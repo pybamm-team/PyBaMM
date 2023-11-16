@@ -22,7 +22,7 @@ VENV_DIR = Path('./venv').resolve()
 
 def set_environment_variables(env_dict, session):
     """
-    Sets environment variables for a nox session object.
+    Sets environment variables for a nox Session object.
 
     Parameters
     -----------
@@ -34,6 +34,38 @@ def set_environment_variables(env_dict, session):
     """
     for key, value in env_dict.items():
         session.env[key] = value
+
+
+def install_PyBaMM(session, extras):
+    """
+    Installs PyBaMM in editable mode along with its dependencies for
+    a nox Session object.
+
+    Parameters
+    -----------
+        session : nox.Session
+            The session to install dependencies for.
+        extras : list[str]
+            A list of dependencies to install. The current
+            options are:
+            [all,dev,jax,odes,docs]
+
+    """
+    # TODO: Remove this mess once [odes] brings support for Python 3.12
+    # See https://github.com/bmcage/odes/issues/162 for details.
+
+    # FIXME: Bump [jax] to get compatibility with Python 3.12 and Windows in this PR
+
+    # For now: silently remove [odes] and [jax] if specified, when running on
+    # 1. Linux and macOS on Python 3.12
+    # 2. Windows on any Python version
+
+    if sys.platform == "win32" or sys.version_info >= (3, 12):
+        if "odes" in extras or "jax" in extras:
+            extras.remove("odes")
+            extras.remove("jax")
+
+    session.install("-e", f".[{','.join(extras)}]", silent=False)
 
 
 @nox.session(name="pybamm-requires")
@@ -60,10 +92,10 @@ def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+        install_PyBaMM(session=session, extras=["all","odes","jax"])
+    else:
+        install_PyBaMM(session=session, extras=["all"])
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -73,16 +105,17 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform == "linux":
-        session.install("-e", ".[odes]", silent=False)
+        install_PyBaMM(session=session, extras=["all","odes","jax"])
+    else:
+        install_PyBaMM(session=session, extras=["all"])
     session.run("python", "run-tests.py", "--integration")
 
 
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.install("-e", ".[all,docs]", silent=False)
+    install_PyBaMM(session=session, extras=["all","docs"])
     session.run("python", "run-tests.py", "--doctest")
 
 
@@ -90,10 +123,10 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform == "linux":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+        install_PyBaMM(session=session, extras=["all","odes","jax"])
+    else:
+        install_PyBaMM(session=session, extras=["all"])
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -101,7 +134,7 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev]", silent=False)
+    install_PyBaMM(session=session, extras=["all","dev"])
     notebooks_to_test = session.posargs if session.posargs else []
     session.run("pytest", "--nbmake", *notebooks_to_test, external=True)
 
@@ -110,7 +143,7 @@ def run_examples(session):
 def run_scripts(session):
     """Run the scripts tests for Python scripts."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
+    install_PyBaMM(session=session, extras=["all"])
     session.run("python", "run-tests.py", "--scripts")
 
 
@@ -137,10 +170,10 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+        install_PyBaMM(session=session, extras=["all","odes","jax"])
+    else:
+        install_PyBaMM(session=session, extras=["all"])
     session.run("python", "run-tests.py", "--all")
 
 
@@ -148,7 +181,7 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    session.install("-e", ".[all,docs]", silent=False)
+    install_PyBaMM(session=session, extras=["all","docs"])
     session.chdir("docs")
     # Local development
     if session.interactive:
