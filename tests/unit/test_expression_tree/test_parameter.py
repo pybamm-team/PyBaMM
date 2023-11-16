@@ -5,9 +5,8 @@ from tests import TestCase
 import numbers
 import unittest
 
-import sympy
-
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class TestParameter(TestCase):
@@ -21,6 +20,7 @@ class TestParameter(TestCase):
         self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         func = pybamm.Parameter("test_string")
         func1 = pybamm.Parameter("test_name")
 
@@ -107,6 +107,7 @@ class TestFunctionParameter(TestCase):
         self.assertEqual(_myfun(x).print_name, None)
 
     def test_function_parameter_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
         func1 = pybamm.FunctionParameter("func", {"var": pybamm.Variable("var")})
 

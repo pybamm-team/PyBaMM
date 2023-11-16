@@ -183,24 +183,27 @@ class TestExperiment(TestCase):
             )
 
     def test_set_next_start_time(self):
-        # Defined dummy experiment to access _set_next_start_time
-        experiment = pybamm.Experiment(["Rest for 1 hour"])
         raw_op = [
             pybamm.step._Step(
                 "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 8, 0)
             ),
+            pybamm.step._Step("voltage", 2.5, duration=3600, start_time=None),
             pybamm.step._Step(
                 "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 12, 0)
             ),
             pybamm.step._Step("current", 1, duration=3600, start_time=None),
+            pybamm.step._Step("voltage", 2.5, duration=3600, start_time=None),
             pybamm.step._Step(
                 "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 15, 0)
             ),
         ]
+        experiment = pybamm.Experiment(raw_op)
         processed_op = experiment._set_next_start_time(raw_op)
 
         expected_next = [
+            None,
             datetime(2023, 1, 1, 12, 0),
+            None,
             None,
             datetime(2023, 1, 1, 15, 0),
             None,
@@ -208,16 +211,21 @@ class TestExperiment(TestCase):
 
         expected_end = [
             datetime(2023, 1, 1, 12, 0),
+            datetime(2023, 1, 1, 12, 0),
+            datetime(2023, 1, 1, 15, 0),
             datetime(2023, 1, 1, 15, 0),
             datetime(2023, 1, 1, 15, 0),
             None,
         ]
 
+        # Test method directly
         for next, end, op in zip(expected_next, expected_end, processed_op):
             # useful form for debugging
             self.assertEqual(op.next_start_time, next)
             self.assertEqual(op.end_time, end)
 
+        # TODO: once #3176 is completed, the test should pass for
+        # operating_conditions_steps (or equivalent) as well
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

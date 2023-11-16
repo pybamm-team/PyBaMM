@@ -6,10 +6,10 @@ import unittest
 import unittest.mock as mock
 
 import numpy as np
-import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 EMPTY_DOMAINS = {
     "primary": [],
@@ -754,6 +754,7 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(pybamm.inner(a3, a3).evaluate(), 9)
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         # Test print_name
         pybamm.Addition.print_name = "test"
         self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))
