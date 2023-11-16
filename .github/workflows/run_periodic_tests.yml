@@ -36,7 +36,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Check style
         run: |
@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -92,16 +92,16 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: pipx run nox -s pybamm-requires
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
-        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
+      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, 3.10, and 3.11 and for macOS and Windows with all Python versions
+        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.12) || (matrix.os != 'ubuntu-latest')
         run: pipx run nox -s unit
 
-      - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run unit tests for GNU/Linux with Python 3.12 and generate coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.12
         run: pipx run nox -s coverage
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.12
         uses: codecov/codecov-action@v3.1.4
 
       - name: Run integration tests
@@ -132,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
