@@ -10,7 +10,6 @@ import casadi
 import numpy as np
 
 import pybamm
-from pybamm.expression_tree.operations.latexify import Latexify
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.util import have_optional_dependency
 
