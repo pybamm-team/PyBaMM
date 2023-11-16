@@ -774,14 +774,19 @@ class Simulation:
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions_steps[idx]
 
+                    # Hacky patch to allow correct processing of end_time and next_starting time
+                    # For efficiency purposes, op_conds treats identical steps as the same object
+                    # regardless of the initial time. Should be refactored as part of #3176
+                    op_conds_unproc = self.experiment.operating_conditions_steps_unprocessed[idx]
+
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if op_conds.end_time:
+                    if getattr(op_conds_unproc, "end_time", None):
                         dt = min(
                             op_conds.duration,
                             (
-                                op_conds.end_time
+                                op_conds_unproc.end_time
                                 - (
                                     initial_start_time
                                     + timedelta(seconds=float(start_time))
@@ -834,9 +839,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds.next_start_time is not None:
+                    if getattr(op_conds_unproc, "next_start_time", None) is not None:
                         rest_time = (
-                            op_conds.next_start_time
+                            op_conds_unproc.next_start_time
                             - (
                                 initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
