@@ -203,10 +203,10 @@ setup(
     ],
     # List of dependencies
     install_requires=[
-        "numpy>=1.24.4",
-        "scipy>=1.10.1",
+        "numpy>=1.23.5",
+        "scipy>=1.9.3",
         "casadi>=3.6.3",
-        "xarray>=23.1.0",
+        "xarray>=2022.6.0",
         "anytree>=2.12.0",
     ],
     extras_require={
@@ -236,7 +236,7 @@ setup(
             # on systems without an attached display, it should never be imported
             # outside of plot() methods.
             # Should not be imported
-            "matplotlib>=3.7.3",
+            "matplotlib>=3.6.0",
         ],
         "cite": [
             "pybtex>=0.24.0",
@@ -263,7 +263,7 @@ setup(
             "nbmake",
         ],
         "pandas": [
-            "pandas>=2.0.3",
+            "pandas>=1.5.0",
         ],
         "jax": [
             "jax==0.4.8",
