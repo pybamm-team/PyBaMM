@@ -35,9 +35,10 @@ class BaseParticle(pybamm.BaseSubModel):
         domain_options = getattr(self.options, domain)
 
         # Get diffusivity (may have empirical hysteresis)
-        if domain_options["diffusivity"] == "single":
+        diffusivity_option = getattr(domain_options, self.phase)["diffusivity"]
+        if diffusivity_option == "single":
             D = phase_param.D(c, T)
-        elif domain_options["diffusivity"] == "current sigmoid":
+        elif diffusivity_option == "current sigmoid":
             k = 100
             if Domain == "Positive":
                 lithiation_current = current
