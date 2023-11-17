@@ -393,7 +393,7 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_composite_kinetic_hysteresis(self):
         options = {
             "particle phases": ("2", "1"),
-            "exchange current density": (
+            "exchange-current density": (
                 ("current sigmoid", "single"),
                 "current sigmoid",
             ),
