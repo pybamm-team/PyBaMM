@@ -1,19 +1,21 @@
 #
-# Tests lithium ion parameters load and give expected values
+# Tests lithium-ion parameters load and give expected values
 #
+import os
 from tests import TestCase
 import pybamm
-
+from tempfile import TemporaryDirectory
 import unittest
 import numpy as np
 
 
 class TestLithiumIonParameterValues(TestCase):
     def test_print_parameters(self):
-        parameters = pybamm.LithiumIonParameters()
-        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
-        output_file = "lithium_ion_parameters.txt"
-        parameter_values.print_parameters(parameters, output_file)
+        with TemporaryDirectory() as dir_name:
+            parameters = pybamm.LithiumIonParameters()
+            parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
+            output_file = os.path.join(dir_name, "lithium_ion_parameters.txt")
+            parameter_values.print_parameters(parameters, output_file)
 
     def test_lithium_ion(self):
         """This test checks that all the parameters are being calculated

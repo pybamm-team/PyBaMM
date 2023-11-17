@@ -8,7 +8,7 @@ import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-import tqdm
+from pybamm.util import have_optional_dependency
 
 
 def is_notebook():
@@ -290,9 +290,10 @@ class Simulation:
                 # figure out whether the voltage event is greater than the starting
                 # voltage (charge) or less (discharge) and set the sign of the
                 # event accordingly
-                if (isinstance(op.value, pybamm.Interpolant) or
-                    isinstance(op.value, pybamm.Multiplication)):
-                    inpt = {"start time":0}
+                if isinstance(op.value, pybamm.Interpolant) or isinstance(
+                    op.value, pybamm.Multiplication
+                ):
+                    inpt = {"start time": 0}
                     init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
                     sign = np.sign(init_curr)
                 else:
@@ -373,8 +374,16 @@ class Simulation:
         options = self.model.options
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
-            self._parameter_values = self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
-                initial_soc, param=param, inplace=False, options=options
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+        elif options["working electrode"] == "positive":
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
+                    initial_soc, param=param, inplace=False, options=options
+                )
             )
         else:
             self._parameter_values = (
@@ -543,7 +552,7 @@ class Simulation:
                 )
             if (
                 self.operating_mode == "without experiment"
-                or self._model.name == "ElectrodeSOH model"
+                or "ElectrodeSOH" in self._model.name
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -717,13 +726,18 @@ class Simulation:
                         # Update _solution
                         self._solution = current_solution
 
-            for cycle_num, cycle_length in enumerate(
-                # tqdm is the progress bar.
-                tqdm.tqdm(
+            # check if a user has tqdm installed
+            if showprogress:
+                tqdm = have_optional_dependency("tqdm")
+                cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
-                    disable=(not showprogress),
                     desc="Cycling",
-                ),
+                )
+            else:
+                cycle_lengths = self.experiment.cycle_lengths
+
+            for cycle_num, cycle_length in enumerate(
+                cycle_lengths,
                 start=1,
             ):
                 logs["cycle number"] = (
@@ -760,14 +774,19 @@ class Simulation:
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions_steps[idx]
 
+                    # Hacky patch to allow correct processing of end_time and next_starting time
+                    # For efficiency purposes, op_conds treats identical steps as the same object
+                    # regardless of the initial time. Should be refactored as part of #3176
+                    op_conds_unproc = self.experiment.operating_conditions_steps_unprocessed[idx]
+
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if op_conds.end_time:
+                    if getattr(op_conds_unproc, "end_time", None):
                         dt = min(
                             op_conds.duration,
                             (
-                                op_conds.end_time
+                                op_conds_unproc.end_time
                                 - (
                                     initial_start_time
                                     + timedelta(seconds=float(start_time))
@@ -820,9 +839,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds.next_start_time is not None:
+                    if getattr(op_conds_unproc, "next_start_time", None) is not None:
                         rest_time = (
-                            op_conds.next_start_time
+                            op_conds_unproc.next_start_time
                             - (
                                 initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
