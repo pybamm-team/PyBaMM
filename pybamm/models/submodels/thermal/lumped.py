@@ -56,10 +56,9 @@ class Lumped(BaseThermal):
         # Newton cooling, accounting for surface area to volume ratio
         cell_surface_area = self.param.A_cooling
         cell_volume = self.param.V_cell
-        total_cooling_coefficient = (
-            -self.param.h_total * cell_surface_area / cell_volume
+        Q_cool_vol_av = (
+            -self.param.h_total * (T_vol_av - T_amb) * cell_surface_area / cell_volume
         )
-        Q_cool_vol_av = total_cooling_coefficient * (T_vol_av - T_amb)
 
         self.rhs = {
             T_vol_av: (Q_vol_av + Q_cool_vol_av) / self.param.rho_c_p_eff(T_vol_av)

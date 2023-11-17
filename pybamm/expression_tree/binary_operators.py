@@ -4,22 +4,22 @@
 import numbers
 
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 def _preprocess_binary(left, right):
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
-    if isinstance(right, numbers.Number):
-        right = pybamm.Scalar(right)
     elif isinstance(left, np.ndarray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
+    if isinstance(right, numbers.Number):
+        right = pybamm.Scalar(right)
     elif isinstance(right, np.ndarray):
         if right.ndim > 1:
             raise ValueError("right must be a 1D array")
@@ -147,6 +147,7 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -323,6 +324,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -626,6 +628,7 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Min(left, right)
 
 
@@ -662,6 +665,7 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Max(left, right)
 
 
