@@ -2,7 +2,6 @@ name: Build and publish package to PyPI
 on:
   release:
     types: [published]
-  pull_request:
   schedule:
     # Run at 10 am UTC on day-of-month 1 and 15.
     - cron: "0 10 1,15 * *"
@@ -84,7 +83,6 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS on macOS
         if: matrix.os == 'macos-latest'
         run: |
-          brew update
           brew install graphviz openblas libomp
           brew reinstall gcc
           python -m pip install cmake wget
