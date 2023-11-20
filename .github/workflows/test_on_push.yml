@@ -90,6 +90,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Install nox
+        run: python -m pip install nox
+
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
         if: matrix.os != 'windows-latest'
@@ -106,7 +109,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
         if: matrix.os != 'windows-latest'
-        run: pipx run nox -s pybamm-requires
+        run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s unit
@@ -143,6 +146,9 @@ jobs:
         with:
           python-version: 3.11
           cache: 'pip'
+
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -222,6 +228,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Install nox
+        run: python -m pip install nox
+
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
         if: matrix.os != 'windows-latest'
@@ -238,7 +247,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
         if: matrix.os != 'windows-latest'
-        run: pipx run nox -s pybamm-requires
+        run: python -m nox -s pybamm-requires
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
@@ -276,6 +285,9 @@ jobs:
         with:
           python-version: 3.11
           cache: 'pip'
+
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
         run: python -m nox -s doctests
@@ -316,6 +328,9 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
+      - name: Install nox
+        run: python -m pip install nox
+
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
         with:
@@ -333,7 +348,7 @@ jobs:
         run: python -m nox -s pybamm-requires
 
       - name: Run example notebooks tests for GNU/Linux with Python 3.11
-        run: pipx run nox -s examples
+        run: python -m nox -s examples
 
   # Runs only on Ubuntu with Python 3.11
   run_scripts_tests:
@@ -368,6 +383,9 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
+      - name: Install nox
+        run: python -m pip install nox
+
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
         with:
@@ -385,4 +403,4 @@ jobs:
         run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.11
-        run: pipx run nox -s scripts
+        run: python -m nox -s scripts
