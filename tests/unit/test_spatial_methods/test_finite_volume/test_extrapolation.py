@@ -40,8 +40,9 @@ def errors(pts, function, method_options, bcs=None):
     left_extrap_processed = disc.process_symbol(left_extrap)
     right_extrap_processed = disc.process_symbol(right_extrap)
 
-    l_error = np.abs(l_true - left_extrap_processed.evaluate(None, y))
-    r_error = np.abs(r_true - right_extrap_processed.evaluate(None, y))
+    # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion
+    l_error = np.abs(l_true - left_extrap_processed.evaluate(None, y)).item()
+    r_error = np.abs(r_true - right_extrap_processed.evaluate(None, y)).item()
 
     return l_error, r_error
 

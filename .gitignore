@@ -8,12 +8,13 @@
 *.mat
 *.csv
 *.hidden
+*.pkl
 
 # don't ignore important .txt and .csv files
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!pybamm/CITATIONS.txt
+!pybamm/CITATIONS.bib
 !pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png
@@ -41,7 +42,7 @@ input/*
 !input/drive_cycles
 
 # keep images required by notebooks
-!examples/notebooks/Creating%20Models/SEI.png
+!docs/examples/notebooks/creating_models/SEI.png
 
 # simulation outputs
 out/
@@ -113,9 +114,30 @@ test.json
 # tox
 .tox/
 
+# nox
+.nox/
+
 # vcpkg
 vcpkg_installed/
 
 # benchmarks
 html/
 results/
+
+# expression tree images for notebooks in docs
+!docs/source/examples/notebooks/expression_tree/expression_tree1.png
+!docs/source/examples/notebooks/expression_tree/expression_tree2.png
+!docs/source/examples/notebooks/expression_tree/expression_tree3.png
+!docs/source/examples/notebooks/expression_tree/expression_tree4.png
+!docs/source/examples/notebooks/expression_tree/expression_tree5.png
+
+# do not ignore SPM images for notebooks in docs
+!docs/source/examples/notebooks/models/spm1.png
+!docs/source/examples/notebooks/models/spm2.png
+
+# do not ignore images in _static folder in docs
+!docs/_static/favicon/favicon.png
+!docs/_static/pybamm_logo.png
+
+# tests
+test_callback.log

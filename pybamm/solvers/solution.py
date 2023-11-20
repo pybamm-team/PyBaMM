@@ -131,6 +131,9 @@ class Solution(object):
         # Initialize empty summary variables
         self._summary_variables = None
 
+        # Initialise initial start time
+        self.initial_start_time = None
+
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
@@ -308,7 +311,20 @@ class Solution(object):
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                y_var = y[model.variables[var.name].y_slices[0]]
+                var = model.variables[var.name]
+                # find the statevector corresponding to this variable
+                statevector = None
+                for node in var.pre_order():
+                    if isinstance(node, pybamm.StateVector):
+                        statevector = node
+
+                # there will always be a statevector, but just in case
+                if statevector is None:  # pragma: no cover
+                    raise RuntimeError(
+                        "Cannot find statevector corresponding to variable {}"
+                        .format(var.name)
+                    )
+                y_var = y[statevector.y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_value):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
@@ -421,6 +437,15 @@ class Solution(object):
     def summary_variables(self):
         return self._summary_variables
 
+    @property
+    def initial_start_time(self):
+        return self._initial_start_time
+
+    @initial_start_time.setter
+    def initial_start_time(self, value):
+        """Updates the initial start time of the experiment"""
+        self._initial_start_time = value
+
     def set_summary_variables(self, all_summary_variables):
         summary_variables = {var: [] for var in all_summary_variables[0]}
         for sum_vars in all_summary_variables:
@@ -458,13 +483,21 @@ class Solution(object):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
                 elif key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
                 else:
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
             var = pybamm.ProcessedVariable(
@@ -475,9 +508,9 @@ class Solution(object):
             self._variables[key] = var
             self.data[key] = var.data
 
-    def process_casadi_var(self, var_pybamm, inputs, ys):
+    def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", ys.shape[0])
+        y_MX = casadi.MX.sym("y", ys_shape[0])
         inputs_MX_dict = {
             key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
         }
@@ -803,7 +836,7 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     esoh_solver : :class:`pybamm.lithium_ion.ElectrodeSOHSolver`
         Solver to calculate electrode SOH (eSOH) variables. If `None` (default)
         then only summary variables that do not require the eSOH calculation
-        are calculated. See [1] for more details on eSOH variables.
+        are calculated. See :footcite:t:`Mohtat2019` for more details on eSOH variables.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True
@@ -814,12 +847,6 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
         The Solution object for this cycle, or None (if save_this_cycle is False)
     cycle_summary_variables : dict
         Dictionary of summary variables for this cycle
-
-    References
-    ----------
-    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-    better estimability of electrode-specific state of health: Decoding the cell
-    expansion. Journal of Power Sources, 427, 101-111.
 
     """
     sum_sols = step_solutions[0].copy()

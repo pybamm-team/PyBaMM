@@ -1,4 +1,4 @@
-# This CMakeFile is adapted from that in dune-common: 
+# This CMakeFile is adapted from that in dune-common:
 
 # .. cmake_module::
 #
@@ -239,4 +239,3 @@ endif()
 #set HAVE_SUITESPARSE for config.h
 set(HAVE_SUITESPARSE ${SuiteSparse_FOUND})
 set(HAVE_UMFPACK ${SuiteSparse_UMFPACK_FOUND})
-

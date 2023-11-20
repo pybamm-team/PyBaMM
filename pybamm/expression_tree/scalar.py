@@ -2,10 +2,9 @@
 # Scalar class
 #
 import numpy as np
-import sympy
 
 import pybamm
-
+from pybamm.util import have_optional_dependency
 
 class Scalar(pybamm.Symbol):
     """
@@ -37,9 +36,14 @@ class Scalar(pybamm.Symbol):
         """The value returned by the node when evaluated."""
         return self._value
 
+    # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion
     @value.setter
     def value(self, value):
-        self._value = np.float64(value)
+        self._value = (
+            np.float64(value.item())
+            if isinstance(value, np.ndarray)
+            else np.float64(value)
+        )
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
@@ -65,6 +69,7 @@ class Scalar(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:

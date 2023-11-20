@@ -17,7 +17,7 @@ class Broadcast(pybamm.SpatialOperator):
 
     For an example of broadcasts in action, see
     `this example notebook
-    <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+    <https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
     Parameters
     ----------
@@ -44,6 +44,11 @@ class Broadcast(pybamm.SpatialOperator):
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         return child
+
+    def _diff(self, variable):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Differentiate the child and broadcast the result in the same way
+        return self._unary_new_copy(self.child.diff(variable))
 
 
 class PrimaryBroadcast(Broadcast):

@@ -18,7 +18,9 @@ if pybamm.have_jax():
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten
     from jax.util import cache, safe_map, split_list
 
-    config.update("jax_enable_x64", True)
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        config.update("jax_enable_x64", True)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
@@ -66,13 +68,15 @@ if pybamm.have_jax():
     def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
         """
         Implements a Backward Difference formula (BDF) implicit multistep integrator.
-        The basic algorithm is derived in [2]_. This particular implementation follows
-        that implemented in the Matlab routine ode15s described in [1]_ and the SciPy
-        implementation [3]_, which features the NDF formulas for improved stability,
-        with associated differences in the error constants, and calculates the jacobian
-        at J(t_{n+1}, y^0_{n+1}).  This implementation was based on that implemented in
-        the scipy library [3]_, which also mainly follows [1]_ but uses the more
-        standard jacobian update.
+        The basic algorithm is derived in :footcite:t:`byrne1975polyalgorithm`. This
+        particular implementation follows that implemented in the Matlab routine ode15s
+        described in :footcite:t:`shamphine1997matlab` and the SciPy implementation
+        :footcite:t:`Virtanen2020`, which features the NDF formulas for improved
+        stability with associated differences in the error constants, and calculates
+        the jacobian at J(t_{n+1}, y^0_{n+1}). This implementation was based on that
+        implemented in the SciPy library :footcite:t:`Virtanen2020`, which also mainly
+        follows :footcite:t:`shamphine1997matlab` but uses the more standard Jacobian
+        update.
 
         Parameters
         ----------
@@ -100,17 +104,6 @@ if pybamm.have_jax():
         y: ndarray with shape (n, m)
             calculated state vector at each of the m time points
 
-        References
-        ----------
-        .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
-            COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
-        .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
-            Solution of Ordinary Differential Equations", ACM Transactions on
-            Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
-        .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
-            T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
-            fundamental algorithms for scientific computing in Python.
-            Nature methods, 17(3), 261-272.
         """
 
         def fun_bind_inputs(y, t):
@@ -368,12 +361,8 @@ if pybamm.have_jax():
         comparing the predicted state against that using the provided function.
 
         Optimal step size based on the selected order is obtained using formula (4.12)
-        in [1]
+        in :footcite:t:`hairer1993solving`.
 
-        References
-        ----------
-        .. [1] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
-                Equations I: Nonstiff Problems", Sec. II.4.
         """
         scale = atol + jnp.abs(y0) * rtol
         y1 = y0 + h0 * f0
@@ -980,12 +969,14 @@ if pybamm.have_jax():
 def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in [2]_. This particular implementation follows that implemented in the
-    Matlab routine ode15s described in [1]_ and the SciPy implementation [3]_, which
-    features the NDF formulas for improved stability, with associated differences in the
-    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
-    implementation was based on that implemented in the scipy library [3]_, which also
-    mainly follows [1]_ but uses the more standard jacobian update.
+    is derived in :footcite:t:`byrne1975polyalgorithm`. This particular implementation
+    follows that implemented in the Matlab routine ode15s described in
+    :footcite:t:`shampine1997matlab` and the SciPy implementation
+    :footcite:t:`Virtanen2020` which features the NDF formulas for improved stability,
+    with associated differences in the error constants, and calculates the jacobian at
+    J(t_{n+1}, y^0_{n+1}). This implementation was based on that implemented in the
+    SciPy library :footcite:t:`Virtanen2020`, which also mainly follows
+    :footcite:t:`shampine1997matlab` but uses the more standard jacobian update.
 
     Parameters
     ----------
@@ -1013,21 +1004,10 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     y: ndarray with shape (n, m)
         calculated state vector at each of the m time points
 
-    References
-    ----------
-    .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
-        COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
-    .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
-        Solution of Ordinary Differential Equations", ACM Transactions on
-        Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
-    .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
-        T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
-        fundamental algorithms for scientific computing in Python.
-        Nature methods, 17(3), 261-272.
     """
     if not pybamm.have_jax():
         raise ModuleNotFoundError(
-            "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
         )
 
     def _check_arg(arg):

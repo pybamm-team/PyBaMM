@@ -65,8 +65,8 @@ yum -y install openblas-devel
 
 mkdir -p build_sundials
 cd build_sundials
-KLU_INCLUDE_DIR=/usr/include
-KLU_LIBRARY_DIR=/usr/lib
+KLU_INCLUDE_DIR=/usr/local/include
+KLU_LIBRARY_DIR=/usr/local/lib
 SUNDIALS_DIR=sundials-$SUNDIALS_VERSION
 cmake -DENABLE_LAPACK=ON\
       -DSUNDIALS_INDEX_SIZE=32\
@@ -78,4 +78,3 @@ cmake -DENABLE_LAPACK=ON\
       -DCMAKE_INSTALL_PREFIX=/usr\
       ../$SUNDIALS_DIR
 make install
-

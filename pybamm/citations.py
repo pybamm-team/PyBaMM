@@ -6,10 +6,8 @@
 import pybamm
 import os
 import warnings
-import pybtex
 from sys import _getframe
-from pybtex.database import parse_file, parse_string, Entry
-from pybtex.scanner import PybtexError
+from pybamm.util import have_optional_dependency
 
 
 class Citations:
@@ -18,7 +16,7 @@ class Citations:
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
 
-    Citations listed in `pybamm/CITATIONS.txt` can be registered with their citation
+    Citations listed in `pybamm/CITATIONS.bib` can be registered with their citation
     key. For all other works provide a BibTeX Citation to :meth:`register`.
 
     Examples
@@ -73,10 +71,11 @@ class Citations:
         return caller_name
 
     def read_citations(self):
-        """Reads the citations in `pybamm.CITATIONS.txt`. Other works can be cited
+        """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
+        parse_file = have_optional_dependency("pybtex.database", "parse_file")
+        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
         bib_data = parse_file(citations_file, bib_format="bibtex")
         for key, entry in bib_data.entries.items():
             self._add_citation(key, entry)
@@ -86,6 +85,7 @@ class Citations:
         previous entry is overwritten
         """
 
+        Entry = have_optional_dependency("pybtex.database", "Entry")
         # Check input types are correct
         if not isinstance(key, str) or not isinstance(entry, Entry):
             raise TypeError()
@@ -120,7 +120,7 @@ class Citations:
         Parameters
         ----------
         key : str
-            - The citation key for an entry in `pybamm/CITATIONS.txt` or
+            - The citation key for an entry in `pybamm/CITATIONS.bib` or
             - A BibTeX formatted citation
         """
         if self._citation_err_msg is None:
@@ -151,6 +151,8 @@ class Citations:
         key: str
             A BibTeX formatted citation
         """
+        PybtexError = have_optional_dependency("pybtex.scanner", "PybtexError")
+        parse_string = have_optional_dependency("pybtex.database", "parse_string")
         try:
             # Parse string as a bibtex citation, and check that a citation was found
             bib_data = parse_string(key, bib_format="bibtex")
@@ -217,6 +219,7 @@ class Citations:
         """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
+        pybtex = have_optional_dependency("pybtex")
         try:
             for key in self._unknown_citations:
                 self._parse_citation(key)

@@ -7,7 +7,8 @@ from .base_lithium_ion_model import BaseModel
 
 class SPM(BaseModel):
     """
-    Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
+    Single Particle Model (SPM) of a lithium-ion battery, from
+    :footcite:t:`Marquis2019`.
     See :class:`pybamm.lithium_ion.BaseModel` for more details.
 
     Examples
@@ -17,11 +18,6 @@ class SPM(BaseModel):
     >>> model.name
     'Single Particle Model'
 
-    References
-    ----------
-    .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. Journal of The
-           Electrochemical Society, 166(15):A3693–A3706, 2019
     """
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
@@ -52,7 +48,7 @@ class SPM(BaseModel):
             pybamm.citations.register("Marquis2019")
 
         if (
-            self.options["SEI"] not in ["none", "constant"]
+            self.options["SEI"] not in ["none", "constant", ("constant", "none")]
             or self.options["lithium plating"] != "none"
         ):
             pybamm.citations.register("BrosaPlanella2022")
@@ -108,6 +104,10 @@ class SPM(BaseModel):
                 ]:
                     submod = pybamm.particle.XAveragedPolynomialProfile(
                         self.param, domain, self.options, phase=phase
+                    )
+                elif particle == "MSMR":
+                    submod = pybamm.particle.MSMRDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=True
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
                 self.submodels[

@@ -6,6 +6,6 @@ Meshes
 
 .. autoclass:: pybamm.SubMesh
     :members:
-    
+
 .. autoclass:: pybamm.MeshGenerator
     :members:

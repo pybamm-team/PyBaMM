@@ -139,13 +139,9 @@ class ResistanceFunctionControl(FunctionControl):
 class CCCVFunctionControl(FunctionControl):
     """
     External circuit with constant-current constant-voltage control, as implemented in
-    [1]_
+    :footcite:t:`Mohtat2021`.
 
-    References
-    ----------
-    .. [1] Mohtat, P., Pannala, S., Sulzer, V., Siegel, J. B., & Stefanopoulou, A. G.
-           (2021). An Algorithmic Safety VEST For Li-ion Batteries During Fast Charging.
-           arXiv preprint arXiv:2108.07833.
+    .. footbibliography::
 
     """
 

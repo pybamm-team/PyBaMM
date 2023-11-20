@@ -3,13 +3,41 @@ ci:
   autofix_commit_msg: "style: pre-commit fixes"
 
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.3.0
-    hooks:
-      - id: black
-
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: "v0.0.272"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.0.292"
     hooks:
       - id: ruff
-        args: [--ignore=E741, --exclude=__init__.py]
+        args: [--fix, --ignore=E741, --exclude=__init__.py]
+
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.0
+    hooks:
+      - id: nbqa-ruff
+        additional_dependencies: [ruff==0.0.284]
+        args: ["--fix","--ignore=E501,E402"]
+
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: "1.16.0"
+    hooks:
+       - id: blacken-docs
+         additional_dependencies: [black==22.12.0]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+        - id: check-added-large-files
+        - id: check-case-conflict
+        - id: check-merge-conflict
+        - id: check-yaml
+        - id: debug-statements
+        - id: end-of-file-fixer
+        - id: mixed-line-ending
+        - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+        - id: python-check-blanket-type-ignore
+        - id: rst-backticks
+        - id: rst-directive-colons
+        - id: rst-inline-touching-normal

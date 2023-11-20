@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
@@ -25,7 +26,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     D_ref = 3.9 * 10 ** (-14)
     E_D_s = 42770
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -44,15 +45,15 @@ def graphite_mcmb2528_ocp_Dualfoil1998(sto):
 
     u_eq = (
         0.194
-        + 1.5 * pybamm.exp(-120.0 * sto)
-        + 0.0351 * pybamm.tanh((sto - 0.286) / 0.083)
-        - 0.0045 * pybamm.tanh((sto - 0.849) / 0.119)
-        - 0.035 * pybamm.tanh((sto - 0.9233) / 0.05)
-        - 0.0147 * pybamm.tanh((sto - 0.5) / 0.034)
-        - 0.102 * pybamm.tanh((sto - 0.194) / 0.142)
-        - 0.022 * pybamm.tanh((sto - 0.9) / 0.0164)
-        - 0.011 * pybamm.tanh((sto - 0.124) / 0.0226)
-        + 0.0155 * pybamm.tanh((sto - 0.105) / 0.029)
+        + 1.5 * np.exp(-120.0 * sto)
+        + 0.0351 * np.tanh((sto - 0.286) / 0.083)
+        - 0.0045 * np.tanh((sto - 0.849) / 0.119)
+        - 0.035 * np.tanh((sto - 0.9233) / 0.05)
+        - 0.0147 * np.tanh((sto - 0.5) / 0.034)
+        - 0.102 * np.tanh((sto - 0.194) / 0.142)
+        - 0.022 * np.tanh((sto - 0.9) / 0.0164)
+        - 0.011 * np.tanh((sto - 0.124) / 0.0226)
+        + 0.0155 * np.tanh((sto - 0.105) / 0.029)
     )
 
     return u_eq
@@ -87,7 +88,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     """
     m_ref = 2 * 10 ** (-5)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 37480
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -111,15 +112,15 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
 
     """
     du_dT = (
-        -1.5 * (120.0 / c_s_max) * pybamm.exp(-120 * sto)
-        + (0.0351 / (0.083 * c_s_max)) * ((pybamm.cosh((sto - 0.286) / 0.083)) ** (-2))
-        - (0.0045 / (0.119 * c_s_max)) * ((pybamm.cosh((sto - 0.849) / 0.119)) ** (-2))
-        - (0.035 / (0.05 * c_s_max)) * ((pybamm.cosh((sto - 0.9233) / 0.05)) ** (-2))
-        - (0.0147 / (0.034 * c_s_max)) * ((pybamm.cosh((sto - 0.5) / 0.034)) ** (-2))
-        - (0.102 / (0.142 * c_s_max)) * ((pybamm.cosh((sto - 0.194) / 0.142)) ** (-2))
-        - (0.022 / (0.0164 * c_s_max)) * ((pybamm.cosh((sto - 0.9) / 0.0164)) ** (-2))
-        - (0.011 / (0.0226 * c_s_max)) * ((pybamm.cosh((sto - 0.124) / 0.0226)) ** (-2))
-        + (0.0155 / (0.029 * c_s_max)) * ((pybamm.cosh((sto - 0.105) / 0.029)) ** (-2))
+        -1.5 * (120.0 / c_s_max) * np.exp(-120 * sto)
+        + (0.0351 / (0.083 * c_s_max)) * ((np.cosh((sto - 0.286) / 0.083)) ** (-2))
+        - (0.0045 / (0.119 * c_s_max)) * ((np.cosh((sto - 0.849) / 0.119)) ** (-2))
+        - (0.035 / (0.05 * c_s_max)) * ((np.cosh((sto - 0.9233) / 0.05)) ** (-2))
+        - (0.0147 / (0.034 * c_s_max)) * ((np.cosh((sto - 0.5) / 0.034)) ** (-2))
+        - (0.102 / (0.142 * c_s_max)) * ((np.cosh((sto - 0.194) / 0.142)) ** (-2))
+        - (0.022 / (0.0164 * c_s_max)) * ((np.cosh((sto - 0.9) / 0.0164)) ** (-2))
+        - (0.011 / (0.0226 * c_s_max)) * ((np.cosh((sto - 0.124) / 0.0226)) ** (-2))
+        + (0.0155 / (0.029 * c_s_max)) * ((np.cosh((sto - 0.105) / 0.029)) ** (-2))
     )
 
     return du_dT
@@ -148,7 +149,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     """
     D_ref = 1 * 10 ** (-13)
     E_D_s = 18550
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -180,12 +181,12 @@ def lico2_ocp_Dualfoil1998(sto):
 
     u_eq = (
         2.16216
-        + 0.07645 * pybamm.tanh(30.834 - 54.4806 * sto)
-        + 2.1581 * pybamm.tanh(52.294 - 50.294 * sto)
-        - 0.14169 * pybamm.tanh(11.0923 - 19.8543 * sto)
-        + 0.2051 * pybamm.tanh(1.4684 - 5.4888 * sto)
-        + 0.2531 * pybamm.tanh((-sto + 0.56478) / 0.1316)
-        - 0.02167 * pybamm.tanh((sto - 0.525) / 0.006)
+        + 0.07645 * np.tanh(30.834 - 54.4806 * sto)
+        + 2.1581 * np.tanh(52.294 - 50.294 * sto)
+        - 0.14169 * np.tanh(11.0923 - 19.8543 * sto)
+        + 0.2051 * np.tanh(1.4684 - 5.4888 * sto)
+        + 0.2531 * np.tanh((-sto + 0.56478) / 0.1316)
+        - 0.02167 * np.tanh((sto - 0.525) / 0.006)
     )
 
     return u_eq
@@ -218,7 +219,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     """
     m_ref = 6 * 10 ** (-7)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 39570
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -246,17 +247,12 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     sto = stretch * sto
 
     du_dT = (
-        0.07645
-        * (-54.4806 / c_s_max)
-        * ((1.0 / pybamm.cosh(30.834 - 54.4806 * sto)) ** 2)
-        + 2.1581 * (-50.294 / c_s_max) * ((pybamm.cosh(52.294 - 50.294 * sto)) ** (-2))
-        + 0.14169
-        * (19.854 / c_s_max)
-        * ((pybamm.cosh(11.0923 - 19.8543 * sto)) ** (-2))
-        - 0.2051 * (5.4888 / c_s_max) * ((pybamm.cosh(1.4684 - 5.4888 * sto)) ** (-2))
-        - (0.2531 / 0.1316 / c_s_max)
-        * ((pybamm.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
-        - (0.02167 / 0.006 / c_s_max) * ((pybamm.cosh((sto - 0.525) / 0.006)) ** (-2))
+        0.07645 * (-54.4806 / c_s_max) * ((1.0 / np.cosh(30.834 - 54.4806 * sto)) ** 2)
+        + 2.1581 * (-50.294 / c_s_max) * ((np.cosh(52.294 - 50.294 * sto)) ** (-2))
+        + 0.14169 * (19.854 / c_s_max) * ((np.cosh(11.0923 - 19.8543 * sto)) ** (-2))
+        - 0.2051 * (5.4888 / c_s_max) * ((np.cosh(1.4684 - 5.4888 * sto)) ** (-2))
+        - (0.2531 / 0.1316 / c_s_max) * ((np.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
+        - (0.02167 / 0.006 / c_s_max) * ((np.cosh((sto - 0.525) / 0.006)) ** (-2))
     )
 
     return du_dT
@@ -288,9 +284,9 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
         Solid diffusivity
     """
 
-    D_c_e = 5.34e-10 * pybamm.exp(-0.65 * c_e / 1000)
+    D_c_e = 5.34e-10 * np.exp(-0.65 * c_e / 1000)
     E_D_e = 37040
-    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
 
@@ -329,7 +325,7 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
     )
 
     E_k_e = 34700
-    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius
 
@@ -337,40 +333,18 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for a Kokam SLPB78205130H cell, from the paper
-
-        Scott G. Marquis, Valentin Sulzer, Robert Timms, Colin P. Please, and S. Jon
-        Chapman. An asymptotic derivation of a single particle model with electrolyte.
-        Journal of The Electrochemical Society, 166(15):A3693-A3706, 2019.
-        doi:10.1149/2.0341915jes.
-
+    Parameters for a Kokam SLPB78205130H cell, from the paper :footcite:t:`Marquis2019`
     and references therein.
 
-    SEI parameters are example parameters for SEI growth from the papers:
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
 
-        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-        Development of first principles capacity fade model for Li-ion cells. Journal of
-        the Electrochemical Society, 151(2), A196-A203.
-
-        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
-        151(3), A456-A462.
-
-        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-        continued growth of the solid-electrolyte interphase. ChemSusChem, 11(12),
-        1950-1955.
-
-        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
-        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
-        The Electrochemical Society, 156(3),
-
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -492,6 +466,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 3.105,
         "Upper voltage cut-off [V]": 4.1,
+        "Open-circuit voltage at 0% SOC [V]": 3.105,
+        "Open-circuit voltage at 100% SOC [V]": 4.1,
         "Initial concentration in negative electrode [mol.m-3]": 19986.609595075,
         "Initial concentration in positive electrode [mol.m-3]": 30730.7554385565,
         "Initial temperature [K]": 298.15,

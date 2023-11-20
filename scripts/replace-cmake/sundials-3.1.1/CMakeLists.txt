@@ -36,7 +36,7 @@ SET(PACKAGE_NAME "SUNDIALS")
 SET(PACKAGE_STRING "SUNDIALS 3.1.1")
 SET(PACKAGE_TARNAME "sundials")
 
-# set SUNDIALS version numbers 
+# set SUNDIALS version numbers
 # (use "" for the version label if none is needed)
 SET(PACKAGE_VERSION_MAJOR "3")
 SET(PACKAGE_VERSION_MINOR "1")
@@ -387,7 +387,7 @@ OPTION(HYPRE_ENABLE "Enable hypre support" OFF)
 
 # Using hypre requres building with MPI enabled
 IF(HYPRE_ENABLE AND NOT MPI_ENABLE)
-  PRINT_WARNING("MPI not enabled - Disabling hypre" 
+  PRINT_WARNING("MPI not enabled - Disabling hypre"
                 "Set MPI_ENABLE to ON to use parhyp")
   FORCE_VARIABLE(HYPRE_ENABLE BOOL "Enable hypre support" OFF)
 ENDIF()
@@ -399,7 +399,7 @@ OPTION(PETSC_ENABLE "Enable PETSc support" OFF)
 
 # Using PETSc requires building with MPI enabled
 IF(PETSC_ENABLE AND NOT MPI_ENABLE)
-  PRINT_WARNING("MPI not enabled - Disabling PETSc" 
+  PRINT_WARNING("MPI not enabled - Disabling PETSc"
                 "Set MPI_ENABLE to ON to use PETSc")
   FORCE_VARIABLE(PETSC_ENABLE BOOL "Enable PETSc support" OFF)
 ENDIF()
@@ -456,7 +456,7 @@ ENDIF()
 SET(DOCSTR "Build ARKode F90 examples")
 IF(FCMIX_ENABLE AND BUILD_ARKODE)
   SHOW_VARIABLE(EXAMPLES_ENABLE_F90 BOOL "${DOCSTR}" OFF)
-  # Fortran90 examples do not support single or extended precision 
+  # Fortran90 examples do not support single or extended precision
   # NOTE: This check can be removed after Fortran configure file is integrated into examples
   IF(SUNDIALS_PRECISION MATCHES "EXTENDED" OR SUNDIALS_PRECISION MATCHES "SINGLE")
     PRINT_WARNING("F90 examples are not compatible with ${SUNDIALS_PRECISION} precision"
@@ -540,7 +540,7 @@ IF(EXAMPLES_ENABLED)
       SET(EXAMPLES_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/examples" CACHE STRING
         "Output directory for installing example files" FORCE)
     ENDIF(NOT EXAMPLES_INSTALL_PATH)
-    
+
     # create test_install target and directory for running smoke tests after
     # installation
     ADD_CUSTOM_TARGET(test_install)
@@ -565,7 +565,7 @@ ELSE(EXAMPLES_ENABLED)
 
   HIDE_VARIABLE(EXAMPLES_INSTALL)
   HIDE_VARIABLE(EXAMPLES_INSTALL_PATH)
-  
+
 ENDIF(EXAMPLES_ENABLED)
 
 # ---------------------------------------------------------------
@@ -796,7 +796,7 @@ IF(PTHREAD_ENABLE)
   IF(CMAKE_USE_PTHREADS_INIT)
     message(STATUS "Using Pthreads")
     SET(PTHREADS_FOUND TRUE)
-    # SGS    
+    # SGS
   ELSE()
     message(STATUS "Disabling Pthreads support, could not determine compiler flags")
   endif()
@@ -814,7 +814,7 @@ ENDIF()
 
 if(CUDA_ENABLE)
   find_package(CUDA)
-  
+
   if (CUDA_FOUND)
     #message("CUDA found!")
     set(CUDA_NVCC_FLAGS "-lineinfo")
@@ -1026,7 +1026,7 @@ IF(HYPRE_ENABLE)
     PRINT_WARNING("HYPRE not functional - support will not be provided"
                   "Found hypre library, test code does not work")
   ENDIF(HYPRE_LIBRARIES AND NOT HYPRE_FOUND)
-  
+
 ELSE()
 
   HIDE_VARIABLE(HYPRE_INCLUDE_DIR)
@@ -1070,7 +1070,7 @@ ENDIF()
 
 
 # ===============================================================
-# Add source and configuration files 
+# Add source and configuration files
 # ===============================================================
 
 # ---------------------------------------------------------------
@@ -1141,11 +1141,11 @@ IF(PETSC_FOUND)
 ENDIF(PETSC_FOUND)
 
 IF(CUDA_FOUND)
-  ADD_SUBDIRECTORY(src/nvec_cuda)   
+  ADD_SUBDIRECTORY(src/nvec_cuda)
 ENDIF(CUDA_FOUND)
 
 IF(RAJA_FOUND)
-  ADD_SUBDIRECTORY(src/nvec_raja)   
+  ADD_SUBDIRECTORY(src/nvec_raja)
 ENDIF(RAJA_FOUND)
 
 # ARKODE library
@@ -1241,7 +1241,7 @@ IF(EXAMPLES_ENABLED)
     SET(CFLAGS "${CMAKE_C_FLAGS_RELEASE}")
     SET(LDFLAGS "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
     LIST2STRING(EXTRA_LINK_LIBS LIBS)
-    
+
     IF(CXX_FOUND)
       SET(CXX "${CMAKE_CXX_COMPILER}")
       SET(CXX_LNKR "${CMAKE_CXX_COMPILER}")
@@ -1378,7 +1378,7 @@ IF(EXAMPLES_ENABLED)
       IF(MPIF90_FOUND)
         ADD_SUBDIRECTORY(examples/arkode/F90_parallel)
       ENDIF()
-    ENDIF()   
+    ENDIF()
   ENDIF(BUILD_ARKODE)
 
   # add CVODE examples
@@ -1411,7 +1411,7 @@ IF(EXAMPLES_ENABLED)
         ADD_SUBDIRECTORY(examples/cvode/cuda)
       ENDIF()
     ENDIF(EXAMPLES_ENABLE_CUDA)
-    # raja examples 
+    # raja examples
     IF(EXAMPLES_ENABLE_RAJA)
       IF(RAJA_ENABLE AND RAJA_FOUND)
         ADD_SUBDIRECTORY(examples/cvode/raja)
@@ -1568,11 +1568,11 @@ IF(EXAMPLES_ENABLED)
   IF(CUDA_FOUND)
       ADD_SUBDIRECTORY(examples/nvector/cuda)
   ENDIF(CUDA_FOUND)
-  
+
   IF(RAJA_FOUND)
       ADD_SUBDIRECTORY(examples/nvector/raja)
   ENDIF(RAJA_FOUND)
-  
+
 ENDIF(EXAMPLES_ENABLED)
 
 # ---------------------------------------------------------------

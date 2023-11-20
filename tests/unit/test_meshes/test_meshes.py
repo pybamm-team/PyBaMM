@@ -35,6 +35,9 @@ class TestMesh(TestCase):
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
+        # check geometry
+        self.assertEqual(mesh.geometry, geometry)
+
         # check boundary locations
         self.assertEqual(mesh["negative particle"].edges[0], 0)
         self.assertEqual(mesh["negative particle"].edges[-1], 1)
@@ -76,6 +79,9 @@ class TestMesh(TestCase):
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # check geometry
+        self.assertEqual(mesh.geometry, geometry)
 
         # check boundary locations
         self.assertEqual(mesh["negative electrode"].edges[0], 0)

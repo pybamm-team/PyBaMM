@@ -112,9 +112,6 @@ class ParticleGeometricParameters(BaseParameters):
         # Particle-size distribution geometry
         self.R_min = pybamm.Parameter(f"{pref}{Domain} minimum particle radius [m]")
         self.R_max = pybamm.Parameter(f"{pref}{Domain} maximum particle radius [m]")
-        self.sd_a = pybamm.Parameter(
-            f"{pref}{Domain} area-weighted particle-size standard deviation [m]"
-        )
 
     @property
     def R_typ(self):

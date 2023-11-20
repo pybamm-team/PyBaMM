@@ -19,10 +19,10 @@ explore the effect of different battery designs and modeling assumptions under a
 The core of the framework is a custom computer algebra system to define mathematical equations,
 and a domain specific modeling language to combine these equations into systems of differential equations
 (usually partial differential equations for variables depending on space and time).
-The [expression tree](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb) example gives an introduction to the computer algebra system, and the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Getting%20Started) tutorials
+The [expression tree](https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/expression-tree.ipynb) example gives an introduction to the computer algebra system, and the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/getting_started/) tutorials
 walk through creating models of increasing complexity.
 
-Once a model has been defined symbolically, PyBaMM solves it using the Method of Lines. First, the equations are discretised in the spatial dimension, using the finite volume method. Then, the resulting system is solved using third-party numerical solvers. Depending on the form of the model, the system can be ordinary differential equations (ODEs) (if only `model.rhs` is defined), or algebraic equations (if only `model.algebraic` is defined), or differential-algebraic equations (DAEs) (if both `model.rhs` and `model.algebraic` are defined). Jupyter notebooks explaining the solvers can be found [here](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/solvers).
+Once a model has been defined symbolically, PyBaMM solves it using the Method of Lines. First, the equations are discretised in the spatial dimension, using the finite volume method. Then, the resulting system is solved using third-party numerical solvers. Depending on the form of the model, the system can be ordinary differential equations (ODEs) (if only `model.rhs` is defined), or algebraic equations (if only `model.algebraic` is defined), or differential-algebraic equations (DAEs) (if both `model.rhs` and `model.algebraic` are defined). Jupyter notebooks explaining the solvers can be found [here](https://github.com/pybamm-team/PyBaMM/tree/develop/docs/source/examples/notebooks/solvers).
 
 ## Model and Parameter Library
 
@@ -43,11 +43,13 @@ One of PyBaMM's unique features is the `Experiment` class, which allows users to
 ```python
 pybamm.Experiment(
     [
-        ("Discharge at C/10 for 10 hours or until 3.3 V",
-        "Rest for 1 hour",
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour")
+        (
+            "Discharge at C/10 for 10 hours or until 3.3 V",
+            "Rest for 1 hour",
+            "Charge at 1 A until 4.1 V",
+            "Hold at 4.1 V until 50 mA",
+            "Rest for 1 hour",
+        )
     ]
     * 3,
 )
@@ -68,10 +70,10 @@ solution = sim.solve()
 solution.plot()
 ```
 
-Finally, PyBaMM provides cusotm visualization tools:
+Finally, PyBaMM provides custom visualization tools:
 
 - [](quick_plot): for easily plotting simulation outputs in a grid, including comparing multiple simulations
-- [](plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
+- [](pybamm.plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
 
 Users are not limited to these tools and can plot the output of a simulation solution by accessing the underlying numpy array for the solution variables as
 

@@ -77,7 +77,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     def cv_boundary_reconstruction_sub_matrix(self):
         """
         Coefficients for reconstruction of a function through averages.
-        The resulting matrix is scale-invariant [2]_.
+        The resulting matrix is scale-invariant :footcite:t:`Wang2002`.
 
         Parameters
         ----------
@@ -85,13 +85,6 @@ class SpectralVolume(pybamm.FiniteVolume):
         Returns
         -------
 
-        References
-        ----------
-        .. [2] Z. J. Wang.
-               “Spectral (Finite) Volume Method for Conservation Laws
-               on Unstructured Grids”.
-               Journal of Computational Physics,
-               178:210–251, 2002
         """
 
         # While Spectral Volume in general may use any point
@@ -182,7 +175,8 @@ class SpectralVolume(pybamm.FiniteVolume):
 
     def chebyshev_differentiation_matrices(self, noe, dod):
         """
-        Chebyshev differentiation matrices [1]_.
+        Chebyshev differentiation matrices, from
+        :footcite:t:`baltensperger2003spectral`.
 
         Parameters
         ----------
@@ -201,13 +195,6 @@ class SpectralVolume(pybamm.FiniteVolume):
             matrix of order p would just be the pth matrix power of
             the diff. matrix of order 1. This method computes the higher
             orders in a more numerically stable way.
-
-        References
-        ----------
-        .. [1] Richard Baltensperger and Manfred R. Trummer.
-               “Spectral Differencing With A Twist”.
-               Society for Industrial and Applied Mathematics,
-               24(5):1465–1487, 2003
         """
         if dod >= noe:
             raise ValueError(

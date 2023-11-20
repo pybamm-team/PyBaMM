@@ -2,7 +2,6 @@
 # Processed Variable class
 #
 import casadi
-import numbers
 import numpy as np
 import pybamm
 from scipy.integrate import cumulative_trapezoid
@@ -56,6 +55,15 @@ class ProcessedVariable(object):
         self.warn = warn
         self.cumtrapz_ic = cumtrapz_ic
 
+        # Process spatial variables
+        geometry = solution.all_models[0].geometry
+        self.spatial_variables = {}
+        for domain_level, domain_names in self.domains.items():
+            variables = []
+            for domain in domain_names:
+                variables += list(geometry[domain].keys())
+            self.spatial_variables[domain_level] = variables
+
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -64,9 +72,8 @@ class ProcessedVariable(object):
         self.t_pts = solution.t
 
         # Evaluate base variable at initial time
-        self.base_eval = self.base_variables_casadi[0](
-            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
-        ).full()
+        self.base_eval_shape = self.base_variables[0].shape
+        self.base_eval_size = self.base_variables[0].size
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -78,15 +85,11 @@ class ProcessedVariable(object):
 
         # check variable shape
         else:
-            if (
-                isinstance(self.base_eval, numbers.Number)
-                or len(self.base_eval.shape) == 0
-                or self.base_eval.shape[0] == 1
-            ):
+            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
                 self.initialise_0D()
             else:
                 n = self.mesh.npts
-                base_shape = self.base_eval.shape[0]
+                base_shape = self.base_eval_shape[0]
                 # Try some shapes that could make the variable a 1D variable
                 if base_shape in [n, n + 1]:
                     self.initialise_1D()
@@ -95,7 +98,7 @@ class ProcessedVariable(object):
                     first_dim_nodes = self.mesh.nodes
                     first_dim_edges = self.mesh.edges
                     second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-                    if self.base_eval.size // len(second_dim_pts) in [
+                    if self.base_eval_size // len(second_dim_pts) in [
                         len(first_dim_nodes),
                         len(first_dim_edges),
                     ]:
@@ -109,9 +112,6 @@ class ProcessedVariable(object):
 
     def initialise_0D(self):
         # initialise empty array of the correct size
-        entries = np.empty(len(self.t_pts))
-        idx = 0
-
         entries = np.empty(len(self.t_pts))
         idx = 0
         # Evaluate the base_variable index-by-index
@@ -137,7 +137,7 @@ class ProcessedVariable(object):
         self.dimensions = 0
 
     def initialise_1D(self, fixed_t=False):
-        len_space = self.base_eval.shape[0]
+        len_space = self.base_eval_shape[0]
         entries = np.empty((len_space, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
@@ -172,25 +172,11 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0].endswith("particle"):
-            self.first_dimension = "r"
-            self.r_sol = space
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ]:
-            self.first_dimension = "x"
-            self.x_sol = space
-        elif self.domain == ["current collector"]:
-            self.first_dimension = "z"
-            self.z_sol = space
-        elif self.domain[0].endswith("particle size"):
-            self.first_dimension = "R"
-            self.R_sol = space
-        else:
-            self.first_dimension = "x"
-            self.x_sol = space
+        self.spatial_variable_names = {
+            k: self._process_spatial_variable_names(v)
+            for k, v in self.spatial_variables.items()
+        }
+        self.first_dimension = self.spatial_variable_names["primary"]
 
         # assign attributes for reference
         pts_for_interp = space
@@ -213,9 +199,9 @@ class ProcessedVariable(object):
         first_dim_edges = self.mesh.edges
         second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
         second_dim_edges = self.base_variables[0].secondary_mesh.edges
-        if self.base_eval.size // len(second_dim_nodes) == len(first_dim_nodes):
+        if self.base_eval_size // len(second_dim_nodes) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
-        elif self.base_eval.size // len(second_dim_nodes) == len(first_dim_edges):
+        elif self.base_eval_size // len(second_dim_nodes) == len(first_dim_edges):
             first_dim_pts = first_dim_edges
 
         second_dim_pts = second_dim_nodes
@@ -285,48 +271,13 @@ class ProcessedVariable(object):
             axis=1,
         )
 
-        # Process r-x, x-z, r-R, R-x, or R-z
-        if self.domain[0].endswith("particle") and self.domains["secondary"][
-            0
-        ].endswith("electrode"):
-            self.first_dimension = "r"
-            self.second_dimension = "x"
-            self.r_sol = first_dim_pts
-            self.x_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and self.domains["secondary"] == ["current collector"]:
-            self.first_dimension = "x"
-            self.second_dimension = "z"
-            self.x_sol = first_dim_pts
-            self.z_sol = second_dim_pts
-        elif self.domain[0].endswith("particle") and self.domains["secondary"][
-            0
-        ].endswith("particle size"):
-            self.first_dimension = "r"
-            self.second_dimension = "R"
-            self.r_sol = first_dim_pts
-            self.R_sol = second_dim_pts
-        elif self.domain[0].endswith("particle size") and self.domains["secondary"][
-            0
-        ].endswith("electrode"):
-            self.first_dimension = "R"
-            self.second_dimension = "x"
-            self.R_sol = first_dim_pts
-            self.x_sol = second_dim_pts
-        elif self.domain[0].endswith("particle size") and self.domains["secondary"] == [
-            "current collector"
-        ]:
-            self.first_dimension = "R"
-            self.second_dimension = "z"
-            self.R_sol = first_dim_pts
-            self.z_sol = second_dim_pts
-        else:  # pragma: no cover
-            raise pybamm.DomainError(
-                f"Cannot process 2D object with domains '{self.domains}'."
-            )
+        self.spatial_variable_names = {
+            k: self._process_spatial_variable_names(v)
+            for k, v in self.spatial_variables.items()
+        }
+
+        self.first_dimension = self.spatial_variable_names["primary"]
+        self.second_dimension = self.spatial_variable_names["secondary"]
 
         # assign attributes for reference
         self.entries = entries
@@ -385,6 +336,35 @@ class ProcessedVariable(object):
             entries,
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
+
+    def _process_spatial_variable_names(self, spatial_variable):
+        if len(spatial_variable) == 0:
+            return None
+
+        # Extract names
+        raw_names = []
+        for var in spatial_variable:
+            # Ignore tabs in domain names
+            if var == "tabs":
+                continue
+            if isinstance(var, str):
+                raw_names.append(var)
+            else:
+                raw_names.append(var.name)
+
+        # Rename battery variables to match PyBaMM convention
+        if all([var.startswith("r") for var in raw_names]):
+            return "r"
+        elif all([var.startswith("x") for var in raw_names]):
+            return "x"
+        elif all([var.startswith("R") for var in raw_names]):
+            return "R"
+        elif len(raw_names) == 1:
+            return raw_names[0]
+        else:
+            raise NotImplementedError(
+                "Spatial variable name not recognized for {}".format(spatial_variable)
+            )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """

@@ -4,12 +4,11 @@
 import pickle
 import pybamm
 import numpy as np
-import copy
 import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-import tqdm
+from pybamm.util import have_optional_dependency
 
 
 def is_notebook():
@@ -74,8 +73,8 @@ class Simulation:
         output_variables=None,
         C_rate=None,
     ):
-        self.parameter_values = parameter_values or model.default_parameter_values
-        self._unprocessed_parameter_values = self.parameter_values
+        self._parameter_values = parameter_values or model.default_parameter_values
+        self._unprocessed_parameter_values = self._parameter_values
 
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
             if experiment is not None:
@@ -114,14 +113,14 @@ class Simulation:
             self.experiment = experiment.copy()
 
         self._unprocessed_model = model
-        self.model = model
+        self._model = model
 
-        self.geometry = geometry or self.model.default_geometry
-        self.submesh_types = submesh_types or self.model.default_submesh_types
-        self.var_pts = var_pts or self.model.default_var_pts
-        self.spatial_methods = spatial_methods or self.model.default_spatial_methods
-        self.solver = solver or self.model.default_solver
-        self.output_variables = output_variables
+        self._geometry = geometry or self._model.default_geometry
+        self._submesh_types = submesh_types or self._model.default_submesh_types
+        self._var_pts = var_pts or self._model.default_var_pts
+        self._spatial_methods = spatial_methods or self._model.default_spatial_methods
+        self._solver = solver or self._model.default_solver
+        self._output_variables = output_variables
 
         # Initialize empty built states
         self._model_with_set_params = None
@@ -201,7 +200,7 @@ class Simulation:
 
     def set_up_and_parameterise_model_for_experiment(self):
         """
-        Set up self.model to be able to run the experiment (new version).
+        Set up self._model to be able to run the experiment (new version).
         In this version, a new model is created for each step.
 
         This increases set-up time since several models to be processed, but
@@ -209,8 +208,8 @@ class Simulation:
         """
         self.experiment_unique_steps_to_model = {}
         for op_number, op in enumerate(self.experiment.unique_steps):
-            new_model = self.model.new_copy()
-            new_parameter_values = self.parameter_values.copy()
+            new_model = self._model.new_copy()
+            new_parameter_values = self._parameter_values.copy()
 
             if op.type != "current":
                 # Voltage or power control
@@ -255,13 +254,13 @@ class Simulation:
             parameterised_model = new_parameter_values.process_model(
                 new_model, inplace=False
             )
-            self.experiment_unique_steps_to_model[repr(op)] = parameterised_model
+            self.experiment_unique_steps_to_model[op.basic_repr()] = parameterised_model
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
-            new_model = self.model.new_copy()
+            new_model = self._model.new_copy()
             # Update parameter values
-            new_parameter_values = self.parameter_values.copy()
+            new_parameter_values = self._parameter_values.copy()
             self._original_temperature = new_parameter_values["Ambient temperature [K]"]
             new_parameter_values.update(
                 {"Current function [A]": 0, "Ambient temperature [K]": "[input]"},
@@ -291,8 +290,12 @@ class Simulation:
                 # figure out whether the voltage event is greater than the starting
                 # voltage (charge) or less (discharge) and set the sign of the
                 # event accordingly
-                if isinstance(op.value, pybamm.Interpolant):
-                    sign = np.sign(op.value.y[0])
+                if isinstance(op.value, pybamm.Interpolant) or isinstance(
+                    op.value, pybamm.Multiplication
+                ):
+                    inpt = {"start time": 0}
+                    init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
+                    sign = np.sign(init_curr)
                 else:
                     sign = np.sign(op.value)
                 if sign > 0:
@@ -357,8 +360,8 @@ class Simulation:
         self._model_with_set_params = self._parameter_values.process_model(
             self._unprocessed_model, inplace=False
         )
-        self._parameter_values.process_geometry(self.geometry)
-        self.model = self._model_with_set_params
+        self._parameter_values.process_geometry(self._geometry)
+        self._model = self._model_with_set_params
 
     def set_initial_soc(self, initial_soc):
         if self._built_initial_soc != initial_soc:
@@ -368,12 +371,27 @@ class Simulation:
             self.op_conds_to_built_models = None
             self.op_conds_to_built_solvers = None
 
-        param = self.model.param
-        self.parameter_values = (
-            self._unprocessed_parameter_values.set_initial_stoichiometries(
-                initial_soc, param=param, inplace=False
+        options = self.model.options
+        param = self._model.param
+        if options["open-circuit potential"] == "MSMR":
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
+                    initial_soc, param=param, inplace=False, options=options
+                )
             )
-        )
+        elif options["working electrode"] == "positive":
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+        else:
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometries(
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 
@@ -400,9 +418,9 @@ class Simulation:
 
         if self.built_model:
             return
-        elif self.model.is_discretised:
-            self._model_with_set_params = self.model
-            self._built_model = self.model
+        elif self._model.is_discretised:
+            self._model_with_set_params = self._model
+            self._built_model = self._model
         else:
             self.set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
@@ -444,7 +462,7 @@ class Simulation:
                 built_model = self._disc.process_model(
                     model_with_set_params, inplace=True, check_model=check_model
                 )
-                solver = self.solver.copy()
+                solver = self._solver.copy()
                 self.op_conds_to_built_solvers[op_cond] = solver
                 self.op_conds_to_built_models[op_cond] = built_model
 
@@ -516,7 +534,7 @@ class Simulation:
         """
         # Setup
         if solver is None:
-            solver = self.solver
+            solver = self._solver
 
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
         logs = {}
@@ -534,7 +552,7 @@ class Simulation:
                 )
             if (
                 self.operating_mode == "without experiment"
-                or self.model.name == "ElectrodeSOH model"
+                or "ElectrodeSOH" in self._model.name
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -638,6 +656,21 @@ class Simulation:
                     starting_solution.all_first_states.copy()
                 )
 
+            # set simulation initial_start_time
+            if starting_solution is None:
+                initial_start_time = self.experiment.initial_start_time
+            else:
+                initial_start_time = starting_solution.initial_start_time
+
+            if (
+                initial_start_time is None
+                and self.experiment.initial_start_time is not None
+            ):
+                raise ValueError(
+                    "When using experiments with `start_time`, the starting_solution "
+                    "must have a `start_time` too."
+                )
+
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
             all_summary_variables = starting_solution_summary_variables
@@ -650,13 +683,61 @@ class Simulation:
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
-            for cycle_num, cycle_length in enumerate(
-                # tqdm is the progress bar.
-                tqdm.tqdm(
+
+            # Add initial padding rest if current time is earlier than first start time
+            # This could be the case when using a starting solution
+            if starting_solution is not None:
+                op_conds = self.experiment.operating_conditions_steps[0]
+                if op_conds.start_time is not None:
+                    rest_time = (
+                        op_conds.start_time
+                        - (
+                            initial_start_time
+                            + timedelta(seconds=float(current_solution.t[-1]))
+                        )
+                    ).total_seconds()
+                    if rest_time > pybamm.settings.step_start_offset:
+                        # logs["step operating conditions"] = "Initial rest for padding"
+                        # callbacks.on_step_start(logs)
+
+                        kwargs["inputs"] = {
+                            **user_inputs,
+                            "Ambient temperature [K]": (
+                                op_conds.temperature or self._original_temperature
+                            ),
+                            "start time": current_solution.t[-1],
+                        }
+                        steps = current_solution.cycles[-1].steps
+                        step_solution = current_solution.cycles[-1].steps[-1]
+
+                        step_solution_with_rest = self.run_padding_rest(
+                            kwargs, rest_time, step_solution
+                        )
+                        steps[-1] = step_solution + step_solution_with_rest
+
+                        cycle_solution, _, _ = pybamm.make_cycle_solution(
+                            steps, esoh_solver=esoh_solver, save_this_cycle=True
+                        )
+                        old_cycles = current_solution.cycles.copy()
+                        old_cycles[-1] = cycle_solution
+                        current_solution += step_solution_with_rest
+                        current_solution.cycles = old_cycles
+
+                        # Update _solution
+                        self._solution = current_solution
+
+            # check if a user has tqdm installed
+            if showprogress:
+                tqdm = have_optional_dependency("tqdm")
+                cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
-                    disable=(not showprogress),
                     desc="Cycling",
-                ),
+                )
+            else:
+                cycle_lengths = self.experiment.cycle_lengths
+
+            for cycle_num, cycle_length in enumerate(
+                cycle_lengths,
                 start=1,
             ):
                 logs["cycle number"] = (
@@ -673,6 +754,8 @@ class Simulation:
                 save_this_cycle = (
                     # always save cycle 1
                     cycle_num == 1
+                    # always save last cycle
+                    or cycle_num == num_cycles
                     # None: save all cycles
                     or save_at_cycles is None
                     # list: save all cycles in the list
@@ -700,7 +783,7 @@ class Simulation:
                             (
                                 op_conds.end_time
                                 - (
-                                    self.experiment.initial_start_time
+                                    initial_start_time
                                     + timedelta(seconds=float(start_time))
                                 )
                             ).total_seconds(),
@@ -708,8 +791,8 @@ class Simulation:
                     else:
                         dt = op_conds.duration
                     op_conds_str = str(op_conds)
-                    model = self.op_conds_to_built_models[repr(op_conds)]
-                    solver = self.op_conds_to_built_solvers[repr(op_conds)]
+                    model = self.op_conds_to_built_models[op_conds.basic_repr()]
+                    solver = self.op_conds_to_built_solvers[op_conds.basic_repr()]
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = op_conds_str
@@ -755,41 +838,25 @@ class Simulation:
                         rest_time = (
                             op_conds.next_start_time
                             - (
-                                self.experiment.initial_start_time
+                                initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
                             )
                         ).total_seconds()
                         if rest_time > pybamm.settings.step_start_offset:
-                            start_time = step_solution.t[-1]
-                            # Let me know if you have a better name
-                            op_conds_str = "Rest for padding"
-                            model = self.op_conds_to_built_models[op_conds_str]
-                            solver = self.op_conds_to_built_solvers[op_conds_str]
-
                             logs["step number"] = (step_num, cycle_length)
-                            logs["step operating conditions"] = op_conds_str
+                            logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)
 
-                            ambient_temp = (
-                                op_conds.temperature or self._original_temperature
-                            )
                             kwargs["inputs"] = {
                                 **user_inputs,
-                                "Ambient temperature [K]": ambient_temp,
-                                "start time": start_time,
+                                "Ambient temperature [K]": (
+                                    op_conds.temperature or self._original_temperature
+                                ),
+                                "start time": step_solution.t[-1],
                             }
-                            # Make sure we take at least 2 timesteps
-                            # The period is hardcoded to 10 minutes, the user can
-                            # always override it by adding a rest step
-                            npts = max(int(round(rest_time / 600)) + 1, 2)
 
-                            step_solution_with_rest = solver.step(
-                                step_solution,
-                                model,
-                                rest_time,
-                                npts=npts,
-                                save=False,
-                                **kwargs,
+                            step_solution_with_rest = self.run_padding_rest(
+                                kwargs, rest_time, step_solution
                             )
                             step_solution += step_solution_with_rest
 
@@ -854,7 +921,7 @@ class Simulation:
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
                     # Note capacity_start could be defined as
-                    # self.parameter_values["Nominal cell capacity [A.h]"] instead
+                    # self._parameter_values["Nominal cell capacity [A.h]"] instead
                     if "capacity" in self.experiment.termination:
                         capacity_start = all_summary_variables[0]["Capacity [A.h]"]
                         logs["start capacity"] = capacity_start
@@ -893,7 +960,29 @@ class Simulation:
 
             callbacks.on_experiment_end(logs)
 
+            # record initial_start_time of the solution
+            self.solution.initial_start_time = initial_start_time
+
         return self.solution
+
+    def run_padding_rest(self, kwargs, rest_time, step_solution):
+        model = self.op_conds_to_built_models["Rest for padding"]
+        solver = self.op_conds_to_built_solvers["Rest for padding"]
+
+        # Make sure we take at least 2 timesteps. The period is hardcoded to 10
+        # minutes,the user can always override it by adding a rest step
+        npts = max(int(round(rest_time / 600)) + 1, 2)
+
+        step_solution_with_rest = solver.step(
+            step_solution,
+            model,
+            rest_time,
+            npts=npts,
+            save=False,
+            **kwargs,
+        )
+
+        return step_solution_with_rest
 
     def step(
         self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
@@ -924,7 +1013,7 @@ class Simulation:
             self.build()
 
         if solver is None:
-            solver = self.solver
+            solver = self._solver
 
         if starting_solution is None:
             starting_solution = self._solution
@@ -938,14 +1027,14 @@ class Simulation:
     def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
-            or isinstance(self.model, pybamm.lead_acid.BaseModel)
-            or isinstance(self.model, pybamm.equivalent_circuit.Thevenin)
-            or self.model.options["working electrode"] != "both"
+            or isinstance(self._model, pybamm.lead_acid.BaseModel)
+            or isinstance(self._model, pybamm.equivalent_circuit.Thevenin)
+            or self._model.options["working electrode"] != "both"
         ):
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
-            self.parameter_values, self.model.param
+            self._parameter_values, self._model.param, options=self._model.options
         )
 
     def plot(self, output_variables=None, **kwargs):
@@ -970,7 +1059,7 @@ class Simulation:
             )
 
         if output_variables is None:
-            output_variables = self.output_variables
+            output_variables = self._output_variables
 
         self.quick_plot = pybamm.dynamic_plot(
             self._solution, output_variables=output_variables, **kwargs
@@ -1006,10 +1095,6 @@ class Simulation:
     def model(self):
         return self._model
 
-    @model.setter
-    def model(self, model):
-        self._model = copy.copy(model)
-
     @property
     def model_with_set_params(self):
         return self._model_with_set_params
@@ -1022,25 +1107,13 @@ class Simulation:
     def geometry(self):
         return self._geometry
 
-    @geometry.setter
-    def geometry(self, geometry):
-        self._geometry = geometry.copy()
-
     @property
     def parameter_values(self):
         return self._parameter_values
 
-    @parameter_values.setter
-    def parameter_values(self, parameter_values):
-        self._parameter_values = parameter_values.copy()
-
     @property
     def submesh_types(self):
         return self._submesh_types
-
-    @submesh_types.setter
-    def submesh_types(self, submesh_types):
-        self._submesh_types = submesh_types.copy()
 
     @property
     def mesh(self):
@@ -1050,33 +1123,17 @@ class Simulation:
     def var_pts(self):
         return self._var_pts
 
-    @var_pts.setter
-    def var_pts(self, var_pts):
-        self._var_pts = var_pts.copy()
-
     @property
     def spatial_methods(self):
         return self._spatial_methods
-
-    @spatial_methods.setter
-    def spatial_methods(self, spatial_methods):
-        self._spatial_methods = spatial_methods.copy()
 
     @property
     def solver(self):
         return self._solver
 
-    @solver.setter
-    def solver(self, solver):
-        self._solver = solver.copy()
-
     @property
     def output_variables(self):
         return self._output_variables
-
-    @output_variables.setter
-    def output_variables(self, output_variables):
-        self._output_variables = copy.copy(output_variables)
 
     @property
     def solution(self):
@@ -1084,7 +1141,7 @@ class Simulation:
 
     def save(self, filename):
         """Save simulation using pickle"""
-        if self.model.convert_to_format == "python":
+        if self._model.convert_to_format == "python":
             # We currently cannot save models in the 'python' format
             raise NotImplementedError(
                 """

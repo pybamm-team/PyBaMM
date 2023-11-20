@@ -13,7 +13,9 @@ if pybamm.have_jax():
     import jax
     from jax.config import config
 
-    config.update("jax_enable_x64", True)
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:
@@ -40,7 +42,7 @@ class JaxCooMatrix:
     def __init__(self, row, col, data, shape):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
 
         self.row = jax.numpy.array(row)
@@ -171,7 +173,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             if output_jax and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
                 constant_symbols[symbol.id] = create_jax_coo_matrix(value)
-
             else:
                 constant_symbols[symbol.id] = value
         return
@@ -536,7 +537,7 @@ class EvaluatorJax:
     def __init__(self, symbol):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
 
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)

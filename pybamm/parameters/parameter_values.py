@@ -60,10 +60,12 @@ class ParameterValues:
             self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
-            if isinstance(values, str) and values in pybamm.parameter_sets:
+            if isinstance(values, str) and values in pybamm.parameter_sets.keys():
                 values = pybamm.parameter_sets[values]
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
+            else:
+                raise ValueError("Invalid Parameter Value")
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -99,6 +101,16 @@ class ParameterValues:
         bpx = parse_bpx_file(filename)
         pybamm_dict = _bpx_to_param_dict(bpx)
 
+        if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
+            pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
+                "Lower voltage cut-off [V]"
+            ]
+            pybamm_dict["Open-circuit voltage at 100% SOC [V]"] = pybamm_dict[
+                "Upper voltage cut-off [V]"
+            ]
+            # probably should put a warning here to indicate we are going
+            # ahead with the low voltage limit.
+
         # get initial concentrations based on SOC
         c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
         pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
@@ -107,7 +119,25 @@ class ParameterValues:
         return pybamm.ParameterValues(pybamm_dict)
 
     def __getitem__(self, key):
-        return self._dict_items[key]
+        try:
+            return self._dict_items[key]
+        except KeyError as err:
+            if (
+                "Exchange-current density for lithium metal electrode [A.m-2]"
+                in err.args[0]
+                and "Exchange-current density for plating [A.m-2]" in self._dict_items
+            ):
+                raise KeyError(
+                    "'Exchange-current density for plating [A.m-2]' has been renamed "
+                    "to 'Exchange-current density for lithium metal electrode [A.m-2]' "
+                    "when referring to the reaction at the surface of a lithium metal "
+                    "electrode. This is to avoid confusion with the exchange-current "
+                    "density for the lithium plating reaction in a porous negative "
+                    "electrode. To avoid this error, change your parameter file to use "
+                    "the new name."
+                )
+            else:
+                raise err
 
     def get(self, key, default=None):
         """Return item corresponding to key if it exists, otherwise return default"""
@@ -241,20 +271,54 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_stoichiometry_half_cell(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial stoichiometry of the working electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            initial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+
+        c_max = self.evaluate(param.p.prim.c_max)
+
+        parameter_values.update(
+            {
+                "Initial concentration in {} electrode [mol.m-3]".format(
+                    options["working electrode"]
+                ): x
+                * c_max
+            }
+        )
+        return parameter_values
+
     def set_initial_stoichiometries(
         self,
         initial_value,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
+        options=None,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
         SOC or voltage
         """
-        param = param or pybamm.LithiumIonParameters()
+        param = param or pybamm.LithiumIonParameters(options)
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_value, self, param=param, known_value=known_value
+            initial_value, self, param=param, known_value=known_value, options=options
         )
         if inplace:
             parameter_values = self
@@ -266,6 +330,34 @@ class ParameterValues:
             {
                 "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
                 "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        return parameter_values
+
+    def set_initial_ocps(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial OCP of each electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            initial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+        parameter_values.update(
+            {
+                "Initial voltage in negative electrode [V]": Un,
+                "Initial voltage in positive electrode [V]": Up,
             }
         )
         return parameter_values
@@ -647,7 +739,9 @@ class ParameterValues:
             new_symbol._scale = self.process_symbol(symbol.scale)
             reference = self.process_symbol(symbol.reference)
             if isinstance(reference, pybamm.Vector):
-                reference = pybamm.Scalar(float(reference.evaluate()))
+                # address numpy 1.25 deprecation warning: array should have ndim=0
+                # before conversion
+                reference = pybamm.Scalar((reference.evaluate()).item())
             new_symbol._reference = reference
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol

@@ -5,10 +5,10 @@ from tests import TestCase
 import unittest
 
 import numpy as np
-import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class TestBinaryOperators(TestCase):
@@ -53,6 +53,26 @@ class TestBinaryOperators(TestCase):
         # test simplifying
         summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
         self.assertEqual(summ2, pybamm.Scalar(4))
+
+    def test_addition_numpy_array(self):
+        a = pybamm.Symbol("a")
+        # test adding symbol and numpy array
+        # converts numpy array to vector
+        array = np.array([1, 2, 3])
+        summ3 = pybamm.Addition(a, array)
+        self.assertIsInstance(summ3, pybamm.Addition)
+        self.assertIsInstance(summ3.children[0], pybamm.Symbol)
+        self.assertIsInstance(summ3.children[1], pybamm.Vector)
+
+        summ4 = array + a
+        self.assertIsInstance(summ4.children[0], pybamm.Vector)
+
+        # should error if numpy array is not 1D
+        array = np.array([[1, 2, 3], [4, 5, 6]])
+        with self.assertRaisesRegex(ValueError, "left must be a 1D array"):
+            pybamm.Addition(array, a)
+        with self.assertRaisesRegex(ValueError, "right must be a 1D array"):
+            pybamm.Addition(a, array)
 
     def test_power(self):
         a = pybamm.Symbol("a")
@@ -303,6 +323,12 @@ class TestBinaryOperators(TestCase):
         # simplifications
         self.assertEqual(1 < b + 2, -1 < b)
         self.assertEqual(b + 1 > 2, b > 1)
+
+        # expression with a subtract
+        expr = 2 * (b < 1) - (b > 3)
+        self.assertEqual(expr.evaluate(y=np.array([0])), 2)
+        self.assertEqual(expr.evaluate(y=np.array([2])), 0)
+        self.assertEqual(expr.evaluate(y=np.array([4])), -1)
 
     def test_equality(self):
         a = pybamm.Scalar(1)
@@ -720,6 +746,7 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(pybamm.inner(a3, a3).evaluate(), 9)
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         # Test print_name
         pybamm.Addition.print_name = "test"
         self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))

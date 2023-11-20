@@ -234,20 +234,78 @@ class BaseIntegrationTestLithiumIon:
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_well_posed_loss_active_material_current_negative(self):
+        options = {"loss of active material": ("current-driven", "none")}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def current_LAM(i, T):
+            return -1e-10 * abs(i)
+
+        parameter_values.update(
+            {"Negative electrode current-driven LAM rate": current_LAM},
+            check_already_exists=False,
+        )
+
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_well_posed_loss_active_material_current_positive(self):
+        options = {"loss of active material": ("none", "current-driven")}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def current_LAM(i, T):
+            return -1e-10 * abs(i)
+
+        parameter_values.update(
+            {"Positive electrode current-driven LAM rate": current_LAM},
+            check_already_exists=False,
+        )
+
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         parameter_values = pybamm.ParameterValues("Ai2020")
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        var_pts = {
+            "x_n": 20,  # negative electrode
+            "x_s": 20,  # separator
+            "x_p": 20,  # positive electrode
+            "r_n": 26,  # negative particle
+            "r_p": 26,  # positive particle
+        }
+        self.run_basic_processing_test(options,
+                                       parameter_values=parameter_values,
+                                       var_pts=var_pts
+                                       )
 
     def test_positive_cracking(self):
         options = {"particle mechanics": ("none", "swelling and cracking")}
         parameter_values = pybamm.ParameterValues("Ai2020")
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        var_pts = {
+            "x_n": 20,  # negative electrode
+            "x_s": 20,  # separator
+            "x_p": 20,  # positive electrode
+            "r_n": 26,  # negative particle
+            "r_p": 26,  # positive particle
+        }
+        self.run_basic_processing_test(options,
+                                       parameter_values=parameter_values,
+                                       var_pts=var_pts
+                                       )
 
     def test_both_cracking(self):
         options = {"particle mechanics": "swelling and cracking"}
         parameter_values = pybamm.ParameterValues("Ai2020")
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        var_pts = {
+            "x_n": 20,  # negative electrode
+            "x_s": 20,  # separator
+            "x_p": 20,  # positive electrode
+            "r_n": 26,  # negative particle
+            "r_p": 26,  # positive particle
+        }
+        self.run_basic_processing_test(options,
+                                       parameter_values=parameter_values,
+                                       var_pts=var_pts
+                                       )
 
     def test_both_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
@@ -280,3 +338,15 @@ class BaseIntegrationTestLithiumIon:
             {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_basic_processing_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "intercalation kinetics": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+        }
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+        model = self.model(options)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)

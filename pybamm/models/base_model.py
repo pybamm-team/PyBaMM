@@ -9,7 +9,7 @@ import casadi
 import numpy as np
 
 import pybamm
-from pybamm.expression_tree.operations.latexify import Latexify
+from pybamm.util import have_optional_dependency
 
 
 class BaseModel:
@@ -113,6 +113,7 @@ class BaseModel:
         self._input_parameters = None
         self._parameter_info = None
         self._variables_casadi = {}
+        self._geometry = pybamm.Geometry({})
 
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
@@ -311,6 +312,10 @@ class BaseModel:
         raise NotImplementedError(
             "length_scales has been removed since models are now dimensional"
         )
+
+    @property
+    def geometry(self):
+        return self._geometry
 
     @property
     def default_var_pts(self):
@@ -1050,13 +1055,42 @@ class BaseModel:
         C.generate()
 
     def latexify(self, filename=None, newline=True, output_variables=None):
-        # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
+        """
+        Converts all model equations in latex.
+
+        Parameters
+        ----------
+        filename: str (optional)
+            Accepted file formats - any image format, pdf and tex
+            Default is None, When None returns all model equations in latex
+            If not None, returns all model equations in given file format.
+
+        newline: bool (optional)
+            Default is True, If True, returns every equation in a new line.
+            If False, returns the list of all the equations.
+
+        Load model
+        >>> model = pybamm.lithium_ion.SPM()
+
+        This will returns all model equations in png
+        >>> model.latexify("equations.png")
+
+        This will return all the model equations in latex
+        >>> model.latexify()
+
+        This will return the list of all the model equations
+        >>> model.latexify(newline=False)
+
+        This will return first five model equations
+        >>> model.latexify(newline=False)[1:5]
+        """
+        sympy = have_optional_dependency("sympy")
+        if sympy:
+            from pybamm.expression_tree.operations.latexify import Latexify
+
         return Latexify(self, filename, newline).latexify(
             output_variables=output_variables
         )
-
-    # Set :meth:`latexify` docstring from :class:`Latexify`
-    latexify.__doc__ = Latexify.__doc__
 
     def process_parameters_and_discretise(self, symbol, parameter_values, disc):
         """

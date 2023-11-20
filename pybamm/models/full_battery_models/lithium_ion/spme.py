@@ -8,8 +8,9 @@ from .spm import SPM
 class SPMe(SPM):
     """
     Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
-    [1]_. Inherits most submodels from SPM, only modifies potentials and electrolyte.
-    See :class:`pybamm.lithium_ion.BaseModel` for more details.
+    :footcite:t:`Marquis2019`. Inherits most submodels from SPM, only modifies
+    potentials and electrolyte. See :class:`pybamm.lithium_ion.BaseModel` for more
+    details.
 
     Examples
     --------
@@ -18,11 +19,6 @@ class SPMe(SPM):
     >>> model.name
     'Single Particle Model with electrolyte'
 
-    References
-    ----------
-    .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. Journal of The
-           Electrochemical Society, 166(15):A3693–A3706, 2019
     """
 
     def __init__(

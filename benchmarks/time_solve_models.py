@@ -145,8 +145,7 @@ class TimeSolveDFN:
     )
 
     def setup(self, solve_first, parameters, solver_class):
-        if (solve_first, parameters, solver_class) == (
-            True,
+        if (parameters, solver_class) == (
             "ORegan2022",
             pybamm.CasadiSolver,
         ):

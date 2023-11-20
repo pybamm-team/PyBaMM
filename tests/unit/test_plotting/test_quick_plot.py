@@ -290,11 +290,12 @@ class TestQuickPlot(TestCase):
         quick_plot.plot(0)
 
         # test creating a GIF
-        quick_plot.create_gif(number_of_images=3, duration=3)
-        assert not os.path.exists("plot*.png")
-        assert os.path.exists("plot.gif")
-        os.remove("plot.gif")
-
+        test_stub = "spm_sim_test"
+        test_file = f"{test_stub}.gif"
+        quick_plot.create_gif(number_of_images=3, duration=3, output_filename=test_file)
+        assert not os.path.exists(f"{test_stub}*.png")
+        assert os.path.exists(test_file)
+        os.remove(test_file)
         pybamm.close_plots()
 
     def test_loqs_spme(self):
@@ -343,7 +344,7 @@ class TestQuickPlot(TestCase):
             # test quick plot of particle for spme
             if (
                 model.name == "Single Particle Model with electrolyte"
-                and model.options["working electrode"] != "positive"
+                and model.options["working electrode"] == "both"
             ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",
@@ -463,9 +464,13 @@ class TestQuickPlot(TestCase):
 
         pybamm.close_plots()
 
-    def test_failure(self):
-        with self.assertRaisesRegex(TypeError, "solutions must be"):
+    def test_invalid_input_type_failure(self):
+        with self.assertRaisesRegex(TypeError, "Solutions must be"):
             pybamm.QuickPlot(1)
+
+    def test_empty_list_failure(self):
+        with self.assertRaisesRegex(TypeError, "QuickPlot requires at least 1"):
+            pybamm.QuickPlot([])
 
     def test_model_with_inputs(self):
         parameter_values = pybamm.ParameterValues("Chen2020")

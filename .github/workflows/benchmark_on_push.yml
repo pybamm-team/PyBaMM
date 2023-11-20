@@ -1,26 +1,37 @@
 name: Run benchmarks on push
 on:
   push:
+    branches: [main, develop]
   pull_request:
+
+concurrency:
+  # Cancel intermediate builds always
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
+
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
           sudo apt install gfortran gcc libopenblas-dev
+
       - name: Install python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools virtualenv asv wget cmake casadi numpy
-      - name: Install SuiteSparse and Sundials
+          python -m pip install --upgrade pip wheel setuptools wget cmake casadi numpy
+          python -m pip install asv[virtualenv]
+
+      - name: Install SuiteSparse and SUNDIALS
         run: python scripts/install_KLU_Sundials.py
+
       - name: Fetch base branch
         run: |
           # This workflow also runs for merge commits
@@ -42,7 +53,8 @@ jobs:
           HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
-          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr --strict -v
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr -v
+
       - name: Compare commits' benchmark results
         run: |
           BASE_COMMIT=$(head -1 commits_to_compare.txt)

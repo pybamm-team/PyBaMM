@@ -1,0 +1,196 @@
+/* Font */
+
+@import url("https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Open+Sans:ital,wght@0,400;0,600;1,400;1,600&display=swap");
+
+body {
+  font-family: "Open Sans", sans-serif;
+}
+
+/* Main page overview cards */
+
+.sd-card {
+  background: #fff;
+  border-radius: 0;
+  padding: 30px 10px 20px 10px;
+  margin: 10px 0px;
+}
+
+.sd-card .sd-card-header {
+  text-align: center;
+}
+
+.sd-card .sd-card-header .sd-card-text {
+  margin: 0px;
+}
+
+.sd-card .sd-card-img-top {
+  height: 52px;
+  width: 52px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sd-card .sd-card-header {
+  border: none;
+  background-color: white;
+  color: #150458 !important;
+  font-size: var(--pst-font-size-h5);
+  font-weight: bold;
+  padding: 2.5rem 0rem 0.5rem 0rem;
+}
+
+.sd-card .sd-card-footer {
+  border: none;
+  background-color: white;
+}
+
+.sd-card .sd-card-footer .sd-card-text {
+  max-width: 220px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Dark theme tweaking */
+
+html[data-theme="dark"] .sd-card img[src*=".svg"] {
+  filter: invert(0.82) brightness(0.8) contrast(1.2);
+}
+
+/* Main index page overview cards */
+
+html[data-theme="dark"] .sd-card {
+  background-color: var(--pst-color-background);
+}
+
+/* Inheritance diagram dropdown options */
+
+html[data-theme="dark"] .sd-card .sd-card-header {
+  background-color: var(--pst-color-background);
+  color: #459db9 !important;
+}
+
+html[data-theme="dark"] .sd-card .sd-card-footer {
+  background-color: var(--pst-color-background);
+}
+
+details.sd-dropdown {
+  box-shadow: none !important;
+}
+
+.sd-summary-content blockquote {
+  border-left: 0 !important;
+}
+
+/* Overrides for sphinx-hoverxref since it does not support a native dark theme, see */
+/* https://github.com/readthedocs/sphinx-hoverxref/issues/231 */
+
+/* These will ensure that the tooltip inherits the PyData colours */
+
+.tooltipster-sidetip.tooltipster-shadow .tooltipster-box {
+  background: var(--pst-color-background) !important;
+}
+
+.tooltipster-sidetip.tooltipster-shadow .tooltipster-arrow {
+  background: none !important;
+  overflow: hidden;
+  position: absolute;
+}
+
+.tooltipster-sidetip.tooltipster-shadow.tooltipster-right .tooltipster-arrow-border {
+  border-right-color: var(--pst-color-background) !important;
+}
+
+.tooltipster-sidetip.tooltipster-shadow.tooltipster-left .tooltipster-arrow-border {
+  border-left-color: var(--pst-color-background) !important;
+}
+
+/* Custom styles for Algolia DocSearch v3 items and modals */
+/* to make them congruous with PST on light and dark themes */
+
+@import url("https://cdn.jsdelivr.net/npm/@docsearch/css@3");
+
+/* Remove the default PST search */
+
+div.search-button__wrapper.show {
+  visibility: hidden;
+}
+
+.DocSearch-Modal {
+  margin: 150px auto auto;
+  background: var(--pst-color-background);
+}
+
+.DocSearch-Container {
+  z-index: 2000;
+}
+
+kbd.DocSearch-Commands-Key {
+  border: 0;
+  box-shadow: var(--docsearch-key-shadow);
+  margin: 1px 5px 1px 0px;
+  padding: inherit;
+}
+
+.DocSearch-Button-Key {
+  width: 24px;
+}
+
+/* Do not add custom padding for keyboard buttons */
+
+kbd:not(.compound) {
+  padding: 0rem 0rem;
+}
+
+html[data-theme="dark"] kbd.DocSearch-Commands-Key {
+  color: var(--pst-color-border);
+}
+
+html[data-theme="dark"] .DocSearch-Commands-Key {
+  background: linear-gradient(-26.5deg,#30474f,#31355b)
+}
+
+.DocSearch-Hit-source {
+  background: var(--pst-color-background);
+}
+
+.DocSearch-Hit-icon {
+  height: 30px;
+}
+
+.DocSearch-Button {
+  border-radius: 6px;
+}
+
+.DocSearch-Footer {
+  background: var(--pst-color-background);
+}
+
+/* Should be for both light and dark */
+
+:root {
+  --docsearch-primary-color: var(--pst-color-info);
+  --docsearch-searchbox-focus-background: var(--pst-color-background);
+  --docsearch-footer-background: var(--pst-color-on-background)
+}
+
+/* Logo in dark theme */
+
+html[data-theme="dark"] .DocSearch-Logo svg path.cls-1,
+html[data-theme="dark"] .DocSearch-Logo svg path.cls-2,
+html[data-theme="dark"] .DocSearch-Logo svg rect.cls-1 {
+ fill: var(--pst-color-white);
+}
+
+/* Logo in light theme */
+
+html[data-theme="light"] .DocSearch-Logo svg path.cls-1,
+html[data-theme="light"] .DocSearch-Logo svg path.cls-2,
+html[data-theme="light"] .DocSearch-Logo svg rect.cls-1 {
+  fill: var(--pst-color-primary);
+}
+
+/* Search field dark theme corrections */
+
+html[data-theme="dark"] .DocSearch-Button {
+  background: var(--pst-color-background);
+}

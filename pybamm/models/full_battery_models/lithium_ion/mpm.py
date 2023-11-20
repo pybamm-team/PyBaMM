@@ -8,7 +8,7 @@ from .spm import SPM
 class MPM(SPM):
     """
     Many-Particle Model (MPM) of a lithium-ion battery with particle-size
-    distributions for each electrode, from [1]_.
+    distributions for each electrode, from :footcite:t:`Kirk2020`.
     See :class:`pybamm.lithium_ion.BaseModel` for more details.
 
     Examples
@@ -18,12 +18,6 @@ class MPM(SPM):
     >>> model.name
     'Many-Particle Model'
 
-    References
-    ----------
-    .. [1] TL Kirk, J Evans, CP Please and SJ Chapman. “Modelling electrode
-        heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size
-        distributions”.
-        In: arXiv preprint arXiv:2006.12208 (2020).
     """
 
     def __init__(self, options=None, name="Many-Particle Model", build=True):
@@ -53,6 +47,6 @@ class MPM(SPM):
     def default_parameter_values(self):
         default_params = super().default_parameter_values
         default_params = pybamm.get_size_distribution_parameters(
-            default_params, electrode=self.options["working electrode"]
+            default_params, working_electrode=self.options["working electrode"]
         )
         return default_params

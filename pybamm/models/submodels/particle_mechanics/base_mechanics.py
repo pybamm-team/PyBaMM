@@ -6,7 +6,8 @@ import pybamm
 
 class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle mechanics models, referenced from [1]_ and [2]_.
+    Base class for particle mechanics models, referenced from :footcite:t:`Ai2019` and
+    :footcite:t:`Deshpande2012`.
 
     Parameters
     ----------
@@ -20,14 +21,6 @@ class BaseMechanics(pybamm.BaseSubModel):
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    References
-    ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-           Cells. Journal of The Electrochemical Society, 167(1), 013512.
-    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
-           Battery cycle life prediction with coupled chemical degradation and
-           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
     """
 
     def __init__(self, param, domain, options, phase="primary"):
@@ -57,12 +50,13 @@ class BaseMechanics(pybamm.BaseSubModel):
         c_0 = domain_param.c_0
         E0 = domain_param.E
         nu = domain_param.nu
+        L0 = domain_param.L
         sto_init = pybamm.r_average(domain_param.prim.c_init / domain_param.prim.c_max)
         v_change = pybamm.x_average(
             eps_s * domain_param.prim.t_change(sto_rav)
         ) - pybamm.x_average(eps_s * domain_param.prim.t_change(sto_init))
 
-        electrode_thickness_change = self.param.n_electrodes_parallel * v_change
+        electrode_thickness_change = self.param.n_electrodes_parallel * v_change * L0
         # Ai2019 eq [10]
         disp_surf = Omega * R0 / 3 * (c_s_rav - c_0)
         # c0 reference concentration for no deformation
