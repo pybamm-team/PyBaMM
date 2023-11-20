@@ -413,16 +413,17 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ### Installation
 
-Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/) and [setuptools](http://setuptools.readthedocs.io/). It uses `CMake` to compile C++ extensions using [`pybind11`](https://pybind11.readthedocs.io/en/stable/) and [`casadi`](https://web.casadi.org/) (non-Windows). The installation process is described in detail in the [source installation](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) page and is configured through the `CMakeLists.txt` file.
+Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/) and [setuptools](http://setuptools.readthedocs.io/). It uses `CMake` to compile C++ extensions using [`pybind11`](https://pybind11.readthedocs.io/en/stable/) and [`casadi`](https://web.casadi.org/). The installation process is described in detail in the [source installation](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) page and is configured through the `CMakeLists.txt` file.
 
 Configuration files:
 
 ```
 setup.py
 pyproject.toml
+MANIFEST.in
 ```
 
-Note that this file must be kept in sync with the version number in [`pybamm/__init__.py`](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/__init__.py).
+Note: `MANIFEST.in` is used to include and exclude non-Python files and auxiliary package data for PyBaMM when distributing it. If a file is not included in `MANIFEST.in`, it will not be included in the source distribution (SDist) and subsequently not be included in the binary distribution (wheel).
 
 ### Continuous Integration using GitHub Actions
 
