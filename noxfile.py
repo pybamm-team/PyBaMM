@@ -17,7 +17,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
 }
-VENV_DIR = Path('./venv').resolve()
+VENV_DIR = Path("./venv").resolve()
 
 
 def set_environment_variables(env_dict, session):
@@ -121,13 +121,25 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    session.run(
+        python,
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "pip",
+        "setuptools",
+        "wheel",
+        external=True,
+    )
     if sys.platform == "linux":
-        session.run(python,
-                    "-m",
-                    "pip",
-                    "install",
-                    ".[all,dev,jax,odes]",
-                    external=True,
+        session.run(
+            python,
+            "-m",
+            "pip",
+            "install",
+            ".[all,dev,jax,odes]",
+            external=True,
         )
     else:
         session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", external=True)
@@ -153,26 +165,26 @@ def build_docs(session):
     # Local development
     if session.interactive:
         session.run(
-        "sphinx-autobuild",
-        "-j",
-        "auto",
-        "--open-browser",
-        "-qT",
-        ".",
-        f"{envbindir}/../tmp/html",
+            "sphinx-autobuild",
+            "-j",
+            "auto",
+            "--open-browser",
+            "-qT",
+            ".",
+            f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
     else:
         session.run(
-        "sphinx-build",
-        "-j",
-        "auto",
-        "-b",
-        "html",
-        "-W",
-        "--keep-going",
-        ".",
-        f"{envbindir}/../tmp/html",
+            "sphinx-build",
+            "-j",
+            "auto",
+            "-b",
+            "html",
+            "-W",
+            "--keep-going",
+            ".",
+            f"{envbindir}/../tmp/html",
         )
 
 
