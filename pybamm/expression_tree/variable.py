@@ -3,9 +3,9 @@
 #
 
 import numpy as np
-import sympy
 import numbers
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class VariableBase(pybamm.Symbol):
@@ -124,6 +124,7 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
