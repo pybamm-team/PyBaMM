@@ -152,6 +152,7 @@ if platform.system() == "Darwin":
 # runners are Intel-based, but the wheels are to be built for both architectures.
 if os.getenv("CIBUILDWHEEL", "0") == "1":
     cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64")
+    cmake_args.append("-DCMAKE_CROSSCOMPILING=ON")
 
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
 # download_dir
