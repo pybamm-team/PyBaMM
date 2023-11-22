@@ -72,7 +72,7 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,jax]", silent=False)
     if sys.platform == "linux":
         session.install("-e", ".[odes]", silent=False)
     session.run("python", "run-tests.py", "--integration")
