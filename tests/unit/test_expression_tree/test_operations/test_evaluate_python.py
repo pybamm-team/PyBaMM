@@ -503,7 +503,7 @@ class TestEvaluate(TestCase):
         expr = pybamm.exp(a * b)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, np.exp(6))
+        np.testing.assert_array_almost_equal(result, np.exp(6), decimal=15)
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
