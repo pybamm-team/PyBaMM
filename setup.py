@@ -268,15 +268,9 @@ setup(
         # Note: jax and jaxlib must be pinned to a specific version
         # to avoid upstream breaking changes.
         "jax": [
-            # 0.4.18 provides support for Jax on aarch64 containers
-            # via the PyBaMM images on Docker Hub which come with
-            # Python 3.11 installed.
-            # It also provides support for CPU-only Jax on Windows.
             "jax==0.4.20; python_version >= '3.9'",
             "jaxlib==0.4.20; python_version >= '3.9'",
-            # Jax 0.4.13 was the last version to support Python 3.8.
-            # Support for CPU-only Windows was added in 0.4.13, so
-            # this version supports Windows too.
+            # The versions below can be removed once PyBaMM no longer supports python 3.8
             "jax==0.4.13; python_version < '3.9'",
             "jaxlib==0.4.13; python_version < '3.9'",
         ],
