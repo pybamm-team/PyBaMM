@@ -60,9 +60,9 @@ def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,jax]", silent=False)
     if sys.platform != "win32":
-        session.install("-e", ".[odes,jax]", silent=False)
+        session.install("-e", ".[odes]", silent=False)
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -89,9 +89,9 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,jax]", silent=False)
     if sys.platform == "linux":
-        session.install("-e", ".[odes,jax]", silent=False)
+        session.install("-e", ".[odes]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -128,16 +128,16 @@ def set_dev(session):
                     external=True,
         )
     else:
-        session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", external=True)
+        session.run(python, "-m", "pip", "install", "-e", ".[all,dev,jax]", external=True)
 
 
 @nox.session(name="tests")
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,jax]", silent=False)
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("-e", ".[odes, jax]", silent=False)
+        session.install("-e", ".[odes]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
