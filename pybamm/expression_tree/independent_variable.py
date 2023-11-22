@@ -129,7 +129,7 @@ class SpatialVariable(IndependentVariable):
             ["particle" in dom for dom in domain]
         ):
             raise pybamm.DomainError(
-                "domain cannot be particle if name is '{}'".format(name)
+                f"domain cannot be particle if name is '{name}'"
             )
 
     def create_copy(self):

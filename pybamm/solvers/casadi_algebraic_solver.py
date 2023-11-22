@@ -141,7 +141,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y_alg_sol)
             elif not success:
                 raise pybamm.SolverError(
-                    "Could not find acceptable solution: {}".format(message)
+                    f"Could not find acceptable solution: {message}"
                 )
             elif any(np.isnan(fun)):
                 raise pybamm.SolverError(
@@ -149,13 +149,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 )
             else:
                 raise pybamm.SolverError(
-                    """
+                    f"""
                     Could not find acceptable solution: solver terminated
-                    successfully, but maximum solution error ({})
-                    above tolerance ({})
-                    """.format(
-                        casadi.mmax(casadi.fabs(fun)), self.tol
-                    )
+                    successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))})
+                    above tolerance ({self.tol})
+                    """
                 )
 
         # Concatenate differential part

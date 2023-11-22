@@ -16,9 +16,7 @@ def _process_name(name, path, ext):
             filename = os.path.join(path, "data", name)
             if not os.path.exists(filename):
                 raise FileNotFoundError(
-                    "Could not find file '{}' in '{}' or '{}'".format(
-                        name, path, os.path.join(path, "data")
-                    )
+                    f"Could not find file '{name}' in '{path}' or '{os.path.join(path, 'data')}'"
                 )
     else:
         filename = name

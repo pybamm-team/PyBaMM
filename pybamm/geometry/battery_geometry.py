@@ -135,14 +135,12 @@ def battery_geometry(
             }
         else:
             raise pybamm.GeometryError(
-                "Invalid current collector dimension '{}' (should be 0 or 1 for "
-                "a 'cylindrical' battery geometry)".format(current_collector_dimension)
+                f"Invalid current collector dimension '{current_collector_dimension}' (should be 0 or 1 for "
+                "a 'cylindrical' battery geometry)"
             )
     else:
         raise pybamm.GeometryError(
-            "Invalid form factor '{}' (should be 'pouch' or 'cylindrical'".format(
-                form_factor
-            )
+            f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
         )
 
     return pybamm.Geometry(geometry)

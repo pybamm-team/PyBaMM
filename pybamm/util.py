@@ -122,10 +122,10 @@ class FuzzyDict(dict):
             )
         elif print_values:
             # Else print results, including dict items
-            print("\n".join("{}\t{}".format(k, v) for k, v in results.items()))
+            print("\n".join(f"{k}\t{v}" for k, v in results.items()))
         else:
             # Just print keys
-            print("\n".join("{}".format(k) for k in results.keys()))
+            print("\n".join(f"{k}" for k in results.keys()))
 
     def copy(self):
         return FuzzyDict(super().copy())
@@ -171,13 +171,13 @@ class TimerTime:
         """
         time = self.value
         if time < 1e-6:
-            return "{:.3f} ns".format(time * 1e9)
+            return f"{time * 1e9:.3f} ns"
         if time < 1e-3:
-            return "{:.3f} us".format(time * 1e6)
+            return f"{time * 1e6:.3f} us"
         if time < 1:
-            return "{:.3f} ms".format(time * 1e3)
+            return f"{time * 1e3:.3f} ms"
         elif time < 60:
-            return "{:.3f} s".format(time)
+            return f"{time:.3f} s"
         output = []
         time = int(round(time))
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]

@@ -74,9 +74,7 @@ class Mesh(dict):
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
-                                "Points not given for a variable in domain '{}'".format(
-                                    domain
-                                )
+                                f"Points not given for a variable in domain '{domain}'"
                             )
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
@@ -249,4 +247,4 @@ class MeshGenerator:
         return self.submesh_type(lims, npts, **self.submesh_params)
 
     def __repr__(self):
-        return "Generator for {}".format(self.submesh_type.__name__)
+        return f'Generator for {self.submesh_type.__name__}'

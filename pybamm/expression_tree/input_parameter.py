@@ -79,7 +79,7 @@ class InputParameter(pybamm.Symbol):
             input_eval = inputs[self.name]
         # raise more informative error if can't find name in dict
         except KeyError:
-            raise KeyError("Input parameter '{}' not found".format(self.name))
+            raise KeyError(f"Input parameter '{self.name}' not found")
 
         if isinstance(input_eval, numbers.Number):
             input_size = 1
@@ -94,10 +94,6 @@ class InputParameter(pybamm.Symbol):
                 return input_eval
         else:
             raise ValueError(
-                "Input parameter '{}' was given an object of size '{}'".format(
-                    self.name, input_size
-                )
-                + " but was expecting an object of size '{}'.".format(
-                    self._expected_size
-                )
+                f"Input parameter '{self.name}' was given an object of size '{input_size}'"
+                + f" but was expecting an object of size '{self._expected_size}'."
             )

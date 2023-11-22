@@ -314,7 +314,7 @@ class BaseSolver(object):
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
             raise pybamm.SolverError(
-                "Cannot use ODE solver '{}' to solve DAE model".format(self.name)
+                f"Cannot use ODE solver '{self.name}' to solve DAE model"
             )
         # Check model.rhs for algebraic solvers
         if self.algebraic_solver is True and len(model.rhs) > 0:
@@ -338,16 +338,14 @@ class BaseSolver(object):
             except pybamm.DiscretisationError as e:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, "
-                    "model should be discretised before solving ({})".format(e)
+                    f"model should be discretised before solving ({e})"
                 )
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
-                "Converting {} to CasADi for solving with CasADi solver".format(
-                    model.name
-                )
+                f"Converting {model.name} to CasADi for solving with CasADi solver"
             )
             model.convert_to_format = "casadi"
         if (
@@ -355,9 +353,7 @@ class BaseSolver(object):
             and model.convert_to_format != "casadi"
         ):
             pybamm.logger.warning(
-                "Converting {} to CasADi for calculating ICs with CasADi".format(
-                    model.name
-                )
+                f"Converting {model.name} to CasADi for calculating ICs with CasADi"
             )
             model.convert_to_format = "casadi"
 
@@ -689,7 +685,7 @@ class BaseSolver(object):
             root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
-                "Could not find consistent states: {}".format(e.args[0])
+                f"Could not find consistent states: {e.args[0]}"
             )
         pybamm.logger.debug("Found consistent states")
 
@@ -748,7 +744,7 @@ class BaseSolver(object):
             If multiple calls to `solve` pass in different models
 
         """
-        pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+        pybamm.logger.info(f"Start solving {model.name} with {self.name}")
 
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
@@ -783,7 +779,7 @@ class BaseSolver(object):
                     "'t_eval' can be provided as an array of times at which to "
                     "return the solution, or as a list [t0, tf] where t0 is the "
                     "initial time and tf is the final time, but has been provided "
-                    "as a list of length {}.".format(len(t_eval))
+                    f"as a list of length {len(t_eval)}."
                 )
             else:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
@@ -898,10 +894,7 @@ class BaseSolver(object):
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.verbose(
-                "Calling solver for {} < t < {}".format(
-                    t_eval[start_index],
-                    t_eval[end_index - 1],
-                )
+                f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
             ninputs = len(model_inputs_list)
             if ninputs == 1:
@@ -976,26 +969,19 @@ class BaseSolver(object):
 
         # Report times
         if len(solutions) == 1:
-            pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+            pybamm.logger.info(f"Finish solving {model.name} ({termination})")
             pybamm.logger.info(
                 (
-                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
-                    "Total time: {}"
-                ).format(
-                    solutions[0].set_up_time,
-                    solutions[0].solve_time,
-                    solutions[0].integration_time,
-                    solutions[0].total_time,
+                    f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time} "
+                    f"(of which integration time: {solutions[0].integration_time}), "
+                    f"Total time: {solutions[0].total_time}"
                 )
             )
         else:
-            pybamm.logger.info("Finish solving {} for all inputs".format(model.name))
+            pybamm.logger.info(f"Finish solving {model.name} for all inputs")
             pybamm.logger.info(
-                ("Set-up time: {}, Solve time: {}, Total time: {}").format(
-                    solutions[0].set_up_time,
-                    solutions[0].solve_time,
-                    solutions[0].total_time,
-                )
+                (f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, "
+                 f"Total time: {solutions[0].total_time}")
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
@@ -1049,7 +1035,7 @@ class BaseSolver(object):
         discontinuities = [v for v in discontinuities if v < t_eval[-1]]
 
         pybamm.logger.verbose(
-            "Discontinuity events found at t = {}".format(discontinuities)
+            f"Discontinuity events found at t = {discontinuities}"
         )
         if isinstance(inputs, list):
             raise pybamm.SolverError(
@@ -1210,7 +1196,7 @@ class BaseSolver(object):
             and old_solution.termination is None
         ):
             pybamm.logger.verbose(
-                "Start stepping {} with {}".format(model.name, self.name)
+                f"Start stepping {model.name} with {self.name}"
             )
 
         if isinstance(old_solution, pybamm.EmptySolution):
@@ -1241,7 +1227,7 @@ class BaseSolver(object):
 
         # Step
         pybamm.logger.verbose(
-            "Stepping for {:.0f} < t < {:.0f}".format(t_start_shifted, t_end)
+            f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}"
         )
         timer.reset()
         solution = self._integrate(model, t_eval, model_inputs)
@@ -1258,16 +1244,12 @@ class BaseSolver(object):
         solution.set_up_time = set_up_time
 
         # Report times
-        pybamm.logger.verbose("Finish stepping {} ({})".format(model.name, termination))
+        pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
             (
-                "Set-up time: {}, Step time: {} (of which integration time: {}), "
-                "Total time: {}"
-            ).format(
-                solution.set_up_time,
-                solution.solve_time,
-                solution.integration_time,
-                solution.total_time,
+                f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time}"
+                f"(of which integration time: {solution.integration_time}), "
+                f"Total time: {solution.total_time}"
             )
         )
 
@@ -1327,7 +1309,7 @@ class BaseSolver(object):
                         "(possibly due to NaNs)"
                     )
                 # Add the event to the solution object
-                solution.termination = "event: {}".format(termination_event)
+                solution.termination = f"event: {termination_event}"
             # Update t, y and inputs to include event time and state
             # Note: if the final entry of t is equal to the event time we skip
             # this (having duplicate entries causes an error later in ProcessedVariable)

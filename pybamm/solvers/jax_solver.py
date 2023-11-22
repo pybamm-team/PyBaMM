@@ -71,12 +71,12 @@ class JaxSolver(pybamm.BaseSolver):
         )
         method_options = ["RK45", "BDF"]
         if method not in method_options:
-            raise ValueError("method must be one of {}".format(method_options))
+            raise ValueError("method must be one of {method_options}")
         self.ode_solver = False
         if method == "RK45":
             self.ode_solver = True
         self.extra_options = extra_options or {}
-        self.name = "JAX solver ({})".format(method)
+        self.name = f"JAX solver ({method})"
         self._cached_solves = dict()
         pybamm.citations.register("jax2018")
 
@@ -136,11 +136,11 @@ class JaxSolver(pybamm.BaseSolver):
             raise RuntimeError(
                 "Terminate events not supported for this solver."
                 " Model has the following events:"
-                " {}.\nYou can remove events using `model.events = []`."
+                f" {model.events}.\nYou can remove events using `model.events = []`."
                 " It might be useful to first solve the model using a"
                 " different solver to obtain the time of the event, then"
                 " re-solve using no events and a fixed"
-                " end-time".format(model.events)
+                " end-time"
             )
 
         # Initial conditions, make sure they are an 0D array

@@ -90,17 +90,13 @@ class Thevenin(pybamm.BaseModel):
                 options[name] = opt
             else:
                 raise pybamm.OptionError(
-                    "Option '{}' not recognised. Best matches are {}".format(
-                        name, options.get_best_matches(name)
-                    )
+                    f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                 )
 
         for opt, value in options.items():
             if value not in possible_options[opt]:
                 raise pybamm.OptionError(
-                    "Option '{}' must be one of {}. Got '{}' instead.".format(
-                        opt, possible_options[opt], value
-                    )
+                    f"Option '{opt}' must be one of {possible_options[opt]}. Got '{value}' instead."
                 )
 
         self.options = options
@@ -208,7 +204,7 @@ class Thevenin(pybamm.BaseModel):
         self._build_model()
 
         self._built = True
-        pybamm.logger.info("Finished building {}".format(self.name))
+        pybamm.logger.info(f"Finished building {self.name}")
 
     @property
     def default_parameter_values(self):

@@ -223,9 +223,7 @@ class ParameterValues:
                 and not (self[name] == float(value) or self[name] == value)
             ):
                 raise ValueError(
-                    "parameter '{}' already defined with value '{}'".format(
-                        name, self[name]
-                    )
+                    f"parameter '{name}' already defined with value '{self[name]}'"
                 )
             # check parameter already exists (for updating parameters)
             if check_already_exists is True:
@@ -233,8 +231,8 @@ class ParameterValues:
                     self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        "Cannot update parameter '{}' as it does not ".format(name)
-                        + "have a default value. ({}). If you are ".format(err.args[0])
+                        f"Cannot update parameter '{name}' as it does not "
+                        + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
@@ -396,7 +394,7 @@ class ParameterValues:
 
         """
         pybamm.logger.info(
-            "Start setting parameters for {}".format(unprocessed_model.name)
+            f"Start setting parameters for {unprocessed_model.name}"
         )
 
         # set up inplace vs not inplace
@@ -418,7 +416,7 @@ class ParameterValues:
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.verbose(
-                "Processing parameters for {!r} (rhs)".format(variable)
+                f"Processing parameters for {variable!r} (rhs)"
             )
             new_variable = self.process_symbol(variable)
             new_rhs[new_variable] = self.process_symbol(equation)
@@ -427,7 +425,7 @@ class ParameterValues:
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
             pybamm.logger.verbose(
-                "Processing parameters for {!r} (algebraic)".format(variable)
+                f"Processing parameters for {variable!r} (algebraic)"
             )
             new_variable = self.process_symbol(variable)
             new_algebraic[new_variable] = self.process_symbol(equation)
@@ -436,7 +434,7 @@ class ParameterValues:
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
             pybamm.logger.verbose(
-                "Processing parameters for {!r} (initial conditions)".format(variable)
+                f"Processing parameters for {variable!r} (initial conditions)"
             )
             new_variable = self.process_symbol(variable)
             new_initial_conditions[new_variable] = self.process_symbol(equation)
@@ -447,7 +445,7 @@ class ParameterValues:
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
             pybamm.logger.verbose(
-                "Processing parameters for {!r} (variables)".format(variable)
+                f"Processing parameters for {variable!r} (variables)"
             )
             new_variables[variable] = self.process_symbol(equation)
         model.variables = new_variables
@@ -455,7 +453,7 @@ class ParameterValues:
         new_events = []
         for event in unprocessed_model.events:
             pybamm.logger.verbose(
-                "Processing parameters for event '{}''".format(event.name)
+                f"Processing parameters for event '{event.name}''"
             )
             new_events.append(
                 pybamm.Event(
@@ -466,7 +464,7 @@ class ParameterValues:
         interpolant_events = self._get_interpolant_events(model)
         for event in interpolant_events:
             pybamm.logger.verbose(
-                "Processing parameters for event '{}''".format(event.name)
+                f"Processing parameters for event '{event.name}''"
             )
             new_events.append(
                 pybamm.Event(
@@ -476,7 +474,7 @@ class ParameterValues:
 
         model.events = new_events
 
-        pybamm.logger.info("Finish setting parameters for {}".format(model.name))
+        pybamm.logger.info(f"Finish setting parameters for {model.name}")
 
         return model
 
@@ -524,7 +522,7 @@ class ParameterValues:
                 try:
                     bc, typ = bcs[side]
                     pybamm.logger.verbose(
-                        "Processing parameters for {!r} ({} bc)".format(variable, side)
+                        f"Processing parameters for {variable!r} ({side} bc)"
                     )
                     processed_bc = (self.process_symbol(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
@@ -609,7 +607,7 @@ class ParameterValues:
                 new_value.copy_domains(symbol)
                 return new_value
             else:
-                raise TypeError("Cannot process parameter '{}'".format(value))
+                raise TypeError(f"Cannot process parameter '{value}'")
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             function_name = self[symbol.name]
@@ -659,7 +657,7 @@ class ParameterValues:
 
                 else:  # pragma: no cover
                     raise ValueError(
-                        "Invalid function name length: {0}".format(len(function_name))
+                        f"Invalid function name length: {len(function_name)}"
                     )
 
             elif isinstance(function_name, numbers.Number):
@@ -683,7 +681,7 @@ class ParameterValues:
                 function = function_name
             else:
                 raise TypeError(
-                    "Parameter provided for '{}' ".format(symbol.name)
+                    f"Parameter provided for '{symbol.name}' "
                     + "is of the wrong type (should either be scalar-like or callable)"
                 )
             # Differentiate if necessary
@@ -889,7 +887,7 @@ class ParameterValues:
         """
         # Get column width for pretty printing
         column_width = max(len(name) for name in evaluated_parameters.keys())
-        s = "{{:>{}}}".format(column_width)
+        s = f"{{:>{column_width}}}"
         with open(output_file, "w") as file:
             for name, value in sorted(evaluated_parameters.items()):
                 if 0.001 < abs(value) < 1000:

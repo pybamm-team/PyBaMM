@@ -40,7 +40,7 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         ret = int(not result.wasSuccessful())
     else:
-        print("Running {} tests with executable '{}'".format(folder, interpreter))
+        print(f'Running {folder} tests with executable {interpreter}')
         cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
@@ -178,7 +178,7 @@ def test_script(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok ({})".format(b.time()))
+    print(f'ok ({b.time()})')
     return True
 
 

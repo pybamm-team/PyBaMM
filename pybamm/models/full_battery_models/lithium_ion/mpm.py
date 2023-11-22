@@ -25,9 +25,7 @@ class MPM(SPM):
         options = options or {}
         if "particle size" in options and options["particle size"] != "distribution":
             raise pybamm.OptionError(
-                "particle size must be 'distribution' for MPM not '{}'".format(
-                    options["particle size"]
-                )
+                f'''particle size must be 'distribution' for MPM not '{options["particle size"]}'''''
             )
         elif "surface form" in options and options["surface form"] == "false":
             raise pybamm.OptionError(

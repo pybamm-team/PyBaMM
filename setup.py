@@ -109,12 +109,12 @@ def compile_KLU():
     pybind11_dir = os.path.join(pybamm_project_dir, "pybind11")
     try:
         open(os.path.join(pybind11_dir, "tools", "pybind11Tools.cmake"))
-        logger.info("Found pybind11 directory ({})".format(pybind11_dir))
+        logger.info(f'Found pybind11 directory ({pybind11_dir})')
     except FileNotFoundError:
         PyBind11Found = False
         msg = (
-            "Could not find PyBind11 directory ({})."
-            " Skipping compilation of KLU module.".format(pybind11_dir)
+            f"Could not find PyBind11 directory ({pybind11_dir})."
+            " Skipping compilation of KLU module."
         )
         logger.info(msg)
 

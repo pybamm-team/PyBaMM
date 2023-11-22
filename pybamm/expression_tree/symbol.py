@@ -444,9 +444,9 @@ class Symbol:
         """
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
-                print("{}{} = {}".format(pre, node.name, node.value))
+                print(f"{pre}{node.name} = {node.value}")
             else:
-                print("{}{}".format(pre, node.name))
+                print(f"{pre}{node.name}")
 
     def visualise(self, filename):
         """
@@ -468,7 +468,7 @@ class Symbol:
 
         try:
             DotExporter(
-                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+                new_node, nodeattrfunc=lambda node: f'label="{node.label}"'
             ).to_picture(filename)
         except FileNotFoundError:  # pragma: no cover
             # raise error but only through logger so that test passes
@@ -530,13 +530,7 @@ class Symbol:
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return ("{!s}({}, {!s}, children={!s}, domains={!s})").format(
-            self.__class__.__name__,
-            hex(self.id),
-            self._name,
-            [str(child) for child in self.children],
-            {k: v for k, v in self.domains.items() if v != []},
-        )
+        return f"{self.__class__.__name__}({hex(self.id)}, {self._name}, children={[str(child) for child in self.children]}, domains={{k: v for k, v in self.domains.items() if v != []}})"
 
     def __add__(self, other):
         """return an :class:`Addition` object."""
@@ -694,7 +688,7 @@ class Symbol:
         if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
             raise TypeError(
                 "Jacobian can only be taken with respect to a 'StateVector' "
-                "or 'StateVectorDot', but {} is a {}".format(variable, type(variable))
+                f"or 'StateVectorDot', but {variable} is a {type(variable)}"
             )
         return jac.jac(self, variable)
 
@@ -728,7 +722,7 @@ class Symbol:
         """
         raise NotImplementedError(
             "method self.evaluate() not implemented for symbol "
-            "{!s} of type {}".format(self, type(self))
+            f"{self} of type {type(self)}"
         )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
@@ -886,10 +880,8 @@ class Symbol:
         copy.deepcopy(), which is slow.
         """
         raise NotImplementedError(
-            """method self.new_copy() not implemented
-            for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            f"""method self.new_copy() not implemented
+            for symbol {self} of type {type(self)}"""
         )
 
     def new_copy(self):
@@ -972,7 +964,7 @@ class Symbol:
         try:
             self.shape_for_testing
         except ValueError as e:
-            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+            raise pybamm.ShapeError(f"Cannot find shape (original error: {e})")
 
     @property
     def print_name(self):

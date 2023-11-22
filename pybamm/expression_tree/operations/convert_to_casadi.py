@@ -144,7 +144,7 @@ class CasadiConverter(object):
                     )
                 else:  # pragma: no cover
                     raise NotImplementedError(
-                        "Unknown interpolator: {0}".format(symbol.interpolator)
+                        f"Unknown interpolator: {symbol.interpolator}"
                     )
 
                 if len(converted_children) == 1:
@@ -159,9 +159,7 @@ class CasadiConverter(object):
                     return res
                 else:  # pragma: no cover
                     raise ValueError(
-                        "Invalid converted_children count: {0}".format(
-                            len(converted_children)
-                        )
+                        f"Invalid converted_children count: {len(converted_children)}"
                     )
 
             elif symbol.function.__name__.startswith("elementwise_grad_of_"):
@@ -208,10 +206,8 @@ class CasadiConverter(object):
 
         else:
             raise TypeError(
-                """
-                Cannot convert symbol of type '{}' to CasADi. Symbols must all be
+                f"""
+                Cannot convert symbol of type '{type(symbol)}' to CasADi. Symbols must all be
                 'linear algebra' at this stage.
-                """.format(
-                    type(symbol)
-                )
+                """
             )

@@ -236,8 +236,8 @@ class Citations:
             citations = "\n".join(self._cited)
         else:
             raise pybamm.OptionError(
-                "Output format {} not recognised."
-                "It should be 'text' or 'bibtex'.".format(output_format)
+                f"Output format {output_format} not recognised."
+                "It should be 'text' or 'bibtex'."
             )
 
         if filename is None:

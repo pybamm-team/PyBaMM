@@ -273,10 +273,8 @@ class UserSupplied1DSubMesh(SubMesh1D):
         # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
-                """User-suppled edges has should have length (npts + 1) but has length
-                {}.Number of points (npts) for domain {} is {}.""".format(
-                    len(edges), spatial_var.domain, npts
-                ).replace(
+                f"""User-suppled edges has should have length (npts + 1) but has length
+                {len(edges)}.Number of points (npts) for domain {spatial_var.domain} is {npts}.""".replace(
                     "\n                ", " "
                 )
             )
@@ -284,17 +282,13 @@ class UserSupplied1DSubMesh(SubMesh1D):
         # check end points of edges agree with spatial_lims
         if edges[0] != spatial_lims["min"]:
             raise pybamm.GeometryError(
-                """First entry of edges is {}, but should be equal to {}
-                 for domain {}.""".format(
-                    edges[0], spatial_lims["min"], spatial_var.domain
-                )
+                f"""First entry of edges is {edges[0]}, but should be equal to {spatial_lims["min"]}
+                 for domain {spatial_var.domain}."""
             )
         if edges[-1] != spatial_lims["max"]:
             raise pybamm.GeometryError(
-                """Last entry of edges is {}, but should be equal to {}
-                for domain {}.""".format(
-                    edges[-1], spatial_lims["max"], spatial_var.domain
-                )
+                f"""Last entry of edges is {edges[-1]}, but should be equal to {spatial_lims["max"]}
+                for domain {spatial_var.domain}."""
             )
 
         coord_sys = spatial_var.coord_sys
@@ -336,25 +330,19 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         elif (npts + 1) != len(edges):
             raise pybamm.GeometryError(
                 "User-suppled edges should have length (npts + 1) but has len"
-                "gth {}. Number of points (npts) for domain {} is {}.".format(
-                    len(edges), spatial_var.domain, npts
-                )
+                f"gth {len(edges)}. Number of points (npts) for domain {spatial_var.domain} is {npts}."
             )
 
         # check end points of edges agree with spatial_lims
         if edges[0] != spatial_lims["min"]:
             raise pybamm.GeometryError(
-                """First entry of edges is {}, but should be equal to {}
-                 for domain {}.""".format(
-                    edges[0], spatial_lims["min"], spatial_var.domain
-                )
+                f"""First entry of edges is {edges[0]}, but should be equal to {spatial_lims["min"]}
+                 for domain {spatial_var.dom}."""
             )
         if edges[-1] != spatial_lims["max"]:
             raise pybamm.GeometryError(
-                """Last entry of edges is {}, but should be equal to {}
-                for domain {}.""".format(
-                    edges[-1], spatial_lims["max"], spatial_var.domain
-                )
+                f"""Last entry of edges is {edges[-1]}, but should be equal to {spatial_lims["max"]}
+                for domain {spatial_var.domain}."""
             )
 
         coord_sys = spatial_var.coord_sys

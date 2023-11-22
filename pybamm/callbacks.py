@@ -217,7 +217,7 @@ class LoggingCallback(Callback):
 
     def on_experiment_end(self, logs):
         elapsed_time = logs["elapsed time"]
-        self.logger.notice("Finish experiment simulation, took {}".format(elapsed_time))
+        self.logger.notice(f'Finish experiment simulation, took {elapsed_time}')
 
     def on_experiment_error(self, logs):
         error = logs["error"]

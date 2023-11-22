@@ -34,7 +34,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         super().__init__(method=method)
         self.tol = tol
         self.extra_options = extra_options or {}
-        self.name = "Algebraic solver ({})".format(method)
+        self.name = f"Algebraic solver ({method})"
         self.algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
 
@@ -106,9 +106,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 y = np.concatenate([y0_diff, y_alg])
                 out = algebraic(t, y)
                 pybamm.logger.debug(
-                    "Evaluating algebraic equations at t={}, L2-norm is {}".format(
-                        t, np.linalg.norm(out)
-                    )
+                    f"Evaluating algebraic equations at t={t}, L2-norm is {np.linalg.norm(out)}"
                 )
                 return out
 
@@ -215,7 +213,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     success = True
                 elif not sol.success:
                     raise pybamm.SolverError(
-                        "Could not find acceptable solution: {}".format(sol.message)
+                        f"Could not find acceptable solution: {sol.message}"
                     )
                 else:
                     y0_alg = sol.x
@@ -223,9 +221,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         raise pybamm.SolverError(
                             "Could not find acceptable solution: solver terminated "
                             "successfully, but maximum solution error "
-                            "({}) above tolerance ({})".format(
-                                np.max(abs(sol.fun)), self.tol
-                            )
+                            f"({np.max(abs(sol.fun))}) above tolerance ({self.tol})"
                         )
                 itr += 1
 

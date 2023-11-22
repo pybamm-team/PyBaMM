@@ -106,7 +106,7 @@ class ProcessedVariable(object):
                     else:
                         # Raise error for 3D variable
                         raise NotImplementedError(
-                            "Shape not recognized for {} ".format(base_variables[0])
+                            f"Shape not recognized for {base_variables[0]} "
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 
@@ -363,7 +363,7 @@ class ProcessedVariable(object):
             return raw_names[0]
         else:
             raise NotImplementedError(
-                "Spatial variable name not recognized for {}".format(spatial_variable)
+                f"Spatial variable name not recognized for {spatial_variable}"
             )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):

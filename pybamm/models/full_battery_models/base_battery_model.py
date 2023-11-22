@@ -434,9 +434,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     )
                 else:
                     raise pybamm.OptionError(
-                        "Option '{}' not recognised. Best matches are {}".format(
-                            name, options.get_best_matches(name)
-                        )
+                        f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
         # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
@@ -924,9 +922,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "integrated",
             ]:
                 raise pybamm.OptionError(
-                    "electrolyte conductivity '{}' not suitable for SPMe".format(
-                        options["electrolyte conductivity"]
-                    )
+                    f'''electrolyte conductivity '{options["electrolyte conductivity"]}' not suitable for SPMe'''
                 )
         if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
             self, pybamm.lithium_ion.SPMe
@@ -965,10 +961,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             and options["hydrolysis"] == "true"
         ):
             raise pybamm.OptionError(
-                """must use surface formulation to solve {!s} with hydrolysis
-                    """.format(
-                    self
-                )
+                f"""must use surface formulation to solve {self!s} with hydrolysis
+                    """
             )
 
         self._options = options
@@ -997,33 +991,27 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.verbose(
-                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+                f"Setting rhs for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_rhs(self.variables)
             pybamm.logger.verbose(
-                "Setting algebraic for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting algebraic for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                "Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
             pybamm.logger.verbose(
-                "Setting initial conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                "Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
             pybamm.logger.verbose(
-                "Updating {} submodel ({})".format(submodel_name, self.name)
+                f"Updating {submodel_name} submodel ({self.name})"
             )
             self.update(submodel)
             self.check_no_repeated_keys()
@@ -1033,18 +1021,18 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._build_model()
 
         # Set battery specific variables
-        pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
+        pybamm.logger.debug(f"Setting voltage variables ({self.name})")
         self.set_voltage_variables()
 
-        pybamm.logger.debug("Setting SoC variables ({})".format(self.name))
+        pybamm.logger.debug(f"Setting SoC variables ({self.name})")
         self.set_soc_variables()
 
-        pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
+        pybamm.logger.debug(f"Setting degradation variables ({self.name})")
         self.set_degradation_variables()
         self.set_summary_variables()
 
         self._built = True
-        pybamm.logger.info("Finish building {}".format(self.name))
+        pybamm.logger.info(f"Finish building {self.name}")
 
     @property
     def summary_variables(self):

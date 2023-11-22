@@ -85,17 +85,17 @@ class CMakeBuild(build_ext):
 
         build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "RELEASE")
         cmake_args = [
-            "-DCMAKE_BUILD_TYPE={}".format(build_type),
-            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
-            "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
+            f'-DCMAKE_BUILD_TYPE={build_type}',
+            f'-DPYTHON_EXECUTABLE={sys.executable}',
+            f'-DUSE_PYTHON_CASADI={"TRUE" if use_python_casadi else "FALSE"}',
         ]
         if self.suitesparse_root:
             cmake_args.append(
-                "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))
+                f'-DSuiteSparse_ROOT={os.path.abspath(self.suitesparse_root)}'
             )
         if self.sundials_root:
             cmake_args.append(
-                "-DSUNDIALS_ROOT={}".format(os.path.abspath(self.sundials_root))
+                f'-DSUNDIALS_ROOT={os.path.abspath(self.sundials_root)}'
             )
 
         build_dir = self.get_build_directory()

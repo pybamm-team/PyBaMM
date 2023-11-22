@@ -75,8 +75,7 @@ class ScikitSubMesh2D(SubMesh):
         # check that two variables have been passed in
         if len(lims) != 2:
             raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
-            )
+                f"lims should contain exactly two variables, not {lims}")
 
         # get spatial variables
         spatial_vars = list(lims.keys())
@@ -88,10 +87,8 @@ class ScikitSubMesh2D(SubMesh):
         # check coordinate system agrees
         if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
             raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
+                f"""spatial variables should have the same coordinate system,
+                but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"""
             )
         return spatial_vars, tabs
 
@@ -168,7 +165,7 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 edges[var.name] = np.linspace(
@@ -215,7 +212,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
-                "At present, side can only be 'top', but is set to {}".format(side)
+                f"At present, side can only be 'top', but is set to {side}"
             )
 
         spatial_vars, tabs = self.read_lims(lims)
@@ -226,7 +223,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f'spatial variable must be y or z not {var.name}'
                 )
             elif var.name == "y":
                 edges[var.name] = np.linspace(
@@ -280,7 +277,7 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f'spatial variable must be y or z not {var.name}'
                 )
             else:
                 # Create N Chebyshev nodes in the interval (a,b)
@@ -337,27 +334,21 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
             # check that npts equals number of user-supplied edges
             if npts[var.name] != len(edges[var.name]):
                 raise pybamm.GeometryError(
-                    """User-suppled edges has should have length npts but has length {}.
-                     Number of points (npts) for variable {} in
-                     domain {} is {}.""".format(
-                        len(edges[var.name]), var.name, var.domain, npts[var.name]
-                    )
+                    f"""User-suppled edges has should have length npts but has length {len(edges[var.name])}.
+                     Number of points (npts) for variable {var.name} in
+                     domain {var.domain} is {npts[var.name]}."""
                 )
 
             # check end points of edges agree with spatial_lims
             if edges[var.name][0] != lims[var.name]["min"]:
                 raise pybamm.GeometryError(
-                    """First entry of edges is {}, but should be equal to {}
-                     for variable {} in domain {}.""".format(
-                        edges[var.name][0], lims[var.name]["min"], var.name, var.domain
-                    )
+                    f"""First entry of edges is {edges[var.name][0]}, but should be equal to {lims[var.name]["min"]}
+                     for variable {var.name} in domain {var.domain}."""
                 )
             if edges[var.name][-1] != lims[var.name]["max"]:
                 raise pybamm.GeometryError(
-                    """Last entry of edges is {}, but should be equal to {}
-                    for variable {} in domain {}.""".format(
-                        edges[var.name][-1], lims[var.name]["max"], var.name, var.domain
-                    )
+                    f"""Last entry of edges is {edges[var.name][-1]}, but should be equal to {lims[var.name]["max"]}
+                    for variable {var.name} in domain {var.domain}."""
                 )
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)

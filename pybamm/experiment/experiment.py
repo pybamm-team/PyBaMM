@@ -135,7 +135,7 @@ class Experiment:
         return Experiment(*self.args)
 
     def __repr__(self):
-        return "pybamm.Experiment({!s})".format(self)
+        return f"pybamm.Experiment({self!s})"
 
     def read_termination(self, termination):
         """

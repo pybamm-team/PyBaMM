@@ -134,9 +134,7 @@ class SPM(BaseModel):
 
         if self.options["electrolyte conductivity"] not in ["default", "leading order"]:
             raise pybamm.OptionError(
-                "electrolyte conductivity '{}' not suitable for SPM".format(
-                    self.options["electrolyte conductivity"]
-                )
+                f"electrolyte conductivity '{self.options['electrolyte conductivity']}' not suitable for SPM"
             )
 
         if (

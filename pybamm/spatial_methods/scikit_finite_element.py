@@ -58,7 +58,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             entries = symbol_mesh["current collector"].coordinates[1, :][:, np.newaxis]
         else:
             raise pybamm.GeometryError(
-                "Spatial variable must be 'y' or 'z' not {}".format(symbol.name)
+                f"Spatial variable must be 'y' or 'z' not {symbol.name}"
             )
         return pybamm.Vector(entries, domains=symbol.domains)
 
@@ -217,9 +217,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             boundary_load = boundary_load + neg_bc_value * pybamm.Vector(neg_bc_load)
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    neg_bc_type
-                )
+                f"boundary condition must be Dirichlet or Neumann, not '{neg_bc_type}'"
             )
 
         if pos_bc_type == "Neumann":
@@ -234,9 +232,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             boundary_load = boundary_load + pos_bc_value * pybamm.Vector(pos_bc_load)
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    pos_bc_type
-                )
+                f"boundary condition must be Dirichlet or Neumann, not '{pos_bc_type}'"
             )
 
         return -stiffness_matrix @ discretised_symbol + boundary_load
@@ -276,7 +272,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             _, pos_bc_type = boundary_conditions[symbol]["positive tab"]
         except KeyError:
             raise pybamm.ModelError(
-                "No boundary conditions provided for symbol `{}``".format(symbol)
+                f"No boundary conditions provided for symbol `{symbol}``"
             )
 
         # adjust matrix for Dirichlet boundary conditions
