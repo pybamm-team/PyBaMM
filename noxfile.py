@@ -62,8 +62,7 @@ def run_coverage(session):
     session.install("coverage", silent=False)
     session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+        session.install("-e", ".[odes,jax]", silent=False)
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -92,8 +91,7 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]", silent=False)
     if sys.platform == "linux":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+        session.install("-e", ".[odes,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -139,8 +137,7 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]", silent=False)
     if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+        session.install("-e", ".[odes, jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
