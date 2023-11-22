@@ -265,8 +265,6 @@ setup(
         "pandas": [
             "pandas>=1.5.0",
         ],
-        # Note: jax and jaxlib must be pinned to a specific version
-        # to avoid upstream breaking changes.
         "jax": [
             "jax==0.4.20; python_version >= '3.9'",
             "jaxlib==0.4.20; python_version >= '3.9'",
