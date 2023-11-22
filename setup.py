@@ -272,8 +272,8 @@ setup(
             # via the PyBaMM images on Docker Hub which come with
             # Python 3.11 installed.
             # It also provides support for CPU-only Jax on Windows.
-            "jax==0.4.18; python_version >= '3.9'",
-            "jaxlib==0.4.18; python_version >= '3.9'",
+            "jax==0.4.20; python_version >= '3.9'",
+            "jaxlib==0.4.20; python_version >= '3.9'",
             # Jax 0.4.13 was the last version to support Python 3.8.
             # Support for CPU-only Windows was added in 0.4.13, so
             # this version supports Windows too.
