@@ -68,7 +68,7 @@ jobs:
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-latest'
-        run:
+        run: |
           brew install graphviz openblas
           brew reinstall gcc
 

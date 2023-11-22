@@ -23,6 +23,7 @@ handled on a case-by-case basis.
 - Scott Marquis
 - [Gregory Offer](https://www.imperial.ac.uk/people/gregory.offer)
 - [Valentin Sulzer](https://sites.google.com/view/valentinsulzer)
+- [Martin Robinson](https://www.sabsr3.ox.ac.uk/people/dr-martin-robinson)
 
 ## Advisory Committee
 
