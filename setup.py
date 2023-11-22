@@ -203,10 +203,11 @@ setup(
     ],
     # List of dependencies
     install_requires=[
-        "numpy>=1.16",
-        "scipy>=1.3",
-        "casadi>=3.6.0",
-        "xarray",
+        "numpy>=1.23.5",
+        "scipy>=1.9.3",
+        "casadi>=3.6.3",
+        "xarray>=2022.6.0",
+        "anytree>=2.12.0",
     ],
     extras_require={
         "docs": [
@@ -230,18 +231,18 @@ setup(
             "jupyter",  # For example notebooks
         ],
         "plot": [
-            "imageio>=2.9.0",
+            "imageio>=2.32.0",
             # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
             # on systems without an attached display, it should never be imported
             # outside of plot() methods.
             # Should not be imported
-            "matplotlib>=2.0",
+            "matplotlib>=3.6.0",
         ],
         "cite": [
             "pybtex>=0.24.0",
         ],
         "latexify": [
-            "sympy>=1.8",
+            "sympy>=1.12",
         ],
         "bpx": [
             "bpx",
@@ -262,7 +263,7 @@ setup(
             "nbmake",
         ],
         "pandas": [
-            "pandas>=0.24",
+            "pandas>=1.5.0",
         ],
         "jax": [
             "jax==0.4.8",
@@ -270,17 +271,9 @@ setup(
         ],
         "odes": ["scikits.odes"],
         "all": [
-            "anytree>=2.4.3",
-            "autograd>=1.2",
-            "pandas>=0.24",
-            "scikit-fem>=0.2.0",
-            "imageio>=2.9.0",
-            "pybtex>=0.24.0",
-            "sympy>=1.8",
-            "bpx",
-            "tqdm",
-            "matplotlib>=2.0",
-            "jupyter",
+            "autograd>=1.6.2",
+            "scikit-fem>=8.1.0",
+            "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]"
         ],
     },
     entry_points={

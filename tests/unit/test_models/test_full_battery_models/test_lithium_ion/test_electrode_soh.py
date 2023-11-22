@@ -40,9 +40,7 @@ class TestElectrodeSOH(TestCase):
                     k: sol_split[k].data[0]
                     for k in ["x_0", "y_0", "x_100", "y_100", "Q_p"]
                 }
-                energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                    parameter_values, inputs
-                )
+                energy = esoh_solver.theoretical_energy_integral(inputs)
                 self.assertAlmostEqual(sol[key], energy, places=5)
 
         # should still work with old inputs
