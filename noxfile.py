@@ -61,9 +61,9 @@ def run_coverage(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
     session.install("-e", ".[all]", silent=False)
-    if sys.platform != "win32":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+    if sys.platform != "win32" and sys.version_info < (3, 12):
+        # TODO: update this when JAX is bumped to support Python 3.12 and Windows
+        session.install("-e", ".[odes,jax]", silent=False)
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -74,7 +74,7 @@ def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]", silent=False)
-    if sys.platform == "linux":
+    if sys.platform == "linux" and sys.version_info < (3, 12):
         session.install("-e", ".[odes]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
@@ -91,9 +91,9 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]", silent=False)
-    if sys.platform == "linux":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+    if sys.platform == "linux" and sys.version_info < (3, 12):
+        # TODO: update this when JAX is bumped to support Python 3.12 and Windows
+        session.install("-e", ".[odes,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -121,7 +121,8 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
-    if sys.platform == "linux":
+    if sys.platform == "linux" and sys.version_info < (3, 12):
+    # TODO: update this when JAX is bumped to support Python 3.12 and Windows
         session.run(python,
                     "-m",
                     "pip",
@@ -138,9 +139,9 @@ def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all]", silent=False)
-    if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+    if (sys.platform == "linux" or sys.platform == "darwin") and sys.version_info < (3, 12):
+        # TODO: update this when JAX is bumped to support Python 3.12 and Windows
+        session.install("-e", ".[odes,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
