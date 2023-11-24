@@ -1199,6 +1199,13 @@ class Simulation:
         mesh = self.mesh if (mesh or variables) else None
         variables = self.built_model.variables if variables else None
 
+        if self.operating_mode == "with experiment":
+            raise NotImplementedError(
+                """
+                Serialising models coupled to experiments is not yet supported.
+                """
+            )
+
         if self.built_model:
             Serialise().save_model(
                 self.built_model, filename=filename, mesh=mesh, variables=variables

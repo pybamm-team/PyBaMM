@@ -528,6 +528,18 @@ class TestSerialise(TestCase):
         newest_solver = newest_model.default_solver
         newest_solver.solve(newest_model, [0, 3600])
 
+    def test_save_experiment_model_error(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(["Discharge at 1C for 1 hour"])
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve()
+
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Serialising models coupled to experiments is not yet supported.",
+        ):
+            sim.save_model("spm_experiment", mesh=False, variables=False)
+
     def test_serialised_model_plotting(self):
         # models without a mesh
         model = pybamm.BaseModel()
