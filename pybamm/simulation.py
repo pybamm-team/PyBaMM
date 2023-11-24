@@ -1214,7 +1214,7 @@ class Simulation:
             raise NotImplementedError(
                 """
                 PyBaMM can only serialise a discretised model.
-                Ensure the model has been built (e.g. run `solve()`) before saving.
+                Ensure the model has been built (e.g. run `build()`) before saving.
                 """
             )
 
