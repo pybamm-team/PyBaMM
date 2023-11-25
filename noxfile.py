@@ -64,7 +64,7 @@ def run_coverage(session):
         session.install("-e", ".[all,odes,jax]", silent=False)
     else:
         session.install("-e", ".[all]", silent=False)
-    session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
+    session.run("coverage", "run", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
 
