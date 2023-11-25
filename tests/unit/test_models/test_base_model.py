@@ -694,7 +694,7 @@ class TestBaseModel(TestCase):
         new_model_disc = model_disc.set_initial_conditions_from(sol, inplace=False)
 
         # Test new initial conditions
-        var_scalar = list(new_model_disc.initial_conditions.keys())[0]
+        var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
         self.assertIsInstance(
             new_model_disc.initial_conditions[var_scalar], pybamm.Vector
         )
@@ -826,7 +826,7 @@ class TestBaseModel(TestCase):
         new_model_disc = model_disc.set_initial_conditions_from(sol_dict, inplace=False)
 
         # Test new initial conditions
-        var_scalar = list(new_model_disc.initial_conditions.keys())[0]
+        var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
         self.assertIsInstance(
             new_model_disc.initial_conditions[var_scalar], pybamm.Vector
         )

@@ -403,9 +403,7 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+            (self.__class__, self.name, *tuple([child.id for child in self.children]), *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
         )
 
     @property

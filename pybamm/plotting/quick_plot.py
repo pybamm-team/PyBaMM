@@ -534,7 +534,7 @@ class QuickPlot(object):
                 # 1D plot: plot as a function of x at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
-                spatial_var_name = list(spatial_vars.keys())[0]
+                spatial_var_name = next(iter(spatial_vars.keys()))
                 ax.set_xlabel(
                     "{} [{}]".format(spatial_var_name, self.spatial_unit),
                 )
@@ -568,12 +568,12 @@ class QuickPlot(object):
                 # different order based on whether the domains are x-r, x-z or y-z, etc
                 if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
-                    y_name = list(spatial_vars.keys())[0][0]
+                    y_name = next(iter(spatial_vars.keys()))[0]
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
-                    x_name = list(spatial_vars.keys())[0][0]
+                    x_name = next(iter(spatial_vars.keys()))[0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]

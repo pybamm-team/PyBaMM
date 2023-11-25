@@ -1205,7 +1205,7 @@ class EquationDict(dict):
             for var, eqn in equations.items():
                 if eqn.has_symbol_of_classes(pybamm.Variable):
                     unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-                    variable_in_equation = list(unpacker.unpack_symbol(eqn))[0]
+                    variable_in_equation = next(iter(unpacker.unpack_symbol(eqn)))
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
                         "but '{!r}' found in initial conditions for '{}'".format(

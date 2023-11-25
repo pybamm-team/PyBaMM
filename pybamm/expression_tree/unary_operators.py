@@ -287,14 +287,7 @@ class Index(UnaryOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.slice.start,
-                self.slice.stop,
-                self.children[0].id,
-            )
-            + tuple(self.domain)
+            (self.__class__, self.name, self.slice.start, self.slice.stop, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_evaluate(self, child):
@@ -554,15 +547,7 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple(
-                [
-                    integration_variable.id
-                    for integration_variable in self.integration_variable
-                ]
-            )
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name, *tuple([integration_variable.id for integration_variable in self.integration_variable]), self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -702,9 +687,7 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name, self.vector_type, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -757,7 +740,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
+            (self.__class__, self.name, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -798,8 +781,7 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
         )
 
     def _evaluates_on_edges(self, dimension):
@@ -857,8 +839,7 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
         )
 
     def _unary_new_copy(self, child):

@@ -38,7 +38,7 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
+    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)

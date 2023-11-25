@@ -78,7 +78,7 @@ def update_version():
         file.write(replace_version)
 
     # Get latest commit id from pybamm-team/sundials-vcpkg-registry
-    cmd = "git ls-remote https://github.com/pybamm-team/sundials-vcpkg-registry | grep refs/heads/main | cut -f 1 | tr -d '\n'"  # noqa: E501
+    cmd = "git ls-remote https://github.com/pybamm-team/sundials-vcpkg-registry | grep refs/heads/main | cut -f 1 | tr -d '\n'"
     latest_commit_id = os.popen(cmd).read()
 
     # vcpkg-configuration.json
@@ -93,7 +93,7 @@ def update_version():
         file.write(replace_commit_id)
 
     changelog_line1 = "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n"
-    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {last_day_of_month}\n\n"  # noqa: E501
+    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {last_day_of_month}\n\n"
 
     # CHANGELOG.md
     with open(os.path.join(pybamm.root_dir(), "CHANGELOG.md"), "r+") as file:

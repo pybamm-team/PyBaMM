@@ -49,7 +49,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
-"""  # noqa: E501
+"""
 
 
 class TestBaseBatteryModel(TestCase):
