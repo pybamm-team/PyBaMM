@@ -139,6 +139,7 @@ def set_dev(session):
             "-m",
             "pip",
             "install",
+            "-e",
             ".[all,dev,jax,odes]",
             external=True,
         )
