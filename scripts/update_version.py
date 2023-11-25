@@ -48,26 +48,6 @@ def update_version():
         file.seek(0)
         file.write(replace_version)
 
-    # docs/_static/versions.json for readthedocs build
-    if "rc" not in release_version:
-        with open(
-            os.path.join(pybamm.root_dir(), "docs", "_static", "versions.json"),
-            "r+",
-        ) as file:
-            output = file.read()
-            json_data = json.loads(output)
-            json_data.insert(
-                2,
-                {
-                    "name": f"v{release_version}",
-                    "version": f"{release_version}",
-                    "url": f"https://docs.pybamm.org/en/v{release_version}/",
-                },
-            )
-            file.truncate(0)
-            file.seek(0)
-            file.write(json.dumps(json_data, indent=4))
-
     # vcpkg.json
     with open(os.path.join(pybamm.root_dir(), "vcpkg.json"), "r+") as file:
         output = file.read()
