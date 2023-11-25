@@ -247,4 +247,4 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
 source = "pybamm"
-concurrency = "multiprocessing"
+concurrency = ["multiprocessing"]
