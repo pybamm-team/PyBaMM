@@ -99,7 +99,6 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
@@ -155,7 +154,6 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
@@ -237,7 +235,6 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
@@ -336,7 +333,6 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
@@ -391,7 +387,6 @@ jobs:
         with:
           path: |
             # Repository files
-            ${{ github.workspace }}/pybind11/
             ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
