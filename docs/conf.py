@@ -122,7 +122,7 @@ html_favicon = "_static/favicon/favicon.png"
 html_theme_options = {
     "logo": {
         "image_light": "pybamm_logo.png",
-        "image_dark": "pybamm_logo.png",
+        "image_dark": "pybamm_log_whitetext.png",
     },
     "icon_links": [
         {
