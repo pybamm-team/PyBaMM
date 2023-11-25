@@ -123,9 +123,9 @@ class ParameterValues:
             return self._dict_items[key]
         except KeyError as err:
             if (
-                "Exchange-current density for lithium metal electrode [A.m-2]"
-                in err.args[0]
-                and "Exchange-current density for plating [A.m-2]" in self._dict_items
+                    "Exchange-current density for lithium metal electrode [A.m-2]"
+                    in err.args[0]
+                    and "Exchange-current density for plating [A.m-2]" in self._dict_items
             ):
                 raise KeyError(
                     "'Exchange-current density for plating [A.m-2]' has been renamed "
@@ -218,9 +218,9 @@ class ParameterValues:
         for name, value in values.items():
             # check for conflicts
             if (
-                check_conflict is True
-                and name in self.keys()
-                and not (self[name] == float(value) or self[name] == value)
+                    check_conflict is True
+                    and name in self.keys()
+                    and not (self[name] == float(value) or self[name] == value)
             ):
                 raise ValueError(
                     f"parameter '{name}' already defined with value '{self[name]}'"
@@ -239,10 +239,10 @@ class ParameterValues:
             # if no conflicts, update
             if isinstance(value, str):
                 if (
-                    value.startswith("[function]")
-                    or value.startswith("[current data]")
-                    or value.startswith("[data]")
-                    or value.startswith("[2D data]")
+                        value.startswith("[function]")
+                        or value.startswith("[current data]")
+                        or value.startswith("[data]")
+                        or value.startswith("[2D data]")
                 ):
                     raise ValueError(
                         "Specifying parameters via [function], [current data], [data] "
@@ -270,12 +270,12 @@ class ParameterValues:
         self._processed_symbols = {}
 
     def set_initial_stoichiometry_half_cell(
-        self,
-        initial_value,
-        param=None,
-        known_value="cyclable lithium capacity",
-        inplace=True,
-        options=None,
+            self,
+            initial_value,
+            param=None,
+            known_value="cyclable lithium capacity",
+            inplace=True,
+            options=None,
     ):
         """
         Set the initial stoichiometry of the working electrode, based on the initial
@@ -294,21 +294,18 @@ class ParameterValues:
 
         parameter_values.update(
             {
-                "Initial concentration in {} electrode [mol.m-3]".format(
-                    options["working electrode"]
-                ): x
-                * c_max
+                f'''Initial concentration in {options["working electrode"]} electrode [mol.m-3]''': x * c_max
             }
         )
         return parameter_values
 
     def set_initial_stoichiometries(
-        self,
-        initial_value,
-        param=None,
-        known_value="cyclable lithium capacity",
-        inplace=True,
-        options=None,
+            self,
+            initial_value,
+            param=None,
+            known_value="cyclable lithium capacity",
+            inplace=True,
+            options=None,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
@@ -333,12 +330,12 @@ class ParameterValues:
         return parameter_values
 
     def set_initial_ocps(
-        self,
-        initial_value,
-        param=None,
-        known_value="cyclable lithium capacity",
-        inplace=True,
-        options=None,
+            self,
+            initial_value,
+            param=None,
+            known_value="cyclable lithium capacity",
+            inplace=True,
+            options=None,
     ):
         """
         Set the initial OCP of each electrode, based on the initial
@@ -407,9 +404,9 @@ class ParameterValues:
             model = unprocessed_model.new_copy()
 
         if (
-            len(unprocessed_model.rhs) == 0
-            and len(unprocessed_model.algebraic) == 0
-            and len(unprocessed_model.variables) == 0
+                len(unprocessed_model.rhs) == 0
+                and len(unprocessed_model.algebraic) == 0
+                and len(unprocessed_model.variables) == 0
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
@@ -612,11 +609,11 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.FunctionParameter):
             function_name = self[symbol.name]
             if isinstance(
-                function_name,
-                (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
+                    function_name,
+                    (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
             ) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
+                    isinstance(function_name, pybamm.Symbol)
+                    and function_name.size_for_testing == 1
             ):
                 # no need to process children, they will only be used for shape
                 new_children = symbol.children
@@ -625,7 +622,7 @@ class ParameterValues:
                 new_children = []
                 for child in symbol.children:
                     if symbol.diff_variable is not None and any(
-                        x == symbol.diff_variable for x in child.pre_order()
+                            x == symbol.diff_variable for x in child.pre_order()
                     ):
                         # Wrap with NotConstant to avoid simplification,
                         # which would stop symbolic diff from working properly
@@ -673,10 +670,10 @@ class ParameterValues:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
             elif isinstance(
-                function_name, (pybamm.Interpolant, pybamm.InputParameter)
+                    function_name, (pybamm.Interpolant, pybamm.InputParameter)
             ) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
+                    isinstance(function_name, pybamm.Symbol)
+                    and function_name.size_for_testing == 1
             ):
                 function = function_name
             else:
@@ -713,7 +710,7 @@ class ParameterValues:
             # x_average can sometimes create a new symbol with electrode thickness
             # parameters, so we process again to make sure these parameters are set
             if isinstance(symbol, pybamm.XAverage) and not isinstance(
-                new_symbol, pybamm.XAverage
+                    new_symbol, pybamm.XAverage
             ):
                 new_symbol = self.process_symbol(new_symbol)
             # f_a_dist in the size average needs to be processed
@@ -854,11 +851,11 @@ class ParameterValues:
                     # skip parameters that don't have a value in that parameter set
                     proc_symbol = None
                 if not (
-                    callable(proc_symbol)
-                    or proc_symbol is None
-                    or proc_symbol.has_symbol_of_classes(
-                        (pybamm.Concatenation, pybamm.Broadcast)
-                    )
+                        callable(proc_symbol)
+                        or proc_symbol is None
+                        or proc_symbol.has_symbol_of_classes(
+                    (pybamm.Concatenation, pybamm.Broadcast)
+                )
                 ):
                     evaluated_parameters[name] = proc_symbol.evaluate(t=0)
 
