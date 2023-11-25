@@ -250,16 +250,29 @@ class bdist_wheel(orig.bdist_wheel):
 
 
 def compile_KLU():
-    # Return whether or not the KLU extension should be compiled.
-    # Return True if all three of the following conditions are met:
-    # - Not running on Windows
-    # - CMake is found
-    # - pybind11 is found as a build-time dependency
+    # Decide whether or not the KLU extension should be compiled.
+    # Return True if all of the following conditions are met:
+    #
+    # 1. Not running Windows.
+    #     1.1 If running on Windows, check if building a wheel.
+    # 2. CMake is found
+    # 3. pybind11 is found as a build-time dependency
+    # 4. Not running on Read the Docs (which runs on Ubuntu 22.04)
+    #
+    # Otherwise, it is assumed that the user does not want to compile the
+    # IDAKLU solver, and False is returned. This configuration ensures
+    # that the IDAKLU solver is compiled when building a Windows wheel
+    # but not when running in CI on Windows.
+
     CMakeFound = True
     PyBind11Found = True
-    windows = (not system()) or system() == "Windows"
+    WindowsFound = (not system()) or system() == "Windows"
+    ReadTheDocsFound = os.getenv("READTHEDOCS", False) == "True"
+    # If running on Windows, check if building a wheel.
+    if WindowsFound:
+        WindowsWheelFound = os.getenv("CIBUILDWHEEL", 0) == "1"
 
-    windows_msg = "Running on Windows" if windows else "Not running on Windows"
+    windows_msg = "Running on Windows" if WindowsFound else "Not running on Windows"
     pybind11_msg = "Could not find pybind11. Skipping compilation of KLU module."
 
     logger.info(windows_msg)
@@ -279,7 +292,10 @@ def compile_KLU():
 
         PyBind11Found = False
 
-    return CMakeFound and PyBind11Found
+    if WindowsFound:
+        return True if WindowsWheelFound else False
+    else:
+        return CMakeFound and PyBind11Found and not ReadTheDocsFound
 
 idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",
