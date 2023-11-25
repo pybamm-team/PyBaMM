@@ -142,11 +142,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    # should be kept versioned to use for the version warning bar
-    "switcher": {
-        "version_match": version,
-        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
-    },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
     # for dark mode toggle and social media links
