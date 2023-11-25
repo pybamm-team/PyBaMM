@@ -174,8 +174,6 @@ pybamm = [
 
 [tool.setuptools.packages.find]
 include = ["pybamm", "pybamm.*"]
-# TODO: remove once https://github.com/pybamm-team/PyBaMM/issues/3480 is resolved
-exclude = ["pybind11*"]
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
@@ -234,6 +232,7 @@ required_plugins = [
 addopts = [
   "-nauto",
   "-v",
+  "--ignore=pybind11",
 ]
 testpaths = [
   "docs/source/examples/",
