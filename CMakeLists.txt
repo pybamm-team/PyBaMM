@@ -32,11 +32,8 @@ endif()
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
-if(NOT PYBIND11_DIR)
-  set(PYBIND11_DIR pybind11)
-endif()
+find_package(pybind11 REQUIRED)
 
-add_subdirectory(${PYBIND11_DIR})
 pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
