@@ -251,16 +251,18 @@ class bdist_wheel(orig.bdist_wheel):
 
 def compile_KLU():
     # Return whether or not the KLU extension should be compiled.
-    # Return True if:
-    # - Not running on Windows AND
-    # - CMake is found AND
-    # - The pybind11/ directory is found in the PyBaMM project directory
+    # Return True if all three of the following conditions are met:
+    # - Not running on Windows
+    # - CMake is found
+    # - pybind11 is found as a build-time dependency
     CMakeFound = True
     PyBind11Found = True
     windows = (not system()) or system() == "Windows"
 
-    msg = "Running on Windows" if windows else "Not running on windows"
-    logger.info(msg)
+    windows_msg = "Running on Windows" if windows else "Not running on Windows"
+    pybind11_msg = "Could not find pybind11. Skipping compilation of KLU module."
+
+    logger.info(windows_msg)
 
     try:
         subprocess.run(["cmake", "--version"])
@@ -268,19 +270,14 @@ def compile_KLU():
     except OSError:
         CMakeFound = False
         logger.info("Could not find CMake. Skipping compilation of KLU module.")
-
-    pybamm_project_dir = os.path.dirname(os.path.abspath(__file__))
-    pybind11_dir = os.path.join(pybamm_project_dir, "pybind11")
     try:
-        open(os.path.join(pybind11_dir, "tools", "pybind11Tools.cmake"))
-        logger.info("Found pybind11 directory ({})".format(pybind11_dir))
-    except FileNotFoundError:
+        from pybind11 import get_cmake_dir
+        pybind11_config = os.path.join(get_cmake_dir(), "pybind11Tools.cmake")
+        logger.info(f"Found pybind11 at {pybind11_config}")
+    except ModuleNotFoundError or FileNotFoundError:
+        logger.info(pybind11_msg)
+
         PyBind11Found = False
-        msg = (
-            "Could not find PyBind11 directory ({})."
-            " Skipping compilation of KLU module.".format(pybind11_dir)
-        )
-        logger.info(msg)
 
     return CMakeFound and PyBind11Found
 
