@@ -26,9 +26,6 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
-
       - name: Install vcpkg on Windows
         run: |
           cd C:\
@@ -75,9 +72,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8
-
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install SuiteSparse and SUNDIALS on macOS
