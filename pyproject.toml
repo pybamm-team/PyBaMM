@@ -232,7 +232,6 @@ required_plugins = [
 addopts = [
   "-nauto",
   "-v",
-  "--ignore=pybind11",
 ]
 testpaths = [
   "docs/source/examples/",
