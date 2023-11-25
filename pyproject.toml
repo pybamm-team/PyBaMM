@@ -5,6 +5,7 @@ requires = [
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.0; platform_system!='Windows'",
     "cmake; platform_system!='Windows'",
+    "pybind11>=2.11.1",
     ]
 build-backend = "setuptools.build_meta"
 
