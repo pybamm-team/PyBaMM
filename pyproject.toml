@@ -223,7 +223,7 @@ ignore = [
 "**.ipynb" = ["E402", "E703"]
 
 # NOTE: currently used only for notebook tests with the nbmake plugin.
-[tool.pytest]
+[tool.pytest.ini_options]
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
