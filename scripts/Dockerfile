@@ -38,8 +38,6 @@ RUN pip install cmake
 
 RUN if [ "$IDAKLU" = "true" ]; then \
     python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs]"; \
     fi
 
@@ -54,8 +52,6 @@ RUN if [ "$JAX" = "true" ]; then \
 
 RUN if [ "$ALL" = "true" ]; then \
     python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
     pip install --user -e ".[all,dev,docs,jax,odes]"; \
     fi
 
