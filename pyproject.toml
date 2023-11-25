@@ -103,7 +103,7 @@ dev = [
     # For running testing sessions
     "nox",
     # For coverage
-    coverage[toml],
+    "coverage[toml]",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
