@@ -63,7 +63,10 @@ def run_coverage(session):
     if sys.platform != "win32":
         session.install("-e", ".[all,jax,odes]", silent=False)
     else:
-        session.install("-e", ".[all,jax]", silent=False)
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -76,7 +79,10 @@ def run_integration(session):
     if sys.platform != "win32":
         session.install("-e", ".[all,jax,odes]", silent=False)
     else:
-        session.install("-e", ".[all,jax]", silent=False)
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -94,7 +100,10 @@ def run_unit(session):
     if sys.platform != "win32":
         session.install("-e", ".[all,jax,odes]", silent=False)
     else:
-        session.install("-e", ".[all,jax]", silent=False)
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -143,7 +152,24 @@ def set_dev(session):
             external=True,
         )
     else:
-        session.run(python, "-m", "pip", "install", "-e", ".[all,dev,jax]", external=True)
+        if sys.version_info < (3, 9):
+            session.run(
+                python,
+                "-m",
+                "pip",
+                "install",
+                ".[all,dev]",
+                external=True,
+            )
+        else:
+            session.run(
+                python,
+                "-m",
+                "pip",
+                "install",
+                ".[all,dev,jax]",
+                external=True,
+            )
 
 
 @nox.session(name="tests")
@@ -153,7 +179,10 @@ def run_tests(session):
     if sys.platform != "win32":
             session.install("-e", ".[all,jax,odes]", silent=False)
     else:
-        session.install("-e", ".[all,jax]", silent=False)
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
