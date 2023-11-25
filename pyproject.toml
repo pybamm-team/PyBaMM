@@ -115,9 +115,6 @@ pandas = [
 jax = [
     "jax==0.4.20; python_version >= '3.9'",
     "jaxlib==0.4.20; python_version >= '3.9'",
-    # The versions below can be removed once PyBaMM no longer supports Python 3.8
-    "jax==0.4.13; python_version < '3.9'",
-    "jaxlib==0.4.13; python_version < '3.9'",
 ]
 # For the scikits.odes solver
 odes = [
