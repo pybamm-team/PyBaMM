@@ -6,7 +6,7 @@ GNU-Linux & MacOS
 Prerequisites
 -------------
 
-To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
+To use PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
 .. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
 

@@ -66,6 +66,7 @@ Package                                                          Minimum support
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                    2.8.2
 `CasADi <https://web.casadi.org/docs/>`__                        3.6.0
 `Xarray <https://docs.xarray.dev/en/stable/>`__                  2023.04.0
+`Anytree <https://anytree.readthedocs.io/en/stable/>`__          2.4.3
 ================================================================ ==========================
 
 .. _install.optional_dependencies:
@@ -76,7 +77,7 @@ Optional Dependencies
 PyBaMM has a number of optional dependencies for different functionalities.
 If the optional dependency is not installed, PyBaMM will raise an ImportError when the method requiring that dependency is called.
 
-If using pip, optional PyBaMM dependencies can be installed or managed in a file (e.g. requirements.txt or setup.py)
+If you are using ``pip``, optional PyBaMM dependencies can be installed or managed in a file (e.g., setup.py, or pyproject.toml)
 as optional extras (e.g.,``pybamm[dev,plot]``). All optional dependencies can be installed with ``pybamm[all]``,
 and specific sets of dependencies are listed in the sections below.
 
