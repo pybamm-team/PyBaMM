@@ -3,14 +3,12 @@
 #
 import numbers
 
-import anytree
 import numpy as np
-import sympy
-from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
 
 import pybamm
+from pybamm.util import have_optional_dependency
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
@@ -405,9 +403,7 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+            (self.__class__, self.name, *tuple([child.id for child in self.children]), *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
         )
 
     @property
@@ -442,6 +438,7 @@ class Symbol:
         """
         Print out a visual representation of the tree (this node and its children)
         """
+        anytree = have_optional_dependency("anytree")
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
                 print(f"{pre}{node.name} = {node.value}")
@@ -460,6 +457,7 @@ class Symbol:
             filename to output, must end in ".png"
         """
 
+        DotExporter = have_optional_dependency("anytree.exporter", "DotExporter")
         # check that filename ends in .png.
         if filename[-4:] != ".png":
             raise ValueError("filename should end in .png")
@@ -479,6 +477,7 @@ class Symbol:
         Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
         """
+        anytree = have_optional_dependency("anytree")
         name = symbol.name
         if name == "div":
             name = "&nabla;&sdot;"
@@ -522,6 +521,7 @@ class Symbol:
         a
         b
         """
+        anytree = have_optional_dependency("anytree")
         return anytree.PreOrderIter(self)
 
     def __str__(self):
@@ -976,4 +976,5 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
+        sympy = have_optional_dependency("sympy")
         return sympy.Symbol(str(self.name))

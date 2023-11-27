@@ -156,7 +156,7 @@ if not os.path.exists(build_dir):
 
 sundials_src = f"../sundials-{sundials_version}"
 print("-" * 10, "Running CMake prepare", "-" * 40)
-subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir, check=True)
+subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]

@@ -4,11 +4,12 @@
 import pickle
 import pybamm
 import numpy as np
+import hashlib
 import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-import tqdm
+from pybamm.util import have_optional_dependency
 
 
 def is_notebook():
@@ -133,6 +134,9 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
 
+        # Initialise instances of Simulation class with the same random seed
+        self._set_random_seed()
+
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
             import warnings
@@ -155,6 +159,18 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    # If the solver being used is CasadiSolver or its variants, set a fixed
+    # random seed during class initialization to the SHA-256 hash of the class
+    # name for purposes of reproducibility.
+    def _set_random_seed(self):
+        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
+            self._solver, pybamm.CasadiAlgebraicSolver
+        ):
+            np.random.seed(
+                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
+                % (2**32)
+            )
 
     def set_up_and_parameterise_experiment(self):
         """
@@ -375,7 +391,7 @@ class Simulation:
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
             self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
+                self._unprocessed_parameter_values.set_initial_ocps(
                     initial_soc, param=param, inplace=False, options=options
                 )
             )
@@ -722,13 +738,18 @@ class Simulation:
                         # Update _solution
                         self._solution = current_solution
 
-            for cycle_num, cycle_length in enumerate(
-                # tqdm is the progress bar.
-                tqdm.tqdm(
+            # check if a user has tqdm installed
+            if showprogress:
+                tqdm = have_optional_dependency("tqdm")
+                cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
-                    disable=(not showprogress),
                     desc="Cycling",
-                ),
+                )
+            else:
+                cycle_lengths = self.experiment.cycle_lengths
+
+            for cycle_num, cycle_length in enumerate(
+                cycle_lengths,
                 start=1,
             ):
                 logs["cycle number"] = (
@@ -765,14 +786,19 @@ class Simulation:
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions_steps[idx]
 
+                    # Hacky patch to allow correct processing of end_time and next_starting time
+                    # For efficiency purposes, op_conds treats identical steps as the same object
+                    # regardless of the initial time. Should be refactored as part of #3176
+                    op_conds_unproc = self.experiment.operating_conditions_steps_unprocessed[idx]
+
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if op_conds.end_time:
+                    if getattr(op_conds_unproc, "end_time", None):
                         dt = min(
                             op_conds.duration,
                             (
-                                op_conds.end_time
+                                op_conds_unproc.end_time
                                 - (
                                     initial_start_time
                                     + timedelta(seconds=float(start_time))
@@ -825,9 +851,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds.next_start_time is not None:
+                    if getattr(op_conds_unproc, "next_start_time", None) is not None:
                         rest_time = (
-                            op_conds.next_start_time
+                            op_conds_unproc.next_start_time
                             - (
                                 initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))

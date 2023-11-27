@@ -2,10 +2,10 @@
 # NumpyArray class
 #
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class Array(pybamm.Symbol):
@@ -97,7 +97,7 @@ class Array(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name) + self.entries_string + tuple(self.domain)
+            (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
         )
 
     def _jac(self, variable):
@@ -125,6 +125,7 @@ class Array(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        sympy = have_optional_dependency("sympy")
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 

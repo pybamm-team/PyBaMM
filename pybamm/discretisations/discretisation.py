@@ -457,7 +457,7 @@ class Discretisation(object):
                 if (
                     self.mesh[subdomain].coord_sys
                     in ["spherical polar", "cylindrical polar"]
-                    and list(self.mesh.geometry[subdomain].values())[0]["min"] == 0
+                    and next(iter(self.mesh.geometry[subdomain].values()))["min"] == 0
                 ):
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
@@ -745,7 +745,7 @@ class Discretisation(object):
             spatial_method = self.spatial_methods[symbol.domain[0]]
             # If boundary conditions are provided, need to check for BCs on tabs
             if self.bcs:
-                key_id = list(self.bcs.keys())[0]
+                key_id = next(iter(self.bcs.keys()))
                 if any("tab" in side for side in list(self.bcs[key_id].keys())):
                     self.bcs[key_id] = self.check_tab_conditions(
                         symbol, self.bcs[key_id]

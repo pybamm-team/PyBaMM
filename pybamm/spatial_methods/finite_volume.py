@@ -620,10 +620,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Dirichlet boundary conditions
         n_bcs = 0
         if lbc_type == "Dirichlet":
-            domain = [domain[0] + "_left ghost cell"] + domain
+            domain = [domain[0] + "_left ghost cell", *domain]
             n_bcs += 1
         if rbc_type == "Dirichlet":
-            domain = domain + [domain[-1] + "_right ghost cell"]
+            domain = [*domain, domain[-1] + "_right ghost cell"]
             n_bcs += 1
 
         # Calculate values for ghost nodes for any Dirichlet boundary conditions

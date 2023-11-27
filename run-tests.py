@@ -156,7 +156,7 @@ def test_script(path, executable="python"):
     env["MPLBACKEND"] = "Template"
 
     # Run in subprocess
-    cmd = [executable] + [path]
+    cmd = [executable, path]
     try:
         p = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--examples",
         action="store_true",
-        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",  # noqa: E501
+        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",
     )
     parser.add_argument(
         "--debook",

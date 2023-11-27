@@ -78,7 +78,7 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
 
-        operating_conditions_steps_unprocessed = self._set_next_start_time(
+        self.operating_conditions_steps_unprocessed = self._set_next_start_time(
             [cond for cycle in operating_conditions_cycles for cond in cycle]
         )
 
@@ -89,7 +89,7 @@ class Experiment:
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
         processed_steps = {}
-        for step in operating_conditions_steps_unprocessed:
+        for step in self.operating_conditions_steps_unprocessed:
             if repr(step) in processed_steps:
                 continue
             elif isinstance(step, str):
@@ -106,7 +106,7 @@ class Experiment:
 
         self.operating_conditions_steps = [
             processed_steps[repr(step)]
-            for step in operating_conditions_steps_unprocessed
+            for step in self.operating_conditions_steps_unprocessed
         ]
 
         # Save the processed unique steps and the processed operating conditions

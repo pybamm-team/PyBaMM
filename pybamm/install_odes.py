@@ -42,7 +42,9 @@ def install_sundials(download_dir, install_dir):
 
     url = (
         "https://github.com/LLNL/"
-        f'sundials/releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz'
+        + "sundials/releases/download/v{}/sundials-{}.tar.gz".format(
+            sundials_version, sundials_version
+        )
     )
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)
@@ -64,7 +66,7 @@ def install_sundials(download_dir, install_dir):
 
     print("-" * 10, "Running CMake prepare", "-" * 40)
     subprocess.run(
-        ["cmake", f'../sundials-{sundials_version}'] + cmake_args,
+        ["cmake", "../sundials-{}".format(sundials_version), *cmake_args],
         cwd=build_directory,
         check=True,
     )
@@ -79,7 +81,9 @@ def update_LD_LIBRARY_PATH(install_dir):
     # for LD_LIBRARY_PATH in activate script.  If no virtual env found,
     # then the current user's .bashrc file is modified instead.
 
-    export_statement = f'export LD_LIBRARY_PATH={install_dir}/lib:$LD_LIBRARY_PATH'
+    export_statement = "export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH".format(
+        install_dir
+    )
 
     venv_path = os.environ.get("VIRTUAL_ENV")
     if venv_path:
@@ -87,10 +91,10 @@ def update_LD_LIBRARY_PATH(install_dir):
     else:
         script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
 
-    if os.getenv("LD_LIBRARY_PATH") and f'{install_dir}/lib' in os.getenv(
+    if os.getenv("LD_LIBRARY_PATH") and "{}/lib".format(install_dir) in os.getenv(
         "LD_LIBRARY_PATH"
     ):
-        print(f'{install_dir}/lib was found in LD_LIBRARY_PATH.')
+        print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
         print("--> Not updating venv activate or .bashrc scripts")
     else:
         with open(script_path, "a+") as fh:
@@ -98,7 +102,8 @@ def update_LD_LIBRARY_PATH(install_dir):
             if export_statement not in fh.read():
                 fh.write(export_statement)
                 print(
-                    f'Adding {install_dir}/lib to LD_LIBRARY_PATH in {script_path}'
+                    "Adding {}/lib to LD_LIBRARY_PATH"
+                    " in {}".format(install_dir, script_path)
                 )
 
 
@@ -141,18 +146,18 @@ def main(arguments=None):
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)
     for DIR in SUNDIALS_LIB_DIRS:
-        logger.info(f'Looking for sundials at {DIR}')
+        logger.info("Looking for sundials at {}".format(DIR))
         SUNDIALS_FOUND = isfile(join(DIR, "lib", "libsundials_ida.so")) or isfile(
             join(DIR, "lib", "libsundials_ida.dylib")
         )
         if SUNDIALS_FOUND:
             SUNDIALS_LIB_DIR = DIR
-            logger.info(f'Found sundials at {SUNDIALS_LIB_DIR}')
+            logger.info("Found sundials at {}".format(SUNDIALS_LIB_DIR))
             break
 
     if not SUNDIALS_FOUND:
         logger.info("Could not find sundials libraries.")
-        logger.info(f'Installing sundials in {install_dir}')
+        logger.info("Installing sundials in {}".format(install_dir))
         download_dir = os.path.join(pybamm_dir, "sundials")
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)

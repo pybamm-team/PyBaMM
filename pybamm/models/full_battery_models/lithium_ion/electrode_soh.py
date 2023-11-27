@@ -410,10 +410,7 @@ class ElectrodeSOHSolver:
         # Calculate theoretical energy
         # TODO: energy calc for MSMR
         if self.options["open-circuit potential"] != "MSMR":
-            energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                self.parameter_values,
-                sol_dict,
-            )
+            energy = self.theoretical_energy_integral(sol_dict)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
@@ -829,6 +826,27 @@ class ElectrodeSOHSolver:
         sol = self.solve(inputs)
         return [sol["Un(x_0)"], sol["Un(x_100)"], sol["Up(y_100)"], sol["Up(y_0)"]]
 
+    def theoretical_energy_integral(self, inputs, points=1000):
+        x_0 = inputs["x_0"]
+        y_0 = inputs["y_0"]
+        x_100 = inputs["x_100"]
+        y_100 = inputs["y_100"]
+        Q_p = inputs["Q_p"]
+        x_vals = np.linspace(x_100, x_0, num=points)
+        y_vals = np.linspace(y_100, y_0, num=points)
+        # Calculate OCV at each stoichiometry
+        param = self.param
+        T = param.T_amb_av(0)
+        Vs = self.parameter_values.evaluate(
+            param.p.prim.U(y_vals, T) - param.n.prim.U(x_vals, T)
+        ).flatten()
+        # Calculate dQ
+        Q = Q_p * (y_0 - y_100)
+        dQ = Q / (points - 1)
+        # Integrate and convert to W-h
+        E = np.trapz(Vs, dx=dQ)
+        return E
+
 
 def get_initial_stoichiometries(
     initial_value,
@@ -972,7 +990,7 @@ def get_min_max_ocps(
     return esoh_solver.get_min_max_ocps()
 
 
-def theoretical_energy_integral(parameter_values, inputs, points=100):
+def theoretical_energy_integral(parameter_values, param, inputs, points=100):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
     given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -991,30 +1009,8 @@ def theoretical_energy_integral(parameter_values, inputs, points=100):
     E
         The total energy of the cell in Wh
     """
-    x_0 = inputs["x_0"]
-    y_0 = inputs["y_0"]
-    x_100 = inputs["x_100"]
-    y_100 = inputs["y_100"]
-    Q_p = inputs["Q_p"]
-    x_vals = np.linspace(x_100, x_0, num=points)
-    y_vals = np.linspace(y_100, y_0, num=points)
-    # Calculate OCV at each stoichiometry
-    param = pybamm.LithiumIonParameters()
-    y = pybamm.standard_spatial_vars.y
-    z = pybamm.standard_spatial_vars.z
-    T = pybamm.yz_average(param.T_amb(y, z, 0))
-    Vs = np.empty(x_vals.shape)
-    for i in range(x_vals.size):
-        Vs[i] = (
-            parameter_values.evaluate(param.p.prim.U(y_vals[i], T)).item()
-            - parameter_values.evaluate(param.n.prim.U(x_vals[i], T)).item()
-        )
-    # Calculate dQ
-    Q = Q_p * (y_0 - y_100)
-    dQ = Q / (points - 1)
-    # Integrate and convert to W-h
-    E = np.trapz(Vs, dx=dQ)
-    return E
+    esoh_solver = ElectrodeSOHSolver(parameter_values, param)
+    return esoh_solver.theoretical_energy_integral(inputs, points=points)
 
 
 def calculate_theoretical_energy(
@@ -1045,6 +1041,7 @@ def calculate_theoretical_energy(
     Q_p = parameter_values.evaluate(pybamm.LithiumIonParameters().p.prim.Q_init)
     E = theoretical_energy_integral(
         parameter_values,
+        pybamm.LithiumIonParameters(),
         {"x_100": x_100, "x_0": x_0, "y_100": y_100, "y_0": y_0, "Q_p": Q_p},
         points=points,
     )

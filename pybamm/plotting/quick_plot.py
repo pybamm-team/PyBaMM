@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
+from pybamm.util import have_optional_dependency
 
 
 class LoopList(list):
@@ -46,7 +47,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    import matplotlib.pyplot as plt
+    plt = have_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
@@ -462,9 +463,10 @@ class QuickPlot(object):
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
-        from matplotlib import cm, colors
+        plt = have_optional_dependency("matplotlib.pyplot")
+        gridspec = have_optional_dependency("matplotlib.gridspec")
+        cm = have_optional_dependency("matplotlib", "cm")
+        colors = have_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -525,7 +527,7 @@ class QuickPlot(object):
                 # 1D plot: plot as a function of x at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
-                spatial_var_name = list(spatial_vars.keys())[0]
+                spatial_var_name = next(iter(spatial_vars.keys()))
                 ax.set_xlabel(
                     f"{spatial_var_name} [{self.spatial_unit}]",
                 )
@@ -559,12 +561,12 @@ class QuickPlot(object):
                 # different order based on whether the domains are x-r, x-z or y-z, etc
                 if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
-                    y_name = list(spatial_vars.keys())[0][0]
+                    y_name = next(iter(spatial_vars.keys()))[0]
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
-                    x_name = list(spatial_vars.keys())[0][0]
+                    x_name = next(iter(spatial_vars.keys()))[0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
@@ -661,8 +663,8 @@ class QuickPlot(object):
                 continuous_update=False,
             )
         else:
-            import matplotlib.pyplot as plt
-            from matplotlib.widgets import Slider
+            plt = have_optional_dependency("matplotlib.pyplot")
+            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -766,8 +768,8 @@ class QuickPlot(object):
             Name of the generated GIF file.
 
         """
-        import imageio.v2 as imageio
-        import matplotlib.pyplot as plt
+        imageio = have_optional_dependency("imageio.v2")
+        plt = have_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)

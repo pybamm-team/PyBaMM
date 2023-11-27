@@ -4,11 +4,9 @@
 import numbers
 
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
-from sympy.vector.operators import Divergence as sympy_Divergence
-from sympy.vector.operators import Gradient as sympy_Gradient
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -83,6 +81,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -288,14 +287,7 @@ class Index(UnaryOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.slice.start,
-                self.slice.stop,
-                self.children[0].id,
-            )
-            + tuple(self.domain)
+            (self.__class__, self.name, self.slice.start, self.slice.stop, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_evaluate(self, child):
@@ -368,6 +360,7 @@ class Gradient(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
         return sympy_Gradient(child)
 
 
@@ -401,6 +394,7 @@ class Divergence(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
         return sympy_Divergence(child)
 
 
@@ -551,15 +545,7 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple(
-                [
-                    integration_variable.id
-                    for integration_variable in self.integration_variable
-                ]
-            )
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name, *tuple([integration_variable.id for integration_variable in self.integration_variable]), self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -577,6 +563,7 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Integral(child, sympy.Symbol("xn"))
 
 
@@ -694,9 +681,7 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name, self.vector_type, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -749,7 +734,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
+            (self.__class__, self.name, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -790,8 +775,7 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
         )
 
     def _evaluates_on_edges(self, dimension):
@@ -847,8 +831,7 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
         )
 
     def _unary_new_copy(self, child):
@@ -881,6 +864,7 @@ class BoundaryValue(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         if (
             self.child.domain[0] in ["negative particle", "positive particle"]
             and self.side == "right"
