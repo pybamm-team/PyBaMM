@@ -64,9 +64,11 @@ if (NOT DEFINED USE_PYTHON_CASADI)
   set(USE_PYTHON_CASADI TRUE)
 endif()
 
+# Use importlib to find the casadi path without importing it. This is useful
+# to find the path for the build-time dependency, not the run-time dependency.
 execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
-    "import casadi as _; print(_.__path__[0])"
+    "import importlib.util; print(importlib.util.find_spec('casadi').submodule_search_locations[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
