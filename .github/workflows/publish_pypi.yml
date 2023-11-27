@@ -21,7 +21,7 @@ env:
   # Increase pip debugging output, equivalent to `pip -vv`
   CIBW_BUILD_VERBOSITY: 2
   # Disable build isolation to allow pre-installing build-time dependencies
-  # CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+  CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
 
 jobs:
   build_windows_wheels:
