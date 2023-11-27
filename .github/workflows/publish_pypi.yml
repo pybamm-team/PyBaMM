@@ -16,6 +16,13 @@ on:
         required: false
         default: false
 
+# Set options available for all jobs that use cibuildwheel
+env:
+  # Increase pip debugging output, equivalent to `pip -vv`
+  CIBW_BUILD_VERBOSITY: 2
+  # Disable build isolation to allow pre-installing build-time dependencies
+  # CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+
 jobs:
   build_windows_wheels:
     name: Build wheels on windows-latest
@@ -55,6 +62,9 @@ jobs:
         env:
           CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=C:\vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
           CIBW_ARCHS: "AMD64"
+          CIBW_BEFORE_BUILD: >
+            python -m pip install --upgrade setuptools wheel
+          CIBW_TEST_COMMAND: "python -c 'import pybamm; print(pybamm.have_idaklu())' | grep 'True'"
 
       - name: Upload Windows wheels
         uses: actions/upload-artifact@v3
@@ -63,7 +73,7 @@ jobs:
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-  build_wheels:
+  build_macos_and_linux_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -96,17 +106,14 @@ jobs:
             yum -y install openblas-devel lapack-devel &&
             bash scripts/install_sundials.sh 6.0.3 6.5.0
           CIBW_BEFORE_BUILD_LINUX: >
-            python -m pip install cmake casadi numpy
-          # override; point to casadi install path so that it can be found by the repair command
+            python -m pip install cmake casadi setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
-            LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:$(python -c 'import casadi; print(casadi.__path__[0])')" auditwheel repair -w {dest_dir} {wheel}
+            auditwheel repair -w {dest_dir} {wheel}
           CIBW_BEFORE_BUILD_MACOS: >
-            python -m pip
-            install cmake casadi numpy &&
-            python scripts/fix_casadi_rpath_mac.py && scripts/fix_suitesparse_rpath_mac.sh
+            python -m pip install --upgrade cmake casadi setuptools wheel && scripts/fix_suitesparse_rpath_mac.sh
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            delocate-listdeps {wheel} &&
-            delocate-wheel -v -w {dest_dir} {wheel}
+            delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+          CIBW_TEST_COMMAND: "python -c 'import pybamm; print(pybamm.have_idaklu())' | grep 'True'"
           CIBW_SKIP: "pp* *musllinux*"
 
       - name: Upload wheels
@@ -142,7 +149,7 @@ jobs:
   publish_pypi:
     if: github.event_name != 'schedule'
     name: Upload package to PyPI
-    needs: [build_wheels, build_windows_wheels, build_sdist]
+    needs: [build_macos_and_linux_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -171,7 +178,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
-    needs: [build_windows_wheels, build_wheels, build_sdist]
+    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_sdist]
     name: Open an issue if build fails
     if: ${{ always() && contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
