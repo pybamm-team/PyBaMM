@@ -65,7 +65,6 @@ class Time(IndependentVariable):
 
     def __init__(self):
         super().__init__("time")
-        # making this super(pybamm.Symbol, self)__init__(name="time") works, but not sure why.
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -74,9 +73,9 @@ class Time(IndependentVariable):
     def _base_evaluate(
         self,
         t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        y: Any = None,
+        y_dot: Any = None,
+        inputs: Any = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if t is None:
@@ -115,8 +114,6 @@ class SpatialVariable(IndependentVariable):
         deprecated.
     """
 
-    # coord_sys: Optional[Any]
-
     def __init__(
         self,
         name: str,
@@ -130,28 +127,25 @@ class SpatialVariable(IndependentVariable):
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
         domain = self.domain
-        # using a dataclass, at this point the domain doesn't get set for some reason, during initialisation.
 
         if domain == []:
             raise ValueError("domain must be provided")
 
         # Check symbol name vs domain name
-        if name == "r_n" and not all(
-            n in domain[0] for n in ["negative", "particle"]  # type:ignore[index]
-        ):
+        if name == "r_n" and not all(n in domain[0] for n in ["negative", "particle"]):
             # catches "negative particle", "negative secondary particle", etc
             raise pybamm.DomainError(
                 "domain must be negative particle if name is 'r_n'"
             )
         elif name == "r_p" and not all(
-            n in domain[0] for n in ["positive", "particle"]  # type:ignore[index]
+            n in domain[0] for n in ["positive", "particle"]
         ):
             # catches "positive particle", "positive secondary particle", etc
             raise pybamm.DomainError(
                 "domain must be positive particle if name is 'r_p'"
             )
         elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
-            ["particle" in dom for dom in domain]  # type:ignore[index, union-attr]
+            ["particle" in dom for dom in domain]
         ):
             raise pybamm.DomainError(
                 "domain cannot be particle if name is '{}'".format(name)

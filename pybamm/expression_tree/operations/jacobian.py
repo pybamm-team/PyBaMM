@@ -76,17 +76,12 @@ class Jacobian(object):
         elif isinstance(symbol, pybamm.Function):
             children_jacs = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
-                children_jacs[i] = self.jac(  # type:ignore[call-overload]
-                    child, variable
-                )
+                children_jacs[i] = self.jac(child, variable)
             # _function_jac defined in function class
             jac = symbol._function_jac(children_jacs)
 
         elif isinstance(symbol, pybamm.Concatenation):
-            children_jacs = [
-                self.jac(child, variable)  # type:ignore[misc]
-                for child in symbol.children
-            ]
+            children_jacs = [self.jac(child, variable) for child in symbol.children]
             if len(children_jacs) == 1:
                 jac = children_jacs[0]
             else:

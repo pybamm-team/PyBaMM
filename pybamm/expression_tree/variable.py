@@ -6,7 +6,7 @@ import numpy as np
 import sympy
 import numbers
 import pybamm
-from typing import Iterable, Union, Optional, Sequence
+from typing import Union, Optional
 
 
 class VariableBase(pybamm.Symbol):
@@ -51,10 +51,10 @@ class VariableBase(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[Union[Sequence[str], str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict] = None,
-        bounds: Optional[tuple] = None,
+        bounds: Optional[tuple[pybamm.Symbol]] = None,
         print_name: Optional[str] = None,
         scale: Optional[Union[float, pybamm.Symbol]] = 1,
         reference: Optional[Union[float, pybamm.Symbol]] = 0,
@@ -83,13 +83,13 @@ class VariableBase(pybamm.Symbol):
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values: Sequence[numbers.Number]):
+    def bounds(self, values: tuple[numbers.Number, numbers.Number]):
         if values is None:
             values = (-np.inf, np.inf)
         else:
             if (
                 all(isinstance(b, numbers.Number) for b in values)
-                and values[0] >= values[1]  # type:ignore
+                and values[0] >= values[1]
             ):
                 raise ValueError(
                     f"Invalid bounds {values}. "
@@ -99,7 +99,7 @@ class VariableBase(pybamm.Symbol):
         values = list(values)
         for idx, bound in enumerate(values):
             if isinstance(bound, numbers.Number):
-                values[idx] = pybamm.Scalar(bound)  # type:ignore[call-overload]
+                values[idx] = pybamm.Scalar(bound)
         self._bounds = tuple(values)
 
     def set_id(self):
@@ -234,9 +234,7 @@ class VariableDot(VariableBase):
         """
         return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
 
-    def diff(
-        self, variable: pybamm.VariableDot  # type:ignore[override]
-    ) -> pybamm.Scalar:
+    def diff(self, variable: pybamm.Symbol) -> pybamm.Scalar:
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:

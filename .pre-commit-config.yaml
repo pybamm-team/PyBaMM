@@ -7,7 +7,7 @@ repos:
     rev: "v0.0.288"
     hooks:
       - id: ruff
-        args: [--fix, --ignore=E741, --exclude=__init__.py]
+        args: [--fix, --ignore=E741, --exclude=__init__.py, --select=I002]
 
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.7.0

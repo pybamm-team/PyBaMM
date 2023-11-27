@@ -28,7 +28,7 @@ class UnaryOperator(pybamm.Symbol):
         child node
     """
 
-    def __init__(self, name: str, child: pybamm.Symbol, domains=None):
+    def __init__(self, name: str, child: pybamm.Symbol, domains: Optional[dict] = None):
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
@@ -344,7 +344,7 @@ class SpatialOperator(UnaryOperator):
         child node
     """
 
-    def __init__(self, name: str, child: pybamm.Symbol, domains=None):
+    def __init__(self, name: str, child: pybamm.Symbol, domains: Optional[dict] = None):
         super().__init__(name, child, domains)
 
 

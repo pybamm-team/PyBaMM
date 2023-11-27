@@ -103,7 +103,7 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x = [x]  # type:ignore[list-item]
+                x = [x]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
@@ -115,7 +115,7 @@ class Interpolant(pybamm.Function):
             children = [children]
         # Either a single x is provided and there is one child
         # or x is a 2-tuple and there are two children
-        if len(x) != len(children):  # type:ignore[arg-type]
+        if len(x) != len(children):
             raise ValueError("len(x) should equal len(children)")
         # if there is only one x, y can be 2-dimensional but the child must have
         # length 1
@@ -131,7 +131,7 @@ class Interpolant(pybamm.Function):
                 if extrapolate is False:
                     fill_value = np.nan
                 elif extrapolate is True:
-                    fill_value = "extrapolate"  # type:ignore[assignment]
+                    fill_value = "extrapolate"  # ignore:assignment
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y.T,
@@ -181,7 +181,7 @@ class Interpolant(pybamm.Function):
                 )
             else:
                 interpolating_function = interpolate.RegularGridInterpolator(
-                    (x1, x2, x3),  # type:ignore[has-type]
+                    (x1, x2, x3),
                     y,
                     method=interpolator,
                     bounds_error=False,

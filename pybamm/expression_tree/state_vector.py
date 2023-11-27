@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
-from typing import Optional, Iterable, Union, Sequence
+from typing import Optional, Union, Any
 
 import pybamm
 
@@ -39,7 +39,7 @@ class StateVectorBase(pybamm.Symbol):
         *y_slices: slice,
         base_name="y",
         name: Optional[str] = None,
-        domain: Optional[Sequence[str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
@@ -226,7 +226,7 @@ class StateVector(StateVectorBase):
         self,
         *y_slices: slice,
         name: Optional[str] = None,
-        domain: Optional[Sequence[str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
@@ -243,10 +243,10 @@ class StateVector(StateVectorBase):
 
     def _base_evaluate(
         self,
-        t: Optional[float] = None,
+        t: Any = None,
         y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        y_dot: Any = None,
+        inputs: Any = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y is None:
@@ -310,7 +310,7 @@ class StateVectorDot(StateVectorBase):
         self,
         *y_slices: slice,
         name: Optional[str] = None,
-        domain: Optional[Sequence[str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict] = None,
         domains: Optional[dict[str, list[str]]] = None,
         evaluation_array: Optional[list] = None,
@@ -327,10 +327,10 @@ class StateVectorDot(StateVectorBase):
 
     def _base_evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
+        t: Any = None,
+        y: Any = None,
         y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        inputs: Any = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y_dot is None:

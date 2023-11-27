@@ -3,7 +3,7 @@
 #
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from typing import Union, Optional
+from typing import Union, Optional, Type
 
 import pybamm
 
@@ -15,7 +15,7 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: Union[np.ndarray, list],
+        entries: Union[np.ndarray, list, csr_matrix],
         name: Optional[str] = None,
         domain: Optional[list[str]] = None,
         auxiliary_domains: Optional[dict[str, str]] = None,

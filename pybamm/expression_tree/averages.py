@@ -2,7 +2,7 @@
 # Classes and methods for averaging
 #
 from __future__ import annotations
-from typing import Union, Callable, Sequence
+from typing import Union, Callable, Optional
 import pybamm
 
 
@@ -211,7 +211,7 @@ def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.reduce_one_dimension()  # type:ignore
+        return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
     elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
         return _sum_of_averages(symbol, z_average)
@@ -247,7 +247,7 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.reduce_one_dimension()  # type:ignore
+        return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages
     elif isinstance(symbol, (pybamm.Addition, pybamm.Subtraction)):
         return _sum_of_averages(symbol, yz_average)
@@ -303,7 +303,9 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         return RAverage(symbol)
 
 
-def size_average(symbol: pybamm.Symbol, f_a_dist=None) -> pybamm.Symbol:
+def size_average(
+    symbol: pybamm.Symbol, f_a_dist: Optional[pybamm.Symbol] = None
+) -> pybamm.Symbol:
     """Convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 

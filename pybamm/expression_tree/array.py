@@ -38,11 +38,11 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries: Union[np.ndarray, list],
+        entries: Union[np.ndarray, list, csr_matrix],
         name: Optional[str] = None,
         domain: Union[list[str], str, None] = None,
         auxiliary_domains: Optional[dict[str, str]] = None,
-        domains: Optional[dict] = None,
+        domains: Optional[dict[str, list[str]]] = None,
         entries_string: Optional[str] = None,
     ) -> None:
         # if
@@ -78,7 +78,7 @@ class Array(pybamm.Symbol):
         return self._entries_string
 
     @entries_string.setter
-    def entries_string(self, value):
+    def entries_string(self, value: Union[None, tuple]):
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
         # Slightly different syntax for sparse and non-sparse matrices
@@ -88,10 +88,10 @@ class Array(pybamm.Symbol):
             entries = self._entries
             if issparse(entries):
                 dct = entries.__dict__
-                self._entries_string = ["shape", str(dct["_shape"])]
+                entries_string = ["shape", str(dct["_shape"])]
                 for key in ["data", "indices", "indptr"]:
-                    self._entries_string += [key, dct[key].tobytes()]
-                self._entries_string = tuple(self._entries_string)
+                    entries_string += [key, dct[key].tobytes()]
+                self._entries_string = tuple(entries_string)
                 # self._entries_string = str(entries.__dict__)
             else:
                 self._entries_string = (entries.tobytes(),)
@@ -117,13 +117,7 @@ class Array(pybamm.Symbol):
             entries_string=self.entries_string,
         )
 
-    def _base_evaluate(
-        self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
-    ):
+    def _base_evaluate(self, t, y, y_dot, inputs):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._entries
 
@@ -137,7 +131,7 @@ class Array(pybamm.Symbol):
         return sympy.Array(entries_list)
 
 
-def linspace(start: float, stop: float, num=50, **kwargs) -> pybamm.Array:
+def linspace(start: float, stop: float, num: int = 50, **kwargs) -> pybamm.Array:
     """
     Creates a linearly spaced array by calling `numpy.linspace` with keyword
     arguments 'kwargs'. For a list of 'kwargs' see the
@@ -155,6 +149,6 @@ def meshgrid(
     see the `numpy meshgrid documentation <https://tinyurl.com/y8azewrj>`_
     """
     [X, Y] = np.meshgrid(x.entries, y.entries)
-    X = pybamm.Array(X)  # type:ignore[assignment]
-    Y = pybamm.Array(Y)  # type:ignore[assignment]
-    return X, Y  # type:ignore[return-value]
+    X = pybamm.Array(X)
+    Y = pybamm.Array(Y)
+    return X, Y

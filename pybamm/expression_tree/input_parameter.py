@@ -31,7 +31,7 @@ class InputParameter(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[Union[Sequence[str], str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         expected_size: Optional[int] = None,
     ) -> None:
         # Expected size defaults to 1 if no domain else None (gets set later)
@@ -78,7 +78,7 @@ class InputParameter(pybamm.Symbol):
         t: Optional[float] = None,
         y: Optional[np.ndarray] = None,
         y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        inputs: Optional[Union[dict, str]] = None,
     ):
         # inputs should be a dictionary
         # convert 'None' to empty dictionary for more informative error

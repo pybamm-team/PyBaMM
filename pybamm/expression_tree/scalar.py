@@ -5,7 +5,7 @@ from __future__ import annotations
 import numbers
 import numpy as np
 import sympy
-from typing import Optional, Literal, Union
+from typing import Optional, Literal, Union, Any
 
 import pybamm
 
@@ -26,7 +26,7 @@ class Scalar(pybamm.Symbol):
 
     def __init__(
         self,
-        value: Union[float, numbers.Number],
+        value: Union[float, numbers.Number, np.bool_],
         name: Optional[str] = None,
     ) -> None:
         # set default name if not provided
@@ -61,10 +61,10 @@ class Scalar(pybamm.Symbol):
 
     def _base_evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        t: Any = None,
+        y: Any = None,
+        y_dot: Any = None,
+        inputs: Any = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value

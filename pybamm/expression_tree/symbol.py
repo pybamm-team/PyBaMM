@@ -3,7 +3,6 @@
 #
 from __future__ import annotations
 import numbers
-import inspect
 
 import anytree
 import numpy as np
@@ -17,12 +16,9 @@ from typing import (
     Optional,
     Iterable,
     Sequence,
-    TypeVar,
     no_type_check,
 )
-
-# from pydantic import BaseModel
-# from pydantic.dataclasses import dataclass
+from typing_extensions import TypeVar
 
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
@@ -40,27 +36,6 @@ if TYPE_CHECKING:
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
-
-
-# class PatchedModel(BaseModel):
-#     @no_type_check
-#     def __setattr__(self, name, value):
-#         """
-#         To be able to use properties with setters
-#         """
-#         try:
-#             super().__setattr__(name, value)
-#         except ValueError as e:
-#             setters = inspect.getmembers(
-#                 self.__class__,
-#                 predicate=lambda x: isinstance(x, property) and x.fset is not None,
-#             )
-#             for setter_name, func in setters:
-#                 if setter_name == name:
-#                     object.__setattr__(self, name, value)
-#                     break
-#             else:
-#                 raise e
 
 
 def domain_size(domain: Union[list[str], str]):
@@ -147,7 +122,7 @@ def is_scalar_minus_one(expr: Symbol):
     return is_scalar_x(expr, -1)
 
 
-def is_matrix_x(expr: Symbol, x):
+def is_matrix_x(expr: Symbol, x: int):
     """
     Utility function to test if an expression evaluates to a constant matrix value
     """
@@ -191,9 +166,7 @@ def is_matrix_minus_one(expr: Symbol):
     return is_matrix_x(expr, -1)
 
 
-def simplify_if_constant(
-    symbol: S,
-) -> S:
+def simplify_if_constant(symbol: Union[S, float]) -> S:
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -206,25 +179,20 @@ def simplify_if_constant(
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                return pybamm.Scalar(result)  # type:ignore[return-value, arg-type]
+                return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(  # type:ignore[return-value]
-                        result, domains=symbol.domains
-                    )
+                    return pybamm.Vector(result, domains=symbol.domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(  # type:ignore[return-value]
-                        result, domains=symbol.domains
-                    )
+                    return pybamm.Matrix(result, domains=symbol.domains)
 
     return symbol
 
 
-# @dataclass
-class Symbol:  # PatchedModel
+class Symbol:
     """
     Base node class for the expression tree.
 
@@ -253,23 +221,14 @@ class Symbol:  # PatchedModel
         deprecated.
     """
 
-    # name: str
-
     def __init__(
         self,
         name: str,
         children: Optional[Sequence[Symbol]] = None,
-        domain: Optional[Union[Sequence[str], str]] = None,
+        domain: Optional[Union[list[str], str]] = None,
         auxiliary_domains: Optional[dict[str, str]] = None,
-        domains: Optional[dict] = None,
+        domains: Optional[dict[str, list[str]]] = None,
     ):
-        # super().__init__(
-        #     name=name,
-        #     children=children,
-        #     domain=domain,
-        #     auxiliary_domains=auxiliary_domains,
-        #     domains=domains,
-        # )
         super(Symbol, self).__init__()
         self.name = name
 
@@ -277,11 +236,11 @@ class Symbol:  # PatchedModel
             children = []
 
         self._children = children
-        # Keep a separate "oprhans" attribute for backwards compatibility
+        # Keep a separate "orphans" attribute for backwards compatibility
         self._orphans = children
 
         # Set domains (and hence id)
-        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)  # type: ignore[misc]
+        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
         self._saved_evaluates_on_edges: dict = {}
         self._print_name = None
@@ -295,15 +254,6 @@ class Symbol:  # PatchedModel
                 for x in self.pre_order()
             ):
                 self.test_shape()
-
-    #     # super().__init__(name, children, domain, auxiliary_domains, domains)
-
-    # class Config:
-    #     arbitrary_types_allowed = True
-    #     # underscore_attrs_are_private = True
-    #     keep_untouched = (cached_property,)
-    #     fields = {"domain": {"exclude": True}, "auxiliary_domains": {"exclude": True}}
-    #     # json_encoders = {"Symbol": lambda u: u.__dict__}
 
     @property
     def children(self):
@@ -329,31 +279,7 @@ class Symbol:  # PatchedModel
     def domains(self):
         return self._domains
 
-    @property
-    def domain(self):
-        """
-        list of applicable domains.
-
-        Returns
-        -------
-            iterable of str
-        """
-        return self._domains["primary"]
-
-    @domain.setter
-    def domain(self, domain: Union[list[str], str]):
-        raise NotImplementedError(
-            "Cannot set domain directly, use domains={'primary': domain} instead"
-        )
-
-    @property
-    def auxiliary_domains(self):
-        """Returns auxiliary domains."""
-        raise NotImplementedError(
-            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
-        )
-
-    @domains.setter  # type:ignore[no-redef, attr-defined]
+    @domains.setter
     def domains(self, domains):
         try:
             if (
@@ -397,6 +323,30 @@ class Symbol:  # PatchedModel
 
         self._domains = domains
         self.set_id()
+
+    @property
+    def domain(self):
+        """
+        list of applicable domains.
+
+        Returns
+        -------
+            iterable of str
+        """
+        return self._domains["primary"]
+
+    @domain.setter
+    def domain(self, domain):
+        raise NotImplementedError(
+            "Cannot set domain directly, use domains={'primary': domain} instead"
+        )
+
+    @property
+    def auxiliary_domains(self):
+        """Returns auxiliary domains."""
+        raise NotImplementedError(
+            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
+        )
 
     @property
     def secondary_domain(self):
@@ -448,7 +398,7 @@ class Symbol:  # PatchedModel
 
     def read_domain_or_domains(
         self,
-        domain: Optional[Union[Sequence[str], str]],
+        domain: Optional[Union[list[str], str]],
         auxiliary_domains: Optional[dict[str, str]],
         domains: Optional[dict],
     ):
@@ -494,9 +444,9 @@ class Symbol:  # PatchedModel
     def reference(self):
         return self._reference
 
-    def __eq__(self, other):
+    def __eq__(self, other: Union[Symbol, float]):
         try:
-            return self._id == other._id
+            return self._id == other._id  # type:ignore
         except AttributeError:
             if isinstance(other, numbers.Number):
                 return self._id == pybamm.Scalar(other)._id
@@ -550,7 +500,7 @@ class Symbol:  # PatchedModel
             # raise error but only through logger so that test passes
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
-    def relabel_tree(self, symbol, counter):
+    def relabel_tree(self, symbol: Symbol, counter: int):
         """
         Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
@@ -638,11 +588,11 @@ class Symbol:  # PatchedModel
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
-    def __matmul__(self, other: Symbol):
+    def __matmul__(self, other: Symbol) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(self, other)
 
-    def __rmatmul__(self, other: Symbol):
+    def __rmatmul__(self, other: Symbol) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
@@ -678,7 +628,7 @@ class Symbol:  # PatchedModel
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
-    def __neg__(self) -> pybamm.Symbol:
+    def __neg__(self) -> pybamm.Negate:
         """return a :class:`Negate` object."""
         if isinstance(self, pybamm.Negate):
             # Double negative is a positive
@@ -791,7 +741,7 @@ class Symbol:  # PatchedModel
         t: Optional[float] = None,
         y: Optional[np.ndarray] = None,
         y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        inputs: Optional[Union[dict, str]] = None,
     ):
         """
         evaluate expression tree.
@@ -823,8 +773,8 @@ class Symbol:  # PatchedModel
         t: Optional[float] = None,
         y: Optional[np.ndarray] = None,
         y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
-    ):
+        inputs: Optional[Union[dict, str]] = None,
+    ) -> Union[float, np.ndarray]:
         """Evaluate expression tree (wrapper to allow using dict of known values).
 
         Parameters
@@ -876,7 +826,7 @@ class Symbol:  # PatchedModel
         # Default behaviour is False
         return False
 
-    def evaluate_ignoring_errors(self, t=0):
+    def evaluate_ignoring_errors(self, t: Union[None, float] = 0):  # none
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
         as a scalar or vector (e.g. Time, Parameter, Variable, StateVector), then None
@@ -955,7 +905,7 @@ class Symbol:  # PatchedModel
         # Default behaviour: return False
         return False
 
-    def has_symbol_of_classes(self, symbol_classes):
+    def has_symbol_of_classes(self, symbol_classes: Union[Symbol, tuple[type[Symbol]]]):
         """
         Returns True if equation has a term of the class(es) `symbol_class`.
 

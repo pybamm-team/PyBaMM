@@ -101,7 +101,7 @@ class FunctionParameter(pybamm.Symbol):
         domains = self.get_children_domains(children_list)
         super().__init__(name, children=children_list, domains=domains)
 
-        self.input_names = list(inputs.keys())  # type:ignore[misc]
+        self.input_names = list(inputs.keys())
 
         # Use the inspect module to find the function's "short name" from the
         # Parameters module that called it
@@ -109,12 +109,12 @@ class FunctionParameter(pybamm.Symbol):
             self.print_name = print_name
         else:
             frame = sys._getframe().f_back
-            print_name = frame.f_code.co_name  # type:ignore[union-attr]
+            print_name = frame.f_code.co_name
             if print_name.startswith("_"):
                 self.print_name = None
             else:
                 try:
-                    parent_param = frame.f_locals["self"]  # type:ignore[union-attr]
+                    parent_param = frame.f_locals["self"]
                 except KeyError:
                     parent_param = None
                 if hasattr(parent_param, "domain") and parent_param.domain is not None:
@@ -124,16 +124,16 @@ class FunctionParameter(pybamm.Symbol):
                     print_name += f"_{d}"
                 self.print_name = print_name
 
-    @property
-    def input_names(self):
-        return self._input_names
-
     def print_input_names(self):
         if self._input_names:
             for inp in self._input_names:
                 print(inp)
 
-    @input_names.setter  # type:ignore[no-redef, attr-defined]
+    @property
+    def input_names(self):
+        return self._input_names
+
+    @input_names.setter
     def input_names(self, inp=None):
         if inp:
             if inp.__class__ is list:
