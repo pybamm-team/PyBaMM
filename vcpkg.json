@@ -1,6 +1,6 @@
 {
   "name": "pybamm",
-  "version-string": "23.5",
+  "version-string": "23.9",
   "dependencies": [
     "casadi",
     {

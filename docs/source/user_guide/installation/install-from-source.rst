@@ -105,8 +105,8 @@ Installing PyBaMM
 
 You should now have everything ready to build and install PyBaMM successfully.
 
-Using Nox (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~
+Using ``Nox`` (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
@@ -116,7 +116,7 @@ Using Nox (recommended)
 .. note::
 	It is recommended to use ``--verbose`` or ``-v`` to see outputs of all commands run.
 
-This creates a virtual environment ``.nox/dev`` inside the ``PyBaMM/`` directory.
+This creates a virtual environment ``venv/`` inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `pre-commit <https://pre-commit.com/>`_ and `ruff <https://beta.ruff.rs/docs/>`_.
 
 You can now activate the environment with
@@ -125,13 +125,13 @@ You can now activate the environment with
 
 	.. code:: bash
 
-		source .nox/dev/bin/activate
+		source venv/bin/activate
 
 .. tab:: Windows
 
 	.. code:: bash
 
-		.nox\dev\Scripts\activate.bat
+		venv\Scripts\activate.bat
 
 and run the tests to check your installation.
 
@@ -167,7 +167,7 @@ Running the tests
 Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-You can use Nox to run the unit tests and example notebooks in isolated virtual environments.
+You can use ``Nox`` to run the unit tests and example notebooks in isolated virtual environments.
 
 The default command
 
@@ -175,7 +175,7 @@ The default command
 
 	nox
 
-will run pre-commit, install ``Linux`` dependencies, and run the unit tests.
+will run pre-commit, install ``Linux`` and ``macOS`` dependencies, and run the unit tests.
 This can take several minutes.
 
 To just run the unit tests, use
@@ -246,8 +246,9 @@ Doctests, examples, and coverage
 - ``nox -s coverage``: Measure current test coverage and generate a coverage report.
 - ``nox -s quick``: Run integration tests, unit tests, and doctests sequentially.
 
-Extra tips while using Nox
---------------------------
+Extra tips while using ``Nox``
+------------------------------
+
 Here are some additional useful commands you can run with ``Nox``:
 
 - ``--verbose or -v``: Enables verbose mode, providing more detailed output during the execution of Nox sessions.
@@ -257,11 +258,12 @@ Here are some additional useful commands you can run with ``Nox``:
 - ``--install-only``: Skips the test execution and only performs the installation step defined in the Nox sessions.
 - ``--nocolor``: Disables the color output in the console during the execution of Nox sessions.
 - ``--report output.json``: Generates a JSON report of the Nox session execution and saves it to the specified file, in this case, "output.json".
+- ``nox -s docs --non-interactive``: Builds the documentation without serving it locally (using ``sphinx-build`` instead of ``sphinx-autobuild``).
 
 Troubleshooting
-===============
+---------------
 
-**Problem:** I’ve made edits to source files in PyBaMM, but these are
+**Problem:** I have made edits to source files in PyBaMM, but these are
 not being used when I run my Python script.
 
 **Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
@@ -279,11 +281,11 @@ sure each command was successful.
 One possibility is that you have not set your ``LD_LIBRARY_PATH`` to
 point to the sundials library, type ``echo $LD_LIBRARY_PATH`` and make
 sure one of the directories printed out corresponds to where the
-sundials libraries are located.
+SUNDIALS libraries are located.
 
 Another common reason is that you forget to install a BLAS library such
-as OpenBLAS before installing sundials. Check the cmake output when you
-configured Sundials, it might say:
+as OpenBLAS before installing SUNDIALS. Check the cmake output when you
+configured SUNDIALS, it might say:
 
 ::
 
@@ -292,5 +294,5 @@ configured Sundials, it might say:
 
 If this is the case, on a Debian or Ubuntu system you can install
 OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
-``brew install openblas`` for Mac OS) and then re-install sundials using
+``brew install openblas`` for Mac OS) and then re-install SUNDIALS using
 the instructions above.

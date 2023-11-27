@@ -47,13 +47,13 @@ from .util import (
     get_parameters_filepath,
     have_jax,
     install_jax,
+    have_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
-
 #
 # Classes for the Expression Tree
 #
@@ -202,6 +202,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver

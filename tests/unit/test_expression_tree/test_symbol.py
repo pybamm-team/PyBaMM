@@ -4,13 +4,14 @@
 from tests import TestCase
 import os
 import unittest
+from tempfile import TemporaryDirectory
 
 import numpy as np
 from scipy.sparse import csr_matrix, coo_matrix
-import sympy
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm.util import have_optional_dependency
 
 
 class TestSymbol(TestCase):
@@ -386,13 +387,16 @@ class TestSymbol(TestCase):
         )
 
     def test_symbol_visualise(self):
-        c = pybamm.Variable("c", "negative electrode")
-        d = pybamm.Variable("d", "negative electrode")
-        sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
-        sym.visualise("test_visualize.png")
-        self.assertTrue(os.path.exists("test_visualize.png"))
-        with self.assertRaises(ValueError):
-            sym.visualise("test_visualize")
+        with TemporaryDirectory() as dir_name:
+            test_stub = os.path.join(dir_name, "test_visualize")
+            test_name = f"{test_stub}.png"
+            c = pybamm.Variable("c", "negative electrode")
+            d = pybamm.Variable("d", "negative electrode")
+            sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
+            sym.visualise(test_name)
+            self.assertTrue(os.path.exists(test_name))
+            with self.assertRaises(ValueError):
+                sym.visualise(test_stub)
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var", domain="test")
@@ -480,6 +484,7 @@ class TestSymbol(TestCase):
             (y1 + y2).test_shape()
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
     def test_numpy_array_ufunc(self):

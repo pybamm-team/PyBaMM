@@ -215,7 +215,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         y = []
         platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if platform.startswith("cpu"):
+        if len(inputs) <= 1 or platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():
                 async def solve_model_async(inputs_v):
@@ -227,7 +227,11 @@ class JaxSolver(pybamm.BaseSolver):
                 return await asyncio.gather(*coro)
 
             y = asyncio.run(solve_model_for_inputs())
-        elif platform.startswith("gpu") or platform.startswith("tpu"):
+        elif (
+            platform.startswith("gpu")
+            or platform.startswith("tpu")
+            or platform.startswith("metal")
+        ):
             # gpu execution runs faster when parallelised with vmap
             # (see also comment below regarding single-program multiple-data
             #  execution (SPMD) using pmap on multiple XLAs)
