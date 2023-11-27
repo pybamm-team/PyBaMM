@@ -87,8 +87,8 @@ class ScikitSubMesh2D(SubMesh):
         # check coordinate system agrees
         if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
             raise pybamm.DomainError(
-                f"""spatial variables should have the same coordinate system,
-                but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"""
+                f"spatial variables should have the same coordinate system, "
+                "but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"
             )
         return spatial_vars, tabs
 
@@ -334,21 +334,21 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
             # check that npts equals number of user-supplied edges
             if npts[var.name] != len(edges[var.name]):
                 raise pybamm.GeometryError(
-                    f"""User-suppled edges has should have length npts but has length {len(edges[var.name])}.
-                     Number of points (npts) for variable {var.name} in
-                     domain {var.domain} is {npts[var.name]}."""
+                    f"User-suppled edges has should have length npts but has length {len(edges[var.name])}. "
+                    "Number of points (npts) for variable {var.name} in "
+                    "domain {var.domain} is {npts[var.name]}."
                 )
 
             # check end points of edges agree with spatial_lims
             if edges[var.name][0] != lims[var.name]["min"]:
                 raise pybamm.GeometryError(
-                    f"""First entry of edges is {edges[var.name][0]}, but should be equal to {lims[var.name]["min"]}
-                     for variable {var.name} in domain {var.domain}."""
+                    f"First entry of edges is {edges[var.name][0]}, but should be equal to {lims[var.name]["min"]} "
+                    "for variable {var.name} in domain {var.domain}."
                 )
             if edges[var.name][-1] != lims[var.name]["max"]:
                 raise pybamm.GeometryError(
-                    f"""Last entry of edges is {edges[var.name][-1]}, but should be equal to {lims[var.name]["max"]}
-                    for variable {var.name} in domain {var.domain}."""
+                    f"Last entry of edges is {edges[var.name][-1]}, but should be equal to {lims[var.name]["max"]} "
+                    "for variable {var.name} in domain {var.domain}."
                 )
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)

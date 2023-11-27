@@ -272,7 +272,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             _, pos_bc_type = boundary_conditions[symbol]["positive tab"]
         except KeyError:
             raise pybamm.ModelError(
-                f"No boundary conditions provided for symbol `{symbol}``"
+                f"No boundary conditions provided for symbol `{symbol}`"
             )
 
         # adjust matrix for Dirichlet boundary conditions

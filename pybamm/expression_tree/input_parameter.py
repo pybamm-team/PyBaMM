@@ -95,5 +95,5 @@ class InputParameter(pybamm.Symbol):
         else:
             raise ValueError(
                 f"Input parameter '{self.name}' was given an object of size '{input_size}'"
-                + f" but was expecting an object of size '{self._expected_size}'."
+                f" but was expecting an object of size '{self._expected_size}'."
             )

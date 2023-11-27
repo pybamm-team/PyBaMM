@@ -349,7 +349,7 @@ class Gradient(SpatialOperator):
         if child.domain == []:
             raise pybamm.DomainError(
                 f"Cannot take gradient of '{child}' since its domain is empty. "
-                + "Try broadcasting the object first, e.g.\n\n"
+                "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is True:
@@ -380,13 +380,13 @@ class Divergence(SpatialOperator):
         if child.domain == []:
             raise pybamm.DomainError(
                 f"Cannot take divergence of '{child}' since its domain is empty. "
-                + "Try broadcasting the object first, e.g.\n\n"
+                "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 f"Cannot take divergence of '{child}' since it does not "
-                + "evaluate on edges. Usually, a gradient should be taken before the "
+                "evaluate on edges. Usually, a gradient should be taken before the "
                 "divergence."
             )
         super().__init__("div", child)
@@ -830,8 +830,8 @@ class BoundaryOperator(SpatialOperator):
         if side in ["negative tab", "positive tab"]:
             if child.domain[0] != "current collector":
                 raise pybamm.ModelError(
-                    f"""Can only take boundary value on the tabs in the domain
-                'current collector', but {child} has domain {child.domain[0]}"""
+                    f"Can only take boundary value on the tabs in the domain "
+                    "'current collector', but {child} has domain {child.domain[0]}"
                 )
         self.side = side
         # boundary value of a child takes the primary domain from secondary domain

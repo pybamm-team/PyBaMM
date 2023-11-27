@@ -28,7 +28,7 @@ def _preprocess_binary(left, right):
     # Check both left and right are pybamm Symbols
     if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
         raise NotImplementedError(
-            f"""BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"""
+            f"BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
@@ -1336,8 +1336,8 @@ def source(left, right, boundary=False):
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            f"""'source' only implemented in the 'current collector' domain,
-            but symbols have domains {left.domain} and {right.domain}"""
+            f"'source' only implemented in the 'current collector' domain, "
+            "but symbols have domains {left.domain} and {right.domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

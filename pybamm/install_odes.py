@@ -42,7 +42,7 @@ def install_sundials(download_dir, install_dir):
 
     url = (
         "https://github.com/LLNL/"
-        + f'sundials/releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz'
+        f'sundials/releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz'
     )
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)

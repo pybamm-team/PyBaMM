@@ -815,7 +815,7 @@ class BaseModel:
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
                 raise pybamm.ModelError(
-                    f"""no initial condition given for variable '{var}'"""
+                    f"no initial condition given for variable '{var}'"
                 )
 
     def check_variables(self):
@@ -1190,9 +1190,7 @@ class BoundaryConditionsDict(dict):
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
-                        f"""
-                        boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'
-                        """
+                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
                     )
 
         return boundary_conditions

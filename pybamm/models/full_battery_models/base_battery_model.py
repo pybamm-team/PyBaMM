@@ -922,7 +922,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "integrated",
             ]:
                 raise pybamm.OptionError(
-                    f'''electrolyte conductivity '{options["electrolyte conductivity"]}' not suitable for SPMe'''
+                    f"electrolyte conductivity '{options['electrolyte conductivity']}' not suitable for SPMe"
                 )
         if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
             self, pybamm.lithium_ion.SPMe
@@ -961,8 +961,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             and options["hydrolysis"] == "true"
         ):
             raise pybamm.OptionError(
-                f"""must use surface formulation to solve {self!s} with hydrolysis
-                    """
+                f"must use surface formulation to solve {self!s} with hydrolysis"
             )
 
         self._options = options

@@ -99,7 +99,7 @@ class DFN(BaseModel):
 
         if self.options["electrolyte conductivity"] not in ["default", "full"]:
             raise pybamm.OptionError(
-                f'''electrolyte conductivity '{self.options["electrolyte conductivity"]}' not suitable for DFN'''
+                f"electrolyte conductivity '{self.options['electrolyte conductivity']}' not suitable for DFN"
             )
 
         if self.options["surface form"] == "false":

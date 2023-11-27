@@ -380,7 +380,6 @@ def to_python(symbol, debug=False, output_jax=False):
     variable_symbols = OrderedDict()
     find_symbols(symbol, constant_values, variable_symbols, output_jax)
 
-    #line_format = "{} = {}"
 
     if debug:  # pragma: no cover
         variable_lines = [

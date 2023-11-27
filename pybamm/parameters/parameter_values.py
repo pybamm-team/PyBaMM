@@ -232,9 +232,9 @@ class ParameterValues:
                 except KeyError as err:
                     raise KeyError(
                         f"Cannot update parameter '{name}' as it does not "
-                        + f"have a default value. ({err.args[0]}). If you are "
-                        + "sure you want to update this parameter, use "
-                        + "param.update({{name: value}}, check_already_exists=False)"
+                        f"have a default value. ({err.args[0]}). If you are "
+                        "sure you want to update this parameter, use "
+                        "param.update({{name: value}}, check_already_exists=False)"
                     )
             # if no conflicts, update
             if isinstance(value, str):
@@ -294,7 +294,7 @@ class ParameterValues:
 
         parameter_values.update(
             {
-                f'''Initial concentration in {options["working electrode"]} electrode [mol.m-3]''': x * c_max
+                f'Initial concentration in {options["working electrode"]} electrode [mol.m-3]': x * c_max
             }
         )
         return parameter_values
@@ -450,7 +450,7 @@ class ParameterValues:
         new_events = []
         for event in unprocessed_model.events:
             pybamm.logger.verbose(
-                f"Processing parameters for event '{event.name}''"
+                f"Processing parameters for event '{event.name}'"
             )
             new_events.append(
                 pybamm.Event(
@@ -461,7 +461,7 @@ class ParameterValues:
         interpolant_events = self._get_interpolant_events(model)
         for event in interpolant_events:
             pybamm.logger.verbose(
-                f"Processing parameters for event '{event.name}''"
+                f"Processing parameters for event '{event.name}'"
             )
             new_events.append(
                 pybamm.Event(
