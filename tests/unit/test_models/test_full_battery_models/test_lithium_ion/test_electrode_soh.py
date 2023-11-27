@@ -40,9 +40,7 @@ class TestElectrodeSOH(TestCase):
                     k: sol_split[k].data[0]
                     for k in ["x_0", "y_0", "x_100", "y_100", "Q_p"]
                 }
-                energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                    parameter_values, inputs
-                )
+                energy = esoh_solver.theoretical_energy_integral(inputs)
                 self.assertAlmostEqual(sol[key], energy, places=5)
 
         # should still work with old inputs
@@ -244,7 +242,7 @@ class TestElectrodeSOHMSMR(TestCase):
 
 class TestElectrodeSOHHalfCell(TestCase):
     def test_known_solution(self):
-        model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell()
 
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
         parameter_values = pybamm.ParameterValues("Xu2019")
@@ -346,6 +344,9 @@ class TestGetInitialSOC(TestCase):
 
     def test_error(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values_half_cell = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
 
         with self.assertRaisesRegex(
             ValueError, "Initial SOC should be between 0 and 1"
@@ -357,6 +358,23 @@ class TestGetInitialSOC(TestCase):
 
         with self.assertRaisesRegex(ValueError, "must be a float"):
             pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
+
+        with self.assertRaisesRegex(ValueError, "outside the voltage limits"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "1 V", parameter_values_half_cell
+            )
+
+        with self.assertRaisesRegex(ValueError, "must be a float"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "5 A", parameter_values_half_cell
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Initial SOC should be between 0 and 1"
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                2, parameter_values_half_cell
+            )
 
 
 class TestGetInitialOCP(TestCase):

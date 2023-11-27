@@ -6,6 +6,7 @@
 #
 import argparse
 import importlib.util
+import importlib.metadata
 import numbers
 import os
 import pathlib
@@ -18,13 +19,12 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import pkg_resources
-
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM
-JAX_VERSION = "0.4.8"
-JAXLIB_VERSION = "0.4.7"
+# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
+# in the extras dependencies in pyproject.toml, and therefore must be kept in sync.
+JAX_VERSION = "0.4"
+JAXLIB_VERSION = "0.4"
 
 
 def root_dir():
@@ -272,8 +272,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        pkg_resources.get_distribution("jax").version == JAX_VERSION
-        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
+        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
     )
 
 
@@ -341,7 +341,30 @@ def install_jax(arguments=None):  # pragma: no cover
             "-m",
             "pip",
             "install",
-            f"jax=={JAX_VERSION}",
-            f"jaxlib=={JAXLIB_VERSION}",
+            f"jax>={JAX_VERSION}",
+            f"jaxlib>={JAXLIB_VERSION}",
         ]
     )
+
+# https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
+def have_optional_dependency(module_name, attribute=None):
+    err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
+    try:
+        # Attempt to import the specified module
+        module = importlib.import_module(module_name)
+
+        if attribute:
+            # If an attribute is specified, check if it's available
+            if hasattr(module, attribute):
+                imported_attribute = getattr(module, attribute)
+                return imported_attribute  # Return the imported attribute
+            else:
+                # Raise an ModuleNotFoundError if the attribute is not available
+                raise ModuleNotFoundError(err_msg)      # pragma: no cover
+        else:
+            # Return the entire module if no attribute is specified
+            return module
+
+    except ModuleNotFoundError:
+        # Raise an ModuleNotFoundError if the module or attribute is not available
+        raise ModuleNotFoundError(err_msg)

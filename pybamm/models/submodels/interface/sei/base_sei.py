@@ -20,45 +20,34 @@ class BaseModel(BaseInterface):
         Whether this is a submodel for standard SEI or SEI on cracks
     """
 
-    def __init__(self, param, options, phase="primary", cracks=False):
+    def __init__(self, param, domain, options, phase="primary", cracks=False):
         if cracks is True:
             reaction = "SEI on cracks"
         else:
             reaction = "SEI"
-        domain = "negative"
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_coupled_variables(self, variables):
         # Update some common variables
+        domain, Domain = self.domain_Domain
 
         if self.reaction_loc != "interface":
             j_sei_av = variables[
-                f"X-averaged {self.reaction_name}interfacial current density [A.m-2]"
+                f"X-averaged {domain} electrode {self.reaction_name}interfacial"
+                " current density [A.m-2]"
             ]
             j_sei = variables[
-                f"{self.reaction_name}interfacial current density [A.m-2]"
+                f"{Domain} electrode {self.reaction_name}interfacial current"
+                " density [A.m-2]"
             ]
             variables.update(
                 {
-                    f"X-averaged negative electrode {self.reaction_name}interfacial "
+                    f"X-averaged {domain} electrode {self.reaction_name}interfacial "
                     "current density [A.m-2]": j_sei_av,
-                    f"Negative electrode {self.reaction_name}interfacial current "
+                    f"{Domain} electrode {self.reaction_name}interfacial current "
                     "density [A.m-2]": j_sei,
                 }
             )
-
-        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
-        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        variables.update(
-            {
-                f"Positive electrode {self.reaction} "
-                "interfacial current density [A.m-2]": zero,
-                f"X-averaged positive electrode {self.reaction} "
-                "volumetric interfacial current density [A.m-2]": zero_av,
-                f"Positive electrode {self.reaction} "
-                "volumetric interfacial current density [A.m-3]": zero,
-            }
-        )
 
         variables.update(
             self._get_standard_volumetric_current_density_variables(variables)
@@ -83,9 +72,10 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
+        domain, Domain = self.domain_Domain
         variables = {
-            f"Inner {self.reaction_name}thickness [m]": L_inner,
-            f"Outer {self.reaction_name}thickness [m]": L_outer,
+            f"{Domain} inner {self.reaction_name}thickness [m]": L_inner,
+            f"{Domain} outer {self.reaction_name}thickness [m]": L_outer,
         }
 
         if self.reaction_loc != "interface":
@@ -93,8 +83,10 @@ class BaseModel(BaseInterface):
             L_outer_av = pybamm.x_average(L_outer)
             variables.update(
                 {
-                    f"X-averaged inner {self.reaction_name}thickness [m]": L_inner_av,
-                    f"X-averaged outer {self.reaction_name}thickness [m]": L_outer_av,
+                    f"X-averaged {domain} inner {self.reaction_name}"
+                    "thickness [m]": L_inner_av,
+                    f"X-averaged {domain} outer {self.reaction_name}"
+                    "thickness [m]": L_outer_av,
                 }
             )
         # Get variables related to the total thickness
@@ -105,7 +97,7 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_thickness_variables(self, L_sei):
         """Update variables related to total SEI thickness."""
-        domain = self.domain
+        domain, Domain = self.domain_Domain
 
         if isinstance(self, pybamm.sei.NoSEI):
             R_sei = 1
@@ -113,15 +105,16 @@ class BaseModel(BaseInterface):
             R_sei = self.phase_param.R_sei
 
         variables = {
-            f"{self.reaction_name}[m]": L_sei,
-            f"Total {self.reaction_name}thickness [m]": L_sei,
+            f"{Domain} {self.reaction_name}[m]": L_sei,
+            f"{Domain} total {self.reaction_name}thickness [m]": L_sei,
         }
         if self.reaction_loc != "interface":
             L_sei_av = pybamm.x_average(L_sei)
             variables.update(
                 {
-                    f"X-averaged {self.reaction_name}thickness [m]": L_sei_av,
-                    f"X-averaged total {self.reaction_name}thickness [m]": L_sei_av,
+                    f"X-averaged {domain} {self.reaction_name}thickness [m]": L_sei_av,
+                    f"X-averaged {domain} total {self.reaction_name}"
+                    "thickness [m]": L_sei_av,
                 }
             )
             if self.reaction == "SEI":
@@ -135,7 +128,7 @@ class BaseModel(BaseInterface):
 
     def _get_standard_concentration_variables(self, variables):
         """Update variables related to the SEI concentration."""
-        Domain = self.domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_param = self.phase_param
         reaction_name = self.reaction_name
 
@@ -157,7 +150,7 @@ class BaseModel(BaseInterface):
             else:
                 # m * (mol/m4) = mol/m3 (n is a bulk quantity)
                 a = variables[
-                    f"Negative electrode {self.phase_name}"
+                    f"{Domain} electrode {self.phase_name}"
                     "surface area to volume ratio [m-1]"
                 ]
                 L_to_n_inner = a / phase_param.V_bar_inner
@@ -175,8 +168,8 @@ class BaseModel(BaseInterface):
             )
 
         if self.reaction == "SEI":
-            L_inner = variables[f"Inner {reaction_name}thickness [m]"]
-            L_outer = variables[f"Outer {reaction_name}thickness [m]"]
+            L_inner = variables[f"{Domain} inner {reaction_name}thickness [m]"]
+            L_outer = variables[f"{Domain} outer {reaction_name}thickness [m]"]
 
             n_inner = L_inner * L_to_n_inner  # inner SEI concentration
             n_outer = L_outer * L_to_n_outer  # outer SEI concentration
@@ -193,35 +186,38 @@ class BaseModel(BaseInterface):
 
             # Q_sei in mol
             if self.reaction_loc == "interface":
-                L_n = 1
-            else:
-                L_n = self.param.n.L
+                L_k = 1
+            elif domain == "negative":
+                L_k = self.param.n.L
+            elif domain == "positive":
+                L_k = self.param.p.L
 
-            # Multiply delta_n_SEI by V_n to get total moles of SEI formed
+            # Multiply delta_n_SEI by V_k to get total moles of SEI formed
             # multiply by z_sei to get total lithium moles consumed by SEI
-            V_n = L_n * self.param.L_y * self.param.L_z
-            Q_sei = z_sei * delta_n_SEI * V_n
+            V_k = L_k * self.param.L_y * self.param.L_z
+            Q_sei = z_sei * delta_n_SEI * V_k
 
             variables.update(
                 {
-                    f"Inner {reaction_name}concentration [mol.m-3]": n_inner,
-                    f"X-averaged inner {reaction_name}"
+                    f"{Domain} inner {reaction_name}concentration [mol.m-3]": n_inner,
+                    f"X-averaged {domain} inner {reaction_name}"
                     "concentration [mol.m-3]": n_inner_av,
-                    f"Outer {reaction_name}concentration [mol.m-3]": n_outer,
-                    f"X-averaged outer {reaction_name}"
+                    f"{Domain} outer {reaction_name}concentration [mol.m-3]": n_outer,
+                    f"X-averaged {domain} outer {reaction_name}"
                     "concentration [mol.m-3]": n_outer_av,
-                    f"{reaction_name}concentration [mol.m-3]": n_SEI,
-                    f"X-averaged {reaction_name}concentration [mol.m-3]": n_SEI_xav,
-                    f"Loss of lithium to {reaction_name}[mol]": Q_sei,
-                    f"Loss of capacity to {reaction_name}[A.h]": Q_sei
+                    f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI,
+                    f"X-averaged {domain} {reaction_name}"
+                    "concentration [mol.m-3]": n_SEI_xav,
+                    f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei,
+                    f"Loss of capacity to {domain} {reaction_name}[A.h]": Q_sei
                     * self.param.F
                     / 3600,
                 }
             )
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
-            L_inner_cr = variables[f"Inner {reaction_name}thickness [m]"]
-            L_outer_cr = variables[f"Outer {reaction_name}thickness [m]"]
+            L_inner_cr = variables[f"{Domain} inner {reaction_name}thickness [m]"]
+            L_outer_cr = variables[f"{Domain} outer {reaction_name}thickness [m]"]
             roughness = variables[f"{Domain} electrode roughness ratio"]
 
             n_inner_cr = L_inner_cr * L_to_n_inner * (roughness - 1)
@@ -242,28 +238,29 @@ class BaseModel(BaseInterface):
             n_SEI_cr_init = n_crack_0 * (roughness_av - 1)
             delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
+            if domain == "negative":
+                L_k = self.param.n.L
+            elif domain == "positive":
+                L_k = self.param.p.L
+
             # Q_sei_cr in mol
-            Q_sei_cr = (
-                z_sei
-                * delta_n_SEI_cr
-                * self.param.n.L
-                * self.param.L_y
-                * self.param.L_z
-            )
+            Q_sei_cr = z_sei * delta_n_SEI_cr * L_k * self.param.L_y * self.param.L_z
 
             variables.update(
                 {
-                    f"Inner {reaction_name}" "concentration [mol.m-3]": n_inner_cr,
-                    f"X-averaged inner {reaction_name}"
+                    f"{Domain} inner {reaction_name}"
+                    "concentration [mol.m-3]": n_inner_cr,
+                    f"X-averaged {domain} inner {reaction_name}"
                     "concentration [mol.m-3]": n_inner_cr_av,
-                    f"Outer {reaction_name}concentration [mol.m-3]": n_outer_cr,
-                    f"X-averaged outer {reaction_name}"
+                    f"{Domain} outer {reaction_name}"
+                    "concentration [mol.m-3]": n_outer_cr,
+                    f"X-averaged {domain} outer {reaction_name}"
                     "concentration [mol.m-3]": n_outer_cr_av,
-                    f"{reaction_name}" "concentration [mol.m-3]": n_SEI_cr,
-                    f"X-averaged {reaction_name}"
+                    f"{Domain} {reaction_name}" "concentration [mol.m-3]": n_SEI_cr,
+                    f"X-averaged {domain} {reaction_name}"
                     "concentration [mol.m-3]": n_SEI_cr_xav,
-                    f"Loss of lithium to {reaction_name}[mol]": Q_sei_cr,
-                    f"Loss of capacity to {reaction_name}[A.h]": Q_sei_cr
+                    f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei_cr,
+                    f"Loss of capacity to {domain} {reaction_name}[A.h]": Q_sei_cr
                     * self.param.F
                     / 3600,
                 }
@@ -288,25 +285,29 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI currents.
         """
+        domain, Domain = self.domain_Domain
         j_inner_av = pybamm.x_average(j_inner)
         j_outer_av = pybamm.x_average(j_outer)
         j_sei = j_inner + j_outer
 
         variables = {
-            f"Inner {self.reaction_name}interfacial current density [A.m-2]": j_inner,
-            f"X-averaged inner {self.reaction_name}"
+            f"{Domain} electrode inner {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_inner,
+            f"X-averaged {domain} electrode inner {self.reaction_name}"
             "interfacial current density [A.m-2]": j_inner_av,
-            f"Outer {self.reaction_name}interfacial current density [A.m-2]": j_outer,
-            f"X-averaged outer {self.reaction_name}"
+            f"{Domain} electrode outer {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_outer,
+            f"X-averaged {domain} electrode outer {self.reaction_name}"
             "interfacial current density [A.m-2]": j_outer_av,
-            f"{self.reaction_name}interfacial current density [A.m-2]": j_sei,
+            f"{Domain} electrode {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_sei,
         }
 
         if self.reaction_loc != "interface":
             j_sei_av = pybamm.x_average(j_sei)
             variables.update(
                 {
-                    f"X-averaged {self.reaction_name}"
+                    f"X-averaged {domain} electrode {self.reaction_name}"
                     "interfacial current density [A.m-2]": j_sei_av,
                 }
             )

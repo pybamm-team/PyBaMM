@@ -2,6 +2,7 @@
 # Solver class using Scipy's adaptive time stepper
 #
 import numpy as onp
+import asyncio
 
 import pybamm
 
@@ -164,7 +165,7 @@ class JaxSolver(pybamm.BaseSolver):
                 inputs,
                 rtol=self.rtol,
                 atol=self.atol,
-                **self.extra_options
+                **self.extra_options,
             )
             return jnp.transpose(y)
 
@@ -177,7 +178,7 @@ class JaxSolver(pybamm.BaseSolver):
                 rtol=self.rtol,
                 atol=self.atol,
                 mass=mass,
-                **self.extra_options
+                **self.extra_options,
             )
             return jnp.transpose(y)
 
@@ -186,7 +187,7 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -196,7 +197,7 @@ class JaxSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs_dict : dict, optional
+        inputs : dict, list[dict], optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -206,11 +207,78 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        if isinstance(inputs, dict):
+            inputs = [inputs]
         timer = pybamm.Timer()
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = self._cached_solves[model](inputs_dict).block_until_ready()
+        y = []
+        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        if len(inputs) <= 1 or platform.startswith("cpu"):
+            # cpu execution runs faster when multithreaded
+            async def solve_model_for_inputs():
+                async def solve_model_async(inputs_v):
+                    return self._cached_solves[model](inputs_v)
+
+                coro = []
+                for inputs_v in inputs:
+                    coro.append(asyncio.create_task(solve_model_async(inputs_v)))
+                return await asyncio.gather(*coro)
+
+            y = asyncio.run(solve_model_for_inputs())
+        elif (
+            platform.startswith("gpu")
+            or platform.startswith("tpu")
+            or platform.startswith("metal")
+        ):
+            # gpu execution runs faster when parallelised with vmap
+            # (see also comment below regarding single-program multiple-data
+            #  execution (SPMD) using pmap on multiple XLAs)
+
+            # convert inputs (array of dict) to a dict of arrays for vmap
+            inputs_v = {
+                key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
+            }
+            y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
+        else:
+            # Unknown platform, use serial execution as fallback
+            print(
+                f'Unknown platform requested: "{platform}", '
+                "falling back to serial execution"
+            )
+            for inputs_v in inputs:
+                y.append(self._cached_solves[model](inputs_v))
+
+        # This code block implements single-program multiple-data execution
+        # using pmap across multiple XLAs. It is currently commented out
+        # because it produces bus errors for even moderate-sized models.
+        # It is suspected that this is due to either a bug in JAX, insufficient
+        # sparse matrix support in JAX resulting in high memory usage, or a bug
+        # in the BDF solver.
+        #
+        # This issue on guthub appears related:
+        # https://github.com/google/jax/discussions/13930
+        #
+        #     # Split input list based on the number of available xla devices
+        #     device_count = jax.local_device_count()
+        #     inputs_listoflists = [inputs[x:x + device_count]
+        #                           for x in range(0, len(inputs), device_count)]
+        #     if len(inputs_listoflists) > 1:
+        #         print(f"{len(inputs)} parameter sets were provided, "
+        #               f"but only {device_count} XLA devices are available")
+        #         print(f"Parameter sets split into {len(inputs_listoflists)} "
+        #               "lists for parallel processing")
+        #     y = []
+        #     for k, inputs_list in enumerate(inputs_listoflists):
+        #         if len(inputs_listoflists) > 1:
+        #             print(f" Solving list {k+1} of {len(inputs_listoflists)} "
+        #                   f"({len(inputs_list)} parameter sets)")
+        #         # convert inputs to a dict of arrays for pmap
+        #         inputs_v = {key: jnp.array([dic[key] for dic in inputs_list])
+        #                     for key in inputs_list[0]}
+        #         y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
+
         integration_time = timer.time()
 
         # convert to a normal numpy array
@@ -219,8 +287,22 @@ class JaxSolver(pybamm.BaseSolver):
         termination = "final time"
         t_event = None
         y_event = onp.array(None)
-        sol = pybamm.Solution(
-            t_eval, y, model, inputs_dict, t_event, y_event, termination
-        )
-        sol.integration_time = integration_time
-        return sol
+
+        # Extract solutions from y with their associated input dicts
+        solutions = []
+        for k, inputs_dict in enumerate(inputs):
+            sol = pybamm.Solution(
+                t_eval,
+                jnp.reshape(y[k,], y.shape[1:]),
+                model,
+                inputs_dict,
+                t_event,
+                y_event,
+                termination,
+            )
+            sol.integration_time = integration_time
+            solutions.append(sol)
+
+        if len(solutions) == 1:
+            return solutions[0]
+        return solutions

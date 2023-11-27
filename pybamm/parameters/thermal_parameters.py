@@ -51,6 +51,12 @@ class ThermalParameters(BaseParameters):
             },
         )
 
+    def T_amb_av(self, t):
+        """YZ-averaged ambient temperature [K]"""
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        return pybamm.yz_average(self.T_amb(y, z, t))
+
     def h_edge(self, y, z):
         """Cell edge heat transfer coefficient [W.m-2.K-1]"""
         inputs = {
@@ -70,6 +76,16 @@ class ThermalParameters(BaseParameters):
             + self.s.rho_c_p(T) * self.geo.s.L
             + self.p.rho_c_p(T) * self.geo.p.L
             + self.p.rho_c_p_cc(T) * self.geo.p.L_cc
+        ) / self.geo.L
+
+    def lambda_eff(self, T):
+        """Effective thermal conductivity [W.m-1.K-1]"""
+        return (
+            self.n.lambda_cc(T) * self.geo.n.L_cc
+            + self.n.lambda_(T) * self.geo.n.L
+            + self.s.lambda_(T) * self.geo.s.L
+            + self.p.lambda_(T) * self.geo.p.L
+            + self.p.lambda_cc(T) * self.geo.p.L_cc
         ) / self.geo.L
 
 

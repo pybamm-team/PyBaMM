@@ -3,11 +3,11 @@
 #
 from __future__ import annotations
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
 from typing import Union, Tuple, Optional, Any
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class Array(pybamm.Symbol):
@@ -127,6 +127,7 @@ class Array(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
+        sympy = have_optional_dependency("sympy")
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 

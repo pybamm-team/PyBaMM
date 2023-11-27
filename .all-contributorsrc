@@ -442,7 +442,7 @@
       "login": "wigging",
       "name": "Gavin Wiggins",
       "avatar_url": "https://avatars.githubusercontent.com/u/6828967?v=4",
-      "profile": "https://wigging.me",
+      "profile": "https://gavinw.me",
       "contributions": [
         "bug",
         "code"
@@ -531,7 +531,8 @@
       "contributions": [
         "infra",
         "code",
-        "doc"
+        "doc",
+        "review"
       ]
     },
     {
@@ -613,7 +614,8 @@
       "contributions": [
         "infra",
         "code",
-        "doc"
+        "doc",
+        "review"
       ]
     },
     {
@@ -692,7 +694,38 @@
       "profile": "https://github.com/kratman",
       "contributions": [
         "doc",
+        "infra",
+        "bug",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "aitorres",
+      "name": "Andrés Ignacio Torres",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26191851?v=4",
+      "profile": "https://aitorres.com",
+      "contributions": [
         "infra"
+      ]
+    },
+    {
+      "login": "Agnik7",
+      "name": "Agnik Bakshi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/77234005?v=4",
+      "profile": "https://github.com/Agnik7",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "RuiheLi",
+      "name": "RuiheLi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/84007676?v=4",
+      "profile": "https://github.com/RuiheLi",
+      "contributions": [
+        "code",
+        "test"
       ]
     }
   ],

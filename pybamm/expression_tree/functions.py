@@ -4,15 +4,13 @@
 from __future__ import annotations
 import numbers
 
-import autograd
 import numpy as np
-import sympy
 from scipy import special
 from typing import Optional, Sequence, Callable, Type, Union
 from typing_extensions import TypeVar
 
 import pybamm
-
+from pybamm.util import have_optional_dependency
 
 class Function(pybamm.Symbol):
     """
@@ -101,6 +99,7 @@ class Function(pybamm.Symbol):
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.
         """
+        autograd = have_optional_dependency("autograd")
         # Store differentiated function, needed in case we want to convert to CasADi
         if self.derivative == "autograd":
             return Function(
@@ -213,6 +212,7 @@ class Function(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -261,6 +261,7 @@ class SpecificFunction(Function):
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
+        sympy = have_optional_dependency("sympy")
         class_name = self.__class__.__name__.lower()
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
@@ -281,6 +282,7 @@ class Arcsinh(SpecificFunction):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.asinh(child)
 
 
@@ -301,6 +303,7 @@ class Arctan(SpecificFunction):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.atan(child)
 
 

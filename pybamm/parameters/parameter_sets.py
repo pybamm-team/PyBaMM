@@ -1,3 +1,4 @@
+import sys
 import warnings
 import importlib.metadata
 import textwrap
@@ -38,8 +39,16 @@ class ParameterSets(Mapping):
     def __init__(self):
         # Dict of entry points for parameter sets, lazily load entry points as
         self.__all_parameter_sets = dict()
-        for entry_point in importlib.metadata.entry_points()["pybamm_parameter_sets"]:
+        for entry_point in self.get_entries("pybamm_parameter_sets"):
             self.__all_parameter_sets[entry_point.name] = entry_point
+
+    @staticmethod
+    def get_entries(group_name):
+        # Wrapper for the importlib version logic
+        if sys.version_info < (3, 10): # pragma: no cover
+            return importlib.metadata.entry_points()[group_name]
+        else:
+            return importlib.metadata.entry_points(group=group_name)
 
     def __new__(cls):
         """Ensure only one instance of ParameterSets exists"""

@@ -8,6 +8,7 @@
 *.mat
 *.csv
 *.hidden
+*.pkl
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -137,6 +138,7 @@ results/
 # do not ignore images in _static folder in docs
 !docs/_static/favicon/favicon.png
 !docs/_static/pybamm_logo.png
+!docs/_static/pybamm_logo_whitetext.png
 
 # tests
 test_callback.log

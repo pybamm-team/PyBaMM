@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
+from pybamm.util import have_optional_dependency
 
 
 class LoopList(list):
@@ -46,7 +47,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    import matplotlib.pyplot as plt
+    plt = have_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
@@ -106,21 +107,7 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        input_solutions = solutions
-        solutions = []
-        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
-            raise TypeError(
-                "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
-            )
-        elif not isinstance(input_solutions, list):
-            input_solutions = [input_solutions]
-        for sim_or_sol in input_solutions:
-            if isinstance(sim_or_sol, pybamm.Simulation):
-                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
-                # 'Solution' attribute
-                solutions.append(sim_or_sol.solution)
-            elif isinstance(sim_or_sol, pybamm.Solution):
-                solutions.append(sim_or_sol)
+        solutions = self.preprocess_solutions(solutions)
 
         models = [solution.all_models[0] for solution in solutions]
 
@@ -241,6 +228,32 @@ class QuickPlot(object):
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
+
+    @staticmethod
+    def preprocess_solutions(solutions):
+        input_solutions = QuickPlot.check_input_validity(solutions)
+        processed_solutions = []
+        for sim_or_sol in input_solutions:
+            if isinstance(sim_or_sol, pybamm.Simulation):
+                # 'sim_or_sol' is actually a 'Simulation' object here, so it has a
+                # 'Solution' attribute
+                processed_solutions.append(sim_or_sol.solution)
+            elif isinstance(sim_or_sol, pybamm.Solution):
+                processed_solutions.append(sim_or_sol)
+        return processed_solutions
+
+    @staticmethod
+    def check_input_validity(input_solutions):
+        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
+            raise TypeError(
+                "Solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
+            )
+        elif not isinstance(input_solutions, list):
+            input_solutions = [input_solutions]
+        else:
+            if not input_solutions:
+                raise TypeError("QuickPlot requires at least 1 solution or simulation.")
+        return input_solutions
 
     def set_output_variables(self, output_variables, solutions):
         # Set up output variables
@@ -457,9 +470,10 @@ class QuickPlot(object):
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
-        from matplotlib import cm, colors
+        plt = have_optional_dependency("matplotlib.pyplot")
+        gridspec = have_optional_dependency("matplotlib.gridspec")
+        cm = have_optional_dependency("matplotlib", "cm")
+        colors = have_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -656,8 +670,8 @@ class QuickPlot(object):
                 continuous_update=False,
             )
         else:
-            import matplotlib.pyplot as plt
-            from matplotlib.widgets import Slider
+            plt = have_optional_dependency("matplotlib.pyplot")
+            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -761,18 +775,20 @@ class QuickPlot(object):
             Name of the generated GIF file.
 
         """
-        import imageio.v2 as imageio
-        import matplotlib.pyplot as plt
+        imageio = have_optional_dependency("imageio.v2")
+        plt = have_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
         images = []
 
         # create images/plots
+        stub_name = output_filename.split(".")[0]
         for val in time_array:
             self.plot(val)
-            images.append("plot" + str(val) + ".png")
-            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            temp_name = f"{stub_name}{val}.png"
+            images.append(temp_name)
+            self.fig.savefig(temp_name, dpi=300)
             plt.close()
 
         # compile the images/plots to create a GIF

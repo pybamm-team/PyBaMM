@@ -21,6 +21,15 @@ caption: Fundamentals and usage
 maxdepth: 2
 ---
 fundamentals/index
+fundamentals/battery_models
+```
+
+```{toctree}
+---
+caption: Contributing guide
+maxdepth: 1
+---
+contributing
 ```
 
 # Example notebooks

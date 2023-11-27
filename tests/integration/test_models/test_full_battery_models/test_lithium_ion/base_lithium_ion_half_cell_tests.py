@@ -45,6 +45,15 @@ class BaseIntegrationTestLithiumIonHalfCell:
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
+    def test_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
+        parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_sei_constant(self):
         options = {"SEI": "constant"}
         self.run_basic_processing_test(options)
@@ -55,9 +64,9 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_sei_asymmetric_reaction_limited(self):
         options = {"SEI": "reaction limited (asymmetric)"}
-        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2},
+            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826},
             check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
@@ -80,11 +89,17 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_sei_asymmetric_ec_reaction_limited(self):
         options = {"SEI": "ec reaction limited (asymmetric)"}
-        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         parameter_values.update(
-            {"SEI growth transfer coefficient": 0.2},
+            {"SEI growth transfer coefficient": 0.2, "Current function [A]": -0.07826},
             check_already_exists=False,
         )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_swelling_only(self):
+        options = {"particle mechanics": "swelling only"}
+        parameter_values = pybamm.ParameterValues("OKane2022_graphite_SiOx_halfcell")
+        parameter_values.update({"Current function [A]": -2.5})  # C/2 charge
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_constant_utilisation(self):
