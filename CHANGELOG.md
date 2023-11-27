@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+- Fixed a bug where coordinate systems of variables do not get checked against known ([#3394](https://github.com/pybamm-team/PyBaMM/pull/3394))
 - Fixed a bug where simulations using the CasADi-based solvers would fail randomly with the half-cell model ([#3494](https://github.com/pybamm-team/PyBaMM/pull/3494))
 - Fixed bug that made identical Experiment steps with different end times crash ([#3516](https://github.com/pybamm-team/PyBaMM/pull/3516))
 - Fixed bug in calculation of theoretical energy that made it very slow ([#3506](https://github.com/pybamm-team/PyBaMM/pull/3506))
@@ -26,7 +27,6 @@
 
 ## Bug fixes
 
-- Fixed a bug where coordinate systems of variables do not get checked against known ([#3394](https://github.com/pybamm-team/PyBaMM/pull/3394))
 - Fixed a bug where the JaxSolver would fails when using GPU support with no input parameters ([#3423](https://github.com/pybamm-team/PyBaMM/pull/3423))
 - Make pybamm importable with minimal dependencies ([#3044](https://github.com/pybamm-team/PyBaMM/pull/3044), [#3475](https://github.com/pybamm-team/PyBaMM/pull/3475))
 - Fixed a bug where supplying an initial soc did not work with half cell models ([#3456](https://github.com/pybamm-team/PyBaMM/pull/3456))
