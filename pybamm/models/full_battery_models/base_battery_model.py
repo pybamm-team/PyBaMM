@@ -605,7 +605,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
-        if options["particle phases"] != "1":
+        if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
                 options["surface form"] != "false"
                 and options["particle size"] == "single"

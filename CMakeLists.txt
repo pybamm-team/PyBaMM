@@ -72,8 +72,8 @@ execute_process(
 
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+  message("Found python casadi path: ${CASADI_DIR}")
 endif()
-message("Found python casadi path: ${CASADI_DIR}")
 
 if(${USE_PYTHON_CASADI})
   message("Trying to link against python casadi package")
@@ -87,7 +87,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
-message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}")
+message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
@@ -98,6 +98,7 @@ if(DEFINED VCPKG_ROOT_DIR)
   find_package(SuiteSparse CONFIG REQUIRED)
 else()
   find_package(SuiteSparse REQUIRED)
+  message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
