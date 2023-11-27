@@ -22,6 +22,8 @@ class UnaryOperator(pybamm.Symbol):
         name of the node
     child : :class:`Symbol`
         child node
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. 
     """
 
     def __init__(self, name, child, domains=None):
@@ -333,6 +335,8 @@ class SpatialOperator(UnaryOperator):
         name of the node
     child : :class:`Symbol`
         child node
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. 
     """
 
     def __init__(self, name, child, domains=None):
@@ -939,49 +943,106 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
-class UpwindDownwind(SpatialOperator):
+# class UpwindDownwind(SpatialOperator):
+#     """
+#     A node in the expression tree representing an upwinding or downwinding operator.
+#     Usually to be used for better stability in convection-dominated equations.
+#     """
+
+#     def __init__(self, name, child):
+#         if child.domain == []:
+#             raise pybamm.DomainError(
+#                 "Cannot upwind '{}' since its domain is empty. ".format(child)
+#                 + "Try broadcasting the object first, e.g.\n\n"
+#                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+#             )
+#         if child.evaluates_on_edges("primary") is True:
+#             raise TypeError(
+#                 "Cannot upwind '{}' since it does not ".format(child)
+#                 + "evaluate on nodes."
+#             )
+#         super().__init__(name, child)
+
+#     def _evaluates_on_edges(self, dimension):
+#         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
+#         return True
+
+
+# class Upwind(UpwindDownwind):
+#     """
+#     Upwinding operator. To be used if flow velocity is positive (left to right).
+#     """
+
+#     def __init__(self, child):
+#         super().__init__("upwind", child)
+
+
+# class Downwind(UpwindDownwind):
+#     """
+#     Downwinding operator. To be used if flow velocity is negative (right to left).
+#     """
+
+#     def __init__(self, child):
+#         super().__init__("downwind", child)
+
+
+class UpwindDownwindDivergence(SpatialOperator):
     """
-    A node in the expression tree representing an upwinding or downwinding operator.
-    Usually to be used for better stability in convection-dominated equations.
+    A node in the expression tree representing an upwinding or downwinding divergence
+    operator. Usually to be used for better stability in convection-dominated equations.
     """
 
     def __init__(self, name, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot upwind '{}' since its domain is empty. ".format(child)
+                "Cannot take divergence of '{}' since its domain is empty. ".format(
+                    child
+                )
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
-        if child.evaluates_on_edges("primary") is True:
+        if child.evaluates_on_edges("primary") is False:
             raise TypeError(
-                "Cannot upwind '{}' since it does not ".format(child)
-                + "evaluate on nodes."
+                "Cannot take divergence of '{}' since it does not ".format(child)
+                + "evaluate on edges. Usually, a gradient should be taken before the "
+                "divergence."
             )
         super().__init__(name, child)
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
-        return True
+        return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
+        return sympy_Divergence(child)
 
-class Upwind(UpwindDownwind):
+class UpwindDivergence(UpwindDownwindDivergence):
     """
-    Upwinding operator. To be used if flow velocity is positive (left to right).
+    Upwinding divergence operator. To be used if flow velocity is positive
+    (left to right).
     """
-
     def __init__(self, child):
-        super().__init__("upwind", child)
+        super().__init__("upwind div", child)
+
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return div(child, method="upwind")
 
 
-class Downwind(UpwindDownwind):
+class DownwindDivergence(UpwindDownwindDivergence):
     """
-    Downwinding operator. To be used if flow velocity is negative (right to left).
+    Downwinding divergence operator. To be used if flow velocity is positive
+    (right to left).
     """
-
     def __init__(self, child):
-        super().__init__("downwind", child)
+        super().__init__("downwind div", child)
 
-
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return div(child, method="downwind")
+        
 class NotConstant(UnaryOperator):
     """Special class to wrap a symbol that should not be treated as a constant."""
 
@@ -1044,7 +1105,7 @@ def grad(symbol):
         return Gradient(symbol)
 
 
-def div(symbol):
+def div(symbol, method="centred"):
     """
     convenience function for creating a :class:`Divergence`
 
@@ -1078,7 +1139,14 @@ def div(symbol):
         #     return -div(symbol._binary_new_copy(left, right.orphans[0]))
 
     # Last resort
-    return Divergence(symbol)
+    if method == "centred":
+        return Divergence(symbol)
+    elif method == "upwind":
+        return UpwindDivergence(symbol)
+    elif method == "downwind":
+        return DownwindDivergence(symbol)
+    else:
+        raise ValueError(f"method {method} not recognised. It must be 'centred', 'upwind' or 'downwind'")
 
 
 def laplacian(symbol):
