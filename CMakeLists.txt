@@ -72,17 +72,23 @@ execute_process(
 
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
-  message("Found python casadi path: ${CASADI_DIR}")
+  message("Found Python casadi path: ${CASADI_DIR}")
 endif()
 
 if(${USE_PYTHON_CASADI})
-  message("Trying to link against python casadi package")
+  message("Trying to link against Python casadi package")
   find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 else()
-  message("Trying to link against any casadi package apart from the python one")
+  message("Trying to link against any casadi package apart from the Python one")
   set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
   find_package(casadi CONFIG REQUIRED)
 endif()
+
+set_target_properties(
+  idaklu PROPERTIES
+  INSTALL_RPATH "${CASADI_DIR}"
+  INSTALL_RPATH_USE_LINK_PATH TRUE
+)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
