@@ -135,19 +135,24 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh[symbol.domain]
 
         divergence_matrix = self.divergence_matrix(symbol.domains)
+        coord_sys = submesh.coord_sys
 
         # check coordinate system
-        if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
+        if coord_sys in ["cylindrical polar", "spherical polar"]:
             second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
             # create np.array of repeated submesh.edges
             r_edges_numpy = np.kron(np.ones(second_dim_repeats), submesh.edges)
             r_edges = pybamm.Vector(r_edges_numpy)
-            if submesh.coord_sys == "spherical polar":
+            if coord_sys == "spherical polar":
                 out = divergence_matrix @ ((r_edges**2) * discretised_symbol)
-            elif submesh.coord_sys == "cylindrical polar":
+            elif coord_sys == "cylindrical polar":
                 out = divergence_matrix @ (r_edges * discretised_symbol)
-        elif submesh.coord_sys == "cartesian":
+        elif coord_sys == "cartesian":
             out = divergence_matrix @ discretised_symbol
+        elif coord_sys is not None:
+            raise ValueError(
+                f"Coordinate system is {coord_sys}, not in"
+                " cartesian, cylindrical polar, spherical polar, None")
         return out
 
 
