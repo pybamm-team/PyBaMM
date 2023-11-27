@@ -383,10 +383,10 @@ def to_python(symbol, debug=False, output_jax=False):
 
     if debug:  # pragma: no cover
         variable_lines = [
-            '''print(f"{id_to_python_variable(symbol_id, False)} = {symbol_line}")'''
+            f"print({id_to_python_variable(symbol_id, False)} = {symbol_line})\
+            {id_to_python_variable(symbol_id, False)} = {symbol_line}\
+            ;print(type({id_to_python_variable(symbol_id, False)}),np.shape({id_to_python_variable(symbol_id, False)}))"
 
-            + f"{id_to_python_variable(symbol_id, False)} = {symbol_line}"
-            + f"; print(type({id_to_python_variable(symbol_id, False)}),np.shape({id_to_python_variable(symbol_id, False)}))"
             for symbol_id, symbol_line in variable_symbols.items()
         ]
     else:

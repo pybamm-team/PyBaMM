@@ -598,14 +598,12 @@ class Simulation:
                     dt_eval_max = np.max(np.diff(t_eval))
                     if dt_eval_max > dt_data_min + sys.float_info.epsilon:
                         warnings.warn(
-                            f"""
-                            The largest timestep in t_eval ({dt_eval_max}) is larger than
-                            the smallest timestep in the data ({dt_data_min}). The returned
-                            solution may not have the correct resolution to accurately
-                            capture the input. Try refining t_eval. Alternatively,
-                            passing t_eval = None automatically sets t_eval to be the
-                            points in the data.
-                            """,
+                            f"The largest timestep in t_eval ({dt_eval_max}) is larger than\
+                            the smallest timestep in the data ({dt_data_min}). The returned\
+                            solution may not have the correct resolution to accurately\
+                            capture the input. Try refining t_eval. Alternatively,\
+                            passing t_eval = None automatically sets t_eval to be the\
+                            points in the data.",
                             pybamm.SolverWarning,
                         )
 

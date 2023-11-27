@@ -837,11 +837,9 @@ class BaseModel:
         for var in all_vars:
             if var not in vars_in_keys:
                 raise pybamm.ModelError(
-                    f"""
-                    No key set for variable '{var}'. Make sure it is included in either
-                    model.rhs or model.algebraic, in an unmodified form
-                    (e.g. not Broadcasted)
-                    """
+                    f"No key set for variable '{var}'. Make sure it is included in either\
+                    model.rhs or model.algebraic, in an unmodified form\
+                    (e.g. not Broadcasted)"
                 )
 
     def check_no_repeated_keys(self):

@@ -888,11 +888,9 @@ class Discretisation(object):
                 y_slices = self.y_slices[symbol]
             except KeyError:
                 raise pybamm.ModelError(
-                    f"""
-                    No key set for variable '{symbol.name}'. Make sure it is included in either
-                    model.rhs or model.algebraic in an unmodified form
-                    (e.g. not Broadcasted)
-                    """
+                    f"No key set for variable '{symbol.name}'. Make sure it is included in either\
+                    model.rhs or model.algebraic in an unmodified form\
+                    (e.g. not Broadcasted)"
                 )
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1

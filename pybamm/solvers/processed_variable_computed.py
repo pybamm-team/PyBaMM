@@ -106,8 +106,8 @@ class ProcessedVariableComputed(object):
                     else:
                         # Raise error for 3D variable
                         raise NotImplementedError(
-                            f"Shape not recognized for {base_variables[0]} "
-                            + "(note processing of 3D variables is not yet implemented)"
+                            f"Shape not recognized for {base_variables[0]}\
+                            (note processing of 3D variables is not yet implemented)"
                         )
 
     def add_sensitivity(self, param, data):

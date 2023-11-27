@@ -308,9 +308,9 @@ class MatrixMultiplication(BinaryOperator):
             return left @ right_jac
         else:
             raise NotImplementedError(
-                f"""jac of 'MatrixMultiplication' is only
-             implemented for left of type 'pybamm.Array',
-             not {left.__class__}"""
+                f"jac of 'MatrixMultiplication' is only\
+                 implemented for left of type 'pybamm.Array',\
+                 not {left.__class__}"
             )
 
     def _binary_evaluate(self, left, right):
