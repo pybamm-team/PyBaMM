@@ -814,7 +814,7 @@ class BoundaryOperator(SpatialOperator):
         if side in ["negative tab", "positive tab"]:
             if child.domain[0] != "current collector":
                 raise pybamm.ModelError(
-                    f"Can only take boundary value on the tabs in the domain "
+                    "Can only take boundary value on the tabs in the domain "
                     "'current collector', but {child} has domain {child.domain[0]}"
                 )
         self.side = side

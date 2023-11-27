@@ -88,7 +88,7 @@ class ScikitSubMesh2D(SubMesh):
         # check coordinate system agrees
         if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
             raise pybamm.DomainError(
-                f"spatial variables should have the same coordinate system, "
+                "spatial variables should have the same coordinate system, "
                 "but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"
             )
         return spatial_vars, tabs

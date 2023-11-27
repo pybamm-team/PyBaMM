@@ -1340,7 +1340,7 @@ def source(left, right, boundary=False):
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            f"'source' only implemented in the 'current collector' domain, "
+            "'source' only implemented in the 'current collector' domain, "
             "but symbols have domains {left.domain} and {right.domain}"
         )
     if boundary:

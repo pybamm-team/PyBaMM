@@ -880,7 +880,7 @@ class Symbol:
         copy.deepcopy(), which is slow.
         """
         raise NotImplementedError(
-            f"method self.new_copy() not implemented "
+            "method self.new_copy() not implemented "
             "for symbol {self} of type {type(self)}"
         )
 
