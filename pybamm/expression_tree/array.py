@@ -97,7 +97,7 @@ class Array(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name) + self.entries_string + tuple(self.domain)
+            (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
         )
 
     def _jac(self, variable):
