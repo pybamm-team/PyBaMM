@@ -202,6 +202,27 @@ class Interpolant(pybamm.Function):
         self.interpolator = interpolator
         self.extrapolate = extrapolate
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Create an Interpolant object from JSON data"""
+        instance = cls.__new__(cls)
+
+        if len(snippet["x"]) == 1:
+            x = [np.array(x) for x in snippet["x"]]
+        else:
+            x = tuple(np.array(x) for x in snippet["x"])
+
+        instance.__init__(
+            x,
+            np.array(snippet["y"]),
+            snippet["children"],
+            name=snippet["name"],
+            interpolator=snippet["interpolator"],
+            extrapolate=snippet["extrapolate"],
+        )
+
+        return instance
+
     @property
     def entries_string(self):
         return self._entries_string
@@ -288,3 +309,19 @@ class Interpolant(pybamm.Function):
 
         else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
+
+    def to_json(self):
+        """
+        Method to serialise an Interpolant object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "x": [x_item.tolist() for x_item in self.x],
+            "y": self.y.tolist(),
+            "interpolator": self.interpolator,
+            "extrapolate": self.extrapolate,
+        }
+
+        return json_dict

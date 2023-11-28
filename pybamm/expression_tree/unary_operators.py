@@ -32,6 +32,21 @@ class UnaryOperator(pybamm.Symbol):
         super().__init__(name, children=[child], domains=domains)
         self.child = self.children[0]
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising"""
+
+        instance = cls.__new__(cls)
+
+        super(UnaryOperator, instance).__init__(
+            snippet["name"],
+            snippet["children"],
+            domains=snippet["domains"],
+        )
+        instance.child = instance.children[0]
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}({!s})".format(self.name, self.child)
@@ -154,6 +169,10 @@ class Sign(UnaryOperator):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("sign", child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        raise NotImplementedError()
+
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         return pybamm.Scalar(0)
@@ -271,6 +290,25 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.clear_domains()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = cls.__new__(cls)
+
+        index = slice(
+            snippet["index"]["start"],
+            snippet["index"]["stop"],
+            snippet["index"]["step"],
+        )
+
+        instance.__init__(
+            snippet["children"][0],
+            index,
+            name=snippet["name"],
+            check_size=snippet["check_size"],
+        )
+        return instance
+
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
 
@@ -308,6 +346,24 @@ class Index(UnaryOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def to_json(self):
+        """
+        Method to serialise an Index object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "index": {
+                "start": self.slice.start,
+                "stop": self.slice.stop,
+                "step": self.slice.step,
+            },
+            "check_size": False,
+        }
+
+        return json_dict
+
 
 class SpatialOperator(UnaryOperator):
     """
@@ -330,6 +386,19 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child, domains=None):
         super().__init__(name, child, domains)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator:"
+            "Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator:"
+            "Please use a discretised model when reading in from JSON."
+        )
 
 
 class Gradient(SpatialOperator):
@@ -672,7 +741,8 @@ class DefiniteIntegralVector(SpatialOperator):
     Parameters
     ----------
     variable : :class:`pybamm.Symbol`
-        The variable whose basis will be integrated over the entire domain
+        The variable whose basis will be integrated over the entire domain (will
+        become self.children[0])
     vector_type : str, optional
         Whether to return a row or column vector (default is row)
     """
@@ -897,11 +967,33 @@ class ExplicitTimeIntegral(UnaryOperator):
         super().__init__("explicit time integral", children)
         self.initial_condition = initial_condition
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["children"][0], snippet["initial_condition"])
+
+        return instance
+
     def _unary_new_copy(self, child):
         return self.__class__(child, self.initial_condition)
 
     def is_constant(self):
         return False
+
+    def to_json(self):
+        """
+        Convert ExplicitTimeIntegral to json for serialisation.
+
+        Both `children` and `initial_condition` contain Symbols, and are therefore
+        dealt with by `pybamm.Serialise._SymbolEncoder.default()` directly.
+        """
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+        }
+
+        return json_dict
 
 
 class BoundaryGradient(BoundaryOperator):
