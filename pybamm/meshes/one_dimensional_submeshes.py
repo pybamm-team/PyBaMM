@@ -283,12 +283,12 @@ class UserSupplied1DSubMesh(SubMesh1D):
         if edges[0] != spatial_lims["min"]:
             raise pybamm.GeometryError(
                 f"First entry of edges is {edges[0]}, but should be equal to {spatial_lims["min"]} "
-                "for domain {spatial_var.domain}."
+                f"for domain {spatial_var.domain}."
             )
         if edges[-1] != spatial_lims["max"]:
             raise pybamm.GeometryError(
                 f"Last entry of edges is {edges[-1]}, but should be equal to {spatial_lims["max"]} "
-                "for domain {spatial_var.domain}."
+                f"for domain {spatial_var.domain}."
             )
 
         coord_sys = spatial_var.coord_sys
@@ -337,12 +337,12 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         if edges[0] != spatial_lims["min"]:
             raise pybamm.GeometryError(
                 f"First entry of edges is {edges[0]}, but should be equal to {spatial_lims["min"]} "
-                "for domain {spatial_var.dom}."
+                f"for domain {spatial_var.dom}."
             )
         if edges[-1] != spatial_lims["max"]:
             raise pybamm.GeometryError(
                 f"Last entry of edges is {edges[-1]}, but should be equal to {spatial_lims["max"]} "
-                "for domain {spatial_var.domain}."
+                f"for domain {spatial_var.domain}."
             )
 
         coord_sys = spatial_var.coord_sys

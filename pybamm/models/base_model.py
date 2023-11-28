@@ -480,7 +480,7 @@ class BaseModel:
                             # no more submodels to try
                             raise pybamm.ModelError(
                                 f"Missing variable for submodel '{submodel_name}': {key}.\n"
-                                + "Check the selected "
+                                "Check the selected "
                                 "submodels provide all of the required variables."
                             )
                         else:

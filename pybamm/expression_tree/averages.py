@@ -189,7 +189,7 @@ def z_average(symbol):
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
             "z-average only implemented in the 'current collector' domain, "
-            "but symbol has domains {symbol.domain}"
+            f"but symbol has domains {symbol.domain}"
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
@@ -223,7 +223,7 @@ def yz_average(symbol):
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
             "y-z-average only implemented in the 'current collector' domain, "
-            "but symbol has domains {symbol.domain}"
+            f"but symbol has domains {symbol.domain}"
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:

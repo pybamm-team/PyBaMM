@@ -1000,12 +1000,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {submodel_name} submodel ({self.name})"
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
             pybamm.logger.verbose(
-                "Setting initial conditions for {submodel_name} submodel ({self.name})"
+                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)

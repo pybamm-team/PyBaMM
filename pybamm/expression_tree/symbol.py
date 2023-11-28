@@ -881,7 +881,7 @@ class Symbol:
         """
         raise NotImplementedError(
             "method self.new_copy() not implemented "
-            "for symbol {self} of type {type(self)}"
+            f"for symbol {self} of type {type(self)}"
         )
 
     def new_copy(self):

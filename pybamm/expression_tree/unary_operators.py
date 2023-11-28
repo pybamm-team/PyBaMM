@@ -815,7 +815,7 @@ class BoundaryOperator(SpatialOperator):
             if child.domain[0] != "current collector":
                 raise pybamm.ModelError(
                     "Can only take boundary value on the tabs in the domain "
-                    "'current collector', but {child} has domain {child.domain[0]}"
+                    f"'current collector', but {child} has domain {child.domain[0]}"
                 )
         self.side = side
         # boundary value of a child takes the primary domain from secondary domain
@@ -928,7 +928,7 @@ class UpwindDownwind(SpatialOperator):
         if child.evaluates_on_edges("primary") is True:
             raise TypeError(
                 f"Cannot upwind '{child}' since it does not "
-                + "evaluate on nodes."
+                "evaluate on nodes."
             )
         super().__init__(name, child)
 
