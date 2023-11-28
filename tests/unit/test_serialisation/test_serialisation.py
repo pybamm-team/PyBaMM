@@ -272,7 +272,7 @@ class TestSerialise(TestCase):
         ser_dict = {
             "rod": {
                 "symbol_x": {
-                    "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",  # noqa: E501
+                    "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",
                     "py/id": mock.ANY,
                     "name": "x",
                     "id": mock.ANY,
@@ -341,7 +341,7 @@ class TestSerialise(TestCase):
             },
             "children": [
                 {
-                    "py/object": "pybamm.expression_tree.binary_operators.Multiplication",  # noqa: E501
+                    "py/object": "pybamm.expression_tree.binary_operators.Multiplication",
                     "py/id": 139691619709232,
                     "name": "*",
                     "id": 6094209803352873499,
@@ -361,7 +361,7 @@ class TestSerialise(TestCase):
                             "children": [],
                         },
                         {
-                            "py/object": "pybamm.expression_tree.state_vector.StateVector",  # noqa: E501
+                            "py/object": "pybamm.expression_tree.state_vector.StateVector",
                             "py/id": 139691619589760,
                             "name": "y[0:1]",
                             "id": 5063056989669636089,
@@ -423,7 +423,7 @@ class TestSerialise(TestCase):
         ser_dict = {
             "rod": {
                 "symbol_x": {
-                    "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",  # noqa: E501
+                    "py/object": "pybamm.expression_tree.independent_variable.SpatialVariable",
                     "py/id": mock.ANY,
                     "name": "x",
                     "id": mock.ANY,
