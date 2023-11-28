@@ -392,6 +392,11 @@ class TestUnaryOperators(TestCase):
             pybamm.Index(vec, 5)
         pybamm.settings.debug_mode = debug_mode
 
+    def test_evaluate_at(self):
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        f = pybamm.EvaluateAt(a, 1)
+        self.assertEqual(f.value, 1)
+
     def test_upwind_downwind(self):
         # upwind of scalar symbol should fail
         a = pybamm.Symbol("a")
@@ -611,9 +616,10 @@ class TestUnaryOperators(TestCase):
         self.assertFalse((2 * a).is_constant())
 
     def test_to_equation(self):
-
         sympy = have_optional_dependency("sympy")
-        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
+        sympy_Divergence = have_optional_dependency(
+            "sympy.vector.operators", "Divergence"
+        )
         sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
 
         a = pybamm.Symbol("a", domain="negative particle")

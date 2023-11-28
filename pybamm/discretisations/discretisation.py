@@ -865,6 +865,10 @@ class Discretisation(object):
                 return child_spatial_method.boundary_value_or_flux(
                     symbol, disc_child, self.bcs
                 )
+            elif isinstance(symbol, pybamm.EvaluateAt):
+                return child_spatial_method.evaluate_at(
+                    symbol, disc_child, symbol.value
+                )
             elif isinstance(symbol, pybamm.UpwindDownwind):
                 direction = symbol.name  # upwind or downwind
                 return spatial_method.upwind_or_downwind(

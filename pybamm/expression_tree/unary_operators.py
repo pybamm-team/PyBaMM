@@ -287,7 +287,14 @@ class Index(UnaryOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.slice.start, self.slice.stop, self.children[0].id, *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.slice.start,
+                self.slice.stop,
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
     def _unary_evaluate(self, child):
@@ -396,7 +403,9 @@ class Divergence(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
+        sympy_Divergence = have_optional_dependency(
+            "sympy.vector.operators", "Divergence"
+        )
         return sympy_Divergence(child)
 
 
@@ -547,7 +556,18 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, *tuple([integration_variable.id for integration_variable in self.integration_variable]), self.children[0].id, *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                *tuple(
+                    [
+                        integration_variable.id
+                        for integration_variable in self.integration_variable
+                    ]
+                ),
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
     def _unary_new_copy(self, child):
@@ -687,7 +707,13 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type, self.children[0].id, *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.vector_type,
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
     def _unary_new_copy(self, child):
@@ -757,6 +783,18 @@ class BoundaryIntegral(SpatialOperator):
         return False
 
 
+class ExplicitTimeIntegral(UnaryOperator):
+    def __init__(self, children, initial_condition):
+        super().__init__("explicit time integral", children)
+        self.initial_condition = initial_condition
+
+    def _unary_new_copy(self, child):
+        return self.__class__(child, self.initial_condition)
+
+    def is_constant(self):
+        return False
+
+
 class DeltaFunction(SpatialOperator):
     """
     Delta function. Currently can only be implemented at the edge of a domain.
@@ -781,7 +819,13 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
+            (
+                self.__class__,
+                self.name,
+                self.side,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
         )
 
     def _evaluates_on_edges(self, dimension):
@@ -839,7 +883,13 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
+            (
+                self.__class__,
+                self.name,
+                self.side,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
         )
 
     def _unary_new_copy(self, child):
@@ -892,18 +942,6 @@ class BoundaryValue(BoundaryOperator):
             return sympy.Symbol(latex_child)
 
 
-class ExplicitTimeIntegral(UnaryOperator):
-    def __init__(self, children, initial_condition):
-        super().__init__("explicit time integral", children)
-        self.initial_condition = initial_condition
-
-    def _unary_new_copy(self, child):
-        return self.__class__(child, self.initial_condition)
-
-    def is_constant(self):
-        return False
-
-
 class BoundaryGradient(BoundaryOperator):
     """
     A node in the expression tree which gets the boundary flux of a variable.
@@ -918,6 +956,51 @@ class BoundaryGradient(BoundaryOperator):
 
     def __init__(self, child, side):
         super().__init__("boundary flux", child, side)
+
+
+class EvaluateAt(SpatialOperator):
+    """
+    A node in the expression tree which evaluates a symbol at a given position. Only
+    implemented for variables that depend on a single spatial dimension.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    value : float
+        The point in one-dimensional space at which to evaluate the symbol.
+    """
+
+    def __init__(self, child, value):
+        self.value = value
+
+        super().__init__("evaluate", child)
+
+        # evaluating removes the domain
+        self.clear_domains()
+
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id()`"""
+        self._id = hash(
+            (
+                self.__class__,
+                self.name,
+                self.value,
+                self.children[0].id,
+            )
+        )
+
+    def _unary_jac(self, child_jac):
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
+        return pybamm.Scalar(0)
+
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.value)
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
 
 
 class UpwindDownwind(SpatialOperator):
