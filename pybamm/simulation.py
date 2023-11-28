@@ -10,6 +10,7 @@ import sys
 from functools import lru_cache
 from datetime import timedelta
 from pybamm.util import have_optional_dependency
+from typing import Optional
 
 from pybamm.expression_tree.operations.serialise import Serialise
 
@@ -795,7 +796,9 @@ class Simulation:
                     # Hacky patch to allow correct processing of end_time and next_starting time
                     # For efficiency purposes, op_conds treats identical steps as the same object
                     # regardless of the initial time. Should be refactored as part of #3176
-                    op_conds_unproc = self.experiment.operating_conditions_steps_unprocessed[idx]
+                    op_conds_unproc = (
+                        self.experiment.operating_conditions_steps_unprocessed[idx]
+                    )
 
                     start_time = current_solution.t[-1]
 
@@ -1192,7 +1195,7 @@ class Simulation:
 
     def save_model(
         self,
-        filename: str = None,
+        filename: Optional[str] = None,
         mesh: bool = False,
         variables: bool = False,
     ):
