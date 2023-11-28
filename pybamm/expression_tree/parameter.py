@@ -50,6 +50,17 @@ class Parameter(pybamm.Symbol):
         else:
             return sympy.Symbol(self.name)
 
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Parameter: Serialisation is only implemented for discretised models"
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Parameter: Please use a discretised model when reading in from JSON"
+        )
+
 
 class FunctionParameter(pybamm.Symbol):
     """
@@ -221,3 +232,16 @@ class FunctionParameter(pybamm.Symbol):
             return sympy.Symbol(self.print_name)
         else:
             return sympy.Symbol(self.name)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.FunctionParameter:"
+            "Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.FunctionParameter:"
+            "Please use a discretised model when reading in from JSON."
+        )

@@ -5,6 +5,7 @@ import numbers
 
 import numpy as np
 from scipy import special
+from typing import Callable
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -211,6 +212,17 @@ class Function(pybamm.Symbol):
                 eq_list.append(eq)
             return self._sympy_operator(*eq_list)
 
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Function: Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Function: Please use a discretised model when reading in from JSON."
+        )
+
 
 def simplified_function(func_class, child):
     """
@@ -244,6 +256,25 @@ class SpecificFunction(Function):
     def __init__(self, function, child):
         super().__init__(function, child)
 
+    @classmethod
+    def _from_json(cls, function: Callable, snippet: dict):
+        """
+        Reconstructs a SpecificFunction instance during deserialisation of a JSON file.
+
+        Parameters
+        ----------
+        function : method
+            Function to be applied to child
+        snippet: dict
+            Contains the child to apply the function to
+        """
+
+        instance = cls.__new__(cls)
+
+        super(SpecificFunction, instance).__init__(function, snippet["children"][0])
+
+        return instance
+
     def _function_new_copy(self, children):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return pybamm.simplify_if_constant(self.__class__(*children))
@@ -255,12 +286,31 @@ class SpecificFunction(Function):
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
 
+    def to_json(self):
+        """
+        Method to serialise a SpecificFunction object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "function": self.function.__name__,
+        }
+
+        return json_dict
+
 
 class Arcsinh(SpecificFunction):
     """Arcsinh function."""
 
     def __init__(self, child):
         super().__init__(np.arcsinh, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.arcsinh, snippet)
+        return instance
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
@@ -283,6 +333,12 @@ class Arctan(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.arctan, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.arctan, snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
@@ -304,6 +360,12 @@ class Cos(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.cos, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.cos, snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return -sin(children[0])
@@ -320,6 +382,12 @@ class Cosh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.cosh, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.cosh, snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return sinh(children[0])
@@ -335,6 +403,12 @@ class Erf(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(special.erf, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(special.erf, snippet)
+        return instance
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
@@ -357,6 +431,12 @@ class Exp(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.exp, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.exp, snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return exp(children[0])
@@ -372,6 +452,12 @@ class Log(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.log, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.log, snippet)
+        return instance
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -403,6 +489,12 @@ class Max(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.max, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.max, snippet)
+        return instance
+
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         # Max will always return a scalar
@@ -422,6 +514,12 @@ class Min(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.min, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.min, snippet)
+        return instance
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
@@ -448,6 +546,12 @@ class Sin(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.sin, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.sin, snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cos(children[0])
@@ -464,6 +568,12 @@ class Sinh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.sinh, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.sinh, snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cosh(children[0])
@@ -479,6 +589,12 @@ class Sqrt(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.sqrt, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.sqrt, snippet)
+        return instance
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -500,6 +616,12 @@ class Tanh(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.tanh, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        instance = super()._from_json(np.tanh, snippet)
+        return instance
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""

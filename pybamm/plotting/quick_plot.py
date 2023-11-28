@@ -141,6 +141,10 @@ class QuickPlot(object):
                     f"No default output variables provided for {models[0].name}"
                 )
 
+        # check variables have been provided after any serialisation
+        if any(len(m.variables) == 0 for m in models):
+            raise AttributeError("No variables to plot")
+
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
         )

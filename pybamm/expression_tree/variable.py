@@ -129,6 +129,13 @@ class VariableBase(pybamm.Symbol):
         else:
             return self.name
 
+    def to_json(
+        self,
+    ):
+        raise NotImplementedError(
+            "pybamm.Variable: Serialisation is only implemented for discretised models."
+        )
+
 
 class Variable(VariableBase):
     """
