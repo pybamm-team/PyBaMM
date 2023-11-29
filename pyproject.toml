@@ -36,7 +36,7 @@ dependencies = [
     "scipy>=1.9.3",
     "casadi>=3.6.3",
     "xarray>=2022.6.0",
-    "anytree>=2.12.0",
+    "anytree>=2.8.0",
 ]
 
 [project.urls]
@@ -72,7 +72,7 @@ examples = [
 ]
 # Plotting functionality
 plot = [
-    "imageio>=2.32.0",
+    "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
     # outside of plot() methods.
