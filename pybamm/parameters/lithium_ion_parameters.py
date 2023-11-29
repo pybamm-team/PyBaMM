@@ -352,7 +352,7 @@ class DomainLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         inputs = {f"{Domain} particle stoichiometry": sto}
         return pybamm.FunctionParameter(
-            f"{Domain} electrode partial molar volume [m3.mol-1]"
+            f"{Domain} electrode partial molar volume [m3.mol-1]", inputs
         )
 
     def sigma(self, T):
