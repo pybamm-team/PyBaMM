@@ -4,11 +4,7 @@
 from tests import TestCase
 
 import os
-import tempfile
-import shutil
 import unittest
-import inspect
-import importlib
 
 import numpy as np
 import pandas as pd
@@ -19,74 +15,36 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
     lico2_ocp_Dualfoil1998,
     lico2_diffusivity_Dualfoil1998,
 )
+from pybamm.expression_tree.exceptions import OptionError
 import casadi
 
 
 class TestParameterValues(TestCase):
-    def test_find_parameter(self):
-        f = tempfile.NamedTemporaryFile()
-        pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
-
-        tempfile_name = os.path.basename(f.name)
-        self.assertEqual(pybamm.ParameterValues.find_parameter(tempfile_name), f.name)
-
-        with self.assertRaisesRegex(FileNotFoundError, "Could not find parameter"):
-            pybamm.ParameterValues.find_parameter("not_a_file")
-
-    def test_read_parameters_csv(self):
-        data = pybamm.ParameterValues({}).read_parameters_csv(
-            os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "testing_only",
-                "positive_electrodes",
-                "lico2_Ai2020",
-                "parameters.csv",
-            )
-        )
-        self.assertEqual(data["Positive electrode porosity"], "0.32")
-
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
         self.assertIn("a", param.keys())
         self.assertIn(1, param.values())
+        self.assertIn(("a", 1), param.items())
+
+        # from dict with strings
+        param = pybamm.ParameterValues({"a": "1"})
+        self.assertEqual(param["a"], 1)
 
         # from dict "chemistry" key gets removed
         param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
         self.assertNotIn("chemistry", param.keys())
-
-        # from file
-        param = pybamm.ParameterValues(
-            "lithium_ion/testing_only/positive_electrodes/lico2_Ai2020/parameters.csv"
-        )
-        self.assertEqual(param["Positive electrode porosity"], 0.32)
-
-        # from file, absolute path
-        param = pybamm.ParameterValues(
-            os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "testing_only",
-                "positive_electrodes",
-                "lico2_Ai2020",
-                "parameters.csv",
-            )
-        )
-        self.assertEqual(param["Positive electrode porosity"], 0.32)
 
         # chemistry kwarg removed
         with self.assertRaisesRegex(
             ValueError, "'chemistry' keyword argument has been deprecated"
         ):
             pybamm.ParameterValues(None, chemistry="lithium-ion")
+
+        # junk param values rejected
+        with self.assertRaisesRegex(ValueError, "Invalid Parameter Value"):
+            pybamm.ParameterValues("Junk")
 
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
@@ -115,13 +73,6 @@ class TestParameterValues(TestCase):
         )
 
     def test_update(self):
-        # converts to dict if not
-        param = pybamm.ParameterValues("Ai2020")
-        param_from_csv = pybamm.ParameterValues(
-            "lithium_ion/testing_only/"
-            "negative_electrodes/graphite_Ai2020/parameters.csv"
-        )
-        param.update(param_from_csv)
         # equate values
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
@@ -142,6 +93,10 @@ class TestParameterValues(TestCase):
         # with parameter not existing yet
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
+
+        # update with a ParameterValues object
+        new_param = pybamm.ParameterValues(param)
+        self.assertEqual(new_param["a"], 2)
 
         # test deleting a parameter
         del param["a"]
@@ -164,6 +119,75 @@ class TestParameterValues(TestCase):
         y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
         y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
         self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
+    def test_set_initial_stoichiometry_half_cell(self):
+        param = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param = param.set_initial_stoichiometry_half_cell(
+            0.4, inplace=False, options={"working electrode": "positive"}
+        )
+        param_0 = param.set_initial_stoichiometry_half_cell(
+            0, inplace=False, options={"working electrode": "positive"}
+        )
+        param_100 = param.set_initial_stoichiometry_half_cell(
+            1, inplace=False, options={"working electrode": "positive"}
+        )
+
+        y = param["Initial concentration in positive electrode [mol.m-3]"]
+        y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
+        y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
+        self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
+        # inplace for 100% coverage
+        param_t = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param_t.set_initial_stoichiometry_half_cell(
+            0.4, inplace=True, options={"working electrode": "positive"}
+        )
+        y = param_t["Initial concentration in positive electrode [mol.m-3]"]
+        param_0 = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param_0.set_initial_stoichiometry_half_cell(
+            0, inplace=True, options={"working electrode": "positive"}
+        )
+        y_0 = param_0["Initial concentration in positive electrode [mol.m-3]"]
+        param_100 = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
+        param_100.set_initial_stoichiometry_half_cell(
+            1, inplace=True, options={"working electrode": "positive"}
+        )
+        y_100 = param_100["Initial concentration in positive electrode [mol.m-3]"]
+        self.assertAlmostEqual(y, y_0 - 0.4 * (y_0 - y_100))
+
+        # test error
+        param = pybamm.ParameterValues("Chen2020")
+        with self.assertRaisesRegex(OptionError, "working electrode"):
+            param.set_initial_stoichiometry_half_cell(
+                0.1, options={"working electrode": "negative"}
+            )
+
+    def test_set_initial_ocps(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param_100 = pybamm.ParameterValues("MSMR_Example")
+        param_100.set_initial_ocps(1, inplace=True, options=options)
+        param_0 = param_100.set_initial_ocps(0, inplace=False, options=options)
+
+        Un_0 = param_0["Initial voltage in negative electrode [V]"]
+        Up_0 = param_0["Initial voltage in positive electrode [V]"]
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
+
+        Un_100 = param_100["Initial voltage in negative electrode [V]"]
+        Up_100 = param_100["Initial voltage in positive electrode [V]"]
+        self.assertAlmostEqual(Up_100 - Un_100, 4.2)
 
     def test_check_parameter_values(self):
         with self.assertRaisesRegex(ValueError, "propotional term"):
@@ -443,6 +467,10 @@ class TestParameterValues(TestCase):
         self.assertEqual(func1.domains, func2.domains)
         self.assertEqual(func1.domains, func3.domains)
 
+        # [function] is deprecated
+        with self.assertRaisesRegex(ValueError, "[function]"):
+            pybamm.ParameterValues({"func": "[function]something"})
+
     def test_process_inline_function_parameters(self):
         def D(c):
             return c**2
@@ -580,17 +608,18 @@ class TestParameterValues(TestCase):
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({"function": lico2_ocp_Dualfoil1998})
+        # path is parent dir of this file
+        path = os.path.abspath(os.path.dirname(__file__))
+        lico2_ocv_example_data = pybamm.parameters.process_1D_data(
+            "lico2_ocv_example.csv", path=path
+        )
+
+        def lico2_ocv_example(sto):
+            name, (x, y) = lico2_ocv_example_data
+            return pybamm.Interpolant(x, y, [sto], name=name)
+
         parameter_values.update(
-            {"interpolation": "[data]lico2_data_example"},
-            path=os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "data",
-            ),
-            check_already_exists=False,
+            {"interpolation": lico2_ocv_example}, check_already_exists=False
         )
 
         a = pybamm.Scalar(0.6)
@@ -607,11 +636,18 @@ class TestParameterValues(TestCase):
         parameter_values = pybamm.ParameterValues(
             {"function": lico2_diffusivity_Dualfoil1998}
         )
+        # path is parent dir of this file
+        path = os.path.abspath(os.path.dirname(__file__))
+        lico2_diffusivity_Dualfoil1998_2D_data = pybamm.parameters.process_2D_data(
+            "lico2_diffusivity_Dualfoil1998_2D.json", path=path
+        )
+
+        def lico2_diffusivity_Dualfoil1998_2D(c_s, T):
+            name, (xs, y) = lico2_diffusivity_Dualfoil1998_2D_data
+            return pybamm.Interpolant(xs, y, [c_s, T], name=name)
+
         parameter_values.update(
-            {
-                "interpolation": "[2D data]lico2_diffusivity_Dualfoil1998_2D",
-            },
-            path=os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters"),
+            {"interpolation": lico2_diffusivity_Dualfoil1998_2D},
             check_already_exists=False,
         )
 
@@ -932,9 +968,9 @@ class TestParameterValues(TestCase):
         self.assertIsInstance(model.initial_conditions[var1], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[var1].value, 2)
         # boundary conditions
-        bc_key = list(model.boundary_conditions.keys())[0]
+        bc_key = next(iter(model.boundary_conditions.keys()))
         self.assertIsInstance(bc_key, pybamm.Variable)
-        bc_value = list(model.boundary_conditions.values())[0]
+        bc_value = next(iter(model.boundary_conditions.values()))
         self.assertIsInstance(bc_value["left"][0], pybamm.Scalar)
         self.assertEqual(bc_value["left"][0].value, 3)
         self.assertIsInstance(bc_value["right"][0], pybamm.Scalar)
@@ -992,89 +1028,18 @@ class TestParameterValues(TestCase):
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
 
-    def test_export_csv(self):
-        def some_function(self):
-            return None
-
-        example_data = ("some_data", [0, 1, 2])
-
+    def test_exchange_current_density_plating(self):
         parameter_values = pybamm.ParameterValues(
-            {"a": 0.1, "b": some_function, "c": example_data}
+            {"Exchange-current density for plating [A.m-2]": 1}
         )
-
-        filename = "parameter_values_test.csv"
-
-        parameter_values.export_csv(filename)
-
-        df = pd.read_csv(filename, index_col=0, header=None)
-
-        self.assertEqual(df[1]["a"], "0.1")
-        self.assertEqual(df[1]["b"], "[function]some_function")
-        self.assertEqual(df[1]["c"], "[data]some_data")
-
-    def test_export_python_script(self):
-        parameter_values = pybamm.ParameterValues(
-            {
-                "chemistry": "lithium_ion",
-                "cell": "Enertech_Ai2020",
-                "negative electrode": "graphite_Ai2020",
-                "separator": "separator_Ai2020",
-                "positive electrode": "lico2_Ai2020",
-                "electrolyte": "lipf6_Enertech_Ai2020",
-                "experiment": "1C_discharge_from_full_Ai2020",
-                "sei": "example",
-                "citation": "Ai2019",
-            }
+        param = pybamm.Parameter(
+            "Exchange-current density for lithium metal electrode [A.m-2]"
         )
-        parameter_values.export_python_script(
-            "Ai2020_test",
-            old_parameters_path=os.path.join(
-                pybamm.root_dir(),
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium_ion",
-                "testing_only",
-            ),
-        )
-
-        # test that loading the parameter set works
-        module = importlib.import_module("Ai2020_test")
-        function = getattr(module, "get_parameter_values")
-        new_parameter_values = pybamm.ParameterValues(function())
-
-        # Parameters should be the same
-        self.assertEqual(
-            new_parameter_values["Negative particle radius [m]"],
-            parameter_values["Negative particle radius [m]"],
-        )
-
-        # Functions should be the same, except without 'pybamm.'
-        self.assertEqual(
-            inspect.getsource(
-                new_parameter_values[
-                    "Negative electrode exchange-current density [A.m-2]"
-                ]
-            ).replace(" pybamm.", " "),
-            inspect.getsource(
-                parameter_values["Negative electrode exchange-current density [A.m-2]"]
-            ),
-        )
-        # Data should be the same
-        np.testing.assert_array_equal(
-            new_parameter_values["Negative electrode OCP [V]"][1][0],
-            parameter_values["Negative electrode OCP [V]"][1][0],
-        )
-        np.testing.assert_array_equal(
-            new_parameter_values["Negative electrode OCP [V]"][1][1],
-            parameter_values["Negative electrode OCP [V]"][1][1],
-        )
-
-        # remove the file
-        filename = os.path.join("Ai2020_test.py")
-        if os.path.exists(filename):
-            os.remove(filename)
-        shutil.rmtree("data")
+        with self.assertRaisesRegex(
+            KeyError,
+            "referring to the reaction at the surface of a lithium metal electrode",
+        ):
+            parameter_values.evaluate(param)
 
 
 if __name__ == "__main__":

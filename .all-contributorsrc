@@ -331,7 +331,8 @@
         "example",
         "doc",
         "test",
-        "tutorial"
+        "tutorial",
+        "review"
       ]
     },
     {
@@ -441,7 +442,7 @@
       "login": "wigging",
       "name": "Gavin Wiggins",
       "avatar_url": "https://avatars.githubusercontent.com/u/6828967?v=4",
-      "profile": "https://wigging.me",
+      "profile": "https://gavinw.me",
       "contributions": [
         "bug",
         "code"
@@ -530,7 +531,8 @@
       "contributions": [
         "infra",
         "code",
-        "doc"
+        "doc",
+        "review"
       ]
     },
     {
@@ -610,7 +612,120 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/104268427?v=4",
       "profile": "https://github.com/arjxn-py",
       "contributions": [
+        "infra",
+        "code",
+        "doc",
+        "review"
+      ]
+    },
+    {
+      "login": "chenzhao-py",
+      "name": "CHEN ZHAO",
+      "avatar_url": "https://avatars.githubusercontent.com/u/75906533?v=4",
+      "profile": "https://github.com/chenzhao-py",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "darryl-ad",
+      "name": "darryl-ad",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91731499?v=4",
+      "profile": "https://www.aboutenergy.io/",
+      "contributions": [
+        "code",
+        "bug",
+        "ideas"
+      ]
+    },
+    {
+      "login": "julian-evers",
+      "name": "julian-evers",
+      "avatar_url": "https://avatars.githubusercontent.com/u/133691040?v=4",
+      "profile": "https://github.com/julian-evers",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "js1tr3",
+      "name": "Jason Siegel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/633873?v=4",
+      "profile": "https://batterycontrolgroup.engin.umich.edu/",
+      "contributions": [
+        "code",
+        "ideas"
+      ]
+    },
+    {
+      "login": "tommaull",
+      "name": "Tom Maull",
+      "avatar_url": "https://avatars.githubusercontent.com/u/101814207?v=4",
+      "profile": "https://github.com/tommaull",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "ejfdickinson",
+      "name": "ejfdickinson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/116663050?v=4",
+      "profile": "https://github.com/ejfdickinson",
+      "contributions": [
+        "ideas",
+        "bug"
+      ]
+    },
+    {
+      "login": "bobonice",
+      "name": "bobonice",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22030806?v=4",
+      "profile": "https://github.com/bobonice",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "kratman",
+      "name": "Eric G. Kratz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10170302?v=4",
+      "profile": "https://github.com/kratman",
+      "contributions": [
+        "doc",
+        "infra",
+        "bug",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "aitorres",
+      "name": "Andrés Ignacio Torres",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26191851?v=4",
+      "profile": "https://aitorres.com",
+      "contributions": [
         "infra"
+      ]
+    },
+    {
+      "login": "Agnik7",
+      "name": "Agnik Bakshi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/77234005?v=4",
+      "profile": "https://github.com/Agnik7",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "RuiheLi",
+      "name": "RuiheLi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/84007676?v=4",
+      "profile": "https://github.com/RuiheLi",
+      "contributions": [
+        "code",
+        "test"
       ]
     }
   ],
@@ -620,5 +735,6 @@
   "repoType": "github",
   "repoHost": "https://github.com",
   "skipCi": true,
-  "commitConvention": "angular"
+  "commitConvention": "angular",
+  "commitType": "docs"
 }

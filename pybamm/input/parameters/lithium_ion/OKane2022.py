@@ -1,5 +1,6 @@
 import pybamm
 import os
+import numpy as np
 
 
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
@@ -121,7 +122,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     D_ref = 3.3e-14
     E_D_s = 3.03e4
     # E_D_s not given by Chen et al (2020), so taken from Ecker et al. (2015) instead
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -159,7 +160,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
     m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -242,7 +243,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     """
     k_cr = 3.9e-20
     Eac_cr = 0  # to be implemented
-    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    arrhenius = np.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
 
 
@@ -273,7 +274,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
 
     D_ref = 4e-15
     E_D_s = 25000  # O'Kane et al. (2022), after Cabanero et al. (2018)
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -304,9 +305,9 @@ def nmc_LGM50_ocp_Chen2020(sto):
     u_eq = (
         -0.8090 * sto
         + 4.4875
-        - 0.0428 * pybamm.tanh(18.5138 * (sto - 0.5542))
-        - 17.7326 * pybamm.tanh(15.7890 * (sto - 0.3117))
-        + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.3120))
+        - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
+        + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
     )
 
     return u_eq
@@ -340,7 +341,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     """
     m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 17800
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -403,7 +404,7 @@ def cracking_rate_Ai2020(T_dim):
     """
     k_cr = 3.9e-20
     Eac_cr = 0  # to be implemented
-    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    arrhenius = np.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
 
 
@@ -440,7 +441,7 @@ def electrolyte_diffusivity_Nyman2008_arrhenius(c_e, T):
     # So use temperature dependence from Ecker et al. (2015) instead
 
     E_D_c_e = 17000
-    arrhenius = pybamm.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_c_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
 
@@ -480,7 +481,7 @@ def electrolyte_conductivity_Nyman2008_arrhenius(c_e, T):
     # So use temperature dependence from Ecker et al. (2015) instead
 
     E_sigma_e = 17000
-    arrhenius = pybamm.exp(E_sigma_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_sigma_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius
 
@@ -500,28 +501,13 @@ def graphite_LGM50_ocp_Chen2020(sto):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for an LG M50 cell, from the paper
+    Parameters for an LG M50 cell, from the paper :footcite:t:`OKane2022`, based on the
+    paper :footcite:t:`Chen2020` and references therein.
 
-        Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diego Alonso-Alvarez, Robert
-        Timms, Valentin Sulzer, Jacqueline Sophie Edge, Billy Wu, Gregory J. Offer, and
-        Monica Marinescu. Lithium-ion battery degradation: how to model it. Phys. Chem.
-        Chem. Phys., 24:7909-7922, 2022. URL: http://dx.doi.org/10.1039/D2CP00417H,
-        doi:10.1039/D2CP00417H.
-
-
-    based on the paper
-
-        Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-
-
-    and references therein.
-
-    Note: the SEI and plating parameters do not claim to be representative of the true
-    parameter values. These are merely the parameter values that were used in the
-    referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -671,6 +657,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.5,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.5,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 29866.0,
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,

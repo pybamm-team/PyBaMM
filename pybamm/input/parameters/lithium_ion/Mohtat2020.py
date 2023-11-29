@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_diffusivity_PeymanMPM(sto, T):
@@ -25,7 +26,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
     D_ref = 5.0 * 10 ** (-15)
     E_D_s = 42770
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -42,13 +43,13 @@ def graphite_ocp_PeymanMPM(sto):
 
     u_eq = (
         0.063
-        + 0.8 * pybamm.exp(-75 * (sto + 0.001))
-        - 0.0120 * pybamm.tanh((sto - 0.127) / 0.016)
-        - 0.0118 * pybamm.tanh((sto - 0.155) / 0.016)
-        - 0.0035 * pybamm.tanh((sto - 0.220) / 0.020)
-        - 0.0095 * pybamm.tanh((sto - 0.190) / 0.013)
-        - 0.0145 * pybamm.tanh((sto - 0.490) / 0.020)
-        - 0.0800 * pybamm.tanh((sto - 1.030) / 0.055)
+        + 0.8 * np.exp(-75 * (sto + 0.001))
+        - 0.0120 * np.tanh((sto - 0.127) / 0.016)
+        - 0.0118 * np.tanh((sto - 0.155) / 0.016)
+        - 0.0035 * np.tanh((sto - 0.220) / 0.020)
+        - 0.0095 * np.tanh((sto - 0.190) / 0.013)
+        - 0.0145 * np.tanh((sto - 0.490) / 0.020)
+        - 0.0800 * np.tanh((sto - 1.030) / 0.055)
     )
 
     return u_eq
@@ -83,7 +84,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
     m_ref = 1.061 * 10 ** (-6)  # unit has been converted
     # units are (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 37480
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -144,7 +145,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 
     D_ref = 8 * 10 ** (-15)
     E_D_s = 18550
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -172,7 +173,7 @@ def NMC_ocp_PeymanMPM(sto):
         - 2.0843 * (sto**3)
         + 3.5146 * (sto**4)
         - 2.2166 * (sto**5)
-        - 0.5623e-4 * pybamm.exp(109.451 * sto - 100.006)
+        - 0.5623e-4 * np.exp(109.451 * sto - 100.006)
     )
 
     return u_eq
@@ -205,7 +206,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
     """
     m_ref = 4.824 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 39570
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
         m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
@@ -240,7 +241,7 @@ def NMC_entropic_change_PeymanMPM(sto, c_s_max):
         + 1.6225 * sto**2
         - 2.0843 * sto**3
         + 3.5146 * sto**4
-        - 0.5623 * 10 ** (-4) * pybamm.exp(109.451 * sto - 100.006)
+        - 0.5623 * 10 ** (-4) * np.exp(109.451 * sto - 100.006)
     )
 
     du_dT = (
@@ -278,7 +279,7 @@ def electrolyte_diffusivity_PeymanMPM(c_e, T):
 
     D_c_e = 5.35 * 10 ** (-10)
     E_D_e = 37040
-    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
 
@@ -310,7 +311,7 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
 
     sigma_e = 1.3
     E_k_e = 34700
-    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius
 
@@ -318,53 +319,23 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
     """
-    Parameters for a graphite/NMC532 pouch cell from the paper
-
-        Peyman Mohtat, Suhak Lee, Valentin Sulzer, Jason B. Siegel, and Anna G.
-        Stefanopoulou. Differential Expansion and Voltage Model for Li-ion Batteries at
-        Practical Charging Rates. Journal of The Electrochemical Society,
-        167(11):110561, 2020. doi:10.1149/1945-7111/aba5d1.
-
+    Parameters for a graphite/NMC532 pouch cell from the paper :footcite:t:`Mohtat2020`
     and references therein.
 
-    Some example parameters for SEI growth from the papers:
-
-        Ramadass, P., Haran, B., Gomadam, P. M., White, R., & Popov, B. N. (2004).
-        Development of first principles capacity fade model for Li-ion cells. Journal of
-        the Electrochemical Society, 151(2), A196-A203.
-
-        Ploehn, H. J., Ramadass, P., & White, R. E. (2004). Solvent diffusion model for
-        aging of lithium-ion battery cells. Journal of The Electrochemical Society,
-        151(3), A456-A462.
-
-        Single, F., Latz, A., & Horstmann, B. (2018). Identifying the mechanism of
-        continued growth of the solid-electrolyte interphase. ChemSusChem, 11(12),
-        1950-1955.
-
-        Safari, M., Morcrette, M., Teyssot, A., & Delacour, C. (2009). Multimodal
-        Physics- Based Aging Model for Life Prediction of Li-Ion Batteries. Journal of
-        The Electrochemical Society, 156(3),
-
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
 
     SEI parameters
     ^^^^^^^^^^^^^^
 
-    Parameters for lithium plating are from the paper:
+    Parameters for lithium plating are from the paper :footcite:t:`Yang2017`
 
-        Yang, X., Leng, Y., Zhang, G., Ge, S., Wang, C. (2017). Modeling of lithium
-        plating induced aging of lithium-ion batteries: Transition from linear to
-        nonlinear aging. Journal of Power Sources, 360, 28-40.
-
-    Note: this parameter set does not claim to be representative of the true parameter
-    values. Instead these are parameter values that were used to fit SEI models to
-    observed experimental data in the referenced papers.
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
     """
 
     return {
@@ -492,6 +463,8 @@ def get_parameter_values():
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.8,
         "Upper voltage cut-off [V]": 4.2,
+        "Open-circuit voltage at 0% SOC [V]": 2.8,
+        "Open-circuit voltage at 100% SOC [V]": 4.2,
         "Initial concentration in negative electrode [mol.m-3]": 48.8682,
         "Initial concentration in positive electrode [mol.m-3]": 31513.0,
         "Initial temperature [K]": 298.15,

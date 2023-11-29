@@ -1,10 +1,11 @@
 #
 # Test for the standard lead acid parameters
 #
+import os
 from tests import TestCase
 import pybamm
 from tests import get_discretisation_for_testing
-
+from tempfile import TemporaryDirectory
 import unittest
 
 
@@ -15,10 +16,11 @@ class TestStandardParametersLeadAcid(TestCase):
         self.assertAlmostEqual(constants.F.evaluate(), 96485, places=0)
 
     def test_print_parameters(self):
-        parameters = pybamm.LeadAcidParameters()
-        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
-        output_file = "lead_acid_parameters.txt"
-        parameter_values.print_parameters(parameters, output_file)
+        with TemporaryDirectory() as dir_name:
+            parameters = pybamm.LeadAcidParameters()
+            parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
+            output_file = os.path.join(dir_name, "lead_acid_parameters.txt")
+            parameter_values.print_parameters(parameters, output_file)
 
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested

@@ -9,4 +9,3 @@ Submodels for (loss of) active material
   base_active_material
   constant_active_material
   loss_active_material
-

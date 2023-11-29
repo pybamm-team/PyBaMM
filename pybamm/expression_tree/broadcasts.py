@@ -17,7 +17,7 @@ class Broadcast(pybamm.SpatialOperator):
 
     For an example of broadcasts in action, see
     `this example notebook
-    <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+    <https://github.com/pybamm-team/PyBaMM/blob/develop/docs/source/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
     Parameters
     ----------
@@ -44,6 +44,22 @@ class Broadcast(pybamm.SpatialOperator):
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
         return child
+
+    def _diff(self, variable):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        # Differentiate the child and broadcast the result in the same way
+        return self._unary_new_copy(self.child.diff(variable))
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Broadcast: Serialisation is only implemented for discretised models"
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Broadcast: Please use a discretised model when reading in from JSON"
+        )
 
 
 class PrimaryBroadcast(Broadcast):
@@ -541,8 +557,10 @@ def full_like(symbols, fill_value):
         return array_type(entries, domains=sum_symbol.domains)
 
     except NotImplementedError:
-        if sum_symbol.shape_for_testing == (1, 1) or sum_symbol.shape_for_testing == (
-            1,
+        if (
+            sum_symbol.shape_for_testing == (1, 1)
+            or sum_symbol.shape_for_testing == (1,)
+            or sum_symbol.domain == []
         ):
             return pybamm.Scalar(fill_value)
         if sum_symbol.evaluates_on_edges("primary"):

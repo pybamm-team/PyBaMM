@@ -13,4 +13,3 @@ Solvers
   algebraic_solvers
   solution
   processed_variable
-

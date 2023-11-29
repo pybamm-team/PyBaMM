@@ -13,10 +13,6 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN
 
-    def test_sensitivities(self):
-        # skip sensitivities test for now as it is failing with casadi 3.6
-        pass
-
     def test_particle_distribution_in_x(self):
         model = pybamm.lithium_ion.DFN()
         param = model.default_parameter_values

@@ -39,7 +39,6 @@ PARAMETER_PATH = [
 from .util import Timer, TimerTime, FuzzyDict
 from .util import (
     root_dir,
-    load_function,
     rmse,
     load,
     is_constant_and_can_evaluate,
@@ -48,13 +47,13 @@ from .util import (
     get_parameters_filepath,
     have_jax,
     install_jax,
+    have_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
-
 #
 # Classes for the Expression Tree
 #
@@ -190,6 +189,11 @@ from .meshes.scikit_fem_submeshes import (
 )
 
 #
+# Serialisation
+#
+from .models.base_model import load_model
+
+#
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
@@ -203,6 +207,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
@@ -220,8 +225,9 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 # Experiments
 #
-from .experiments.experiment import Experiment
-from . import experiments
+from .experiment.experiment import Experiment
+from . import experiment
+
 
 #
 # Plotting

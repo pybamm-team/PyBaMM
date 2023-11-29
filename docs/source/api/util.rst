@@ -16,11 +16,7 @@ Utility functions
 .. autoclass:: pybamm.FuzzyDict
   :members:
 
-.. autofunction:: pybamm.load_function
-
 .. autofunction:: pybamm.load
-
-.. autofunction:: pybamm.get_parameters_filepath
 
 .. autofunction:: pybamm.install_jax
 

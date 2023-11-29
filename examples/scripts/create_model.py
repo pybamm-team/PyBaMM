@@ -1,5 +1,5 @@
 # This script is intended to be a stripped back version of the
-# 'examples/notebooks/create-model.ipnb' so for more details please see
+# 'docs/source/examples/notebooks/create-model.ipnb' so for more details please see
 # that notebook
 
 import pybamm

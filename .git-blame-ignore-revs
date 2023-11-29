@@ -1,2 +1,8 @@
 # activated pre-commit - https://github.com/pybamm-team/PyBaMM/pull/2272
 0054efe388d2d17301f7e0554449eac9a7d3b7fc
+# activated pre-commit for notebooks - https://github.com/pybamm-team/PyBaMM/pull/3110
+a63e49ece0f9336d1f5c2562f7459e555c6e6693
+# activated standard pre-commits - https://github.com/pybamm-team/PyBaMM/pull/3192
+5273214b585c5a4286609aed40e0b092d0e05f42
+# migrate config to pyproject.toml - https://github.com/pybamm-team/PyBaMM/pull/3557
+12c5d77203bd93542785d237bac00bad5ed5469a

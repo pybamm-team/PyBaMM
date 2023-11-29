@@ -249,9 +249,6 @@ class DomainLeadAcidParameters(BaseParameters):
 
         # Macroscale geometry
         self.L = self.geo.L
-        # In lead-acid the current collector and electrodes are the same (same
-        # thickness)
-        self.L_cc = self.L
 
         # Thermal
         self.rho_c_p = self.therm.rho_c_p
@@ -265,9 +262,19 @@ class DomainLeadAcidParameters(BaseParameters):
             self.b_e = self.geo.b_e
             self.epsilon_inactive = pybamm.Scalar(0)
             return
+
+        # In lead-acid the current collector and electrodes are the same (same
+        # thickness)
+        self.L_cc = self.L
         # for lead-acid the electrodes and current collector are the same
         self.rho_c_p_cc = self.therm.rho_c_p
         self.lambda_cc = self.therm.lambda_
+
+        # Tab geometry (for pouch cells)
+        self.L_tab = self.geo.L_tab
+        self.centre_y_tab = self.geo.centre_y_tab
+        self.centre_z_tab = self.geo.centre_z_tab
+        self.A_tab = self.geo.A_tab
 
         # Microstructure
         self.b_e = self.geo.b_e
@@ -303,9 +310,6 @@ class DomainLeadAcidParameters(BaseParameters):
         self.DeltaV = self.DeltaVsurf + self.DeltaVliq
 
         self.Q_max = pybamm.Parameter(f"{Domain} electrode volumetric capacity [C.m-3]")
-        self.C_dl = pybamm.Parameter(
-            f"{Domain} electrode double-layer capacity [F.m-2]"
-        )
 
         # In lead-acid the current collector and electrodes are the same (same
         # conductivity) but we correct here for Bruggeman. Note that because for
@@ -314,8 +318,17 @@ class DomainLeadAcidParameters(BaseParameters):
         # T_ref.
         self.sigma_cc = self.sigma(main.T_ref) * (1 - self.eps_max) ** self.b_s
 
+    def C_dl(self, T):
+        """Dimensional double-layer capacity [F.m-2]"""
+        inputs = {"Temperature [K]": T}
+        Domain = self.domain.capitalize()
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode double-layer capacity [F.m-2]", inputs
+        )
+
     def sigma(self, T):
-        """Dimensional electrical conductivity"""
+        """Dimensional electrical conductivity [S.m-1]"""
+
         inputs = {"Temperature [K]": T}
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(

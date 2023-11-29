@@ -7,3 +7,9 @@ Electrode SOH models
 .. autofunction:: pybamm.lithium_ion.get_initial_stoichiometries
 
 .. autofunction:: pybamm.lithium_ion.get_min_max_stoichiometries
+
+.. autofunction:: pybamm.lithium_ion.get_initial_ocps
+
+.. autofunction:: pybamm.lithium_ion.get_min_max_ocps
+
+.. footbibliography::

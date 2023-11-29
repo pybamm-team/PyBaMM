@@ -41,7 +41,6 @@ for ax, model_, model_name in zip(
 ):
     for params in parameters:
         time_points = []
-        # solver = pybamm.CasadiSolver()
 
         model = model_.new_copy()
         c_rate = 10
@@ -99,7 +98,7 @@ plt.gca().legend(
 plt.savefig(f"benchmarks/benchmark_images/time_vs_dt_max_{pybamm.__version__}.png")
 
 
-content = f"## Solve Time vs dt_max\n<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>\n"  # noqa
+content = f"## Solve Time vs dt_max\n<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>\n"
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()

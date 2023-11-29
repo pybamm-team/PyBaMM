@@ -7,7 +7,7 @@ from .base_mechanics import BaseMechanics
 
 class SwellingOnly(BaseMechanics):
     """
-    Class for swelling only (no cracking), from [1]_
+    Class for swelling only (no cracking), from :footcite:t:`Ai2019`.
 
     Parameters
     ----------
@@ -21,11 +21,6 @@ class SwellingOnly(BaseMechanics):
     phase : str, optional
         Phase of the particle (default is "primary")
 
-    References
-    ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-           Cells. Journal of The Electrochemical Society, 167(1), 013512.
     """
 
     def __init__(self, param, domain, options, phase="primary"):

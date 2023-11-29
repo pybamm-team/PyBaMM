@@ -4,18 +4,26 @@
 import numbers
 
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 def _preprocess_binary(left, right):
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
+    elif isinstance(left, np.ndarray):
+        if left.ndim > 1:
+            raise ValueError("left must be a 1D array")
+        left = pybamm.Vector(left)
     if isinstance(right, numbers.Number):
         right = pybamm.Scalar(right)
+    elif isinstance(right, np.ndarray):
+        if right.ndim > 1:
+            raise ValueError("right must be a 1D array")
+        right = pybamm.Vector(right)
 
     # Check both left and right are pybamm Symbols
     if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
@@ -59,6 +67,23 @@ class BinaryOperator(pybamm.Symbol):
         super().__init__(name, children=[left, right], domains=domains)
         self.left = self.children[0]
         self.right = self.children[1]
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising; discretisation has
+        already occured so pre-processing of binaries is not necessary."""
+
+        instance = cls.__new__(cls)
+
+        super(BinaryOperator, instance).__init__(
+            snippet["name"],
+            children=[snippet["children"][0], snippet["children"][1]],
+            domains=snippet["domains"],
+        )
+        instance.left = instance.children[0]
+        instance.right = instance.children[1]
+
+        return instance
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -139,6 +164,7 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -146,6 +172,15 @@ class BinaryOperator(pybamm.Symbol):
             eq1 = child1.to_equation()
             eq2 = child2.to_equation()
             return self._sympy_operator(eq1, eq2)
+
+    def to_json(self):
+        """
+        Method to serialise a BinaryOperator object into JSON.
+        """
+
+        json_dict = {"name": self.name, "id": self.id, "domains": self.domains}
+
+        return json_dict
 
 
 class Power(BinaryOperator):
@@ -315,6 +350,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -456,7 +492,11 @@ class Equality(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
-        return int(left == right)
+        # numpy 1.25 deprecation warning: extract value from numpy arrays
+        if isinstance(right, np.ndarray):
+            return int(left == right.item())
+        else:
+            return int(left == right)
 
     def _binary_new_copy(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
@@ -495,6 +535,17 @@ class _Heaviside(BinaryOperator):
         # Heaviside should always be multiplied by something else so hopefully don't
         # need to worry about shape
         return pybamm.Scalar(0)
+
+    def _evaluate_for_shape(self):
+        """
+        Returns an array of NaNs of the correct shape.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`.
+        """
+        left = self.children[0].evaluate_for_shape()
+        right = self.children[1].evaluate_for_shape()
+        # _binary_evaluate will return an array of bools, so we multiply by NaN to get
+        # an array of NaNs
+        return self._binary_evaluate(left, right) * np.nan
 
 
 class EqualHeaviside(_Heaviside):
@@ -603,6 +654,7 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Min(left, right)
 
 
@@ -639,6 +691,7 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Max(left, right)
 
 
@@ -752,7 +805,7 @@ def simplified_power(left, right):
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
 
-def simplified_addition(left, right):
+def add(left, right):
     """
     Note
     ----
@@ -767,7 +820,7 @@ def simplified_addition(left, right):
         left, right = right, left
 
     # Check for Concatenations and Broadcasts
-    out = _simplified_binary_broadcast_concatenation(left, right, simplified_addition)
+    out = _simplified_binary_broadcast_concatenation(left, right, add)
     if out is not None:
         return out
 
@@ -840,7 +893,7 @@ def simplified_addition(left, right):
     return pybamm.simplify_if_constant(Addition(left, right))
 
 
-def simplified_subtraction(left, right):
+def subtract(left, right):
     """
     Note
     ----
@@ -856,9 +909,7 @@ def simplified_subtraction(left, right):
         return -right + left
 
     # Check for Concatenations and Broadcasts
-    out = _simplified_binary_broadcast_concatenation(
-        left, right, simplified_subtraction
-    )
+    out = _simplified_binary_broadcast_concatenation(left, right, subtract)
     if out is not None:
         return out
 
@@ -869,7 +920,7 @@ def simplified_subtraction(left, right):
     if pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
             return -right * pybamm.ones_like(left)
-        # See comments in simplified_addition
+        # See comments in add
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
@@ -924,7 +975,7 @@ def simplified_subtraction(left, right):
     return pybamm.simplify_if_constant(Subtraction(left, right))
 
 
-def simplified_multiplication(left, right):
+def multiply(left, right):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Move constant to always be on the left
@@ -932,9 +983,7 @@ def simplified_multiplication(left, right):
         left, right = right, left
 
     # Check for Concatenations and Broadcasts
-    out = _simplified_binary_broadcast_concatenation(
-        left, right, simplified_multiplication
-    )
+    out = _simplified_binary_broadcast_concatenation(left, right, multiply)
     if out is not None:
         return out
 
@@ -1051,7 +1100,7 @@ def simplified_multiplication(left, right):
     return Multiplication(left, right)
 
 
-def simplified_division(left, right):
+def divide(left, right):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # anything divided by zero raises error
@@ -1064,7 +1113,7 @@ def simplified_division(left, right):
         return (1 / right) * left
 
     # Check for Concatenations and Broadcasts
-    out = _simplified_binary_broadcast_concatenation(left, right, simplified_division)
+    out = _simplified_binary_broadcast_concatenation(left, right, divide)
     if out is not None:
         return out
 
@@ -1122,7 +1171,7 @@ def simplified_division(left, right):
     return pybamm.simplify_if_constant(Division(left, right))
 
 
-def simplified_matrix_multiplication(left, right):
+def matmul(left, right):
     left, right = _preprocess_binary(left, right)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(MatrixMultiplication(left, right))

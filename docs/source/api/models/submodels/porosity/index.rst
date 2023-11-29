@@ -8,4 +8,3 @@ Porosity
   constant_porosity
   reaction_driven_porosity
   reaction_driven_porosity_ode
-

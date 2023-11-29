@@ -18,7 +18,7 @@ geometry = model.default_geometry
 # load parameter values and process model and geometry
 
 
-def ambient_temperature(t):
+def ambient_temperature(y, z, t):
     return 300 + t * 100 / 3600
 
 

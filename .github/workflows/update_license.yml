@@ -13,11 +13,11 @@ jobs:
     if: github.repository_owner == 'pybamm-team'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Update year in license
-        uses: FantasticFiasco/action-update-license-year@v2
+        uses: FantasticFiasco/action-update-license-year@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: LICENSE.txt
@@ -28,11 +28,11 @@ jobs:
     needs: license
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Update year in docs
-        uses: FantasticFiasco/action-update-license-year@v2
+        uses: FantasticFiasco/action-update-license-year@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: docs/conf.py

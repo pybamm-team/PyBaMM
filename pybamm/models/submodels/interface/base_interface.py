@@ -64,6 +64,7 @@ class BaseInterface(pybamm.BaseSubModel):
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
+        domain_options = getattr(self.options, domain)
 
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
@@ -108,14 +109,30 @@ class BaseInterface(pybamm.BaseSubModel):
                     c_s_surf = c_s_surf.orphans[0]
                     c_e = c_e.orphans[0]
                     T = T.orphans[0]
-
-            j0 = phase_param.j0(c_e, c_s_surf, T)
+            # Get main reaction exchange-current density (may have empirical hysteresis)
+            j0_option = getattr(domain_options, self.phase)["exchange-current density"]
+            if j0_option == "single":
+                j0 = phase_param.j0(c_e, c_s_surf, T)
+            elif j0_option == "current sigmoid":
+                current = variables["Total current density [A.m-2]"]
+                k = 100
+                if Domain == "Positive":
+                    lithiation_current = current
+                elif Domain == "Negative":
+                    lithiation_current = -current
+                m_lith = pybamm.sigmoid(
+                    0, lithiation_current, k
+                )  # lithiation_current > 0
+                m_delith = 1 - m_lith  # lithiation_current < 0
+                j0_lith = phase_param.j0(c_e, c_s_surf, T, "lithiation")
+                j0_delith = phase_param.j0(c_e, c_s_surf, T, "delithiation")
+                j0 = m_lith * j0_lith + m_delith * j0_delith
 
         elif self.reaction == "lithium metal plating":
             # compute T on the surface of the anode (interface with separator)
             T = pybamm.boundary_value(T, "right")
-            c_Li_typ = param.c_Li_typ
-            j0 = param.j0_plating(c_e, c_Li_typ, T)
+            c_Li_metal = 1 / param.V_bar_Li
+            j0 = param.j0_Li_metal(c_e, c_Li_metal, T)
 
         elif self.reaction == "lead-acid main":
             # If variable was broadcast, take only the orphan
@@ -289,9 +306,9 @@ class BaseInterface(pybamm.BaseSubModel):
         a_j_av = pybamm.x_average(a_j)
 
         if reaction_name == "SEI on cracks ":
-            roughness = variables["Negative electrode roughness ratio"] - 1
+            roughness = variables[f"{Domain} electrode roughness ratio"] - 1
             roughness_av = (
-                variables["X-averaged negative electrode roughness ratio"] - 1
+                variables[f"X-averaged {domain} electrode roughness ratio"] - 1
             )
         else:
             roughness = 1
@@ -335,14 +352,14 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
-        domain = self.domain
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         Phase_name = phase_name.capitalize()
 
-        if self.options.electrode_types["negative"] == "planar":
+        if self.options.electrode_types[domain] == "planar":
             # half-cell domain
             variables = {
-                f"{Phase_name}SEI film overpotential [V]": eta_sei,
+                f"{Domain} electrode {Phase_name}SEI film overpotential [V]": eta_sei,
             }
             return variables
 
@@ -356,8 +373,9 @@ class BaseInterface(pybamm.BaseSubModel):
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, f"{domain} electrode")
 
         variables = {
-            f"{Phase_name}SEI film overpotential [V]": eta_sei,
-            f"X-averaged {phase_name}SEI film overpotential [V]": eta_sei_av,
+            f"{Domain} electrode {phase_name}SEI film overpotential [V]": eta_sei,
+            f"X-averaged {domain} electrode {phase_name}SEI"
+            " film overpotential [V]": eta_sei_av,
         }
 
         return variables

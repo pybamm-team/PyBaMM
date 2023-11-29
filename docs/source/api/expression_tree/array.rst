@@ -6,4 +6,4 @@ Array
 
 .. autofunction:: pybamm.linspace
 
-.. autofunction:: pybamm.meshgrid 
+.. autofunction:: pybamm.meshgrid

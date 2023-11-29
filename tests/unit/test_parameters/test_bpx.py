@@ -9,7 +9,6 @@ import json
 import pybamm
 import copy
 
-
 class TestBPX(TestCase):
     def setUp(self):
         self.base = {
@@ -161,12 +160,49 @@ class TestBPX(TestCase):
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
-            pybamm.ParameterValues.create_from_bpx(tmp.name)
+            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+            # Function to check that functional parameters output constants
+            def check_constant_output(func):
+                stos = [0, 1]
+                T = 298.15
+                p_vals = [func(sto, T) for sto in stos]
+                self.assertEqual(p_vals[0], p_vals[1])
+
+            for electrode in ["Negative", "Positive"]:
+                D = param[f"{electrode} electrode diffusivity [m2.s-1]"]
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
+                check_constant_output(D)
+                check_constant_output(dUdT)
+
+            kappa = param["Electrolyte conductivity [S.m-1]"]
+            De = param["Electrolyte diffusivity [m2.s-1]"]
+            check_constant_output(kappa)
+            check_constant_output(De)
+
 
     def test_table_data(self):
         bpx_obj = copy.copy(self.base)
+        data = {"x": [0, 1], "y": [0, 1]}
         bpx_obj["Parameterisation"]["Electrolyte"].update(
-            {"Conductivity [S.m-1]": {"x": [800, 1000, 1200], "y": [0.9, 1, 1.1]}}
+            {
+                "Conductivity [S.m-1]": data,
+                "Diffusivity [m2.s-1]": data,
+            }
+        )
+        bpx_obj["Parameterisation"]["Negative electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": data,
+                "OCP [V]": data,
+                "Entropic change coefficient [V.K-1]": data,
+            }
+        )
+        bpx_obj["Parameterisation"]["Positive electrode"].update(
+            {
+                "Diffusivity [m2.s-1]": data,
+                "OCP [V]": data,
+                "Entropic change coefficient [V.K-1]": data,
+            }
         )
 
         filename = "tmp.json"
@@ -179,12 +215,91 @@ class TestBPX(TestCase):
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
-            pybamm.ParameterValues.create_from_bpx(tmp.name)
+            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+            # Check that the electrolyte conductivity is an Interpolant with the
+            # correct child
+            c = pybamm.Variable("c")
+            kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
+            self.assertIsInstance(kappa, pybamm.Interpolant)
+            self.assertEqual(kappa.children[0], c)
+            # Check other parameters give interpolants
+            D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
+            self.assertIsInstance(D, pybamm.Interpolant)
+            for electrode in ["Negative", "Positive"]:
+                D = param[f"{electrode} electrode diffusivity [m2.s-1]"](c, 298.15)
+                self.assertIsInstance(D, pybamm.Interpolant)
+                OCP = param[f"{electrode} electrode OCP [V]"](c)
+                self.assertIsInstance(OCP, pybamm.Interpolant)
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](
+                    c, 10000
+                )
+                self.assertIsInstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
         with self.assertRaisesRegex(ValueError, "Target SOC"):
             pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
 
+    def test_bpx_arrhenius(self):
+        bpx_obj = copy.copy(self.base)
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+
+        def arrhenius_assertion(pv, param_key, Ea_key):
+            sto = 0.5
+            T = 300
+            c_e = 1000
+            c_s_surf = 15000
+            c_s_max = 20000
+            T_ref = pv["Reference temperature [K]"]
+            Ea = pv[Ea_key]
+
+            if "exchange-current" in param_key:
+                eval_ratio = (
+                    pv[param_key](c_e, c_s_surf, c_s_max, T).value
+                    / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).value
+                    )
+            else:
+                eval_ratio = (
+                    pv[param_key](sto, T).value
+                    / pv[param_key](sto, T_ref).value
+                )
+
+            calc_ratio = pybamm.exp(Ea / pybamm.constants.R * (1 / T_ref - 1 / T)).value
+
+            self.assertAlmostEqual(eval_ratio, calc_ratio)
+
+        param_keys = [
+            "Electrolyte conductivity [S.m-1]",
+            "Electrolyte diffusivity [m2.s-1]",
+            "Negative electrode diffusivity [m2.s-1]",
+            "Positive electrode diffusivity [m2.s-1]",
+            "Positive electrode exchange-current density [A.m-2]",
+            "Negative electrode exchange-current density [A.m-2]",
+        ]
+
+        Ea_keys = [
+            "Electrolyte conductivity activation energy [J.mol-1]",
+            "Electrolyte diffusivity activation energy [J.mol-1]",
+            "Negative electrode diffusivity activation energy [J.mol-1]",
+            "Positive electrode diffusivity activation energy [J.mol-1]",
+            "Positive electrode reaction rate constant activation energy [J.mol-1]",
+            "Negative electrode reaction rate constant activation energy [J.mol-1]",
+        ]
+
+        for param_key, Ea_key in zip(param_keys, Ea_keys):
+            arrhenius_assertion(pv, param_key, Ea_key)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -36,13 +36,11 @@ class TestElectrodeSOH(TestCase):
                 self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
             else:
                 # theoretical_energy is not present in sol_split
-                x_0 = sol_split["x_0"].data[0]
-                y_0 = sol_split["y_0"].data[0]
-                x_100 = sol_split["x_100"].data[0]
-                y_100 = sol_split["y_100"].data[0]
-                energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                    parameter_values, x_100, x_0, y_100, y_0
-                )
+                inputs = {
+                    k: sol_split[k].data[0]
+                    for k in ["x_0", "y_0", "x_100", "y_100", "Q_p"]
+                }
+                energy = esoh_solver.theoretical_energy_integral(inputs)
                 self.assertAlmostEqual(sol[key], energy, places=5)
 
         # should still work with old inputs
@@ -94,7 +92,11 @@ class TestElectrodeSOH(TestCase):
 
         Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 5}
+            {
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 5,
+            }
+            # need to update both the target voltages at 0 and 100% SOC
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
@@ -105,7 +107,12 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to upper voltage limit
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 0, "Upper voltage cut-off [V]": 6}
+            {
+                "Lower voltage cut-off [V]": 0,
+                "Upper voltage cut-off [V]": 6,
+                "Open-circuit voltage at 0% SOC [V]": 0,
+                "Open-circuit voltage at 100% SOC [V]": 6,
+            }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
@@ -113,7 +120,12 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
         # Solver fails to find a solution due to lower voltage limit
         parameter_values.update(
-            {"Lower voltage cut-off [V]": -10, "Upper voltage cut-off [V]": 5}
+            {
+                "Lower voltage cut-off [V]": -10,
+                "Upper voltage cut-off [V]": 5,
+                "Open-circuit voltage at 0% SOC [V]": -10,
+                "Open-circuit voltage at 100% SOC [V]": 5,
+            }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, param)
         inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
@@ -122,7 +134,12 @@ class TestElectrodeSOH(TestCase):
 
         # errors for cell capacity based solver
         parameter_values.update(
-            {"Lower voltage cut-off [V]": 3, "Upper voltage cut-off [V]": 4.2}
+            {
+                "Lower voltage cut-off [V]": 3,
+                "Upper voltage cut-off [V]": 4.2,
+                "Open-circuit voltage at 0% SOC [V]": 3,
+                "Open-circuit voltage at 100% SOC [V]": 4.2,
+            }
         )
         esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
             parameter_values, param, known_value="cell capacity"
@@ -137,9 +154,95 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
 
 
+class TestElectrodeSOHMSMR(TestCase):
+    def test_known_solution(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param = pybamm.LithiumIonParameters(options=options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, options=options
+        )
+
+        Vmin = 2.8
+        Vmax = 4.2
+        Q_n = parameter_values.evaluate(param.n.Q_init)
+        Q_p = parameter_values.evaluate(param.p.Q_init)
+        Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
+
+        inputs = {"Q_Li": Q_Li, "Q_n": Q_n, "Q_p": Q_p}
+
+        # Solve the model and check outputs
+        sol = esoh_solver.solve(inputs)
+
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
+
+        # Solve with split esoh and check outputs
+        ics = esoh_solver._set_up_solve(inputs)
+        sol_split = esoh_solver._solve_split(inputs, ics)
+        for key in sol:
+            if key != "Maximum theoretical energy [W.h]":
+                self.assertAlmostEqual(sol[key], sol_split[key].data[0], places=5)
+
+        # Check feasibility checks can be performed successfully
+        esoh_solver._check_esoh_feasible(inputs)
+
+    def test_known_solution_cell_capacity(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, known_value="cell capacity", options=options
+        )
+
+        Vmin = 2.8
+        Vmax = 4.2
+        Q_n = parameter_values.evaluate(param.n.Q_init)
+        Q_p = parameter_values.evaluate(param.p.Q_init)
+        Q = parameter_values.evaluate(param.Q)
+
+        inputs = {"Q": Q, "Q_n": Q_n, "Q_p": Q_p}
+
+        # Solve the model and check outputs
+        sol = esoh_solver.solve(inputs)
+
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"], Vmax, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"], Vmin, places=5)
+        self.assertAlmostEqual(sol["Q"], Q, places=5)
+
+    def test_error(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        esoh_solver = pybamm.lithium_ion.ElectrodeSOHSolver(
+            parameter_values, param, known_value="cell capacity", options=options
+        )
+        with self.assertRaisesRegex(ValueError, "solve_for must be "):
+            esoh_solver._get_electrode_soh_sims_split()
+
+
 class TestElectrodeSOHHalfCell(TestCase):
     def test_known_solution(self):
-        model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell()
 
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
         parameter_values = pybamm.ParameterValues("Xu2019")
@@ -168,7 +271,7 @@ class TestCalculateTheoreticalEnergy(TestCase):
             )
         )
         # Real energy should be less than discharge energy,
-        #  and both should be greater than 0
+        # and both should be greater than 0
         self.assertLess(discharge_energy, theoretical_energy)
         self.assertLess(0, discharge_energy)
         self.assertLess(0, theoretical_energy)
@@ -218,6 +321,16 @@ class TestGetInitialSOC(TestCase):
         V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
         self.assertAlmostEqual(V, 2.8)
 
+        x0, x100, y100, y0 = pybamm.lithium_ion.get_min_max_stoichiometries(
+            parameter_values,
+            param,
+            known_value="cell capacity",
+        )
+        V = parameter_values.evaluate(param.p.prim.U(y100, T) - param.n.prim.U(x100, T))
+        self.assertAlmostEqual(V, 4.2)
+        V = parameter_values.evaluate(param.p.prim.U(y0, T) - param.n.prim.U(x0, T))
+        self.assertAlmostEqual(V, 2.8)
+
     def test_initial_soc_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -231,6 +344,9 @@ class TestGetInitialSOC(TestCase):
 
     def test_error(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values_half_cell = pybamm.lithium_ion.DFN(
+            {"working electrode": "positive"}
+        ).default_parameter_values
 
         with self.assertRaisesRegex(
             ValueError, "Initial SOC should be between 0 and 1"
@@ -242,6 +358,91 @@ class TestGetInitialSOC(TestCase):
 
         with self.assertRaisesRegex(ValueError, "must be a float"):
             pybamm.lithium_ion.get_initial_stoichiometries("5 A", parameter_values)
+
+        with self.assertRaisesRegex(ValueError, "outside the voltage limits"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "1 V", parameter_values_half_cell
+            )
+
+        with self.assertRaisesRegex(ValueError, "must be a float"):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                "5 A", parameter_values_half_cell
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Initial SOC should be between 0 and 1"
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+                2, parameter_values_half_cell
+            )
+
+
+class TestGetInitialOCP(TestCase):
+    def test_get_initial_ocp(self):
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(1, parameter_values, param)
+        self.assertAlmostEqual(Up - Un, 4.2)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(0, parameter_values, param)
+        self.assertAlmostEqual(Up - Un, 2.8)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps("4 V", parameter_values, param)
+        self.assertAlmostEqual(Up - Un, 4)
+
+    def test_min_max_ocp(self):
+        param = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
+
+        Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
+            parameter_values, param
+        )
+        self.assertAlmostEqual(Up_100 - Un_100, 4.2)
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
+
+
+class TestGetInitialOCPMSMR(TestCase):
+    def test_get_initial_ocp(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            1, parameter_values, param, options=options
+        )
+        self.assertAlmostEqual(Up - Un, 4.2, places=5)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            0, parameter_values, param, options=options
+        )
+        self.assertAlmostEqual(Up - Un, 2.8, places=5)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            "4 V", parameter_values, param, options=options
+        )
+        self.assertAlmostEqual(Up - Un, 4)
+
+    def test_min_max_ocp(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        param = pybamm.LithiumIonParameters(options)
+        parameter_values = pybamm.ParameterValues("MSMR_Example")
+
+        Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
+            parameter_values, param, options=options
+        )
+        self.assertAlmostEqual(Up_100 - Un_100, 4.2)
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
+
+        Un_0, Un_100, Up_100, Up_0 = pybamm.lithium_ion.get_min_max_ocps(
+            parameter_values, param, known_value="cell capacity", options=options
+        )
+        self.assertAlmostEqual(Up_100 - Un_100, 4.2)
+        self.assertAlmostEqual(Up_0 - Un_0, 2.8)
 
 
 if __name__ == "__main__":

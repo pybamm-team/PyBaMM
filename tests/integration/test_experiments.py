@@ -80,6 +80,27 @@ class TestExperiments(TestCase):
         # this experiment fails during the third cycle (i.e. is infeasible)
         self.assertEqual(len(sol.cycles), 3)
 
+    def test_drive_cycle(self):
+        drive_cycle = np.array([np.arange(100), 5 * np.ones(100)]).T
+        c_step = pybamm.step.current(
+            value=drive_cycle, duration=100, termination=["4.00 V"]
+        )
+        experiment = pybamm.Experiment(
+            [
+                c_step,
+            ],
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=param,
+            solver=pybamm.CasadiSolver(),
+        )
+        sol = sim.solve()
+        assert np.all(sol["Terminal voltage [V]"].entries >= 4.00)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

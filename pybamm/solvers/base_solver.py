@@ -38,6 +38,9 @@ class BaseSolver(object):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    output_variables : list[str], optional
+        List of variables to calculate and return. If none are specified then
+        the complete state vector is returned (can be very large) (default is [])
     """
 
     def __init__(
@@ -48,6 +51,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
+        output_variables=[],
     ):
         self.method = method
         self.rtol = rtol
@@ -55,6 +59,7 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
+        self.output_variables = output_variables
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -62,6 +67,7 @@ class BaseSolver(object):
         self.ode_solver = False
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
+        self.computed_var_fcns = {}
 
     @property
     def root_method(self):
@@ -130,13 +136,14 @@ class BaseSolver(object):
         )
 
         # Process initial conditions
-        initial_conditions = process(
+        initial_conditions, _, jacp_ic, _ = process(
             model.concatenated_initial_conditions,
             "initial_conditions",
             vars_for_processing,
             use_jacobian=False,
-        )[0]
+        )
         model.initial_conditions_eval = initial_conditions
+        model.jacp_initial_conditions_eval = jacp_ic
 
         # evaluate initial condition
         y0_total_size = (
@@ -146,9 +153,25 @@ class BaseSolver(object):
         if model.convert_to_format == "casadi":
             # stack inputs
             inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
-            model.y0 = initial_conditions(0, y_zero, inputs_casadi)
+            model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
+            if jacp_ic is None:
+                model.y0S = None
+            else:
+                model.y0S = jacp_ic(0.0, y_zero, inputs_casadi)
         else:
-            model.y0 = initial_conditions(0, y_zero, inputs)
+            model.y0 = initial_conditions(0.0, y_zero, inputs)
+            if jacp_ic is None:
+                model.y0S = None
+            else:
+                # we are calculating the derivative wrt the inputs
+                # so need to make sure we convert int -> float
+                # This is to satisfy JAX jacfwd function which requires
+                # float inputs
+                inputs_float = {
+                    key: float(value) if isinstance(value, int) else value
+                    for key, value in inputs.items()
+                }
+                model.y0S = jacp_ic(0.0, y_zero, inputs_float)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -233,7 +256,56 @@ class BaseSolver(object):
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
 
+            # if output_variables specified then convert functions to casadi
+            # expressions for evaluation within the respective solver
+            self.computed_var_fcns = {}
+            self.computed_dvar_dy_fcns = {}
+            self.computed_dvar_dp_fcns = {}
+            for key in self.output_variables:
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
+                if isinstance(
+                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                ):
+                    continue
+                # Generate Casadi function to calculate variable and derivates
+                # to enable sensitivites to be computed within the solver
+                (
+                    self.computed_var_fcns[key],
+                    self.computed_dvar_dy_fcns[key],
+                    self.computed_dvar_dp_fcns[key],
+                    _,
+                ) = process(
+                    model.variables_and_events[key],
+                    BaseSolver._wrangle_name(key),
+                    vars_for_processing,
+                    use_jacobian=True,
+                    return_jacp_stacked=True,
+                )
+
         pybamm.logger.info("Finish solver set-up")
+
+    @classmethod
+    def _wrangle_name(cls, name: str) -> str:
+        """
+        Wrangle a function name to replace special characters
+        """
+        replacements = [
+            (" ", "_"),
+            ("[", ""),
+            ("]", ""),
+            (".", "_"),
+            ("-", "_"),
+            ("(", ""),
+            (")", ""),
+            ("%", "prc"),
+            (",", ""),
+            (".", ""),
+        ]
+        name = "v_" + name.casefold()
+        for string, replacement in replacements:
+            name = name.replace(string, replacement)
+        return name
 
     def _check_and_prepare_model_inplace(self, model, inputs, ics_only):
         """
@@ -485,8 +557,12 @@ class BaseSolver(object):
                     # We only need to do this if the model is a DAE model
                     # see #1082
                     k = 20
+                    # address numpy 1.25 deprecation warning: array should have
+                    # ndim=0 before conversion
                     init_sign = float(
-                        np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
+                        np.sign(
+                            event.evaluate(0, model.y0.full(), inputs=inputs)
+                        ).item()
                     )
                     # We create a sigmoid for each event which will multiply the
                     # rhs. Doing * 2 - 1 ensures that when the event is crossed,
@@ -686,9 +762,14 @@ class BaseSolver(object):
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             if not isinstance(self, pybamm.DummySolver):
-                raise pybamm.ModelError(
-                    "Cannot solve empty model, use `pybamm.DummySolver` instead"
-                )
+                # check for a discretised model without original parameters
+                if not (
+                    model.concatenated_rhs is not None
+                    or model.concatenated_algebraic is not None
+                ):
+                    raise pybamm.ModelError(
+                        "Cannot solve empty model, use `pybamm.DummySolver` instead"
+                    )
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
@@ -726,13 +807,6 @@ class BaseSolver(object):
         model_inputs_list = [
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
-
-        # Cannot use multiprocessing with model in "jax" format
-        if (len(inputs_list) > 1) and model.convert_to_format == "jax":
-            raise pybamm.SolverError(
-                "Cannot solve list of inputs with multiprocessing "
-                'when model in format "jax".'
-            )
 
         # Check that calculate_sensitivites have not been updated
         calculate_sensitivities_list.sort()
@@ -843,17 +917,25 @@ class BaseSolver(object):
                 )
                 new_solutions = [new_solution]
             else:
-                with mp.Pool(processes=nproc) as p:
-                    new_solutions = p.starmap(
-                        self._integrate,
-                        zip(
-                            [model] * ninputs,
-                            [t_eval[start_index:end_index]] * ninputs,
-                            model_inputs_list,
-                        ),
+                if model.convert_to_format == "jax":
+                    # Jax can parallelize over the inputs efficiently
+                    new_solutions = self._integrate(
+                        model,
+                        t_eval[start_index:end_index],
+                        model_inputs_list,
                     )
-                    p.close()
-                    p.join()
+                else:
+                    with mp.Pool(processes=nproc) as p:
+                        new_solutions = p.starmap(
+                            self._integrate,
+                            zip(
+                                [model] * ninputs,
+                                [t_eval[start_index:end_index]] * ninputs,
+                                model_inputs_list,
+                            ),
+                        )
+                        p.close()
+                        p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -1344,7 +1426,9 @@ class BaseSolver(object):
         return ordered_inputs
 
 
-def process(symbol, name, vars_for_processing, use_jacobian=None):
+def process(
+    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+):
     """
     Parameters
     ----------
@@ -1354,6 +1438,8 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
         function evaluators created will have this base name
     use_jacobian: bool, optional
         whether to return Jacobian functions
+    return_jacp_stacked: bool, optional
+        returns Jacobian function wrt stacked parameters instead of jacp
 
     Returns
     -------
@@ -1531,17 +1617,28 @@ def process(symbol, name, vars_for_processing, use_jacobian=None):
                     "CasADi"
                 )
             )
-            # WARNING, jacp for convert_to_format=casadi does not return a dict
-            # instead it returns multiple return values, one for each param
-            # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
-            jacp = casadi.Function(
-                name + "_jacp",
-                [t_casadi, y_and_S, p_casadi_stacked],
-                [
-                    casadi.densify(casadi.jacobian(casadi_expression, p_casadi[pname]))
-                    for pname in model.calculate_sensitivities
-                ],
-            )
+            # Compute derivate wrt p-stacked (can be passed to solver to
+            # compute sensitivities online)
+            if return_jacp_stacked:
+                jacp = casadi.Function(
+                    f"d{name}_dp",
+                    [t_casadi, y_casadi, p_casadi_stacked],
+                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
+                )
+            else:
+                # WARNING, jacp for convert_to_format=casadi does not return a dict
+                # instead it returns multiple return values, one for each param
+                # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
+                jacp = casadi.Function(
+                    name + "_jacp",
+                    [t_casadi, y_and_S, p_casadi_stacked],
+                    [
+                        casadi.densify(
+                            casadi.jacobian(casadi_expression, p_casadi[pname])
+                        )
+                        for pname in model.calculate_sensitivities
+                    ],
+                )
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")

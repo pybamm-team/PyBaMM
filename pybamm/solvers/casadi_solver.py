@@ -41,7 +41,7 @@ class CasadiSolver(pybamm.BaseSolver):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
-    max_step_decrease_counts : float, optional
+    max_step_decrease_count : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
     dt_max : float, optional
@@ -261,6 +261,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     except pybamm.SolverError as error:
                         pybamm.logger.debug("Failed, halving step size")
                         dt /= 2
+                        count += 1
                         # also reduce maximum step size for future global steps,
                         # but skip them in the beginning
                         # sometimes, for the first integrator smaller timesteps are
@@ -268,7 +269,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         # global timestep will only be reduced after the first timestep.
                         if first_ts_solved:
                             dt_max = dt
-                        if count >= self.max_step_decrease_count:
+                        if count > self.max_step_decrease_count:
                             message = (
                                 "Maximum number of decreased steps occurred at "
                                 f"t={t} (final SolverError: '{error}'). "
@@ -287,7 +288,6 @@ class CasadiSolver(pybamm.BaseSolver):
                                     "return the solution object up to the point where "
                                     "failure occured."
                                 )
-                    count += 1
                 if termination_due_to_small_dt:
                     break
                 # Check if the sign of an event changes, if so find an accurate

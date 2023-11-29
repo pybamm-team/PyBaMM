@@ -6,4 +6,3 @@ Variable
 
 .. autoclass:: pybamm.VariableDot
   :members:
-

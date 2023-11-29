@@ -99,8 +99,8 @@ class Discretisation(object):
         check_model=True,
         remove_independent_variables_from_rhs=True,
     ):
-        """Discretise a model.
-        Currently inplace, could be changed to return a new model.
+        """
+        Discretise a model. Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
@@ -240,6 +240,10 @@ class Discretisation(object):
         model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
             model_disc
         )
+
+        # Save geometry
+        pybamm.logger.verbose("Save geometry for {}".format(model.name))
+        model_disc._geometry = getattr(self.mesh, "_geometry", None)
 
         # Check that resulting model makes sense
         if check_model:
@@ -454,7 +458,11 @@ class Discretisation(object):
             # check if the boundary condition at the origin for sphere domains is other
             # than no flux
             for subdomain in key.domain:
-                if self.mesh[subdomain].coord_sys == "spherical polar":
+                if (
+                    self.mesh[subdomain].coord_sys
+                    in ["spherical polar", "cylindrical polar"]
+                    and next(iter(self.mesh.geometry[subdomain].values()))["min"] == 0
+                ):
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
                             "Boundary condition at r = 0 must be a homogeneous "
@@ -688,7 +696,6 @@ class Discretisation(object):
 
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             processed_eqn = self.process_symbol(eqn)
-
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
             if ics:
@@ -746,7 +753,7 @@ class Discretisation(object):
             spatial_method = self.spatial_methods[symbol.domain[0]]
             # If boundary conditions are provided, need to check for BCs on tabs
             if self.bcs:
-                key_id = list(self.bcs.keys())[0]
+                key_id = next(iter(self.bcs.keys()))
                 if any("tab" in side for side in list(self.bcs[key_id].keys())):
                     self.bcs[key_id] = self.check_tab_conditions(
                         symbol, self.bcs[key_id]

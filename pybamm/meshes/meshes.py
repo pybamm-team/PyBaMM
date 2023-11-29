@@ -25,6 +25,9 @@ class Mesh(dict):
     def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
 
+        # Save geometry
+        self.geometry = geometry
+
         # Preprocess var_pts
         var_pts_input = var_pts
         var_pts = {}
@@ -117,6 +120,21 @@ class Mesh(dict):
         # add ghost meshes
         self.add_ghost_meshes()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+        super(Mesh, instance).__init__()
+
+        instance.submesh_pts = snippet["submesh_pts"]
+        instance.base_domains = snippet["base_domains"]
+
+        for k, v in snippet["sub_meshes"].items():
+            instance[k] = v
+
+        # instance.add_ghost_meshes()
+
+        return instance
+
     def __getitem__(self, domains):
         if isinstance(domains, str):
             domains = (domains,)
@@ -204,6 +222,22 @@ class Mesh(dict):
             self[domain[0] + "_right ghost cell"] = pybamm.SubMesh1D(
                 rgs_edges, submesh.coord_sys
             )
+
+    @property
+    def geometry(self):
+        return self._geometry
+
+    @geometry.setter
+    def geometry(self, geometry):
+        self._geometry = geometry
+
+    def to_json(self):
+        json_dict = {
+            "submesh_pts": self.submesh_pts,
+            "base_domains": self.base_domains,
+        }
+
+        return json_dict
 
 
 class SubMesh:

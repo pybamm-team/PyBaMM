@@ -7,7 +7,8 @@ from .base_active_material import BaseModel
 
 
 class LossActiveMaterial(BaseModel):
-    """Submodel for varying active material volume fraction from [1]_ and [2]_.
+    """Submodel for varying active material volume fraction from :footcite:t:`Ai2019`
+    and :footcite:t:`Reniers2019`.
 
     Parameters
     ----------
@@ -20,14 +21,6 @@ class LossActiveMaterial(BaseModel):
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
 
-    References
-    ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-           Cells. Journal of The Electrochemical Society, 167(1), 013512.
-    .. [2] Reniers, J. M., Mulder, G., & Howey, D. A. (2019). Review and performance
-           comparison of mechanical-chemical degradation models for lithium-ion
-           batteries. Journal of The Electrochemical Society, 166(14), A3189.
     """
 
     def __init__(self, param, domain, options, x_average):
@@ -103,24 +96,32 @@ class LossActiveMaterial(BaseModel):
 
         if "reaction" in lam_option:
             beta_LAM_sei = self.domain_param.beta_LAM_sei
-            if self.domain == "negative":
-                if self.x_average is True:
-                    a_j_sei = variables[
-                        "X-averaged negative electrode SEI "
-                        "volumetric interfacial current density [A.m-3]"
-                    ]
-                else:
-                    a_j_sei = variables[
-                        "Negative electrode SEI volumetric "
-                        "interfacial current density [A.m-3]"
-                    ]
+            if self.x_average is True:
+                a_j_sei = variables[
+                    f"X-averaged {domain} electrode SEI "
+                    "volumetric interfacial current density [A.m-3]"
+                ]
             else:
-                # No SEI in the positive electrode so no reaction-driven LAM
-                # until other reactions are implemented
-                a_j_sei = 0
+                a_j_sei = variables[
+                    f"{Domain} electrode SEI volumetric "
+                    "interfacial current density [A.m-3]"
+                ]
 
             j_stress_reaction = beta_LAM_sei * a_j_sei / self.param.F
             deps_solid_dt += j_stress_reaction
+
+        if "current" in lam_option:
+            # obtain the rate of loss of active materials (LAM) driven by current
+            if self.x_average is True:
+                T = variables[f"X-averaged {domain} electrode temperature [K]"]
+            else:
+                T = variables[f"{Domain} electrode temperature [K]"]
+
+            j_current_LAM = self.domain_param.LAM_rate_current(
+                self.param.current_density_with_time, T
+            )
+            deps_solid_dt += j_current_LAM
+
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )

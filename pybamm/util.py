@@ -6,6 +6,7 @@
 #
 import argparse
 import importlib.util
+import importlib.metadata
 import numbers
 import os
 import pathlib
@@ -15,15 +16,15 @@ import sys
 import timeit
 from platform import system
 import difflib
+from warnings import warn
 
 import numpy as np
-import pkg_resources
-
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM
-JAX_VERSION = "0.4.8"
-JAXLIB_VERSION = "0.4.7"
+# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
+# in the extras dependencies in pyproject.toml, and therefore must be kept in sync.
+JAX_VERSION = "0.4"
+JAXLIB_VERSION = "0.4"
 
 
 def root_dir():
@@ -72,6 +73,18 @@ class FuzzyDict(dict):
                     "variable called 'Bulk open-circuit voltage [V]' which is the"
                     "open-circuit voltage evaluated at the average particle "
                     "concentrations."
+                )
+            if "Open-circuit voltage at 0% SOC [V]" in key:
+                raise KeyError(
+                    "Parameter 'Open-circuit voltage at 0% SOC [V]' not found."
+                    "In most cases this should be set to be equal to "
+                    "'Lower voltage cut-off [V]'"
+                )
+            if "Open-circuit voltage at 100% SOC [V]" in key:
+                raise KeyError(
+                    "Parameter 'Open-circuit voltage at 100% SOC [V]' not found."
+                    "In most cases this should be set to be equal to "
+                    "'Upper voltage cut-off [V]'"
                 )
             best_matches = self.get_best_matches(key)
             for k in best_matches:
@@ -221,67 +234,6 @@ class TimerTime:
         return self.value == other.value
 
 
-def load_function(filename, funcname=None):
-    """
-    Load a python function from an absolute or relative path using `importlib`.
-    Example - pybamm.load_function("pybamm/input/example.py")
-
-    Arguments
-    ---------
-    filename : str
-        The path of the file containing the function.
-    funcname : str, optional
-        The name of the function in the file. If None, assumed to be the same as the
-        filename (ignoring the path)
-
-    Returns
-    -------
-    function
-        The python function loaded from the file.
-    """
-    # Remove `.py` from the file name
-    if filename.endswith(".py"):
-        filename = filename.replace(".py", "")
-
-    if funcname is None:
-        # Read funcname by splitting the file (assumes funcname is the same as filename)
-        _, funcname = os.path.split(filename)
-
-    # Store the current working directory
-    orig_dir = os.getcwd()
-
-    # Strip absolute path to pybamm/input/example.py
-    if "pybamm/input/parameters" in filename or "pybamm\\input\\parameters" in filename:
-        root_path = filename[filename.rfind("pybamm") :]
-    # If the function is in the current working directory
-    elif os.getcwd() in filename:  # pragma: no cover
-        root_path = filename.replace(os.getcwd(), "")
-    # If the function is not in the current working directory and the path provided is
-    # absolute
-    elif os.path.isabs(filename) and os.getcwd() not in filename:  # pragma: no cover
-        # Change directory to import the function
-        dir_path = os.path.split(filename)[0]
-        os.chdir(dir_path)
-        root_path = filename.replace(os.getcwd(), "")
-    else:  # pragma: no cover
-        root_path = filename
-
-    # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
-    if root_path[0] == "\\" or root_path[0] == "/":  # pragma: no cover
-        root_path = root_path[1:]
-
-    path = root_path.replace("/", ".")
-    path = path.replace("\\", ".")
-    pybamm.logger.debug(
-        f"Importing function '{funcname}' from file '{filename}' via path '{path}'"
-    )
-    module_object = importlib.import_module(path)
-
-    # Revert back current working directory if it was changed
-    os.chdir(orig_dir)
-    return getattr(module_object, funcname)
-
-
 def rmse(x, y):
     """
     Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
@@ -320,8 +272,8 @@ def have_jax():
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
-        pkg_resources.get_distribution("jax").version == JAX_VERSION
-        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
+        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
     )
 
 
@@ -378,13 +330,41 @@ def install_jax(arguments=None):  # pragma: no cover
                 " following command: \npybamm_install_jax --force"
             )
 
+    msg = (
+        "pybamm_install_jax is deprecated,"
+        " use 'pip install pybamm[jax]' to install jax & jaxlib"
+    )
+    warn(msg, DeprecationWarning)
     subprocess.check_call(
         [
             sys.executable,
             "-m",
             "pip",
             "install",
-            f"jax=={JAX_VERSION}",
-            f"jaxlib=={JAXLIB_VERSION}",
+            f"jax>={JAX_VERSION}",
+            f"jaxlib>={JAXLIB_VERSION}",
         ]
     )
+
+# https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
+def have_optional_dependency(module_name, attribute=None):
+    err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
+    try:
+        # Attempt to import the specified module
+        module = importlib.import_module(module_name)
+
+        if attribute:
+            # If an attribute is specified, check if it's available
+            if hasattr(module, attribute):
+                imported_attribute = getattr(module, attribute)
+                return imported_attribute  # Return the imported attribute
+            else:
+                # Raise an ModuleNotFoundError if the attribute is not available
+                raise ModuleNotFoundError(err_msg)      # pragma: no cover
+        else:
+            # Return the entire module if no attribute is specified
+            return module
+
+    except ModuleNotFoundError:
+        # Raise an ModuleNotFoundError if the module or attribute is not available
+        raise ModuleNotFoundError(err_msg)

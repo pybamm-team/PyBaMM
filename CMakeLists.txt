@@ -24,7 +24,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
+if(NOT MSVC)
+    # MSVC does not support variable length arrays (vla)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=vla")
+endif()
 
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
@@ -34,13 +37,19 @@ if(NOT PYBIND11_DIR)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
-pybind11_add_module(idaklu 
+pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_solver.hpp
-  pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolver.cpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolver.hpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.cpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.hpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.cpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp
+  pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp
   pybamm/solvers/c_solvers/idaklu/common.hpp
   pybamm/solvers/c_solvers/idaklu/python.hpp
   pybamm/solvers/c_solvers/idaklu/python.cpp
@@ -56,18 +65,18 @@ if (NOT DEFINED USE_PYTHON_CASADI)
 endif()
 
 execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}" -c 
+    COMMAND "${PYTHON_EXECUTABLE}" -c
     "import casadi as _; print(_.__path__[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+  message("Found python casadi path: ${CASADI_DIR}")
 endif()
-message("Found python casadi path: ${CASADI_DIR}")
 
 if(${USE_PYTHON_CASADI})
-  message("Trying to link against python casadi package")   
+  message("Trying to link against python casadi package")
   find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 else()
   message("Trying to link against any casadi package apart from the python one")
@@ -78,7 +87,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
-message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}") 
+message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
@@ -89,6 +98,7 @@ if(DEFINED VCPKG_ROOT_DIR)
   find_package(SuiteSparse CONFIG REQUIRED)
 else()
   find_package(SuiteSparse REQUIRED)
+  message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})

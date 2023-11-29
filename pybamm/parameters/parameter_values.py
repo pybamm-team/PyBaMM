@@ -3,15 +3,9 @@
 #
 import numpy as np
 import pybamm
-import pandas as pd
-import os
 import numbers
-import warnings
 from pprint import pformat
 from collections import defaultdict
-import inspect
-from textwrap import fill
-import shutil
 
 
 class ParameterValues:
@@ -24,9 +18,9 @@ class ParameterValues:
     Parameters
     ----------
     values : dict or string
-        Explicit set of parameters, or reference to a file of parameters
+        Explicit set of parameters, or reference to an inbuilt parameter set
         If string and matches one of the inbuilt parameter sets, returns that parameter
-        set. If non-matching string, gets passed to read_parameters_csv to read a file.
+        set.
 
     Examples
     --------
@@ -60,44 +54,26 @@ class ParameterValues:
             }
         )
 
-        if isinstance(values, dict):
-            if "negative electrode" in values:
-                warnings.warn(
-                    "Creating a parameter set from a dictionary of components has "
-                    "been deprecated and will be removed in a future release. "
-                    "Define the parameter set in a python script instead.",
-                    DeprecationWarning,
-                )
-                self.update_from_chemistry(values)
-            else:
-                # Remove chemistry if present
-                values.pop("chemistry", None)
-                self.update(values, check_already_exists=False)
+        if isinstance(values, (dict, ParameterValues)):
+            # remove the "chemistry" key if it exists
+            values.pop("chemistry", None)
+            self.update(values, check_already_exists=False)
         else:
             # Check if values is a named parameter set
-            if isinstance(values, str) and values in pybamm.parameter_sets:
+            if isinstance(values, str) and values in pybamm.parameter_sets.keys():
                 values = pybamm.parameter_sets[values]
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
-
             else:
-                # In this case it might be a filename, load from that filename
-                file_path = self.find_parameter(values)
-                path = os.path.split(file_path)[0]
-                values = self.read_parameters_csv(file_path)
-                self.update(values, check_already_exists=False, path=path)
+                raise ValueError("Invalid Parameter Value")
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
 
         # save citations
-        citations = []
-        if hasattr(self, "citations"):
-            citations = self.citations
-        elif "citations" in self._dict_items:
-            citations = self._dict_items["citations"]
-        for citation in citations:
-            pybamm.citations.register(citation)
+        if "citations" in self._dict_items:
+            for citation in self._dict_items["citations"]:
+                pybamm.citations.register(citation)
 
     @staticmethod
     def create_from_bpx(filename, target_soc=1):
@@ -125,6 +101,16 @@ class ParameterValues:
         bpx = parse_bpx_file(filename)
         pybamm_dict = _bpx_to_param_dict(bpx)
 
+        if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
+            pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
+                "Lower voltage cut-off [V]"
+            ]
+            pybamm_dict["Open-circuit voltage at 100% SOC [V]"] = pybamm_dict[
+                "Upper voltage cut-off [V]"
+            ]
+            # probably should put a warning here to indicate we are going
+            # ahead with the low voltage limit.
+
         # get initial concentrations based on SOC
         c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
         pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
@@ -133,7 +119,25 @@ class ParameterValues:
         return pybamm.ParameterValues(pybamm_dict)
 
     def __getitem__(self, key):
-        return self._dict_items[key]
+        try:
+            return self._dict_items[key]
+        except KeyError as err:
+            if (
+                "Exchange-current density for lithium metal electrode [A.m-2]"
+                in err.args[0]
+                and "Exchange-current density for plating [A.m-2]" in self._dict_items
+            ):
+                raise KeyError(
+                    "'Exchange-current density for plating [A.m-2]' has been renamed "
+                    "to 'Exchange-current density for lithium metal electrode [A.m-2]' "
+                    "when referring to the reaction at the surface of a lithium metal "
+                    "electrode. This is to avoid confusion with the exchange-current "
+                    "density for the lithium plating reaction in a porous negative "
+                    "electrode. To avoid this error, change your parameter file to use "
+                    "the new name."
+                )
+            else:
+                raise err
 
     def get(self, key, default=None):
         """Return item corresponding to key if it exists, otherwise return default"""
@@ -167,6 +171,9 @@ class ParameterValues:
         """Get the items of the dictionary"""
         return self._dict_items.items()
 
+    def pop(self, *args, **kwargs):
+        self._dict_items.pop(*args, **kwargs)
+
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
@@ -180,81 +187,6 @@ class ParameterValues:
         See :meth:`pybamm.FuzzyDict.search()`.
         """
         return self._dict_items.search(key, print_values)
-
-    def update_from_chemistry(self, chemistry):
-        """
-        Load standard set of components from a 'chemistry' dictionary
-        """
-        self.chemistry = chemistry
-
-        base_chemistry = chemistry["chemistry"]
-
-        # Load each component name
-
-        component_groups = [
-            "cell",
-            "negative electrode",
-            "positive electrode",
-            "separator",
-            "electrolyte",
-            "experiment",
-        ]
-
-        self.component_params_by_group = {}
-
-        # add SEI parameters if provided
-        for extra_group in ["sei", "lithium plating"]:
-            if extra_group in chemistry:
-                component_groups = [extra_group] + component_groups
-
-        for component_group in component_groups:
-            component = chemistry[component_group]
-            # Create path to component and load values
-            component_path = os.path.join(
-                base_chemistry,
-                "testing_only",
-                component_group.replace(" ", "_") + "s",
-                component,
-            )
-            file_path = self.find_parameter(
-                os.path.join(component_path, "parameters.csv")
-            )
-            component_params = self.read_parameters_csv(file_path)
-
-            self.component_params_by_group[component_group] = component_params
-
-            # Update parameters, making sure to check any conflicts
-            self.update(
-                component_params,
-                check_conflict=True,
-                check_already_exists=False,
-                path=os.path.dirname(file_path),
-            )
-
-        # register (list of) citations
-        if "citation" in chemistry:
-            self.citations = chemistry["citation"]
-            if not isinstance(self.citations, list):
-                self.citations = [self.citations]
-
-    def read_parameters_csv(self, filename):
-        """Reads parameters from csv file into dict.
-
-        Parameters
-        ----------
-        filename : str
-            The name of the csv file containing the parameters.
-
-        Returns
-        -------
-        dict
-            {name: value} pairs for the parameters.
-
-        """
-        df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
-        # Drop rows that are all NaN (seems to not work with skip_blank_lines)
-        df.dropna(how="all", inplace=True)
-        return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
     def update(self, values, check_conflict=False, check_already_exists=True, path=""):
         """
@@ -306,29 +238,21 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     )
-            # if no conflicts, update, loading functions and data if they are specified
-            # Functions are flagged with the string "[function]"
+            # if no conflicts, update
             if isinstance(value, str):
-                if value.startswith("[function]"):
-                    loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
-                    self._dict_items[name] = loaded_value
-                # Data is flagged with the string "[data]" or "[current data]"
-                elif value.startswith("[current data]") or value.startswith("[data]"):
-                    if value.startswith("[current data]"):
-                        data_path = os.path.join(
-                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
-                        )
-                        filename = os.path.join(data_path, value[14:] + ".csv")
-                    else:
-                        filename = os.path.join(path, value[6:] + ".csv")
-                    filename = pybamm.get_parameters_filepath(filename)
-                    # Save name and data
-                    self._dict_items[name] = pybamm.parameters.process_1D_data(filename)
-                # parse 2D parameter data
-                elif value.startswith("[2D data]"):
-                    filename = os.path.join(path, value[9:] + ".json")
-                    filename = pybamm.get_parameters_filepath(filename)
-                    self._dict_items[name] = pybamm.parameters.process_2D_data(filename)
+                if (
+                    value.startswith("[function]")
+                    or value.startswith("[current data]")
+                    or value.startswith("[data]")
+                    or value.startswith("[2D data]")
+                ):
+                    raise ValueError(
+                        "Specifying parameters via [function], [current data], [data] "
+                        "or [2D data] is no longer supported. For functions, pass in a "
+                        "python function object. For data, pass in a python function "
+                        "that returns a pybamm Interpolant object. "
+                        "See https://tinyurl.com/merv43ss for an example with both."
+                    )
 
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
@@ -347,20 +271,54 @@ class ParameterValues:
         # reset processed symbols
         self._processed_symbols = {}
 
+    def set_initial_stoichiometry_half_cell(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial stoichiometry of the working electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        x = pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
+            initial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+
+        c_max = self.evaluate(param.p.prim.c_max)
+
+        parameter_values.update(
+            {
+                "Initial concentration in {} electrode [mol.m-3]".format(
+                    options["working electrode"]
+                ): x
+                * c_max
+            }
+        )
+        return parameter_values
+
     def set_initial_stoichiometries(
         self,
         initial_value,
         param=None,
         known_value="cyclable lithium capacity",
         inplace=True,
+        options=None,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
         SOC or voltage
         """
-        param = param or pybamm.LithiumIonParameters()
+        param = param or pybamm.LithiumIonParameters(options)
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_value, self, param=param, known_value=known_value
+            initial_value, self, param=param, known_value=known_value, options=options
         )
         if inplace:
             parameter_values = self
@@ -372,6 +330,34 @@ class ParameterValues:
             {
                 "Initial concentration in negative electrode [mol.m-3]": x * c_n_max,
                 "Initial concentration in positive electrode [mol.m-3]": y * c_p_max,
+            }
+        )
+        return parameter_values
+
+    def set_initial_ocps(
+        self,
+        initial_value,
+        param=None,
+        known_value="cyclable lithium capacity",
+        inplace=True,
+        options=None,
+    ):
+        """
+        Set the initial OCP of each electrode, based on the initial
+        SOC or voltage
+        """
+        param = param or pybamm.LithiumIonParameters(options)
+        Un, Up = pybamm.lithium_ion.get_initial_ocps(
+            initial_value, self, param=param, known_value=known_value, options=options
+        )
+        if inplace:
+            parameter_values = self
+        else:
+            parameter_values = self.copy()
+        parameter_values.update(
+            {
+                "Initial voltage in negative electrode [V]": Un,
+                "Initial voltage in positive electrode [V]": Up,
             }
         )
         return parameter_values
@@ -753,7 +739,9 @@ class ParameterValues:
             new_symbol._scale = self.process_symbol(symbol.scale)
             reference = self.process_symbol(symbol.reference)
             if isinstance(reference, pybamm.Vector):
-                reference = pybamm.Scalar(float(reference.evaluate()))
+                # address numpy 1.25 deprecation warning: array should have ndim=0
+                # before conversion
+                reference = pybamm.Scalar((reference.evaluate()).item())
             new_symbol._reference = reference
             new_symbol.bounds = tuple([self.process_symbol(b) for b in symbol.bounds])
             return new_symbol
@@ -787,21 +775,6 @@ class ParameterValues:
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
-
-    def export_csv(self, filename):
-        # process functions and data to output
-        # like they appear in inputs csv files
-        parameter_output = {}
-        for key, val in self.items():
-            if callable(val):
-                val = "[function]" + val.__name__
-            elif isinstance(val, tuple):
-                val = "[data]" + val[0]
-            parameter_output[key] = [val]
-
-        df = pd.DataFrame(parameter_output)
-        df = df.transpose()
-        df.to_csv(filename, header=["Value"], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """
@@ -923,190 +896,3 @@ class ParameterValues:
                     file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
-
-    @staticmethod
-    def find_parameter(path):
-        """Look for parameter file in the different locations
-        in PARAMETER_PATH
-        """
-        # Check for absolute path
-        if os.path.isfile(path) and os.path.isabs(path):
-            pybamm.logger.verbose(f"Using absolute path: '{path}'")
-            return path
-        for location in pybamm.PARAMETER_PATH:
-            trial_path = os.path.join(location, path)
-            if os.path.isfile(trial_path):
-                pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
-                return trial_path
-        raise FileNotFoundError(
-            f"Could not find parameter {path}. If you have a developer install, try "
-            "re-installing pybamm (e.g. `pip install -e .`) to expose recently-added "
-            "parameter entry points."
-        )
-
-    def export_python_script(
-        self, name, old_parameters_path="", new_parameters_path=""
-    ):
-        """
-        Print a python script that can be used to reproduce the parameter set
-
-        Parameters
-        ----------
-        name : string
-            The name to save the parameter set under
-        old_parameters_path : string, optional
-            Optional path for the location where to find the old parameters.
-        new_parameters_path : string, optional
-            Optional path for the location where to save the new parameters.
-        """
-        # Initialize
-        preamble = "import pybamm\n"
-        function_output = ""
-        data_output = ""
-        dict_output = ""
-
-        component_params_by_group = getattr(
-            self, "component_params_by_group", {"": self}
-        )
-
-        # Loop through each component group and add appropriate functions, data, and
-        # parameters to the relevant strings
-        for component_group, items in component_params_by_group.items():
-            if component_group != "":
-                dict_output += f"\n        # {component_group}"
-            for k in items.keys():
-                v = self[k]
-                if callable(v):
-                    # write the function body to the file
-                    function_output += inspect.getsource(v) + "\n"
-                    v = v.__name__
-                elif isinstance(v, tuple):
-                    # save the data to a separate csv file
-                    # and load it in the parameter set
-                    data_name = v[0]
-                    data_file_old = os.path.join(
-                        old_parameters_path,
-                        component_group.replace(" ", "_") + "s",
-                        self.chemistry[component_group],
-                        f"{data_name}.csv",
-                    )
-                    data_path = os.path.join(new_parameters_path, "data")
-                    if not os.path.exists(data_path):
-                        os.makedirs(data_path)
-                    data_file_new = os.path.join(data_path, f"{data_name}.csv")
-                    shutil.copyfile(data_file_old, data_file_new)
-
-                    # add data output
-                    if data_output == "":
-                        data_output = (
-                            "# Load data in the appropriate format\n"
-                            "path, _ = os.path.split(os.path.abspath(__file__))\n"
-                        )
-                    data_output += (
-                        f"{data_name} = pybamm.parameters.process_1D_data"
-                        f"('{data_name}.csv', path)\n"
-                    )
-                    v = f"pybamm.{data_name}"
-
-                    v = f"{data_name}"
-
-                # add line to the parameter output in the appropriate section
-                line_output = f'\n        "{k}": {v},'
-                if len(line_output) > 88:
-                    # this will be split into multiple lines by black
-                    line_output = f'\n        "{k}""": {v},'
-
-                dict_output += line_output
-
-        # save citation info
-        if hasattr(self, "citations"):
-            dict_output += (
-                "\n        # citations" + f"\n        'citations': {self.citations},"
-            )
-
-        # read README.md if they exist and save info
-        docstring = self._create_docstring_from_readmes(name)
-
-        # construct the output string
-        output = (
-            function_output
-            + data_output
-            + "\n# Call dict via a function to avoid errors when editing in place"
-            + "\ndef get_parameter_values():"
-            + docstring
-            + "\n    return {"
-            + dict_output
-            + "\n    }"
-        )
-
-        # Add more packages to preamble if needed
-        if "os." in output:
-            preamble += "import os\n"
-        output = preamble + "\n\n" + output
-
-        # Add pybamm. to functions that didn't have it in function body before
-        for funcname in [
-            "Parameter",
-            "exp",
-            "tanh",
-            "cosh",
-            "log10",
-            "LeadAcidParameters",
-        ]:
-            # add space or ( before so it doesn't do this for middle-of-word matches
-            output = output.replace(f" {funcname}(", f" pybamm.{funcname}(")
-            output = output.replace(f"({funcname}(", f"(pybamm.{funcname}(")
-        output = output.replace("constants", "pybamm.constants")
-
-        # Process file name
-        filename = name
-        if not filename.endswith(".py"):
-            filename = filename + ".py"
-        filename = os.path.join(new_parameters_path, filename)
-
-        # save to file
-        with open(filename, "w") as f:
-            f.write(output)
-
-    def _create_docstring_from_readmes(self, name):
-        docstring = ""
-
-        if hasattr(self, "chemistry"):
-            chemistry = self.chemistry
-            lines = []
-            for component_group, component in chemistry.items():
-                if component_group in self.component_params_by_group:
-                    readme = os.path.join(
-                        "input",
-                        "parameters",
-                        self.chemistry["chemistry"],
-                        "testing_only",
-                        component_group.replace(" ", "_") + "s",
-                        component,
-                        "README.md",
-                    )
-                    readme = pybamm.get_parameters_filepath(readme)
-                    if os.path.isfile(readme):
-                        with open(readme, "r") as f:
-                            lines += f.readlines()
-
-            # lines, ind = np.unique(lines, return_index=True)
-            # lines = lines[np.argsort(ind)]
-            lines = [
-                fill(
-                    line,
-                    88,
-                    drop_whitespace=False,
-                    initial_indent="    ",
-                    subsequent_indent="    ",
-                )
-                + "\n"
-                for line in lines
-            ]
-            docstring = (
-                f'\n    """\n    # {name} parameter set\n'
-                + "".join(lines)
-                + '    """\n'
-            )
-
-        return docstring

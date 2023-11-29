@@ -7,7 +7,7 @@ from .base_lithium_ion_model import BaseModel
 
 class BasicDFNHalfCell(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery with lithium counter
-    electrode, adapted from [2]_.
+    electrode, adapted from :footcite:t:`Doyle1993`.
 
     This class differs from the :class:`pybamm.lithium_ion.BasicDFN` model class in
     that it is for a cell with a lithium counter electrode (half cell). This is a
@@ -16,9 +16,7 @@ class BasicDFNHalfCell(BaseModel):
     the full functionality.
 
     The electrode labeled "positive electrode" is the working electrode, and the
-    electrode labeled "negative electrode" is the counter electrode. If the "negative
-    electrode" is the working electrode, then the parameters for the "negative
-    electrode" are used to define the "positive electrode".
+    electrode labeled "negative electrode" is the counter electrode.
     This facilitates compatibility with the full-cell models.
 
     Parameters
@@ -29,20 +27,10 @@ class BasicDFNHalfCell(BaseModel):
     name : str, optional
         The name of the model.
 
-    References
-    ----------
-    .. [2] M Doyle, TF Fuller and JS Nwman. “Modeling of Galvanostatic Charge and
-        Discharge of the Lithium/Polymer/Insertion Cell”. Journal of The
-        Electrochemical Society, 140(6):1526-1533, 1993
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):
         super().__init__(options, name)
-        if self.options["working electrode"] not in ["negative", "positive"]:
-            raise ValueError(
-                "The option 'working electrode' should be either 'positive'"
-                " or 'negative'"
-            )
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
@@ -165,7 +153,7 @@ class BasicDFNHalfCell(BaseModel):
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-j_w / D_w(c_s_surf_w, T) / param.F, "Neumann"),
+            "right": (-j_w / pybamm.surf(D_w(c_s_w, T)) / param.F, "Neumann"),
         }
         self.initial_conditions[c_s_w] = c_w_init
 
@@ -235,7 +223,7 @@ class BasicDFNHalfCell(BaseModel):
         # reference potential
         L_Li = param.p.L
         sigma_Li = param.p.sigma
-        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), c_w_max, T)
+        j_Li = param.j0_Li_metal(pybamm.boundary_value(c_e, "left"), c_w_max, T)
         eta_Li = 2 * RT_F * pybamm.arcsinh(i_cell / (2 * j_Li))
 
         phi_s_cn = 0

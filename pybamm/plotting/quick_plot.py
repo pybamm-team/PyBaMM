@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
+from pybamm.util import have_optional_dependency
 
 
 class LoopList(list):
@@ -46,7 +47,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    import matplotlib.pyplot as plt
+    plt = have_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
@@ -70,6 +71,8 @@ class QuickPlot(object):
         default color loop defined by matplotlib style sheet or rcParams is used.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
+    shading : str, optional
+        The shading to use for 2D plots. Defaults to "auto".
     figsize : tuple of floats, optional
         The size of the figure to make
     n_rows : int, optional
@@ -97,27 +100,14 @@ class QuickPlot(object):
         labels=None,
         colors=None,
         linestyles=None,
+        shading="auto",
         figsize=None,
         n_rows=None,
         time_unit=None,
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        input_solutions = solutions
-        solutions = []
-        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
-            raise TypeError(
-                "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
-            )
-        elif not isinstance(input_solutions, list):
-            input_solutions = [input_solutions]
-        for sim_or_sol in input_solutions:
-            if isinstance(sim_or_sol, pybamm.Simulation):
-                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
-                # 'Solution' attribute
-                solutions.append(sim_or_sol.solution)
-            elif isinstance(sim_or_sol, pybamm.Solution):
-                solutions.append(sim_or_sol)
+        solutions = self.preprocess_solutions(solutions)
 
         models = [solution.all_models[0] for solution in solutions]
 
@@ -140,6 +130,7 @@ class QuickPlot(object):
         else:
             self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
+        self.shading = shading
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -149,6 +140,10 @@ class QuickPlot(object):
                 raise ValueError(
                     f"No default output variables provided for {models[0].name}"
                 )
+
+        # check variables have been provided after any serialisation
+        if any(len(m.variables) == 0 for m in models):
+            raise AttributeError("No variables to plot")
 
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
@@ -237,6 +232,32 @@ class QuickPlot(object):
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
+
+    @staticmethod
+    def preprocess_solutions(solutions):
+        input_solutions = QuickPlot.check_input_validity(solutions)
+        processed_solutions = []
+        for sim_or_sol in input_solutions:
+            if isinstance(sim_or_sol, pybamm.Simulation):
+                # 'sim_or_sol' is actually a 'Simulation' object here, so it has a
+                # 'Solution' attribute
+                processed_solutions.append(sim_or_sol.solution)
+            elif isinstance(sim_or_sol, pybamm.Solution):
+                processed_solutions.append(sim_or_sol)
+        return processed_solutions
+
+    @staticmethod
+    def check_input_validity(input_solutions):
+        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
+            raise TypeError(
+                "Solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
+            )
+        elif not isinstance(input_solutions, list):
+            input_solutions = [input_solutions]
+        else:
+            if not input_solutions:
+                raise TypeError("QuickPlot requires at least 1 solution or simulation.")
+        return input_solutions
 
     def set_output_variables(self, output_variables, solutions):
         # Set up output variables
@@ -453,9 +474,10 @@ class QuickPlot(object):
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
-        from matplotlib import cm, colors
+        plt = have_optional_dependency("matplotlib.pyplot")
+        gridspec = have_optional_dependency("matplotlib.gridspec")
+        cm = have_optional_dependency("matplotlib", "cm")
+        colors = have_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -516,7 +538,7 @@ class QuickPlot(object):
                 # 1D plot: plot as a function of x at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
-                spatial_var_name = list(spatial_vars.keys())[0]
+                spatial_var_name = next(iter(spatial_vars.keys()))
                 ax.set_xlabel(
                     "{} [{}]".format(spatial_var_name, self.spatial_unit),
                 )
@@ -550,12 +572,12 @@ class QuickPlot(object):
                 # different order based on whether the domains are x-r, x-z or y-z, etc
                 if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
-                    y_name = list(spatial_vars.keys())[0][0]
+                    y_name = next(iter(spatial_vars.keys()))[0]
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
-                    x_name = list(spatial_vars.keys())[0][0]
+                    x_name = next(iter(spatial_vars.keys()))[0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
@@ -572,7 +594,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        shading="auto",
+                        shading=self.shading,
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -652,8 +674,8 @@ class QuickPlot(object):
                 continuous_update=False,
             )
         else:
-            import matplotlib.pyplot as plt
-            from matplotlib.widgets import Slider
+            plt = have_optional_dependency("matplotlib.pyplot")
+            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -725,7 +747,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        shading="auto",
+                        shading=self.shading,
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -757,18 +779,20 @@ class QuickPlot(object):
             Name of the generated GIF file.
 
         """
-        import imageio.v2 as imageio
-        import matplotlib.pyplot as plt
+        imageio = have_optional_dependency("imageio.v2")
+        plt = have_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
         images = []
 
         # create images/plots
+        stub_name = output_filename.split(".")[0]
         for val in time_array:
             self.plot(val)
-            images.append("plot" + str(val) + ".png")
-            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            temp_name = f"{stub_name}{val}.png"
+            images.append(temp_name)
+            self.fig.savefig(temp_name, dpi=300)
             plt.close()
 
         # compile the images/plots to create a GIF

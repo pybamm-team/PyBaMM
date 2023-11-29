@@ -5,6 +5,7 @@ import pybamm
 import tests
 
 import numpy as np
+import os
 
 
 class StandardModelTest(object):
@@ -122,7 +123,7 @@ class StandardModelTest(object):
         output_sens = self.solution[output_name].sensitivities[param_name]
 
         # check via finite differencing
-        h = 1e-4 * param_value
+        h = 1e-2 * param_value
         inputs_plus = {param_name: (param_value + 0.5 * h)}
         inputs_neg = {param_name: (param_value - 0.5 * h)}
         sol_plus = self.solver.solve(self.model, t_eval, inputs=inputs_plus)
@@ -138,6 +139,44 @@ class StandardModelTest(object):
             atol=1e-6,
         )
 
+    def test_serialisation(self, solver=None, t_eval=None):
+        self.model.save_model(
+            "test_model", variables=self.model.variables, mesh=self.disc.mesh
+        )
+
+        new_model = pybamm.load_model("test_model.json")
+
+        # create new solver for re-created model
+        if solver is not None:
+            new_solver = solver
+        else:
+            new_solver = new_model.default_solver
+
+        if isinstance(new_model, pybamm.lithium_ion.BaseModel):
+            new_solver.rtol = 1e-8
+            new_solver.atol = 1e-8
+
+        accuracy = 5
+
+        Crate = abs(
+            self.parameter_values["Current function [A]"]
+            / self.parameter_values["Nominal cell capacity [A.h]"]
+        )
+        # don't allow zero C-rate
+        if Crate == 0:
+            Crate = 1
+        if t_eval is None:
+            t_eval = np.linspace(0, 3600 / Crate, 100)
+
+        new_solution = new_solver.solve(new_model, t_eval)
+
+        for x, val in enumerate(self.solution.all_ys):
+            np.testing.assert_array_almost_equal(
+                new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
+            )
+
+        os.remove("test_model.json")
+
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
     ):
@@ -152,6 +191,7 @@ class StandardModelTest(object):
             )
             and not skip_output_tests
         ):
+            self.test_serialisation(solver, t_eval)
             self.test_outputs()
 
 

@@ -15,6 +15,8 @@ PyBaMM documentation
 
    User Guide <source/user_guide/index>
    source/api/index
+   source/examples/index
+   Contributing <source/user_guide/contributing>
 
 **Version**: |version|
 
@@ -27,7 +29,7 @@ PyBaMM documentation
 
 PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
 written in Python. Our mission is to accelerate battery modelling research by
-providing open-source tools for multi-institutional, interdisciplinary collaboration. 
+providing open-source tools for multi-institutional, interdisciplinary collaboration.
 Broadly, PyBaMM consists of
 
 #. a framework for writing and solving systems of differential equations,
@@ -40,7 +42,7 @@ explore the effect of different battery designs and modeling assumptions under a
 .. grid:: 2
 
    .. grid-item-card::
-      :img-top: source/_static/index-images/getting_started.svg
+      :img-top: _static/index-images/getting_started.svg
 
       User Guide
       ^^^^^^^^^^
@@ -56,9 +58,9 @@ explore the effect of different battery designs and modeling assumptions under a
          :click-parent:
 
          To the user guide
-    
+
    .. grid-item-card::
-      :img-top: source/_static/index-images/examples.svg
+      :img-top: _static/index-images/examples.svg
 
       Examples
       ^^^^^^^^
@@ -68,7 +70,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-link:: https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks
+      .. button-ref:: source/examples/index
          :expand:
          :color: secondary
          :click-parent:
@@ -76,7 +78,7 @@ explore the effect of different battery designs and modeling assumptions under a
          To the examples
 
    .. grid-item-card::
-      :img-top: source/_static/index-images/api.svg
+      :img-top: _static/index-images/api.svg
 
       API Documentation
       ^^^^^^^^^^^^^^^^^
@@ -95,7 +97,7 @@ explore the effect of different battery designs and modeling assumptions under a
          To the API documentation
 
    .. grid-item-card::
-      :img-top: source/_static/index-images/contributor.svg
+      :img-top: _static/index-images/contributor.svg
 
       Contributor's Guide
       ^^^^^^^^^^^^^^^^^^^
@@ -105,7 +107,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-link:: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
+      .. button-link:: source/user_guide/contributing.html
          :expand:
          :color: secondary
          :click-parent:

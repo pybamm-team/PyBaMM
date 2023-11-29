@@ -5,9 +5,9 @@ import numbers
 import sys
 
 import numpy as np
-import sympy
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class Parameter(pybamm.Symbol):
@@ -44,10 +44,22 @@ class Parameter(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
             return sympy.Symbol(self.name)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Parameter: Serialisation is only implemented for discretised models"
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Parameter: Please use a discretised model when reading in from JSON"
+        )
 
 
 class FunctionParameter(pybamm.Symbol):
@@ -151,9 +163,7 @@ class FunctionParameter(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id`"""
         self._id = hash(
-            (self.__class__, self.name, self.diff_variable)
-            + tuple([child.id for child in self.children])
-            + tuple(self.domain)
+            (self.__class__, self.name, self.diff_variable, *tuple([child.id for child in self.children]), *tuple(self.domain))
         )
 
     def diff(self, variable):
@@ -217,7 +227,21 @@ class FunctionParameter(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
             return sympy.Symbol(self.name)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.FunctionParameter:"
+            "Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.FunctionParameter:"
+            "Please use a discretised model when reading in from JSON."
+        )
