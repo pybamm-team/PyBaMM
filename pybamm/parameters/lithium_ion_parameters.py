@@ -303,7 +303,6 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
-        self.E = pybamm.Parameter(f"{Domain} electrode Young's modulus [Pa]")
         self.c_0 = pybamm.Parameter(
             f"{Domain} electrode reference concentration for free of deformation "
             "[mol.m-3]"
@@ -353,6 +352,14 @@ class DomainLithiumIonParameters(BaseParameters):
         inputs = {f"{Domain} particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             f"{Domain} electrode partial molar volume [m3.mol-1]", inputs
+        )
+
+    def E(self, sto, T):
+        """Dimensional Young's modulus"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode Young's modulus [Pa]", inputs
         )
 
     def sigma(self, T):
