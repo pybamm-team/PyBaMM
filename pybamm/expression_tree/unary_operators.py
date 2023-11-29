@@ -904,7 +904,8 @@ class DeltaFunction(SpatialOperator):
 
 class BoundaryOperator(SpatialOperator):
     """
-    A node in the expression tree which gets the boundary value of a variable.
+    A node in the expression tree which gets the boundary value of a variable on its
+    primary domain.
 
     Parameters
     ----------
@@ -961,7 +962,8 @@ class BoundaryOperator(SpatialOperator):
 
 class BoundaryValue(BoundaryOperator):
     """
-    A node in the expression tree which gets the boundary value of a variable.
+    A node in the expression tree which gets the boundary value of a variable on its
+    primary domain.
 
     Parameters
     ----------
@@ -1036,7 +1038,8 @@ class ExplicitTimeIntegral(UnaryOperator):
 
 class BoundaryGradient(BoundaryOperator):
     """
-    A node in the expression tree which gets the boundary flux of a variable.
+    A node in the expression tree which gets the boundary flux of a variable on its
+    primary domain.
 
     Parameters
     ----------
@@ -1052,19 +1055,20 @@ class BoundaryGradient(BoundaryOperator):
 
 class EvaluateAt(SpatialOperator):
     """
-    A node in the expression tree which evaluates a symbol at a given position. Only
-    implemented for variables that depend on a single spatial dimension.
+    A node in the expression tree which evaluates a symbol at a given position in space
+    in its primary domain. Currently this is only implemented for 1D primary domains.
 
     Parameters
     ----------
     child : :class:`pybamm.Symbol`
-        The variable whose boundary value to take
-    value : float
-        The point in one-dimensional space at which to evaluate the symbol.
+        The variable to evaluate
+    position : :class:`pybamm.Symbol`
+        The position in space on the symbol's primary domain at which to evaluate
+        the symbol.
     """
 
-    def __init__(self, child, value):
-        self.value = value
+    def __init__(self, child, position):
+        self.position = position
 
         super().__init__("evaluate", child)
 
@@ -1077,7 +1081,7 @@ class EvaluateAt(SpatialOperator):
             (
                 self.__class__,
                 self.name,
-                self.value,
+                self.position,
                 self.children[0].id,
             )
         )
@@ -1088,7 +1092,7 @@ class EvaluateAt(SpatialOperator):
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, self.value)
+        return self.__class__(child, self.position)
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""

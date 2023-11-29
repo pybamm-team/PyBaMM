@@ -457,7 +457,7 @@ class TestUnaryOperators(TestCase):
     def test_evaluate_at(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
         f = pybamm.EvaluateAt(a, 1)
-        self.assertEqual(f.value, 1)
+        self.assertEqual(f.position, 1)
 
     def test_upwind_downwind(self):
         # upwind of scalar symbol should fail

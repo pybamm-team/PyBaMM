@@ -377,7 +377,7 @@ class SpatialMethod:
         out.clear_domains()
         return out
 
-    def evaluate_at(self, symbol, discretised_child, value):
+    def evaluate_at(self, symbol, discretised_child, position):
         """
         Returns the symbol evaluated at a given position in space.
 
@@ -387,7 +387,7 @@ class SpatialMethod:
             The boundary value or flux symbol
         discretised_child : :class:`pybamm.StateVector`
             The discretised variable from which to calculate the boundary value
-        value : float
+        position : :class:`pybamm.Scalar`
             The point in one-dimensional space at which to evaluate the symbol.
 
         Returns

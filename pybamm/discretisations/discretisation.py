@@ -867,7 +867,7 @@ class Discretisation(object):
                 )
             elif isinstance(symbol, pybamm.EvaluateAt):
                 return child_spatial_method.evaluate_at(
-                    symbol, disc_child, symbol.value
+                    symbol, disc_child, symbol.position
                 )
             elif isinstance(symbol, pybamm.UpwindDownwind):
                 direction = symbol.name  # upwind or downwind
