@@ -308,9 +308,7 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode reference concentration for free of deformation "
             "[mol.m-3]"
         )
-        self.Omega = pybamm.Parameter(
-            f"{Domain} electrode partial molar volume [m3.mol-1]"
-        )
+
         self.l_cr_0 = pybamm.Parameter(f"{Domain} electrode initial crack length [m]")
         self.w_cr = pybamm.Parameter(f"{Domain} electrode initial crack width [m]")
         self.rho_cr = pybamm.Parameter(
@@ -347,6 +345,14 @@ class DomainLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
+        )
+
+    def Omega(self, sto):
+        """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} particle stoichiometry": sto}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode partial molar volume [m3.mol-1]"
         )
 
     def sigma(self, T):
