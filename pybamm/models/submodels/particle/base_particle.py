@@ -32,6 +32,8 @@ class BaseParticle(pybamm.BaseSubModel):
         domain, Domain = self.domain_Domain
         domain_param = self.domain_param
         phase_param = self.phase_param
+
+        sto = c / phase_param.c_max
         domain_options = getattr(self.options, domain)
 
         # Get diffusivity (may have empirical hysteresis)
@@ -56,7 +58,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if stress_option == "true":
             # Ai2019 eq [12]
-            Omega = domain_param.Omega
+            Omega = domain_param.Omega(sto)
             E = domain_param.E
             nu = domain_param.nu
             theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
