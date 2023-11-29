@@ -37,7 +37,7 @@ class _Step:
         or "resistance".
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
-        2-tuple (for cccv_ode), or a 2-column array. Can pass list as argument (for drive cycles)
+        2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
     duration : float, optional
         The duration of the step in seconds.
     termination : str or list, optional
