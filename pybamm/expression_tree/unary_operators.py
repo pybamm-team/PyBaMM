@@ -1070,10 +1070,16 @@ class EvaluateAt(SpatialOperator):
     def __init__(self, child, position):
         self.position = position
 
-        super().__init__("evaluate", child)
+        # "evaluate at" of a child takes the primary domain from secondary domain
+        # of the child
+        # tertiary auxiliary domain shift down to secondary, quarternary to tertiary
+        domains = {
+            "primary": child.domains["secondary"],
+            "secondary": child.domains["tertiary"],
+            "tertiary": child.domains["quaternary"],
+        }
 
-        # evaluating removes the domain
-        self.clear_domains()
+        super().__init__("evaluate", child, domains)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -1083,6 +1089,7 @@ class EvaluateAt(SpatialOperator):
                 self.name,
                 self.position,
                 self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
             )
         )
 
