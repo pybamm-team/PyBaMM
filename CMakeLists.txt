@@ -68,7 +68,7 @@ endif()
 # to find the path for the build-time dependency, not the run-time dependency.
 execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
-    "import importlib.util; print(importlib.util.find_spec('casadi').submodule_search_locations[0])"
+    "import importlib.util; print(next(iter(importlib.util.find_spec('casadi').submodule_search_locations)))"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
