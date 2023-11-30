@@ -57,6 +57,30 @@ class Array(pybamm.Symbol):
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        if isinstance(snippet["entries"], dict):
+            matrix = csr_matrix(
+                (
+                    snippet["entries"]["data"],
+                    snippet["entries"]["row_indices"],
+                    snippet["entries"]["column_pointers"],
+                ),
+                shape=snippet["entries"]["shape"],
+            )
+        else:
+            matrix = snippet["entries"]
+
+        instance.__init__(
+            matrix,
+            name=snippet["name"],
+            domains=snippet["domains"],
+        )
+
+        return instance
+
     @property
     def entries(self):
         return self._entries
@@ -97,7 +121,7 @@ class Array(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name) + self.entries_string + tuple(self.domain)
+            (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
         )
 
     def _jac(self, variable):
@@ -128,6 +152,30 @@ class Array(pybamm.Symbol):
         sympy = have_optional_dependency("sympy")
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
+
+    def to_json(self):
+        """
+        Method to serialise an Array object into JSON.
+        """
+
+        if isinstance(self.entries, np.ndarray):
+            matrix = self.entries.tolist()
+        elif isinstance(self.entries, csr_matrix):
+            matrix = {
+                "shape": self.entries.shape,
+                "data": self.entries.data.tolist(),
+                "row_indices": self.entries.indices.tolist(),
+                "column_pointers": self.entries.indptr.tolist(),
+            }
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "entries": matrix,
+        }
+
+        return json_dict
 
 
 def linspace(start, stop, num=50, **kwargs):

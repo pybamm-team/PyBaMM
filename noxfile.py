@@ -38,7 +38,7 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
+    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
@@ -64,7 +64,7 @@ def run_coverage(session):
         session.install("-e", ".[all,odes,jax]", silent=False)
     else:
         session.install("-e", ".[all]", silent=False)
-    session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
+    session.run("coverage", "run", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
 

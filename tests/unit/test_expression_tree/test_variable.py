@@ -64,6 +64,11 @@ class TestVariable(TestCase):
         # Test name
         self.assertEqual(pybamm.Variable("name").to_equation(), sympy.Symbol("name"))
 
+    def test_to_json_error(self):
+        func = pybamm.Variable("test_string")
+        with self.assertRaises(NotImplementedError):
+            func.to_json()
+
 
 class TestVariableDot(TestCase):
     def test_variable_init(self):

@@ -3,6 +3,7 @@
 #
 from tests import TestCase
 import unittest
+import unittest.mock as mock
 
 import numpy as np
 from scipy import special
@@ -146,8 +147,30 @@ class TestFunction(TestCase):
         # Test Function
         self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
 
+    def test_to_from_json_error(self):
+        a = pybamm.Symbol("a")
+        funca = pybamm.Function(test_function, a)
+
+        with self.assertRaises(NotImplementedError):
+            funca.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.Function._from_json({})
+
 
 class TestSpecificFunctions(TestCase):
+    def test_to_json(self):
+        a = pybamm.InputParameter("a")
+        fun = pybamm.cos(a)
+
+        expected_json = {
+            "name": "function (cos)",
+            "id": mock.ANY,
+            "function": "cos",
+        }
+
+        self.assertEqual(fun.to_json(), expected_json)
+
     def test_arcsinh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.arcsinh(a)
@@ -181,6 +204,15 @@ class TestSpecificFunctions(TestCase):
             pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2"),
         )
 
+        # test creation from json
+        input_json = {
+            "name": "arcsinh",
+            "id": mock.ANY,
+            "function": "arcsinh",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Arcsinh._from_json(input_json), fun)
+
     def test_arctan(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.arctan(a)
@@ -196,6 +228,15 @@ class TestSpecificFunctions(TestCase):
             / h,
             places=5,
         )
+
+        # test creation from json
+        input_json = {
+            "name": "arctan",
+            "id": mock.ANY,
+            "function": "arctan",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Arctan._from_json(input_json), fun)
 
     def test_cos(self):
         a = pybamm.InputParameter("a")
@@ -214,6 +255,15 @@ class TestSpecificFunctions(TestCase):
             places=5,
         )
 
+        # test creation from json
+        input_json = {
+            "name": "cos",
+            "id": mock.ANY,
+            "function": "cos",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Cos._from_json(input_json), fun)
+
     def test_cosh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cosh(a)
@@ -231,6 +281,15 @@ class TestSpecificFunctions(TestCase):
             places=5,
         )
 
+        # test creation from json
+        input_json = {
+            "name": "cosh",
+            "id": mock.ANY,
+            "function": "cosh",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Cosh._from_json(input_json), fun)
+
     def test_exp(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.exp(a)
@@ -247,6 +306,15 @@ class TestSpecificFunctions(TestCase):
             / h,
             places=5,
         )
+
+        # test creation from json
+        input_json = {
+            "name": "exp",
+            "id": mock.ANY,
+            "function": "exp",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Exp._from_json(input_json), fun)
 
     def test_log(self):
         a = pybamm.InputParameter("a")
@@ -276,6 +344,17 @@ class TestSpecificFunctions(TestCase):
             / h,
             places=5,
         )
+
+        # test creation from json
+        a = pybamm.InputParameter("a")
+        fun = pybamm.log(a)
+        input_json = {
+            "name": "log",
+            "id": mock.ANY,
+            "function": "log",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Log._from_json(input_json), fun)
 
     def test_max(self):
         a = pybamm.StateVector(slice(0, 3))
@@ -308,6 +387,15 @@ class TestSpecificFunctions(TestCase):
             places=5,
         )
 
+        # test creation from json
+        input_json = {
+            "name": "sin",
+            "id": mock.ANY,
+            "function": "sin",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Sin._from_json(input_json), fun)
+
     def test_sinh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.sinh(a)
@@ -325,6 +413,15 @@ class TestSpecificFunctions(TestCase):
             places=5,
         )
 
+        # test creation from json
+        input_json = {
+            "name": "sinh",
+            "id": mock.ANY,
+            "function": "sinh",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Sinh._from_json(input_json), fun)
+
     def test_sqrt(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.sqrt(a)
@@ -340,6 +437,15 @@ class TestSpecificFunctions(TestCase):
             / h,
             places=5,
         )
+
+        # test creation from json
+        input_json = {
+            "name": "sqrt",
+            "id": mock.ANY,
+            "function": "sqrt",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Sqrt._from_json(input_json), fun)
 
     def test_tanh(self):
         a = pybamm.InputParameter("a")
@@ -370,6 +476,15 @@ class TestSpecificFunctions(TestCase):
             / h,
             places=5,
         )
+
+        # test creation from json
+        input_json = {
+            "name": "erf",
+            "id": mock.ANY,
+            "function": "erf",
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Erf._from_json(input_json), fun)
 
     def test_erfc(self):
         a = pybamm.InputParameter("a")
