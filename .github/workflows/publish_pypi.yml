@@ -114,7 +114,7 @@ jobs:
             bash scripts/install_sundials.sh 6.0.3 6.5.0
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.have_idaklu())" | grep True
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Build wheels on macOS
         if: matrix.os == 'macos-latest'
@@ -124,7 +124,7 @@ jobs:
             python -m pip install --upgrade cmake casadi setuptools wheel &&
             scripts/fix_suitesparse_rpath_mac.sh
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.have_idaklu())" | grep True
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3
