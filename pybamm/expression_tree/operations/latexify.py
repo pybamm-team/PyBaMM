@@ -97,9 +97,9 @@ class Latexify:
 
         if bcs:
             # Take range minimum from the first domain
-            var_name = list(self.model.default_geometry[var.domain[0]].keys())[0]
-            rng_left = list(self.model.default_geometry[var.domain[0]].values())[0]
-            rng_right = list(self.model.default_geometry[var.domain[-1]].values())[0]
+            var_name = next(iter(self.model.default_geometry[var.domain[0]].keys()))
+            rng_left = next(iter(self.model.default_geometry[var.domain[0]].values()))
+            rng_right = next(iter(self.model.default_geometry[var.domain[-1]].values()))
 
             # Trim name (r_n --> r)
             var_name = re.findall(r"(.)_*.*", str(var_name))[0]

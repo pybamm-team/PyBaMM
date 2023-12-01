@@ -267,7 +267,7 @@ def print_citations(filename=None, output_format="text", verbose=False):
         if verbose:  # pragma: no cover
             if filename is not None:  # pragma: no cover
                 raise Exception(
-                    "Verbose output is available only for the terminal and not for printing to files",  # noqa: E501
+                    "Verbose output is available only for the terminal and not for printing to files",
                 )
             else:
                 citations.print(filename, output_format, verbose=True)

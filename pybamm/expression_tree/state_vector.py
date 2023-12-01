@@ -75,6 +75,21 @@ class StateVectorBase(pybamm.Symbol):
             domains=domains,
         )
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        y_slices = [slice(s["start"], s["stop"], s["step"]) for s in snippet["y_slice"]]
+
+        instance.__init__(
+            *y_slices,
+            name=snippet["name"],
+            domains=snippet["domains"],
+            evaluation_array=snippet["evaluation_array"],
+        )
+
+        return instance
+
     @property
     def y_slices(self):
         return self._y_slices
@@ -109,8 +124,7 @@ class StateVectorBase(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, tuple(self.evaluation_array))
-            + tuple(self.domain)
+            (self.__class__, self.name, tuple(self.evaluation_array), *tuple(self.domain))
         )
 
     def _jac_diff_vector(self, variable: pybamm.StateVectorBase):
@@ -195,6 +209,28 @@ class StateVectorBase(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return np.nan * np.ones((self.size, 1))
+
+    def to_json(self):
+        """
+        Method to serialise a StateVector object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "y_slice": [
+                {
+                    "start": y.start,
+                    "stop": y.stop,
+                    "step": y.step,
+                }  # are there ever more than 1?
+                for y in self.y_slices
+            ],
+            "evaluation_array": list(self.evaluation_array),
+        }
+
+        return json_dict
 
 
 class StateVector(StateVectorBase):

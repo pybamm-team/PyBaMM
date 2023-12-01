@@ -5,6 +5,7 @@ from tests import TestCase
 import pybamm
 
 import unittest
+import unittest.mock as mock
 import numpy as np
 
 
@@ -324,6 +325,65 @@ class TestInterpolant(TestCase):
         interp = pybamm.Interpolant(x, 2 * x, y)
 
         self.assertEqual(interp, interp.new_copy())
+
+    def test_to_from_json(self):
+        x = np.linspace(0, 1, 10)
+        y = pybamm.StateVector(slice(0, 2))
+        interp = pybamm.Interpolant(x, 2 * x, y)
+
+        expected_json = {
+            "name": "interpolating_function",
+            "id": mock.ANY,
+            "x": [
+                [
+                    0.0,
+                    0.1111111111111111,
+                    0.2222222222222222,
+                    0.3333333333333333,
+                    0.4444444444444444,
+                    0.5555555555555556,
+                    0.6666666666666666,
+                    0.7777777777777777,
+                    0.8888888888888888,
+                    1.0,
+                ]
+            ],
+            "y": [
+                0.0,
+                0.2222222222222222,
+                0.4444444444444444,
+                0.6666666666666666,
+                0.8888888888888888,
+                1.1111111111111112,
+                1.3333333333333333,
+                1.5555555555555554,
+                1.7777777777777777,
+                2.0,
+            ],
+            "interpolator": "linear",
+            "extrapolate": True,
+        }
+
+        # check correct writing to json
+        self.assertEqual(interp.to_json(), expected_json)
+
+        expected_json["children"] = [y]
+        # check correct re-creation
+        self.assertEqual(pybamm.Interpolant._from_json(expected_json), interp)
+
+        # test to_from_json for 2d x & y
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.01))
+        xx, yy = np.meshgrid(x[0], x[1], indexing="ij")
+        z = np.sin(xx**2 + yy**2)
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        # linear
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
+
+        interp2d_json = interp.to_json()
+        interp2d_json["children"] = (var1, var2)
+
+        self.assertEqual(pybamm.Interpolant._from_json(interp2d_json), interp)
 
 
 if __name__ == "__main__":

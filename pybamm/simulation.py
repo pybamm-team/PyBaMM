@@ -10,6 +10,9 @@ import sys
 from functools import lru_cache
 from datetime import timedelta
 from pybamm.util import have_optional_dependency
+from typing import Optional
+
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 def is_notebook():
@@ -391,7 +394,7 @@ class Simulation:
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
             self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
+                self._unprocessed_parameter_values.set_initial_ocps(
                     initial_soc, param=param, inplace=False, options=options
                 )
             )
@@ -793,7 +796,9 @@ class Simulation:
                     # Hacky patch to allow correct processing of end_time and next_starting time
                     # For efficiency purposes, op_conds treats identical steps as the same object
                     # regardless of the initial time. Should be refactored as part of #3176
-                    op_conds_unproc = self.experiment.operating_conditions_steps_unprocessed[idx]
+                    op_conds_unproc = (
+                        self.experiment.operating_conditions_steps_unprocessed[idx]
+                    )
 
                     start_time = current_solution.t[-1]
 
@@ -1187,6 +1192,50 @@ class Simulation:
 
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def save_model(
+        self,
+        filename: Optional[str] = None,
+        mesh: bool = False,
+        variables: bool = False,
+    ):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        mesh: bool
+            The mesh used to discretise the model. If false, plotting tools will not
+            be available when the model is read back in and solved.
+        variables: bool
+            The discretised variables. Not required to solve a model, but if false
+            tools will not be availble. Will automatically save meshes as well, required
+            for plotting tools.
+        filename: str, optional
+            The desired name of the JSON file. If no name is provided, one will be
+            created based on the model name, and the current datetime.
+        """
+        mesh = self.mesh if (mesh or variables) else None
+        variables = self.built_model.variables if variables else None
+
+        if self.operating_mode == "with experiment":
+            raise NotImplementedError(
+                """
+                Serialising models coupled to experiments is not yet supported.
+                """
+            )
+
+        if self.built_model:
+            Serialise().save_model(
+                self.built_model, filename=filename, mesh=mesh, variables=variables
+            )
+        else:
+            raise NotImplementedError(
+                """
+                PyBaMM can only serialise a discretised model.
+                Ensure the model has been built (e.g. run `build()`) before saving.
+                """
+            )
 
 
 def load_sim(filename):
