@@ -45,11 +45,7 @@ class IndependentVariable(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
-        instance.__init__(snippet["name"], domains=snippet["domains"])
-
-        return instance
+        return cls(snippet["name"], domains=snippet["domains"])
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""

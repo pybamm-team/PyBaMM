@@ -77,18 +77,14 @@ class StateVectorBase(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
         y_slices = [slice(s["start"], s["stop"], s["step"]) for s in snippet["y_slice"]]
 
-        instance.__init__(
+        return cls(
             *y_slices,
             name=snippet["name"],
             domains=snippet["domains"],
             evaluation_array=snippet["evaluation_array"],
         )
-
-        return instance
 
     @property
     def y_slices(self):
@@ -124,7 +120,12 @@ class StateVectorBase(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, tuple(self.evaluation_array), *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                tuple(self.evaluation_array),
+                *tuple(self.domain),
+            )
         )
 
     def _jac_diff_vector(self, variable: pybamm.StateVectorBase):

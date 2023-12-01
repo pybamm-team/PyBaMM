@@ -265,13 +265,9 @@ class Symbol:
             At minimum, should contain "name", "children" and "domains".
         """
 
-        instance = cls.__new__(cls)
-
-        instance.__init__(
+        return cls(
             snippet["name"], children=snippet["children"], domains=snippet["domains"]
         )
-
-        return instance
 
     @property
     def children(self):
@@ -449,7 +445,12 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name, *tuple([child.id for child in self.children]), *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
+            (
+                self.__class__,
+                self.name,
+                *tuple([child.id for child in self.children]),
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     @property
@@ -584,47 +585,51 @@ class Symbol:
             {k: v for k, v in self.domains.items() if v != []},
         )
 
-    def __add__(self, other: Symbol) -> Addition:
+    def __add__(self, other: Union[float, np.ndarray, Symbol]) -> Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(self, other)
 
-    def __radd__(self, other: Symbol) -> Addition:
+    def __radd__(self, other: Union[float, np.ndarray, Symbol]) -> Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(other, self)
 
-    def __sub__(self, other: Symbol) -> Subtraction:
+    def __sub__(self, other: Union[float, np.ndarray, Symbol]) -> Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(self, other)
 
-    def __rsub__(self, other: Symbol) -> Subtraction:
+    def __rsub__(self, other: Union[float, np.ndarray, Symbol]) -> Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(other, self)
 
-    def __mul__(self, other: Symbol) -> Multiplication:
+    def __mul__(self, other: Union[float, np.ndarray, Symbol]) -> Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(self, other)
 
-    def __rmul__(self, other: Symbol) -> Multiplication:
+    def __rmul__(self, other: Union[float, np.ndarray, Symbol]) -> Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
-    def __matmul__(self, other: Symbol) -> pybamm.MatrixMultiplication:
+    def __matmul__(
+        self, other: Union[float, np.ndarray, Symbol]
+    ) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(self, other)
 
-    def __rmatmul__(self, other: Symbol) -> pybamm.MatrixMultiplication:
+    def __rmatmul__(
+        self, other: Union[float, np.ndarray, Symbol]
+    ) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
-    def __truediv__(self, other: Symbol) -> Division:
+    def __truediv__(self, other: Union[float, np.ndarray, Symbol]) -> Division:
         """return a :class:`Division` object."""
         return pybamm.divide(self, other)
 
-    def __rtruediv__(self, other: Symbol) -> Division:
+    def __rtruediv__(self, other: Union[float, np.ndarray, Symbol]) -> Division:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other: Union[Symbol, float]) -> pybamm.Power:
+    def __pow__(self, other: Union[float, np.ndarray, Symbol]) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 

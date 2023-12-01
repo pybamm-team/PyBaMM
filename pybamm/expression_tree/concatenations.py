@@ -56,13 +56,15 @@ class Concatenation(pybamm.Symbol):
         super().__init__(name, children, domains=domains)
 
     @classmethod
-    def _from_json(cls, *children, name, domains, concat_fun=None):
+    def _from_json(cls, snippet: dict):
         """Creates a new Concatenation instance from a json object"""
         instance = cls.__new__(cls)
 
-        instance.concatenation_function = concat_fun
+        instance.concatenation_function = snippet["concat_fun"]
 
-        super(Concatenation, instance).__init__(name, children, domains=domains)
+        super(Concatenation, instance).__init__(
+            snippet["name"], tuple(snippet["children"]), domains=snippet["domains"]
+        )
 
         return instance
 
@@ -215,12 +217,11 @@ class NumpyConcatenation(Concatenation):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.Concatenation._from_json()`."""
-        instance = super()._from_json(
-            *snippet["children"],
-            name="numpy_concatenation",
-            domains=snippet["domains"],
-            concat_fun=np.concatenate,
-        )
+
+        snippet["name"] = "numpy_concatenation"
+        snippet["concat_fun"] = np.concatenate
+
+        instance = super()._from_json(snippet)
 
         return instance
 
@@ -300,11 +301,11 @@ class DomainConcatenation(Concatenation):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.Concatenation._from_json()`."""
-        instance = super()._from_json(
-            *snippet["children"],
-            name="domain_concatenation",
-            domains=snippet["domains"],
-        )
+
+        snippet["name"] = "domain_concatenation"
+        snippet["concat_fun"] = None
+
+        instance = super()._from_json(snippet)
 
         def repack_defaultDict(slices):
             slices = defaultdict(list, slices)

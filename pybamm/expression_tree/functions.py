@@ -268,7 +268,7 @@ class SpecificFunction(Function):
         super().__init__(function, child)
 
     @classmethod
-    def _from_json(cls, function: Callable, snippet: dict):
+    def _from_json(cls, snippet: dict):
         """
         Reconstructs a SpecificFunction instance during deserialisation of a JSON file.
 
@@ -282,7 +282,9 @@ class SpecificFunction(Function):
 
         instance = cls.__new__(cls)
 
-        super(SpecificFunction, instance).__init__(function, snippet["children"][0])
+        super(SpecificFunction, instance).__init__(
+            snippet["function"], snippet["children"][0]
+        )
 
         return instance
 
@@ -323,7 +325,8 @@ class Arcsinh(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.arcsinh, snippet)
+        snippet["function"] = np.arcsinh
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -350,7 +353,8 @@ class Arctan(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.arctan, snippet)
+        snippet["function"] = np.arctan
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -377,7 +381,8 @@ class Cos(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.cos, snippet)
+        snippet["function"] = np.cos
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -399,7 +404,8 @@ class Cosh(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.cosh, snippet)
+        snippet["function"] = np.cosh
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -421,7 +427,8 @@ class Erf(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(special.erf, snippet)
+        snippet["function"] = special.erf
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -448,7 +455,8 @@ class Exp(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.exp, snippet)
+        snippet["function"] = np.exp
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -470,7 +478,8 @@ class Log(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.log, snippet)
+        snippet["function"] = np.log
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_evaluate(self, evaluated_children):
@@ -506,7 +515,8 @@ class Max(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.max, snippet)
+        snippet["function"] = np.max
+        instance = super()._from_json(snippet)
         return instance
 
     def _evaluate_for_shape(self):
@@ -532,7 +542,8 @@ class Min(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.min, snippet)
+        snippet["function"] = np.min
+        instance = super()._from_json(snippet)
         return instance
 
     def _evaluate_for_shape(self):
@@ -563,7 +574,8 @@ class Sin(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.sin, snippet)
+        snippet["function"] = np.sin
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -585,7 +597,8 @@ class Sinh(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.sinh, snippet)
+        snippet["function"] = np.sinh
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):
@@ -607,7 +620,8 @@ class Sqrt(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.sqrt, snippet)
+        snippet["function"] = np.sqrt
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_evaluate(self, evaluated_children):
@@ -634,7 +648,8 @@ class Tanh(SpecificFunction):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.SpecificFunction._from_json()`."""
-        instance = super()._from_json(np.tanh, snippet)
+        snippet["function"] = np.tanh
+        instance = super()._from_json(snippet)
         return instance
 
     def _function_diff(self, children, idx):

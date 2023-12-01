@@ -45,15 +45,11 @@ class InputParameter(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
-        instance.__init__(
+        return cls(
             snippet["name"],
             domain=snippet["domain"],
             expected_size=snippet["expected_size"],
         )
-
-        return instance
 
     def create_copy(self) -> pybamm.InputParameter:
         """See :meth:`pybamm.Symbol.new_copy()`."""

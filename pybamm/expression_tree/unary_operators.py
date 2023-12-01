@@ -301,21 +301,18 @@ class Index(UnaryOperator):
     @classmethod
     def _from_json(cls, snippet: dict):
         """See :meth:`pybamm.UnaryOperator._from_json()`."""
-        instance = cls.__new__(cls)
-
         index = slice(
             snippet["index"]["start"],
             snippet["index"]["stop"],
             snippet["index"]["step"],
         )
 
-        instance.__init__(
+        return cls(
             snippet["children"][0],
             index,
             name=snippet["name"],
             check_size=snippet["check_size"],
         )
-        return instance
 
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
@@ -333,7 +330,14 @@ class Index(UnaryOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.slice.start, self.slice.stop, self.children[0].id, *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.slice.start,
+                self.slice.stop,
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
     def _unary_evaluate(self, child):
@@ -473,7 +477,9 @@ class Divergence(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
+        sympy_Divergence = have_optional_dependency(
+            "sympy.vector.operators", "Divergence"
+        )
         return sympy_Divergence(child)
 
 
@@ -630,7 +636,18 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, *tuple([integration_variable.id for integration_variable in self.integration_variable]), self.children[0].id, *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                *tuple(
+                    [
+                        integration_variable.id
+                        for integration_variable in self.integration_variable
+                    ]
+                ),
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
     def _unary_new_copy(self, child):
@@ -771,7 +788,13 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type, self.children[0].id, *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.vector_type,
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
     def _unary_new_copy(self, child):
@@ -865,7 +888,13 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
+            (
+                self.__class__,
+                self.name,
+                self.side,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
         )
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
@@ -923,7 +952,13 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
+            (
+                self.__class__,
+                self.name,
+                self.side,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
         )
 
     def _unary_new_copy(self, child):

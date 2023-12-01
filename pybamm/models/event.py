@@ -1,7 +1,7 @@
 from enum import Enum
 import numpy as np
 
-from typing import Optional
+from typing import Optional, TypeVar, Type
 
 
 class EventType(Enum):
@@ -27,6 +27,9 @@ class EventType(Enum):
     SWITCH = 3
 
 
+E = TypeVar("E", bound="Event")
+
+
 class Event:
     """
 
@@ -50,7 +53,7 @@ class Event:
         self._event_type = event_type
 
     @classmethod
-    def _from_json(cls, snippet: dict):
+    def _from_json(cls: Type[E], snippet: dict) -> E:
         """
         Reconstructs an Event instance during deserialisation of a JSON file.
 
@@ -61,15 +64,11 @@ class Event:
             Should contain "name", "expression" and "event_type".
         """
 
-        instance = cls.__new__(cls)
-
-        instance.__init__(
+        return cls(
             snippet["name"],
             snippet["expression"],
             event_type=EventType(snippet["event_type"][1]),
         )
-
-        return instance
 
     def evaluate(
         self,

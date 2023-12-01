@@ -131,7 +131,7 @@ class Interpolant(pybamm.Function):
                 if extrapolate is False:
                     fill_value = np.nan
                 elif extrapolate is True:
-                    fill_value = "extrapolate"  # ignore:assignment
+                    fill_value = "extrapolate"  # ignore: assignment
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y.T,
@@ -207,14 +207,13 @@ class Interpolant(pybamm.Function):
     @classmethod
     def _from_json(cls, snippet: dict):
         """Create an Interpolant object from JSON data"""
-        instance = cls.__new__(cls)
 
         if len(snippet["x"]) == 1:
             x = [np.array(x) for x in snippet["x"]]
         else:
             x = tuple(np.array(x) for x in snippet["x"])
 
-        instance.__init__(
+        return cls(
             x,
             np.array(snippet["y"]),
             snippet["children"],
@@ -222,8 +221,6 @@ class Interpolant(pybamm.Function):
             interpolator=snippet["interpolator"],
             extrapolate=snippet["extrapolate"],
         )
-
-        return instance
 
     @property
     def entries_string(self):
@@ -245,7 +242,13 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name, self.entries_string, *tuple([child.id for child in self.children]), *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.entries_string,
+                *tuple([child.id for child in self.children]),
+                *tuple(self.domain),
+            )
         )
 
     def _function_new_copy(self, children):

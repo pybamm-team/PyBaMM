@@ -61,8 +61,6 @@ class Array(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
         if isinstance(snippet["entries"], dict):
             matrix = csr_matrix(
                 (
@@ -75,13 +73,11 @@ class Array(pybamm.Symbol):
         else:
             matrix = snippet["entries"]
 
-        instance.__init__(
+        return cls(
             matrix,
             name=snippet["name"],
             domains=snippet["domains"],
         )
-
-        return instance
 
     @property
     def entries(self):
