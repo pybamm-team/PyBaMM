@@ -559,7 +559,7 @@ class TestParameterValues(TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
         self.assertAlmostEqual(
-            processed_func.evaluate(inputs={"a": 3.01, "b": 4.4})[0][0], 14.82
+            processed_func.evaluate(inputs={"a": 3.01, "b": 4.4}), 14.82
         )
 
         # process differentiated function parameter
