@@ -79,7 +79,7 @@ endif()
 
 if(${USE_PYTHON_CASADI})
   message("Trying to link against Python casadi package")
-  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED NO_DEFAULT_PATH)
 else()
   message("Trying to link against any casadi package apart from the Python one")
   set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
