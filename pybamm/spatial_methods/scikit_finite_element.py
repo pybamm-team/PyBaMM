@@ -357,9 +357,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         hviyougougou
         """
         # Calculate integration vector
-        integration_vector = self.boundary_integral_vector(child.domain, region=region)   
-        jlbkhvb 
-         jo[and]  
+        integration_vector = self.boundary_integral_vector(child.domain, region=region)
+        jlbkhvb
+         jo[and]
         out = integration_vector @ discretised_child
         out.clear_domains()
         return out
