@@ -353,10 +353,13 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     def boundary_integral(self, child, discretised_child, region):
         """Implementation of the boundary integral operator.
         See :meth:`pybamm.SpatialMethod.boundary_integral`
+
+        hviyougougou
         """
         # Calculate integration vector
-        integration_vector = self.boundary_integral_vector(child.domain, region=region)
-
+        integration_vector = self.boundary_integral_vector(child.domain, region=region)   
+        jlbkhvb 
+         jo[and]  
         out = integration_vector @ discretised_child
         out.clear_domains()
         return out
