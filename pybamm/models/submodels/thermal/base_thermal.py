@@ -121,7 +121,7 @@ class BaseThermal(pybamm.BaseSubModel):
         phase_names = [""]
         if num_phases > 1:
             phase_names = ["primary ", "secondary "]
-        
+
         Q_rxn_p, Q_rev_p = 0, 0
         T_p = variables["Positive electrode temperature [K]"]
         for phase in phase_names:
@@ -139,7 +139,7 @@ class BaseThermal(pybamm.BaseSubModel):
         num_phases = int(getattr(self.options, 'negative')["particle phases"])
         phase_names = [""]
         if num_phases > 1:
-            phase_names = ["primary", "secondary"]       
+            phase_names = ["primary", "secondary"]
 
         if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
@@ -159,11 +159,11 @@ class BaseThermal(pybamm.BaseSubModel):
                 eta_r_n = variables[f"Negative electrode {phase}reaction overpotential [V]"]
                 # Irreversible electrochemical heating
                 Q_rxn_n += a_j_n * eta_r_n
-                
+
                 # Reversible electrochemical heating
                 dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
                 Q_rev_n += a_j_n * T_n * dUdT_n
-        
+
         # Irreversible electrochemical heating
         Q_rxn = pybamm.concatenation(
             Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
