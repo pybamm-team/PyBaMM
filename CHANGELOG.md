@@ -3,6 +3,7 @@
 ## Features
 
 - Serialisation added so models can be written to/read from JSON ([#3397](https://github.com/pybamm-team/PyBaMM/pull/3397))
+- Mechanical parameters are now a function of stoichiometry ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
 
 ## Bug fixes
 
