@@ -25,8 +25,8 @@ parameter_values = pybamm.ParameterValues(pybamm.parameter_sets.Chen2020)
 D_s_n = parameter_values["Negative electrode diffusivity [m2.s-1]"]
 df = pd.DataFrame(
     {
-        "sto": [0, 1, 0, 1, 0, 1],
         "T": [0, 0, 25, 25, 45, 45],
+        "sto": [0, 1, 0, 1, 0, 1],
         "D_s_n": [D_s_n, D_s_n, D_s_n, D_s_n, D_s_n, D_s_n],
     }
 )
@@ -36,7 +36,7 @@ D_s_n_data = process_2D("Negative electrode diffusivity [m2.s-1]", df)
 
 def D_s_n(sto, T):
     name, (x, y) = D_s_n_data
-    return pybamm.Interpolant(x, y, [sto, T], name)
+    return pybamm.Interpolant(x, y, [T, sto], name)
 
 
 parameter_values["Negative electrode diffusivity [m2.s-1]"] = D_s_n
