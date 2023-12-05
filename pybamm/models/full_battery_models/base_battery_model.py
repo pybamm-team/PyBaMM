@@ -103,7 +103,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
+                (default), "current sigmoid", "Plett", or "MSMR". If "MSMR" then the "particle"
                 option must also be "MSMR". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
             * "operating mode" : str
@@ -264,7 +264,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
-            "open-circuit potential": ["single", "current sigmoid", "MSMR"],
+            "open-circuit potential": ["single", "current sigmoid", "MSMR", "Plett"],
             "operating mode": [
                 "current",
                 "voltage",

@@ -535,6 +535,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
+        # if self.options['open-circuit potential'] == 'Plett':
+        self.K = pybamm.Parameter(f'{pref}{Domain} particle hysteresis decay rate')
+        self.K_x = pybamm.Parameter(f'{pref}{Domain} particle hysteresis switching factor')
+        self.h_init = pybamm.Scalar(0)
 
         if self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
@@ -630,6 +634,27 @@ class ParticleLithiumIonParameters(BaseParameters):
             out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
         return out
 
+    def H(self, sto):
+        """Dimensional hysteresis [V]"""
+        Domain = self.domain.capitalize()
+        # tol = pybamm.settings.tolerances["U__c_s"]
+        # sto = pybamm.maximum(pybamm.minimum(sto,1-tol),tol)
+        inputs = {f"{self.phase_prefactor}{Domain} particle stoichiometry": sto}
+        h_ref = pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode OCP hysteresis [V]", inputs
+        )
+        return h_ref
+
+    def Q(self, sto):
+        """Capacity change as a function of stoichiometry"""
+        c_max = self.c_max
+        epsilon_s_av = self.epsilon_s_av
+        V_electrode = self.main_param.A_cc*self.domain_param.L
+        Li_max = c_max * V_electrode * epsilon_s_av
+        Q_max = Li_max * self.main_param.F / 3600
+        return Q_max * sto
+
+
     def dUdT(self, sto):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
@@ -644,6 +669,8 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} electrode OCP entropic change [V.K-1]",
             inputs,
         )
+
+    # def dQdU(self,sto)
 
     def X_j(self, index):
         "Available host sites indexed by reaction j"
