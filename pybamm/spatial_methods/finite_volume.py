@@ -1023,6 +1023,46 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return boundary_value
 
+    def evaluate_at(self, symbol, discretised_child, position):
+        """
+        Returns the symbol evaluated at a given position in space.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The boundary value or flux symbol
+        discretised_child : :class:`pybamm.StateVector`
+            The discretised variable from which to calculate the boundary value
+        position : :class:`pybamm.Scalar`
+            The point in one-dimensional space at which to evaluate the symbol.
+
+        Returns
+        -------
+        :class:`pybamm.MatrixMultiplication`
+            The variable representing the value at the given point.
+        """
+        # Get mesh nodes
+        domain = discretised_child.domain
+        mesh = self.mesh[domain]
+        nodes = mesh.nodes
+        repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
+
+        # Find the index of the node closest to the value
+        index = np.argmin(np.abs(nodes - position.value))
+
+        # Create a sparse matrix with a 1 at the index
+        sub_matrix = csr_matrix(([1], ([0], [index])), shape=(1, mesh.npts))
+        # repeat across auxiliary domains
+        matrix = csr_matrix(kron(eye(repeats), sub_matrix))
+
+        # Index into the discretised child
+        out = pybamm.Matrix(matrix) @ discretised_child
+
+        # `EvaluateAt` removes domain
+        out.clear_domains()
+
+        return out
+
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
