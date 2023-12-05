@@ -120,7 +120,7 @@ def current(value, **kwargs):
     Parameters
     ----------
     value : float
-        The current value in A. 
+        The current value in A.
         Value can be a number, a 2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
