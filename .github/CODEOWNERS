@@ -1,2 +1,35 @@
 # Automatically request reviews from maintainers
-* @pybamm-team/maintainers
+# The CODEOWNERS are listed alphabetically
+
+# Package
+/pybamm/discretisations/ @martinjrobins @tinosulzer
+/pybamm/experiment/ @brosaplanella @martinjrobins @tinosulzer @TomTranter
+/pybamm/expression_tree/ @martinjrobins @tinosulzer
+/pybamm/geometry/ @martinjrobins @tinosulzer
+/pybamm/input/ @brosaplanella @DrSOKane @tinosulzer @TomTranter
+/pybamm/meshes/ @martinjrobins @tinosulzer
+/pybamm/models/ @brosaplanella @DrSOKane @tinosulzer @TomTranter
+/pybamm/parameters/ @brosaplanella @DrSOKane @tinosulzer @TomTranter
+/pybamm/plotting/ @martinjrobins @Saransh-cpp @tinosulzer
+/pybamm/solvers/ @martinjrobins @tinosulzer @TomTranter
+/pybamm/spatial_methods/ @martinjrobins @tinosulzer
+/pybamm/step/ @brosaplanella @martinjrobins @tinosulzer @TomTranter
+/pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/
+
+# CI/CD workflows
+/.github/ @martinjrobins @Saransh-cpp
+
+# Benchmarks
+/benchmarks/ @brosaplanella @Saransh-cpp
+
+# Documentation
+/docs/ @pybamm-team/maintainers
+
+# Example scripts
+/examples/ @pybamm-team/maintainer
+
+# Installation and other scripts
+/scripts/ @martinjrobins @Saransh-cpp
+
+# Files in the root directory
+/* @martinjrobins @Saransh-cpp
