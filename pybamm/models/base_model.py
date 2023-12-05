@@ -429,7 +429,7 @@ class BaseModel:
 
         input_parameters = self._find_symbols(pybamm.InputParameter)
         for input_param in input_parameters:
-            if input_param.domain == []:
+            if not input_param.domain:
                 parameter_info.append((input_param.name, "InputParameter"))
             else:
                 parameter_info.append((input_param.name, f"InputParameter in {input_param.domain}"))
@@ -444,8 +444,8 @@ class BaseModel:
 
     def print_parameter_info(self):
         info = self.get_parameter_info()
-        for param , details in info:
-            print(f"{param} ({details})")
+        for param, param_type in info:
+            print(f"{param} ({param_type})")
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
