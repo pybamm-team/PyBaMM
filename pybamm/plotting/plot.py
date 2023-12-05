@@ -3,6 +3,7 @@
 #
 import pybamm
 from .quick_plot import ax_min, ax_max
+from pybamm.util import have_optional_dependency
 
 
 def plot(x, y, ax=None, testing=False, **kwargs):
@@ -25,7 +26,7 @@ def plot(x, y, ax=None, testing=False, **kwargs):
         Keyword arguments, passed to plt.plot
 
     """
-    import matplotlib.pyplot as plt
+    plt = have_optional_dependency("matplotlib.pyplot")
 
     if not isinstance(x, pybamm.Array):
         raise TypeError("x must be 'pybamm.Array'")

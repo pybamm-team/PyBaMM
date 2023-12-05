@@ -180,6 +180,109 @@ class TestScikitFiniteElement2DSubMesh(TestCase):
         param.process_geometry(geometry)
         pybamm.Mesh(geometry, submesh_types, var_pts)
 
+    def test_to_json(self):
+        param = get_param()
+        geometry = pybamm.battery_geometry(
+            include_particles=False, options={"dimensionality": 2}
+        )
+        param.process_geometry(geometry)
+
+        var_pts = {"x_n": 10, "x_s": 7, "x_p": 12, "y": 16, "z": 24}
+
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
+        }
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        mesh_json = mesh.to_json()
+
+        expected_json = {
+            "submesh_pts": {
+                "negative electrode": {"x_n": 10},
+                "separator": {"x_s": 7},
+                "positive electrode": {"x_p": 12},
+                "current collector": {"y": 16, "z": 24},
+            },
+            "base_domains": [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+                "current collector",
+            ],
+        }
+
+        self.assertEqual(mesh_json, expected_json)
+
+        # test Uniform2DSubMesh serialisation
+
+        submesh = mesh["current collector"].to_json()
+
+        expected_submesh = {
+            "edges": {
+                "y": [
+                    0.0,
+                    0.02666666666666667,
+                    0.05333333333333334,
+                    0.08,
+                    0.10666666666666667,
+                    0.13333333333333333,
+                    0.16,
+                    0.18666666666666668,
+                    0.21333333333333335,
+                    0.24000000000000002,
+                    0.26666666666666666,
+                    0.29333333333333333,
+                    0.32,
+                    0.3466666666666667,
+                    0.37333333333333335,
+                    0.4,
+                ],
+                "z": [
+                    0.0,
+                    0.021739130434782608,
+                    0.043478260869565216,
+                    0.06521739130434782,
+                    0.08695652173913043,
+                    0.10869565217391304,
+                    0.13043478260869565,
+                    0.15217391304347827,
+                    0.17391304347826086,
+                    0.19565217391304346,
+                    0.21739130434782608,
+                    0.2391304347826087,
+                    0.2608695652173913,
+                    0.2826086956521739,
+                    0.30434782608695654,
+                    0.32608695652173914,
+                    0.34782608695652173,
+                    0.3695652173913043,
+                    0.3913043478260869,
+                    0.41304347826086957,
+                    0.43478260869565216,
+                    0.45652173913043476,
+                    0.4782608695652174,
+                    0.5,
+                ],
+            },
+            "coord_sys": "cartesian",
+            "tabs": {
+                "negative": {"y_centre": 0.1, "z_centre": 0.5, "width": 0.1},
+                "positive": {"y_centre": 0.3, "z_centre": 0.5, "width": 0.1},
+            },
+        }
+
+        self.assertEqual(submesh, expected_submesh)
+
+        new_submesh = pybamm.ScikitUniform2DSubMesh._from_json(submesh)
+
+        for x, y in zip(mesh['current collector'].edges, new_submesh.edges):
+            np.testing.assert_array_equal(x, y)
+
 
 class TestScikitFiniteElementChebyshev2DSubMesh(TestCase):
     def test_mesh_creation(self):

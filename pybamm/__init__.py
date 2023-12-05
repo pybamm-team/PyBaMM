@@ -47,13 +47,13 @@ from .util import (
     get_parameters_filepath,
     have_jax,
     install_jax,
+    have_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
-
 #
 # Classes for the Expression Tree
 #
@@ -187,6 +187,11 @@ from .meshes.scikit_fem_submeshes import (
     ScikitChebyshev2DSubMesh,
     UserSupplied2DSubMesh,
 )
+
+#
+# Serialisation
+#
+from .models.base_model import load_model
 
 #
 # Spatial Methods

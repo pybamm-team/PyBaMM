@@ -3,9 +3,9 @@
 #
 
 import numpy as np
-import sympy
 import numbers
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class VariableBase(pybamm.Symbol):
@@ -103,8 +103,7 @@ class VariableBase(pybamm.Symbol):
 
     def set_id(self):
         self._id = hash(
-            (self.__class__, self.name, self.scale, self.reference)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+            (self.__class__, self.name, self.scale, self.reference, *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
         )
 
     def create_copy(self):
@@ -124,10 +123,18 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
             return self.name
+
+    def to_json(
+        self,
+    ):
+        raise NotImplementedError(
+            "pybamm.Variable: Serialisation is only implemented for discretised models."
+        )
 
 
 class Variable(VariableBase):

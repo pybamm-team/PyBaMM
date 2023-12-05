@@ -122,7 +122,7 @@ html_favicon = "_static/favicon/favicon.png"
 html_theme_options = {
     "logo": {
         "image_light": "pybamm_logo.png",
-        "image_dark": "pybamm_logo.png",
+        "image_dark": "pybamm_logo_whitetext.png",
     },
     "icon_links": [
         {
@@ -142,11 +142,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    # should be kept versioned to use for the version warning bar
-    "switcher": {
-        "version_match": version,
-        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
-    },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
     # for dark mode toggle and social media links
@@ -154,6 +149,7 @@ html_theme_options = {
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     # add Algolia to the persistent navbar, this removes the default search icon
     "navbar_persistent": "algolia-searchbox",
+    "navigation_with_keys": False,
     "use_edit_page_button": True,
     "analytics": {
         "plausible_analytics_domain": "docs.pybamm.org",

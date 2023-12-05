@@ -727,6 +727,16 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "chmabaur",
+      "name": "chmabaur",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127507466?v=4",
+      "profile": "https://github.com/chmabaur",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

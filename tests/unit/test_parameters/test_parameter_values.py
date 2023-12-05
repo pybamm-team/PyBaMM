@@ -968,9 +968,9 @@ class TestParameterValues(TestCase):
         self.assertIsInstance(model.initial_conditions[var1], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[var1].value, 2)
         # boundary conditions
-        bc_key = list(model.boundary_conditions.keys())[0]
+        bc_key = next(iter(model.boundary_conditions.keys()))
         self.assertIsInstance(bc_key, pybamm.Variable)
-        bc_value = list(model.boundary_conditions.values())[0]
+        bc_value = next(iter(model.boundary_conditions.values()))
         self.assertIsInstance(bc_value["left"][0], pybamm.Scalar)
         self.assertEqual(bc_value["left"][0].value, 3)
         self.assertIsInstance(bc_value["right"][0], pybamm.Scalar)

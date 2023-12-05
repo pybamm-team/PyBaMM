@@ -4,11 +4,9 @@
 import numbers
 
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
-from sympy.vector.operators import Divergence as sympy_Divergence
-from sympy.vector.operators import Gradient as sympy_Gradient
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -33,6 +31,21 @@ class UnaryOperator(pybamm.Symbol):
 
         super().__init__(name, children=[child], domains=domains)
         self.child = self.children[0]
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising"""
+
+        instance = cls.__new__(cls)
+
+        super(UnaryOperator, instance).__init__(
+            snippet["name"],
+            snippet["children"],
+            domains=snippet["domains"],
+        )
+        instance.child = instance.children[0]
+
+        return instance
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -83,6 +96,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -154,6 +168,10 @@ class Sign(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("sign", child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        raise NotImplementedError()
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -272,6 +290,25 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.clear_domains()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        instance = cls.__new__(cls)
+
+        index = slice(
+            snippet["index"]["start"],
+            snippet["index"]["stop"],
+            snippet["index"]["step"],
+        )
+
+        instance.__init__(
+            snippet["children"][0],
+            index,
+            name=snippet["name"],
+            check_size=snippet["check_size"],
+        )
+        return instance
+
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
 
@@ -288,14 +325,7 @@ class Index(UnaryOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.slice.start,
-                self.slice.stop,
-                self.children[0].id,
-            )
-            + tuple(self.domain)
+            (self.__class__, self.name, self.slice.start, self.slice.stop, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_evaluate(self, child):
@@ -315,6 +345,24 @@ class Index(UnaryOperator):
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
+
+    def to_json(self):
+        """
+        Method to serialise an Index object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "index": {
+                "start": self.slice.start,
+                "stop": self.slice.stop,
+                "step": self.slice.step,
+            },
+            "check_size": False,
+        }
+
+        return json_dict
 
 
 class SpatialOperator(UnaryOperator):
@@ -338,6 +386,19 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child, domains=None):
         super().__init__(name, child, domains)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator:"
+            "Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator:"
+            "Please use a discretised model when reading in from JSON."
+        )
 
 
 class Gradient(SpatialOperator):
@@ -368,6 +429,7 @@ class Gradient(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
         return sympy_Gradient(child)
 
 
@@ -403,6 +465,7 @@ class Divergence(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Divergence = have_optional_dependency("sympy.vector.operators", "Divergence")
         return sympy_Divergence(child)
 
 
@@ -553,15 +616,7 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple(
-                [
-                    integration_variable.id
-                    for integration_variable in self.integration_variable
-                ]
-            )
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name, *tuple([integration_variable.id for integration_variable in self.integration_variable]), self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -579,6 +634,7 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Integral(child, sympy.Symbol("xn"))
 
 
@@ -685,7 +741,8 @@ class DefiniteIntegralVector(SpatialOperator):
     Parameters
     ----------
     variable : :class:`pybamm.Symbol`
-        The variable whose basis will be integrated over the entire domain
+        The variable whose basis will be integrated over the entire domain (will
+        become self.children[0])
     vector_type : str, optional
         Whether to return a row or column vector (default is row)
     """
@@ -700,9 +757,7 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name, self.vector_type, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -755,7 +810,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
+            (self.__class__, self.name, self.children[0].id, *tuple(self.domain))
         )
 
     def _unary_new_copy(self, child):
@@ -796,8 +851,7 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
         )
 
     def _evaluates_on_edges(self, dimension):
@@ -855,8 +909,7 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (self.__class__, self.name, self.side, self.children[0].id, *tuple([(k, tuple(v)) for k, v in self.domains.items()]))
         )
 
     def _unary_new_copy(self, child):
@@ -889,6 +942,7 @@ class BoundaryValue(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         if (
             self.child.domain[0] in ["negative particle", "positive particle"]
             and self.side == "right"
@@ -913,11 +967,33 @@ class ExplicitTimeIntegral(UnaryOperator):
         super().__init__("explicit time integral", children)
         self.initial_condition = initial_condition
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["children"][0], snippet["initial_condition"])
+
+        return instance
+
     def _unary_new_copy(self, child):
         return self.__class__(child, self.initial_condition)
 
     def is_constant(self):
         return False
+
+    def to_json(self):
+        """
+        Convert ExplicitTimeIntegral to json for serialisation.
+
+        Both `children` and `initial_condition` contain Symbols, and are therefore
+        dealt with by `pybamm.Serialise._SymbolEncoder.default()` directly.
+        """
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+        }
+
+        return json_dict
 
 
 class BoundaryGradient(BoundaryOperator):

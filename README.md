@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-66-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-67-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -34,7 +34,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
 [//]: # "numfocus-fiscal-sponsor-attribution"
 
-PyBaMM uses an [open governance model](./GOVERNANCE.md)
+PyBaMM uses an [open governance model](https://pybamm.org/governance/)
 and is fiscally sponsored by [NumFOCUS](https://numfocus.org/). Consider making
 a [tax-deductible donation](https://numfocus.org/donate-for-pybamm) to help the project
 pay for developer time, professional services, travel, workshops, and a variety of other needs.
@@ -270,6 +270,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://aitorres.com"><img src="https://avatars.githubusercontent.com/u/26191851?v=4?s=100" width="100px;" alt="Andrés Ignacio Torres"/><br /><sub><b>Andrés Ignacio Torres</b></sub></a><br /><a href="#infra-aitorres" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Agnik7"><img src="https://avatars.githubusercontent.com/u/77234005?v=4?s=100" width="100px;" alt="Agnik Bakshi"/><br /><sub><b>Agnik Bakshi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Agnik7" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/RuiheLi"><img src="https://avatars.githubusercontent.com/u/84007676?v=4?s=100" width="100px;" alt="RuiheLi"/><br /><sub><b>RuiheLi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=RuiheLi" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=RuiheLi" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chmabaur"><img src="https://avatars.githubusercontent.com/u/127507466?v=4?s=100" width="100px;" alt="chmabaur"/><br /><sub><b>chmabaur</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Achmabaur" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=chmabaur" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
