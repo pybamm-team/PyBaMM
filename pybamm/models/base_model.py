@@ -421,55 +421,31 @@ class BaseModel:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
 
-    def parameter_info(self, param_class, param_type):
-        """Extracts and returns all the parameter information in the model"""
-        try:
-            parameter_info = ""
-            parameters = self._find_symbols(param_class)
-            for parameter in parameters:
-                if not isinstance(parameter, (pybamm.FunctionParameter, pybamm.InputParameter, pybamm.Parameter)):
-                    raise ValueError(f"ERROR: Invalid Parameter Type: {type(parameter)}")
-                if isinstance(parameter, pybamm.FunctionParameter):
-                    if parameter.name not in parameter_info:
-                        input_names = "'" + "', '".join(parameter.input_names) + "'"
-                        parameter_info += (
-                            f"{parameter.name} ({param_type} with input(s) {input_names})\n"
-                        )
+    def get_parameter_info(self):
+        parameter_info = []
+        parameters = self._find_symbols(pybamm.Parameter)
+        for param in parameters:
+            parameter_info.append((param.name, "Parameter"))
 
-                elif isinstance(parameter, pybamm.InputParameter):
-                    if not parameter.domain:
-                        parameter_info += f"{parameter.name} ({param_type})\n"
-                    else:
-                        parameter_info += (
-                            f"{parameter.name} ({param_type} in {parameter.domain})\n"
-                        )
+        input_parameters = self._find_symbols(pybamm.InputParameter)
+        for input_param in input_parameters:
+            if input_param.domain == []:
+                parameter_info.append((input_param.name, "InputParameter"))
+            else:
+                parameter_info.append((input_param.name, f"InputParameter in {input_param.domain}"))
 
-                elif isinstance(parameter, pybamm.Parameter):
-                    parameter_info += f"{parameter.name} ({param_type})\n"
-            return parameter_info
-        except Exception as e:
-            raise ValueError(f"ERROR in parameter_info: {e}")
+        function_parameters = self._find_symbols(pybamm.FunctionParameter)
+        for func_param in function_parameters:
+            if func_param.name not in [name for name, _ in parameter_info]:
+                input_names =  "', '".join(func_param.input_names)
+                parameter_info.append((func_param.name, f"FunctionParameter with inputs(s) '{input_names}'"))
+
+        return parameter_info
 
     def print_parameter_info(self):
-        """Prints all the extracted parameter information of the model"""
-        try:
-            self._parameter_info = ""
-            parameter_types = [
-                ("Parameter", pybamm.Parameter),
-                ("inputParameter", pybamm.InputParameter),
-                ("FunctionParameter", pybamm.FunctionParameter),
-            ]
-
-            for param_type, param_class in parameter_types:
-                parameter_info = self.parameter_info(param_class, param_type)
-                if parameter_info is not None:
-                    self._parameter_info += parameter_info
-                else:
-                    print(f"WARNING: parameter_info is NONE for {param_type}")
-
-            print(self._parameter_info)
-        except Exception as e:
-            print(f"ERROR in print_parameter_info: {e}")
+        info = self.get_parameter_info()
+        for param , details in info:
+            print(f"{param} ({details})")
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
