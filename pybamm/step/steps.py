@@ -120,7 +120,7 @@ def current(value, **kwargs):
     Parameters
     ----------
     value : float
-        The current value in A.
+        The current value in A. 
         Value can be a number, a 2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
@@ -142,8 +142,7 @@ def c_rate(value, **kwargs):
     Parameters
     ----------
     value : float
-        The C-rate value.
-        Value can be a number, a 2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
+        The C-rate value. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -164,8 +163,7 @@ def voltage(value, **kwargs):
     Parameters
     ----------
     value : float
-        The voltage value in V.
-        Value can be a number, a 2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
+        The voltage value in V. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -186,8 +184,7 @@ def power(value, **kwargs):
     Parameters
     ----------
     value : float
-        The power value in W.
-        Value can be a number, a 2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
+        The power value in W. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -208,8 +205,7 @@ def resistance(value, **kwargs):
     Parameters
     ----------
     value : float
-        The resistance value in Ohm.
-        Value can be a number, a 2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
+        The resistance value in Ohm. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
