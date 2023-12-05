@@ -346,10 +346,10 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
         )
 
-    def Omega(self, sto):
+    def Omega(self, sto, T):
         """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
         Domain = self.domain.capitalize()
-        inputs = {f"{Domain} particle stoichiometry": sto}
+        inputs = {f"{Domain} particle stoichiometry": sto, "Temperature [K]": T}
         return pybamm.FunctionParameter(
             f"{Domain} electrode partial molar volume [m3.mol-1]", inputs
         )

@@ -57,7 +57,7 @@ class BaseParticle(pybamm.BaseSubModel):
         if stress_option == "true":
             # Ai2019 eq [12]
             sto = c / phase_param.c_max
-            Omega = pybamm.r_average(domain_param.Omega(sto))
+            Omega = pybamm.r_average(domain_param.Omega(sto, T))
             E = pybamm.r_average(domain_param.E(sto, T))
             nu = domain_param.nu
             theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
