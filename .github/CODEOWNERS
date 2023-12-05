@@ -26,7 +26,7 @@
 /docs/ @pybamm-team/maintainers
 
 # Example scripts
-/examples/ @pybamm-team/maintainer
+/examples/ @pybamm-team/maintainers
 
 # Installation and other scripts
 /scripts/ @martinjrobins @Saransh-cpp
