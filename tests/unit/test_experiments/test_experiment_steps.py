@@ -264,6 +264,18 @@ class TestExperimentSteps(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "`start_time` should be"):
             pybamm.step._Step("current", 1, duration=3600, start_time="bad start_time")
 
+    def test_custom_termination(self):
+        def neg_stoich_cutoff(variables):
+            return variables["Negative electrode stoichiometry"] - 1
+
+        neg_stoich_termination = pybamm.step.CustomTermination(
+            name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
+        )
+        variables = {"Negative electrode stoichiometry": 3}
+        event = neg_stoich_termination.get_event(variables, None)
+        self.assertEqual(event.name, "Negative stoichiometry cut-off [experiment]")
+        self.assertEqual(event.expression, 2)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
