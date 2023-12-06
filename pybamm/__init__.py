@@ -54,6 +54,7 @@ from .util import (
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
+
 #
 # Classes for the Expression Tree
 #
@@ -222,6 +223,7 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .experiment.experiment import Experiment
 from . import experiment
+from .experiment import step
 
 
 #
