@@ -1,5 +1,5 @@
 #
-# OCP with empiral hysteresis function, and hysteresis state function
+# from Wycisk 2022
 #
 import pybamm
 from . import BaseOpenCircuitPotential
@@ -10,14 +10,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         h = pybamm.Variable(f'{Domain} electrode {phase_name}hysteresis state')
-        # ocp_eq = pybamm.Variable(f'{Domain} electrode {phase_name}equilibrium OCP [V]')
-        # ocp_eq_bulk = pybamm.Variable(f'{Domain} electrode {phase_name}bulk equilibrium OCP [V]')
-        # dQdU = pybamm.Variable(f'{Domain} electrode {phase_name}differential capacity [A.s.V-1]')
-        return {f'{Domain} electrode {phase_name}hysteresis state':h,
-                # f'{Domain} electrode {phase_name}equilibrium OCP [V]':ocp_eq,
-                # f'{Domain} electrode {phase_name}bulk equilibrium OCP [V]':ocp_eq_bulk,
-                # f'{Domain} electrode {phase_name}differential capacity [A.s.V-1]':dQdU
-                }
+        return {f'{Domain} electrode {phase_name}hysteresis state':h,}
 
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
@@ -25,10 +18,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
 
         if self.reaction == "lithium-ion main":
             T = variables[f"{Domain} electrode temperature [K]"]
-            #! custom
-            # capacity = variables['Discharge capacity [A.h]']
             h = variables[f'{Domain} electrode {phase_name}hysteresis state']
-            #! Custom
             # For "particle-size distribution" models, take distribution version
             # of c_s_surf that depends on particle size.
             domain_options = getattr(self.options, domain)
@@ -43,7 +33,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
                     sto_surf = sto_surf.orphans[0]
                     T = T.orphans[0]
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
-                # h = pybamm.PrimaryBroadcast(h, [f'{domain} particle size'])
+                h = pybamm.PrimaryBroadcast(h, [f'{domain} particle size'])
             else:
                 sto_surf = variables[
                     f"{Domain} {phase_name}particle surface stoichiometry"
@@ -63,7 +53,6 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             T_bulk = pybamm.xyz_average(pybamm.size_average(T))
             ocp_bulk_eq = self.phase_param.U(sto_bulk, T_bulk)
 
-            #! Custom
             H = self.phase_param.H(sto_bulk)
             variables[f'{Domain} electrode {phase_name}equilibrium OCP [V]'] = ocp_surf_eq
             variables[f'{Domain} electrode {phase_name}bulk equilibrium OCP [V]'] = ocp_bulk_eq
@@ -77,7 +66,6 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             variables[f'{Domain} electrode {phase_name}differential capacity [A.s.V-1]'] = dQdU
             ocp_surf = ocp_surf_eq + H * h
             ocp_bulk = ocp_bulk_eq + H * h
-            #! Custom
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables
