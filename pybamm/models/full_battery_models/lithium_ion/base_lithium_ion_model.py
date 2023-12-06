@@ -249,6 +249,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
                 elif ocp_option == "Plett":
+                    pybamm.citations.register('Wycisk2022')
                     ocp_model = ocp_submodels.PlettOpenCircuitPotential
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
