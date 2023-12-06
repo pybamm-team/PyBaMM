@@ -62,11 +62,11 @@ PyBaMM requires the following dependencies.
 ================================================================ ==========================
 Package                                                          Minimum supported version
 ================================================================ ==========================
-`NumPy <https://numpy.org>`__                                    1.16.0
-`SciPy <https://docs.scipy.org/doc/scipy/>`__                    2.8.2
-`CasADi <https://web.casadi.org/docs/>`__                        3.6.0
-`Xarray <https://docs.xarray.dev/en/stable/>`__                  2023.04.0
-`Anytree <https://anytree.readthedocs.io/en/stable/>`__          2.4.3
+`NumPy <https://numpy.org>`__                                    1.23.5
+`SciPy <https://docs.scipy.org/doc/scipy/>`__                    1.9.3
+`CasADi <https://web.casadi.org/docs/>`__                        3.6.3
+`Xarray <https://docs.xarray.dev/en/stable/>`__                  2022.6.0
+`Anytree <https://anytree.readthedocs.io/en/stable/>`__          2.8.0
 ================================================================ ==========================
 
 .. _install.optional_dependencies:
@@ -77,7 +77,7 @@ Optional Dependencies
 PyBaMM has a number of optional dependencies for different functionalities.
 If the optional dependency is not installed, PyBaMM will raise an ImportError when the method requiring that dependency is called.
 
-If using pip, optional PyBaMM dependencies can be installed or managed in a file (e.g. requirements.txt or setup.py)
+If you are using ``pip``, optional PyBaMM dependencies can be installed or managed in a file (e.g., setup.py, or pyproject.toml)
 as optional extras (e.g.,``pybamm[dev,plot]``). All optional dependencies can be installed with ``pybamm[all]``,
 and specific sets of dependencies are listed in the sections below.
 
@@ -91,8 +91,8 @@ Installable with ``pip install "pybamm[plot]"``
 =========================================================== ================== ================== ==================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ==================================================================
-`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.9.0              plot               For generating simulation GIFs.
-`matplotlib <https://matplotlib.org/stable/>`__             2.0.0              plot               To plot various battery models, and analyzing battery performance.
+`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.3.0              plot               For generating simulation GIFs.
+`matplotlib <https://matplotlib.org/stable/>`__             3.6.0              plot               To plot various battery models, and analyzing battery performance.
 =========================================================== ================== ================== ==================================================================
 
 .. _install.pandas_dependencies:
@@ -105,7 +105,7 @@ Installable with ``pip install "pybamm[pandas]"``
 =========================================================== ================== ================== ==================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ==================================================================
-`pandas <https://pandas.pydata.org/docs/>`__                0.24.0             pandas             For data manipulation and analysis.
+`pandas <https://pandas.pydata.org/docs/>`__                1.5.0              pandas             For data manipulation and analysis.
 =========================================================== ================== ================== ==================================================================
 
 .. _install.docs_dependencies:
@@ -154,6 +154,7 @@ Dependency                                                                      
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
+`coverage <https://coverage.readthedocs.io/en/>`__                               \-                 dev                For calculating coverage of tests.
 `pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running Jupyter notebooks tests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
@@ -182,7 +183,7 @@ Installable with ``pip install "pybamm[latexify]"``
 =========================================================== ================== ================== =========================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== =========================
-`sympy <https://docs.sympy.org/latest/index.html>`__        1.8.0              latexify           For symbolic mathematics.
+`sympy <https://docs.sympy.org/latest/index.html>`__        1.9.3              latexify           For symbolic mathematics.
 =========================================================== ================== ================== =========================
 
 .. _install.bpx_dependencies:

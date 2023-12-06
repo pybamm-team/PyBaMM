@@ -4,11 +4,15 @@
 import pickle
 import pybamm
 import numpy as np
+import hashlib
 import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
 from pybamm.util import have_optional_dependency
+from typing import Optional
+
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 def is_notebook():
@@ -133,6 +137,9 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
 
+        # Initialise instances of Simulation class with the same random seed
+        self._set_random_seed()
+
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
             import warnings
@@ -155,6 +162,18 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
+
+    # If the solver being used is CasadiSolver or its variants, set a fixed
+    # random seed during class initialization to the SHA-256 hash of the class
+    # name for purposes of reproducibility.
+    def _set_random_seed(self):
+        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
+            self._solver, pybamm.CasadiAlgebraicSolver
+        ):
+            np.random.seed(
+                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
+                % (2**32)
+            )
 
     def set_up_and_parameterise_experiment(self):
         """
@@ -328,7 +347,7 @@ class Simulation:
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
             self._parameter_values = (
-                self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
+                self._unprocessed_parameter_values.set_initial_ocps(
                     initial_soc, param=param, inplace=False, options=options
                 )
             )
@@ -1126,6 +1145,50 @@ class Simulation:
 
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def save_model(
+        self,
+        filename: Optional[str] = None,
+        mesh: bool = False,
+        variables: bool = False,
+    ):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        mesh: bool
+            The mesh used to discretise the model. If false, plotting tools will not
+            be available when the model is read back in and solved.
+        variables: bool
+            The discretised variables. Not required to solve a model, but if false
+            tools will not be availble. Will automatically save meshes as well, required
+            for plotting tools.
+        filename: str, optional
+            The desired name of the JSON file. If no name is provided, one will be
+            created based on the model name, and the current datetime.
+        """
+        mesh = self.mesh if (mesh or variables) else None
+        variables = self.built_model.variables if variables else None
+
+        if self.operating_mode == "with experiment":
+            raise NotImplementedError(
+                """
+                Serialising models coupled to experiments is not yet supported.
+                """
+            )
+
+        if self.built_model:
+            Serialise().save_model(
+                self.built_model, filename=filename, mesh=mesh, variables=variables
+            )
+        else:
+            raise NotImplementedError(
+                """
+                PyBaMM can only serialise a discretised model.
+                Ensure the model has been built (e.g. run `build()`) before saving.
+                """
+            )
 
 
 def load_sim(filename):

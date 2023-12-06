@@ -236,6 +236,12 @@ class TestJacobian(TestCase):
         jac = ind.jac(vec).evaluate(y=np.linspace(0, 2, 5)).toarray()
         np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 0, 0]]))
 
+    def test_evaluate_at(self):
+        y = pybamm.StateVector(slice(0, 4))
+        expr = pybamm.EvaluateAt(y, 2)
+        jac = expr.jac(y).evaluate(y=np.linspace(0, 2, 4))
+        np.testing.assert_array_equal(jac, 0)
+
     def test_jac_of_number(self):
         """Jacobian of a number should be zero"""
         a = pybamm.Scalar(1)

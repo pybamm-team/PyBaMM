@@ -117,38 +117,59 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
 
-        # Irreversible electrochemical heating
-        a_j_p = variables[
-            "Positive electrode volumetric interfacial current density [A.m-3]"
-        ]
-        eta_r_p = variables["Positive electrode reaction overpotential [V]"]
+        num_phases = int(getattr(self.options, 'positive')["particle phases"])
+        phase_names = [""]
+        if num_phases > 1:
+            phase_names = ["primary ", "secondary "]
+
+        Q_rxn_p, Q_rev_p = 0, 0
+        T_p = variables["Positive electrode temperature [K]"]
+        for phase in phase_names:
+            a_j_p = variables[
+                f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
+            ]
+            eta_r_p = variables[f"Positive electrode {phase}reaction overpotential [V]"]
+            # Irreversible electrochemical heating
+            Q_rxn_p += a_j_p * eta_r_p
+            # Reversible electrochemical heating
+            dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
+            Q_rev_p += a_j_p * T_p * dUdT_p
+
+
+        num_phases = int(getattr(self.options, 'negative')["particle phases"])
+        phase_names = [""]
+        if num_phases > 1:
+            phase_names = ["primary", "secondary"]
+
         if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
-        else:
-            a_j_n = variables[
-                "Negative electrode volumetric interfacial current density [A.m-3]"
-            ]
-            eta_r_n = variables["Negative electrode reaction overpotential [V]"]
-            Q_rxn_n = a_j_n * eta_r_n
-        Q_rxn_p = a_j_p * eta_r_p
-        Q_rxn = pybamm.concatenation(
-            Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
-        )
-
-        # Reversible electrochemical heating
-        T_p = variables["Positive electrode temperature [K]"]
-        dUdT_p = variables["Positive electrode entropic change [V.K-1]"]
-        if self.options.electrode_types["negative"] == "planar":
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
         else:
             T_n = variables["Negative electrode temperature [K]"]
-            dUdT_n = variables["Negative electrode entropic change [V.K-1]"]
-            Q_rev_n = a_j_n * T_n * dUdT_n
-        Q_rev_p = a_j_p * T_p * dUdT_p
+            Q_rxn_n = 0
+            Q_rev_n = 0
+            for phase in phase_names:
+                a_j_n = variables[
+                    f"Negative electrode {phase}volumetric interfacial current density [A.m-3]"
+                ]
+                eta_r_n = variables[f"Negative electrode {phase}reaction overpotential [V]"]
+                # Irreversible electrochemical heating
+                Q_rxn_n += a_j_n * eta_r_n
+
+                # Reversible electrochemical heating
+                dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
+                Q_rev_n += a_j_n * T_n * dUdT_n
+
+        # Irreversible electrochemical heating
+        Q_rxn = pybamm.concatenation(
+            Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
+        )
+
+        # Reversible electrochemical heating
         Q_rev = pybamm.concatenation(
             Q_rev_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rev_p
         )

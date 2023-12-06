@@ -1,8 +1,0 @@
-extend-include = ["*.ipynb"]
-extend-exclude = ["__init__.py"]
-
-[lint]
-ignore = ["E741"]
-
-[lint.per-file-ignores]
-"**.ipynb" = ["E402", "E703"]

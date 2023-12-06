@@ -4,8 +4,10 @@
 from tests import TestCase
 import pybamm
 import numpy as np
+from scipy.sparse import csr_matrix
 
 import unittest
+import unittest.mock as mock
 
 
 class TestMatrix(TestCase):
@@ -37,6 +39,29 @@ class TestMatrix(TestCase):
         np.testing.assert_array_equal(
             (self.mat @ self.vect).evaluate(), np.array([[5], [2], [3]])
         )
+
+    def test_to_from_json(self):
+        arr = pybamm.Matrix(csr_matrix([[0, 1, 0, 0], [0, 0, 0, 1]]))
+        json_dict = {
+            "name": "Sparse Matrix (2, 4)",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "entries": {
+                "column_pointers": [0, 1, 2],
+                "data": [1.0, 1.0],
+                "row_indices": [1, 3],
+                "shape": (2, 4),
+            },
+        }
+
+        self.assertEqual(arr.to_json(), json_dict)
+
+        self.assertEqual(pybamm.Matrix._from_json(json_dict), arr)
 
 
 if __name__ == "__main__":

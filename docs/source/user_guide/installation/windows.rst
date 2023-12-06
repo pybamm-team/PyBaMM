@@ -6,7 +6,7 @@ Windows
 Prerequisites
 -------------
 
-To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
+To use PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
 To install Python 3 download the installation files from `Python’s
 website <https://www.python.org/downloads/windows/>`__. Make sure to
@@ -27,7 +27,7 @@ install PyBaMM. You can find a reminder of how to navigate the terminal
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution python files.
 
-To install virtualenv type:
+To install ``virtualenv``, type:
 
 .. code:: bash
 
