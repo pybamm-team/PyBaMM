@@ -2,18 +2,18 @@
 # The CODEOWNERS are listed alphabetically
 
 # Package
-/pybamm/discretisations/ @martinjrobins @tinosulzer
-/pybamm/experiment/ @brosaplanella @martinjrobins @tinosulzer @TomTranter
-/pybamm/expression_tree/ @martinjrobins @tinosulzer
-/pybamm/geometry/ @martinjrobins @tinosulzer
-/pybamm/input/ @brosaplanella @DrSOKane @tinosulzer @TomTranter
-/pybamm/meshes/ @martinjrobins @tinosulzer
-/pybamm/models/ @brosaplanella @DrSOKane @tinosulzer @TomTranter
-/pybamm/parameters/ @brosaplanella @DrSOKane @tinosulzer @TomTranter
-/pybamm/plotting/ @martinjrobins @Saransh-cpp @tinosulzer
-/pybamm/solvers/ @martinjrobins @tinosulzer @TomTranter
-/pybamm/spatial_methods/ @martinjrobins @tinosulzer
-/pybamm/step/ @brosaplanella @martinjrobins @tinosulzer @TomTranter
+/pybamm/discretisations/ @martinjrobins @tinosulzer @rtimms
+/pybamm/experiment/ @brosaplanella @martinjrobins @tinosulzer @TomTranter @rtimms
+/pybamm/expression_tree/ @martinjrobins @tinosulzer @rtimms
+/pybamm/geometry/ @martinjrobins @tinosulzer @rtimms
+/pybamm/input/ @brosaplanella @DrSOKane @tinosulzer @TomTranter @rtimms
+/pybamm/meshes/ @martinjrobins @tinosulzer @rtimms
+/pybamm/models/ @brosaplanella @DrSOKane @tinosulzer @TomTranter @rtimms
+/pybamm/parameters/ @brosaplanella @DrSOKane @tinosulzer @TomTranter @rtimms
+/pybamm/plotting/ @martinjrobins @Saransh-cpp @tinosulzer @rtimms
+/pybamm/solvers/ @martinjrobins @tinosulzer @TomTranter @rtimms
+/pybamm/spatial_methods/ @martinjrobins @tinosulzer @rtimms
+/pybamm/step/ @brosaplanella @martinjrobins @tinosulzer @TomTranter @rtimms
 /pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/
 
 # CI/CD workflows
