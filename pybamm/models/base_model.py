@@ -422,30 +422,32 @@ class BaseModel:
         return self._input_parameters
 
     def get_parameter_info(self):
+        """Extract the parameter information and return its dictionary"""
         parameter_info = []
         parameters = self._find_symbols(pybamm.Parameter)
         for param in parameters:
-            parameter_info.append((param.name, "Parameter"))
+            parameter_info.append((param, "Parameter"))
 
         input_parameters = self._find_symbols(pybamm.InputParameter)
         for input_param in input_parameters:
             if not input_param.domain:
-                parameter_info.append((input_param.name, "InputParameter"))
+                parameter_info.append((input_param, "InputParameter"))
             else:
-                parameter_info.append((input_param.name, f"InputParameter in {input_param.domain}"))
+                parameter_info.append((input_param, f"InputParameter in {input_param.domain}"))
 
         function_parameters = self._find_symbols(pybamm.FunctionParameter)
         for func_param in function_parameters:
-            if func_param.name not in [name for name, _ in parameter_info]:
+            if func_param.name not in [p for p, _ in parameter_info]:
                 input_names =  "', '".join(func_param.input_names)
-                parameter_info.append((func_param.name, f"FunctionParameter with inputs(s) '{input_names}'"))
+                parameter_info.append((func_param, f"FunctionParameter with inputs(s) '{input_names}'"))
 
         return parameter_info
 
     def print_parameter_info(self):
+        """Print parameter information from the dictionary"""
         info = self.get_parameter_info()
         for param, param_type in info:
-            print(f"{param} ({param_type})")
+            print(f"{param.name} ({param_type})")
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
