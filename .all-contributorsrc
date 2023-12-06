@@ -746,6 +746,15 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "shubhambhar007",
+      "name": "Shubham Bhardwaj",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32607282?v=4",
+      "profile": "https://github.com/shubhambhar007",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
