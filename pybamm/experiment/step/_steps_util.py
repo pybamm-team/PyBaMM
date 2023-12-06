@@ -4,7 +4,7 @@
 import pybamm
 import numpy as np
 from datetime import datetime
-from .step_termination import read_termination
+from .step_termination import _read_termination
 
 _examples = """
 
@@ -139,7 +139,7 @@ class _Step:
         for term in termination:
             if isinstance(term, str):
                 term = _convert_electric(term)
-            term = read_termination(term)
+            term = _read_termination(term)
             self.termination.append(term)
 
         self.temperature = _convert_temperature_to_kelvin(temperature)
