@@ -422,7 +422,11 @@ class BaseModel:
         return self._input_parameters
 
     def get_parameter_info(self):
-        """Extract the parameter information and returns it as a list of tuples"""
+        """
+        Extract the parameter information and returns it as a list of tuples.
+        To get a list of all parameter-like objects without extra information,
+        use `model.parameters`.
+        """
         parameter_info = []
         parameters = self._find_symbols(pybamm.Parameter)
         for param in parameters:
