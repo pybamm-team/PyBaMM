@@ -422,7 +422,7 @@ class BaseModel:
         return self._input_parameters
 
     def get_parameter_info(self):
-        """Extract the parameter information and return its dictionary"""
+        """Extract the parameter information and returns it as a list of tuples"""
         parameter_info = []
         parameters = self._find_symbols(pybamm.Parameter)
         for param in parameters:
@@ -444,35 +444,32 @@ class BaseModel:
         return parameter_info
 
     def print_parameter_info(self):
-        """Print parameter information in a formatted table from the dictionary"""
+        """Print parameter information in a formatted table from the list of tuples"""
         info = self.get_parameter_info()
-        header_format = 280 * "="
-        row_format = "| {:<70} | {:<110} | {:<90} |"
-        print(header_format)
-        print(row_format.format("Parameter", "Type of parameter", "Parameter inputs"))
-        print(header_format)
+        max_param_name_length = 0
+        max_param_type_length = 0
+        for param, param_type in info:
+            param_name_length = len(getattr(param, 'name', str(param)))
+            param_type_length = len(param_type)
+            max_param_name_length = max(max_param_name_length, param_name_length)
+            max_param_type_length = max(max_param_type_length, param_type_length)
+
+        header_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+        row_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+        print(header_format.format("Parameter", "Type of parameter"))
+        print(header_format.format("=" * max_param_name_length, "=" * max_param_type_length))
 
         for param, param_type in info:
-            if isinstance(param, pybamm.FunctionParameter):
-                input_string = param_type.split("with inputs(s) ")[1]
-            else:
-                input_string = ""
-
             param_name = getattr(param, 'name', str(param))
-
-            # Split long strings into multiline strings with a max of 90 characters per line
-            param_name_lines = [param_name[i:i + 70] for i in range(0, len(param_name), 70)]
-            param_type_lines = [param_type[i:i + 110] for i in range(0, len(param_type), 110)]
-            input_string_lines = [input_string[i:i + 90] for i in range(0, len(input_string), 90)]
-            max_lines = max(len(param_name_lines), len(param_type_lines), len(input_string_lines))
+            param_name_lines = [param_name[i:i + max_param_name_length] for i in range(0, len(param_name), max_param_name_length)]
+            param_type_lines = [param_type[i:i + max_param_type_length] for i in range(0, len(param_type), max_param_type_length)]
+            max_lines = max(len(param_name_lines), len(param_type_lines))
 
             for i in range(max_lines):
                 param_line = param_name_lines[i] if i < len(param_name_lines) else ""
                 type_line = param_type_lines[i] if i < len(param_type_lines) else ""
-                input_line = input_string_lines[i] if i < len(input_string_lines) else ""
 
-                print(row_format.format(param_line, type_line, input_line))
-        print(header_format)
+                print(row_format.format(param_line, type_line))
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
