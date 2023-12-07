@@ -65,6 +65,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/rate-capability.ipynb
     notebooks/models/saving_models.ipynb
     notebooks/models/SEI-on-cracks.ipynb
+    notebooks/models/simulate-3E-cell.ipynb
     notebooks/models/simulating-ORegan-2022-parameter-set.ipynb
     notebooks/models/SPM.ipynb
     notebooks/models/SPMe.ipynb

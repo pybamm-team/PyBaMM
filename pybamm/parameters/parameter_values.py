@@ -721,6 +721,15 @@ class ParameterValues:
             # f_a_dist in the size average needs to be processed
             if isinstance(new_symbol, pybamm.SizeAverage):
                 new_symbol.f_a_dist = self.process_symbol(new_symbol.f_a_dist)
+            # position in evaluate at needs to be processed, and should be a Scalar
+            if isinstance(new_symbol, pybamm.EvaluateAt):
+                new_symbol_position = self.process_symbol(new_symbol.position)
+                if not isinstance(new_symbol_position, pybamm.Scalar):
+                    raise ValueError(
+                        "'position' in 'EvaluateAt' must evaluate to a scalar"
+                    )
+                else:
+                    new_symbol.position = new_symbol_position
             return new_symbol
 
         # Functions

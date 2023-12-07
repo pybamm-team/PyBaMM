@@ -28,6 +28,7 @@ jobs:
       - name: Check style
         run: |
           python -m pip install pre-commit
+          git add .
           pre-commit run ruff
 
   run_unit_tests:
