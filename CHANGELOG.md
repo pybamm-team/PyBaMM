@@ -10,6 +10,10 @@
 
 - Updated `jax` and `jaxlib` to the latest available versions and added Windows (Python 3.9+) support for the Jax solver ([#3550](https://github.com/pybamm-team/PyBaMM/pull/3550))
 
+## Breaking changes
+
+- Dropped support for the `[jax]` extra, i.e., the Jax solver when running on Python 3.8. The Jax solver is now available on Python 3.9 and above ([#3550](https://github.com/pybamm-team/PyBaMM/pull/3550))
+
 # [v23.9](https://github.com/pybamm-team/PyBaMM/tree/v23.9) - 2023-10-31
 
 ## Features
