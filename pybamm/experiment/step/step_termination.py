@@ -130,11 +130,11 @@ class CustomTermination(BaseTermination):
     when the negative electrode stoichiometry reaches 10%.
 
     >>> def neg_stoich_cutoff(variables):
-           return variables["Negative electrode stoichiometry"] - 0.1
+    ...    return variables["Negative electrode stoichiometry"] - 0.1
 
     >>> neg_stoich_termination = pybamm.step.CustomTermination(
-           name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
-        )
+    ...    name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
+    ... )
     """
 
     def __init__(self, name, event_function):
