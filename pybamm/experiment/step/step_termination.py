@@ -33,6 +33,13 @@ class BaseTermination:
         """
         raise NotImplementedError
 
+    def __eq__(self, other):
+        # objects are equal if they have the same type and value
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        else:
+            return False
+
 
 class CrateTermination(BaseTermination):
     """
@@ -123,11 +130,11 @@ class CustomTermination(BaseTermination):
     when the negative electrode stoichiometry reaches 10%.
 
     >>> def neg_stoich_cutoff(variables):
-    >>>    return variables["Negative electrode stoichiometry"] - 0.1
+           return variables["Negative electrode stoichiometry"] - 0.1
 
     >>> neg_stoich_termination = pybamm.step.CustomTermination(
-    >>>    name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
-    >>> )
+           name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
+        )
     """
 
     def __init__(self, name, event_function):

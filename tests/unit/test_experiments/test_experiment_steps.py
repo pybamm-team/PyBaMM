@@ -34,7 +34,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.type, "voltage")
         self.assertEqual(step.value, 1)
         self.assertEqual(step.duration, 3600)
-        self.assertEqual(step.termination, [{"type": "voltage", "value": 2.5}])
+        self.assertEqual(step.termination, [pybamm.step.VoltageTermination(2.5)])
         self.assertEqual(step.period, 60)
         self.assertEqual(step.temperature, 298.15)
         self.assertEqual(step.tags, ["test"])
@@ -155,25 +155,25 @@ class TestExperimentSteps(unittest.TestCase):
                 "type": "C-rate",
                 "value": -1,
                 "duration": None,
-                "termination": [{"type": "voltage", "value": 4.1}],
+                "termination": [pybamm.step.VoltageTermination(4.1)],
             },
             {
                 "value": 4.1,
                 "type": "voltage",
                 "duration": None,
-                "termination": [{"type": "current", "value": 0.05}],
+                "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
                 "type": "voltage",
                 "duration": None,
-                "termination": [{"type": "C-rate", "value": 0.02}],
+                "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
                 "type": "C-rate",
                 "value": 1 / 3,
                 "duration": 7200.0,
-                "termination": [{"type": "voltage", "value": 2.5}],
+                "termination": [pybamm.step.VoltageTermination(2.5)],
             },
         ]
 

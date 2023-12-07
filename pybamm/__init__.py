@@ -234,7 +234,7 @@ from .experiment import step
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components

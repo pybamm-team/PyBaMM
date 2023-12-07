@@ -834,7 +834,6 @@ class QuickPlotAxes:
         """
         return self._axes[index]
 
-    @property
     def by_variable(self, key):
         """
         Get axis by variable name
