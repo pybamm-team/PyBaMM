@@ -3,6 +3,7 @@
 #
 from tests import TestCase
 import unittest
+import unittest.mock as mock
 
 import numpy as np
 import sympy
@@ -40,6 +41,28 @@ class TestArray(TestCase):
         self.assertEqual(
             pybamm.Array([1, 2]).to_equation(), sympy.Array([[1.0], [2.0]])
         )
+
+    def test_to_from_json(self):
+        arr = pybamm.Array(np.array([1, 2, 3]))
+
+        json_dict = {
+            "name": "Array of shape (3, 1)",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "entries": [[1.0], [2.0], [3.0]],
+        }
+
+        # array to json conversion
+        created_json = arr.to_json()
+        self.assertEqual(created_json, json_dict)
+
+        # json to array conversion
+        self.assertEqual(pybamm.Array._from_json(created_json), arr)
 
 
 if __name__ == "__main__":

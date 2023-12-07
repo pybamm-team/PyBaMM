@@ -267,6 +267,15 @@ class TestParameterValues(TestCase):
         self.assertEqual(processed_a.value, 4)
         self.assertEqual(processed_x, x)
 
+        # process EvaluateAt
+        evaluate_at = pybamm.EvaluateAt(x, aa)
+        processed_evaluate_at = parameter_values.process_symbol(evaluate_at)
+        self.assertIsInstance(processed_evaluate_at, pybamm.EvaluateAt)
+        self.assertEqual(processed_evaluate_at.children[0], x)
+        self.assertEqual(processed_evaluate_at.position, 4)
+        with self.assertRaisesRegex(ValueError, "'position' in 'EvaluateAt'"):
+            parameter_values.process_symbol(pybamm.EvaluateAt(x, x))
+
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         broad = pybamm.PrimaryBroadcast(a, whole_cell)
@@ -559,7 +568,7 @@ class TestParameterValues(TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
         self.assertAlmostEqual(
-            processed_func.evaluate(inputs={"a": 3.01, "b": 4.4})[0][0], 14.82
+            processed_func.evaluate(inputs={"a": 3.01, "b": 4.4}), 14.82
         )
 
         # process differentiated function parameter
@@ -968,9 +977,9 @@ class TestParameterValues(TestCase):
         self.assertIsInstance(model.initial_conditions[var1], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[var1].value, 2)
         # boundary conditions
-        bc_key = list(model.boundary_conditions.keys())[0]
+        bc_key = next(iter(model.boundary_conditions.keys()))
         self.assertIsInstance(bc_key, pybamm.Variable)
-        bc_value = list(model.boundary_conditions.values())[0]
+        bc_value = next(iter(model.boundary_conditions.values()))
         self.assertIsInstance(bc_value["left"][0], pybamm.Scalar)
         self.assertEqual(bc_value["left"][0].value, 3)
         self.assertIsInstance(bc_value["right"][0], pybamm.Scalar)

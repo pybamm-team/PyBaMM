@@ -36,7 +36,7 @@ dependencies = [
     "scipy>=1.9.3",
     "casadi>=3.6.3",
     "xarray>=2022.6.0",
-    "anytree>=2.12.0",
+    "anytree>=2.8.0",
 ]
 
 [project.urls]
@@ -72,7 +72,7 @@ examples = [
 ]
 # Plotting functionality
 plot = [
-    "imageio>=2.32.0",
+    "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
     # outside of plot() methods.
@@ -102,6 +102,8 @@ dev = [
     "ruff",
     # For running testing sessions
     "nox",
+    # For coverage
+    "coverage[toml]",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
@@ -172,3 +174,76 @@ pybamm = [
 
 [tool.setuptools.packages.find]
 include = ["pybamm", "pybamm.*"]
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+extend-exclude = ["__init__.py"]
+
+[tool.ruff.lint]
+extend-select = [
+  # "B",           # flake8-bugbear
+  # "I",           # isort
+  # "ARG",         # flake8-unused-arguments
+  # "C4",          # flake8-comprehensions
+  # "ICN",         # flake8-import-conventions
+  # "ISC",         # flake8-implicit-str-concat
+  # "PGH",         # pygrep-hooks
+  # "PIE",         # flake8-pie
+  # "PL",          # pylint
+  # "PT",          # flake8-pytest-style
+  # "PTH",         # flake8-use-pathlib
+  # "RET",         # flake8-return
+  "RUF",         # Ruff-specific
+  # "SIM",         # flake8-simplify
+  # "T20",         # flake8-print
+  # "UP",          # pyupgrade
+  "YTT",         # flake8-2020
+]
+ignore = [
+  "E741",        # Ambiguous variable name
+  "RUF012",      # Mutable class attributes should be annotated with `typing.ClassVar`
+  "SIM108",      # Use ternary operator
+  "ARG001",      # Unused function argument:
+  "ARG002",      # Unused method arguments
+  "PLR2004",     # Magic value used in comparison
+  "PLR0915",     # Too many statements
+  "PLR0913",     # Too many arguments
+  "PLR0912",     # Too many branches
+  "RET504",      # Unnecessary assignment
+  "RET505",      # Unnecessary `else`
+  "RET506",      # Unnecessary `elif`
+  "B018",        # Found useless expression
+  "RUF002",      # Docstring contains ambiguous
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["T20"]
+"docs/*" = ["T20"]
+"examples/*" = ["T20"]
+"**.ipynb" = ["E402", "E703"]
+
+# NOTE: currently used only for notebook tests with the nbmake plugin.
+[tool.pytest.ini_options]
+# Use pytest-xdist to run tests in parallel by default, exit with
+# error if not installed
+required_plugins = [
+  "pytest-xdist",
+]
+addopts = [
+  "-nauto",
+  "-v",
+]
+testpaths = [
+  "docs/source/examples/",
+]
+console_output_style = "progress"
+
+# Logging configuration
+log_cli = "true"
+log_cli_level = "INFO"
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.coverage.run]
+source = ["pybamm"]
+concurrency = ["multiprocessing"]
