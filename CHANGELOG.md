@@ -3,7 +3,7 @@
 ## Features
 
 - Serialisation added so models can be written to/read from JSON ([#3397](https://github.com/pybamm-team/PyBaMM/pull/3397))
-- Created "parameter_info" method and modified "print_parameter_info" to extract all parameters and print out required ones. ([#3361](https://github.com/pybamm-team/PyBaMM/issues/3361))
+- Added a `get_parameter_info` method for models and modified "print_parameter_info" functionality to extract all parameters and their type in a tabular and readable format ([#3361](https://github.com/pybamm-team/PyBaMM/pull/3584))
 ## Bug fixes
 
 - Fixed a bug where simulations using the CasADi-based solvers would fail randomly with the half-cell model ([#3494](https://github.com/pybamm-team/PyBaMM/pull/3494))
