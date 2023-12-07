@@ -216,13 +216,13 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes
 ========================================================================= ================== ================== =======================
-`JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.8              jax                For JAX solvers
-`jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
+`JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.20             jax                For the JAX solver
+`jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
 ========================================================================= ================== ================== =======================
 
 .. _install.odes_dependencies:
