@@ -80,7 +80,7 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
+      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, 3.10, and 3.12; and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: python -m nox -s unit
 
@@ -89,7 +89,7 @@ jobs:
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.12
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v3.1.4
 
       - name: Run integration tests
