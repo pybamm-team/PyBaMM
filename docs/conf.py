@@ -76,6 +76,7 @@ napoleon_google_docstring = False
 
 doctest_global_setup = """
 from docs import *
+import pybamm
 """
 
 # Add any paths that contain templates here, relative to this directory.
