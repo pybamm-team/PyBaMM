@@ -16,20 +16,18 @@ class ParameterSets(Mapping):
 
     .. doctest::
 
-        >>> import pybamm
         >>> list(pybamm.parameter_sets)
-        ['Ai2020', 'Chen2020', ...]
+        2020', 'Chen2020', ...]
 
     Get the docstring for a parameter set:
 
     .. doctest::
 
-        >>> import pybamm
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
-        <BLANKLINE>
-        Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
-        :footcite:t:`rieger2016new` and references therein.
-        ...
+        NKLINE>
+        meters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
+        tcite:t:`rieger2016new` and references therein.
+
 
     See also: :ref:`adding-parameter-sets`
 
@@ -44,7 +42,7 @@ class ParameterSets(Mapping):
     @staticmethod
     def get_entries(group_name):
         # Wrapper for the importlib version logic
-        if sys.version_info < (3, 10): # pragma: no cover
+        if sys.version_info < (3, 10):  # pragma: no cover
             return importlib.metadata.entry_points()[group_name]
         else:
             return importlib.metadata.entry_points(group=group_name)

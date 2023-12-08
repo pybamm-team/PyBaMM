@@ -423,7 +423,12 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name, *tuple([child.id for child in self.children]), *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
+            (
+                self.__class__,
+                self.name,
+                *tuple([child.id for child in self.children]),
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     @property
@@ -532,8 +537,7 @@ class Symbol:
         Examples
         --------
 
-        >>> import pybamm
-        >>> a = pybamm.Symbol('a')
+            >>> a = pybamm.Symbol('a')
         >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
         ...     print(node.name)
