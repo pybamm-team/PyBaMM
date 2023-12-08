@@ -2,6 +2,7 @@
 # Base model class
 #
 import numbers
+import warnings
 from collections import OrderedDict
 
 import copy
@@ -9,6 +10,7 @@ import casadi
 import numpy as np
 
 import pybamm
+from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.util import have_optional_dependency
 
 
@@ -122,6 +124,61 @@ class BaseModel:
         # Model is not initially discretised
         self.is_discretised = False
         self.y_slices = None
+
+    @classmethod
+    def deserialise(cls, properties: dict):
+        """
+        Create a model instance from a serialised object.
+        """
+        instance = cls.__new__(cls)
+
+        # append the model name with _saved to differentiate
+        instance.__init__(name=properties["name"] + "_saved")
+
+        instance.options = properties["options"]
+
+        # Initialise model with stored variables that have already been discretised
+        instance._concatenated_rhs = properties["concatenated_rhs"]
+        instance._concatenated_algebraic = properties["concatenated_algebraic"]
+        instance._concatenated_initial_conditions = properties[
+            "concatenated_initial_conditions"
+        ]
+
+        instance.len_rhs = instance.concatenated_rhs.size
+        instance.len_alg = instance.concatenated_algebraic.size
+        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
+
+        instance.bounds = properties["bounds"]
+        instance.events = properties["events"]
+        instance.mass_matrix = properties["mass_matrix"]
+        instance.mass_matrix_inv = properties["mass_matrix_inv"]
+
+        # add optional properties not required for model to solve
+        if properties["variables"]:
+            instance._variables = pybamm.FuzzyDict(properties["variables"])
+
+            # assign meshes to each variable
+            for var in instance._variables.values():
+                if var.domain != []:
+                    var.mesh = properties["mesh"][var.domain]
+                else:
+                    var.mesh = None
+
+                if var.domains["secondary"] != []:
+                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
+                else:
+                    var.secondary_mesh = None
+
+            if properties["geometry"]:
+                instance._geometry = pybamm.Geometry(properties["geometry"])
+        else:
+            # Delete the default variables which have not been discretised
+            instance._variables = pybamm.FuzzyDict({})
+
+        # Model has already been discretised
+        instance.is_discretised = True
+
+        return instance
 
     @property
     def name(self):
@@ -365,6 +422,7 @@ class BaseModel:
         return self._input_parameters
 
     def print_parameter_info(self):
+        """Returns parameters used in the model"""
         self._parameter_info = ""
         parameters = self._find_symbols(pybamm.Parameter)
         for param in parameters:
@@ -1139,6 +1197,43 @@ class BaseModel:
 
         return disc_symbol
 
+    def save_model(self, filename=None, mesh=None, variables=None):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        filename: str, optional
+        The desired name of the JSON file. If no name is provided, one will be created
+        based on the model name, and the current datetime.
+        """
+        if variables and not mesh:
+            warnings.warn(
+                """
+                Serialisation: Variables are being saved without a mesh.
+                Plotting may not be available.
+                """,
+                pybamm.ModelWarning,
+            )
+
+        Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
+
+
+def load_model(filename, battery_model: BaseModel = None):
+    """
+    Load in a saved model from a JSON file
+
+    Parameters
+    ----------
+    filename: str
+        Path to the JSON file containing the serialised model file
+    battery_model: :class: pybamm.BaseBatteryModel, optional
+            PyBaMM model to be created (e.g. pybamm.lithium_ion.SPM), which will
+            override any model names within the file. If None, the function will look
+            for the saved object path, present if the original model came from PyBaMM.
+    """
+    return Serialise().load_model(filename, battery_model)
+
 
 # helper functions for finding symbols
 def find_symbol_in_tree(tree, name):
@@ -1205,7 +1300,7 @@ class EquationDict(dict):
             for var, eqn in equations.items():
                 if eqn.has_symbol_of_classes(pybamm.Variable):
                     unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-                    variable_in_equation = list(unpacker.unpack_symbol(eqn))[0]
+                    variable_in_equation = next(iter(unpacker.unpack_symbol(eqn)))
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
                         "but '{!r}' found in initial conditions for '{}'".format(

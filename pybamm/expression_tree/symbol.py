@@ -232,6 +232,26 @@ class Symbol:
             ):
                 self.test_shape()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """
+        Reconstructs a Symbol instance during deserialisation of a JSON file.
+
+        Parameters
+        ----------
+        snippet: dict
+            Contains the information needed to reconstruct a specific instance.
+            At minimum, should contain "name", "children" and "domains".
+        """
+
+        instance = cls.__new__(cls)
+
+        instance.__init__(
+            snippet["name"], children=snippet["children"], domains=snippet["domains"]
+        )
+
+        return instance
+
     @property
     def children(self):
         """
@@ -403,9 +423,12 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+            (
+                self.__class__,
+                self.name,
+                *tuple([child.id for child in self.children]),
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     @property
@@ -514,7 +537,6 @@ class Symbol:
         Examples
         --------
 
-        >>> import pybamm
         >>> a = pybamm.Symbol('a')
         >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
@@ -988,3 +1010,16 @@ class Symbol:
     def to_equation(self):
         sympy = have_optional_dependency("sympy")
         return sympy.Symbol(str(self.name))
+
+    def to_json(self):
+        """
+        Method to serialise a Symbol object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+        }
+
+        return json_dict

@@ -9,6 +9,7 @@ import unittest
 
 import casadi
 import numpy as np
+from numpy import testing
 
 import pybamm
 
@@ -694,7 +695,7 @@ class TestBaseModel(TestCase):
         new_model_disc = model_disc.set_initial_conditions_from(sol, inplace=False)
 
         # Test new initial conditions
-        var_scalar = list(new_model_disc.initial_conditions.keys())[0]
+        var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
         self.assertIsInstance(
             new_model_disc.initial_conditions[var_scalar], pybamm.Vector
         )
@@ -826,7 +827,7 @@ class TestBaseModel(TestCase):
         new_model_disc = model_disc.set_initial_conditions_from(sol_dict, inplace=False)
 
         # Test new initial conditions
-        var_scalar = list(new_model_disc.initial_conditions.keys())[0]
+        var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
         self.assertIsInstance(
             new_model_disc.initial_conditions[var_scalar], pybamm.Vector
         )
@@ -981,6 +982,83 @@ class TestBaseModel(TestCase):
             model.timescale = 1
         with self.assertRaises(NotImplementedError):
             model.length_scales = 1
+
+    def test_save_load_model(self):
+        # Set up model
+        model = pybamm.BaseModel()
+        var_scalar = pybamm.Variable("var_scalar")
+        var_1D = pybamm.Variable("var_1D", domain="negative electrode")
+        var_2D = pybamm.Variable(
+            "var_2D",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
+        var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
+        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
+        model.rhs = {var_scalar: -var_scalar, var_1D: -var_1D}
+        model.algebraic = {var_2D: -var_2D, var_concat: -var_concat}
+        model.initial_conditions = {var_scalar: 1, var_1D: 1, var_2D: 1, var_concat: 1}
+        model.variables = {
+            "var_scalar": var_scalar,
+            "var_1D": var_1D,
+            "var_2D": var_2D,
+            "var_concat_neg": var_concat_neg,
+            "var_concat_sep": var_concat_sep,
+            "var_concat": var_concat,
+        }
+
+        # Discretise
+        geometry = {
+            "negative electrode": {"x_n": {"min": 0, "max": 1}},
+            "separator": {"x_s": {"min": 1, "max": 2}},
+            "negative particle": {"r_n": {"min": 0, "max": 1}},
+        }
+        submeshes = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+        }
+        var_pts = {"x_n": 10, "x_s": 10, "r_n": 5}
+        mesh = pybamm.Mesh(geometry, submeshes, var_pts)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume(),
+            "separator": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        model_disc = disc.process_model(model, inplace=False)
+        t = np.linspace(0, 1)
+        y = np.tile(3 * t, (1 + 30 + 50, 1))
+
+        # Find baseline solution
+        solution = pybamm.Solution(t, y, model_disc, {})
+
+        # save model
+        model_disc.save_model(filename="test_base_model")
+
+        # load without variables
+        new_model = pybamm.load_model("test_base_model.json")
+
+        new_solution = pybamm.Solution(t, y, new_model, {})
+
+        # model solutions match
+        testing.assert_array_equal(solution.all_ys, new_solution.all_ys)
+
+        # raises warning if variables are saved without mesh
+        with self.assertWarns(pybamm.ModelWarning):
+            model_disc.save_model(
+                filename="test_base_model", variables=model_disc.variables
+            )
+
+        model_disc.save_model(
+            filename="test_base_model", variables=model_disc.variables, mesh=mesh
+        )
+
+        # load with variables & mesh
+        new_model = pybamm.load_model("test_base_model.json")
+
+        os.remove("test_base_model.json")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@
 #
 import argparse
 import importlib.util
+import importlib.metadata
 import numbers
 import os
 import pathlib
@@ -18,11 +19,10 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import importlib.metadata
-
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM
+# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
+# in the extras dependencies in pyproject.toml, and therefore must be kept in sync.
 JAX_VERSION = "0.4"
 JAXLIB_VERSION = "0.4"
 

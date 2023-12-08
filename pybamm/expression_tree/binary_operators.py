@@ -68,6 +68,23 @@ class BinaryOperator(pybamm.Symbol):
         self.left = self.children[0]
         self.right = self.children[1]
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising; discretisation has
+        already occured so pre-processing of binaries is not necessary."""
+
+        instance = cls.__new__(cls)
+
+        super(BinaryOperator, instance).__init__(
+            snippet["name"],
+            children=[snippet["children"][0], snippet["children"][1]],
+            domains=snippet["domains"],
+        )
+        instance.left = instance.children[0]
+        instance.right = instance.children[1]
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         # Possibly add brackets for clarity
@@ -155,6 +172,15 @@ class BinaryOperator(pybamm.Symbol):
             eq1 = child1.to_equation()
             eq2 = child2.to_equation()
             return self._sympy_operator(eq1, eq2)
+
+    def to_json(self):
+        """
+        Method to serialise a BinaryOperator object into JSON.
+        """
+
+        json_dict = {"name": self.name, "id": self.id, "domains": self.domains}
+
+        return json_dict
 
 
 class Power(BinaryOperator):
