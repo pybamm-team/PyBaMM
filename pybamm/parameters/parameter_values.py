@@ -24,7 +24,6 @@ class ParameterValues:
 
     Examples
     --------
-    >>> import pybamm
     >>> values = {"some parameter": 1, "another parameter": 2}
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
