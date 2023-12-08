@@ -3,7 +3,7 @@ requires = [
     "setuptools>=64",
     "wheel",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.0; platform_system!='Windows'",
+    "casadi>=3.6.3; platform_system!='Windows'",
     "cmake; platform_system!='Windows'",
     ]
 build-backend = "setuptools.build_meta"
@@ -110,13 +110,13 @@ dev = [
     "nbmake",
 ]
 # Reading CSV files
-pandas =  [
+pandas = [
     "pandas>=1.5.0",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
-    "jax>=0.4,<=0.5",
-    "jaxlib>=0.4,<=0.5",
+    "jax==0.4.20; python_version >= '3.9'",
+    "jaxlib==0.4.20; python_version >= '3.9'",
 ]
 # For the scikits.odes solver
 odes = [
