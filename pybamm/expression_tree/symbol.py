@@ -537,7 +537,7 @@ class Symbol:
         Examples
         --------
 
-            >>> a = pybamm.Symbol('a')
+        >>> a = pybamm.Symbol('a')
         >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
         ...     print(node.name)
