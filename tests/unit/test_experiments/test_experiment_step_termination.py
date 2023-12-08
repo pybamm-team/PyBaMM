@@ -1,5 +1,5 @@
 #
-# Test the experiment steps
+# Test the experiment step termination classes
 #
 import pybamm
 import unittest
