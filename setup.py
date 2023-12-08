@@ -6,14 +6,9 @@ from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
 
-try:
-    from setuptools import setup, Extension
-    from setuptools.command.install import install
-    from setuptools.command.build_ext import build_ext
-except ImportError:
-    from distutils.core import setup
-    from distutils.command.install import install
-    from distutils.command.build_ext import build_ext
+from setuptools import setup, Extension
+from setuptools.command.install import install
+from setuptools.command.build_ext import build_ext
 
 
 default_lib_dir = (
@@ -71,9 +66,9 @@ class CMakeBuild(build_ext):
             self.sundials_root = os.path.join(default_lib_dir)
 
     def get_build_directory(self):
-        # distutils outputs object files in directory self.build_temp
+        # setuptools outputs object files in directory self.build_temp
         # (typically build/temp.*). This is our CMake build directory.
-        # On Windows, distutils is too smart and appends "Release" or
+        # On Windows, setuptools is too smart and appends "Release" or
         # "Debug" to self.build_temp. So in this case we want the
         # build directory to be the parent directory.
         if system() == "Windows":
