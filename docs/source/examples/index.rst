@@ -89,12 +89,12 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     :caption: Simulations and Experiments
     :glob:
 
-    notebooks/simulation_and_experiments/callbacks.ipynb
-    notebooks/simulation_and_experiments/custom-experiments.ipynb
-    notebooks/simulation_and_experiments/experiments-start-time.ipynb
-    notebooks/simulation_and_experiments/rpt-experiment.ipynb
-    notebooks/simulation_and_experiments/simulating-long-experiments.ipynb
-    notebooks/simulation_and_experiments/simulation-class.ipynb
+    notebooks/simulations_and_experiments/callbacks.ipynb
+    notebooks/simulations_and_experiments/custom-experiments.ipynb
+    notebooks/simulations_and_experiments/experiments-start-time.ipynb
+    notebooks/simulations_and_experiments/rpt-experiment.ipynb
+    notebooks/simulations_and_experiments/simulating-long-experiments.ipynb
+    notebooks/simulations_and_experiments/simulation-class.ipynb
 
 .. nbgallery::
     :caption: Plotting
