@@ -192,16 +192,6 @@ class Simulation:
                 op_conds.type = "current"
                 op_conds.value = op_conds.value * capacity
 
-            # Update terminations
-            termination = op_conds.termination
-            for term in termination:
-                term_type = term["type"]
-                if term_type == "C-rate":
-                    # Change type to current
-                    term["type"] = "current"
-                    # Scale C-rate with capacity to obtain current
-                    term["value"] = term["value"] * capacity
-
             # Add time to the experiment times
             dt = op_conds.duration
             if dt is None:
@@ -294,46 +284,9 @@ class Simulation:
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
-            if term["type"] == "current":
-                new_model.events.append(
-                    pybamm.Event(
-                        "Current cut-off [A] [experiment]",
-                        abs(new_model.variables["Current [A]"]) - term["value"],
-                    )
-                )
-
-            # add voltage events to the model
-            if term["type"] == "voltage":
-                # The voltage event should be positive at the start of charge/
-                # discharge. We use the sign of the current or power input to
-                # figure out whether the voltage event is greater than the starting
-                # voltage (charge) or less (discharge) and set the sign of the
-                # event accordingly
-                if isinstance(op.value, pybamm.Interpolant) or isinstance(
-                    op.value, pybamm.Multiplication
-                ):
-                    inpt = {"start time": 0}
-                    init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
-                    sign = np.sign(init_curr)
-                else:
-                    sign = np.sign(op.value)
-                if sign > 0:
-                    name = "Discharge"
-                else:
-                    name = "Charge"
-                if sign != 0:
-                    # Event should be positive at initial conditions for both
-                    # charge and discharge
-                    new_model.events.append(
-                        pybamm.Event(
-                            f"{name} voltage cut-off [V] [experiment]",
-                            sign
-                            * (
-                                new_model.variables["Battery voltage [V]"]
-                                - term["value"]
-                            ),
-                        )
-                    )
+            event = term.get_event(new_model.variables, op.value)
+            if event is not None:
+                new_model.events.append(event)
 
         # Keep the min and max voltages as safeguards but add some tolerances
         # so that they are not triggered before the voltage limits in the

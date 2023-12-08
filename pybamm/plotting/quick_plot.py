@@ -486,14 +486,14 @@ class QuickPlot(object):
         self.plots = {}
         self.time_lines = {}
         self.colorbars = {}
-        self.axes = []
+        self.axes = QuickPlotAxes()
 
         # initialize empty handles, to be created only if the appropriate plots are made
         solution_handles = []
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             ax = self.fig.add_subplot(self.gridspec[k])
-            self.axes.append(ax)
+            self.axes.add(key, ax)
             x_min, x_max, y_min, y_max = self.axis_limits[key]
             ax.set_xlim(x_min, x_max)
             if y_min is not None and y_max is not None:
@@ -803,3 +803,40 @@ class QuickPlot(object):
         # remove the generated images
         for image in images:
             os.remove(image)
+
+
+class QuickPlotAxes:
+    """
+    Class to store axes for the QuickPlot
+    """
+
+    def __init__(self):
+        self._by_variable = {}
+        self._axes = []
+
+    def add(self, keys, axis):
+        """
+        Add axis
+
+        Parameters
+        ----------
+        keys : iter
+            Iterable of keys of variables being plotted on the axis
+        axis : matplotlib Axis object
+            The axis object
+        """
+        self._axes.append(axis)
+        for k in keys:
+            self._by_variable[k] = axis
+
+    def __getitem__(self, index):
+        """
+        Get axis by index
+        """
+        return self._axes[index]
+
+    def by_variable(self, key):
+        """
+        Get axis by variable name
+        """
+        return self._by_variable[key]

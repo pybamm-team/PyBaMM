@@ -2,10 +2,12 @@
 
 ## Features
 
+- Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
+- Added custom experiment terminations ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
+- Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
 - Added a new unary operator, `EvaluateAt`, that evaluates a spatial variable at a given position ([#3573](https://github.com/pybamm-team/PyBaMM/pull/3573))
 - Added a method, `insert_reference_electrode`, to `pybamm.lithium_ion.BaseModel` that insert a reference electrode to measure the electrolyte potential at a given position in space and adds new variables that mimic a 3E cell setup. ([#3573](https://github.com/pybamm-team/PyBaMM/pull/3573))
 - Serialisation added so models can be written to/read from JSON ([#3397](https://github.com/pybamm-team/PyBaMM/pull/3397))
-- Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
 
 ## Bug fixes
 

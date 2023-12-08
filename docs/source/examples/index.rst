@@ -86,6 +86,17 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/parameterization/parameterization.ipynb
 
 .. nbgallery::
+    :caption: Simulations and Experiments
+    :glob:
+
+    notebooks/simulations_and_experiments/callbacks.ipynb
+    notebooks/simulations_and_experiments/custom-experiments.ipynb
+    notebooks/simulations_and_experiments/experiments-start-time.ipynb
+    notebooks/simulations_and_experiments/rpt-experiment.ipynb
+    notebooks/simulations_and_experiments/simulating-long-experiments.ipynb
+    notebooks/simulations_and_experiments/simulation-class.ipynb
+
+.. nbgallery::
     :caption: Plotting
     :glob:
 
@@ -111,11 +122,6 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     :glob:
 
     notebooks/batch_study.ipynb
-    notebooks/callbacks.ipynb
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
-    notebooks/rpt-experiment.ipynb
-    notebooks/simulating-long-experiments.ipynb
-    notebooks/simulation-class.ipynb
     notebooks/solution-data-and-processed-variables.ipynb
-    notebooks/experiments-start-time.ipynb
