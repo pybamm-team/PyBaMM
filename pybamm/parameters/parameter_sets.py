@@ -17,17 +17,17 @@ class ParameterSets(Mapping):
     .. doctest::
 
         >>> list(pybamm.parameter_sets)
-        2020', 'Chen2020', ...]
+        ['Ai2020', 'Chen2020', ...]
 
     Get the docstring for a parameter set:
 
     .. doctest::
 
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
-        NKLINE>
-        meters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
-        tcite:t:`rieger2016new` and references therein.
-
+        <BLANKLINE>
+        Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
+        :footcite:t:`rieger2016new` and references therein.
+        ...
 
     See also: :ref:`adding-parameter-sets`
 
