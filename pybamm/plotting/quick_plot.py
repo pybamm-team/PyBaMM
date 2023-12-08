@@ -810,8 +810,9 @@ class QuickPlotAxes:
     Class to store axes for the QuickPlot
     """
 
-    _by_variable = {}
-    _axes = []
+    def __init__(self):
+        self._by_variable = {}
+        self._axes = []
 
     def add(self, keys, axis):
         """
