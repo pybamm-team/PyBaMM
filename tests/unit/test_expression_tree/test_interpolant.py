@@ -131,7 +131,7 @@ class TestInterpolant(TestCase):
 
         value = interp.evaluate(y=np.array([[1, 1, x[1]], [5, 4, y[1]]]))
         np.testing.assert_array_equal(
-            value, np.array([[f(1, 5)], [f(1, 4)], [f(x[1], y[1])]])
+            value, np.array([[f(1, 5), f(1, 4), f(x[1], y[1])]])
         )
 
         # check also works for cubic
@@ -192,6 +192,17 @@ class TestInterpolant(TestCase):
         evaluated_children = [1, 4]
         value = interp._function_evaluate(evaluated_children)
 
+        # Test that the interpolant shape is the same as the input data shape
+        interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="linear")
+
+        evaluated_children = [np.array([[1, 1]]), np.array([[7, 7]])]
+        value = interp._function_evaluate(evaluated_children)
+        self.assertEqual(value.shape, evaluated_children[0].shape)
+
+        evaluated_children = [np.array([[1, 1], [1, 1]]), np.array([[7, 7], [7, 7]])]
+        value = interp._function_evaluate(evaluated_children)
+        self.assertEqual(value.shape, evaluated_children[0].shape)
+
     def test_interpolation_3_x(self):
         def f(x, y, z):
             return 2 * x**3 + 3 * y**2 - z
@@ -216,7 +227,7 @@ class TestInterpolant(TestCase):
 
         value = interp.evaluate(y=np.array([[1, 1, 1], [5, 4, 4], [8, 7, 7]]))
         np.testing.assert_array_equal(
-            value, np.array([[f(1, 5, 8)], [f(1, 4, 7)], [f(1, 4, 7)]])
+            value, np.array([[f(1, 5, 8), f(1, 4, 7), f(1, 4, 7)]])
         )
 
         # check also works for cubic
