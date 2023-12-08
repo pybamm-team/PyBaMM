@@ -1166,7 +1166,13 @@ class Simulation:
         return self._solution
 
     def save(self, filename):
-        """Save simulation using pickle"""
+        """Save simulation using pickle module.
+
+        Parameters
+        ----------
+        filename : str
+            The file extension can be arbitrary, but it is common to use ".pkl" or ".pickle"
+        """
         if self._model.convert_to_format == "python":
             # We currently cannot save models in the 'python' format
             raise NotImplementedError(
