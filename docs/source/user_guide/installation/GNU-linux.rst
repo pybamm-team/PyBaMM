@@ -105,7 +105,15 @@ Optional - scikits.odes solver
 Users can install `scikits.odes <https://github.com/bmcage/odes>`__ in
 order to use the wrapped SUNDIALS ODE and DAE
 `solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__.
-Currently, only GNU/Linux and macOS are supported.
+
+.. note::
+
+   Currently, only GNU/Linux and macOS are supported.
+
+.. note::
+
+   The ``scikits.odes`` solver is not supported on Python 3.12 yet, please refer to https://github.com/bmcage/odes/issues/162.
+   There is support for Python 3.8, 3.9, 3.10, and 3.11.
 
 .. tab:: GNU/Linux
 
