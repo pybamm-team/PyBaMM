@@ -168,6 +168,7 @@ def set_dev(session):
                 "-m",
                 "pip",
                 "install",
+                "-e",
                 ".[all,dev]",
                 external=True,
             )
@@ -177,6 +178,7 @@ def set_dev(session):
                 "-m",
                 "pip",
                 "install",
+                "-e",
                 ".[all,dev,jax]",
                 external=True,
             )
