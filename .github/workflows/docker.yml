@@ -48,8 +48,7 @@ jobs:
             echo "tag=all" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and push Docker image to Docker Hub (no solvers)
-        if: matrix.build-args == 'No solvers'
+      - name: Build and push Docker image to Docker Hub (${{ matrix.build-args }})
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -57,30 +56,6 @@ jobs:
           tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
           push: true
           platforms: linux/amd64, linux/arm64
-
-      - name: Build and push Docker image to Docker Hub (with ODES and IDAKLU solvers)
-        if: matrix.build-args == 'ODES' || matrix.build-args == 'IDAKLU'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
-          push: true
-          build-args: ${{ matrix.build-args }}=true
-          platforms: linux/amd64, linux/arm64
-
-      - name: Build and push Docker image to Docker Hub (with ALL and JAX solvers)
-        if: matrix.build-args == 'ALL' || matrix.build-args == 'JAX'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: scripts/Dockerfile
-          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
-          push: true
-          build-args: ${{ matrix.build-args }}=true
-          # exclude arm64 for JAX and ALL builds for now, see
-          # https://github.com/google/jax/issues/13608
-          platforms: linux/amd64
 
       - name: List built image(s)
         run: docker images

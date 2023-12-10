@@ -66,6 +66,21 @@ installed automatically when you install PyBaMM using ``pip``.
 For an introduction to virtual environments, see
 (https://realpython.com/python-virtual-environments-a-primer/).
 
+Optional - JaxSolver
+~~~~~~~~~~~~~~~~~~~~
+
+Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
+
+.. note::
+
+   The Jax solver is not supported on Python 3.8. It is supported on Python 3.9, 3.10, and 3.11.
+
+.. code:: bash
+
+	  pip install "pybamm[jax]"
+
+The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
+
 Uninstall PyBaMM
 ----------------
 
