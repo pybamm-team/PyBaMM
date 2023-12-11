@@ -178,7 +178,7 @@ def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-            session.install("-e", ".[all,jax,odes]", silent=False)
+        session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all]", silent=False)

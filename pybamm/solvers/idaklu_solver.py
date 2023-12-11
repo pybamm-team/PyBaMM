@@ -22,7 +22,7 @@ def have_idaklu():
     return idaklu_spec is not None
 
 
-class IDAKLUSolver(pybamm.BaseSolver):
+class IDAKLUSolver(pybamm.BaseSolver, pybamm.IDAKLUJax):
     """
     Solve a discretised model, using sundials with the KLU sparse linear solver.
 
@@ -281,10 +281,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Convert derivative functions for sensitivities
                 if (len(inputs) > 0) and (model.calculate_sensitivities):
                     self.dvar_dy_idaklu_fcns.append(
-                        idaklu.generate_function(self.computed_dvar_dy_fcns[key].serialize())
+                        idaklu.generate_function(
+                            self.computed_dvar_dy_fcns[key].serialize()
+                        )
                     )
                     self.dvar_dp_idaklu_fcns.append(
-                        idaklu.generate_function(self.computed_dvar_dp_fcns[key].serialize())
+                        idaklu.generate_function(
+                            self.computed_dvar_dp_fcns[key].serialize()
+                        )
                     )
 
         else:

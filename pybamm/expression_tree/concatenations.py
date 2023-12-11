@@ -191,7 +191,7 @@ class NumpyConcatenation(Concatenation):
             *children,
             name="numpy_concatenation",
             check_domain=False,
-            concat_fun=np.concatenate
+            concat_fun=np.concatenate,
         )
 
     @classmethod
@@ -201,7 +201,7 @@ class NumpyConcatenation(Concatenation):
             *snippet["children"],
             name="numpy_concatenation",
             domains=snippet["domains"],
-            concat_fun=np.concatenate
+            concat_fun=np.concatenate,
         )
 
         return instance
@@ -280,7 +280,7 @@ class DomainConcatenation(Concatenation):
         instance = super()._from_json(
             *snippet["children"],
             name="domain_concatenation",
-            domains=snippet["domains"]
+            domains=snippet["domains"],
         )
 
         def repack_defaultDict(slices):
@@ -415,7 +415,7 @@ class SparseStack(Concatenation):
             *children,
             name="sparse_stack",
             check_domain=False,
-            concat_fun=concatenation_function
+            concat_fun=concatenation_function,
         )
 
     def _concatenation_new_copy(self, children):

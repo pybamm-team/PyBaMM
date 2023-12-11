@@ -22,6 +22,7 @@ default_lib_dir = (
 
 # ---------- set environment variables for vcpkg on Windows ----------------------------
 
+
 def set_vcpkg_environment_variables():
     if not os.getenv("VCPKG_ROOT_DIR"):
         raise EnvironmentError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
@@ -39,10 +40,16 @@ def set_vcpkg_environment_variables():
         os.getenv("VCPKG_FEATURE_FLAGS"),
     )
 
+
 # ---------- CMakeBuild class (custom build_ext for IDAKLU target) ---------------------
 
+
 class CMakeBuild(build_ext):
-    user_options = [*build_ext.user_options, ("suitesparse-root=", None, "suitesparse source location"), ("sundials-root=", None, "sundials source location")]
+    user_options = [
+        *build_ext.user_options,
+        ("suitesparse-root=", None, "suitesparse source location"),
+        ("sundials-root=", None, "sundials source location"),
+    ]
 
     def initialize_options(self):
         build_ext.initialize_options(self)
@@ -115,7 +122,7 @@ class CMakeBuild(build_ext):
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             os.remove(os.path.join(build_dir, "CMakeError.log"))
 
-# ---------- configuration for vcpkg on Windows ----------------------------------------
+        # ---------- configuration for vcpkg on Windows ----------------------------------------
 
         build_env = os.environ
         if os.getenv("PYBAMM_USE_VCPKG"):
@@ -128,13 +135,16 @@ class CMakeBuild(build_ext):
             build_env["vcpkg_default_triplet"] = vcpkg_default_triplet
             build_env["vcpkg_feature_flags"] = vcpkg_feature_flags
 
-# ---------- Run CMake and build IDAKLU module -----------------------------------------
+        # ---------- Run CMake and build IDAKLU module -----------------------------------------
 
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
         print("-" * 10, "Running CMake for IDAKLU solver", "-" * 40)
         subprocess.run(
-            ["cmake", cmake_list_dir, *cmake_args], cwd=build_dir, env=build_env
-        , check=True)
+            ["cmake", cmake_list_dir, *cmake_args],
+            cwd=build_dir,
+            env=build_env,
+            check=True,
+        )
 
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             msg = (
@@ -198,7 +208,11 @@ logger.info("Starting PyBaMM setup")
 class CustomInstall(install):
     """A custom install command to add 2 build options"""
 
-    user_options = [*install.user_options, ("suitesparse-root=", None, "suitesparse source location"), ("sundials-root=", None, "sundials source location")]
+    user_options = [
+        *install.user_options,
+        ("suitesparse-root=", None, "suitesparse source location"),
+        ("sundials-root=", None, "sundials source location"),
+    ]
 
     def initialize_options(self):
         install.initialize_options(self)
@@ -222,7 +236,11 @@ class CustomInstall(install):
 class bdist_wheel(orig.bdist_wheel):
     """A custom install command to add 2 build options"""
 
-    user_options = [*orig.bdist_wheel.user_options, ("suitesparse-root=", None, "suitesparse source location"), ("sundials-root=", None, "sundials source location")]
+    user_options = [
+        *orig.bdist_wheel.user_options,
+        ("suitesparse-root=", None, "suitesparse source location"),
+        ("sundials-root=", None, "sundials source location"),
+    ]
 
     def initialize_options(self):
         orig.bdist_wheel.initialize_options(self)
@@ -274,6 +292,7 @@ def compile_KLU():
         logger.info(msg)
 
     return CMakeFound and PyBind11Found
+
 
 idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",

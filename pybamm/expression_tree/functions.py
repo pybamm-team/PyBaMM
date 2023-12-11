@@ -10,6 +10,7 @@ from typing import Callable
 import pybamm
 from pybamm.util import have_optional_dependency
 
+
 class Function(pybamm.Symbol):
     """
     A node in the expression tree representing an arbitrary function.

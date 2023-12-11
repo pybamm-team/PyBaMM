@@ -883,7 +883,12 @@ if pybamm.have_jax():
             """
             return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
 
-        aug_mass = (mass, mass, onp.array(1.0), *arg_dicts_to_values(tree_map(arg_to_identity, args)))
+        aug_mass = (
+            mass,
+            mass,
+            onp.array(1.0),
+            *arg_dicts_to_values(tree_map(arg_to_identity, args)),
+        )
 
         def scan_fun(carry, i):
             y_bar, t0_bar, args_bar = carry

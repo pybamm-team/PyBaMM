@@ -12,7 +12,7 @@ def plot_voltage_components(
     show_legend=True,
     split_by_electrode=False,
     testing=False,
-    **kwargs_fill
+    **kwargs_fill,
 ):
     """
     Generate a plot showing the component overpotentials that make up the voltage
@@ -105,14 +105,14 @@ def plot_voltage_components(
             initial_ocv - delta_ocp_n,
             initial_ocv,
             **kwargs_fill,
-            label="Negative open-circuit potential"
+            label="Negative open-circuit potential",
         )
         ax.fill_between(
             time,
             initial_ocv - delta_ocp_n + delta_ocp_p,
             initial_ocv - delta_ocp_n,
             **kwargs_fill,
-            label="Positive open-circuit potential"
+            label="Positive open-circuit potential",
         )
         ocv = initial_ocv - delta_ocp_n + delta_ocp_p
     top = ocv
