@@ -423,9 +423,9 @@ class BaseModel:
 
     def get_parameter_info(self):
         """
-        Extract the parameter information and returns it as a dictionary.
+        Extracts the parameter information and returns it as a dictionary.
         To get a list of all parameter-like objects without extra information,
-        use `model.parameters`.
+        use :py:attr:`model.parameters`.
         """
         parameter_info = {}
         parameters = self._find_symbols(pybamm.Parameter)
@@ -448,7 +448,7 @@ class BaseModel:
         return parameter_info
 
     def print_parameter_info(self):
-        """Print parameter information in a formatted table from the list of tuples"""
+        """Print parameter information in a formatted table from a dictionary of parameters"""
         info = self.get_parameter_info()
         max_param_name_length = 0
         max_param_type_length = 0
