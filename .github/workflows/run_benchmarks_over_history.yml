@@ -48,6 +48,7 @@ jobs:
           path: results
 
   publish-results:
+    if: github.repository_owner == 'pybamm-team'
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
