@@ -140,7 +140,7 @@ jobs:
           if-no-files-found: error
 
   publish_pypi:
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && github.repository_owner == 'pybamm-team'
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
