@@ -108,13 +108,15 @@ KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
 cmake_args = [
     "-DENABLE_LAPACK=ON",
     "-DSUNDIALS_INDEX_SIZE=32",
-    "-DEXAMPLES_ENABLE:BOOL=OFF",
+    "-DEXAMPLES_ENABLE_C=OFF",
+    "-DEXAMPLES_ENABLE_CXX=OFF",
+    "-DEXAMPLES_INSTALL=OFF",
     "-DENABLE_KLU=ON",
     "-DENABLE_OPENMP=ON",
     "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
     "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
-    # on mac use fixed paths rather than rpath
+    # on macOS use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
 ]
 
@@ -125,9 +127,7 @@ if platform.system() == "Darwin":
         LDFLAGS = "-L/opt/homebrew/opt/libomp/lib"
         CPPFLAGS = "-I/opt/homebrew/opt/libomp/include"
         OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
-        OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
         OpenMP_C_LIB_NAMES = "omp"
-        OpenMP_CXX_LIB_NAMES = "omp"
         OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
         OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
     elif platform.processor() == "i386":
@@ -137,7 +137,6 @@ if platform.system() == "Darwin":
         OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
         OpenMP_C_LIB_NAMES = "omp"
         OpenMP_CXX_LIB_NAMES = "omp"
-        OpenMP_libomp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
         OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
 
     cmake_args += [
