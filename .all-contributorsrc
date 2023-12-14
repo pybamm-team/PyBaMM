@@ -755,6 +755,15 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "jlauber18",
+      "name": "Jonathan Lauber",
+      "avatar_url": "https://avatars.githubusercontent.com/u/28939653?v=4",
+      "profile": "https://github.com/jlauber18",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
