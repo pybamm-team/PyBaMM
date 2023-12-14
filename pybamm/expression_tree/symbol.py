@@ -3,14 +3,12 @@
 #
 import numbers
 
-import anytree
 import numpy as np
-import sympy
-from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
 
 import pybamm
+from pybamm.util import have_optional_dependency
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
@@ -234,6 +232,26 @@ class Symbol:
             ):
                 self.test_shape()
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """
+        Reconstructs a Symbol instance during deserialisation of a JSON file.
+
+        Parameters
+        ----------
+        snippet: dict
+            Contains the information needed to reconstruct a specific instance.
+            At minimum, should contain "name", "children" and "domains".
+        """
+
+        instance = cls.__new__(cls)
+
+        instance.__init__(
+            snippet["name"], children=snippet["children"], domains=snippet["domains"]
+        )
+
+        return instance
+
     @property
     def children(self):
         """
@@ -405,9 +423,12 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+            (
+                self.__class__,
+                self.name,
+                *tuple([child.id for child in self.children]),
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     @property
@@ -442,6 +463,7 @@ class Symbol:
         """
         Print out a visual representation of the tree (this node and its children)
         """
+        anytree = have_optional_dependency("anytree")
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
                 print("{}{} = {}".format(pre, node.name, node.value))
@@ -460,6 +482,7 @@ class Symbol:
             filename to output, must end in ".png"
         """
 
+        DotExporter = have_optional_dependency("anytree.exporter", "DotExporter")
         # check that filename ends in .png.
         if filename[-4:] != ".png":
             raise ValueError("filename should end in .png")
@@ -479,6 +502,7 @@ class Symbol:
         Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
         """
+        anytree = have_optional_dependency("anytree")
         name = symbol.name
         if name == "div":
             name = "&nabla;&sdot;"
@@ -513,7 +537,6 @@ class Symbol:
         Examples
         --------
 
-        >>> import pybamm
         >>> a = pybamm.Symbol('a')
         >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
@@ -522,6 +545,7 @@ class Symbol:
         a
         b
         """
+        anytree = have_optional_dependency("anytree")
         return anytree.PreOrderIter(self)
 
     def __str__(self):
@@ -984,4 +1008,18 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
+        sympy = have_optional_dependency("sympy")
         return sympy.Symbol(str(self.name))
+
+    def to_json(self):
+        """
+        Method to serialise a Symbol object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+        }
+
+        return json_dict

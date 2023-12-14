@@ -5,9 +5,9 @@ from tests import TestCase
 import unittest
 
 import numpy as np
-import sympy
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class TestVariable(TestCase):
@@ -55,6 +55,7 @@ class TestVariable(TestCase):
             pybamm.Variable("var", bounds=(1, 1))
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         # Test print_name
         func = pybamm.Variable("test_string")
         func.print_name = "test"
@@ -62,6 +63,11 @@ class TestVariable(TestCase):
 
         # Test name
         self.assertEqual(pybamm.Variable("name").to_equation(), sympy.Symbol("name"))
+
+    def test_to_json_error(self):
+        func = pybamm.Variable("test_string")
+        with self.assertRaises(NotImplementedError):
+            func.to_json()
 
 
 class TestVariableDot(TestCase):

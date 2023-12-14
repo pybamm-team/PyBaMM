@@ -61,7 +61,7 @@ class JaxSolver(pybamm.BaseSolver):
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
             )
 
         # note: bdf solver itself calculates consistent initial conditions so can set
@@ -215,7 +215,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         y = []
         platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if platform.startswith("cpu"):
+        if len(inputs) <= 1 or platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():
                 async def solve_model_async(inputs_v):

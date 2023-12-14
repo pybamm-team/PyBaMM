@@ -2,12 +2,13 @@
 # Tests for the Concatenation class and subclasses
 #
 import unittest
+import unittest.mock as mock
 from tests import TestCase
 
 import numpy as np
-import sympy
 
 import pybamm
+from pybamm.util import have_optional_dependency
 from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
@@ -370,6 +371,7 @@ class TestConcatenations(TestCase):
         )
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
         func_symbol = sympy.Symbol(r"\begin{cases}a\\b\end{cases}")
@@ -381,6 +383,79 @@ class TestConcatenations(TestCase):
 
         # Test concat_sym
         self.assertEqual(pybamm.Concatenation(a, b).to_equation(), func_symbol)
+
+    def test_to_from_json(self):
+        # test DomainConcatenation
+        mesh = get_mesh_for_testing()
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
+        conc = pybamm.DomainConcatenation([a, b], mesh)
+
+        json_dict = {
+            "name": "domain_concatenation",
+            "id": mock.ANY,
+            "domains": {
+                "primary": ["negative electrode", "separator", "positive electrode"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "slices": {
+                "negative electrode": [{"start": 0, "stop": 40, "step": None}],
+                "separator": [{"start": 40, "stop": 65, "step": None}],
+                "positive electrode": [{"start": 65, "stop": 100, "step": None}],
+            },
+            "size": 100,
+            "children_slices": [
+                {"negative electrode": [{"start": 0, "stop": 40, "step": None}]},
+                {
+                    "separator": [{"start": 0, "stop": 25, "step": None}],
+                    "positive electrode": [{"start": 25, "stop": 60, "step": None}],
+                },
+            ],
+            "secondary_dimensions_npts": 1,
+        }
+
+        self.assertEqual(
+            conc.to_json(),
+            json_dict,
+        )
+
+        # manually add children
+        json_dict["children"] = [a, b]
+
+        # check symbol re-creation
+        self.assertEqual(pybamm.pybamm.DomainConcatenation._from_json(json_dict), conc)
+
+        # -----------------------------
+        # test NumpyConcatenation -----
+        # -----------------------------
+
+        y = np.linspace(0, 1, 15)[:, np.newaxis]
+        a_np = pybamm.Vector(y[:5])
+        b_np = pybamm.Vector(y[5:9])
+        c_np = pybamm.Vector(y[9:])
+        conc_np = pybamm.NumpyConcatenation(a_np, b_np, c_np)
+
+        np_json = {
+            "name": "numpy_concatenation",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+        }
+
+        # test to_json
+        self.assertEqual(conc_np.to_json(), np_json)
+
+        # add children
+        np_json["children"] = [a_np, b_np, c_np]
+
+        # test _from_json
+        self.assertEqual(pybamm.NumpyConcatenation._from_json(np_json), conc_np)
 
 
 if __name__ == "__main__":

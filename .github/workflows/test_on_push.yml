@@ -21,13 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
       - name: Check style
         run: |
           python -m pip install pre-commit
+          git add .
           pre-commit run ruff
 
   run_unit_tests:
@@ -50,7 +51,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -73,10 +74,11 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew update
-          brew install graphviz openblas
+          brew install graphviz openblas libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -84,20 +86,17 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
@@ -107,14 +106,14 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s pybamm-requires
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        if: matrix.os != 'windows-latest'
+        run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: pipx run nox -s unit
+        run: python -m nox -s unit
 
   # Runs only on Ubuntu with Python 3.11
   check_coverage:
@@ -130,7 +129,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -144,16 +143,13 @@ jobs:
 
       - name: Set up Python 3.11
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -166,13 +162,13 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: pipx run nox -s pybamm-requires
+        run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
-        run: pipx run nox -s coverage
+        run: python -m nox -s coverage
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
@@ -193,7 +189,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -216,10 +212,11 @@ jobs:
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew update
-          brew install graphviz openblas
+          brew install graphviz openblas libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -227,20 +224,17 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
@@ -250,14 +244,14 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s pybamm-requires
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        if: matrix.os != 'windows-latest'
+        run: python -m nox -s pybamm-requires
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: pipx run nox -s integration
+        run: python -m nox -s integration
 
 # Runs only on Ubuntu with Python 3.11. Skips IDAKLU module compilation
 # for speedups, which is already tested in other jobs.
@@ -274,7 +268,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -288,22 +282,19 @@ jobs:
 
       - name: Set up Python 3.11
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        run: pipx run nox -s doctests
+        run: python -m nox -s doctests
 
       - name: Check if the documentation can be built for GNU/Linux with Python 3.11
-        run: pipx run nox -s docs
+        run: python -m nox -s docs
 
   # Runs only on Ubuntu with Python 3.11
   run_example_tests:
@@ -319,7 +310,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -333,16 +324,13 @@ jobs:
 
       - name: Set up Python 3.11
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -355,13 +343,13 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: pipx run nox -s pybamm-requires
+        run: python -m nox -s pybamm-requires
 
-      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
-        run: pipx run nox -s examples
+      - name: Run example notebooks tests for GNU/Linux with Python 3.11
+        run: python -m nox -s examples
 
   # Runs only on Ubuntu with Python 3.11
   run_scripts_tests:
@@ -377,7 +365,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
@@ -391,16 +379,13 @@ jobs:
 
       - name: Set up Python 3.11
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v3
@@ -413,10 +398,10 @@ jobs:
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
             ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: pipx run nox -s pybamm-requires
+        run: python -m nox -s pybamm-requires
 
-      - name: Install dev dependencies and run example scripts tests for GNU/Linux with Python 3.11
-        run: pipx run nox -s scripts
+      - name: Run example scripts tests for GNU/Linux with Python 3.11
+        run: python -m nox -s scripts
