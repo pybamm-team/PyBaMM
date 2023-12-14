@@ -8,8 +8,8 @@ import sys
 import numpy as np
 from typing import Optional, TYPE_CHECKING, Literal
 
-# if TYPE_CHECKING:
-#     from pybamm import FunctionParameter
+if TYPE_CHECKING:
+    import sympy
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -121,20 +121,24 @@ class FunctionParameter(pybamm.Symbol):
             self.print_name = print_name
         else:
             frame = sys._getframe().f_back
-            print_name = frame.f_code.co_name
-            if print_name.startswith("_"):
-                self.print_name = None
-            else:
-                try:
-                    parent_param = frame.f_locals["self"]
-                except KeyError:
-                    parent_param = None
-                if hasattr(parent_param, "domain") and parent_param.domain is not None:
-                    # add "_n" or "_s" or "_p" if this comes from a Parameter class with
-                    # a domain
-                    d = parent_param.domain[0]
-                    print_name += f"_{d}"
-                self.print_name = print_name
+            if frame is not None:
+                print_name = frame.f_code.co_name
+                if print_name.startswith("_"):
+                    self.print_name = None
+                else:
+                    try:
+                        parent_param = frame.f_locals["self"]
+                    except KeyError:
+                        parent_param = None
+                    if (
+                        hasattr(parent_param, "domain")
+                        and parent_param.domain is not None
+                    ):
+                        # add "_n" or "_s" or "_p" if this comes from a Parameter class with
+                        # a domain
+                        d = parent_param.domain[0]
+                        print_name += f"_{d}"
+                    self.print_name = print_name
 
     def print_input_names(self):
         if self._input_names:
@@ -168,7 +172,13 @@ class FunctionParameter(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id`"""
         self._id = hash(
-            (self.__class__, self.name, self.diff_variable, *tuple([child.id for child in self.children]), *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.diff_variable,
+                *tuple([child.id for child in self.children]),
+                *tuple(self.domain),
+            )
         )
 
     def diff(self, variable: pybamm.Symbol) -> pybamm.FunctionParameter:

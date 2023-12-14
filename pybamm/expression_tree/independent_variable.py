@@ -74,11 +74,7 @@ class Time(IndependentVariable):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
-        instance.__init__()
-
-        return instance
+        return cls()
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

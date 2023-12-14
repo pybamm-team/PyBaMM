@@ -15,7 +15,6 @@ from typing import (
     Sequence,
     no_type_check,
 )
-from typing_extensions import TypeVar
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -29,8 +28,7 @@ if TYPE_CHECKING:
         Division,
     )
     import casadi
-
-    S = TypeVar("S", bound=pybamm.Symbol)
+    from hints import S
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
@@ -164,7 +162,7 @@ def is_matrix_minus_one(expr: Symbol):
     return is_matrix_x(expr, -1)
 
 
-def simplify_if_constant(symbol: Union[S, float]) -> S:
+def simplify_if_constant(symbol: S) -> S:
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -930,7 +928,9 @@ class Symbol:
         # Default behaviour: return False
         return False
 
-    def has_symbol_of_classes(self, symbol_classes: Union[Symbol, tuple[type[Symbol]]]):
+    def has_symbol_of_classes(
+        self, symbol_classes: Union[type[Symbol], tuple[type[Symbol]]]
+    ):
         """
         Returns True if equation has a term of the class(es) `symbol_class`.
 

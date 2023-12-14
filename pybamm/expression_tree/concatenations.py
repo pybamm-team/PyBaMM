@@ -7,14 +7,12 @@ from collections import defaultdict
 
 import numpy as np
 from scipy.sparse import issparse, vstack
-from typing import Optional, Sequence, Type, Union, TYPE_CHECKING
-from typing_extensions import TypeGuard, TypeVar
+from typing import Optional, Sequence, Type, Union
+from typing_extensions import TypeGuard
+from pybamm.hints import S
 
 import pybamm
 from pybamm.util import have_optional_dependency
-
-if TYPE_CHECKING:
-    S = TypeVar("S", bound=pybamm.Symbol)  # type: ignore[no-redef]
 
 
 class Concatenation(pybamm.Symbol):
@@ -29,7 +27,7 @@ class Concatenation(pybamm.Symbol):
 
     def __init__(
         self,
-        *children: Sequence[pybamm.Symbol],
+        *children: pybamm.Symbol,
         name: Optional[str] = None,
         check_domain=True,
         concat_fun=None,
@@ -200,7 +198,7 @@ class NumpyConcatenation(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children: Sequence[pybamm.Symbol]):
+    def __init__(self, *children: pybamm.Symbol):
         children = list(children)
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
@@ -571,17 +569,18 @@ def simplified_domain_concatenation(
     # Simplify Concatenation of StateVectors to a single StateVector
     # The sum of the evalation arrays of the StateVectors must be exactly 1
     if all(isinstance(child, pybamm.StateVector) for child in children):
-        longest_eval_array = len(children[-1]._evaluation_array)
+        sv_children: list[pybamm.StateVector] = children  # type narrow for mypy
+        longest_eval_array = len(sv_children[-1]._evaluation_array)
         eval_arrays = {}
-        for child in children:
+        for child in sv_children:
             eval_arrays[child] = np.concatenate(
                 [
                     child.evaluation_array,
                     np.zeros(longest_eval_array - len(child.evaluation_array)),
                 ]
             )
-        first_start = children[0].y_slices[0].start
-        last_stop = children[-1].y_slices[-1].stop
+        first_start = sv_children[0].y_slices[0].start
+        last_stop = sv_children[-1].y_slices[-1].stop
         if all(
             sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
         ):

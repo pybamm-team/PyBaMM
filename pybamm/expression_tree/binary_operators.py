@@ -1482,7 +1482,7 @@ def sigmoid(
 
 def source(
     left: Union[numbers.Number, pybamm.Symbol],
-    right: Union[numbers.Number, pybamm.Symbol],
+    right: pybamm.Symbol,
     boundary=False,
 ):
     """

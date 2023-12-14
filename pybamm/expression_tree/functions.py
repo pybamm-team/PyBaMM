@@ -235,22 +235,6 @@ class Function(pybamm.Symbol):
         )
 
 
-def simplified_function(func_class: Type[SF], child: pybamm.Symbol):
-    """
-    Simplifications implemented before applying the function.
-    Currently only implemented for one-child functions.
-    """
-    if isinstance(child, pybamm.Broadcast):
-        # Move the function inside the broadcast
-        # Apply recursively
-        func_child_not_broad = pybamm.simplify_if_constant(
-            simplified_function(func_class, child.orphans[0])
-        )
-        return child._unary_new_copy(func_child_not_broad)
-    else:
-        return pybamm.simplify_if_constant(func_class(child))
-
-
 class SpecificFunction(Function):
     """
     Parent class for the specific functions, which implement their own `diff`
@@ -314,6 +298,22 @@ class SpecificFunction(Function):
 
 
 SF = TypeVar("SF", bound=SpecificFunction)
+
+
+def simplified_function(func_class: Type[SF], child: pybamm.Symbol):
+    """
+    Simplifications implemented before applying the function.
+    Currently only implemented for one-child functions.
+    """
+    if isinstance(child, pybamm.Broadcast):
+        # Move the function inside the broadcast
+        # Apply recursively
+        func_child_not_broad = pybamm.simplify_if_constant(
+            simplified_function(func_class, child.orphans[0])
+        )
+        return child._unary_new_copy(func_child_not_broad)
+    else:
+        return pybamm.simplify_if_constant(func_class(child))
 
 
 class Arcsinh(SpecificFunction):

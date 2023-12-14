@@ -1018,11 +1018,7 @@ class ExplicitTimeIntegral(UnaryOperator):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
-        instance.__init__(snippet["children"][0], snippet["initial_condition"])
-
-        return instance
+        return cls(snippet["children"][0], snippet["initial_condition"])
 
     def _unary_new_copy(self, child):
         return self.__class__(child, self.initial_condition)

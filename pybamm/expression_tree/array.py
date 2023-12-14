@@ -4,10 +4,13 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from typing import Union, Tuple, Optional, Any
+from typing import Union, Tuple, Optional, Any, TYPE_CHECKING
 
 import pybamm
 from pybamm.util import have_optional_dependency
+
+if TYPE_CHECKING:
+    import sympy
 
 
 class Array(pybamm.Symbol):

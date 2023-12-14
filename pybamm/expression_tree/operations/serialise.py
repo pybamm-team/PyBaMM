@@ -114,7 +114,7 @@ class Serialise:
             "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
-            "bounds": [bound.tolist() for bound in model.bounds],
+            "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
             "concatenated_rhs": self._SymbolEncoder().default(model._concatenated_rhs),
             "concatenated_algebraic": self._SymbolEncoder().default(
                 model._concatenated_algebraic

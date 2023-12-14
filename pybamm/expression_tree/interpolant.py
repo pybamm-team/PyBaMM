@@ -43,7 +43,7 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: Sequence[np.ndarray],
+        x: Union[np.ndarray, Sequence[np.ndarray]],
         y: np.ndarray,
         children: Union[Sequence[pybamm.Symbol], pybamm.Time],
         name: Optional[str] = None,
@@ -103,7 +103,7 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x = [x]
+                x: list[np.ndarray] = [x]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
