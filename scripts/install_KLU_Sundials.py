@@ -82,11 +82,21 @@ install_cmd = [
     "install",
 ]
 print("-" * 10, "Building SuiteSparse", "-" * 40)
-# # Set CMAKE_OPTIONS as environment variables to pass to GNU Make
+# Set CMAKE_OPTIONS as environment variables to pass to the GNU Make command
 env = os.environ.copy()
-env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir} -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE"
 for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     build_dir = os.path.join(suitesparse_src, libdir)
+    # We want to ensure that libsuitesparseconfig.dylib is not repeated in
+    # multiple paths at the time of wheel repair. Therefore, it should not be
+    # built with an RPATH since it is copied to the install prefix.
+    if libdir == "SuiteSparse_config":
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
+    else:
+    # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
+    # INSTALL RPATH in order to ensure that the dynamic libraries are found
+    # at runtime just once. Otherwise delocate complains about multiple
+    # references to the SuiteSparse_config dynamic libaries.
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
     subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 
