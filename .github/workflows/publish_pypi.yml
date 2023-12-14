@@ -1,13 +1,15 @@
 name: Build and publish package to PyPI
-
 on:
   release:
     types: [published]
+  schedule:
+    # Run at 10 am UTC on day-of-month 1 and 15.
+    - cron: "0 10 1,15 * *"
   workflow_dispatch:
     inputs:
       target:
         description: 'Deployment target. Can be "pypi" or "testpypi"'
-        default: "pypi"
+        default: "testpypi"
       debug_enabled:
         type: boolean
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
@@ -20,18 +22,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.12.3
-
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      # remove when a new vcpkg version is released
-      - name: Install the latest commit of vcpkg on windows
+      - name: Install vcpkg on Windows
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
@@ -39,7 +37,7 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
-      - name: Cache packages installed through vcpkg on windows
+      - name: Cache packages installed through vcpkg on Windows
         uses: actions/cache@v3
         env:
           cache-name: vckpg_binary_cache
@@ -52,14 +50,13 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Build 64 bits wheels on Windows
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
+      - name: Build 64-bit wheels on Windows
+        run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: 'PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=C:\vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR="Visual Studio 17 2022" CMAKE_GENERATOR_PLATFORM=x64'
           CIBW_ARCHS: "AMD64"
 
-      - name: Upload windows wheels
+      - name: Upload Windows wheels
         uses: actions/upload-artifact@v3
         with:
           name: windows_wheels
@@ -75,46 +72,38 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.12.3
-
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.10.4 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      - name: Install SUNDIALS on macOS
+      # sometimes gfortran cannot be found, so reinstall gcc just to be sure
+      - name: Install SuiteSparse and SUNDIALS on macOS
         if: matrix.os == 'macos-latest'
         run: |
-          # https://github.com/actions/virtual-environments/issues/1280
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
-          brew update
+          brew install graphviz openblas libomp
           brew reinstall gcc
-          brew install libomp
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
-      - name: Build wheels on Linux and MacOS
-        run: python -m cibuildwheel --output-dir wheelhouse
+      - name: Build wheels on ${{ matrix.os }}
+        run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
-            bash build_manylinux_wheels/install_sundials.sh 6.0.3 6.5.0
-
-          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
+            bash scripts/install_sundials.sh 6.0.3 6.5.0
+          CIBW_BEFORE_BUILD_LINUX: >
+            python -m pip install cmake casadi numpy
+          # override; point to casadi install path so that it can be found by the repair command
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:$(python -c 'import casadi; print(casadi.__path__[0])')" auditwheel repair -w {dest_dir} {wheel}
           CIBW_BEFORE_BUILD_MACOS: >
             python -m pip
             install cmake casadi numpy &&
-            python scripts/fix_casadi_rpath_mac.py &&
-            scripts/fix_suitesparse_rpath_mac.sh
-          # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
-          # it for mac
+            python scripts/fix_casadi_rpath_mac.py && scripts/fix_suitesparse_rpath_mac.sh
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             delocate-listdeps {wheel} &&
             delocate-wheel -v -w {dest_dir} {wheel}
@@ -128,22 +117,22 @@ jobs:
           if-no-files-found: error
 
   build_sdist:
-    name: Build sdist
+    name: Build SDist
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
       - name: Install dependencies
-        run: pip install --upgrade pip setuptools wheel build
+        run: pip install --upgrade pip setuptools wheel
 
-      - name: Build sdist
-        run: python -m build --sdist
+      - name: Build SDist
+        run: pipx run build --sdist
 
-      - name: Upload sdist
+      - name: Upload SDist
         uses: actions/upload-artifact@v3
         with:
           name: sdist
@@ -151,6 +140,7 @@ jobs:
           if-no-files-found: error
 
   publish_pypi:
+    if: github.event_name != 'schedule' && github.repository_owner == 'pybamm-team'
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
@@ -164,9 +154,7 @@ jobs:
           mv windows_wheels/* wheels/* sdist/* files/
 
       - name: Publish on PyPI
-        if: |
-          github.event.inputs.target == 'pypi' ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
@@ -181,3 +169,17 @@ jobs:
           password: ${{ secrets.TESTPYPI_TOKEN }}
           packages-dir: files/
           repository-url: https://test.pypi.org/legacy/
+
+  open_failure_issue:
+    needs: [build_windows_wheels, build_wheels, build_sdist]
+    name: Open an issue if build fails
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: JasonEtco/create-an-issue@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      with:
+        filename: .github/wheel_failure.md

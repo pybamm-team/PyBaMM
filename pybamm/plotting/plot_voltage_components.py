@@ -3,6 +3,8 @@
 #
 import numpy as np
 
+from pybamm.util import have_optional_dependency
+
 
 def plot_voltage_components(
     solution,
@@ -32,7 +34,7 @@ def plot_voltage_components(
         Keyword arguments, passed to ax.fill_between
 
     """
-    import matplotlib.pyplot as plt
+    plt = have_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
     kwargs_fill = {"alpha": 0.6, **kwargs_fill}

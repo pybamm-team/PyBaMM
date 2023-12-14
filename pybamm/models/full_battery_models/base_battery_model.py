@@ -6,6 +6,8 @@ import pybamm
 from functools import cached_property
 import warnings
 
+from pybamm.expression_tree.operations.serialise import Serialise
+
 
 def represents_positive_integer(s):
     """Check if a string represents a positive integer"""
@@ -551,7 +553,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             )
         if options["working electrode"] == "negative":
             raise pybamm.OptionError(
-                "The 'negative' working elecrtrode option has been removed because "
+                "The 'negative' working electrode option has been removed because "
                 "the voltage - and therefore the energy stored - would be negative."
                 "Use the 'positive' working electrode option instead and set whatever "
                 "would normally be the negative electrode as the positive electrode."
@@ -603,7 +605,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
-        if options["particle phases"] != "1":
+        if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
@@ -822,6 +824,60 @@ class BaseBatteryModel(pybamm.BaseModel):
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
+
+    @classmethod
+    def deserialise(cls, properties: dict):
+        """
+        Create a model instance from a serialised object.
+        """
+        instance = cls.__new__(cls)
+
+        # append the model name with _saved to differentiate
+        instance.__init__(
+            options=properties["options"], name=properties["name"] + "_saved"
+        )
+
+        # Initialise model with stored variables that have already been discretised
+        instance._concatenated_rhs = properties["concatenated_rhs"]
+        instance._concatenated_algebraic = properties["concatenated_algebraic"]
+        instance._concatenated_initial_conditions = properties[
+            "concatenated_initial_conditions"
+        ]
+
+        instance.len_rhs = instance.concatenated_rhs.size
+        instance.len_alg = instance.concatenated_algebraic.size
+        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
+
+        instance.bounds = properties["bounds"]
+        instance.events = properties["events"]
+        instance.mass_matrix = properties["mass_matrix"]
+        instance.mass_matrix_inv = properties["mass_matrix_inv"]
+
+        # add optional properties not required for model to solve
+        if properties["variables"]:
+            instance._variables = pybamm.FuzzyDict(properties["variables"])
+
+            # assign meshes to each variable
+            for var in instance._variables.values():
+                if var.domain != []:
+                    var.mesh = properties["mesh"][var.domain]
+                else:
+                    var.mesh = None
+
+                if var.domains["secondary"] != []:
+                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
+                else:
+                    var.secondary_mesh = None
+
+            instance._geometry = pybamm.Geometry(properties["geometry"])
+        else:
+            # Delete the default variables which have not been discretised
+            instance._variables = pybamm.FuzzyDict({})
+
+        # Model has already been discretised
+        instance.is_discretised = True
+
+        return instance
 
     @property
     def default_geometry(self):
@@ -1409,3 +1465,20 @@ class BaseBatteryModel(pybamm.BaseModel):
         This function is overriden by the base battery models
         """
         pass
+
+    def save_model(self, filename=None, mesh=None, variables=None):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        filename: str, optional
+        The desired name of the JSON file. If no name is provided, one will be created
+        based on the model name, and the current datetime.
+        """
+        if variables and not mesh:
+            raise ValueError(
+                "Serialisation: Please provide the mesh if variables are required"
+            )
+
+        Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)

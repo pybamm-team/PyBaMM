@@ -52,7 +52,6 @@ class Thevenin(pybamm.BaseModel):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.equivalent_circuit.Thevenin()
     >>> model.name
     'Thevenin Equivalent Circuit Model'

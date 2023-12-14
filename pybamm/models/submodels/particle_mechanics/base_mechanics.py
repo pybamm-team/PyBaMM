@@ -43,12 +43,19 @@ class BaseMechanics(pybamm.BaseSubModel):
         sto_rav = variables[f"R-averaged {domain} particle concentration"]
         c_s_surf = variables[f"{Domain} particle surface concentration [mol.m-3]"]
         T_xav = variables["X-averaged cell temperature [K]"]
+        phase_name = self.phase_name
+        T = pybamm.PrimaryBroadcast(
+            variables[f"{Domain} electrode temperature [K]"],
+            [f"{domain} {phase_name}particle"],
+        )
         eps_s = variables[f"{Domain} electrode active material volume fraction"]
 
-        Omega = domain_param.Omega
+        #use a tangential approximation for omega
+        sto = variables[f"{Domain} particle concentration"]
+        Omega = pybamm.r_average(domain_param.Omega(sto, T))
         R0 = domain_param.prim.R
         c_0 = domain_param.c_0
-        E0 = domain_param.E
+        E0 = pybamm.r_average(domain_param.E(sto, T))
         nu = domain_param.nu
         L0 = domain_param.L
         sto_init = pybamm.r_average(domain_param.prim.c_init / domain_param.prim.c_max)

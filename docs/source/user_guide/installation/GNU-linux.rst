@@ -6,7 +6,7 @@ GNU-Linux & MacOS
 Prerequisites
 -------------
 
-To use and/or contribute to PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
+To use PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
 .. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
 
@@ -133,7 +133,10 @@ Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
-Currently, only GNU/Linux and macOS are supported.
+
+.. note::
+
+   The Jax solver is not supported on Python 3.8. It is supported on Python 3.9, 3.10, and 3.11.
 
 .. code:: bash
 
