@@ -106,7 +106,7 @@ class ProcessedVariable:
                     else:
                         # Raise error for 3D variable
                         raise NotImplementedError(
-                            f"Shape not recognized for {base_variables[0]} "
+                            f"Shape not recognized for {base_variables[0]}"
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 

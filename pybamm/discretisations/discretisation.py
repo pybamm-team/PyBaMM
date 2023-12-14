@@ -72,7 +72,7 @@ class Discretisation:
     @y_slices.setter
     def y_slices(self, value):
         if not isinstance(value, dict):
-            raise TypeError(f"""y_slices should be dict, not {type(value)}""")
+            raise TypeError(f"y_slices should be dict, not {type(value)}")
 
         self._y_slices = value
 
