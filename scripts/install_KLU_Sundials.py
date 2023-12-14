@@ -70,20 +70,24 @@ download_extract_library(suitesparse_url, download_dir)
 # - BTF
 suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
 suitesparse_src = os.path.join(download_dir, suitesparse_dir)
+# Build with INSTALL_RPATH set to install_dir and set
+# INSTALL_RPATH_USE_LINK_PATH to TRUE to use RPATH when linking
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
 make_cmd = [
     "make",
     "library",
-    'CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX={}"'.format(install_dir),
 ]
 install_cmd = [
     "make",
     "install",
 ]
 print("-" * 10, "Building SuiteSparse", "-" * 40)
+# # Set CMAKE_OPTIONS as environment variables to pass to GNU Make
+env = os.environ.copy()
+env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir} -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE"
 for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     build_dir = os.path.join(suitesparse_src, libdir)
-    subprocess.run(make_cmd, cwd=build_dir, check=True)
+    subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 
 # 2 --- Download SUNDIALS
@@ -140,10 +144,7 @@ if platform.system() == "Darwin":
         "-DLDFLAGS=" + LDFLAGS,
         "-DCPPFLAGS=" + CPPFLAGS,
         "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
-        "-DOpenMP_CXX_FLAGS=" + OpenMP_CXX_FLAGS,
         "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
-        "-DOpenMP_CXX_LIB_NAMES=" + OpenMP_CXX_LIB_NAMES,
-        "-DOpenMP_libomp_LIBRARY=" + OpenMP_libomp_LIBRARY,
         "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
     ]
 
