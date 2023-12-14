@@ -105,16 +105,6 @@ class IDAKLUJax:
         self.jax_output_variables = output_variables
         self.jax_inputs = inputs
 
-        if False:
-            cpu_ops_spec = importlib.util.find_spec("idaklu_jax.cpu_ops")
-            if cpu_ops_spec:
-                cpu_ops = importlib.util.module_from_spec(cpu_ops_spec)
-                loader = cpu_ops_spec.loader
-                loader.exec_module(cpu_ops) if loader else None
-
-            for _name, _value in cpu_ops.registrations().items():
-                xla_client.register_custom_call_target(_name, _value, platform="cpu")
-
         def jaxify_solve(t, invar, *inputs_values):
             logging.info("jaxify_solve: ", type(t))
             # Reconstruct dictionary of inputs
@@ -185,8 +175,16 @@ class IDAKLUJax:
             Takes abstractions of inputs, returned ShapedArray for result of primitive
             """
             logging.info("f_abstract_eval")
-            y_aval = jax.core.ShapedArray((*t.shape, len(output_variables)), t.dtype)
-            return y_aval
+            if f_p.multiple_results:
+                shape = t.shape
+                dtype = jax.dtypes.canonicalize_dtype(t.dtype)
+                return (jax.core.ShapedArray(shape, dtype),) * len(output_variables)
+            else:
+                shape = t.shape
+                dtype = jax.dtypes.canonicalize_dtype(t.dtype)
+                # y_aval = jax.core.ShapedArray(shape, t.dtype)
+                y_aval = jax.core.ShapedArray((*t.shape, len(output_variables)), dtype)
+                return y_aval
 
         def f_batch(args, batch_axes):
             """Batching rule for Primitive
@@ -321,7 +319,6 @@ class IDAKLUJax:
         def f_jvp_abstract_eval(*args):
             logging.info("f_jvp_abstract_eval")
             primals = args[: len(args) // 2]
-            tangents = args[len(args) // 2 :]
             t = primals[0]
             out = jax.core.ShapedArray((*t.shape, len(output_variables)), t.dtype)
             logging.info("<- f_jvp_abstract_eval")
@@ -410,74 +407,68 @@ class IDAKLUJax:
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
-        if False:
+        cpu_ops_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
+        if cpu_ops_spec:
+            cpu_ops = importlib.util.module_from_spec(cpu_ops_spec)
+            loader = cpu_ops_spec.loader
+            loader.exec_module(cpu_ops) if loader else None
 
-            def f_lowering_cpu(ctx, t, *inputs):
-                logging.info("jaxify_lowering")
-                t_aval = ctx.avals_in[0]
-                np_dtype = t_aval.dtype
+        for _name, _value in cpu_ops.registrations().items():
+            xla_client.register_custom_call_target(_name, _value, platform="cpu")
 
-                if np_dtype == np.float64:
-                    op_name = "cpu_kepler_f64"
-                else:
-                    raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+        def f_lowering_cpu(ctx, t, *inputs):
+            t_aval = ctx.avals_in[0]
+            np_dtype = np.dtype(t_aval.dtype)
+            if np_dtype == np.float32:
+                op_name = "cpu_idaklu_f32"
+                op_dtype = mlir.ir.F32Type.get()
+            elif np_dtype == np.float64:
+                op_name = "cpu_idaklu_f64"
+                op_dtype = mlir.ir.F64Type.get()
+            else:
+                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
 
-                dtype = mlir.ir.RankedTensorType(t.type)
-                dims = dtype.shape
-                layout = tuple(range(len(dims) - 1, -1, -1))
-                size = np.prod(dims).astype(np.int64)
-                results = custom_call(
-                    op_name,
-                    result_types=[dtype],  # ...
-                    operands=[
-                        mlir.ir_constant(size),
-                        t,
-                        t,
-                    ],  # TODO: Passing t twice to simulate inputs of equal length
-                    operand_layouts=[(), layout, layout],
-                    result_layouts=[layout],  # ...
-                ).results
-                return results
+            dtype_t = mlir.ir.RankedTensorType(t.type)
+            dims_t = dtype_t.shape
+            layout_t = tuple(range(len(dims_t) - 1, -1, -1))
+            size_t = np.prod(dims_t).astype(np.int64)
 
-            mlir.register_lowering(
-                f_p,
-                f_lowering_cpu,
-                platform="cpu",
+            y_aval = ctx.avals_out[0]
+            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
+            dims_out = dtype_out.shape
+            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+
+            input_aval = ctx.avals_in[1]
+            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
+            dims_input = dtype_input.shape
+            layout_input = tuple(range(len(dims_input) - 1, -1, -1))
+
+            results = custom_call(
+                op_name,
+                # Output types
+                result_types=[dtype_out],
+                # The inputs
+                operands=[
+                    mlir.ir_constant(size_t),  # 'size' argument
+                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    t,
+                    *inputs,
+                ],
+                # Layout specification
+                operand_layouts=[
+                    (),  # 'size'
+                    (),  # 'vars'
+                    layout_t,  # t
+                    *([layout_input] * len(inputs)),  # inputs
+                ],
+                result_layouts=[layout_out],
             )
+            return results.results
 
-            # def f_lowering(ctx, mean_anom, ecc, *, platform="cpu"):
-            def f_vjp_lowering_cpu(ctx, t, *inputs):
-                # TODO: This is just a copy of the f_p lowering function for now
-                logging.info("jaxify_lowering: ")
-                t_aval = ctx.avals_in[0]
-                np_dtype = t_aval.dtype
-
-                if np_dtype == np.float64:
-                    op_name = "cpu_kepler_f64"
-                else:
-                    raise NotImplementedError(f"Unsupported dtype {np_dtype}")
-
-                dtype = mlir.ir.RankedTensorType(t.type)
-                dims = dtype.shape
-                layout = tuple(range(len(dims) - 1, -1, -1))
-                size = np.prod(dims).astype(np.int64)
-                results = custom_call(
-                    op_name,
-                    result_types=[dtype],  # ...
-                    operands=[
-                        mlir.ir_constant(size),
-                        t,
-                        t,
-                    ],  # TODO: Passing t twice to simulate inputs of equal length
-                    operand_layouts=[(), layout, layout],
-                    result_layouts=[layout],  # ...
-                ).results
-                return results
-
-            mlir.register_lowering(
-                f_vjp_p,
-                f_vjp_lowering_cpu,
-                platform="cpu",
-            )
+        mlir.register_lowering(
+            f_p,
+            f_lowering_cpu,
+            platform="cpu",
+        )
 
         return f

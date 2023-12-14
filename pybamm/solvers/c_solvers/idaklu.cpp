@@ -9,6 +9,9 @@
 #include <pybind11/stl_bind.h>
 
 #include <vector>
+#include <iostream>
+
+#include "pybind11_kernel_helpers.h"
 
 Function generate_function(const std::string &data)
 {
@@ -18,6 +21,41 @@ Function generate_function(const std::string &data)
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
+
+template <typename T>
+void cpu_idaklu(void *out_tuple, const void **in) {
+  // Parse the inputs
+  const std::int64_t size = *reinterpret_cast<const std::int64_t *>(in[0]);
+  const std::int64_t vars = *reinterpret_cast<const std::int64_t *>(in[1]);
+  const T *t = reinterpret_cast<const T *>(in[2]);
+  const T *in1 = reinterpret_cast<const T *>(in[3]);
+  const T *in2 = reinterpret_cast<const T *>(in[4]);
+  std::cout << "size: " << size << std::endl;
+  std::cout << "vars: " << vars << std::endl;
+  for (std::int64_t n = 0; n < size; ++n) {
+    std::cout << "t: " << t[n] << std::endl;
+    std::cout << "in1: " << in1[n] << std::endl;
+    std::cout << "in2: " << in2[n] << std::endl;
+  }
+
+  // We have a single output, which is a multi-dimensional array; recurse over the dimensions
+  void *out = reinterpret_cast<T *>(out_tuple);
+  std::int64_t i = 0;
+  for (std::int64_t n = 0; n < vars; ++n) {
+    for (std::int64_t m = 0; m < size; ++m) {
+      reinterpret_cast<T *>(out)[i] = (T) (t[m] + n);
+      std::cout << " out" << reinterpret_cast<T *>(out)[i];
+      ++i;
+    }
+  }
+}
+
+pybind11::dict Registrations() {
+  pybind11::dict dict;
+  dict["cpu_idaklu_f32"] = EncapsulateFunction(cpu_idaklu<float>);
+  dict["cpu_idaklu_f64"] = EncapsulateFunction(cpu_idaklu<double>);
+  return dict;
+}
 
 PYBIND11_MODULE(idaklu, m)
 {
@@ -89,6 +127,8 @@ PYBIND11_MODULE(idaklu, m)
     "Generate a casadi function",
     py::arg("string"),
     py::return_value_policy::take_ownership);
+  
+  m.def("registrations", &Registrations);
 
   py::class_<Function>(m, "Function");
 
