@@ -196,7 +196,7 @@ extend-select = [
   "RUF",         # Ruff-specific
   # "SIM",         # flake8-simplify
   # "T20",         # flake8-print
-  # "UP",          # pyupgrade
+   "UP",          # pyupgrade
   "YTT",         # flake8-2020
 ]
 ignore = [
@@ -214,6 +214,7 @@ ignore = [
   "RET506",      # Unnecessary `elif`
   "B018",        # Found useless expression
   "RUF002",      # Docstring contains ambiguous
+    "UP007",     # For pyupgrade
 ]
 
 [tool.ruff.lint.per-file-ignores]
