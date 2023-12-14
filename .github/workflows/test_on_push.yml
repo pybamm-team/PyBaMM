@@ -104,8 +104,7 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
         if: matrix.os != 'windows-latest'
@@ -160,8 +159,7 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: python -m nox -s pybamm-requires
@@ -242,8 +240,7 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
         if: matrix.os != 'windows-latest'
@@ -341,8 +338,7 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: python -m nox -s pybamm-requires
@@ -396,8 +392,7 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: python -m nox -s pybamm-requires
