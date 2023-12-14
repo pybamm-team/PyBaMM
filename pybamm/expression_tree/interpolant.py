@@ -302,10 +302,11 @@ class Interpolant(pybamm.Function):
                     new_evaluated_children, self.function.grid
                 ):
                     nan_children.append(np.ones_like(child) * interp_range.mean())
-                return self.function(np.transpose(nan_children)) * np.nan
+                nan_eval = self.function(np.transpose(nan_children))
+                return np.reshape(nan_eval, shape)
             else:
                 res = self.function(np.transpose(new_evaluated_children))
-                return res[:, np.newaxis]
+                return np.reshape(res, shape)
 
         else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))

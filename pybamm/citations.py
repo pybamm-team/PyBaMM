@@ -21,7 +21,6 @@ class Citations:
 
     Examples
     --------
-    >>> import pybamm
     >>> pybamm.citations.register("Sulzer2021")
     >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
     >>> pybamm.print_citations("citations.txt")
