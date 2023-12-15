@@ -1,4 +1,4 @@
-from bpx import BPX, Function, InterpolatedTable  # type: ignore
+from bpx import BPX, Function, InterpolatedTable
 import pybamm
 import math
 from dataclasses import dataclass
@@ -261,12 +261,12 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         "Maximum concentration in " + negative_electrode.pre_name.lower() + "[mol.m-3]"
     ]
     k_n_norm = pybamm_dict[
-        negative_electrode.pre_name
-        + "reaction rate constant [mol.m-2.s-1]"
+        negative_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
     ]
     Ea_k_n = pybamm_dict.get(
         negative_electrode.pre_name
-        + "reaction rate constant activation energy [J.mol-1]", 0.0
+        + "reaction rate constant activation energy [J.mol-1]",
+        0.0,
     )
     # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
     # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)
@@ -292,12 +292,12 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         "Maximum concentration in " + positive_electrode.pre_name.lower() + "[mol.m-3]"
     ]
     k_p_norm = pybamm_dict[
-        positive_electrode.pre_name
-        + "reaction rate constant [mol.m-2.s-1]"
+        positive_electrode.pre_name + "reaction rate constant [mol.m-2.s-1]"
     ]
     Ea_k_p = pybamm_dict.get(
         positive_electrode.pre_name
-        + "reaction rate constant activation energy [J.mol-1]", 0.0
+        + "reaction rate constant activation energy [J.mol-1]",
+        0.0,
     )
     # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))*sinh(...),
     # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh(...)

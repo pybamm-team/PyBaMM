@@ -10,7 +10,7 @@ from pybamm.util import root_dir
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
-    import wget  # type: ignore
+    import wget
 
     NO_WGET = False
 except ModuleNotFoundError:
@@ -108,7 +108,6 @@ def update_LD_LIBRARY_PATH(install_dir):
 
 
 def main(arguments=None):
-
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     logger = logging.getLogger("scikits.odes setup")
 
