@@ -87,11 +87,9 @@ class Function(pybamm.Symbol):
             # remove None entries
             partial_derivatives = [x for x in partial_derivatives if x is not None]
 
-            derivative: pybamm.Symbol = sum(
-                partial_derivatives
-            )  # type:ignore[assignment]
+            derivative = sum(partial_derivatives)  # type: ignore[arg-type]
             if derivative == 0:
-                derivative = pybamm.Scalar(0)
+                derivative = pybamm.Scalar(0)  # type: ignore[assignment]
 
             return derivative
 

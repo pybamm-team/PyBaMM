@@ -469,7 +469,7 @@ class FullBroadcast(Broadcast):
     ):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
-            child: pybamm.Scalar = pybamm.Scalar(child)
+            child: pybamm.Scalar = pybamm.Scalar(child)  # type: ignore[no-redef]
 
         if isinstance(auxiliary_domains, str):
             auxiliary_domains = {"secondary": auxiliary_domains}

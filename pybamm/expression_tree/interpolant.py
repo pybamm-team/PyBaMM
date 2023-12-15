@@ -103,7 +103,7 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x: list[np.ndarray] = [x]
+                x: list[np.ndarray] = [x]  # type: ignore[no-redef]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
@@ -131,7 +131,7 @@ class Interpolant(pybamm.Function):
                 if extrapolate is False:
                     fill_value = np.nan
                 elif extrapolate is True:
-                    fill_value = "extrapolate"  # ignore: assignment
+                    fill_value = "extrapolate"  # type: ignore[assignment]
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y.T,

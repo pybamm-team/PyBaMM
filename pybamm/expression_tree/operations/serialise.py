@@ -48,7 +48,7 @@ class Serialise:
     class _MeshEncoder(json.JSONEncoder):
         """Converts PyBaMM meshes into a JSON-serialisable format"""
 
-        def default(self, node: dict):
+        def default(self, node: pybamm.Mesh):
             node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
             if isinstance(node, pybamm.Mesh):
                 node_dict.update(node.to_json())
@@ -249,7 +249,7 @@ class Serialise:
             empty_class.__class__ = class_
         except TypeError:
             # Mesh objects have a different layouts
-            empty_class = self._EmptyDict()
+            empty_class = self._EmptyDict()  # type: ignore[assignment]
             empty_class.__class__ = class_
 
         return empty_class

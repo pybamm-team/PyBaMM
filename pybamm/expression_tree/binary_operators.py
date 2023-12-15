@@ -1407,11 +1407,11 @@ def _heaviside(left: ChildValue, right: ChildValue, equal):
     """return a :class:`EqualHeaviside` object, or a smooth approximation."""
     # Check for Concatenations and Broadcasts
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
-    out = _simplified_binary_broadcast_concatenation(
+    concat_out = _simplified_binary_broadcast_concatenation(
         left, right, functools.partial(_heaviside, equal=equal)
     )
-    if out is not None:
-        return out
+    if concat_out is not None:
+        return concat_out
 
     if (
         left.is_constant()
@@ -1434,9 +1434,9 @@ def _heaviside(left: ChildValue, right: ChildValue, equal):
     # (i.e. no need for smoothing)
     if k == "exact" or (left.is_constant() and right.is_constant()):
         if equal is True:
-            out = pybamm.EqualHeaviside(left, right)
+            out: pybamm.EqualHeaviside = pybamm.EqualHeaviside(left, right)
         else:
-            out = pybamm.NotEqualHeaviside(left, right)
+            out: pybamm.NotEqualHeaviside = pybamm.NotEqualHeaviside(left, right)  # type: ignore[no-redef]
     else:
         out = pybamm.sigmoid(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1446,7 +1446,7 @@ def softminus(
     left: pybamm.Symbol,
     right: pybamm.Symbol,
     k: float,
-) -> pybamm.Symbol:
+):
     """
     Softplus approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_smoothing`. The recommended value is k=10.

@@ -62,7 +62,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
         return result.at[self.row, self.col].add(self.data)
 
-    def dot_product(self, b: jaxlib.xla_extension.DeviceArray):
+    def dot_product(self, b):
         """
         dot product of matrix with a dense column vector b
 

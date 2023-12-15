@@ -459,9 +459,9 @@ class Symbol:
     def reference(self):
         return self._reference
 
-    def __eq__(self, other: Union[Symbol, float]):
+    def __eq__(self, other):
         try:
-            return self._id == other._id  # type:ignore
+            return self._id == other._id
         except AttributeError:
             if isinstance(other, numbers.Number):
                 return self._id == pybamm.Scalar(other)._id
