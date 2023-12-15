@@ -11,8 +11,7 @@ import functools
 import pybamm
 from pybamm.util import have_optional_dependency
 
-from typing import Union, Tuple, Optional, Callable, overload
-from typing_extensions import TypeVar
+from typing import Union, Tuple, Optional, Callable
 
 # create type alias(s)
 ChildValue = Union[float, np.ndarray, pybamm.Symbol]

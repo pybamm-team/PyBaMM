@@ -1,15 +1,16 @@
 #
 # Unary operator classes and methods
 #
+from __future__ import annotations
 import numbers
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from typing import Sequence, Optional, Union, Type, SupportsFloat
-
-NumberType = Type[SupportsFloat]
+from typing import Optional, Union, Type, SupportsFloat
 
 import pybamm
+
+NumberType = Type[SupportsFloat]
 
 
 class Broadcast(pybamm.SpatialOperator):

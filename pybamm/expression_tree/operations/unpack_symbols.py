@@ -2,7 +2,7 @@
 # Helper function to unpack a symbol
 #
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Iterable, Union, Sequence
+from typing import TYPE_CHECKING, Optional, Union, Sequence
 
 if TYPE_CHECKING:
     import pybamm

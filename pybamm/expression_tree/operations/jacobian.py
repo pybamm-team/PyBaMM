@@ -1,6 +1,7 @@
 #
 # Calculate the Jacobian of a symbol
 #
+from __future__ import annotations
 from typing import Optional
 import pybamm
 

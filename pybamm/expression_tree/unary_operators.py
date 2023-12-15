@@ -3,7 +3,7 @@
 #
 from __future__ import annotations
 import numbers
-from typing import Optional, Union, Sequence
+from typing import Optional, Union
 
 import numpy as np
 from scipy.sparse import csr_matrix, issparse

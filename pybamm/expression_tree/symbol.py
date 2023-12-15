@@ -11,9 +11,7 @@ from typing import (
     Union,
     TYPE_CHECKING,
     Optional,
-    Iterable,
     Sequence,
-    no_type_check,
 )
 
 import pybamm

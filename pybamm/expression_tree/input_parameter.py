@@ -7,7 +7,7 @@ import numpy as np
 import scipy.sparse
 import pybamm
 
-from typing import Union, Iterable, Optional, Sequence
+from typing import Union, Optional
 
 
 class InputParameter(pybamm.Symbol):

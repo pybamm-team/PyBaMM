@@ -1,8 +1,8 @@
 #
 # IndependentVariable class
 #
+from __future__ import annotations
 import sympy
-import numpy as np
 from typing import Union, Optional, Any
 
 import pybamm
