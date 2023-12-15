@@ -5,7 +5,6 @@ from __future__ import annotations
 import numbers
 from collections import OrderedDict
 from numpy.typing import ArrayLike
-from typing import Tuple
 
 import numpy as np
 import scipy.sparse
@@ -391,7 +390,7 @@ def find_symbols(
 
 def to_python(
     symbol: pybamm.Symbol, debug=False, output_jax=False
-) -> Tuple[OrderedDict, str]:
+) -> tuple[OrderedDict, str]:
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function

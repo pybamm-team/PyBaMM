@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from typing import Union, Tuple, Optional, TYPE_CHECKING
+from typing import Union, Optional, TYPE_CHECKING
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -190,7 +190,7 @@ def linspace(start: float, stop: float, num: int = 50, **kwargs) -> pybamm.Array
 
 def meshgrid(
     x: pybamm.Array, y: pybamm.Array, **kwargs
-) -> Tuple[pybamm.Array, pybamm.Array]:
+) -> tuple[pybamm.Array, pybamm.Array]:
     """
     Return coordinate matrices as from coordinate vectors by calling
     `numpy.meshgrid` with keyword arguments 'kwargs'. For a list of 'kwargs'

@@ -11,7 +11,7 @@ import functools
 import pybamm
 from pybamm.util import have_optional_dependency
 
-from typing import Union, Tuple, Optional, Callable
+from typing import Union, Optional, Callable
 
 # create type alias(s)
 ChildValue = Union[float, np.ndarray, pybamm.Symbol]
@@ -19,7 +19,7 @@ ChildValue = Union[float, np.ndarray, pybamm.Symbol]
 
 def _preprocess_binary(
     left: ChildValue, right: ChildValue
-) -> Tuple[pybamm.Symbol, pybamm.Symbol]:
+) -> tuple[pybamm.Symbol, pybamm.Symbol]:
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
@@ -797,7 +797,7 @@ class Maximum(BinaryOperator):
 def _simplify_elementwise_binary_broadcasts(
     left_child: ChildValue,
     right_child: ChildValue,
-) -> Tuple[pybamm.Symbol, pybamm.Symbol]:
+) -> tuple[pybamm.Symbol, pybamm.Symbol]:
     left, right = _preprocess_binary(left_child, right_child)
 
     def unpack_broadcast_recursive(symbol: pybamm.Symbol) -> pybamm.Symbol:
@@ -1093,8 +1093,6 @@ def multiply(
     right: ChildValue,
 ):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
-
-    assert isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)
 
     # Move constant to always be on the left
     if right.is_constant() and not left.is_constant():
