@@ -196,7 +196,7 @@ extend-select = [
   "RUF",         # Ruff-specific
   # "SIM",         # flake8-simplify
   # "T20",         # flake8-print
-  "UP",           # pyupgrade
+  "UP",          # pyupgrade
   "YTT",         # flake8-2020
 ]
 ignore = [
