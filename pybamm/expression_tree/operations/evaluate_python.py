@@ -14,7 +14,6 @@ import pybamm
 
 if pybamm.have_jax():
     import jax
-    import jaxlib
     from jax.config import config
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
