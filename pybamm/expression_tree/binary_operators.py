@@ -11,7 +11,7 @@ import functools
 import pybamm
 from pybamm.util import have_optional_dependency
 
-from typing import Union, Optional, Callable
+from typing import Union, Callable
 
 # create type alias(s)
 ChildValue = Union[float, np.ndarray, pybamm.Symbol]
@@ -138,10 +138,10 @@ class BinaryOperator(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[Union[dict, str]] = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         left = self.left.evaluate(t, y, y_dot, inputs)
@@ -239,8 +239,8 @@ class Power(BinaryOperator):
 
     def _binary_evaluate(
         self,
-        left: Union[float, np.ndarray, pybamm.Symbol],
-        right: Union[float, np.ndarray, pybamm.Symbol],
+        left: ChildValue,
+        right: ChildValue,
     ):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
@@ -265,15 +265,11 @@ class Addition(BinaryOperator):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) + self.right.diff(variable)
 
-    def _binary_jac(
-        self, left_jac: Union[float, np.ndarray], right_jac: Union[float, np.ndarray]
-    ):
+    def _binary_jac(self, left_jac: float | np.ndarray, right_jac: float | np.ndarray):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac + right_jac
 
-    def _binary_evaluate(
-        self, left: Union[float, np.ndarray], right: Union[float, np.ndarray]
-    ):
+    def _binary_evaluate(self, left: float | np.ndarray, right: float | np.ndarray):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
 
@@ -300,9 +296,7 @@ class Subtraction(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac - right_jac
 
-    def _binary_evaluate(
-        self, left: Union[float, np.ndarray], right: Union[float, np.ndarray]
-    ):
+    def _binary_evaluate(self, left: float | np.ndarray, right: float | np.ndarray):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
 
@@ -829,7 +823,7 @@ def _simplified_binary_broadcast_concatenation(
     left: pybamm.Symbol,
     right: pybamm.Symbol,
     operator: Callable,
-) -> Union[None, pybamm.Broadcast]:
+) -> pybamm.Broadcast | None:
     """
     Check if there are concatenations or broadcasts that we can commute the operator
     with
@@ -1478,7 +1472,7 @@ def sigmoid(
 
 
 def source(
-    left: Union[numbers.Number, pybamm.Symbol],
+    left: numbers.Number | pybamm.Symbol,
     right: pybamm.Symbol,
     boundary=False,
 ):

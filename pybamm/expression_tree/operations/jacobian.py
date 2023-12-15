@@ -2,7 +2,6 @@
 # Calculate the Jacobian of a symbol
 #
 from __future__ import annotations
-from typing import Optional
 import pybamm
 
 
@@ -22,7 +21,7 @@ class Jacobian(object):
 
     def __init__(
         self,
-        known_jacs: Optional[dict[pybamm.Symbol, pybamm.Symbol]] = None,
+        known_jacs: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
         clear_domain: bool = True,
     ):
         self._known_jacs = known_jacs or {}
@@ -75,7 +74,7 @@ class Jacobian(object):
             jac = symbol._unary_jac(child_jac)
 
         elif isinstance(symbol, pybamm.Function):
-            children_jacs: list[None, pybamm.Symbol] = [None] * len(symbol.children)
+            children_jacs: list[None | pybamm.Symbol] = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 children_jacs[i] = self.jac(child, variable)
             # _function_jac defined in function class

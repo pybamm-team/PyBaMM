@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from enum import Enum
 import numpy as np
 
-from typing import Optional, TypeVar, Type
+from typing import TypeVar, Type
 
 
 class EventType(Enum):
@@ -72,10 +74,10 @@ class Event:
 
     def evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | None = None,
     ):
         """
         Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`

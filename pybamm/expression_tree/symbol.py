@@ -8,9 +8,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
 from typing import (
-    Union,
     TYPE_CHECKING,
-    Optional,
     Sequence,
 )
 
@@ -32,7 +30,7 @@ DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
 
 
-def domain_size(domain: Union[list[str], str]):
+def domain_size(domain: list[str] | str):
     """
     Get the domain size.
 
@@ -218,10 +216,10 @@ class Symbol:
     def __init__(
         self,
         name: str,
-        children: Optional[Sequence[Symbol]] = None,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict[str, str]] = None,
-        domains: Optional[dict[str, list[str]]] = None,
+        children: Sequence[Symbol] | None = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str]] | None = None,
     ):
         super(Symbol, self).__init__()
         self.name = name
@@ -408,9 +406,9 @@ class Symbol:
 
     def read_domain_or_domains(
         self,
-        domain: Optional[Union[list[str], str]],
-        auxiliary_domains: Optional[dict[str, str]],
-        domains: Optional[dict],
+        domain: list[str] | str | None,
+        auxiliary_domains: dict[str, str] | None,
+        domains: dict | None,
     ):
         if domains is None:
             if isinstance(domain, str):
@@ -581,51 +579,51 @@ class Symbol:
             {k: v for k, v in self.domains.items() if v != []},
         )
 
-    def __add__(self, other: Union[float, np.ndarray, Symbol]) -> Addition:
+    def __add__(self, other: Symbol | float | np.ndarray) -> Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(self, other)
 
-    def __radd__(self, other: Union[float, np.ndarray, Symbol]) -> Addition:
+    def __radd__(self, other: Symbol | float | np.ndarray) -> Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(other, self)
 
-    def __sub__(self, other: Union[float, np.ndarray, Symbol]) -> Subtraction:
+    def __sub__(self, other: Symbol | float | np.ndarray) -> Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(self, other)
 
-    def __rsub__(self, other: Union[float, np.ndarray, Symbol]) -> Subtraction:
+    def __rsub__(self, other: Symbol | float | np.ndarray) -> Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(other, self)
 
-    def __mul__(self, other: Union[float, np.ndarray, Symbol]) -> Multiplication:
+    def __mul__(self, other: Symbol | float | np.ndarray) -> Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(self, other)
 
-    def __rmul__(self, other: Union[float, np.ndarray, Symbol]) -> Multiplication:
+    def __rmul__(self, other: Symbol | float | np.ndarray) -> Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
     def __matmul__(
-        self, other: Union[float, np.ndarray, Symbol]
+        self, other: Symbol | float | np.ndarray
     ) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(self, other)
 
     def __rmatmul__(
-        self, other: Union[float, np.ndarray, Symbol]
+        self, other: Symbol | float | np.ndarray
     ) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
-    def __truediv__(self, other: Union[float, np.ndarray, Symbol]) -> Division:
+    def __truediv__(self, other: Symbol | float | np.ndarray) -> Division:
         """return a :class:`Division` object."""
         return pybamm.divide(self, other)
 
-    def __rtruediv__(self, other: Union[float, np.ndarray, Symbol]) -> Division:
+    def __rtruediv__(self, other: Symbol | float | np.ndarray) -> Division:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other: Union[float, np.ndarray, Symbol]) -> pybamm.Power:
+    def __pow__(self, other: Symbol | float | np.ndarray) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
@@ -633,7 +631,7 @@ class Symbol:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
-    def __lt__(self, other: Union[Symbol, float]) -> pybamm.NotEqualHeaviside:
+    def __lt__(self, other: Symbol | float) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
@@ -734,7 +732,7 @@ class Symbol:
     def jac(
         self,
         variable: pybamm.Symbol,
-        known_jacs: Optional[dict[pybamm.Symbol, pybamm.Symbol]] = None,
+        known_jacs: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
         clear_domain=True,
     ):
         """
@@ -759,10 +757,10 @@ class Symbol:
 
     def _base_evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[Union[dict, str]] = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """
         evaluate expression tree.
@@ -791,11 +789,11 @@ class Symbol:
 
     def evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[Union[dict, str]] = None,
-    ) -> Union[float, np.ndarray]:
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ) -> float | np.ndarray:
         """Evaluate expression tree (wrapper to allow using dict of known values).
 
         Parameters
@@ -847,7 +845,7 @@ class Symbol:
         # Default behaviour is False
         return False
 
-    def evaluate_ignoring_errors(self, t: Union[None, float] = 0):  # none
+    def evaluate_ignoring_errors(self, t: float | None = 0):  # none
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
         as a scalar or vector (e.g. Time, Parameter, Variable, StateVector), then None
@@ -926,9 +924,7 @@ class Symbol:
         # Default behaviour: return False
         return False
 
-    def has_symbol_of_classes(
-        self, symbol_classes: Union[type[Symbol], tuple[type[Symbol]]]
-    ):
+    def has_symbol_of_classes(self, symbol_classes: tuple[type[Symbol]] | type[Symbol]):
         """
         Returns True if equation has a term of the class(es) `symbol_class`.
 
@@ -941,11 +937,11 @@ class Symbol:
 
     def to_casadi(
         self,
-        t: Optional[casadi.MX] = None,
-        y: Optional[casadi.MX] = None,
-        y_dot: Optional[casadi.MX] = None,
-        inputs: Optional[dict] = None,
-        casadi_symbols: Optional[Symbol] = None,
+        t: casadi.MX | None = None,
+        y: casadi.MX | None = None,
+        y_dot: casadi.MX | None = None,
+        inputs: dict | None = None,
+        casadi_symbols: Symbol | None = None,
     ):
         """
         Convert the expression tree to a CasADi expression tree.

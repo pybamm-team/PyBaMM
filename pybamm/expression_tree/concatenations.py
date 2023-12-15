@@ -7,7 +7,7 @@ from collections import defaultdict
 
 import numpy as np
 from scipy.sparse import issparse, vstack
-from typing import Optional, Sequence, Type, Union
+from typing import Sequence, Type
 from typing_extensions import TypeGuard
 from pybamm.hints import S
 
@@ -28,7 +28,7 @@ class Concatenation(pybamm.Symbol):
     def __init__(
         self,
         *children: pybamm.Symbol,
-        name: Optional[str] = None,
+        name: str | None = None,
         check_domain=True,
         concat_fun=None,
     ):
@@ -122,10 +122,10 @@ class Concatenation(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[Union[dict, str]] = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         children = self.children
@@ -263,7 +263,7 @@ class DomainConcatenation(Concatenation):
         self,
         children: Sequence[pybamm.Symbol],
         full_mesh: pybamm.Mesh,
-        copy_this: Optional[pybamm.DomainConcatenation] = None,
+        copy_this: pybamm.DomainConcatenation | None = None,
     ):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
@@ -561,7 +561,7 @@ def numpy_concatenation(*children):
 def simplified_domain_concatenation(
     children: list[pybamm.Symbol],
     mesh: pybamm.Mesh,
-    copy_this: Optional[DomainConcatenation] = None,
+    copy_this: DomainConcatenation | None = None,
 ):
     """Perform simplifications on a domain concatenation."""
     # Create the DomainConcatenation to read domain and child domain

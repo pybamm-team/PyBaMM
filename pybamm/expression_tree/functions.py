@@ -6,7 +6,7 @@ import numbers
 
 import numpy as np
 from scipy import special
-from typing import Optional, Sequence, Callable, Type, Union
+from typing import Sequence, Callable, Type
 from typing_extensions import TypeVar
 
 import pybamm
@@ -36,9 +36,9 @@ class Function(pybamm.Symbol):
         self,
         function: Callable,
         *children: pybamm.Symbol,
-        name: Optional[str] = None,
-        derivative: Optional[str] = "autograd",
-        differentiated_function: Optional[Callable] = None,
+        name: str | None = None,
+        derivative: str | None = "autograd",
+        differentiated_function: Callable | None = None,
     ):
         # Turn numbers into scalars
         children = list(children)
@@ -146,10 +146,10 @@ class Function(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[Union[dict, str]] = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         evaluated_children = [

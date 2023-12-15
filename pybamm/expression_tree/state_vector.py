@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
-from typing import Optional, Union, Any
+from typing import Any
 
 import pybamm
 
@@ -38,11 +38,11 @@ class StateVectorBase(pybamm.Symbol):
         self,
         *y_slices: slice,
         base_name="y",
-        name: Optional[str] = None,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict[str, list[str]]] = None,
-        evaluation_array: Optional[list] = None,
+        name: str | None = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict[str, list[str]] | None = None,
+        evaluation_array: list | None = None,
     ):
         for y_slice in y_slices:
             if not isinstance(y_slice, slice):
@@ -262,11 +262,11 @@ class StateVector(StateVectorBase):
     def __init__(
         self,
         *y_slices: slice,
-        name: Optional[str] = None,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict[str, list[str]]] = None,
-        evaluation_array: Optional[list] = None,
+        name: str | None = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict[str, list[str]] | None = None,
+        evaluation_array: list | None = None,
     ):
         super().__init__(
             *y_slices,
@@ -281,7 +281,7 @@ class StateVector(StateVectorBase):
     def _base_evaluate(
         self,
         t: Any = None,
-        y: Optional[np.ndarray] = None,
+        y: np.ndarray | None = None,
         y_dot: Any = None,
         inputs: Any = None,
     ):
@@ -311,7 +311,7 @@ class StateVector(StateVectorBase):
         else:
             return pybamm.Scalar(0)
 
-    def _jac(self, variable: Union[pybamm.StateVector, pybamm.StateVectorDot]):
+    def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
         if isinstance(variable, pybamm.StateVector):
             return self._jac_same_vector(variable)
         elif isinstance(variable, pybamm.StateVectorDot):
@@ -346,11 +346,11 @@ class StateVectorDot(StateVectorBase):
     def __init__(
         self,
         *y_slices: slice,
-        name: Optional[str] = None,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict[str, list[str]]] = None,
-        evaluation_array: Optional[list] = None,
+        name: str | None = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict[str, list[str]] | None = None,
+        evaluation_array: list | None = None,
     ):
         super().__init__(
             *y_slices,
@@ -366,7 +366,7 @@ class StateVectorDot(StateVectorBase):
         self,
         t: Any = None,
         y: Any = None,
-        y_dot: Optional[np.ndarray] = None,
+        y_dot: np.ndarray | None = None,
         inputs: Any = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
@@ -392,7 +392,7 @@ class StateVectorDot(StateVectorBase):
         else:
             return pybamm.Scalar(0)
 
-    def _jac(self, variable: Union[pybamm.StateVector, pybamm.StateVectorDot]):
+    def _jac(self, variable: pybamm.StateVector | pybamm.StateVectorDot):
         if isinstance(variable, pybamm.StateVectorDot):
             return self._jac_same_vector(variable)
         elif isinstance(variable, pybamm.StateVector):

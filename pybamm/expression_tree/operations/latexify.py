@@ -1,11 +1,11 @@
 #
 # Latexify class
 #
+from __future__ import annotations
+
 import copy
 import re
 import warnings
-
-from typing import Optional
 
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
@@ -50,9 +50,7 @@ class Latexify:
     >>> model.latexify(newline=False)[1:5]
     """
 
-    def __init__(
-        self, model, filename: Optional[str] = None, newline: Optional[bool] = True
-    ):
+    def __init__(self, model, filename: str | None = None, newline: bool = True):
         self.model = model
         self.filename = filename
         self.newline = newline

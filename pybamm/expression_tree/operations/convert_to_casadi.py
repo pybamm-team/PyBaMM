@@ -1,11 +1,12 @@
 #
 # Convert a PyBaMM expression tree to a CasADi expression tree
 #
+from __future__ import annotations
+
 import pybamm
 import casadi
 import numpy as np
 from scipy import special
-from typing import Union
 
 
 class CasadiConverter(object):
@@ -20,7 +21,7 @@ class CasadiConverter(object):
         t: casadi.MX,
         y: casadi.MX,
         y_dot: casadi.MX,
-        inputs: Union[dict, None],
+        inputs: dict | None,
     ) -> casadi.MX:
         """
         This function recurses down the tree, converting the PyBaMM expression tree to

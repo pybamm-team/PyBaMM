@@ -6,7 +6,6 @@ import numpy as np
 import numbers
 import pybamm
 from pybamm.util import have_optional_dependency
-from typing import Union, Optional
 
 
 class VariableBase(pybamm.Symbol):
@@ -51,13 +50,13 @@ class VariableBase(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict] = None,
-        bounds: Optional[tuple[pybamm.Symbol]] = None,
-        print_name: Optional[str] = None,
-        scale: Optional[Union[float, pybamm.Symbol]] = 1,
-        reference: Optional[Union[float, pybamm.Symbol]] = 0,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict | None = None,
+        bounds: tuple[pybamm.Symbol] | None = None,
+        print_name: str | None = None,
+        scale: float | pybamm.Symbol | None = 1,
+        reference: float | pybamm.Symbol | None = 0,
     ):
         if isinstance(scale, numbers.Number):
             scale = pybamm.Scalar(scale)
@@ -104,7 +103,13 @@ class VariableBase(pybamm.Symbol):
 
     def set_id(self):
         self._id = hash(
-            (self.__class__, self.name, self.scale, self.reference, *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
+            (
+                self.__class__,
+                self.name,
+                self.scale,
+                self.reference,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     def create_copy(self):

@@ -3,7 +3,6 @@
 #
 from __future__ import annotations
 import numbers
-from typing import Optional, Union
 
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
@@ -26,7 +25,7 @@ class UnaryOperator(pybamm.Symbol):
         child node
     """
 
-    def __init__(self, name: str, child: pybamm.Symbol, domains: Optional[dict] = None):
+    def __init__(self, name: str, child: pybamm.Symbol, domains: dict | None = None):
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
@@ -74,10 +73,10 @@ class UnaryOperator(pybamm.Symbol):
 
     def evaluate(
         self,
-        t: Optional[float] = None,
-        y: Optional[np.ndarray] = None,
-        y_dot: Optional[np.ndarray] = None,
-        inputs: Optional[dict] = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         child = self.child.evaluate(t, y, y_dot, inputs)
@@ -396,7 +395,7 @@ class SpatialOperator(UnaryOperator):
         child node
     """
 
-    def __init__(self, name: str, child: pybamm.Symbol, domains: Optional[dict] = None):
+    def __init__(self, name: str, child: pybamm.Symbol, domains: dict | None = None):
         super().__init__(name, child, domains)
 
     def to_json(self):
@@ -561,9 +560,8 @@ class Integral(SpatialOperator):
     def __init__(
         self,
         child,
-        integration_variable: Union[
-            list[pybamm.IndependentVariable], pybamm.IndependentVariable
-        ],
+        integration_variable: list[pybamm.IndependentVariable]
+        | pybamm.IndependentVariable,
     ):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]

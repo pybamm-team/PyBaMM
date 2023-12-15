@@ -7,8 +7,6 @@ import importlib
 import numpy as np
 import re
 
-from typing import Optional
-
 
 class Serialise:
     """
@@ -80,9 +78,9 @@ class Serialise:
     def save_model(
         self,
         model: pybamm.BaseModel,
-        mesh: Optional[pybamm.Mesh] = None,
-        variables: Optional[pybamm.FuzzyDict] = None,
-        filename: Optional[str] = None,
+        mesh: pybamm.Mesh | None = None,
+        variables: pybamm.FuzzyDict | None = None,
+        filename: str | None = None,
     ):
         """Saves a discretised model to a JSON file.
 
@@ -144,7 +142,7 @@ class Serialise:
             json.dump(model_json, f)
 
     def load_model(
-        self, filename: str, battery_model: Optional[pybamm.BaseModel] = None
+        self, filename: str, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.

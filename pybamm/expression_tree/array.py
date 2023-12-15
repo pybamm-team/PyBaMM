@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from typing import Union, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -41,12 +41,12 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries: Union[np.ndarray, list, csr_matrix],
-        name: Optional[str] = None,
-        domain: Union[list[str], str, None] = None,
-        auxiliary_domains: Optional[dict[str, str]] = None,
-        domains: Optional[dict[str, list[str]]] = None,
-        entries_string: Optional[str] = None,
+        entries: np.ndarray | list | csr_matrix,
+        name: str | None = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str]] | None = None,
+        entries_string: str | None = None,
     ) -> None:
         # if
         if isinstance(entries, list):
@@ -101,7 +101,7 @@ class Array(pybamm.Symbol):
         return self._entries_string
 
     @entries_string.setter
-    def entries_string(self, value: Union[None, tuple]):
+    def entries_string(self, value: None | tuple):
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
         # Slightly different syntax for sparse and non-sparse matrices

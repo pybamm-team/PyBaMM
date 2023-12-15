@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numbers
 import numpy as np
-from typing import Optional, Literal, Union, Any
+from typing import Literal, Any
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -26,8 +26,8 @@ class Scalar(pybamm.Symbol):
 
     def __init__(
         self,
-        value: Union[float, numbers.Number, np.bool_],
-        name: Optional[str] = None,
+        value: float | numbers.Number | np.bool_,
+        name: str | None = None,
     ) -> None:
         # set default name if not provided
         self.value = value

@@ -6,7 +6,7 @@ import numbers
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from typing import Optional, Union, Type, SupportsFloat
+from typing import Type, SupportsFloat
 
 import pybamm
 
@@ -37,7 +37,7 @@ class Broadcast(pybamm.SpatialOperator):
         self,
         child: pybamm.Symbol,
         domains: dict[str, list[str]],
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         if name is None:
             name = "broadcast"
@@ -96,9 +96,9 @@ class PrimaryBroadcast(Broadcast):
 
     def __init__(
         self,
-        child: Union[numbers.Number, pybamm.Symbol],
-        broadcast_domain: Union[str, list[str]],
-        name: Optional[str] = None,
+        child: numbers.Number | pybamm.Symbol,
+        broadcast_domain: list[str] | str,
+        name: str | None = None,
     ):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
@@ -190,9 +190,9 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
 
     def __init__(
         self,
-        child: Union[numbers.Number, pybamm.Symbol],
-        broadcast_domain: Union[str, list[str]],
-        name: Optional[str] = None,
+        child: numbers.Number | pybamm.Symbol,
+        broadcast_domain: list[str] | str,
+        name: str | None = None,
     ):
         name = name or "broadcast to edges"
         super().__init__(child, broadcast_domain, name)
@@ -227,8 +227,8 @@ class SecondaryBroadcast(Broadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Union[str, list[str]],
-        name: Optional[str] = None,
+        broadcast_domain: list[str] | str,
+        name: str | None = None,
     ):
         # Convert domain to list if it's a string
         if isinstance(broadcast_domain, str):
@@ -325,8 +325,8 @@ class SecondaryBroadcastToEdges(SecondaryBroadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Union[list[str], str],
-        name: Optional[str] = None,
+        broadcast_domain: list[str] | str,
+        name: str | None = None,
     ):
         name = name or "broadcast to edges"
         super().__init__(child, broadcast_domain, name)
@@ -361,8 +361,8 @@ class TertiaryBroadcast(Broadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Union[list[str], str],
-        name: Optional[str] = None,
+        broadcast_domain: list[str] | str,
+        name: str | None = None,
     ):
         # Convert domain to list if it's a string
         if isinstance(broadcast_domain, str):
@@ -374,7 +374,7 @@ class TertiaryBroadcast(Broadcast):
         super().__init__(child, domains, name=name)
 
     def check_and_set_domains(
-        self, child: pybamm.Symbol, broadcast_domain: Union[list[str], str]
+        self, child: pybamm.Symbol, broadcast_domain: list[str] | str
     ):
         """See :meth:`Broadcast.check_and_set_domains`"""
         if child.domains["secondary"] == []:
@@ -446,8 +446,8 @@ class TertiaryBroadcastToEdges(TertiaryBroadcast):
     def __init__(
         self,
         child: pybamm.Symbol,
-        broadcast_domain: Union[list[str], str],
-        name: Optional[str] = None,
+        broadcast_domain: list[str] | str,
+        name: str | None = None,
     ):
         name = name or "broadcast to edges"
         super().__init__(child, broadcast_domain, name)
@@ -462,11 +462,11 @@ class FullBroadcast(Broadcast):
 
     def __init__(
         self,
-        child: Union[NumberType, pybamm.Symbol],
-        broadcast_domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[Union[str, dict]] = None,
-        broadcast_domains: Optional[dict] = None,
-        name: Optional[str] = None,
+        child: NumberType | pybamm.Symbol,
+        broadcast_domain: list[str] | str | None = None,
+        auxiliary_domains: str | dict | None = None,
+        broadcast_domains: dict | None = None,
+        name: str | None = None,
     ):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
@@ -534,11 +534,11 @@ class FullBroadcastToEdges(FullBroadcast):
 
     def __init__(
         self,
-        child: Union[NumberType, pybamm.Symbol],
-        broadcast_domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[Union[str, dict]] = None,
-        broadcast_domains: Optional[dict] = None,
-        name: Optional[str] = None,
+        child: NumberType | pybamm.Symbol,
+        broadcast_domain: list[str] | str | None = None,
+        auxiliary_domains: str | dict | None = None,
+        broadcast_domains: dict | None = None,
+        name: str | None = None,
     ):
         name = name or "broadcast to edges"
         super().__init__(

@@ -4,7 +4,6 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from typing import Union, Optional
 
 import pybamm
 
@@ -16,12 +15,12 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: Union[np.ndarray, list, csr_matrix],
-        name: Optional[str] = None,
-        domain: Optional[list[str]] = None,
-        auxiliary_domains: Optional[dict[str, str]] = None,
-        domains: Optional[dict] = None,
-        entries_string: Optional[str] = None,
+        entries: np.ndarray | list | csr_matrix,
+        name: str | None = None,
+        domain: list[str] | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict | None = None,
+        entries_string: str | None = None,
     ) -> None:
         if isinstance(entries, list):
             entries = np.array(entries)

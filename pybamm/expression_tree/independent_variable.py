@@ -3,7 +3,7 @@
 #
 from __future__ import annotations
 import sympy
-from typing import Union, Optional, Any
+from typing import Any
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -35,9 +35,9 @@ class IndependentVariable(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict] = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict | None = None,
     ) -> None:
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
@@ -82,7 +82,7 @@ class Time(IndependentVariable):
 
     def _base_evaluate(
         self,
-        t: Optional[float] = None,
+        t: float | None = None,
         y: Any = None,
         y_dot: Any = None,
         inputs: Any = None,
@@ -128,9 +128,9 @@ class SpatialVariable(IndependentVariable):
     def __init__(
         self,
         name: str,
-        domain: Optional[Union[list[str], str]] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict] = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict | None = None,
         coord_sys=None,
     ) -> None:
         self.coord_sys = coord_sys
@@ -191,9 +191,9 @@ class SpatialVariableEdge(SpatialVariable):
     def __init__(
         self,
         name: str,
-        domain: Union[list[str], str, None] = None,
-        auxiliary_domains: Optional[dict] = None,
-        domains: Optional[dict] = None,
+        domain: list[str] | str | None = None,
+        auxiliary_domains: dict | None = None,
+        domains: dict | None = None,
         coord_sys=None,
     ) -> None:
         super().__init__(name, domain, auxiliary_domains, domains, coord_sys)

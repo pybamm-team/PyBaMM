@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy import interpolate
-from typing import Optional, Sequence, Union
+from typing import Sequence
 import warnings
 
 import pybamm
@@ -43,13 +43,13 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: Union[np.ndarray, Sequence[np.ndarray]],
+        x: np.ndarray | Sequence[np.ndarray],
         y: np.ndarray,
-        children: Union[Sequence[pybamm.Symbol], pybamm.Time],
-        name: Optional[str] = None,
-        interpolator: Optional[str] = "linear",
-        extrapolate: Optional[bool] = True,
-        entries_string: Optional[str] = None,
+        children: Sequence[pybamm.Symbol] | pybamm.Time,
+        name: str | None = None,
+        interpolator: str | None = "linear",
+        extrapolate: bool = True,
+        entries_string: str | None = None,
     ):
         # "cubic spline" has been renamed to "cubic"
         if interpolator == "cubic spline":

@@ -1,6 +1,8 @@
 #
 # Base model class
 #
+from __future__ import annotations
+
 import numbers
 import warnings
 from collections import OrderedDict
@@ -12,8 +14,6 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 from pybamm.util import have_optional_dependency
-
-from typing import Optional
 
 
 class BaseModel:
@@ -1219,7 +1219,7 @@ class BaseModel:
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
 
 
-def load_model(filename, battery_model: Optional[BaseModel] = None):
+def load_model(filename, battery_model: BaseModel | None = None):
     """
     Load in a saved model from a JSON file
 

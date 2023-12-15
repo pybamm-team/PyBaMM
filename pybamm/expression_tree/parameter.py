@@ -6,7 +6,7 @@ import numbers
 import sys
 
 import numpy as np
-from typing import Optional, TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     import sympy
@@ -98,7 +98,7 @@ class FunctionParameter(pybamm.Symbol):
         self,
         name: str,
         inputs: dict[str, pybamm.Symbol],
-        diff_variable: Optional[pybamm.Symbol] = None,
+        diff_variable: pybamm.Symbol | None = None,
         print_name="calculate",
     ) -> None:
         # assign diff variable

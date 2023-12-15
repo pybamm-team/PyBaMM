@@ -2,7 +2,7 @@
 # Helper function to unpack a symbol
 #
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Union, Sequence
+from typing import TYPE_CHECKING, Sequence
 
 if TYPE_CHECKING:
     import pybamm
@@ -23,8 +23,8 @@ class SymbolUnpacker(object):
 
     def __init__(
         self,
-        classes_to_find: Union[pybamm.Symbol, Sequence[pybamm.Symbol]],
-        unpacked_symbols: Optional[dict] = None,
+        classes_to_find: Sequence[pybamm.Symbol] | pybamm.Symbol,
+        unpacked_symbols: dict | None = None,
     ):
         self.classes_to_find = classes_to_find
         self._unpacked_symbols: dict = unpacked_symbols or {}
@@ -53,7 +53,7 @@ class SymbolUnpacker(object):
         return all_instances
 
     def unpack_symbol(
-        self, symbol: Union[Sequence[pybamm.Symbol], pybamm.Symbol]
+        self, symbol: Sequence[pybamm.Symbol] | pybamm.Symbol
     ) -> list[pybamm.Symbol]:
         """
         This function recurses down the tree, unpacking the symbols and saving the ones

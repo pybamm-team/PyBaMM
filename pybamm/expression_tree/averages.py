@@ -2,7 +2,7 @@
 # Classes and methods for averaging
 #
 from __future__ import annotations
-from typing import Union, Callable, Optional
+from typing import Callable
 import pybamm
 
 
@@ -20,9 +20,8 @@ class _BaseAverage(pybamm.Integral):
         self,
         child: pybamm.Symbol,
         name: str,
-        integration_variable: Union[
-            list[pybamm.IndependentVariable], pybamm.IndependentVariable
-        ],
+        integration_variable: list[pybamm.IndependentVariable]
+        | pybamm.IndependentVariable,
     ) -> None:
         super().__init__(child, integration_variable)
         self.name = name
@@ -304,7 +303,7 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
 
 
 def size_average(
-    symbol: pybamm.Symbol, f_a_dist: Optional[pybamm.Symbol] = None
+    symbol: pybamm.Symbol, f_a_dist: pybamm.Symbol | None = None
 ) -> pybamm.Symbol:
     """Convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
@@ -359,7 +358,7 @@ def size_average(
 
 
 def _sum_of_averages(
-    symbol: Union[pybamm.Addition, pybamm.Subtraction],
+    symbol: pybamm.Addition | pybamm.Subtraction,
     average_function: Callable[[pybamm.Symbol], pybamm.Symbol],
 ):
     if isinstance(symbol, pybamm.Addition):
