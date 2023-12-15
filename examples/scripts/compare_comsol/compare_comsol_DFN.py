@@ -17,7 +17,7 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
 comsol_results_path = pybamm.get_parameters_filepath(
-    "input/comsol_results/comsol_{}C.pickle".format(C_rate)
+    f"input/comsol_results/comsol_{C_rate}C.pickle"
 )
 comsol_variables = pickle.load(open(comsol_results_path, "rb"))
 

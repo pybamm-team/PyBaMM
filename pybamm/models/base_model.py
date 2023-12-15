@@ -550,9 +550,7 @@ class BaseModel:
                         else:
                             # try setting coupled variables on next loop through
                             pybamm.logger.debug(
-                                "Can't find {}, trying other submodels first".format(
-                                    key
-                                )
+                                f"Can't find {key}, trying other submodels first"
                             )
         # Convert variables back into FuzzyDict
         self.variables = pybamm.FuzzyDict(self._variables)
@@ -561,14 +559,12 @@ class BaseModel:
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.verbose(
-                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+                f"Setting rhs for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_rhs(self.variables)
             pybamm.logger.verbose(
-                "Setting algebraic for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting algebraic for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_algebraic(self.variables)
@@ -580,14 +576,12 @@ class BaseModel:
 
             submodel.set_boundary_conditions(self.variables)
             pybamm.logger.verbose(
-                "Setting initial conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
             pybamm.logger.verbose(
-                "Updating {} submodel ({})".format(submodel_name, self.name)
+                f"Updating {submodel_name} submodel ({self.name})"
             )
             self.update(submodel)
             self.check_no_repeated_keys()
@@ -595,7 +589,7 @@ class BaseModel:
     def build_model(self):
         self._build_model()
         self._built = True
-        pybamm.logger.info("Finish building {}".format(self.name))
+        pybamm.logger.info(f"Finish building {self.name}")
 
     def _build_model(self):
         # Check if already built
@@ -605,7 +599,7 @@ class BaseModel:
                 `model.update` instead."""
             )
 
-        pybamm.logger.info("Start building {}".format(self.name))
+        pybamm.logger.info(f"Start building {self.name}")
 
         if self._built_fundamental is False:
             self.build_fundamental()
@@ -740,7 +734,7 @@ class BaseModel:
         if len(ids1.intersection(ids2)) != 0:
             variables = ids1.intersection(ids2)
             raise pybamm.ModelError(
-                "Submodel incompatible: duplicate variables '{}'".format(variables)
+                f"Submodel incompatible: duplicate variables '{variables}'"
             )
         dict1.update(dict2)
 
@@ -778,12 +772,12 @@ class BaseModel:
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
                         "time derivative of variable found "
-                        "({}) in rhs equation {}".format(node, key)
+                        f"({node}) in rhs equation {key}"
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
                         "time derivative of state vector found "
-                        "({}) in rhs equation {}".format(node, key)
+                        f"({node}) in rhs equation {key}"
                     )
 
         # Check that no variable time derivatives exist in the algebraic equations
@@ -791,13 +785,13 @@ class BaseModel:
             for node in eq.pre_order():
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in algebraic"
-                        "equation {}".format(node, key)
+                        f"time derivative of variable found ({node}) in algebraic"
+                        f"equation {key}"
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
-                        "time derivative of state vector found ({}) in algebraic"
-                        "equation {}".format(node, key)
+                        f"time derivative of state vector found ({node}) in algebraic"
+                        f"equation {key}"
                     )
 
     def check_well_determined(self, post_discretisation):
@@ -887,7 +881,7 @@ class BaseModel:
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
                 raise pybamm.ModelError(
-                    """no initial condition given for variable '{}'""".format(var)
+                    f"""no initial condition given for variable '{var}'"""
                 )
 
     def check_variables(self):
@@ -909,13 +903,11 @@ class BaseModel:
         for var in all_vars:
             if var not in vars_in_keys:
                 raise pybamm.ModelError(
-                    """
-                    No key set for variable '{}'. Make sure it is included in either
+                    f"""
+                    No key set for variable '{var}'. Make sure it is included in either
                     model.rhs or model.algebraic, in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        var
-                    )
+                    """
                 )
 
     def check_no_repeated_keys(self):
@@ -970,7 +962,7 @@ class BaseModel:
             except pybamm.DiscretisationError as e:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, model should be "
-                    "discretised before exporting casadi functions ({})".format(e)
+                    f"discretised before exporting casadi functions ({e})"
                 )
 
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
@@ -1287,9 +1279,7 @@ class EquationDict(dict):
                 equations[var] = eqn
             if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
                 raise pybamm.DomainError(
-                    "variable and equation in '{}' must have the same domain".format(
-                        self.name
-                    )
+                    f"variable and equation in '{self.name}' must have the same domain"
                 )
 
         # For initial conditions, check that the equation doesn't contain any

@@ -49,7 +49,7 @@ def process_2D_data(name, path=None):
     """
     filename, name = _process_name(name, path, ".json")
 
-    with open(filename, "r") as jsonfile:
+    with open(filename) as jsonfile:
         json_data = json.load(jsonfile)
     data = json_data["data"]
     data[0] = [np.array(el) for el in data[0]]

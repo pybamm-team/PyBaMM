@@ -49,7 +49,7 @@ class Array(pybamm.Symbol):
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
-            name = "Array of shape {!s}".format(entries.shape)
+            name = f"Array of shape {entries.shape!s}"
         self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
         self.entries_string = entries_string
