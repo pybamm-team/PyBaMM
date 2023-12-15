@@ -2,7 +2,7 @@
 
 ## Features
 
-- Renamed "electrode diffusivity" to "particle diffusivity" as a non-breaking change with a deprecation warning ([#3604](https://github.com/pybamm-team/PyBaMM/pull/3604))
+- Renamed "electrode diffusivity" to "particle diffusivity" as a non-breaking change with a deprecation warning ([#3623](https://github.com/pybamm-team/PyBaMM/pull/3623))
 - Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
 - Added custom experiment terminations ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
 - Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
