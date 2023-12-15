@@ -134,7 +134,7 @@ class SEIGrowth(BaseModel):
         elif SEI_option == "electron-migration limited":
             # Scott Marquis thesis (eq. 5.94)
             eta_inner = delta_phi - phase_param.U_inner
-            j_sei = phase_param.kappa_inner * eta_inner / L_sei_inner * pybamm.EqualHeaviside(eta_inner, 0)
+            j_sei = pybamm.EqualHeaviside(eta_inner, 0) * phase_param.kappa_inner * eta_inner / L_sei_inner
         elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)
             j_sei = -(
