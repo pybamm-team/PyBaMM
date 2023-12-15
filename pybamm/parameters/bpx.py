@@ -43,12 +43,21 @@ positive_electrode = Domain(
     pre_name="Positive electrode ",
     short_pre_name="Positive ",
 )
+negative_particle = Domain(
+    name="negative particle",
+    pre_name="Negative particle ",
+    short_pre_name="Negative ",
+)
+positive_particle = Domain(
+    name="positive particle",
+    pre_name="Positive particle ",
+    short_pre_name="Positive ",
+)
 positive_current_collector = Domain(
     name="positive current collector",
     pre_name="Positive current collector ",
     short_pre_name="",
 )
-
 negative_current_collector = Domain(
     name="negative current collector",
     pre_name="Negative current collector ",
@@ -324,16 +333,17 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     Ea_D_n = pybamm_dict.get(
         negative_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
+    pybamm_dict[negative_particle.pre_name + "diffusivity activation energy [J.mol-1]"] = Ea_D_n
     D_n_ref = pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_n_ref):
 
-        def _negative_electrode_diffusivity(sto, T):
+        def _negative_particle_diffusivity(sto, T):
             return arrhenius(Ea_D_n, T) * D_n_ref(sto)
 
     elif isinstance(D_n_ref, tuple):
 
-        def _negative_electrode_diffusivity(sto, T):
+        def _negative_particle_diffusivity(sto, T):
             name, (x, y) = D_n_ref
             return arrhenius(Ea_D_n, T) * pybamm.Interpolant(
                 x, y, sto, name=name, interpolator="linear"
@@ -341,27 +351,28 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
 
     else:
 
-        def _negative_electrode_diffusivity(sto, T):
+        def _negative_particle_diffusivity(sto, T):
             return arrhenius(Ea_D_n, T) * D_n_ref
 
-    pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
-        _negative_electrode_diffusivity
+    pybamm_dict[negative_particle.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
+        _negative_particle_diffusivity
     )
 
     # positive electrode
     Ea_D_p = pybamm_dict.get(
         positive_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
+    pybamm_dict[positive_particle.pre_name + "diffusivity activation energy [J.mol-1]"] = Ea_D_p
     D_p_ref = pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_p_ref):
 
-        def _positive_electrode_diffusivity(sto, T):
+        def _positive_particle_diffusivity(sto, T):
             return arrhenius(Ea_D_p, T) * D_p_ref(sto)
 
     elif isinstance(D_p_ref, tuple):
 
-        def _positive_electrode_diffusivity(sto, T):
+        def _positive_particle_diffusivity(sto, T):
             name, (x, y) = D_p_ref
             return arrhenius(Ea_D_p, T) * pybamm.Interpolant(
                 x, y, sto, name=name, interpolator="linear"
@@ -369,11 +380,11 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
 
     else:
 
-        def _positive_electrode_diffusivity(sto, T):
+        def _positive_particle_diffusivity(sto, T):
             return arrhenius(Ea_D_p, T) * D_p_ref
 
-    pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
-        _positive_electrode_diffusivity
+    pybamm_dict[positive_particle.pre_name + "diffusivity [m2.s-1]"] = _copy_func(
+        _positive_particle_diffusivity
     )
 
     # electrolyte

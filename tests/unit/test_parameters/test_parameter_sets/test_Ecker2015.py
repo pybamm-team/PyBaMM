@@ -14,14 +14,14 @@ class TestEcker2015(TestCase):
 
         fun_test = {
             # Negative electrode
-            "Negative electrode diffusivity [m2.s-1]": ([sto, T], 1.219e-14),
+            "Negative particle diffusivity [m2.s-1]": ([sto, T], 1.219e-14),
             "Negative electrode exchange-current density [A.m-2]": (
                 [1000, 15960, 31920, T],
                 6.2517,
             ),
             "Negative electrode OCP [V]": ([sto], 0.124),
             # Positive electrode
-            "Positive electrode diffusivity [m2.s-1]": ([sto, T], 1.0457e-13),
+            "Positive particle diffusivity [m2.s-1]": ([sto, T], 1.0457e-13),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1000, 24290, 48580, T],
                 2.5121,

@@ -170,7 +170,7 @@ class TestBPX(TestCase):
                 self.assertEqual(p_vals[0], p_vals[1])
 
             for electrode in ["Negative", "Positive"]:
-                D = param[f"{electrode} electrode diffusivity [m2.s-1]"]
+                D = param[f"{electrode} particle diffusivity [m2.s-1]"]
                 dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
                 check_constant_output(D)
                 check_constant_output(dUdT)
@@ -227,7 +227,7 @@ class TestBPX(TestCase):
             D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
             self.assertIsInstance(D, pybamm.Interpolant)
             for electrode in ["Negative", "Positive"]:
-                D = param[f"{electrode} electrode diffusivity [m2.s-1]"](c, 298.15)
+                D = param[f"{electrode} particle diffusivity [m2.s-1]"](c, 298.15)
                 self.assertIsInstance(D, pybamm.Interpolant)
                 OCP = param[f"{electrode} electrode OCP [V]"](c)
                 self.assertIsInstance(OCP, pybamm.Interpolant)
@@ -283,8 +283,8 @@ class TestBPX(TestCase):
         param_keys = [
             "Electrolyte conductivity [S.m-1]",
             "Electrolyte diffusivity [m2.s-1]",
-            "Negative electrode diffusivity [m2.s-1]",
-            "Positive electrode diffusivity [m2.s-1]",
+            "Negative particle diffusivity [m2.s-1]",
+            "Positive particle diffusivity [m2.s-1]",
             "Positive electrode exchange-current density [A.m-2]",
             "Negative electrode exchange-current density [A.m-2]",
         ]
@@ -292,8 +292,8 @@ class TestBPX(TestCase):
         Ea_keys = [
             "Electrolyte conductivity activation energy [J.mol-1]",
             "Electrolyte diffusivity activation energy [J.mol-1]",
-            "Negative electrode diffusivity activation energy [J.mol-1]",
-            "Positive electrode diffusivity activation energy [J.mol-1]",
+            "Negative particle diffusivity activation energy [J.mol-1]",
+            "Positive particle diffusivity activation energy [J.mol-1]",
             "Positive electrode reaction rate constant activation energy [J.mol-1]",
             "Negative electrode reaction rate constant activation energy [J.mol-1]",
         ]
