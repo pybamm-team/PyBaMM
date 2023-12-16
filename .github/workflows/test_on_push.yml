@@ -91,10 +91,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and CMake
+        run: python -m pip install nox cmake
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
+        id: pybamm-requires
         uses: actions/cache@v3
         if: matrix.os != 'windows-latest'
         with:
@@ -108,7 +109,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows-latest' && steps.pybamm-requires.outputs.cache-hit != 'true'
         run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
@@ -147,10 +148,11 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and CMake
+        run: python -m pip install nox cmake
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
+        id: pybamm-requires
         uses: actions/cache@v3
         with:
           path: |
@@ -163,6 +165,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        if: steps.pybamm-requires.outputs.cache-hit != 'true'
         run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
@@ -227,10 +230,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and CMake
+        run: python -m pip install nox cmake
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
+        id: pybamm-requires
         uses: actions/cache@v3
         if: matrix.os != 'windows-latest'
         with:
@@ -244,7 +248,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows-latest' && steps.pybamm-requires.outputs.cache-hit != 'true'
         run: python -m nox -s pybamm-requires
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
@@ -271,11 +275,11 @@ jobs:
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
+      - name: Install TeXLive for Linux
         run: |
           sudo apt-get update
           sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python 3.11
         id: setup-python
@@ -326,10 +330,11 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and CMake
+        run: python -m pip install nox cmake
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
+        id: pybamm-requires
         uses: actions/cache@v3
         with:
           path: |
@@ -342,6 +347,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        if: steps.pybamm-requires.outputs.cache-hit != 'true'
         run: python -m nox -s pybamm-requires
 
       - name: Run example notebooks tests for GNU/Linux with Python 3.11
@@ -380,10 +386,11 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and CMake
+        run: python -m pip install nox cmake
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
+        id: pybamm-requires
         uses: actions/cache@v3
         with:
           path: |
@@ -396,6 +403,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        if: steps.pybamm-requires.outputs.cache-hit != 'true'
         run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.11
