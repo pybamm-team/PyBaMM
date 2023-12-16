@@ -13,7 +13,6 @@ class SPM(BaseModel):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.SPM()
     >>> model.name
     'Single Particle Model'

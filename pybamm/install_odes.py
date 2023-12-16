@@ -66,7 +66,7 @@ def install_sundials(download_dir, install_dir):
 
     print("-" * 10, "Running CMake prepare", "-" * 40)
     subprocess.run(
-        ["cmake", f"../sundials-{SUNDIALS_VERSION}"] + cmake_args,
+        ["cmake", f"../sundials-{SUNDIALS_VERSION}", *cmake_args],
         cwd=build_directory,
         check=True,
     )
@@ -91,7 +91,7 @@ def update_LD_LIBRARY_PATH(install_dir):
         if 'ZSH' in os.environ:
             script_path = os.path.join(os.environ.get("HOME"), ".zshrc")
 
-    if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv("LD_LIBRARY_PATH"):  # noqa: E501
+    if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv("LD_LIBRARY_PATH"):
         print(f"{install_dir}/lib was found in LD_LIBRARY_PATH.")
         if 'BASH' in os.environ:
             print("--> Not updating venv activate or .bashrc scripts")

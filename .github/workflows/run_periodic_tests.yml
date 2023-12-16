@@ -12,35 +12,31 @@ on:
   schedule:
     - cron: "0 3 * * *"
 
-jobs:
-  pre_job:
-    runs-on: ubuntu-latest
-    # Map a step output to a job output
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@master
-        with:
-          # All of these options are optional, so you can remove them if you are happy with the defaults
-          concurrent_skipping: "never"
-          cancel_others: "true"
-          paths_ignore: '["**/README.md"]'
+env:
+  FORCE_COLOR: 3
 
+concurrency:
+  # github.workflow: name of the workflow, so that we don't cancel other workflows
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  # This avoids workflow runs on both pushes and PRs
+  cancel-in-progress: true
+
+jobs:
   style:
-    needs: pre_job
-    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
       - name: Check style
         run: |
           python -m pip install pre-commit
+          git add .
           pre-commit run ruff
 
   build:
@@ -55,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -66,65 +62,58 @@ jobs:
           sudo apt install gfortran gcc libopenblas-dev graphviz pandoc
           sudo apt install texlive-full
 
-      # Added fixes to homebrew installs:
-      # rm -f /usr/local/bin/2to3
-      # (see https://github.com/actions/virtual-environments/issues/2322)
-      - name: Install MacOS system dependencies
+      - name: Install macOS system dependencies
         if: matrix.os == 'macos-latest'
         run: |
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
-          brew update
-          brew install graphviz
-          brew install openblas
+          brew analytics off
+          brew install graphviz openblas libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
         run: choco install graphviz --version=2.38.0.20190211
 
-      - name: Install standard Python dependencies
-        run: |
-          python -m pip install --upgrade pip wheel setuptools
+      - name: Install nox
+        run: python -m pip install nox
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s pybamm-requires
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        if: matrix.os != 'windows-latest'
+        run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
-        run: pipx run nox -s unit
+        run: python -m nox -s unit
 
       - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        run: pipx run nox -s coverage
+        run: python -m nox -s coverage
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v3.1.4
 
       - name: Run integration tests
-        run: pipx run nox -s integration
+        run: python -m nox -s integration
 
       - name: Install docs dependencies and run doctests
         if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s doctests
+        run: python -m nox -s doctests
 
       - name: Check if the documentation can be built
         if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s docs
+        run: python -m nox -s docs
 
       - name: Install dev dependencies and run example tests
         if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s examples
+        run: python -m nox -s examples
 
       - name: Run example scripts tests
         if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s scripts
+        run: python -m nox -s scripts
 
   #M-series Mac Mini
   build-apple-mseries:
+    if: github.repository_owner == 'pybamm-team'
     needs: style
     runs-on: [self-hosted, macOS, ARM64]
     env:

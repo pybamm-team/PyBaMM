@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Options to modify nox behaviour
 nox.options.reuse_existing_virtualenvs = True
-if sys.platform == "linux":
+if sys.platform != "win32":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
 else:
     nox.options.sessions = ["pre-commit", "unit"]
@@ -15,9 +15,9 @@ else:
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
-    "LD_LIBRARY_PATH": f"{homedir}/.local/lib:",
+    "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
 }
-VENV_DIR = Path('./venv').resolve()
+VENV_DIR = Path("./venv").resolve()
 
 
 def set_environment_variables(env_dict, session):
@@ -38,7 +38,7 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""  # noqa: E501
+    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("wget", "cmake", silent=False)
@@ -60,11 +60,14 @@ def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
-    session.install("-e", ".[all]", silent=False)
     if sys.platform != "win32":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
-    session.run("coverage", "run", "--rcfile=.coveragerc", "run-tests.py", "--nosub")
+        session.install("-e", ".[all,jax,odes]", silent=False)
+    else:
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
+    session.run("coverage", "run", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
 
@@ -73,9 +76,13 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
-    if sys.platform == "linux":
-        session.install("-e", ".[odes]", silent=False)
+    if sys.platform != "win32":
+        session.install("-e", ".[all,jax,odes]", silent=False)
+    else:
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -90,10 +97,13 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
-    if sys.platform == "linux":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+    if sys.platform != "win32":
+        session.install("-e", ".[all,jax,odes]", silent=False)
+    else:
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -121,26 +131,59 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    session.run(
+        python,
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "pip",
+        "setuptools",
+        "wheel",
+        external=True,
+    )
     if sys.platform == "linux":
-        session.run(python,
-                    "-m",
-                    "pip",
-                    "install",
-                    ".[all,dev,jax,odes]",
-                    external=True,
+        session.run(
+            python,
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            ".[all,dev,jax,odes]",
+            external=True,
         )
     else:
-        session.run(python, "-m", "pip", "install", "-e", ".[all,dev]", external=True)
+        if sys.version_info < (3, 9):
+            session.run(
+                python,
+                "-m",
+                "pip",
+                "install",
+                ".[all,dev]",
+                external=True,
+            )
+        else:
+            session.run(
+                python,
+                "-m",
+                "pip",
+                "install",
+                ".[all,dev,jax]",
+                external=True,
+            )
 
 
 @nox.session(name="tests")
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all]", silent=False)
-    if sys.platform == "linux" or sys.platform == "darwin":
-        session.install("-e", ".[odes]", silent=False)
-        session.install("-e", ".[jax]", silent=False)
+    if sys.platform != "win32":
+            session.install("-e", ".[all,jax,odes]", silent=False)
+    else:
+        if sys.version_info < (3, 9):
+            session.install("-e", ".[all]", silent=False)
+        else:
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
@@ -153,26 +196,26 @@ def build_docs(session):
     # Local development
     if session.interactive:
         session.run(
-        "sphinx-autobuild",
-        "-j",
-        "auto",
-        "--open-browser",
-        "-qT",
-        ".",
-        f"{envbindir}/../tmp/html",
+            "sphinx-autobuild",
+            "-j",
+            "auto",
+            "--open-browser",
+            "-qT",
+            ".",
+            f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
     else:
         session.run(
-        "sphinx-build",
-        "-j",
-        "auto",
-        "-b",
-        "html",
-        "-W",
-        "--keep-going",
-        ".",
-        f"{envbindir}/../tmp/html",
+            "sphinx-build",
+            "-j",
+            "auto",
+            "-b",
+            "html",
+            "-W",
+            "--keep-going",
+            ".",
+            f"{envbindir}/../tmp/html",
         )
 
 

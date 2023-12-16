@@ -141,6 +141,10 @@ class QuickPlot(object):
                     f"No default output variables provided for {models[0].name}"
                 )
 
+        # check variables have been provided after any serialisation
+        if any(len(m.variables) == 0 for m in models):
+            raise AttributeError("No variables to plot")
+
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
         )
@@ -482,14 +486,14 @@ class QuickPlot(object):
         self.plots = {}
         self.time_lines = {}
         self.colorbars = {}
-        self.axes = []
+        self.axes = QuickPlotAxes()
 
         # initialize empty handles, to be created only if the appropriate plots are made
         solution_handles = []
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             ax = self.fig.add_subplot(self.gridspec[k])
-            self.axes.append(ax)
+            self.axes.add(key, ax)
             x_min, x_max, y_min, y_max = self.axis_limits[key]
             ax.set_xlim(x_min, x_max)
             if y_min is not None and y_max is not None:
@@ -534,7 +538,7 @@ class QuickPlot(object):
                 # 1D plot: plot as a function of x at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
-                spatial_var_name = list(spatial_vars.keys())[0]
+                spatial_var_name = next(iter(spatial_vars.keys()))
                 ax.set_xlabel(
                     "{} [{}]".format(spatial_var_name, self.spatial_unit),
                 )
@@ -568,12 +572,12 @@ class QuickPlot(object):
                 # different order based on whether the domains are x-r, x-z or y-z, etc
                 if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
-                    y_name = list(spatial_vars.keys())[0][0]
+                    y_name = next(iter(spatial_vars.keys()))[0]
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
-                    x_name = list(spatial_vars.keys())[0][0]
+                    x_name = next(iter(spatial_vars.keys()))[0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
@@ -799,3 +803,40 @@ class QuickPlot(object):
         # remove the generated images
         for image in images:
             os.remove(image)
+
+
+class QuickPlotAxes:
+    """
+    Class to store axes for the QuickPlot
+    """
+
+    def __init__(self):
+        self._by_variable = {}
+        self._axes = []
+
+    def add(self, keys, axis):
+        """
+        Add axis
+
+        Parameters
+        ----------
+        keys : iter
+            Iterable of keys of variables being plotted on the axis
+        axis : matplotlib Axis object
+            The axis object
+        """
+        self._axes.append(axis)
+        for k in keys:
+            self._by_variable[k] = axis
+
+    def __getitem__(self, index):
+        """
+        Get axis by index
+        """
+        return self._axes[index]
+
+    def by_variable(self, key):
+        """
+        Get axis by variable name
+        """
+        return self._by_variable[key]
