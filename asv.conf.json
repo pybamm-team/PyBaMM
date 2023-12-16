@@ -7,7 +7,7 @@
   "project": "PyBaMM",
 
   // The project's homepage
-  "project_url": "https://www.pybamm.org/",
+  "project_url": "https://pybamm.org/",
 
   // The URL or local path of the source code repository for the
   // project being benchmarked
@@ -24,8 +24,8 @@
   // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
-    "python setup.py build",
-    "PIP_NO_BUILD_ISOLATION=false python -m pip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+    "python -m pip install setuptools wheel casadi pybind11[global] cmake",
+    "python -m pip wheel --no-deps --no-index -w -v --no-build-isolation {build_cache_dir} {build_dir}"
   ],
 
   // List of branches to benchmark. If not provided, defaults to "master"
@@ -75,6 +75,10 @@
     "req": {
       "numpy": [],
       "casadi": [],
+      "scipy": [],
+      "xarray": [],
+      "wheel": [],
+      "pybind11[global]": [],
       "wget": [],
       "cmake": [],
       "anytree": [],
