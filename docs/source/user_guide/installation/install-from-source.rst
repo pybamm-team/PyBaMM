@@ -86,7 +86,7 @@ Manual install of build time requirements
 
 If you'd rather do things yourself,
 
-1. Make sure you have CMake installed
+1. Make sure you have CMake installed. CMake can be installed using ``pip``, ``brew``, or your system's package manager.
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
 
