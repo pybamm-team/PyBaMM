@@ -26,7 +26,7 @@
   "build_command": [
     "python -m pip install pybind11[global]",
     "python setup.py build",
-    "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+    "PIP_NO_BUILD_ISOLATION=false python -m pip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
   ],
 
   // List of branches to benchmark. If not provided, defaults to "master"
