@@ -24,13 +24,13 @@ default_lib_dir = (
 
 def set_vcpkg_environment_variables():
     if not os.getenv("VCPKG_ROOT_DIR"):
-        raise EnvironmentError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
+        raise OSError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
     if not os.getenv("VCPKG_DEFAULT_TRIPLET"):
-        raise EnvironmentError(
+        raise OSError(
             "Environment variable 'VCPKG_DEFAULT_TRIPLET' is undefined."
         )
     if not os.getenv("VCPKG_FEATURE_FLAGS"):
-        raise EnvironmentError(
+        raise OSError(
             "Environment variable 'VCPKG_FEATURE_FLAGS' is undefined."
         )
     return (
@@ -91,17 +91,17 @@ class CMakeBuild(build_ext):
 
         build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "RELEASE")
         cmake_args = [
-            "-DCMAKE_BUILD_TYPE={}".format(build_type),
-            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+            f"-DCMAKE_BUILD_TYPE={build_type}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
         ]
         if self.suitesparse_root:
             cmake_args.append(
-                "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))
+                f"-DSuiteSparse_ROOT={os.path.abspath(self.suitesparse_root)}"
             )
         if self.sundials_root:
             cmake_args.append(
-                "-DSUNDIALS_ROOT={}".format(os.path.abspath(self.sundials_root))
+                f"-DSUNDIALS_ROOT={os.path.abspath(self.sundials_root)}"
             )
 
         build_dir = self.get_build_directory()

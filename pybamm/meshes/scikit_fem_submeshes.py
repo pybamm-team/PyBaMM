@@ -79,7 +79,7 @@ class ScikitSubMesh2D(SubMesh):
         # check that two variables have been passed in
         if len(lims) != 2:
             raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
+                f"lims should contain exactly two variables, not {len(lims)}"
             )
 
         # get spatial variables
@@ -181,7 +181,7 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 edges[var.name] = np.linspace(
@@ -240,7 +240,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
-                "At present, side can only be 'top', but is set to {}".format(side)
+                f"At present, side can only be 'top', but is set to {side}"
             )
 
         spatial_vars, tabs = self.read_lims(lims)
@@ -251,7 +251,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             elif var.name == "y":
                 edges[var.name] = np.linspace(
@@ -305,7 +305,7 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 # Create N Chebyshev nodes in the interval (a,b)

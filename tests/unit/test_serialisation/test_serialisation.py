@@ -512,7 +512,7 @@ class TestSerialise(TestCase):
         )
 
         # Test for error if no model type is provided
-        with open("test_model.json", "r") as f:
+        with open("test_model.json") as f:
             model_data = json.load(f)
             del model_data["py/object"]
 

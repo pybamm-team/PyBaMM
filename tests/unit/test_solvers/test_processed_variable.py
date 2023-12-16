@@ -233,7 +233,7 @@ class TestProcessedVariable(TestCase):
             model,
             {},
             np.linspace(0, 1, 1),
-            np.zeros((var_pts[x])),
+            np.zeros(var_pts[x]),
             "test",
         )
 
