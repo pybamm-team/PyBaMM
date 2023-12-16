@@ -101,7 +101,7 @@ class TestCitations(unittest.TestCase):
             pybamm.citations.register(r"@article{NotACitation, title = {A New Title}}")
             pybamm.citations._parse_citation(
                 r"@article{NotACitation, title = {A New Title}}"
-            )  # noqa: E501
+            )
         self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
         self.assertNotEqual(
             pybamm.citations._all_citations["NotACitation"], old_citation

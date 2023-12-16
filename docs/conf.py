@@ -76,6 +76,7 @@ napoleon_google_docstring = False
 
 doctest_global_setup = """
 from docs import *
+import pybamm
 """
 
 # Add any paths that contain templates here, relative to this directory.
@@ -122,7 +123,7 @@ html_favicon = "_static/favicon/favicon.png"
 html_theme_options = {
     "logo": {
         "image_light": "pybamm_logo.png",
-        "image_dark": "pybamm_logo.png",
+        "image_dark": "pybamm_logo_whitetext.png",
     },
     "icon_links": [
         {
@@ -142,11 +143,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    # should be kept versioned to use for the version warning bar
-    "switcher": {
-        "version_match": version,
-        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
-    },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
     # for dark mode toggle and social media links

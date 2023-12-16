@@ -120,7 +120,7 @@ def current(value, **kwargs):
     Parameters
     ----------
     value : float
-        The current value in A.
+        The current value in A. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -141,7 +141,7 @@ def c_rate(value, **kwargs):
     Parameters
     ----------
     value : float
-        The C-rate value.
+        The C-rate value. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -162,7 +162,7 @@ def voltage(value, **kwargs):
     Parameters
     ----------
     value : float
-        The voltage value in V.
+        The voltage value in V. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -183,7 +183,7 @@ def power(value, **kwargs):
     Parameters
     ----------
     value : float
-        The power value in W.
+        The power value in W. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.
@@ -204,7 +204,7 @@ def resistance(value, **kwargs):
     Parameters
     ----------
     value : float
-        The resistance value in Ohm.
+        The resistance value in Ohm. It can be a number or a 2-column array (for drive cycles).
     **kwargs
         Any other keyword arguments are passed to the :class:`pybamm.step._Step`
         class.

@@ -34,7 +34,7 @@ class SubMesh1D(SubMesh):
         self.internal_boundaries = []
 
         # Add tab locations in terms of "left" and "right"
-        if tabs:
+        if tabs and "negative tab" not in tabs.keys():
             self.tabs = {}
             l_z = self.edges[-1]
 
@@ -52,6 +52,9 @@ class SubMesh1D(SubMesh):
                         f"{tab} tab located at {tab_location}, "
                         f"but must be at either 0 or {l_z}"
                     )
+        elif tabs:
+            # tabs have already been calculated by a serialised model
+            self.tabs = tabs
 
     def read_lims(self, lims):
         # Separate limits and tabs
@@ -69,6 +72,17 @@ class SubMesh1D(SubMesh):
             spatial_var = getattr(pybamm.standard_spatial_vars, spatial_var)
 
         return spatial_var, spatial_lims, tabs
+
+    def to_json(self):
+        json_dict = {
+            "edges": self.edges.tolist(),
+            "coord_sys": self.coord_sys,
+        }
+
+        if hasattr(self, "tabs"):
+            json_dict["tabs"] = self.tabs
+
+        return json_dict
 
 
 class Uniform1DSubMesh(SubMesh1D):
@@ -94,6 +108,18 @@ class Uniform1DSubMesh(SubMesh1D):
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        tabs = snippet["tabs"] if "tabs" in snippet.keys() else None
+
+        super(Uniform1DSubMesh, instance).__init__(
+            np.array(snippet["edges"]), snippet["coord_sys"], tabs=tabs
+        )
+
+        return instance
 
 
 class Exponential1DSubMesh(SubMesh1D):

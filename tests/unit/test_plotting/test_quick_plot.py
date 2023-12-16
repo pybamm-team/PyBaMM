@@ -294,8 +294,9 @@ class TestQuickPlot(TestCase):
         with TemporaryDirectory() as dir_name:
             test_stub = os.path.join(dir_name, "spm_sim_test")
             test_file = f"{test_stub}.gif"
-            quick_plot.create_gif(number_of_images=3, duration=3,
-                                  output_filename=test_file)
+            quick_plot.create_gif(
+                number_of_images=3, duration=3, output_filename=test_file
+            )
             assert not os.path.exists(f"{test_stub}*.png")
             assert os.path.exists(test_file)
         pybamm.close_plots()
@@ -506,6 +507,15 @@ class TestQuickPlot(TestCase):
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(1)
         pybamm.close_plots()
+
+
+class TestQuickPlotAxes(unittest.TestCase):
+    def test_quick_plot_axes(self):
+        axes = pybamm.QuickPlotAxes()
+        axes.add(("test 1", "test 2"), 1)
+        self.assertEqual(axes[0], 1)
+        self.assertEqual(axes.by_variable("test 1"), 1)
+        self.assertEqual(axes.by_variable("test 2"), 1)
 
 
 if __name__ == "__main__":

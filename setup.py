@@ -42,10 +42,7 @@ def set_vcpkg_environment_variables():
 # ---------- CMakeBuild class (custom build_ext for IDAKLU target) ---------------------
 
 class CMakeBuild(build_ext):
-    user_options = build_ext.user_options + [
-        ("suitesparse-root=", None, "suitesparse source location"),
-        ("sundials-root=", None, "sundials source location"),
-    ]
+    user_options = [*build_ext.user_options, ("suitesparse-root=", None, "suitesparse source location"), ("sundials-root=", None, "sundials source location")]
 
     def initialize_options(self):
         build_ext.initialize_options(self)
@@ -136,7 +133,7 @@ class CMakeBuild(build_ext):
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
         print("-" * 10, "Running CMake for IDAKLU solver", "-" * 40)
         subprocess.run(
-            ["cmake", cmake_list_dir] + cmake_args, cwd=build_dir, env=build_env
+            ["cmake", cmake_list_dir, *cmake_args], cwd=build_dir, env=build_env
         , check=True)
 
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
@@ -144,7 +141,7 @@ class CMakeBuild(build_ext):
                 "cmake configuration steps encountered errors, and the IDAKLU module"
                 " could not be built. Make sure dependencies are correctly "
                 "installed. See "
-                "https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html" # noqa: E501
+                "https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html"
             )
             raise RuntimeError(msg)
         else:
@@ -201,10 +198,7 @@ logger.info("Starting PyBaMM setup")
 class CustomInstall(install):
     """A custom install command to add 2 build options"""
 
-    user_options = install.user_options + [
-        ("suitesparse-root=", None, "suitesparse source location"),
-        ("sundials-root=", None, "sundials source location"),
-    ]
+    user_options = [*install.user_options, ("suitesparse-root=", None, "suitesparse source location"), ("sundials-root=", None, "sundials source location")]
 
     def initialize_options(self):
         install.initialize_options(self)
@@ -228,10 +222,7 @@ class CustomInstall(install):
 class bdist_wheel(orig.bdist_wheel):
     """A custom install command to add 2 build options"""
 
-    user_options = orig.bdist_wheel.user_options + [
-        ("suitesparse-root=", None, "suitesparse source location"),
-        ("sundials-root=", None, "sundials source location"),
-    ]
+    user_options = [*orig.bdist_wheel.user_options, ("suitesparse-root=", None, "suitesparse source location"), ("sundials-root=", None, "sundials source location")]
 
     def initialize_options(self):
         orig.bdist_wheel.initialize_options(self)

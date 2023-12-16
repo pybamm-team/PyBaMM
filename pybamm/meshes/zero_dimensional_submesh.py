@@ -31,13 +31,30 @@ class SubMesh0D(SubMesh):
             raise pybamm.GeometryError("position should only contain a single variable")
 
         # extract the position
-        position = list(position.values())[0]
+        position = next(iter(position.values()))
         spatial_position = position["position"]
         self.nodes = np.array([spatial_position])
         self.edges = np.array([spatial_position])
         self.coord_sys = None
         self.npts = 1
 
+    @classmethod
+    def _from_json(cls, snippet):
+        instance = cls.__new__(cls)
+
+        instance.nodes = np.array(snippet["spatial_position"])
+        instance.edges = np.array(snippet["spatial_position"])
+        instance.coord_sys = None
+        instance.npts = 1
+
+        return instance
+
     def add_ghost_meshes(self):
         # No ghost meshes to be added to this class
         pass
+
+    def to_json(self):
+        json_dict = {
+            "spatial_position": self.nodes.tolist(),
+        }
+        return json_dict
