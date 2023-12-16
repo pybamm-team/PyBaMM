@@ -24,8 +24,7 @@
   // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
-    "python -m pip install setuptools wheel casadi cmake pybind11[global]",
-    "python -m pip wheel --no-deps -w --no-build-isolation {build_dir}"
+    "python -m pip install setuptools wheel casadi cmake pybind11[global] && python -m pip wheel --no-deps -w --no-build-isolation {build_dir}"
   ],
 
   // List of branches to benchmark. If not provided, defaults to "master"
@@ -78,7 +77,6 @@
       "scipy": [],
       "xarray": [],
       "wheel": [],
-      "pybind11[global]": [],
       "wget": [],
       "cmake": [],
       "anytree": [],
