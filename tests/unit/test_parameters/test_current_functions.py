@@ -77,7 +77,7 @@ class TestCurrentFunctions(TestCase):
         )
 
 
-class StandardCurrentFunctionTests(object):
+class StandardCurrentFunctionTests:
     def __init__(self, function_list, always_array=False):
         self.function_list = function_list
         self.always_array = always_array

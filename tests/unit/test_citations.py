@@ -50,13 +50,13 @@ class TestCitations(unittest.TestCase):
         # Text Style
         with temporary_filename() as filename:
             pybamm.print_citations(filename, "text")
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
         # Bibtext Style
         with temporary_filename() as filename:
             pybamm.print_citations(filename, "bibtex")
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
         # Write to stdout

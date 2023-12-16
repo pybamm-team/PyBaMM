@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-70-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-71-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -274,6 +274,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/AbhishekChaudharii"><img src="https://avatars.githubusercontent.com/u/91185083?v=4?s=100" width="100px;" alt="Abhishek Chaudhari"/><br /><sub><b>Abhishek Chaudhari</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=AbhishekChaudharii" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/shubhambhar007"><img src="https://avatars.githubusercontent.com/u/32607282?v=4?s=100" width="100px;" alt="Shubham Bhardwaj"/><br /><sub><b>Shubham Bhardwaj</b></sub></a><br /><a href="#infra-shubhambhar007" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/jlauber18"><img src="https://avatars.githubusercontent.com/u/28939653?v=4?s=100" width="100px;" alt="Jonathan Lauber"/><br /><sub><b>Jonathan Lauber</b></sub></a><br /><a href="#infra-jlauber18" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/prady0t"><img src="https://avatars.githubusercontent.com/u/99216956?v=4?s=100" width="100px;" alt="Pradyot Ranjan"/><br /><sub><b>Pradyot Ranjan</b></sub></a><br /><a href="#infra-prady0t" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
     </tr>
   </tbody>
 </table>
