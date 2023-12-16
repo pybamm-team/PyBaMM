@@ -167,7 +167,7 @@ jobs:
   open_failure_issue:
     needs: [build_windows_wheels, build_wheels, build_sdist]
     name: Open an issue if build fails
-    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    if: contains(needs.*.result, 'failure') && github.repository == 'pybamm-team/PyBaMM'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

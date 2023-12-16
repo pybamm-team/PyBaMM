@@ -55,6 +55,7 @@ jobs:
 
   publish-results:
     name: Push and publish results
+    if: github.repository == 'pybamm-team/pybamm'
     needs: benchmarks
     runs-on: ubuntu-latest
     steps:
