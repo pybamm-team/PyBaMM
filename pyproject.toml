@@ -2,12 +2,14 @@
 requires = [
     "setuptools>=64",
     "wheel",
-    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
+    # On Windows, use the CasADi vcpkg registry
     "casadi>=3.6.3; platform_system!='Windows'",
-    "cmake; platform_system!='Windows'",
     "pybind11[global]>=2.11.1",
     ]
 build-backend = "setuptools.build_meta"
+# Note: CMake is required to compile the IDAKLU solver but is not bundled with
+# PyBaMM as a build-time dependency. If CMake is not installed, the IDAKLU
+# solver compilation does not proceed.
 
 [project]
 name = "pybamm"
