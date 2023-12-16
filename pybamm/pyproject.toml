@@ -1,0 +1,250 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
+    "casadi>=3.6.3; platform_system!='Windows'",
+    "cmake; platform_system!='Windows'",
+    ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybamm"
+version = "23.9"
+license = { file = "LICENSE.txt" }
+description = "Python Battery Mathematical Modelling"
+authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
+maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
+requires-python = ">=3.8, <3.12"
+readme = {file = "README.md", content-type = "text/markdown"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.23.5",
+    "scipy>=1.9.3",
+    "casadi>=3.6.3",
+    "xarray>=2022.6.0",
+    "anytree>=2.8.0",
+]
+
+[project.urls]
+Homepage = "https://pybamm.org"
+Documentation = "https://docs.pybamm.org"
+Repository = "https://github.com/pybamm-team/PyBaMM"
+Releases = "https://github.com/pybamm-team/PyBaMM/releases"
+Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
+
+[project.optional-dependencies]
+# For the generation of documentation
+docs = [
+    "sphinx>=6",
+    "sphinx_rtd_theme>=0.5",
+    "pydata-sphinx-theme",
+    "sphinx_design",
+    "sphinx-copybutton",
+    "myst-parser",
+    "sphinx-inline-tabs",
+    "sphinxcontrib-bibtex",
+    "sphinx-autobuild",
+    "sphinx-last-updated-by-git",
+    "nbsphinx",
+    "ipykernel",
+    "ipywidgets",
+    "sphinx-gallery",
+    "sphinx-hoverxref",
+    "sphinx-docsearch",
+]
+# For example notebooks
+examples = [
+    "jupyter",
+]
+# Plotting functionality
+plot = [
+    "imageio>=2.3.0",
+    # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
+    # on systems without an attached display, it should never be imported
+    # outside of plot() methods.
+    "matplotlib>=3.6.0",
+]
+# For the Citations class
+cite = [
+    "pybtex>=0.24.0",
+]
+# To generate LaTeX strings
+latexify = [
+    "sympy>=1.12",
+]
+# Battery Parameter eXchange format
+bpx = [
+    "bpx",
+]
+# Low-overhead progress bars
+tqdm = [
+    "tqdm",
+]
+# Dependencies intended for use by developers
+dev = [
+    # For working with pre-commit hooks
+    "pre-commit",
+    # For code style checks: linting and auto-formatting
+    "ruff",
+    # For running testing sessions
+    "nox",
+    # For coverage
+    "coverage[toml]",
+    # For testing Jupyter notebooks
+    "pytest>=6",
+    "pytest-xdist",
+    "nbmake",
+]
+# Reading CSV files
+pandas = [
+    "pandas>=1.5.0",
+]
+# For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
+jax = [
+    "jax==0.4.20; python_version >= '3.9'",
+    "jaxlib==0.4.20; python_version >= '3.9'",
+]
+# For the scikits.odes solver
+odes = [
+    "scikits.odes"
+]
+# Contains all optional dependencies, except for odes, jax, and dev dependencies
+all = [
+    "autograd>=1.6.2",
+    "scikit-fem>=8.1.0",
+    "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]",
+]
+
+[project.scripts]
+pybamm_edit_parameter = "pybamm.parameters_cli:edit_parameter"
+pybamm_add_parameter = "pybamm.parameters_cli:add_parameter"
+pybamm_rm_parameter = "pybamm.parameters_cli:remove_parameter"
+pybamm_install_odes = "pybamm.install_odes:main"
+pybamm_install_jax = "pybamm.util:install_jax"
+
+[project.entry-points."pybamm_parameter_sets"]
+Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
+Ai2020 = "pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values"
+Chen2020 = "pybamm.input.parameters.lithium_ion.Chen2020:get_parameter_values"
+Chen2020_composite = "pybamm.input.parameters.lithium_ion.Chen2020_composite:get_parameter_values"
+Ecker2015 = "pybamm.input.parameters.lithium_ion.Ecker2015:get_parameter_values"
+Ecker2015_graphite_halfcell = "pybamm.input.parameters.lithium_ion.Ecker2015_graphite_halfcell:get_parameter_values"
+Marquis2019 = "pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_values"
+Mohtat2020 = "pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values"
+NCA_Kim2011 = "pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values"
+OKane2022 = "pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values"
+OKane2022_graphite_SiOx_halfcell = "pybamm.input.parameters.lithium_ion.OKane2022_graphite_SiOx_halfcell:get_parameter_values"
+ORegan2022 = "pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values"
+Prada2013 = "pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values"
+Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_values"
+Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
+ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
+MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
+
+[tool.setuptools]
+include-package-data = true
+
+# List of files to include as package data. These are mainly the parameter CSV files in
+# the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
+# README.md files, and specific .txt files inside the pybamm/ directory are also included.
+# These are specified to be included in the SDist through MANIFEST.in.
+[tool.setuptools.package-data]
+pybamm = [
+    "*.txt",
+    "*.md",
+    "*.csv",
+    "*.py",
+    "pybamm/CITATIONS.bib",
+    "pybamm/plotting/mplstyle",
+]
+
+[tool.setuptools.packages.find]
+include = ["pybamm", "pybamm.*"]
+
+[tool.ruff]
+extend-include = ["*.ipynb"]
+extend-exclude = ["__init__.py"]
+
+[tool.ruff.lint]
+extend-select = [
+  # "B",           # flake8-bugbear
+  # "I",           # isort
+  # "ARG",         # flake8-unused-arguments
+  # "C4",          # flake8-comprehensions
+  # "ICN",         # flake8-import-conventions
+  # "ISC",         # flake8-implicit-str-concat
+  # "PGH",         # pygrep-hooks
+  # "PIE",         # flake8-pie
+  # "PL",          # pylint
+  # "PT",          # flake8-pytest-style
+  # "PTH",         # flake8-use-pathlib
+  # "RET",         # flake8-return
+  "RUF",         # Ruff-specific
+  # "SIM",         # flake8-simplify
+  # "T20",         # flake8-print
+  "UP",          # pyupgrade
+  "YTT",         # flake8-2020
+]
+ignore = [
+  "E741",        # Ambiguous variable name
+  "RUF012",      # Mutable class attributes should be annotated with `typing.ClassVar`
+  "SIM108",      # Use ternary operator
+  "ARG001",      # Unused function argument:
+  "ARG002",      # Unused method arguments
+  "PLR2004",     # Magic value used in comparison
+  "PLR0915",     # Too many statements
+  "PLR0913",     # Too many arguments
+  "PLR0912",     # Too many branches
+  "RET504",      # Unnecessary assignment
+  "RET505",      # Unnecessary `else`
+  "RET506",      # Unnecessary `elif`
+  "B018",        # Found useless expression
+  "RUF002",      # Docstring contains ambiguous
+  "UP007",       # For pyupgrade
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["T20"]
+"docs/*" = ["T20"]
+"examples/*" = ["T20"]
+"**.ipynb" = ["E402", "E703"]
+
+# NOTE: currently used only for notebook tests with the nbmake plugin.
+[tool.pytest.ini_options]
+# Use pytest-xdist to run tests in parallel by default, exit with
+# error if not installed
+required_plugins = [
+  "pytest-xdist",
+]
+addopts = [
+  "-nauto",
+  "-v",
+]
+testpaths = [
+  "docs/source/examples/",
+]
+console_output_style = "progress"
+
+# Logging configuration
+log_cli = "true"
+log_cli_level = "INFO"
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.coverage.run]
+source = ["pybamm"]
+concurrency = ["multiprocessing"]

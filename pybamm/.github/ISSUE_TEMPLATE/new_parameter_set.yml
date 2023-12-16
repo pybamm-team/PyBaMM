@@ -1,0 +1,28 @@
+name: New Parameter Set
+description: Add a third party parameter set to PyBaMM's documentation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Third-party parameter sets can be added to PyBaMM by registering an entry
+        point with `pybamm-parameter-sets` as described in our
+        [documentation](https://docs.pybamm.org/en/latest/source/api/parameters/parameter_sets.html).
+  - type: input
+    id: parameter-set-url
+    attributes:
+      label: Where can we find your parameter set?
+      description: Provide the Github URL or PyPi package name for your parameter set
+      placeholder: https://github.com/AwesomeOrg/NewParameterSet
+    validations:
+      required: true
+  - type: dropdown
+    id: open-source-approved
+    attributes:
+      label: Is your package open source?
+      description: See the [Open Source Initiative's List of Approved Licenses](https://opensource.org/licenses)
+      options: ["Yes", "No"]
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Any additional information?
+      description: Thank you for making parameter set! Is there anything else we should know about it?

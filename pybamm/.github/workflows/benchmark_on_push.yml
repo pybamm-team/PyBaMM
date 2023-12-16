@@ -1,0 +1,76 @@
+name: Run benchmarks on push
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  # Cancel intermediate builds always
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc libopenblas-dev
+
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools wget cmake casadi numpy
+          python -m pip install asv[virtualenv]
+
+      - name: Install SuiteSparse and SUNDIALS
+        run: python scripts/install_KLU_Sundials.py
+
+      - name: Fetch base branch
+        run: |
+          # This workflow also runs for merge commits
+          # on develop. In this case, we don't want to be
+          # fetching the develop branch.
+          current_branch=$(git rev-parse --abbrev-ref HEAD)
+          # This workflow should also run on forks; hence,
+          # we should fetch the upstream develop branch.
+          git remote add upstream https://github.com/pybamm-team/PyBaMM/
+          if [ $current_branch != "develop" ]; then
+              git fetch upstream develop:develop
+          fi
+
+      - name: Run benchmarks
+        run: |
+          asv machine --machine "GitHubRunner"
+          # Get IDs of branch and PR commits
+          BASE_COMMIT=$(git rev-parse develop)
+          HEAD_COMMIT=$(git rev-parse HEAD)
+          echo $BASE_COMMIT | tee commits_to_compare.txt
+          echo $HEAD_COMMIT | tee -a commits_to_compare.txt
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr -v
+
+      - name: Compare commits' benchmark results
+        run: |
+          BASE_COMMIT=$(head -1 commits_to_compare.txt)
+          HEAD_COMMIT=$(tail -1 commits_to_compare.txt)
+          echo "SUMMARY OF CHANGES"
+          echo "=================="
+          asv compare $BASE_COMMIT $HEAD_COMMIT | tee compare_result.txt
+          # Make sure grep returns error code 0 even if code 1 is
+          # returned because no match is found
+          REGRESSIONS=$({ grep "+" compare_result.txt || test $? = 1; })
+          if [ ! -z "$REGRESSIONS" ]; \
+          then \
+          echo "REGRESSIONS FOUND"; \
+          echo "================="; \
+          echo "$REGRESSIONS"; \
+          echo "================="; \
+          printf "Found %d regression(s)\n" $(echo "$REGRESSIONS" | wc -l); \
+          exit 1; \
+          fi
