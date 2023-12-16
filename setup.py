@@ -242,51 +242,36 @@ class bdist_wheel(orig.bdist_wheel):
 
 def compile_KLU():
     # Decide whether or not the KLU extension should be compiled.
-    # Return True if all of the following conditions are met:
+    # Return True if both of the following conditions are met:
     #
-    # 1. Not running Windows.
-    #     1.1 If running on Windows, check if building a wheel.
-    # 2. CMake is found
-    # 3. pybind11 is found as a build-time dependency
-    # 4. Not running on Read the Docs (which runs on Ubuntu 22.04)
+    # 1. CMake is found
+    # 2. pybind11 is found
     #
-    # Otherwise, it is assumed that the user does not want to compile the
-    # IDAKLU solver, and False is returned. This configuration ensures
-    # that the IDAKLU solver is compiled when building a Windows wheel
-    # but not when running in CI on Windows.
+    # Otherwise, return False
 
     CMakeFound = True
     PyBind11Found = True
-    WindowsFound = (not system()) or system() == "Windows"
-    ReadTheDocsFound = os.getenv("READTHEDOCS", False) == "True"
-    # If running on Windows, check if building a wheel.
-    if WindowsFound:
-        WindowsWheelFound = os.getenv("CIBUILDWHEEL", 0) == "1"
 
-    windows_msg = "Running on Windows" if WindowsFound else "Not running on Windows"
-    pybind11_msg = "Could not find pybind11. Skipping compilation of KLU module."
-
-    logger.info(windows_msg)
-
+    # CMake
     try:
         subprocess.run(["cmake", "--version"])
         logger.info("Found CMake.")
     except OSError:
         CMakeFound = False
         logger.info("Could not find CMake. Skipping compilation of KLU module.")
+
+    # pybind11
     try:
         from pybind11 import get_cmake_dir
         pybind11_config = os.path.join(get_cmake_dir(), "pybind11Tools.cmake")
-        logger.info(f"Found pybind11 at {pybind11_config}")
+        if not os.path.isfile(pybind11_config):
+            raise FileNotFoundError
+        logger.info("Found pybind11")
     except ModuleNotFoundError or FileNotFoundError:
-        logger.info(pybind11_msg)
-
         PyBind11Found = False
+        logger.info("Could not find pybind11. Skipping compilation of KLU module.")
 
-    if WindowsFound:
-        return True if WindowsWheelFound else False
-    else:
-        return CMakeFound and PyBind11Found and not ReadTheDocsFound
+    return CMakeFound and PyBind11Found
 
 idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",
