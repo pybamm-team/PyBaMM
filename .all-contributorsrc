@@ -755,6 +755,24 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "jlauber18",
+      "name": "Jonathan Lauber",
+      "avatar_url": "https://avatars.githubusercontent.com/u/28939653?v=4",
+      "profile": "https://github.com/jlauber18",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "prady0t",
+      "name": "Pradyot Ranjan",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99216956?v=4",
+      "profile": "https://github.com/prady0t",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,

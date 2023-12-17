@@ -50,7 +50,7 @@ class ParameterSets(Mapping):
     def __new__(cls):
         """Ensure only one instance of ParameterSets exists"""
         if not hasattr(cls, "instance"):
-            cls.instance = super(ParameterSets, cls).__new__(cls)
+            cls.instance = super().__new__(cls)
         return cls.instance
 
     def __getitem__(self, key) -> dict:

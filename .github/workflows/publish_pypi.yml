@@ -22,7 +22,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -72,7 +72,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -122,7 +122,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
@@ -140,7 +140,7 @@ jobs:
           if-no-files-found: error
 
   publish_pypi:
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && github.repository_owner == 'pybamm-team'
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest

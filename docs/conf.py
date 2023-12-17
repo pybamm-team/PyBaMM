@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -168,7 +167,7 @@ html_theme_options = {
     ],
 }
 
-html_title = "%s v%s Manual" % (project, version)
+html_title = f"{project} v{version} Manual"
 html_last_updated_fmt = "%Y-%m-%d"
 html_css_files = ["pybamm.css"]
 html_context = {"default_mode": "light"}
