@@ -447,37 +447,52 @@ class BaseModel:
 
         return parameter_info
 
-    def print_parameter_info(self):
-        """Print parameter information in a formatted table from a dictionary of parameters"""
-        info = self.get_parameter_info()
-        max_param_name_length = 0
-        max_param_type_length = 0
+    def print_parameter_info(self, by_submodel=False):
+        """
+        Print parameter information in a formatted table from a dictionary of parameters
 
-        for param, param_type in info.values():
-            param_name_length = len(getattr(param, 'name', str(param)))
-            param_type_length = len(param_type)
-            max_param_name_length = max(max_param_name_length, param_name_length)
-            max_param_type_length = max(max_param_type_length, param_type_length)
+        Parameters
+        ----------
+        by_submodel : bool, optional
+            Whether to print the parameter info submodel wise or not (default False)
+        """
+        if by_submodel:
+            for submodel_name, submodel in self.submodels.items():
+                submodel_info = submodel.get_parameter_info()
+                if not submodel_info:
+                    print(f"'{submodel_name}' submodel parameters: \nNo parameters\n")
+                else:
+                    print(f"'{submodel_name}' submodel parameters:")
+                    submodel.print_parameter_info()
+        else:
+            info = self.get_parameter_info()
+            max_param_name_length = 0
+            max_param_type_length = 0
 
-        header_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
-        row_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+            for param, param_type in info.values():
+                param_name_length = len(getattr(param, 'name', str(param)))
+                param_type_length = len(param_type)
+                max_param_name_length = max(max_param_name_length, param_name_length)
+                max_param_type_length = max(max_param_type_length, param_type_length)
 
-        table = [header_format.format("Parameter", "Type of parameter"),
-                 header_format.format("=" * max_param_name_length, "=" * max_param_type_length)]
+            header_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+            row_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
 
-        for param, param_type in info.values():
-            param_name = getattr(param, 'name', str(param))
-            param_name_lines = [param_name[i:i + max_param_name_length] for i in range(0, len(param_name), max_param_name_length)]
-            param_type_lines = [param_type[i:i + max_param_type_length] for i in range(0, len(param_type), max_param_type_length)]
-            max_lines = max(len(param_name_lines), len(param_type_lines))
+            table = [header_format.format("Parameter", "Type of parameter"),
+                     header_format.format("=" * max_param_name_length, "=" * max_param_type_length)]
 
-            for i in range(max_lines):
-                param_line = param_name_lines[i] if i < len(param_name_lines) else ""
-                type_line = param_type_lines[i] if i < len(param_type_lines) else ""
-                table.append(row_format.format(param_line, type_line))
+            for param, param_type in info.values():
+                param_name = getattr(param, 'name', str(param))
+                param_name_lines = [param_name[i:i + max_param_name_length] for i in range(0, len(param_name), max_param_name_length)]
+                param_type_lines = [param_type[i:i + max_param_type_length] for i in range(0, len(param_type), max_param_type_length)]
+                max_lines = max(len(param_name_lines), len(param_type_lines))
 
-        for line in table:
-            print(line)
+                for i in range(max_lines):
+                    param_line = param_name_lines[i] if i < len(param_name_lines) else ""
+                    type_line = param_type_lines[i] if i < len(param_type_lines) else ""
+                    table.append(row_format.format(param_line, type_line))
+
+            print("\n".join(table) + "\n")
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
