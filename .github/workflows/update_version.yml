@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install wheel
+          pip install wheel towncrier
           pip install --editable ".[all]"
 
       - name: Update version
@@ -59,7 +59,7 @@ jobs:
         # on workflow_dispatch for the actual release (when the append_to_tag input is empty), we do not run this step, since
         # we manually edit the version number in the CHANGELOG (since it would have already been built by the previous RC).
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.append_to_tag != '')
-        run: pipx run towncrier build --yes
+        run: python -m towncrier build --yes
 
       - uses: EndBug/add-and-commit@v9
         if: github.event_name == 'schedule'
