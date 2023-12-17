@@ -5,7 +5,6 @@ import argparse
 import sys
 import logging
 import subprocess
-from importlib import import_module
 
 from pybamm.util import root_dir
 
@@ -14,22 +13,21 @@ if sys.platform == "win32":
 
 SUNDIALS_VERSION = "6.5.0"
 
-def install_required_module(module):
-    try:
-        import_module(module)
-    except ModuleNotFoundError:
-        print(f"{module} module not found. Installing {module}...")
-        subprocess.run(["pip", "install", module], check=True)
-
-required_modules = ["wget", "cmake"]
-
-for module in required_modules:
-    install_required_module(module)
-
-import wget  # noqa: E402
+try:
+    # wget module is required to download SUNDIALS or SuiteSparse.
+    import wget
+    NO_WGET = False
+except ModuleNotFoundError:
+    NO_WGET = True
 
 def download_extract_library(url, directory):
     # Download and extract archive at url
+    if NO_WGET:
+        error_msg = (
+            "Could not find wget module."
+            " Please install wget module (pip install wget)."
+        )
+        raise ModuleNotFoundError(error_msg)
     archive = wget.download(url, out=directory)
     tar = tarfile.open(archive)
     tar.extractall(directory)
