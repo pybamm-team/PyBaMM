@@ -4,11 +4,15 @@
 import pickle
 import pybamm
 import numpy as np
+import hashlib
 import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-import tqdm
+from pybamm.util import have_optional_dependency
+from typing import Optional
+
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 def is_notebook():
@@ -133,6 +137,9 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
 
+        # Initialise instances of Simulation class with the same random seed
+        self._set_random_seed()
+
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
             import warnings
@@ -156,6 +163,18 @@ class Simulation:
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
 
+    # If the solver being used is CasadiSolver or its variants, set a fixed
+    # random seed during class initialization to the SHA-256 hash of the class
+    # name for purposes of reproducibility.
+    def _set_random_seed(self):
+        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
+            self._solver, pybamm.CasadiAlgebraicSolver
+        ):
+            np.random.seed(
+                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
+                % (2**32)
+            )
+
     def set_up_and_parameterise_experiment(self):
         """
         Set up a simulation to run with an experiment. This creates a dictionary of
@@ -172,16 +191,6 @@ class Simulation:
             if op_conds.type == "C-rate":
                 op_conds.type = "current"
                 op_conds.value = op_conds.value * capacity
-
-            # Update terminations
-            termination = op_conds.termination
-            for term in termination:
-                term_type = term["type"]
-                if term_type == "C-rate":
-                    # Change type to current
-                    term["type"] = "current"
-                    # Scale C-rate with capacity to obtain current
-                    term["value"] = term["value"] * capacity
 
             # Add time to the experiment times
             dt = op_conds.duration
@@ -275,45 +284,9 @@ class Simulation:
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
-            if term["type"] == "current":
-                new_model.events.append(
-                    pybamm.Event(
-                        "Current cut-off [A] [experiment]",
-                        abs(new_model.variables["Current [A]"]) - term["value"],
-                    )
-                )
-
-            # add voltage events to the model
-            if term["type"] == "voltage":
-                # The voltage event should be positive at the start of charge/
-                # discharge. We use the sign of the current or power input to
-                # figure out whether the voltage event is greater than the starting
-                # voltage (charge) or less (discharge) and set the sign of the
-                # event accordingly
-                if (isinstance(op.value, pybamm.Interpolant) or
-                    isinstance(op.value, pybamm.Multiplication)):
-                    inpt = {"start time":0}
-                    init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
-                    sign = np.sign(init_curr)
-                else:
-                    sign = np.sign(op.value)
-                if sign > 0:
-                    name = "Discharge"
-                else:
-                    name = "Charge"
-                if sign != 0:
-                    # Event should be positive at initial conditions for both
-                    # charge and discharge
-                    new_model.events.append(
-                        pybamm.Event(
-                            f"{name} voltage cut-off [V] [experiment]",
-                            sign
-                            * (
-                                new_model.variables["Battery voltage [V]"]
-                                - term["value"]
-                            ),
-                        )
-                    )
+            event = term.get_event(new_model.variables, op.value)
+            if event is not None:
+                new_model.events.append(event)
 
         # Keep the min and max voltages as safeguards but add some tolerances
         # so that they are not triggered before the voltage limits in the
@@ -373,8 +346,16 @@ class Simulation:
         options = self.model.options
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
-            self._parameter_values = self._unprocessed_parameter_values.set_initial_ocps(  # noqa: E501
-                initial_soc, param=param, inplace=False, options=options
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_ocps(
+                    initial_soc, param=param, inplace=False, options=options
+                )
+            )
+        elif options["working electrode"] == "positive":
+            self._parameter_values = (
+                self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
+                    initial_soc, param=param, inplace=False, options=options
+                )
             )
         else:
             self._parameter_values = (
@@ -543,7 +524,7 @@ class Simulation:
                 )
             if (
                 self.operating_mode == "without experiment"
-                or self._model.name == "ElectrodeSOH model"
+                or "ElectrodeSOH" in self._model.name
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -717,13 +698,18 @@ class Simulation:
                         # Update _solution
                         self._solution = current_solution
 
-            for cycle_num, cycle_length in enumerate(
-                # tqdm is the progress bar.
-                tqdm.tqdm(
+            # check if a user has tqdm installed
+            if showprogress:
+                tqdm = have_optional_dependency("tqdm")
+                cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
-                    disable=(not showprogress),
                     desc="Cycling",
-                ),
+                )
+            else:
+                cycle_lengths = self.experiment.cycle_lengths
+
+            for cycle_num, cycle_length in enumerate(
+                cycle_lengths,
                 start=1,
             ):
                 logs["cycle number"] = (
@@ -760,14 +746,21 @@ class Simulation:
                     # human-intuitive
                     op_conds = self.experiment.operating_conditions_steps[idx]
 
+                    # Hacky patch to allow correct processing of end_time and next_starting time
+                    # For efficiency purposes, op_conds treats identical steps as the same object
+                    # regardless of the initial time. Should be refactored as part of #3176
+                    op_conds_unproc = (
+                        self.experiment.operating_conditions_steps_unprocessed[idx]
+                    )
+
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if op_conds.end_time:
+                    if getattr(op_conds_unproc, "end_time", None):
                         dt = min(
                             op_conds.duration,
                             (
-                                op_conds.end_time
+                                op_conds_unproc.end_time
                                 - (
                                     initial_start_time
                                     + timedelta(seconds=float(start_time))
@@ -820,9 +813,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if op_conds.next_start_time is not None:
+                    if getattr(op_conds_unproc, "next_start_time", None) is not None:
                         rest_time = (
-                            op_conds.next_start_time
+                            op_conds_unproc.next_start_time
                             - (
                                 initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))
@@ -1126,7 +1119,13 @@ class Simulation:
         return self._solution
 
     def save(self, filename):
-        """Save simulation using pickle"""
+        """Save simulation using pickle module.
+
+        Parameters
+        ----------
+        filename : str
+            The file extension can be arbitrary, but it is common to use ".pkl" or ".pickle"
+        """
         if self._model.convert_to_format == "python":
             # We currently cannot save models in the 'python' format
             raise NotImplementedError(
@@ -1152,6 +1151,50 @@ class Simulation:
 
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def save_model(
+        self,
+        filename: Optional[str] = None,
+        mesh: bool = False,
+        variables: bool = False,
+    ):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        mesh: bool
+            The mesh used to discretise the model. If false, plotting tools will not
+            be available when the model is read back in and solved.
+        variables: bool
+            The discretised variables. Not required to solve a model, but if false
+            tools will not be availble. Will automatically save meshes as well, required
+            for plotting tools.
+        filename: str, optional
+            The desired name of the JSON file. If no name is provided, one will be
+            created based on the model name, and the current datetime.
+        """
+        mesh = self.mesh if (mesh or variables) else None
+        variables = self.built_model.variables if variables else None
+
+        if self.operating_mode == "with experiment":
+            raise NotImplementedError(
+                """
+                Serialising models coupled to experiments is not yet supported.
+                """
+            )
+
+        if self.built_model:
+            Serialise().save_model(
+                self.built_model, filename=filename, mesh=mesh, variables=variables
+            )
+        else:
+            raise NotImplementedError(
+                """
+                PyBaMM can only serialise a discretised model.
+                Ensure the model has been built (e.g. run `build()`) before saving.
+                """
+            )
 
 
 def load_sim(filename):

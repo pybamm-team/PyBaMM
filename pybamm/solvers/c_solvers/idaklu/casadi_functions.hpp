@@ -21,7 +21,7 @@
  */
 template<typename T1, typename T2>
 void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 nc[], T2 nr[], int N, int cols) {
-  int nn[cols+1];
+  std::vector<int> nn(cols+1);
   std::vector<int> rr(N);
   for (int i=0; i<cols+1; i++)
     nc[i] = 0;

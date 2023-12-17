@@ -462,3 +462,51 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels[
             "through-cell convection"
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
+
+    def insert_reference_electrode(self, position=None):
+        """
+        Insert a reference electrode to measure the electrolyte potential at a given
+        position in space. Adds model variables for the electrolyte potential at the
+        reference electrode and for the potential difference between the electrode
+        potentials measured at the electrode/current collector interface and the
+        reference electrode. Only implemented for 1D models (i.e. where the
+        'dimensionality' option is 0).
+
+        Parameters
+        ----------
+        position : :class:`pybamm.Symbol`, optional
+            The position in space at which to measure the electrolyte potential. If
+            None, defaults to the mid-point of the separator.
+        """
+        if self.options["dimensionality"] != 0:
+            raise NotImplementedError(
+                "Reference electrode can only be inserted for models where "
+                "'dimensionality' is 0. For other models, please add a reference "
+                "electrode manually."
+            )
+
+        param = self.param
+        if position is None:
+            position = param.n.L + param.s.L / 2
+
+        phi_e_ref = pybamm.EvaluateAt(
+            self.variables["Electrolyte potential [V]"], position
+        )
+        phi_p = pybamm.boundary_value(
+            self.variables["Positive electrode potential [V]"], "right"
+        )
+        variables = {
+            "Positive electrode 3E potential [V]": phi_p - phi_e_ref,
+            "Reference electrode potential [V]": phi_e_ref,
+        }
+
+        if self.options["working electrode"] == "both":
+            phi_n = pybamm.boundary_value(
+                self.variables["Negative electrode potential [V]"], "left"
+            )
+            variables.update(
+                {
+                    "Negative electrode 3E potential [V]": phi_n - phi_e_ref,
+                }
+            )
+        self.variables.update(variables)

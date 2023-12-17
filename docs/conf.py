@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -76,6 +75,7 @@ napoleon_google_docstring = False
 
 doctest_global_setup = """
 from docs import *
+import pybamm
 """
 
 # Add any paths that contain templates here, relative to this directory.
@@ -122,7 +122,7 @@ html_favicon = "_static/favicon/favicon.png"
 html_theme_options = {
     "logo": {
         "image_light": "pybamm_logo.png",
-        "image_dark": "pybamm_logo.png",
+        "image_dark": "pybamm_logo_whitetext.png",
     },
     "icon_links": [
         {
@@ -142,11 +142,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    # should be kept versioned to use for the version warning bar
-    "switcher": {
-        "version_match": version,
-        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
-    },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
     # for dark mode toggle and social media links
@@ -154,6 +149,7 @@ html_theme_options = {
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     # add Algolia to the persistent navbar, this removes the default search icon
     "navbar_persistent": "algolia-searchbox",
+    "navigation_with_keys": False,
     "use_edit_page_button": True,
     "analytics": {
         "plausible_analytics_domain": "docs.pybamm.org",
@@ -171,7 +167,7 @@ html_theme_options = {
     ],
 }
 
-html_title = "%s v%s Manual" % (project, version)
+html_title = f"{project} v{version} Manual"
 html_last_updated_fmt = "%Y-%m-%d"
 html_css_files = ["pybamm.css"]
 html_context = {"default_mode": "light"}

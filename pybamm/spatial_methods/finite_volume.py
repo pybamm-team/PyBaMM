@@ -620,10 +620,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Dirichlet boundary conditions
         n_bcs = 0
         if lbc_type == "Dirichlet":
-            domain = [domain[0] + "_left ghost cell"] + domain
+            domain = [domain[0] + "_left ghost cell", *domain]
             n_bcs += 1
         if rbc_type == "Dirichlet":
-            domain = domain + [domain[-1] + "_right ghost cell"]
+            domain = [*domain, domain[-1] + "_right ghost cell"]
             n_bcs += 1
 
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
@@ -641,9 +641,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    lbc_type
-                )
+                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
             )
 
         if rbc_type == "Dirichlet":
@@ -662,9 +660,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    rbc_type
-                )
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector
@@ -756,9 +752,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    rbc_type
-                )
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
             )
         if rbc_type == "Neumann" and rbc_value != 0:
             rbc_sub_matrix = coo_matrix(
@@ -774,9 +768,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    rbc_type
-                )
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector
@@ -1023,6 +1015,46 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return boundary_value
 
+    def evaluate_at(self, symbol, discretised_child, position):
+        """
+        Returns the symbol evaluated at a given position in space.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The boundary value or flux symbol
+        discretised_child : :class:`pybamm.StateVector`
+            The discretised variable from which to calculate the boundary value
+        position : :class:`pybamm.Scalar`
+            The point in one-dimensional space at which to evaluate the symbol.
+
+        Returns
+        -------
+        :class:`pybamm.MatrixMultiplication`
+            The variable representing the value at the given point.
+        """
+        # Get mesh nodes
+        domain = discretised_child.domain
+        mesh = self.mesh[domain]
+        nodes = mesh.nodes
+        repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
+
+        # Find the index of the node closest to the value
+        index = np.argmin(np.abs(nodes - position.value))
+
+        # Create a sparse matrix with a 1 at the index
+        sub_matrix = csr_matrix(([1], ([0], [index])), shape=(1, mesh.npts))
+        # repeat across auxiliary domains
+        matrix = csr_matrix(kron(eye(repeats), sub_matrix))
+
+        # Index into the discretised child
+        out = pybamm.Matrix(matrix) @ discretised_child
+
+        # `EvaluateAt` removes domain
+        out.clear_domains()
+
+        return out
+
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
@@ -1182,7 +1214,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif shift_key == "edge to node":
                 sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n, n + 1))
             else:
-                raise ValueError("shift key '{}' not recognised".format(shift_key))
+                raise ValueError(f"shift key '{shift_key}' not recognised")
             # Second dimension length
             second_dim_repeats = self._get_auxiliary_domain_repeats(
                 discretised_symbol.domains
@@ -1326,7 +1358,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 return D_eff
 
             else:
-                raise ValueError("shift key '{}' not recognised".format(shift_key))
+                raise ValueError(f"shift key '{shift_key}' not recognised")
 
         # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.size == 1:
@@ -1336,7 +1368,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif method == "harmonic":
             out = harmonic_mean(discretised_symbol)
         else:
-            raise ValueError("method '{}' not recognised".format(method))
+            raise ValueError(f"method '{method}' not recognised")
         return out
 
     def upwind_or_downwind(self, symbol, discretised_symbol, bcs, direction):
@@ -1364,7 +1396,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol not in bcs:
             raise pybamm.ModelError(
                 "Boundary conditions must be provided for "
-                "{}ing '{}'".format(direction, symbol)
+                f"{direction}ing '{symbol}'"
             )
 
         if direction == "upwind":
@@ -1372,7 +1404,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if typ != "Dirichlet":
                 raise pybamm.ModelError(
                     "Dirichlet boundary conditions must be provided for "
-                    "upwinding '{}'".format(symbol)
+                    f"upwinding '{symbol}'"
                 )
 
             concat_bc = pybamm.NumpyConcatenation(bc, discretised_symbol)
@@ -1389,7 +1421,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if typ != "Dirichlet":
                 raise pybamm.ModelError(
                     "Dirichlet boundary conditions must be provided for "
-                    "downwinding '{}'".format(symbol)
+                    f"downwinding '{symbol}'"
                 )
 
             concat_bc = pybamm.NumpyConcatenation(discretised_symbol, bc)

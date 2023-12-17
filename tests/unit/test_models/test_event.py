@@ -48,6 +48,28 @@ class TestEvent(TestCase):
             event = pybamm.Event("my event", pybamm.Scalar(1), event_type)
             self.assertEqual(event.event_type, event_type)
 
+    def test_to_from_json(self):
+        expression = pybamm.Scalar(1)
+        event = pybamm.Event("my event", expression)
+
+        event_json = {
+            "name": "my event",
+            "event_type": ["EventType.TERMINATION", 0],
+        }
+
+        event_ser_json = event.to_json()
+        self.assertEqual(event_ser_json, event_json)
+
+        event_json["expression"] = expression
+
+        new_event = pybamm.Event._from_json(event_json)
+
+        # check for equal expressions
+        self.assertEqual(new_event.expression, event.expression)
+
+        # check for equal event types
+        self.assertEqual(new_event.event_type, event.event_type)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

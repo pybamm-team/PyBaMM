@@ -1,9 +1,8 @@
 #
 # IndependentVariable class
 #
-import sympy
-
 import pybamm
+from pybamm.util import have_optional_dependency
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
@@ -34,6 +33,14 @@ class IndependentVariable(pybamm.Symbol):
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["name"], domains=snippet["domains"])
+
+        return instance
+
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
@@ -44,6 +51,7 @@ class IndependentVariable(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -57,6 +65,14 @@ class Time(IndependentVariable):
 
     def __init__(self):
         super().__init__("time")
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__()
+
+        return instance
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -77,6 +93,7 @@ class Time(IndependentVariable):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         return sympy.Symbol("t")
 
 
@@ -129,7 +146,7 @@ class SpatialVariable(IndependentVariable):
             ["particle" in dom for dom in domain]
         ):
             raise pybamm.DomainError(
-                "domain cannot be particle if name is '{}'".format(name)
+                f"domain cannot be particle if name is '{name}'"
             )
 
     def create_copy(self):

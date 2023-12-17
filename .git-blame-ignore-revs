@@ -4,3 +4,7 @@
 a63e49ece0f9336d1f5c2562f7459e555c6e6693
 # activated standard pre-commits - https://github.com/pybamm-team/PyBaMM/pull/3192
 5273214b585c5a4286609aed40e0b092d0e05f42
+# migrate config to pyproject.toml - https://github.com/pybamm-team/PyBaMM/pull/3557
+12c5d77203bd93542785d237bac00bad5ed5469a
+# activated pyupgrade - https://github.com/pybamm-team/PyBaMM/pull/3579
+ff6d81c01331c7d269303b4a8321d9881bdf98fa

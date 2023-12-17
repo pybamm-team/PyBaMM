@@ -2,10 +2,9 @@
 # Scalar class
 #
 import numpy as np
-import sympy
 
 import pybamm
-
+from pybamm.util import have_optional_dependency
 
 class Scalar(pybamm.Symbol):
     """
@@ -28,6 +27,14 @@ class Scalar(pybamm.Symbol):
             name = str(self.value)
 
         super().__init__(name)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        instance.__init__(snippet["value"], name=snippet["name"])
+
+        return instance
 
     def __str__(self):
         return str(self.value)
@@ -70,7 +77,17 @@ class Scalar(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
             return self.value
+
+    def to_json(self):
+        """
+        Method to serialise a Symbol object into JSON.
+        """
+
+        json_dict = {"name": self.name, "id": self.id, "value": self.value}
+
+        return json_dict

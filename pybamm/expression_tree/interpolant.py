@@ -59,7 +59,7 @@ class Interpolant(pybamm.Function):
 
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
-            raise ValueError("interpolator '{}' not recognised".format(interpolator))
+            raise ValueError(f"interpolator '{interpolator}' not recognised")
 
         # Perform some checks on the data
         if isinstance(x, (tuple, list)) and len(x) == 2:
@@ -186,7 +186,7 @@ class Interpolant(pybamm.Function):
                     fill_value=fill_value,
                 )
         else:
-            raise ValueError("Invalid dimension of x: {0}".format(len(x)))
+            raise ValueError(f"Invalid dimension of x: {len(x)}")
 
         # Set name
         if name is None:
@@ -201,6 +201,27 @@ class Interpolant(pybamm.Function):
         # Store information as attributes
         self.interpolator = interpolator
         self.extrapolate = extrapolate
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Create an Interpolant object from JSON data"""
+        instance = cls.__new__(cls)
+
+        if len(snippet["x"]) == 1:
+            x = [np.array(x) for x in snippet["x"]]
+        else:
+            x = tuple(np.array(x) for x in snippet["x"])
+
+        instance.__init__(
+            x,
+            np.array(snippet["y"]),
+            snippet["children"],
+            name=snippet["name"],
+            interpolator=snippet["interpolator"],
+            extrapolate=snippet["extrapolate"],
+        )
+
+        return instance
 
     @property
     def entries_string(self):
@@ -222,9 +243,7 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name, self.entries_string)
-            + tuple([child.id for child in self.children])
-            + tuple(self.domain)
+            (self.__class__, self.name, self.entries_string, *tuple([child.id for child in self.children]), *tuple(self.domain))
         )
 
     def _function_new_copy(self, children):
@@ -283,10 +302,27 @@ class Interpolant(pybamm.Function):
                     new_evaluated_children, self.function.grid
                 ):
                     nan_children.append(np.ones_like(child) * interp_range.mean())
-                return self.function(np.transpose(nan_children)) * np.nan
+                nan_eval = self.function(np.transpose(nan_children))
+                return np.reshape(nan_eval, shape)
             else:
                 res = self.function(np.transpose(new_evaluated_children))
-                return res[:, np.newaxis]
+                return np.reshape(res, shape)
 
         else:  # pragma: no cover
-            raise ValueError("Invalid dimension: {0}".format(self.dimension))
+            raise ValueError(f"Invalid dimension: {self.dimension}")
+
+    def to_json(self):
+        """
+        Method to serialise an Interpolant object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "x": [x_item.tolist() for x_item in self.x],
+            "y": self.y.tolist(),
+            "interpolator": self.interpolator,
+            "extrapolate": self.extrapolate,
+        }
+
+        return json_dict

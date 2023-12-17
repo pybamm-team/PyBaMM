@@ -5,10 +5,10 @@ import copy
 from collections import defaultdict
 
 import numpy as np
-import sympy
 from scipy.sparse import issparse, vstack
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 class Concatenation(pybamm.Symbol):
@@ -43,11 +43,22 @@ class Concatenation(pybamm.Symbol):
 
         super().__init__(name, children, domains=domains)
 
+    @classmethod
+    def _from_json(cls, *children, name, domains, concat_fun=None):
+        """Creates a new Concatenation instance from a json object"""
+        instance = cls.__new__(cls)
+
+        instance.concatenation_function = concat_fun
+
+        super(Concatenation, instance).__init__(name, children, domains=domains)
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         out = self.name + "("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 
@@ -66,11 +77,11 @@ class Concatenation(pybamm.Symbol):
         domain = []
         for child in children:
             if not isinstance(child, pybamm.Symbol):
-                raise TypeError("{} is not a pybamm symbol".format(child))
+                raise TypeError(f"{child} is not a pybamm symbol")
             child_domain = child.domain
             if child_domain == []:
                 raise pybamm.DomainError(
-                    "Cannot concatenate child '{}' with empty domain".format(child)
+                    f"Cannot concatenate child '{child}' with empty domain"
                 )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain
@@ -135,6 +146,7 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
+        sympy = have_optional_dependency("sympy")
         self.concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
@@ -181,6 +193,18 @@ class NumpyConcatenation(Concatenation):
             check_domain=False,
             concat_fun=np.concatenate
         )
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.Concatenation._from_json()`."""
+        instance = super()._from_json(
+            *snippet["children"],
+            name="numpy_concatenation",
+            domains=snippet["domains"],
+            concat_fun=np.concatenate
+        )
+
+        return instance
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
@@ -250,6 +274,31 @@ class DomainConcatenation(Concatenation):
             self._children_slices = copy.copy(copy_this._children_slices)
             self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.Concatenation._from_json()`."""
+        instance = super()._from_json(
+            *snippet["children"],
+            name="domain_concatenation",
+            domains=snippet["domains"]
+        )
+
+        def repack_defaultDict(slices):
+            slices = defaultdict(list, slices)
+            for domain, sls in slices.items():
+                sls = [slice(s["start"], s["stop"], s["step"]) for s in sls]
+                slices[domain] = sls
+            return slices
+
+        instance._size = snippet["size"]
+        instance._slices = repack_defaultDict(snippet["slices"])
+        instance._children_slices = [
+            repack_defaultDict(s) for s in snippet["children_slices"]
+        ]
+        instance.secondary_dimensions_npts = snippet["secondary_dimensions_npts"]
+
+        return instance
+
     def _get_auxiliary_domain_repeats(self, auxiliary_domains):
         """Helper method to read the 'auxiliary_domain' meshes."""
         mesh_pts = 1
@@ -314,6 +363,32 @@ class DomainConcatenation(Concatenation):
             children, self.full_mesh, copy_this=self
         )
         return new_symbol
+
+    def to_json(self):
+        """
+        Method to serialise a DomainConcatenation object into JSON.
+        """
+
+        def unpack_defaultDict(slices):
+            slices = dict(slices)
+            for domain, sls in slices.items():
+                sls = [{"start": s.start, "stop": s.stop, "step": s.step} for s in sls]
+                slices[domain] = sls
+            return slices
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "slices": unpack_defaultDict(self._slices),
+            "size": self._size,
+            "children_slices": [
+                unpack_defaultDict(child_slice) for child_slice in self._children_slices
+            ],
+            "secondary_dimensions_npts": self.secondary_dimensions_npts,
+        }
+
+        return json_dict
 
 
 class SparseStack(Concatenation):

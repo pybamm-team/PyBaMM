@@ -4,22 +4,22 @@
 import numbers
 
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
 
 import pybamm
+from pybamm.util import have_optional_dependency
 
 
 def _preprocess_binary(left, right):
     if isinstance(left, numbers.Number):
         left = pybamm.Scalar(left)
-    if isinstance(right, numbers.Number):
-        right = pybamm.Scalar(right)
     elif isinstance(left, np.ndarray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
+    if isinstance(right, numbers.Number):
+        right = pybamm.Scalar(right)
     elif isinstance(right, np.ndarray):
         if right.ndim > 1:
             raise ValueError("right must be a 1D array")
@@ -68,6 +68,23 @@ class BinaryOperator(pybamm.Symbol):
         self.left = self.children[0]
         self.right = self.children[1]
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising; discretisation has
+        already occured so pre-processing of binaries is not necessary."""
+
+        instance = cls.__new__(cls)
+
+        super(BinaryOperator, instance).__init__(
+            snippet["name"],
+            children=[snippet["children"][0], snippet["children"][1]],
+            domains=snippet["domains"],
+        )
+        instance.left = instance.children[0]
+        instance.right = instance.children[1]
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         # Possibly add brackets for clarity
@@ -77,16 +94,16 @@ class BinaryOperator(pybamm.Symbol):
             or (self.left.name == "+" and self.name == "-")
             or self.name == "+"
         ):
-            left_str = "({!s})".format(self.left)
+            left_str = f"({self.left!s})"
         else:
-            left_str = "{!s}".format(self.left)
+            left_str = f"{self.left!s}"
         if isinstance(self.right, pybamm.BinaryOperator) and not (
             (self.name == "*" and self.right.name in ["*", "/"]) or self.name == "+"
         ):
-            right_str = "({!s})".format(self.right)
+            right_str = f"({self.right!s})"
         else:
-            right_str = "{!s}".format(self.right)
-        return "{} {} {}".format(left_str, self.name, right_str)
+            right_str = f"{self.right!s}"
+        return f"{left_str} {self.name} {right_str}"
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -147,6 +164,7 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
+        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -154,6 +172,15 @@ class BinaryOperator(pybamm.Symbol):
             eq1 = child1.to_equation()
             eq2 = child2.to_equation()
             return self._sympy_operator(eq1, eq2)
+
+    def to_json(self):
+        """
+        Method to serialise a BinaryOperator object into JSON.
+        """
+
+        json_dict = {"name": self.name, "id": self.id, "domains": self.domains}
+
+        return json_dict
 
 
 class Power(BinaryOperator):
@@ -310,11 +337,9 @@ class MatrixMultiplication(BinaryOperator):
             return left @ right_jac
         else:
             raise NotImplementedError(
-                """jac of 'MatrixMultiplication' is only
+                f"""jac of 'MatrixMultiplication' is only
              implemented for left of type 'pybamm.Array',
-             not {}""".format(
-                    left.__class__
-                )
+             not {left.__class__}"""
             )
 
     def _binary_evaluate(self, left, right):
@@ -323,6 +348,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -529,7 +555,7 @@ class EqualHeaviside(_Heaviside):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{!s} <= {!s}".format(self.left, self.right)
+        return f"{self.left!s} <= {self.right!s}"
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -546,7 +572,7 @@ class NotEqualHeaviside(_Heaviside):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{!s} < {!s}".format(self.left, self.right)
+        return f"{self.left!s} < {self.right!s}"
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -586,7 +612,7 @@ class Modulo(BinaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{!s} mod {!s}".format(self.left, self.right)
+        return f"{self.left!s} mod {self.right!s}"
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -601,7 +627,7 @@ class Minimum(BinaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "minimum({!s}, {!s})".format(self.left, self.right)
+        return f"minimum({self.left!s}, {self.right!s})"
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -626,6 +652,7 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Min(left, right)
 
 
@@ -637,7 +664,7 @@ class Maximum(BinaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "maximum({!s}, {!s})".format(self.left, self.right)
+        return f"maximum({self.left!s}, {self.right!s})"
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -662,6 +689,7 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        sympy = have_optional_dependency("sympy")
         return sympy.Max(left, right)
 
 
@@ -1340,10 +1368,8 @@ def source(left, right, boundary=False):
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            """'source' only implemented in the 'current collector' domain,
-            but symbols have domains {} and {}""".format(
-                left.domain, right.domain
-            )
+            f"""'source' only implemented in the 'current collector' domain,
+            but symbols have domains {left.domain} and {right.domain}"""
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

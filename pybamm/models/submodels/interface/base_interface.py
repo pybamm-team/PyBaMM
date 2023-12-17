@@ -110,9 +110,10 @@ class BaseInterface(pybamm.BaseSubModel):
                     c_e = c_e.orphans[0]
                     T = T.orphans[0]
             # Get main reaction exchange-current density (may have empirical hysteresis)
-            if domain_options["exchange-current density"] == "single":
+            j0_option = getattr(domain_options, self.phase)["exchange-current density"]
+            if j0_option == "single":
                 j0 = phase_param.j0(c_e, c_s_surf, T)
-            elif domain_options["exchange-current density"] == "current sigmoid":
+            elif j0_option == "current sigmoid":
                 current = variables["Total current density [A.m-2]"]
                 k = 100
                 if Domain == "Positive":

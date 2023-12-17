@@ -3,7 +3,7 @@
 #
 
 
-class Settings(object):
+class Settings:
     _debug_mode = False
     _simplify = True
     _min_smoothing = "exact"

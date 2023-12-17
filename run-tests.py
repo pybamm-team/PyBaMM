@@ -40,7 +40,7 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         result = unittest.TextTestRunner(verbosity=2).run(suite)
         ret = int(not result.wasSuccessful())
     else:
-        print("Running {} tests with executable '{}'".format(folder, interpreter))
+        print(f"Running {folder} tests with executable '{interpreter}'")
         cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
@@ -156,7 +156,7 @@ def test_script(path, executable="python"):
     env["MPLBACKEND"] = "Template"
 
     # Run in subprocess
-    cmd = [executable] + [path]
+    cmd = [executable, path]
     try:
         p = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
@@ -178,7 +178,7 @@ def test_script(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok ({})".format(b.time()))
+    print(f"ok ({b.time()})")
     return True
 
 
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--examples",
         action="store_true",
-        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",  # noqa: E501
+        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",
     )
     parser.add_argument(
         "--debook",

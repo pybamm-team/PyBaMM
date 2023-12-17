@@ -46,13 +46,18 @@ jobs:
             --exclude-path ./CHANGELOG.md
             --exclude-path newsfragments/*.md
             --exclude-path ./scripts/update_version.py
+            --exclude-path asv.conf.json
             --exclude-path docs/conf.py
             './**/*.rst'
             './**/*.md'
             './**/*.py'
             './**/*.ipynb'
+            './**/*.json'
+            './**/*.toml'
           # fail the action on broken links
           fail: true
+          jobSummary: true
+          format: markdown
         env:
           # to be used in case rate limits are surpassed
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

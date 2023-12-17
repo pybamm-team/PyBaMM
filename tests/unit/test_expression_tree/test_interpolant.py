@@ -5,6 +5,7 @@ from tests import TestCase
 import pybamm
 
 import unittest
+import unittest.mock as mock
 import numpy as np
 
 
@@ -130,7 +131,7 @@ class TestInterpolant(TestCase):
 
         value = interp.evaluate(y=np.array([[1, 1, x[1]], [5, 4, y[1]]]))
         np.testing.assert_array_equal(
-            value, np.array([[f(1, 5)], [f(1, 4)], [f(x[1], y[1])]])
+            value, np.array([[f(1, 5), f(1, 4), f(x[1], y[1])]])
         )
 
         # check also works for cubic
@@ -191,6 +192,17 @@ class TestInterpolant(TestCase):
         evaluated_children = [1, 4]
         value = interp._function_evaluate(evaluated_children)
 
+        # Test that the interpolant shape is the same as the input data shape
+        interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="linear")
+
+        evaluated_children = [np.array([[1, 1]]), np.array([[7, 7]])]
+        value = interp._function_evaluate(evaluated_children)
+        self.assertEqual(value.shape, evaluated_children[0].shape)
+
+        evaluated_children = [np.array([[1, 1], [1, 1]]), np.array([[7, 7], [7, 7]])]
+        value = interp._function_evaluate(evaluated_children)
+        self.assertEqual(value.shape, evaluated_children[0].shape)
+
     def test_interpolation_3_x(self):
         def f(x, y, z):
             return 2 * x**3 + 3 * y**2 - z
@@ -215,7 +227,7 @@ class TestInterpolant(TestCase):
 
         value = interp.evaluate(y=np.array([[1, 1, 1], [5, 4, 4], [8, 7, 7]]))
         np.testing.assert_array_equal(
-            value, np.array([[f(1, 5, 8)], [f(1, 4, 7)], [f(1, 4, 7)]])
+            value, np.array([[f(1, 5, 8), f(1, 4, 7), f(1, 4, 7)]])
         )
 
         # check also works for cubic
@@ -324,6 +336,65 @@ class TestInterpolant(TestCase):
         interp = pybamm.Interpolant(x, 2 * x, y)
 
         self.assertEqual(interp, interp.new_copy())
+
+    def test_to_from_json(self):
+        x = np.linspace(0, 1, 10)
+        y = pybamm.StateVector(slice(0, 2))
+        interp = pybamm.Interpolant(x, 2 * x, y)
+
+        expected_json = {
+            "name": "interpolating_function",
+            "id": mock.ANY,
+            "x": [
+                [
+                    0.0,
+                    0.1111111111111111,
+                    0.2222222222222222,
+                    0.3333333333333333,
+                    0.4444444444444444,
+                    0.5555555555555556,
+                    0.6666666666666666,
+                    0.7777777777777777,
+                    0.8888888888888888,
+                    1.0,
+                ]
+            ],
+            "y": [
+                0.0,
+                0.2222222222222222,
+                0.4444444444444444,
+                0.6666666666666666,
+                0.8888888888888888,
+                1.1111111111111112,
+                1.3333333333333333,
+                1.5555555555555554,
+                1.7777777777777777,
+                2.0,
+            ],
+            "interpolator": "linear",
+            "extrapolate": True,
+        }
+
+        # check correct writing to json
+        self.assertEqual(interp.to_json(), expected_json)
+
+        expected_json["children"] = [y]
+        # check correct re-creation
+        self.assertEqual(pybamm.Interpolant._from_json(expected_json), interp)
+
+        # test to_from_json for 2d x & y
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.01))
+        xx, yy = np.meshgrid(x[0], x[1], indexing="ij")
+        z = np.sin(xx**2 + yy**2)
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        # linear
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
+
+        interp2d_json = interp.to_json()
+        interp2d_json["children"] = (var1, var2)
+
+        self.assertEqual(pybamm.Interpolant._from_json(interp2d_json), interp)
 
 
 if __name__ == "__main__":

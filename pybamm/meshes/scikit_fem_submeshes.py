@@ -3,9 +3,9 @@
 #
 import pybamm
 from .meshes import SubMesh
-
-import skfem
 import numpy as np
+
+from pybamm.util import have_optional_dependency
 
 
 class ScikitSubMesh2D(SubMesh):
@@ -27,12 +27,16 @@ class ScikitSubMesh2D(SubMesh):
     """
 
     def __init__(self, edges, coord_sys, tabs):
+        skfem = have_optional_dependency("skfem")
         self.edges = edges
         self.nodes = dict.fromkeys(["y", "z"])
         for var in self.nodes.keys():
             self.nodes[var] = (self.edges[var][1:] + self.edges[var][:-1]) / 2
         self.npts = len(self.edges["y"]) * len(self.edges["z"])
         self.coord_sys = coord_sys
+
+        # save tabs for serialisation
+        self.tabs = tabs
 
         # create mesh
         self.fem_mesh = skfem.MeshTri.init_tensor(self.edges["y"], self.edges["z"])
@@ -75,7 +79,7 @@ class ScikitSubMesh2D(SubMesh):
         # check that two variables have been passed in
         if len(lims) != 2:
             raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
+                f"lims should contain exactly two variables, not {len(lims)}"
             )
 
         # get spatial variables
@@ -141,6 +145,15 @@ class ScikitSubMesh2D(SubMesh):
         else:
             raise pybamm.GeometryError("tab location not valid")
 
+    def to_json(self):
+        json_dict = {
+            "edges": {k: v.tolist() for k, v in self.edges.items()},
+            "coord_sys": self.coord_sys,
+            "tabs": self.tabs,
+        }
+
+        return json_dict
+
 
 class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     """
@@ -168,7 +181,7 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 edges[var.name] = np.linspace(
@@ -176,6 +189,18 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
                 )
 
         super().__init__(edges, coord_sys, tabs)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        edges = {k: np.array(v) for k, v in snippet["edges"].items()}
+
+        super(ScikitUniform2DSubMesh, instance).__init__(
+            edges, snippet["coord_sys"], snippet["tabs"]
+        )
+
+        return instance
 
 
 class ScikitExponential2DSubMesh(ScikitSubMesh2D):
@@ -215,7 +240,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
-                "At present, side can only be 'top', but is set to {}".format(side)
+                f"At present, side can only be 'top', but is set to {side}"
             )
 
         spatial_vars, tabs = self.read_lims(lims)
@@ -226,7 +251,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             elif var.name == "y":
                 edges[var.name] = np.linspace(
@@ -280,7 +305,7 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 # Create N Chebyshev nodes in the interval (a,b)

@@ -35,9 +35,10 @@ class BaseParticle(pybamm.BaseSubModel):
         domain_options = getattr(self.options, domain)
 
         # Get diffusivity (may have empirical hysteresis)
-        if domain_options["diffusivity"] == "single":
+        diffusivity_option = getattr(domain_options, self.phase)["diffusivity"]
+        if diffusivity_option == "single":
             D = phase_param.D(c, T)
-        elif domain_options["diffusivity"] == "current sigmoid":
+        elif diffusivity_option == "current sigmoid":
             k = 100
             if Domain == "Positive":
                 lithiation_current = current
@@ -55,8 +56,9 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if stress_option == "true":
             # Ai2019 eq [12]
-            Omega = domain_param.Omega
-            E = domain_param.E
+            sto = c / phase_param.c_max
+            Omega = pybamm.r_average(domain_param.Omega(sto, T))
+            E = pybamm.r_average(domain_param.E(sto, T))
             nu = domain_param.nu
             theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
             stress_factor = 1 + theta_M * (c - domain_param.c_0)
