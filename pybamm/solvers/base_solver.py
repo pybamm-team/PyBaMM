@@ -1110,7 +1110,8 @@ class BaseSolver:
         self,
         old_solution,
         model,
-        dt,
+        dt=None,
+        non_linear_time=None,
         npts=2,
         inputs=None,
         save=True,
@@ -1127,8 +1128,11 @@ class BaseSolver:
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        dt : numeric type
+        dt : numeric type, optional
             The timestep (in seconds) over which to step the solution
+        non_linear_time : list or numpy.ndarray, optional
+            An array of time (in ascending order and not necessarily linearly distributed)
+            to return step solutions at.
         npts : int, optional
             The number of points at which the solution will be returned during
             the step dt. default is 2 (returns the solution at t0 and t0 + dt).
@@ -1162,28 +1166,72 @@ class BaseSolver:
                 raise pybamm.ModelError(
                     "Cannot step empty model, use `pybamm.DummySolver` instead"
                 )
+        if non_linear_time is not None:
+            # Make sure dt is greater than the offset
+            step_start_offset = pybamm.settings.step_start_offset
+            t_start = old_solution.t[-1]
+            t_end = t_start
+            t_eval = np.array([t_start])
+            if t_start == 0:
+                t_start_shifted = t_start
+            else:
+                # offset t_start by t_start_offset (default 1 ns)
+                # to avoid repeated times in the solution
+                # from having the same time at the end of the previous step and
+                # the start of the next step
+                t_start_shifted = t_start + step_start_offset
+                t_eval[0] = t_start_shifted
+            for i in range(len(non_linear_time) - 1):
+                dt = non_linear_time[i + 1] - non_linear_time[i]
+                if dt <= step_start_offset:
+                    raise pybamm.SolverError(
+                        f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
+                    )
 
-        # Make sure dt is greater than the offset
-        step_start_offset = pybamm.settings.step_start_offset
-        if dt <= step_start_offset:
-            raise pybamm.SolverError(
-                f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
-            )
+                t_end = t_end + dt
+                # Append to t_eval
+                t_eval = np.append(t_eval, t_end)
+        elif dt is not None:
+            # Make sure dt is greater than the offset
+            step_start_offset = pybamm.settings.step_start_offset
+            if dt <= step_start_offset:
+                raise pybamm.SolverError(
+                    f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
+                )
 
-        t_start = old_solution.t[-1]
-        t_end = t_start + dt
-        # Calculate t_eval
-        t_eval = np.linspace(t_start, t_end, npts)
+            t_start = old_solution.t[-1]
+            t_end = t_start + dt
+            # Calculate t_eval
+            t_eval = np.linspace(t_start, t_end, npts)
 
-        if t_start == 0:
-            t_start_shifted = t_start
+            if t_start == 0:
+                t_start_shifted = t_start
+            else:
+                # offset t_start by t_start_offset (default 1 ns)
+                # to avoid repeated times in the solution
+                # from having the same time at the end of the previous step and
+                # the start of the next step
+                t_start_shifted = t_start + step_start_offset
+                t_eval[0] = t_start_shifted
         else:
-            # offset t_start by t_start_offset (default 1 ns)
-            # to avoid repeated times in the solution
-            # from having the same time at the end of the previous step and
-            # the start of the next step
-            t_start_shifted = t_start + step_start_offset
-            t_eval[0] = t_start_shifted
+            # if dt and non_linear_time both are None
+            # we assign minimum offset value to dt
+            step_start_offset = pybamm.settings.step_start_offset
+            dt = step_start_offset
+            t_start = old_solution.t[-1]
+            t_end = t_start + dt
+            # Calculate t_eval
+            t_eval = np.linspace(t_start, t_end, npts)
+
+            if t_start == 0:
+                t_start_shifted = t_start
+            else:
+                # offset t_start by t_start_offset (default 1 ns)
+                # to avoid repeated times in the solution
+                # from having the same time at the end of the previous step and
+                # the start of the next step
+                t_start_shifted = t_start + step_start_offset
+                t_eval[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()
@@ -1262,13 +1310,9 @@ class BaseSolver:
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
             (
-                "Set-up time: {}, Step time: {} (of which integration time: {}), "
-                "Total time: {}"
-            ).format(
-                solution.set_up_time,
-                solution.solve_time,
-                solution.integration_time,
-                solution.total_time,
+                f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time}"
+                f"(of which integration time: {solution.integration_time}), "
+                f"Total time: {solution.total_time}"
             )
         )
 
@@ -1277,6 +1321,7 @@ class BaseSolver:
             return solution
         else:
             return old_solution + solution
+
 
     def get_termination_reason(self, solution, events):
         """
