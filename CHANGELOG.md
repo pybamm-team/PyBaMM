@@ -8,6 +8,9 @@ https://docs.pybamm.org/en/latest/source/user_guide/contributing.html
 
 -->
 
+<!-- towncrier release notes start -->
+<!-- TODO: note to self, add newsfragments for the unreleased entries below after this PR has been reviewed and approved -->
+
 ### Features
 
 - Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
@@ -36,10 +39,6 @@ https://docs.pybamm.org/en/latest/source/user_guide/contributing.html
 - Dropped support for the `[jax]` extra, i.e., the Jax solver when running on Python 3.8. The Jax solver is now available on Python 3.9 and above ([#3550](https://github.com/pybamm-team/PyBaMM/pull/3550))
 
 ## [v23.9](https://github.com/pybamm-team/PyBaMM/tree/v23.9) - 2023-10-31
-
-<!-- towncrier release notes start -->
-
-## [23.9rc0](https://github.com/pybamm-team/PyBaMM/tree/v23.9rc0) - 2023-10-31
 
 ### Features
 
