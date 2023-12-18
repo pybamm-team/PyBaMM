@@ -42,7 +42,7 @@ jobs:
           asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
           ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: asv_new_results
           path: results
