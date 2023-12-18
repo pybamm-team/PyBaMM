@@ -14,6 +14,15 @@ from jax.tree_util import tree_flatten
 import importlib.util
 import importlib
 
+idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
+if idaklu_spec is not None:
+    try:
+        idaklu = importlib.util.module_from_spec(idaklu_spec)
+        if idaklu_spec.loader:
+            idaklu_spec.loader.exec_module(idaklu)
+    except ImportError:  # pragma: no cover
+        idaklu_spec = None
+
 
 class IDAKLUJax:
     def get_var(self, f, varname):
@@ -89,6 +98,74 @@ class IDAKLUJax:
             )(t, inputs)
         return d
 
+    def _jaxify_solve(self, t, invar, *inputs_values):
+        logging.info("jaxify_solve: ", type(t))
+        # Reconstruct dictionary of inputs
+        d = self.jax_inputs.copy()
+        for ix, (k, v) in enumerate(self.jax_inputs.items()):
+            d[k] = inputs_values[ix]
+        # Solver
+        logging.debug("Solver:")
+        logging.debug("  t_eval: ", self.jax_t_eval)
+        logging.debug("  t: ", t)
+        logging.debug("  invar: ", invar)
+        logging.debug("  inputs: ", dict(d))
+        logging.debug("  calculate_sensitivities: ", invar is not None)
+        sim = self.jax_solver.solve(
+            self.jax_model,
+            self.jax_t_eval,
+            inputs=dict(d),
+            calculate_sensitivities=invar is not None,
+        )
+        if invar:
+            # Provide vector support for time
+            if t.ndim == 0:
+                t = np.array([t])
+            tk = list(map(lambda t: np.argmin(abs(self.jax_t_eval - t)), t))
+            out = jnp.array(
+                [
+                    jnp.array(sim[outvar].sensitivities[invar][tk])
+                    for outvar in self.jax_output_variables
+                ]
+            ).squeeze()
+            return out.T
+        else:
+            return jnp.array(
+                [np.array(sim[outvar](t)) for outvar in self.jax_output_variables]
+            ).T
+
+    # TODO: Still working on this function (called from c++)
+    def _jax_solve(
+        self,
+        t: float,
+        in1: float,
+        in2: float,
+    ) -> np.ndarray:
+        print(" py:jax_solve: ", type(t), type(in1), type(in2))
+        print(" py:t = ", type(t), t)
+        print(" py:in1 = ", type(in1), in1)
+        print(" py:in2 = ", type(in2), in2)
+        t = np.array(t)
+        # Returns a jax array
+        out = self._jaxify_solve(t, None, in1, in2)
+        # Convert to numpy array
+        out = np.array(out)
+        self.keep_out = out  # Keep result referenced in memory
+        # Returns a 2D array of size (len(t), len(output_variables))
+        print(" py:out = ", type(self.keep_out), self.keep_out)
+        return self.keep_out
+
+    def _register_solve(self):
+        """Register the solve method with the IDAKLU solver"""
+        idaklu.add_python_callback(self._jax_solve)  # TODO: This causes python to hang on exit
+
+    def __del__(self):
+        self._deallocate()
+
+    def _deallocate(self):
+        print("Deallocate")
+        idaklu.add_python_callback(None)
+
     def jaxify(
         self,
         model,
@@ -100,51 +177,17 @@ class IDAKLUJax:
     ):
         """JAXify the model and solver"""
 
-        solver = self
+        self.jax_solver = self
+        self.jax_model = model
         self.jax_t_eval = t_eval
         self.jax_output_variables = output_variables
         self.jax_inputs = inputs
-
-        def jaxify_solve(t, invar, *inputs_values):
-            logging.info("jaxify_solve: ", type(t))
-            # Reconstruct dictionary of inputs
-            d = inputs.copy()
-            for ix, (k, v) in enumerate(inputs.items()):
-                d[k] = inputs_values[ix]
-            # Solver
-            logging.debug("Solver:")
-            logging.debug("  t_eval: ", t_eval)
-            logging.debug("  t: ", t)
-            logging.debug("  invar: ", invar)
-            logging.debug("  inputs: ", dict(d))
-            logging.debug("  calculate_sensitivities: ", invar is not None)
-            sim = solver.solve(
-                model,
-                t_eval,
-                inputs=dict(d),
-                calculate_sensitivities=invar is not None,
-            )
-            if invar:
-                # Provide vector support for time
-                if t.ndim == 0:
-                    t = np.array([t])
-                tk = list(map(lambda t: np.argmin(abs(t_eval - t)), t))
-                out = jnp.array(
-                    [
-                        jnp.array(sim[outvar].sensitivities[invar][tk])
-                        for outvar in output_variables
-                    ]
-                ).squeeze()
-                return out.T
-            else:
-                return jnp.array(
-                    [np.array(sim[outvar](t)) for outvar in output_variables]
-                ).T
+        self._register_solve()
 
         # JAX PRIMITIVE DEFINITION
 
         f_p = jax.core.Primitive("f")
-        # f_p.multiple_results = True  # return a vector (of time samples)
+        f_p.multiple_results = False  # Returns a single multi-dimensional array
 
         def f(t, inputs):
             """
@@ -165,7 +208,7 @@ class IDAKLUJax:
         def f_impl(t, *inputs):
             """Concrete implementation of Primitive"""
             logging.info("f_impl")
-            term_v = jaxify_solve(t, None, *inputs)
+            term_v = self._jaxify_solve(t, None, *inputs)
             logging.debug("f_impl [exit]: ", (type(term_v), term_v))
             return term_v
 
@@ -248,7 +291,7 @@ class IDAKLUJax:
                 # Skipping zero values greatly improves performance
                 if value > 0.0:
                     invar = list(self.jax_inputs.keys())[index]
-                    js = jaxify_solve(t, invar, *inputs)
+                    js = self._jaxify_solve(t, invar, *inputs)
                     if js.ndim == 0:
                         js = jnp.array([js])
                     if js.ndim == 1 and t.ndim > 0:
@@ -363,7 +406,7 @@ class IDAKLUJax:
             if t.ndim == 0:
                 # scalar time input
                 y_dot = jnp.zeros_like(t)
-                js = jaxify_solve(t, invar, *inputs)
+                js = self._jaxify_solve(t, invar, *inputs)
                 if js.ndim == 0:
                     js = jnp.array([js])
                 for index, value in enumerate(y_bar):
@@ -371,7 +414,7 @@ class IDAKLUJax:
                         y_dot += value * js[index]
             else:
                 # vector time input
-                js = jaxify_solve(t, invar, *inputs)
+                js = self._jaxify_solve(t, invar, *inputs)
                 if len(output_variables) == 1:
                     js = js.reshape((len(t), 1))
                 y_dot = jnp.zeros(())
@@ -407,13 +450,7 @@ class IDAKLUJax:
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
-        cpu_ops_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-        if cpu_ops_spec:
-            cpu_ops = importlib.util.module_from_spec(cpu_ops_spec)
-            loader = cpu_ops_spec.loader
-            loader.exec_module(cpu_ops) if loader else None
-
-        for _name, _value in cpu_ops.registrations().items():
+        for _name, _value in idaklu.registrations().items():
             xla_client.register_custom_call_target(_name, _value, platform="cpu")
 
         def f_lowering_cpu(ctx, t, *inputs):

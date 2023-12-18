@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <iostream>
+#include <functional>
 
 #include "pybind11_kernel_helpers.h"
 
@@ -22,38 +23,93 @@ namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
 
-template <typename T>
+#define PYBIND11_DETAILED_ERROR_MESSAGES
+
+int global_var = 0;
+using Handler = std::function<np_array(realtype, realtype, realtype)>;
+
+Handler handler;
+
 void cpu_idaklu(void *out_tuple, const void **in) {
-  // Parse the inputs
+  // Parse the inputs --- note that these come from jax lowering and are NOT np_array's
   const std::int64_t size = *reinterpret_cast<const std::int64_t *>(in[0]);
   const std::int64_t vars = *reinterpret_cast<const std::int64_t *>(in[1]);
-  const T *t = reinterpret_cast<const T *>(in[2]);
-  const T *in1 = reinterpret_cast<const T *>(in[3]);
-  const T *in2 = reinterpret_cast<const T *>(in[4]);
+  const realtype *t = reinterpret_cast<const realtype *>(in[2]);
+  const realtype *in1 = reinterpret_cast<const realtype *>(in[3]);
+  const realtype *in2 = reinterpret_cast<const realtype *>(in[4]);
+  void *out = reinterpret_cast<realtype *>(out_tuple);
+
+  /*
+  py::capsule free_when_done(t, [](void *f) {
+    std::cout << "freeing memory" << std::endl;
+  });
+
+  // Create a Python object that will free the allocated memory when destroyed
+  np_array t_np = py::array_t<realtype>(
+    {size}, // shape
+    {sizeof(realtype)}, // C-style contiguous strides for double
+    t, // the data pointer
+    free_when_done
+  );
+  */
+  realtype t_np = *t;
+
+  /*size_t shape[1] = {1};
+  size_t strides[1] = {sizeof(realtype)};
+  auto t_np = py::array_t<realtype>(shape, strides);
+  auto view = t_np.mutable_unchecked<1>();
+  for (size_t i = 0; i < size; ++i) {
+    view(i) = t[i];
+  }*/
+  
   std::cout << "size: " << size << std::endl;
   std::cout << "vars: " << vars << std::endl;
   for (std::int64_t n = 0; n < size; ++n) {
     std::cout << "t: " << t[n] << std::endl;
+    //std::cout << "a: " << t_np.at(n) << std::endl;
     std::cout << "in1: " << in1[n] << std::endl;
     std::cout << "in2: " << in2[n] << std::endl;
   }
 
+  /*
+  np_array out_np = py::array_t<realtype>(
+    {size, vars}, // shape
+    {vars*sizeof(realtype), sizeof(realtype)}, // C-style contiguous strides
+    out, // the data pointer
+    free_when_done
+  );
+  */
+  
+  np_array a = handler(t_np, in1[0], in2[0]);
+  auto buf = a.request();
+  std::cout << "ndim: " << a.ndim() << std::endl;
+  std::cout << "shape: " << buf.shape[0] << " " << buf.shape[1] << std::endl;
+  // TODO: Insert shape checks here
+  // c-style pointer from numpy use row-first indexing (across vars)
+  realtype* ptr = (realtype*) buf.ptr;
+  for (std::int64_t n = 0; n < size; ++n) {
+    for (std::int64_t tn = 0; tn < vars; ++tn) {
+      std::cout << " item: " << n << " " << tn << ": ";
+      std::cout << ptr[n*vars + tn] << std::endl;
+    }
+  }
+
   // We have a single output, which is a multi-dimensional array; recurse over the dimensions
-  void *out = reinterpret_cast<T *>(out_tuple);
   std::int64_t i = 0;
   for (std::int64_t n = 0; n < vars; ++n) {
-    for (std::int64_t m = 0; m < size; ++m) {
-      reinterpret_cast<T *>(out)[i] = (T) (t[m] + n);
-      std::cout << " out" << reinterpret_cast<T *>(out)[i];
+    for (std::int64_t tn = 0; tn < size; ++tn) {
+      reinterpret_cast<realtype *>(out)[i] = n*vars + tn;
+      // reinterpret_cast<realtype *>(out)[i] = ptr[n*vars + tn];
+      std::cout << " out " << reinterpret_cast<realtype *>(out)[i] << std::endl;
       ++i;
     }
   }
+  std::cout << " done" << std::endl;
 }
 
 pybind11::dict Registrations() {
   pybind11::dict dict;
-  dict["cpu_idaklu_f32"] = EncapsulateFunction(cpu_idaklu<float>);
-  dict["cpu_idaklu_f64"] = EncapsulateFunction(cpu_idaklu<double>);
+  dict["cpu_idaklu_f64"] = EncapsulateFunction(cpu_idaklu);
   return dict;
 }
 
@@ -129,6 +185,9 @@ PYBIND11_MODULE(idaklu, m)
     py::return_value_policy::take_ownership);
   
   m.def("registrations", &Registrations);
+  m.def("add_python_callback",
+    [](Handler h) { handler = h; },
+    py::return_value_policy::take_ownership);
 
   py::class_<Function>(m, "Function");
 
