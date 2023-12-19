@@ -19,9 +19,7 @@ For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>` 
    expression_tree/index
    models/index
    parameters/index
-   geometry/index
-   meshes/index
-   spatial_methods/index
+   discretisation/index
    solvers/index
    experiment/index
    simulation

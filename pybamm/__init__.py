@@ -142,11 +142,11 @@ from .models.submodels.interface import open_circuit_potential
 #
 # Geometry
 #
-from .geometry.geometry import Geometry
-from .geometry.battery_geometry import battery_geometry
+from .discretisation.geometry.geometry import Geometry
+from .discretisation.geometry.battery_geometry import battery_geometry
 
 from .expression_tree.independent_variable import KNOWN_COORD_SYS
-from .geometry import standard_spatial_vars
+from .discretisation.geometry import standard_spatial_vars
 
 #
 # Parameter classes and methods
@@ -169,11 +169,10 @@ from .parameters_cli import add_parameter, remove_parameter, edit_parameter
 #
 # Mesh and Discretisation classes
 #
-from .discretisations.discretisation import Discretisation
-from .discretisations.discretisation import has_bc_of_form
-from .meshes.meshes import Mesh, SubMesh, MeshGenerator
-from .meshes.zero_dimensional_submesh import SubMesh0D
-from .meshes.one_dimensional_submeshes import (
+from .discretisation.discretisation import Discretisation, has_bc_of_form
+from .discretisation.meshes.meshes import Mesh, SubMesh, MeshGenerator
+from .discretisation.meshes.zero_dimensional_submesh import SubMesh0D
+from .discretisation.meshes.one_dimensional_submeshes import (
     SubMesh1D,
     Uniform1DSubMesh,
     Exponential1DSubMesh,
@@ -181,7 +180,7 @@ from .meshes.one_dimensional_submeshes import (
     UserSupplied1DSubMesh,
     SpectralVolume1DSubMesh,
 )
-from .meshes.scikit_fem_submeshes import (
+from .discretisation.meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,
     ScikitExponential2DSubMesh,
@@ -197,11 +196,13 @@ from .models.base_model import load_model
 #
 # Spatial Methods
 #
-from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
-from .spatial_methods.finite_volume import FiniteVolume
-from .spatial_methods.spectral_volume import SpectralVolume
-from .spatial_methods.scikit_finite_element import ScikitFiniteElement
+from .discretisation.spatial_methods.spatial_method import SpatialMethod
+from .discretisation.spatial_methods.zero_dimensional_method import (
+    ZeroDimensionalSpatialMethod,
+)
+from .discretisation.spatial_methods.finite_volume import FiniteVolume
+from .discretisation.spatial_methods.spectral_volume import SpectralVolume
+from .discretisation.spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #
 # Solver classes
