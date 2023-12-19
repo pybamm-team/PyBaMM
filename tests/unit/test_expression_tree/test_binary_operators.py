@@ -431,20 +431,20 @@ class TestBinaryOperators(TestCase):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
 
-        minimum = pybamm.smooth_minus(a, b, 3000)
+        minimum = pybamm.Smooth_min(a, b, 3000)
         self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
 
-        maximum = pybamm.smooth_plus(a, b, 3000)
+        maximum = pybamm.smooth_max(a, b, 3000)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
 
-        minimum = pybamm.smooth_minus(a, b, 1)
+        minimum = pybamm.Smooth_min(a, b, 1)
         self.assertEqual(
             str(minimum),
             "0.5 * (1.0 + y[0:1] - sqrt(1.0 + (1.0 - y[0:1]) ** 2.0))",
         )
-        maximum = pybamm.smooth_plus(a, b, 1)
+        maximum = pybamm.smooth_max(a, b, 1)
         self.assertEqual(
             str(maximum),
             "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])",
@@ -454,8 +454,8 @@ class TestBinaryOperators(TestCase):
         pybamm.settings.min_max_mode = "smooth"
 
         pybamm.settings.min_max_smoothing = 1
-        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.smooth_minus(a, b, 1)))
-        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.smooth_plus(a, b, 1)))
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.Smooth_min(a, b, 1)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.smooth_max(a, b, 1)))
 
         pybamm.settings.min_max_smoothing = 3000
         a = pybamm.Scalar(1)

@@ -1246,7 +1246,7 @@ def minimum(left, right):
     if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Minimum(left, right)
     elif mode == "smooth":
-        out = pybamm.smooth_minus(left, right, k)
+        out = pybamm.Smooth_min(left, right, k)
     else:
         out = pybamm.softminus(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1270,7 +1270,7 @@ def maximum(left, right):
     if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Maximum(left, right)
     elif mode == "smooth":
-        out = pybamm.smooth_plus(left, right, k)
+        out = pybamm.smooth_max(left, right, k)
     else:
         out = pybamm.softplus(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1331,7 +1331,7 @@ def softplus(left, right, k):
     return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
 
 
-def smooth_minus(left, right, k):
+def Smooth_min(left, right, k):
     """
     Smooth_minus approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
@@ -1340,9 +1340,9 @@ def smooth_minus(left, right, k):
     return ((left + right) - (pybamm.sqrt((left - right)**2 + sigma))) / 2
 
 
-def smooth_plus(left, right, k):
+def smooth_max(left, right, k):
     """
-    Smooth_plus approximation to the maximum function. k is the smoothing parameter,
+    Smooth_max approximation to the maximum function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
     """
     sigma = (1.0 / k) ** 2
