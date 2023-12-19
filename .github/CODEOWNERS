@@ -6,17 +6,17 @@
 /pybamm/experiment/ @brosaplanella @martinjrobins @rtimms @tinosulzer @TomTranter
 /pybamm/expression_tree/ @martinjrobins @rtimms @tinosulzer
 /pybamm/geometry/ @martinjrobins @rtimms @tinosulzer
-/pybamm/input/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter
+/pybamm/input/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @kratman
 /pybamm/meshes/ @martinjrobins @rtimms @tinosulzer @rtimms
 /pybamm/models/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms
-/pybamm/parameters/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms
-/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @tinosulzer @rtimms
+/pybamm/parameters/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms  @kratman
+/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @tinosulzer @rtimms  @kratman
 /pybamm/solvers/ @martinjrobins @rtimms @tinosulzer @TomTranter @rtimms
 /pybamm/spatial_methods/ @martinjrobins @rtimms @tinosulzer @rtimms
 /pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/, will not recurse
 
 # CI/CD workflows
-/.github/ @martinjrobins @Saransh-cpp @agriyakhetarpal
+/.github/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman
 
 # Benchmarks
 /benchmarks/ @brosaplanella @Saransh-cpp @agriyakhetarpal
@@ -28,7 +28,7 @@
 /examples/ @pybamm-team/maintainers
 
 # Installation and other scripts
-/scripts/ @martinjrobins @Saransh-cpp @agriyakhetarpal
+/scripts/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman
 
 # Files in the root directory
-/* @martinjrobins @Saransh-cpp @agriyakhetarpal
+/* @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman
