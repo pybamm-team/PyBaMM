@@ -13,7 +13,6 @@
 /pybamm/plotting/ @martinjrobins @Saransh-cpp @tinosulzer @rtimms
 /pybamm/solvers/ @martinjrobins @tinosulzer @TomTranter @rtimms
 /pybamm/spatial_methods/ @martinjrobins @tinosulzer @rtimms
-/pybamm/step/ @brosaplanella @martinjrobins @tinosulzer @TomTranter @rtimms
 /pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/
 
 # CI/CD workflows
