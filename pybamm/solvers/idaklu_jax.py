@@ -1,6 +1,7 @@
 import pybamm
 import numpy as np
 import logging
+import numbers
 import jax
 from jax import lax
 from jax import numpy as jnp
@@ -118,6 +119,8 @@ class IDAKLUJax:
             calculate_sensitivities=invar is not None,
         )
         if invar:
+            if isinstance(invar, numbers.Number):
+                invar = list(self.jax_inputs.keys())[invar]
             # Provide vector support for time
             if t.ndim == 0:
                 t = np.array([t])
@@ -134,7 +137,6 @@ class IDAKLUJax:
                 [np.array(sim[outvar](t)) for outvar in self.jax_output_variables]
             ).T
 
-    # TODO: Still working on this function (called from c++)
     def _jax_solve(
         self,
         t: float,
@@ -145,26 +147,121 @@ class IDAKLUJax:
         print(" py:t = ", type(t), t)
         print(" py:in1 = ", type(in1), in1)
         print(" py:in2 = ", type(in2), in2)
-        t = np.array(t)
+        if isinstance(t, float):
+            t = np.array(t)
         # Returns a jax array
         out = self._jaxify_solve(t, None, in1, in2)
         # Convert to numpy array
-        out = np.array(out)
-        self.keep_out = out  # Keep result referenced in memory
-        # Returns a 2D array of size (len(t), len(output_variables))
-        print(" py:out = ", type(self.keep_out), self.keep_out)
-        return self.keep_out
+        return np.array(out)
+
+    def _jax_jvp_impl(
+        self,
+        *args,
+    ):
+        print("py:_jax_jvp_impl")
+        print("  py:args: ", type(args), args)
+
+        primals = args[: len(args) // 2]
+        tangents = args[len(args) // 2 :]
+        t = primals[0]
+        inputs = primals[1:]
+        inputs_t = tangents[1:]
+
+        if t.ndim == 0:
+            y_dot = jnp.zeros_like(t)
+        else:
+            # This permits direct vector indexing with time for jaxfwd
+            y_dot = jnp.zeros((len(t), len(self.jax_output_variables)))
+        for index, value in enumerate(inputs_t):
+            # Skipping zero values greatly improves performance
+            if value > 0.0:
+                invar = list(self.jax_inputs.keys())[index]
+                js = self._jaxify_solve(t, invar, *inputs)
+                if js.ndim == 0:
+                    js = jnp.array([js])
+                if js.ndim == 1 and t.ndim > 0:
+                    # This permits direct vector indexing with time
+                    js = js.reshape((t.shape[0], -1))
+                y_dot += value * js
+
+        return np.array(y_dot)
+
+    def _jax_vjp_impl(
+        self,
+        y_bar,
+        invar,
+        *primals,
+    ):
+        print("py:f_vjp_p_impl")
+        print("  py:y_bar: ", type(y_bar), y_bar)
+        print("  py:invar: ", type(invar), invar)
+        print("  py:primals: ", type(primals), primals)
+
+        t = primals[0]
+        inputs = primals[1:]
+
+        # TODO
+        if isinstance(y_bar, float):
+            y_bar = np.array([y_bar])
+        if isinstance(invar, float):
+            invar = round(invar)
+        if isinstance(t, float):
+            t = np.array(t)
+
+        if t.ndim == 0:
+            # scalar time input
+            y_dot = jnp.zeros_like(t)
+            js = self._jaxify_solve(t, invar, *inputs)
+            if js.ndim == 0:
+                js = jnp.array([js])
+            for index, value in enumerate(y_bar):
+                if value > 0.0:
+                    y_dot += value * js[index]
+        else:
+            # vector time input
+            print('invar = ', invar)
+            js = self._jaxify_solve(t, invar, *inputs)
+            print('js: ', type(js), js, js.shape)
+            print('len(output_variables): ', len(self.jax_output_variables))
+            if len(self.jax_output_variables) == 1 and len(t) > 1:
+                js = np.array([js])
+            if len(self.jax_output_variables) > 1 and len(t) == 1:
+                js = np.array([js]).T
+            if len(self.jax_output_variables) == 1 and len(t) == 1:
+                js = np.array([[js]])
+            while y_bar.ndim < 2:
+                y_bar = np.array([y_bar]).T
+            print('js shape: ', js.shape)
+            print('js dims: ', js.ndim)
+            y_dot = jnp.zeros(())
+            print('y_bar = ', y_bar)
+            for ix, y_outvar in enumerate(y_bar.T):
+                print('ix: ', ix)
+                print('y_outvar: ', type(y_outvar), y_outvar, y_outvar.shape)
+                print('js[:, ix]: ', type(js[:, ix]), js[:, ix], js[:, ix].shape)
+                y_dot += jnp.dot(y_outvar, js[:, ix])
+        logging.debug("<- f_vjp_p_impl")
+        print("  py:y_dot: ", type(y_dot), y_dot, y_dot.shape)
+        y_dot = np.array(y_dot)
+        print("  py:y_dot: ", type(y_dot), y_dot, y_dot.shape)
+        y_dot = np.array(y_dot)
+        return y_dot
 
     def _register_solve(self):
         """Register the solve method with the IDAKLU solver"""
-        idaklu.add_python_callback(self._jax_solve)  # TODO: This causes python to hang on exit
+        print("Register")
+        idaklu.register_callbacks(
+            self._jax_solve,
+            self._jax_jvp_impl,
+            self._jax_vjp_impl,
+        )
 
     def __del__(self):
         self._deallocate()
 
     def _deallocate(self):
         print("Deallocate")
-        idaklu.add_python_callback(None)
+        idaklu.register_callbacks(None, None, None)
 
     def jaxify(
         self,
@@ -182,6 +279,7 @@ class IDAKLUJax:
         self.jax_t_eval = t_eval
         self.jax_output_variables = output_variables
         self.jax_inputs = inputs
+
         self._register_solve()
 
         # JAX PRIMITIVE DEFINITION
@@ -276,29 +374,7 @@ class IDAKLUJax:
         @f_jvp_p.def_impl
         def f_jvp_eval(*args):
             logging.info("f_jvp_p_eval: ", type(args))
-            primals = args[: len(args) // 2]
-            tangents = args[len(args) // 2 :]
-            t = primals[0]
-            inputs = primals[1:]
-            inputs_t = tangents[1:]
-
-            if t.ndim == 0:
-                y_dot = jnp.zeros_like(t)
-            else:
-                # This permits direct vector indexing with time for jaxfwd
-                y_dot = jnp.zeros((len(t), len(output_variables)))
-            for index, value in enumerate(inputs_t):
-                # Skipping zero values greatly improves performance
-                if value > 0.0:
-                    invar = list(self.jax_inputs.keys())[index]
-                    js = self._jaxify_solve(t, invar, *inputs)
-                    if js.ndim == 0:
-                        js = jnp.array([js])
-                    if js.ndim == 1 and t.ndim > 0:
-                        # This permits direct vector indexing with time
-                        js = js.reshape((t.shape[0], 1))
-                    y_dot += value * js
-            return y_dot
+            return self._jax_jvp_impl(*args)
 
         def f_jvp_batch(args, batch_axes):
             logging.info("f_jvp_batch")
@@ -377,7 +453,7 @@ class IDAKLUJax:
 
             tangents_out = []
             for invar in self.jax_inputs.keys():
-                js = f_vjp_p.bind(y_bar, invar, *primals)
+                js = f_vjp(y_bar, invar, *primals)
                 tangents_out.append(js)
 
             out = (
@@ -395,33 +471,26 @@ class IDAKLUJax:
 
         def f_vjp(y_bar, invar, *primals):
             logging.info("f_vjp")
+            print("f_vjp")
+            print("  y_bar: ", y_bar, type(y_bar), y_bar.shape)
+            if isinstance(invar, str):
+                invar = list(self.jax_inputs.keys()).index(invar)
             return f_vjp_p.bind(y_bar, invar, *primals)
 
         @f_vjp_p.def_impl
         def f_vjp_impl(y_bar, invar, *primals):
-            logging.info("f_vjp_p_impl")
-            t = primals[0]
-            inputs = primals[1:]
+            logging.info("f_vjp_impl")
+            return self._jax_vjp_impl(y_bar, invar, *primals)
 
-            if t.ndim == 0:
-                # scalar time input
-                y_dot = jnp.zeros_like(t)
-                js = self._jaxify_solve(t, invar, *inputs)
-                if js.ndim == 0:
-                    js = jnp.array([js])
-                for index, value in enumerate(y_bar):
-                    if value > 0.0:
-                        y_dot += value * js[index]
-            else:
-                # vector time input
-                js = self._jaxify_solve(t, invar, *inputs)
-                if len(output_variables) == 1:
-                    js = js.reshape((len(t), 1))
-                y_dot = jnp.zeros(())
-                for ix, y_outvar in enumerate(y_bar.T):
-                    y_dot += jnp.dot(y_outvar, js[:, ix])
-            logging.debug("<- f_vjp_p_impl")
-            return y_dot
+        @f_vjp_p.def_abstract_eval
+        def f_vjp_abstract_eval(*args):
+            # TODO: Check abstract evaluation dimensions
+            logging.info("f_vjp_abstract_eval")
+            primals = args[: len(args) // 2]
+            t = primals[0]
+            out = jax.core.ShapedArray((), t.dtype)
+            logging.info("<- f_vjp_abstract_eval")
+            return out
 
         def f_vjp_batch(args, batch_axes):
             logging.info("f_vjp_p_batch")
@@ -456,10 +525,7 @@ class IDAKLUJax:
         def f_lowering_cpu(ctx, t, *inputs):
             t_aval = ctx.avals_in[0]
             np_dtype = np.dtype(t_aval.dtype)
-            if np_dtype == np.float32:
-                op_name = "cpu_idaklu_f32"
-                op_dtype = mlir.ir.F32Type.get()
-            elif np_dtype == np.float64:
+            if np_dtype == np.float64:
                 op_name = "cpu_idaklu_f64"
                 op_dtype = mlir.ir.F64Type.get()
             else:
@@ -470,15 +536,15 @@ class IDAKLUJax:
             layout_t = tuple(range(len(dims_t) - 1, -1, -1))
             size_t = np.prod(dims_t).astype(np.int64)
 
-            y_aval = ctx.avals_out[0]
-            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
-            dims_out = dtype_out.shape
-            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
-
             input_aval = ctx.avals_in[1]
             dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
             dims_input = dtype_input.shape
             layout_input = tuple(range(len(dims_input) - 1, -1, -1))
+
+            y_aval = ctx.avals_out[0]
+            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
+            dims_out = dtype_out.shape
+            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
 
             results = custom_call(
                 op_name,
@@ -505,6 +571,145 @@ class IDAKLUJax:
         mlir.register_lowering(
             f_p,
             f_lowering_cpu,
+            platform="cpu",
+        )
+
+        def f_jvp_lowering_cpu(ctx, *args):
+            primals = args[:len(args) // 2]
+            t_primal = primals[0]
+            inputs_primals = primals[1:]
+
+            tangents = args[len(args) // 2:]
+            t_tangent = tangents[0]
+            inputs_tangents = tangents[1:]
+
+            t_aval = ctx.avals_in[0]
+            np_dtype = np.dtype(t_aval.dtype)
+            if np_dtype == np.float64:
+                op_name = "cpu_idaklu_jvp_f64"
+                op_dtype = mlir.ir.F64Type.get()
+            else:
+                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+
+            dtype_t = mlir.ir.RankedTensorType(t_primal.type)
+            dims_t = dtype_t.shape
+            layout_t_primal = tuple(range(len(dims_t) - 1, -1, -1))
+            layout_t_tangent = layout_t_primal
+            size_t = np.prod(dims_t).astype(np.int64)
+
+            input_aval = ctx.avals_in[1]
+            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
+            dims_input = dtype_input.shape
+            layout_inputs_primals = tuple(range(len(dims_input) - 1, -1, -1))
+            layout_inputs_tangents = layout_inputs_primals
+
+            y_aval = ctx.avals_out[0]
+            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
+            dims_out = dtype_out.shape
+            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+
+            results = custom_call(
+                op_name,
+                # Output types
+                result_types=[dtype_out],
+                # The inputs
+                operands=[
+                    mlir.ir_constant(size_t),  # 'size' argument
+                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    t_primal,  # 't'
+                    *inputs_primals,  # inputs
+                    t_tangent,  # 't'
+                    *inputs_tangents,  # inputs
+                ],
+                # Layout specification
+                operand_layouts=[
+                    (),  # 'size'
+                    (),  # 'vars'
+                    layout_t_primal,  # 't'
+                    *([layout_inputs_primals] * len(inputs_primals)),  # inputs
+                    layout_t_tangent,  # 't'
+                    *([layout_inputs_tangents] * len(inputs_tangents)),  # inputs
+                ],
+                result_layouts=[layout_out],
+            )
+            return results.results
+
+        mlir.register_lowering(
+            f_jvp_p,
+            f_jvp_lowering_cpu,
+            platform="cpu",
+        )
+
+        def f_vjp_lowering_cpu(ctx, y_bar, invar, *primals):
+            print('f_vjp_lowering_cpu')
+            print('  ctx: ', ctx)
+
+            t_primal = primals[0]
+            inputs_primals = primals[1:]
+
+            t_aval = ctx.avals_in[2]
+            np_dtype = np.dtype(t_aval.dtype)
+            if np_dtype == np.float64:
+                op_name = "cpu_idaklu_vjp_f64"
+                op_dtype = mlir.ir.F64Type.get()
+            else:
+                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+
+            y_bar_aval = ctx.avals_in[0]
+            dtype_y_bar = mlir.ir.RankedTensorType.get(y_bar_aval.shape, op_dtype)
+            dims_y_bar = dtype_y_bar.shape
+            print('dims_y_bar: ', dims_y_bar)
+            layout_y_bar = tuple(range(len(dims_y_bar) - 1, -1, -1))
+
+            invar_aval = ctx.avals_in[1]
+            dtype_invar = mlir.ir.RankedTensorType.get(invar_aval.shape, op_dtype)
+            dims_invar = dtype_invar.shape
+            layout_invar = tuple(range(len(dims_invar) - 1, -1, -1))
+
+            dtype_t = mlir.ir.RankedTensorType(t_primal.type)
+            dims_t = dtype_t.shape
+            layout_t_primal = tuple(range(len(dims_t) - 1, -1, -1))
+            size_t = np.prod(dims_t).astype(np.int64)
+
+            input_aval = ctx.avals_in[3]
+            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
+            dims_input = dtype_input.shape
+            layout_inputs_primals = tuple(range(len(dims_input) - 1, -1, -1))
+
+            y_aval = ctx.avals_out[0]
+            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
+            dims_out = dtype_out.shape
+            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+
+            results = custom_call(
+                op_name,
+                # Output types
+                result_types=[dtype_out],
+                # The inputs
+                operands=[
+                    mlir.ir_constant(size_t),  # 'size' argument
+                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    y_bar,  # 'y_bar'
+                    invar,  # 'invar'
+                    t_primal,  # 't'
+                    *inputs_primals,  # inputs
+                ],
+                # Layout specification
+                operand_layouts=[
+                    (),  # 'size'
+                    (),  # 'vars'
+                    layout_y_bar,  # 'y_bar'
+                    layout_invar,  # 'invar'
+                    layout_t_primal,  # 't'
+                    *([layout_inputs_primals] * len(inputs_primals)),  # inputs
+                ],
+                result_layouts=[layout_out],
+            )
+            return results.results
+
+        mlir.register_lowering(
+            f_vjp_p,
+            f_vjp_lowering_cpu,
             platform="cpu",
         )
 
