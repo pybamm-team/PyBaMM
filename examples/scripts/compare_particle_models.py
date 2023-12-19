@@ -28,8 +28,8 @@ for model in models:
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
     sim.solve([0, 3600])
     sims.append(sim)
-    print("Particle model: {}".format(model.name))
-    print("Solve time: {}s".format(sim.solution.solve_time))
+    print(f"Particle model: {model.name}")
+    print(f"Solve time: {sim.solution.solve_time}s")
 
 # plot results
 pybamm.dynamic_plot(sims)

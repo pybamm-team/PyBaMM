@@ -49,7 +49,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{}({!s})".format(self.name, self.child)
+        return f"{self.name}({self.child!s})"
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -115,7 +115,7 @@ class Negate(UnaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{}{!s}".format(self.name, self.child)
+        return f"{self.name}{self.child!s}"
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -272,9 +272,9 @@ class Index(UnaryOperator):
             self.slice = index
             if name is None:
                 if index.start is None:
-                    name = "Index[:{:d}]".format(index.stop)
+                    name = f"Index[:{index.stop:d}]"
                 else:
-                    name = "Index[{:d}:{:d}]".format(index.start, index.stop)
+                    name = f"Index[{index.start:d}:{index.stop:d}]"
         else:
             raise TypeError("index must be integer or slice")
 
@@ -416,13 +416,13 @@ class Gradient(SpatialOperator):
     def __init__(self, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot take gradient of '{}' since its domain is empty. ".format(child)
+                f"Cannot take gradient of '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is True:
             raise TypeError(
-                "Cannot take gradient of '{}' since it evaluates on edges".format(child)
+                f"Cannot take gradient of '{child}' since it evaluates on edges"
             )
         super().__init__("grad", child)
 
@@ -448,15 +448,13 @@ class Divergence(SpatialOperator):
     def __init__(self, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot take divergence of '{}' since its domain is empty. ".format(
-                    child
-                )
+                f"Cannot take divergence of '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is False:
             raise TypeError(
-                "Cannot take divergence of '{}' since it does not ".format(child)
+                f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "
                 "divergence."
             )
@@ -577,9 +575,9 @@ class Integral(SpatialOperator):
             else:
                 raise TypeError(
                     "integration_variable must be of type pybamm.SpatialVariable, "
-                    "not {}".format(type(var))
+                    f"not {type(var)}"
                 )
-            name += " d{}".format(var.name)
+            name += f" d{var.name}"
 
         if self._integration_dimension == "primary":
             # integral of a child takes the domain from auxiliary domain of the child
@@ -613,7 +611,7 @@ class Integral(SpatialOperator):
                 "tertiary": child.domains["tertiary"],
             }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
-            name += " {}".format(child.domain)
+            name += f" {child.domain}"
 
         self._integration_variable = integration_variable
         super().__init__(name, child, domains)
@@ -712,11 +710,9 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
     def __init__(self, child, integration_variable):
         super().__init__(child, integration_variable)
         # Overwrite the name
-        self.name = "{} integrated w.r.t {}".format(
-            child.name, self.integration_variable[0].name
-        )
+        self.name = f"{child.name} integrated w.r.t {self.integration_variable[0].name}"
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(self.integration_variable[0].domain)
+            self.name += f" on {self.integration_variable[0].domain}"
 
 
 class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
@@ -744,7 +740,7 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
             child.name, self.integration_variable[0].name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(self.integration_variable[0].domain)
+            self.name += f" on {self.integration_variable[0].domain}"
 
 
 class DefiniteIntegralVector(SpatialOperator):
@@ -923,10 +919,8 @@ class BoundaryOperator(SpatialOperator):
         if side in ["negative tab", "positive tab"]:
             if child.domain[0] != "current collector":
                 raise pybamm.ModelError(
-                    """Can only take boundary value on the tabs in the domain
-                'current collector', but {} has domain {}""".format(
-                        child, child.domain[0]
-                    )
+                    f"""Can only take boundary value on the tabs in the domain
+                'current collector', but {child} has domain {child.domain[0]}"""
                 )
         self.side = side
         # boundary value of a child takes the primary domain from secondary domain
@@ -1115,13 +1109,13 @@ class UpwindDownwind(SpatialOperator):
     def __init__(self, name, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot upwind '{}' since its domain is empty. ".format(child)
+                f"Cannot upwind '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is True:
             raise TypeError(
-                "Cannot upwind '{}' since it does not ".format(child)
+                f"Cannot upwind '{child}' since it does not "
                 + "evaluate on nodes."
             )
         super().__init__(name, child)
