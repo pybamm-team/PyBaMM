@@ -22,7 +22,7 @@ VENV_DIR = Path("./venv").resolve()
 
 def set_environment_variables(env_dict, session):
     """
-    Sets environment variables for a nox session object.
+    Sets environment variables for a nox Session object.
 
     Parameters
     -----------
@@ -61,7 +61,10 @@ def run_coverage(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
     if sys.platform != "win32":
-        session.install("-e", ".[all,jax,odes]", silent=False)
+        if sys.version_info > (3, 12):
+            session.install("-e", ".[all,jax]", silent=False)
+        else:
+            session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all]", silent=False)
@@ -77,7 +80,10 @@ def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        session.install("-e", ".[all,jax,odes]", silent=False)
+        if sys.version_info > (3, 12):
+            session.install("-e", ".[all,jax]", silent=False)
+        else:
+            session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all]", silent=False)
@@ -98,7 +104,10 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        session.install("-e", ".[all,jax,odes]", silent=False)
+        if sys.version_info > (3, 12):
+            session.install("-e", ".[all,jax]", silent=False)
+        else:
+            session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all]", silent=False)
@@ -131,27 +140,27 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
-    session.run(
-        python,
-        "-m",
-        "pip",
-        "install",
-        "--upgrade",
-        "pip",
-        "setuptools",
-        "wheel",
-        external=True,
-    )
     if sys.platform == "linux":
-        session.run(
-            python,
-            "-m",
-            "pip",
-            "install",
-            "-e",
-            ".[all,dev,jax,odes]",
-            external=True,
-        )
+        if sys.version_info > (3, 12):
+            session.run(
+                python,
+                "-m",
+                "pip",
+                "install",
+                "-e",
+                ".[all,dev,jax]",
+                external=True,
+            )
+        else:
+            session.run(
+                python,
+                "-m",
+                "pip",
+                "install",
+                "-e",
+                ".[all,dev,jax,odes]",
+                external=True,
+            )
     else:
         if sys.version_info < (3, 9):
             session.run(
@@ -159,6 +168,7 @@ def set_dev(session):
                 "-m",
                 "pip",
                 "install",
+                "-e",
                 ".[all,dev]",
                 external=True,
             )
@@ -168,6 +178,7 @@ def set_dev(session):
                 "-m",
                 "pip",
                 "install",
+                "-e",
                 ".[all,dev,jax]",
                 external=True,
             )
@@ -178,6 +189,9 @@ def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
+        if sys.version_info > (3, 12):
+            session.install("-e", ".[all,jax]", silent=False)
+        else:
             session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
