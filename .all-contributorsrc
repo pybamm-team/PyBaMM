@@ -773,6 +773,16 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "XuboGU",
+      "name": "XuboGU",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53944452?v=4",
+      "profile": "https://github.com/XuboGU",
+      "contributions": [
+        "code",
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
