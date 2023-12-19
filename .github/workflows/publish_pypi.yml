@@ -57,7 +57,7 @@ jobs:
           CIBW_ARCHS: "AMD64"
 
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows_wheels
           path: ./wheelhouse/*.whl
@@ -110,7 +110,7 @@ jobs:
           CIBW_SKIP: "pp* *musllinux*"
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: ./wheelhouse/*.whl
@@ -133,7 +133,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: ./dist/*.tar.gz
