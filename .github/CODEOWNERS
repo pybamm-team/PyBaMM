@@ -16,10 +16,10 @@
 /pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/, will not recurse
 
 # CI/CD workflows
-/.github/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman
+/.github/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
 
 # Benchmarks
-/benchmarks/ @brosaplanella @Saransh-cpp @agriyakhetarpal
+/benchmarks/ @brosaplanella @Saransh-cpp @agriyakhetarpal @arjxn-py
 
 # Documentation
 /docs/ @pybamm-team/maintainers
@@ -28,7 +28,7 @@
 /examples/ @pybamm-team/maintainers
 
 # Installation and other scripts
-/scripts/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman
+/scripts/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
 
 # Files in the root directory
-/* @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman
+/* @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
