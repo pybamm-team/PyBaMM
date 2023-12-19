@@ -1,0 +1,144 @@
+*.txt
+*.pdf
+*.tmp
+*.png
+*.gif
+/local/
+*.DS_Store
+*.mat
+*.csv
+*.hidden
+*.pkl
+
+# don't ignore important .txt and .csv files
+!requirements*
+!LICENSE.txt
+!CMakeLists.txt
+!pybamm/CITATIONS.bib
+!pybamm/input/**/*.csv
+!tests/unit/test_parameters/*.csv
+!benchmarks/benchmark_images/*.png
+
+# running files
+*.pyc
+*.py~
+.~lock*
+*.swp
+
+# Python cache
+*__pycache__/
+*.cache
+.ipynb_checkpoints/
+
+# Sphinx build files
+docs/_build/
+docs/build/
+build/
+
+# inputs except parameters and comsol data needed for scripts and notebooks
+input/*
+!input/parameters
+!input/comsol_results/
+!input/drive_cycles
+
+# keep images required by notebooks
+!docs/examples/notebooks/creating_models/SEI.png
+
+# simulation outputs
+out/
+config.py
+matplotlibrc
+*.pickle
+*.sav
+
+# ideas
+ideas/
+.idea/
+
+# setup.py files
+*.egg-info
+dist/
+
+# coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# virtual environment
+env/
+venv/
+venv3.5/
+PyBaMM-env/
+bin/
+etc/
+lib/
+lib64
+share/
+pyvenv.cfg
+.vscode
+.ruff_cache/
+
+# sundials
+sundials
+sundials4
+sundials-*
+SuiteSparse-*
+build_sundials
+KLU_module_deps
+
+# downloads
+*.gz
+
+# third party
+third-party
+
+# cmakefiles
+CMakeFiles
+Makefile
+cmake_install.cmake
+*.so
+
+third-party/pybind11
+pybind11/
+
+# Build dependencies/
+KLU_module_deps
+
+# setup
+setup.log
+
+# test
+test.c
+test.json
+
+# tox
+.tox/
+
+# nox
+.nox/
+
+# vcpkg
+vcpkg_installed/
+
+# benchmarks
+html/
+results/
+
+# expression tree images for notebooks in docs
+!docs/source/examples/notebooks/expression_tree/expression_tree1.png
+!docs/source/examples/notebooks/expression_tree/expression_tree2.png
+!docs/source/examples/notebooks/expression_tree/expression_tree3.png
+!docs/source/examples/notebooks/expression_tree/expression_tree4.png
+!docs/source/examples/notebooks/expression_tree/expression_tree5.png
+
+# do not ignore SPM images for notebooks in docs
+!docs/source/examples/notebooks/models/spm1.png
+!docs/source/examples/notebooks/models/spm2.png
+
+# do not ignore images in _static folder in docs
+!docs/_static/favicon/favicon.png
+!docs/_static/pybamm_logo.png
+!docs/_static/pybamm_logo_whitetext.png
+
+# tests
+test_callback.log

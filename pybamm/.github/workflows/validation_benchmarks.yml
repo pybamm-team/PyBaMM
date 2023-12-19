@@ -1,0 +1,25 @@
+name: Alert validation repository
+on:
+  release:
+    types:
+      - published
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    if: github.repository_owner == 'pybamm-team'
+    name: Dispatch to `pybamm-validation`
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mvasigh/dispatch-action@main
+        with:
+          token: ${{ secrets.BENCHMARKS_ACCESS_TOKEN }}
+          repo: pybamm-validation
+          owner: pybamm-team
+          event_type: ${{ github.event_name }}
+          message: |
+            {
+              "commit_hash": "$GITHUB_SHA"
+            }
