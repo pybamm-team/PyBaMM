@@ -421,31 +421,63 @@ class BaseModel:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
 
-    def print_parameter_info(self):
-        """Returns parameters used in the model"""
-        self._parameter_info = ""
+    def get_parameter_info(self):
+        """
+        Extracts the parameter information and returns it as a dictionary.
+        To get a list of all parameter-like objects without extra information,
+        use :py:attr:`model.parameters`.
+        """
+        parameter_info = {}
         parameters = self._find_symbols(pybamm.Parameter)
         for param in parameters:
-            self._parameter_info += f"{param.name} (Parameter)\n"
+            parameter_info[param.name] = (param, "Parameter")
+
         input_parameters = self._find_symbols(pybamm.InputParameter)
         for input_param in input_parameters:
-            if input_param.domain == []:
-                self._parameter_info += f"{input_param.name} (InputParameter)\n"
+            if not input_param.domain:
+                parameter_info[input_param.name] = (input_param, "InputParameter")
             else:
-                self._parameter_info += (
-                    f"{input_param.name} (InputParameter in {input_param.domain})\n"
-                )
+                parameter_info[input_param.name] = (input_param, f"InputParameter in {input_param.domain}")
+
         function_parameters = self._find_symbols(pybamm.FunctionParameter)
         for func_param in function_parameters:
-            # don't double count function parameters
-            if func_param.name not in self._parameter_info:
-                input_names = "'" + "', '".join(func_param.input_names) + "'"
-                self._parameter_info += (
-                    f"{func_param.name} (FunctionParameter "
-                    f"with input(s) {input_names})\n"
-                )
+            if func_param.name not in parameter_info:
+                input_names =  "', '".join(func_param.input_names)
+                parameter_info[func_param.name] = (func_param, f"FunctionParameter with inputs(s) '{input_names}'")
 
-        print(self._parameter_info)
+        return parameter_info
+
+    def print_parameter_info(self):
+        """Print parameter information in a formatted table from a dictionary of parameters"""
+        info = self.get_parameter_info()
+        max_param_name_length = 0
+        max_param_type_length = 0
+
+        for param, param_type in info.values():
+            param_name_length = len(getattr(param, 'name', str(param)))
+            param_type_length = len(param_type)
+            max_param_name_length = max(max_param_name_length, param_name_length)
+            max_param_type_length = max(max_param_type_length, param_type_length)
+
+        header_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+        row_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+
+        table = [header_format.format("Parameter", "Type of parameter"),
+                 header_format.format("=" * max_param_name_length, "=" * max_param_type_length)]
+
+        for param, param_type in info.values():
+            param_name = getattr(param, 'name', str(param))
+            param_name_lines = [param_name[i:i + max_param_name_length] for i in range(0, len(param_name), max_param_name_length)]
+            param_type_lines = [param_type[i:i + max_param_type_length] for i in range(0, len(param_type), max_param_type_length)]
+            max_lines = max(len(param_name_lines), len(param_type_lines))
+
+            for i in range(max_lines):
+                param_line = param_name_lines[i] if i < len(param_name_lines) else ""
+                type_line = param_type_lines[i] if i < len(param_type_lines) else ""
+                table.append(row_format.format(param_line, type_line))
+
+        for line in table:
+            print(line)
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
