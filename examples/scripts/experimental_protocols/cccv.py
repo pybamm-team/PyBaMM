@@ -37,7 +37,7 @@ for i in range(3):
     t = sol["Time [h]"].entries
     V = sol["Voltage [V]"].entries
     # Plot
-    ax.plot(t - t[0], V, label="Discharge {}".format(i + 1))
+    ax.plot(t - t[0], V, label=f"Discharge {i + 1}")
     ax.set_xlabel("Time [h]")
     ax.set_ylabel("Voltage [V]")
     ax.set_xlim([0, t[-1] - t[0]])

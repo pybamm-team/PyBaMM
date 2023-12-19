@@ -21,7 +21,6 @@ class Citations:
 
     Examples
     --------
-    >>> import pybamm
     >>> pybamm.citations.register("Sulzer2021")
     >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
     >>> pybamm.print_citations("citations.txt")
@@ -239,8 +238,8 @@ class Citations:
             citations = "\n".join(self._cited)
         else:
             raise pybamm.OptionError(
-                "Output format {} not recognised."
-                "It should be 'text' or 'bibtex'.".format(output_format)
+                f"Output format {output_format} not recognised."
+                "It should be 'text' or 'bibtex'."
             )
 
         if filename is None:

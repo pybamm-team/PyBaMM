@@ -22,7 +22,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -57,7 +57,7 @@ jobs:
           CIBW_ARCHS: "AMD64"
 
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows_wheels
           path: ./wheelhouse/*.whl
@@ -72,7 +72,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -110,7 +110,7 @@ jobs:
           CIBW_SKIP: "pp* *musllinux*"
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: ./wheelhouse/*.whl
@@ -122,9 +122,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Install dependencies
         run: pip install --upgrade pip setuptools wheel
@@ -133,20 +133,20 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: ./dist/*.tar.gz
           if-no-files-found: error
 
   publish_pypi:
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && github.repository_owner == 'pybamm-team'
     name: Upload package to PyPI
     needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Move all package files to files/
         run: |

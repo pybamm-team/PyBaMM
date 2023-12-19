@@ -3,7 +3,7 @@ requires = [
     "setuptools>=64",
     "wheel",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.0; platform_system!='Windows'",
+    "casadi>=3.6.3; platform_system!='Windows'",
     "cmake; platform_system!='Windows'",
     ]
 build-backend = "setuptools.build_meta"
@@ -15,7 +15,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
-requires-python = ">=3.8, <3.12"
+requires-python = ">=3.8, <3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -29,6 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
@@ -110,13 +111,13 @@ dev = [
     "nbmake",
 ]
 # Reading CSV files
-pandas =  [
+pandas = [
     "pandas>=1.5.0",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
-    "jax>=0.4,<=0.5",
-    "jaxlib>=0.4,<=0.5",
+    "jax==0.4.20; python_version >= '3.9'",
+    "jaxlib==0.4.20; python_version >= '3.9'",
 ]
 # For the scikits.odes solver
 odes = [
@@ -196,7 +197,7 @@ extend-select = [
   "RUF",         # Ruff-specific
   # "SIM",         # flake8-simplify
   # "T20",         # flake8-print
-  # "UP",          # pyupgrade
+  "UP",          # pyupgrade
   "YTT",         # flake8-2020
 ]
 ignore = [
@@ -214,6 +215,7 @@ ignore = [
   "RET506",      # Unnecessary `elif`
   "B018",        # Found useless expression
   "RUF002",      # Docstring contains ambiguous
+  "UP007",       # For pyupgrade
 ]
 
 [tool.ruff.lint.per-file-ignores]
