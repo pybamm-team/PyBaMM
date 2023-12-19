@@ -1246,7 +1246,7 @@ def minimum(left, right):
     if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Minimum(left, right)
     elif mode == "smooth":
-        out = pybamm.Smooth_min(left, right, k)
+        out = pybamm.smooth_min(left, right, k)
     else:
         out = pybamm.softminus(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1331,9 +1331,9 @@ def softplus(left, right, k):
     return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
 
 
-def Smooth_min(left, right, k):
+def smooth_min(left, right, k):
     """
-    Smooth_minus approximation to the minimum function. k is the smoothing parameter,
+    Smooth_min approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
     """
     sigma = (1.0 / k)**2
