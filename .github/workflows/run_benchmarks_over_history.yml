@@ -44,7 +44,7 @@ jobs:
       - name: Upload results as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: asv_new_results
+          name: asv_over_history_results
           path: results
 
   publish-results:
