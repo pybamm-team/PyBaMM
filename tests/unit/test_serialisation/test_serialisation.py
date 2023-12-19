@@ -47,13 +47,13 @@ def mesh_var_dict():
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
     mesh_json = {
-        "py/object": "pybamm.meshes.meshes.Mesh",
+        "py/object": "pybamm.discretisation.meshes.meshes.Mesh",
         "py/id": mock.ANY,
         "submesh_pts": {"negative particle": {"r": 20}},
         "base_domains": ["negative particle"],
         "sub_meshes": {
             "negative particle": {
-                "py/object": "pybamm.meshes.one_dimensional_submeshes.Uniform1DSubMesh",
+                "py/object": "pybamm.discretisation.meshes.one_dimensional_submeshes.Uniform1DSubMesh",
                 "py/id": mock.ANY,
                 "edges": [
                     0.0,
