@@ -101,6 +101,9 @@ class IDAKLUJax:
 
     def _jaxify_solve(self, t, invar, *inputs_values):
         logging.info("jaxify_solve: ", type(t))
+        print("jaxify_solve")
+        print("  t: ", type(t), t)
+        print("  invar: ", type(invar), invar)
         # Reconstruct dictionary of inputs
         d = self.jax_inputs.copy()
         for ix, (k, v) in enumerate(self.jax_inputs.items()):
@@ -118,7 +121,7 @@ class IDAKLUJax:
             inputs=dict(d),
             calculate_sensitivities=invar is not None,
         )
-        if invar:
+        if invar is not None:
             if isinstance(invar, numbers.Number):
                 invar = list(self.jax_inputs.keys())[invar]
             # Provide vector support for time
@@ -137,30 +140,42 @@ class IDAKLUJax:
                 [np.array(sim[outvar](t)) for outvar in self.jax_output_variables]
             ).T
 
+    def _jax_solve_array_inputs(self, t, inputs_array):
+        print("jax_solve_array_inputs")
+        print("  t: ", type(t), t)
+        print("  inputs (in): ", type(inputs_array), inputs_array)
+        inputs = tuple([k for k in inputs_array])
+        print("  inputs (out): ", type(inputs), inputs)
+        return self._jax_solve(t, *inputs)
+
     def _jax_solve(
         self,
         t: float,
-        in1: float,
-        in2: float,
+        *inputs,
     ) -> np.ndarray:
-        print(" py:jax_solve: ", type(t), type(in1), type(in2))
-        print(" py:t = ", type(t), t)
-        print(" py:in1 = ", type(in1), in1)
-        print(" py:in2 = ", type(in2), in2)
+        print("jax_solve")
+        print("  t: ", type(t), t)
+        print("  inputs: ", type(inputs), inputs)
         if isinstance(t, float):
             t = np.array(t)
         # Returns a jax array
-        out = self._jaxify_solve(t, None, in1, in2)
+        out = self._jaxify_solve(t, None, *inputs)
         # Convert to numpy array
         return np.array(out)
+
+    def _jax_jvp_impl_array_inputs(
+        self,
+        primal_t, primal_inputs,
+        tangent_t, tangent_inputs,
+    ):
+        primals = primal_t, *tuple([k for k in primal_inputs])
+        tangents = tangent_t, *tuple([k for k in tangent_inputs])
+        return self._jax_jvp_impl(*primals, *tangents)
 
     def _jax_jvp_impl(
         self,
         *args,
     ):
-        print("py:_jax_jvp_impl")
-        print("  py:args: ", type(args), args)
-
         primals = args[: len(args) // 2]
         tangents = args[len(args) // 2 :]
         t = primals[0]
@@ -170,7 +185,7 @@ class IDAKLUJax:
         if t.ndim == 0:
             y_dot = jnp.zeros_like(t)
         else:
-            # This permits direct vector indexing with time for jaxfwd
+            # This permits direct vector indexing with time for jacfwd
             y_dot = jnp.zeros((len(t), len(self.jax_output_variables)))
         for index, value in enumerate(inputs_t):
             # Skipping zero values greatly improves performance
@@ -186,6 +201,25 @@ class IDAKLUJax:
 
         return np.array(y_dot)
 
+    def _jax_vjp_impl_array_inputs(
+        self,
+        y_bar,
+        y_bar_s0,
+        y_bar_s1,
+        invar,
+        primal_t, primal_inputs,
+    ):
+        # TODO: May need to reshape y_bar here
+        print('Reshaping y_bar to ', y_bar_s0, y_bar_s1)
+        print('Types: ', type(y_bar_s0), type(y_bar_s1))
+        print('y_bar was: ', y_bar)
+        y_bar_s0 = round(y_bar_s0)
+        y_bar_s1 = round(y_bar_s1)
+        y_bar = y_bar.reshape(y_bar_s0, y_bar_s1)
+        print('y_bar is now: ', y_bar)
+        primals = primal_t, *tuple([k for k in primal_inputs])
+        return self._jax_vjp_impl(y_bar, invar, *primals)
+
     def _jax_vjp_impl(
         self,
         y_bar,
@@ -197,8 +231,15 @@ class IDAKLUJax:
         print("  py:invar: ", type(invar), invar)
         print("  py:primals: ", type(primals), primals)
 
+        print("  py:primals t: ", type(primals[0]), primals[0].ndim, primals[0])
+        try:
+            print("    ", primals[0].shape)
+        except Exception:
+            ...
+
         t = primals[0]
         inputs = primals[1:]
+        print('inputs = ', inputs)
 
         # TODO
         if isinstance(y_bar, float):
@@ -208,8 +249,9 @@ class IDAKLUJax:
         if isinstance(t, float):
             t = np.array(t)
 
-        if t.ndim == 0:
+        if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input
+            print('scalar time')
             y_dot = jnp.zeros_like(t)
             js = self._jaxify_solve(t, invar, *inputs)
             if js.ndim == 0:
@@ -218,13 +260,16 @@ class IDAKLUJax:
                 if value > 0.0:
                     y_dot += value * js[index]
         else:
+            print('vector time')
             # vector time input
+            print('t = ', t)
             print('invar = ', invar)
+            print('inputs = ', inputs)
             js = self._jaxify_solve(t, invar, *inputs)
             print('js: ', type(js), js, js.shape)
             print('len(output_variables): ', len(self.jax_output_variables))
             if len(self.jax_output_variables) == 1 and len(t) > 1:
-                js = np.array([js])
+                js = np.array([js]).T
             if len(self.jax_output_variables) > 1 and len(t) == 1:
                 js = np.array([js]).T
             if len(self.jax_output_variables) == 1 and len(t) == 1:
@@ -243,17 +288,15 @@ class IDAKLUJax:
         logging.debug("<- f_vjp_p_impl")
         print("  py:y_dot: ", type(y_dot), y_dot, y_dot.shape)
         y_dot = np.array(y_dot)
-        print("  py:y_dot: ", type(y_dot), y_dot, y_dot.shape)
-        y_dot = np.array(y_dot)
         return y_dot
 
     def _register_solve(self):
         """Register the solve method with the IDAKLU solver"""
         print("Register")
         idaklu.register_callbacks(
-            self._jax_solve,
-            self._jax_jvp_impl,
-            self._jax_vjp_impl,
+            self._jax_solve_array_inputs,
+            self._jax_jvp_impl_array_inputs,
+            self._jax_vjp_impl_array_inputs,
         )
 
     def __del__(self):
@@ -554,6 +597,7 @@ class IDAKLUJax:
                 operands=[
                     mlir.ir_constant(size_t),  # 'size' argument
                     mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(inputs)),  # 'vars' argument
                     t,
                     *inputs,
                 ],
@@ -561,6 +605,7 @@ class IDAKLUJax:
                 operand_layouts=[
                     (),  # 'size'
                     (),  # 'vars'
+                    (),  # number of inputs
                     layout_t,  # t
                     *([layout_input] * len(inputs)),  # inputs
                 ],
@@ -616,6 +661,7 @@ class IDAKLUJax:
                 operands=[
                     mlir.ir_constant(size_t),  # 'size' argument
                     mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
                     t_primal,  # 't'
                     *inputs_primals,  # inputs
                     t_tangent,  # 't'
@@ -625,6 +671,7 @@ class IDAKLUJax:
                 operand_layouts=[
                     (),  # 'size'
                     (),  # 'vars'
+                    (),  # number of inputs
                     layout_t_primal,  # 't'
                     *([layout_inputs_primals] * len(inputs_primals)),  # inputs
                     layout_t_tangent,  # 't'
@@ -658,7 +705,7 @@ class IDAKLUJax:
             y_bar_aval = ctx.avals_in[0]
             dtype_y_bar = mlir.ir.RankedTensorType.get(y_bar_aval.shape, op_dtype)
             dims_y_bar = dtype_y_bar.shape
-            print('dims_y_bar: ', dims_y_bar)
+            print('dims y_bar: ', dims_y_bar)
             layout_y_bar = tuple(range(len(dims_y_bar) - 1, -1, -1))
 
             invar_aval = ctx.avals_in[1]
@@ -680,6 +727,7 @@ class IDAKLUJax:
             dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
             dims_out = dtype_out.shape
             layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+            print("layout_out: ", layout_out)
 
             results = custom_call(
                 op_name,
@@ -689,6 +737,9 @@ class IDAKLUJax:
                 operands=[
                     mlir.ir_constant(size_t),  # 'size' argument
                     mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(inputs)),  # number of inputs
+                    mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' argument
+                    mlir.ir_constant(dims_y_bar[1] if len(dims_y_bar) > 1 else -1),  # 'y_bar' argument
                     y_bar,  # 'y_bar'
                     invar,  # 'invar'
                     t_primal,  # 't'
@@ -698,6 +749,9 @@ class IDAKLUJax:
                 operand_layouts=[
                     (),  # 'size'
                     (),  # 'vars'
+                    (),  # number of inputs
+                    (),
+                    (),
                     layout_y_bar,  # 'y_bar'
                     layout_invar,  # 'invar'
                     layout_t_primal,  # 't'
