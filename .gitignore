@@ -113,6 +113,7 @@ scikits_odes_setup.log
 # test
 test.c
 test.json
+.pytest_cache/
 
 # tox
 .tox/

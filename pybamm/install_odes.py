@@ -80,20 +80,29 @@ def update_LD_LIBRARY_PATH(install_dir):
 
     export_statement = f"export LD_LIBRARY_PATH={install_dir}/lib:$LD_LIBRARY_PATH"
 
+    home_dir = os.environ.get("HOME")
+    bashrc_path = os.path.join(home_dir, ".bashrc")
+    zshrc_path = os.path.join(home_dir, ".zshrc")
     venv_path = os.environ.get("VIRTUAL_ENV")
+
     if venv_path:
         script_path = os.path.join(venv_path, "bin/activate")
     else:
-        if 'BASH' in os.environ:
+        if os.path.exists(bashrc_path):
             script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
-        if 'ZSH' in os.environ:
+        elif os.path.exists(zshrc_path):
             script_path = os.path.join(os.environ.get("HOME"), ".zshrc")
+        elif os.path.exists(bashrc_path) and os.path.exists(zshrc_path):
+            print("Both .bashrc and .zshrc found in the home directory. Setting .bashrc as path")
+            script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+        else:
+            print("Neither .bashrc nor .zshrc found in the home directory.")
 
     if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv("LD_LIBRARY_PATH"):
         print(f"{install_dir}/lib was found in LD_LIBRARY_PATH.")
-        if 'BASH' in os.environ:
+        if os.path.exists(bashrc_path):
             print("--> Not updating venv activate or .bashrc scripts")
-        if 'ZSH' in os.environ:
+        if os.path.exists(zshrc_path):
             print("--> Not updating venv activate or .zshrc scripts")
     else:
         with open(script_path, "a+") as fh:

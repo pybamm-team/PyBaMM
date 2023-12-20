@@ -698,7 +698,6 @@ class BaseSolver:
         model,
         t_eval=None,
         inputs=None,
-        initial_conditions=None,
         nproc=None,
         calculate_sensitivities=False,
     ):
@@ -717,14 +716,10 @@ class BaseSolver:
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
-        initial_conditions : :class:`pybamm.Symbol`, optional
-            Initial conditions to use when solving the model. If None (default),
-            `model.concatenated_initial_conditions` is used. Otherwise, must be a symbol
-            of size `len(model.rhs) + len(model.algebraic)`.
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivites : list of str or bool
+        calculate_sensitivities : list of str or bool
             If true, solver calculates sensitivities of all input parameters.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
