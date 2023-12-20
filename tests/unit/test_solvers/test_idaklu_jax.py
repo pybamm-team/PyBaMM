@@ -28,12 +28,14 @@ mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 t_eval = np.linspace(0, 360, 10)
-idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
-solver = idaklu_solver
+idaklu_solver0 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+idaklu_solver1 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+idaklu_solver3 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+idaklu_solver = idaklu_solver3
 
 # Create surrogate data (using standard solver)
 sim = idaklu_solver.solve(
-    # model, t_eval=, inputs=, initial_conditions=, nproc=, calculate_sensitivities=
+    # model, t_eval, inputs, initial_conditions, nproc, calculate_sensitivities
     model,
     t_eval,
     inputs=inputs,
@@ -46,21 +48,20 @@ output_variables = [
     "Discharge capacity [A.h]",
     "Loss of lithium inventory [%]",
 ]
-f1 = idaklu_solver.jaxify(
+f1 = idaklu_solver1.jaxify(
     model,
     t_eval,
     output_variables=output_variables[:1],
     inputs=inputs,
     calculate_sensitivities=True,
 )
-if True:
-    f3 = idaklu_solver.jaxify(
-        model,
-        t_eval,
-        output_variables=output_variables,
-        inputs=inputs,
-        calculate_sensitivities=True,
-    )
+f3 = idaklu_solver3.jaxify(
+    model,
+    t_eval,
+    output_variables=output_variables,
+    inputs=inputs,
+    calculate_sensitivities=True,
+)
 
 
 # TEST
@@ -96,6 +97,31 @@ testcase = [
     "IDAKLU Solver and/or JAX are not installed",
 )
 class TestIDAKLUJax(TestCase):
+
+    # Attempt to run before initialisation
+
+    def test_initialise(self):
+        print("\nUninitialised solver")
+        with self.assertRaises(pybamm.SolverError):
+            idaklu_solver0.get_jaxpr()
+
+        print("Initialise solver")
+        idaklu_solver0.jaxify(
+            model,
+            t_eval,
+            output_variables=output_variables,
+            inputs=inputs
+        )
+
+        print("Reinitialise solver")
+        with self.assertWarns(UserWarning):
+            idaklu_solver0.jaxify(
+                model,
+                t_eval,
+                output_variables=output_variables,
+                inputs=inputs
+            )
+
     # Scalar evaluation
 
     @parameterized.expand(testcase)
@@ -343,7 +369,9 @@ class TestIDAKLUJax(TestCase):
             print(out)
             flat_out, _ = tree_flatten(out)
             flat_out = np.array([f for f in flat_out]).flatten()
-            check = np.array([sim[outvar].sensitivities[invar][k] for invar in inputs]).T
+            check = np.array(
+                [sim[outvar].sensitivities[invar][k] for invar in inputs]
+            ).T
             assert np.allclose(
                 flat_out, check.flatten()
             ), f"Got: {flat_out}\nExpected: {check}"
@@ -422,7 +450,9 @@ class TestIDAKLUJax(TestCase):
             )(t_eval[k], inputs)
             flat_out, _ = tree_flatten(out)
             flat_out = np.array([f for f in flat_out]).flatten()
-            check = np.array([sim[outvar].sensitivities[invar][k] for invar in inputs]).T
+            check = np.array(
+                [sim[outvar].sensitivities[invar][k] for invar in inputs]
+            ).T
             assert np.allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
@@ -473,7 +503,9 @@ class TestIDAKLUJax(TestCase):
                     idaklu_solver.get_var(f, outvar),
                     argnums=1,
                 ),
-            )(t_eval[k], inputs)  # output should be a dictionary of inputs
+            )(
+                t_eval[k], inputs
+            )  # output should be a dictionary of inputs
             print(out)
             flat_out, _ = tree_flatten(out)
             flat_out = np.array([f for f in flat_out]).flatten()
@@ -553,7 +585,9 @@ class TestIDAKLUJax(TestCase):
     @parameterized.expand(testcase)
     def test_jax_vars(self, output_variables, f, wrapper):
         if wrapper == jax.jit:
-            print('Skipping test_jax_vars for jax.jit, jit not supported on helper functions')
+            print(
+                "Skipping test_jax_vars for jax.jit, jit not supported on helper functions"
+            )
         print("\njax_vars")
         out = idaklu_solver.jax_value()
         print(out)
@@ -568,7 +602,9 @@ class TestIDAKLUJax(TestCase):
     @parameterized.expand(testcase)
     def test_jax_grad(self, output_variables, f, wrapper):
         if wrapper == jax.jit:
-            print('Skipping test_jax_grad for jax.jit, jit not supported on helper functions')
+            print(
+                "Skipping test_jax_grad for jax.jit, jit not supported on helper functions"
+            )
         print("\njax_grad")
         out = idaklu_solver.jax_grad()
         print(out)
@@ -636,9 +672,9 @@ class TestIDAKLUJax(TestCase):
         ), f"Got: {flat_out}\nExpected: {flat_check_grad}"
 
         # Check value_and_grad return
-        sse_val, sse_grad = wrapper(
-            jax.value_and_grad(sse, argnums=1)
-        )(t_eval, inputs_pred)
+        sse_val, sse_grad = wrapper(jax.value_and_grad(sse, argnums=1))(
+            t_eval, inputs_pred
+        )
         flat_sse_grad, _ = tree_flatten(sse_grad)
         flat_sse_grad = np.array([f for f in flat_sse_grad]).flatten()
         assert np.allclose(

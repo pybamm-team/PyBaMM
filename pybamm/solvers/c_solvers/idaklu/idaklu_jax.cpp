@@ -1,0 +1,213 @@
+#include "common.hpp"
+#include "idaklu_jax.hpp"
+
+#include <pybind11/functional.h>
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
+
+#include <vector>
+#include <iostream>
+#include <functional>
+
+Handler handler;
+HandlerJvp handler_jvp;
+HandlerVjp handler_vjp;
+
+void register_callback_jaxsolve(Handler h) {
+  handler = h;
+}
+
+void register_callback_jvp(HandlerJvp h) {
+  handler_jvp = h;
+}
+
+void register_callback_vjp(HandlerVjp h) {
+  handler_vjp = h;
+}
+
+void register_callbacks(Handler h, HandlerJvp h_jvp, HandlerVjp h_vjp) {
+  handler = h;
+  handler_jvp = h_jvp;
+  handler_vjp = h_vjp;
+}
+
+pybind11::dict Registrations() {
+  pybind11::dict dict;
+  dict["cpu_idaklu_f64"] = EncapsulateFunction(cpu_idaklu);
+  dict["cpu_idaklu_jvp_f64"] = EncapsulateFunction(cpu_idaklu_jvp);
+  dict["cpu_idaklu_vjp_f64"] = EncapsulateFunction(cpu_idaklu_vjp);
+  return dict;
+}
+
+void cpu_idaklu(void *out_tuple, const void **in) {
+  // Parse the inputs --- note that these come from jax lowering and are NOT np_array's
+  int k = 0;
+  const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const realtype *t = reinterpret_cast<const realtype *>(in[k++]);
+  realtype *inputs = new realtype(n_inputs);
+  for (int i = 0; i < n_inputs; i++)
+    inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+  void *out = reinterpret_cast<realtype *>(out_tuple);
+  
+  // Log
+  DEBUG("cpu_idaklu");
+  DEBUG(n_t);
+  DEBUG(n_vars);
+  DEBUG(n_inputs);
+  DEBUG_v(t, n_t);
+  DEBUG_v(inputs, n_inputs);
+
+  // Convert time vector to an np_array
+  py::capsule t_capsule(t, "t_capsule");
+  np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
+  
+  // Convert inputs to an np_array
+  py::capsule in_capsule(t, "in_capsule");
+  np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
+
+  // Call solve obtain function in python to obtain an np_array
+  np_array out_np = handler(t_np, in_np);
+  auto out_buf = out_np.request();
+  const realtype* out_ptr = reinterpret_cast<realtype*>(out_buf.ptr);
+
+  // Arrange into 'out' array
+  memcpy(out, out_ptr, n_t*n_vars*sizeof(realtype));
+}
+
+void cpu_idaklu_jvp(void *out_tuple, const void **in) {
+  // Parse the inputs --- note that these come from jax lowering and are NOT np_array's
+  int k = 0;
+  const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const realtype *primal_t = reinterpret_cast<const realtype *>(in[k++]);
+  realtype *primal_inputs = new realtype(n_inputs);
+  for (int i = 0; i < n_inputs; i++)
+    primal_inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+  const realtype *tangent_t = reinterpret_cast<const realtype *>(in[k++]);
+  realtype *tangent_inputs = new realtype(n_inputs);
+  for (int i = 0; i < n_inputs; i++)
+    tangent_inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+  void *out = reinterpret_cast<realtype *>(out_tuple);
+
+  // Log
+  DEBUG("cpu_idaklu_jvp");
+  DEBUG(n_t);
+  DEBUG(n_vars);
+  DEBUG(n_inputs);
+  DEBUG_v(primal_t, n_t);
+  DEBUG_v(primal_inputs, n_inputs);
+  DEBUG_v(tangent_t, n_t);
+  DEBUG_v(tangent_inputs, n_inputs);
+
+  // Form primals time vector as np_array
+  py::capsule primal_t_capsule(primal_t, "primal_t_capsule");
+  np_array primal_t_np = np_array(
+    {n_t},
+    {sizeof(realtype)},
+    primal_t,
+    primal_t_capsule
+  );
+  
+  // Pack primals as np_array
+  py::capsule primal_inputs_capsule(primal_inputs, "primal_inputs_capsule");
+  np_array primal_inputs_np = np_array(
+    {n_inputs},
+    {sizeof(realtype)},
+    primal_inputs,
+    primal_inputs_capsule
+  );
+  
+  // Form tangents time vector as np_array
+  py::capsule tangent_t_capsule(tangent_t, "tangent_t_capsule");
+  np_array tangent_t_np = np_array(
+    {n_t},
+    {sizeof(realtype)},
+    tangent_t,
+    tangent_t_capsule
+  );
+
+  // Pack tangents as np_array
+  py::capsule tangent_inputs_capsule(tangent_inputs, "tangent_inputs_capsule");
+  np_array tangent_inputs_np = np_array(
+    {n_inputs},
+    {sizeof(realtype)},
+    tangent_inputs,
+    tangent_inputs_capsule
+  );
+
+  // Call JVP function in python to obtain an np_array
+  np_array y_dot = handler_jvp(
+    primal_t_np, primal_inputs_np,
+    tangent_t_np, tangent_inputs_np
+  );
+  auto buf = y_dot.request();
+  const realtype* ptr = reinterpret_cast<realtype*>(buf.ptr);
+
+  // Arrange into 'out' array
+  memcpy(out, ptr, n_t*n_vars*sizeof(realtype));
+}
+
+void cpu_idaklu_vjp(void *out_tuple, const void **in) {
+  int k = 0;
+  const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_y_bar0 = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_y_bar1 = *reinterpret_cast<const std::int64_t *>(in[k++]);
+  const std::int64_t n_y_bar = (n_y_bar1 > 0) ? (n_y_bar0*n_y_bar1) : n_y_bar0;
+  const realtype *y_bar = reinterpret_cast<const realtype *>(in[k++]);
+  const std::int64_t *invar = reinterpret_cast<const std::int64_t *>(in[k++]);
+  const realtype *t = reinterpret_cast<const realtype *>(in[k++]);
+  realtype *inputs = new realtype(n_inputs);
+  for (int i = 0; i < n_inputs; i++)
+    inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
+  realtype *out = reinterpret_cast<realtype *>(out_tuple);
+
+  // Log
+  DEBUG("cpu_idaklu_vjp");
+  DEBUG(n_t);
+  DEBUG(n_vars);
+  DEBUG(n_inputs);
+  DEBUG(n_y_bar0);
+  DEBUG(n_y_bar1);
+  DEBUG_v(y_bar, n_y_bar0*n_y_bar1);
+  DEBUG_v(invar, 1);
+  DEBUG_v(t, n_t);
+  DEBUG_v(inputs, n_inputs);
+  
+  // Convert time vector to an np_array
+  py::capsule t_capsule(t, "t_capsule");
+  np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
+  
+  // Convert y_bar to an np_array
+  py::capsule y_bar_capsule(t, "y_bar_capsule");
+  np_array y_bar_np = np_array(
+      {n_y_bar},
+      {sizeof(realtype)},
+      y_bar,
+      y_bar_capsule
+    );
+  
+  // Convert inputs to an np_array
+  py::capsule in_capsule(t, "in_capsule");
+  np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
+
+  // Call VJP function in python to obtain an np_array
+  np_array y_dot = handler_vjp(y_bar_np, n_y_bar0, n_y_bar1, invar[0], t_np, in_np);
+  auto buf = y_dot.request();
+  const realtype* ptr = reinterpret_cast<realtype*>(buf.ptr);
+
+  // Arrange output
+  //memcpy(out, ptr, sizeof(realtype));
+  out[0] = ptr[0];  // output is scalar
+}
+
+template <typename T>
+pybind11::capsule EncapsulateFunction(T* fn) {
+  return pybind11::capsule((void*)(fn), "xla._CUSTOM_CALL_TARGET");
+}

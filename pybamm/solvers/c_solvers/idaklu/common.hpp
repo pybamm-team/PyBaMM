@@ -45,6 +45,7 @@ using np_array_int = py::array_t<int64_t>;
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
 #define DEBUG_VECTORn(vector)
+#define DEBUG_v(v, N)
 #else
 
 #define DEBUG_VECTORn(vector, N) {\

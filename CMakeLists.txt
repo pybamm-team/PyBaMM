@@ -50,6 +50,8 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp
+  pybamm/solvers/c_solvers/idaklu/idaklu_jax.cpp
+  pybamm/solvers/c_solvers/idaklu/idaklu_jax.hpp
   pybamm/solvers/c_solvers/idaklu/common.hpp
   pybamm/solvers/c_solvers/idaklu/python.hpp
   pybamm/solvers/c_solvers/idaklu/python.cpp

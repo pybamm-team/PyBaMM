@@ -1,6 +1,7 @@
 import pybamm
 import numpy as np
 import logging
+import warnings
 import numbers
 import jax
 from jax import lax
@@ -25,7 +26,15 @@ if idaklu_spec is not None:
         idaklu_spec = None
 
 
-class IDAKLUJax:
+class IDAKLUJax(object):
+    def __init__(self):
+        self.jaxpr = None
+
+    def get_jaxpr(self):
+        if self.jaxpr is None:
+            raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
+        return self.jaxpr
+
     def get_var(self, f, varname):
         """Helper function to extract a single variable from the jaxified expression"""
 
@@ -100,21 +109,17 @@ class IDAKLUJax:
         return d
 
     def _jaxify_solve(self, t, invar, *inputs_values):
-        logging.info("jaxify_solve: ", type(t))
-        print("jaxify_solve")
-        print("  t: ", type(t), t)
-        print("  invar: ", type(invar), invar)
         # Reconstruct dictionary of inputs
         d = self.jax_inputs.copy()
         for ix, (k, v) in enumerate(self.jax_inputs.items()):
             d[k] = inputs_values[ix]
         # Solver
-        logging.debug("Solver:")
-        logging.debug("  t_eval: ", self.jax_t_eval)
-        logging.debug("  t: ", t)
-        logging.debug("  invar: ", invar)
-        logging.debug("  inputs: ", dict(d))
-        logging.debug("  calculate_sensitivities: ", invar is not None)
+        logging.debug("_jaxify_solve:")
+        logging.debug(f"  t_eval: {self.jax_t_eval}")
+        logging.debug(f"  t: {t}")
+        logging.debug(f"  invar: {invar}")
+        logging.debug(f"  inputs: {dict(d)}")
+        logging.debug(f"  calculate_sensitivities: {invar is not None}")
         sim = self.jax_solver.solve(
             self.jax_model,
             self.jax_t_eval,
@@ -141,21 +146,21 @@ class IDAKLUJax:
             ).T
 
     def _jax_solve_array_inputs(self, t, inputs_array):
-        print("jax_solve_array_inputs")
-        print("  t: ", type(t), t)
-        print("  inputs (in): ", type(inputs_array), inputs_array)
+        logging.info("jax_solve_array_inputs")
+        logging.debug(f"  t: {type(t)}, {t}")
+        logging.debug(f"  inputs_array: {type(inputs_array)}, {inputs_array}")
         inputs = tuple([k for k in inputs_array])
-        print("  inputs (out): ", type(inputs), inputs)
+        logging.debug(f"  inputs: {type(inputs)}, {inputs}")
         return self._jax_solve(t, *inputs)
 
     def _jax_solve(
         self,
-        t: float,
+        t: float | np.ndarray,
         *inputs,
     ) -> np.ndarray:
-        print("jax_solve")
-        print("  t: ", type(t), t)
-        print("  inputs: ", type(inputs), inputs)
+        logging.info("jax_solve")
+        logging.debug(f"  t: {type(t)}, {t}")
+        logging.debug(f"  inputs: {type(inputs)}, {inputs}")
         if isinstance(t, float):
             t = np.array(t)
         # Returns a jax array
@@ -165,8 +170,10 @@ class IDAKLUJax:
 
     def _jax_jvp_impl_array_inputs(
         self,
-        primal_t, primal_inputs,
-        tangent_t, tangent_inputs,
+        primal_t,
+        primal_inputs,
+        tangent_t,
+        tangent_inputs,
     ):
         primals = primal_t, *tuple([k for k in primal_inputs])
         tangents = tangent_t, *tuple([k for k in tangent_inputs])
@@ -207,16 +214,13 @@ class IDAKLUJax:
         y_bar_s0,
         y_bar_s1,
         invar,
-        primal_t, primal_inputs,
+        primal_t,
+        primal_inputs,
     ):
-        # TODO: May need to reshape y_bar here
-        print('Reshaping y_bar to ', y_bar_s0, y_bar_s1)
-        print('Types: ', type(y_bar_s0), type(y_bar_s1))
-        print('y_bar was: ', y_bar)
-        y_bar_s0 = round(y_bar_s0)
-        y_bar_s1 = round(y_bar_s1)
+        # Reshape y_bar
+        logging.debug("Reshaping y_bar to ", str(y_bar_s0), str(y_bar_s1))
         y_bar = y_bar.reshape(y_bar_s0, y_bar_s1)
-        print('y_bar is now: ', y_bar)
+        logging.debug("y_bar is now: ", str(y_bar))
         primals = primal_t, *tuple([k for k in primal_inputs])
         return self._jax_vjp_impl(y_bar, invar, *primals)
 
@@ -226,22 +230,14 @@ class IDAKLUJax:
         invar,
         *primals,
     ):
-        print("py:f_vjp_p_impl")
-        print("  py:y_bar: ", type(y_bar), y_bar)
-        print("  py:invar: ", type(invar), invar)
-        print("  py:primals: ", type(primals), primals)
-
-        print("  py:primals t: ", type(primals[0]), primals[0].ndim, primals[0])
-        try:
-            print("    ", primals[0].shape)
-        except Exception:
-            ...
+        logging.info("py:f_vjp_p_impl")
+        logging.debug(f"  py:y_bar: {type(y_bar)}, {y_bar}")
+        logging.debug(f"  py:invar: {type(invar)}, {invar}")
+        logging.debug(f"  py:primals: {type(primals)}, {primals}")
 
         t = primals[0]
         inputs = primals[1:]
-        print('inputs = ', inputs)
 
-        # TODO
         if isinstance(y_bar, float):
             y_bar = np.array([y_bar])
         if isinstance(invar, float):
@@ -251,7 +247,7 @@ class IDAKLUJax:
 
         if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input
-            print('scalar time')
+            logging.debug("scalar time")
             y_dot = jnp.zeros_like(t)
             js = self._jaxify_solve(t, invar, *inputs)
             if js.ndim == 0:
@@ -260,14 +256,9 @@ class IDAKLUJax:
                 if value > 0.0:
                     y_dot += value * js[index]
         else:
-            print('vector time')
+            logging.debug("vector time")
             # vector time input
-            print('t = ', t)
-            print('invar = ', invar)
-            print('inputs = ', inputs)
             js = self._jaxify_solve(t, invar, *inputs)
-            print('js: ', type(js), js, js.shape)
-            print('len(output_variables): ', len(self.jax_output_variables))
             if len(self.jax_output_variables) == 1 and len(t) > 1:
                 js = np.array([js]).T
             if len(self.jax_output_variables) > 1 and len(t) == 1:
@@ -276,23 +267,16 @@ class IDAKLUJax:
                 js = np.array([[js]])
             while y_bar.ndim < 2:
                 y_bar = np.array([y_bar]).T
-            print('js shape: ', js.shape)
-            print('js dims: ', js.ndim)
             y_dot = jnp.zeros(())
-            print('y_bar = ', y_bar)
             for ix, y_outvar in enumerate(y_bar.T):
-                print('ix: ', ix)
-                print('y_outvar: ', type(y_outvar), y_outvar, y_outvar.shape)
-                print('js[:, ix]: ', type(js[:, ix]), js[:, ix], js[:, ix].shape)
                 y_dot += jnp.dot(y_outvar, js[:, ix])
-        logging.debug("<- f_vjp_p_impl")
-        print("  py:y_dot: ", type(y_dot), y_dot, y_dot.shape)
+        logging.debug(f"_jax_vjp_impl [exit]: {type(y_dot)}, {y_dot}, {y_dot.shape}")
         y_dot = np.array(y_dot)
         return y_dot
 
     def _register_solve(self):
         """Register the solve method with the IDAKLU solver"""
-        print("Register")
+        logging.info("_register_solve")
         idaklu.register_callbacks(
             self._jax_solve_array_inputs,
             self._jax_jvp_impl_array_inputs,
@@ -303,10 +287,20 @@ class IDAKLUJax:
         self._deallocate()
 
     def _deallocate(self):
-        print("Deallocate")
+        logging.info("_deallocate")
         idaklu.register_callbacks(None, None, None)
 
-    def jaxify(
+    def jaxify(self, *args, **kwargs):
+        if self.jaxpr is not None:
+            warnings.warn(
+                "JAX expression has already been created. "
+                "Overwriting with new expression.",
+                UserWarning,
+            )
+        self.jaxpr = self._jaxify(*args, **kwargs)
+        return self.jaxpr
+
+    def _jaxify(
         self,
         model,
         t_eval,
@@ -337,10 +331,9 @@ class IDAKLUJax:
                 inputs : dictionary of input values, e.g.
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
-            logging.info("f: ", type(t), type(inputs))
+            logging.info("f")
             flatargs, treedef = tree_flatten((t, inputs))
             out = f_p.bind(*flatargs)
-            logging.debug("f [exit]: ", (out))
             return out
 
         self.jaxify_f = f
@@ -350,7 +343,7 @@ class IDAKLUJax:
             """Concrete implementation of Primitive"""
             logging.info("f_impl")
             term_v = self._jaxify_solve(t, None, *inputs)
-            logging.debug("f_impl [exit]: ", (type(term_v), term_v))
+            logging.debug(f"f_impl [exit]: {type(term_v)}, {term_v}")
             return term_v
 
         @f_p.def_abstract_eval
@@ -514,8 +507,7 @@ class IDAKLUJax:
 
         def f_vjp(y_bar, invar, *primals):
             logging.info("f_vjp")
-            print("f_vjp")
-            print("  y_bar: ", y_bar, type(y_bar), y_bar.shape)
+            logging.debug(f"  y_bar: {y_bar}, {type(y_bar)}, {y_bar.shape}")
             if isinstance(invar, str):
                 invar = list(self.jax_inputs.keys()).index(invar)
             return f_vjp_p.bind(y_bar, invar, *primals)
@@ -527,12 +519,11 @@ class IDAKLUJax:
 
         @f_vjp_p.def_abstract_eval
         def f_vjp_abstract_eval(*args):
-            # TODO: Check abstract evaluation dimensions
             logging.info("f_vjp_abstract_eval")
             primals = args[: len(args) // 2]
             t = primals[0]
             out = jax.core.ShapedArray((), t.dtype)
-            logging.info("<- f_vjp_abstract_eval")
+            logging.debug("<- f_vjp_abstract_eval")
             return out
 
         def f_vjp_batch(args, batch_axes):
@@ -620,11 +611,11 @@ class IDAKLUJax:
         )
 
         def f_jvp_lowering_cpu(ctx, *args):
-            primals = args[:len(args) // 2]
+            primals = args[: len(args) // 2]
             t_primal = primals[0]
             inputs_primals = primals[1:]
 
-            tangents = args[len(args) // 2:]
+            tangents = args[len(args) // 2 :]
             t_tangent = tangents[0]
             inputs_tangents = tangents[1:]
 
@@ -688,8 +679,8 @@ class IDAKLUJax:
         )
 
         def f_vjp_lowering_cpu(ctx, y_bar, invar, *primals):
-            print('f_vjp_lowering_cpu')
-            print('  ctx: ', ctx)
+            logging.info("f_vjp_lowering_cpu")
+            logging.debug("  ctx: ", ctx)
 
             t_primal = primals[0]
             inputs_primals = primals[1:]
@@ -705,7 +696,7 @@ class IDAKLUJax:
             y_bar_aval = ctx.avals_in[0]
             dtype_y_bar = mlir.ir.RankedTensorType.get(y_bar_aval.shape, op_dtype)
             dims_y_bar = dtype_y_bar.shape
-            print('dims y_bar: ', dims_y_bar)
+            logging.debug("  y_bar shape: ", dims_y_bar)
             layout_y_bar = tuple(range(len(dims_y_bar) - 1, -1, -1))
 
             invar_aval = ctx.avals_in[1]
@@ -727,7 +718,6 @@ class IDAKLUJax:
             dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
             dims_out = dtype_out.shape
             layout_out = tuple(range(len(dims_out) - 1, -1, -1))
-            print("layout_out: ", layout_out)
 
             results = custom_call(
                 op_name,
@@ -738,8 +728,10 @@ class IDAKLUJax:
                     mlir.ir_constant(size_t),  # 'size' argument
                     mlir.ir_constant(len(output_variables)),  # 'vars' argument
                     mlir.ir_constant(len(inputs)),  # number of inputs
-                    mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' argument
-                    mlir.ir_constant(dims_y_bar[1] if len(dims_y_bar) > 1 else -1),  # 'y_bar' argument
+                    mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
+                    mlir.ir_constant(  # 'y_bar' shape[1]
+                        dims_y_bar[1] if len(dims_y_bar) > 1 else -1
+                    ),  # 'y_bar' argument
                     y_bar,  # 'y_bar'
                     invar,  # 'invar'
                     t_primal,  # 't'
@@ -750,8 +742,8 @@ class IDAKLUJax:
                     (),  # 'size'
                     (),  # 'vars'
                     (),  # number of inputs
-                    (),
-                    (),
+                    (),  # 'y_bar' shape[0]
+                    (),  # 'y_bar' shape[1]
                     layout_y_bar,  # 'y_bar'
                     layout_invar,  # 'invar'
                     layout_t_primal,  # 't'

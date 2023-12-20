@@ -125,6 +125,7 @@ class IDAKLUSolver(pybamm.BaseSolver, pybamm.IDAKLUJax):
             extrap_tol,
             output_variables,
         )
+        pybamm.IDAKLUJax.__init__(self)
         self.name = "IDA KLU solver"
 
         pybamm.citations.register("Hindmarsh2000")
