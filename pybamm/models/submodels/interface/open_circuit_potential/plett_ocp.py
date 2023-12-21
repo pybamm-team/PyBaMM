@@ -84,8 +84,13 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             # h = pybamm.PrimaryBroadcast(h,[f'{domain} electrode'])
             H_x_av = pybamm.x_average(H)
             h_x_av = pybamm.x_average(h)
-            # variables[f'X-averaged {domain} electrode {phase_name}hysteresis state'] = h_x_av
-            ocp_surf = ocp_surf_eq + H_x_av * h_x_av
+            if domain_options["particle size"] == "distribution":
+                if sto_surf.domains['primary'] == f"{domain} electrode":
+                    ocp_surf = ocp_surf_eq + H * h
+                else:
+                    ocp_surf = ocp_surf_eq + H_x_av * h_x_av
+            else:
+                ocp_surf = ocp_surf_eq + H * h
             H_s_av = pybamm.size_average(H_x_av)
             h_s_av = pybamm.size_average(h_x_av)
 
