@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added support for Python 3.12 ([#3531](https://github.com/pybamm-team/PyBaMM/pull/3531))
 - Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
 - Added custom experiment terminations ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
 - Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
