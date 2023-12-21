@@ -27,8 +27,10 @@ if idaklu_spec is not None:
 
 
 class IDAKLUJax(object):
-    def __init__(self):
-        self.jaxpr = None
+    def __init__(self, solver):
+        self.jaxpr = None  # JAX expression
+        self.idaklu_jax_obj = None  # IDAKLU-JAX object
+        self.solver = solver  # Originating IDAKLU Solver object
 
     def get_jaxpr(self):
         if self.jaxpr is None:
@@ -120,7 +122,7 @@ class IDAKLUJax(object):
         logging.debug(f"  invar: {invar}")
         logging.debug(f"  inputs: {dict(d)}")
         logging.debug(f"  calculate_sensitivities: {invar is not None}")
-        sim = self.jax_solver.solve(
+        sim = self.solver.solve(
             self.jax_model,
             self.jax_t_eval,
             inputs=dict(d),
@@ -277,7 +279,7 @@ class IDAKLUJax(object):
     def _register_solve(self):
         """Register the solve method with the IDAKLU solver"""
         logging.info("_register_solve")
-        idaklu.register_callbacks(
+        self.idaklu_jax_obj.register_callbacks(
             self._jax_solve_array_inputs,
             self._jax_jvp_impl_array_inputs,
             self._jax_vjp_impl_array_inputs,
@@ -288,7 +290,11 @@ class IDAKLUJax(object):
 
     def _deallocate(self):
         logging.info("_deallocate")
-        idaklu.register_callbacks(None, None, None)
+        if self.idaklu_jax_obj is not None:
+            self.idaklu_jax_obj.register_callbacks(None, None, None)
+
+    def unique_name(self):
+        return f"{self.idaklu_jax_obj.get_index()}"
 
     def jaxify(self, *args, **kwargs):
         if self.jaxpr is not None:
@@ -311,17 +317,23 @@ class IDAKLUJax(object):
     ):
         """JAXify the model and solver"""
 
-        self.jax_solver = self
         self.jax_model = model
         self.jax_t_eval = t_eval
         self.jax_output_variables = output_variables
         self.jax_inputs = inputs
 
-        self._register_solve()
+        self.idaklu_jax_obj = idaklu.create_idaklu_jax()  # Create IDAKLU-JAX object
+        self._register_solve()  # Register python methods as callbacks in IDAKLU-JAX
 
-        # JAX PRIMITIVE DEFINITION
+        for _name, _value in idaklu.registrations().items():
+            xla_client.register_custom_call_target(
+                f"{_name}_{self.unique_name()}", _value, platform="cpu"
+            )
 
-        f_p = jax.core.Primitive("f")
+        # --- JAX PRIMITIVE DEFINITION ------------------------------------------------
+
+        logging.debug(f"Creating new primitive: {self.unique_name()}")
+        f_p = jax.core.Primitive(f"f_{self.unique_name()}")
         f_p.multiple_results = False  # Returns a single multi-dimensional array
 
         def f(t, inputs):
@@ -382,7 +394,67 @@ class IDAKLUJax(object):
 
         batching.primitive_batchers[f_p] = f_batch
 
-        # JVP / Forward-mode autodiff / J.v len(v)=num_inputs / len(return)=num_outputs
+        def f_lowering_cpu(ctx, t, *inputs):
+            logging.info("f_lowering_cpu")
+
+            t_aval = ctx.avals_in[0]
+            np_dtype = np.dtype(t_aval.dtype)
+            if np_dtype == np.float64:
+                op_name = f"cpu_idaklu_f64_{self.unique_name()}"
+                op_dtype = mlir.ir.F64Type.get()
+            else:
+                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+
+            dtype_t = mlir.ir.RankedTensorType(t.type)
+            dims_t = dtype_t.shape
+            layout_t = tuple(range(len(dims_t) - 1, -1, -1))
+            size_t = np.prod(dims_t).astype(np.int64)
+
+            input_aval = ctx.avals_in[1]
+            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
+            dims_input = dtype_input.shape
+            layout_input = tuple(range(len(dims_input) - 1, -1, -1))
+
+            y_aval = ctx.avals_out[0]
+            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
+            dims_out = dtype_out.shape
+            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+
+            results = custom_call(
+                op_name,
+                # Output types
+                result_types=[dtype_out],
+                # The inputs
+                operands=[
+                    mlir.ir_constant(
+                        self.idaklu_jax_obj.get_index()
+                    ),  # solver index reference
+                    mlir.ir_constant(size_t),  # 'size' argument
+                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(inputs)),  # 'vars' argument
+                    t,
+                    *inputs,
+                ],
+                # Layout specification
+                operand_layouts=[
+                    (),  # solver index reference
+                    (),  # 'size'
+                    (),  # 'vars'
+                    (),  # number of inputs
+                    layout_t,  # t
+                    *([layout_input] * len(inputs)),  # inputs
+                ],
+                result_layouts=[layout_out],
+            )
+            return results.results
+
+        mlir.register_lowering(
+            f_p,
+            f_lowering_cpu,
+            platform="cpu",
+        )
+
+        # --- JAX PRIMITIVE JVP DEFINITION --------------------------------------------
 
         def f_jvp(primals, tangents):
             logging.info("f_jvp: ", *list(map(type, (*primals, *tangents))))
@@ -405,7 +477,7 @@ class IDAKLUJax(object):
 
         ad.primitive_jvps[f_p] = f_jvp
 
-        f_jvp_p = jax.core.Primitive("f_jvp")
+        f_jvp_p = jax.core.Primitive(f"f_jvp_{self.unique_name()}")
 
         @f_jvp_p.def_impl
         def f_jvp_eval(*args):
@@ -503,7 +575,83 @@ class IDAKLUJax(object):
 
         ad.primitive_transposes[f_jvp_p] = f_jvp_transpose
 
-        f_vjp_p = jax.core.Primitive("f_vjp")
+        def f_jvp_lowering_cpu(ctx, *args):
+            logging.info("f_jvp_lowering_cpu")
+
+            primals = args[: len(args) // 2]
+            t_primal = primals[0]
+            inputs_primals = primals[1:]
+
+            tangents = args[len(args) // 2 :]
+            t_tangent = tangents[0]
+            inputs_tangents = tangents[1:]
+
+            t_aval = ctx.avals_in[0]
+            np_dtype = np.dtype(t_aval.dtype)
+            if np_dtype == np.float64:
+                op_name = f"cpu_idaklu_jvp_f64_{self.unique_name()}"
+                op_dtype = mlir.ir.F64Type.get()
+            else:
+                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+
+            dtype_t = mlir.ir.RankedTensorType(t_primal.type)
+            dims_t = dtype_t.shape
+            layout_t_primal = tuple(range(len(dims_t) - 1, -1, -1))
+            layout_t_tangent = layout_t_primal
+            size_t = np.prod(dims_t).astype(np.int64)
+
+            input_aval = ctx.avals_in[1]
+            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
+            dims_input = dtype_input.shape
+            layout_inputs_primals = tuple(range(len(dims_input) - 1, -1, -1))
+            layout_inputs_tangents = layout_inputs_primals
+
+            y_aval = ctx.avals_out[0]
+            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
+            dims_out = dtype_out.shape
+            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
+
+            results = custom_call(
+                op_name,
+                # Output types
+                result_types=[dtype_out],
+                # The inputs
+                operands=[
+                    mlir.ir_constant(
+                        self.idaklu_jax_obj.get_index()
+                    ),  # solver index reference
+                    mlir.ir_constant(size_t),  # 'size' argument
+                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
+                    t_primal,  # 't'
+                    *inputs_primals,  # inputs
+                    t_tangent,  # 't'
+                    *inputs_tangents,  # inputs
+                ],
+                # Layout specification
+                operand_layouts=[
+                    (),  # solver index reference
+                    (),  # 'size'
+                    (),  # 'vars'
+                    (),  # number of inputs
+                    layout_t_primal,  # 't'
+                    *([layout_inputs_primals] * len(inputs_primals)),  # inputs
+                    layout_t_tangent,  # 't'
+                    *([layout_inputs_tangents] * len(inputs_tangents)),  # inputs
+                ],
+                result_layouts=[layout_out],
+            )
+            return results.results
+
+        mlir.register_lowering(
+            f_jvp_p,
+            f_jvp_lowering_cpu,
+            platform="cpu",
+        )
+
+        # --- JAX PRIMITIVE VJP DEFINITION --------------------------------------------
+
+        f_vjp_p = jax.core.Primitive(f"f_vjp_{self.unique_name()}")
 
         def f_vjp(y_bar, invar, *primals):
             logging.info("f_vjp")
@@ -553,134 +701,8 @@ class IDAKLUJax(object):
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
-        for _name, _value in idaklu.registrations().items():
-            xla_client.register_custom_call_target(_name, _value, platform="cpu")
-
-        def f_lowering_cpu(ctx, t, *inputs):
-            t_aval = ctx.avals_in[0]
-            np_dtype = np.dtype(t_aval.dtype)
-            if np_dtype == np.float64:
-                op_name = "cpu_idaklu_f64"
-                op_dtype = mlir.ir.F64Type.get()
-            else:
-                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
-
-            dtype_t = mlir.ir.RankedTensorType(t.type)
-            dims_t = dtype_t.shape
-            layout_t = tuple(range(len(dims_t) - 1, -1, -1))
-            size_t = np.prod(dims_t).astype(np.int64)
-
-            input_aval = ctx.avals_in[1]
-            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
-            dims_input = dtype_input.shape
-            layout_input = tuple(range(len(dims_input) - 1, -1, -1))
-
-            y_aval = ctx.avals_out[0]
-            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
-            dims_out = dtype_out.shape
-            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
-
-            results = custom_call(
-                op_name,
-                # Output types
-                result_types=[dtype_out],
-                # The inputs
-                operands=[
-                    mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs)),  # 'vars' argument
-                    t,
-                    *inputs,
-                ],
-                # Layout specification
-                operand_layouts=[
-                    (),  # 'size'
-                    (),  # 'vars'
-                    (),  # number of inputs
-                    layout_t,  # t
-                    *([layout_input] * len(inputs)),  # inputs
-                ],
-                result_layouts=[layout_out],
-            )
-            return results.results
-
-        mlir.register_lowering(
-            f_p,
-            f_lowering_cpu,
-            platform="cpu",
-        )
-
-        def f_jvp_lowering_cpu(ctx, *args):
-            primals = args[: len(args) // 2]
-            t_primal = primals[0]
-            inputs_primals = primals[1:]
-
-            tangents = args[len(args) // 2 :]
-            t_tangent = tangents[0]
-            inputs_tangents = tangents[1:]
-
-            t_aval = ctx.avals_in[0]
-            np_dtype = np.dtype(t_aval.dtype)
-            if np_dtype == np.float64:
-                op_name = "cpu_idaklu_jvp_f64"
-                op_dtype = mlir.ir.F64Type.get()
-            else:
-                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
-
-            dtype_t = mlir.ir.RankedTensorType(t_primal.type)
-            dims_t = dtype_t.shape
-            layout_t_primal = tuple(range(len(dims_t) - 1, -1, -1))
-            layout_t_tangent = layout_t_primal
-            size_t = np.prod(dims_t).astype(np.int64)
-
-            input_aval = ctx.avals_in[1]
-            dtype_input = mlir.ir.RankedTensorType.get(input_aval.shape, op_dtype)
-            dims_input = dtype_input.shape
-            layout_inputs_primals = tuple(range(len(dims_input) - 1, -1, -1))
-            layout_inputs_tangents = layout_inputs_primals
-
-            y_aval = ctx.avals_out[0]
-            dtype_out = mlir.ir.RankedTensorType.get(y_aval.shape, op_dtype)
-            dims_out = dtype_out.shape
-            layout_out = tuple(range(len(dims_out) - 1, -1, -1))
-
-            results = custom_call(
-                op_name,
-                # Output types
-                result_types=[dtype_out],
-                # The inputs
-                operands=[
-                    mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
-                    mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
-                    t_primal,  # 't'
-                    *inputs_primals,  # inputs
-                    t_tangent,  # 't'
-                    *inputs_tangents,  # inputs
-                ],
-                # Layout specification
-                operand_layouts=[
-                    (),  # 'size'
-                    (),  # 'vars'
-                    (),  # number of inputs
-                    layout_t_primal,  # 't'
-                    *([layout_inputs_primals] * len(inputs_primals)),  # inputs
-                    layout_t_tangent,  # 't'
-                    *([layout_inputs_tangents] * len(inputs_tangents)),  # inputs
-                ],
-                result_layouts=[layout_out],
-            )
-            return results.results
-
-        mlir.register_lowering(
-            f_jvp_p,
-            f_jvp_lowering_cpu,
-            platform="cpu",
-        )
-
         def f_vjp_lowering_cpu(ctx, y_bar, invar, *primals):
             logging.info("f_vjp_lowering_cpu")
-            logging.debug("  ctx: ", ctx)
 
             t_primal = primals[0]
             inputs_primals = primals[1:]
@@ -688,7 +710,7 @@ class IDAKLUJax(object):
             t_aval = ctx.avals_in[2]
             np_dtype = np.dtype(t_aval.dtype)
             if np_dtype == np.float64:
-                op_name = "cpu_idaklu_vjp_f64"
+                op_name = f"cpu_idaklu_vjp_f64_{self.unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
                 raise NotImplementedError(f"Unsupported dtype {np_dtype}")
@@ -725,6 +747,9 @@ class IDAKLUJax(object):
                 result_types=[dtype_out],
                 # The inputs
                 operands=[
+                    mlir.ir_constant(
+                        self.idaklu_jax_obj.get_index()
+                    ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
                     mlir.ir_constant(len(output_variables)),  # 'vars' argument
                     mlir.ir_constant(len(inputs)),  # number of inputs
@@ -739,6 +764,7 @@ class IDAKLUJax(object):
                 ],
                 # Layout specification
                 operand_layouts=[
+                    (),  # solver index reference
                     (),  # 'size'
                     (),  # 'vars'
                     (),  # number of inputs

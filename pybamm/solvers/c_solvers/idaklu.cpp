@@ -91,11 +91,16 @@ PYBIND11_MODULE(idaklu, m)
     py::return_value_policy::take_ownership);
   
   // IdakluJax interface routines
+  m.def("create_idaklu_jax", &create_idaklu_jax,
+    "Create an idaklu jax object",
+    py::return_value_policy::take_ownership);
   m.def("registrations", &Registrations);
-  m.def("register_callback_jaxsolve", &register_callback_jaxsolve);
-  m.def("register_callback_jvp", &register_callback_jvp);
-  m.def("register_callback_vjp", &register_callback_vjp);
-  m.def("register_callbacks", &register_callbacks);
+  py::class_<IdakluJax>(m, "IdakluJax")
+  .def("register_callback_jaxsolve", &IdakluJax::register_callback_jaxsolve)
+  .def("register_callback_jvp", &IdakluJax::register_callback_jvp)
+  .def("register_callback_vjp", &IdakluJax::register_callback_vjp)
+  .def("register_callbacks", &IdakluJax::register_callbacks)
+  .def("get_index", &IdakluJax::get_index);
 
   py::class_<Function>(m, "Function");
 

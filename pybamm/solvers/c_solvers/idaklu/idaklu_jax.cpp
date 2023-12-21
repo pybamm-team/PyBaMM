@@ -11,39 +11,38 @@
 #include <iostream>
 #include <functional>
 
-Handler handler;
-HandlerJvp handler_jvp;
-HandlerVjp handler_vjp;
+// List of instantiated IdakluJax objects
+std::vector<IdakluJax*> idaklu_jax_instances;
 
-void register_callback_jaxsolve(Handler h) {
-  handler = h;
+// Create a new IdakluJax object, assign identifier, add to the objects list and return as pointer
+IdakluJax *create_idaklu_jax() {
+  IdakluJax *p = new IdakluJax();
+  p->index = idaklu_jax_instances.size();
+  idaklu_jax_instances.push_back(p);
+  return p;
 }
 
-void register_callback_jvp(HandlerJvp h) {
-  handler_jvp = h;
+void IdakluJax::register_callback_jaxsolve(Callback h) {
+  callback = h;
 }
 
-void register_callback_vjp(HandlerVjp h) {
-  handler_vjp = h;
+void IdakluJax::register_callback_jvp(CallbackJvp h) {
+  callback_jvp = h;
 }
 
-void register_callbacks(Handler h, HandlerJvp h_jvp, HandlerVjp h_vjp) {
-  handler = h;
-  handler_jvp = h_jvp;
-  handler_vjp = h_vjp;
+void IdakluJax::register_callback_vjp(CallbackVjp h) {
+  callback_vjp = h;
 }
 
-pybind11::dict Registrations() {
-  pybind11::dict dict;
-  dict["cpu_idaklu_f64"] = EncapsulateFunction(cpu_idaklu);
-  dict["cpu_idaklu_jvp_f64"] = EncapsulateFunction(cpu_idaklu_jvp);
-  dict["cpu_idaklu_vjp_f64"] = EncapsulateFunction(cpu_idaklu_vjp);
-  return dict;
+void IdakluJax::register_callbacks(Callback h, CallbackJvp h_jvp, CallbackVjp h_vjp) {
+  callback = h;
+  callback_jvp = h_jvp;
+  callback_vjp = h_vjp;
 }
 
-void cpu_idaklu(void *out_tuple, const void **in) {
+void IdakluJax::cpu_idaklu(void *out_tuple, const void **in) {
   // Parse the inputs --- note that these come from jax lowering and are NOT np_array's
-  int k = 0;
+  int k = 1;  // Start indexing at 1 to skip idaklu_jax index
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
@@ -55,6 +54,7 @@ void cpu_idaklu(void *out_tuple, const void **in) {
   
   // Log
   DEBUG("cpu_idaklu");
+  DEBUG(index);
   DEBUG(n_t);
   DEBUG(n_vars);
   DEBUG(n_inputs);
@@ -70,7 +70,7 @@ void cpu_idaklu(void *out_tuple, const void **in) {
   np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
 
   // Call solve obtain function in python to obtain an np_array
-  np_array out_np = handler(t_np, in_np);
+  np_array out_np = callback(t_np, in_np);
   auto out_buf = out_np.request();
   const realtype* out_ptr = reinterpret_cast<realtype*>(out_buf.ptr);
 
@@ -78,9 +78,9 @@ void cpu_idaklu(void *out_tuple, const void **in) {
   memcpy(out, out_ptr, n_t*n_vars*sizeof(realtype));
 }
 
-void cpu_idaklu_jvp(void *out_tuple, const void **in) {
+void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
   // Parse the inputs --- note that these come from jax lowering and are NOT np_array's
-  int k = 0;
+  int k = 1;  // Start indexing at 1 to skip idaklu_jax index
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
@@ -141,7 +141,7 @@ void cpu_idaklu_jvp(void *out_tuple, const void **in) {
   );
 
   // Call JVP function in python to obtain an np_array
-  np_array y_dot = handler_jvp(
+  np_array y_dot = callback_jvp(
     primal_t_np, primal_inputs_np,
     tangent_t_np, tangent_inputs_np
   );
@@ -152,8 +152,8 @@ void cpu_idaklu_jvp(void *out_tuple, const void **in) {
   memcpy(out, ptr, n_t*n_vars*sizeof(realtype));
 }
 
-void cpu_idaklu_vjp(void *out_tuple, const void **in) {
-  int k = 0;
+void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
+  int k = 1;  // Start indexing at 1 to skip idaklu_jax index
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
@@ -198,7 +198,7 @@ void cpu_idaklu_vjp(void *out_tuple, const void **in) {
   np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
 
   // Call VJP function in python to obtain an np_array
-  np_array y_dot = handler_vjp(y_bar_np, n_y_bar0, n_y_bar1, invar[0], t_np, in_np);
+  np_array y_dot = callback_vjp(y_bar_np, n_y_bar0, n_y_bar1, invar[0], t_np, in_np);
   auto buf = y_dot.request();
   const realtype* ptr = reinterpret_cast<realtype*>(buf.ptr);
 
@@ -209,5 +209,28 @@ void cpu_idaklu_vjp(void *out_tuple, const void **in) {
 
 template <typename T>
 pybind11::capsule EncapsulateFunction(T* fn) {
-  return pybind11::capsule((void*)(fn), "xla._CUSTOM_CALL_TARGET");
+  return pybind11::capsule(reinterpret_cast<void*>(fn), "xla._CUSTOM_CALL_TARGET");
+}
+
+void wrap_cpu_idaklu_f64(void *out_tuple, const void **in) {
+  const std::int64_t index = *reinterpret_cast<const std::int64_t *>(in[0]);
+  idaklu_jax_instances[index]->cpu_idaklu(out_tuple, in);
+}
+
+void wrap_cpu_idaklu_jvp_f64(void *out_tuple, const void **in) {
+  const std::int64_t index = *reinterpret_cast<const std::int64_t *>(in[0]);
+  idaklu_jax_instances[index]->cpu_idaklu_jvp(out_tuple, in);
+}
+
+void wrap_cpu_idaklu_vjp_f64(void *out_tuple, const void **in) {
+  const std::int64_t index = *reinterpret_cast<const std::int64_t *>(in[0]);
+  idaklu_jax_instances[index]->cpu_idaklu_vjp(out_tuple, in);
+}
+
+pybind11::dict Registrations() {
+  pybind11::dict dict;
+  dict["cpu_idaklu_f64"] = EncapsulateFunction(wrap_cpu_idaklu_f64);
+  dict["cpu_idaklu_jvp_f64"] = EncapsulateFunction(wrap_cpu_idaklu_jvp_f64);
+  dict["cpu_idaklu_vjp_f64"] = EncapsulateFunction(wrap_cpu_idaklu_vjp_f64);
+  return dict;
 }

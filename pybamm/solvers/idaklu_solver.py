@@ -23,7 +23,7 @@ def have_idaklu():
     return idaklu_spec is not None
 
 
-class IDAKLUSolver(pybamm.BaseSolver, pybamm.IDAKLUJax):
+class IDAKLUSolver(pybamm.BaseSolver):
     """
     Solve a discretised model, using sundials with the KLU sparse linear solver.
 
@@ -125,7 +125,6 @@ class IDAKLUSolver(pybamm.BaseSolver, pybamm.IDAKLUJax):
             extrap_tol,
             output_variables,
         )
-        pybamm.IDAKLUJax.__init__(self)
         self.name = "IDA KLU solver"
 
         pybamm.citations.register("Hindmarsh2000")
@@ -677,3 +676,9 @@ class IDAKLUSolver(pybamm.BaseSolver, pybamm.IDAKLUJax):
             return newsol
         else:
             raise pybamm.SolverError("idaklu solver failed")
+
+    def jaxify(self, *args, **kwargs):
+        """Return a jaxified version of the solver"""
+        obj = pybamm.IDAKLUJax(self)
+        obj.jaxify(*args, **kwargs)
+        return obj
