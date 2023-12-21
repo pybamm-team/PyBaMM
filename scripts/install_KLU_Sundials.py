@@ -37,6 +37,9 @@ try:
 except OSError:
     raise RuntimeError("CMake must be installed.")
 
+# Build in parallel wherever possible
+os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
+
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 download_dir = os.path.join(pybamm_dir, "install_KLU_Sundials")
@@ -78,6 +81,7 @@ make_cmd = [
 ]
 install_cmd = [
     "make",
+    f"-j{cpu_count()}",
     "install",
 ]
 print("-" * 10, "Building SuiteSparse", "-" * 40)
@@ -89,13 +93,13 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     # multiple paths at the time of wheel repair. Therefore, it should not be
     # built with an RPATH since it is copied to the install prefix.
     if libdir == "SuiteSparse_config":
-        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_BUILD_PARALLEL_LEVEL={cpu_count()}"
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
     else:
     # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
     # INSTALL RPATH in order to ensure that the dynamic libraries are found
     # at runtime just once. Otherwise, delocate complains about multiple
     # references to the SuiteSparse_config dynamic library (auditwheel does not).
-        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE -DCMAKE_BUILD_PARALLEL_LEVEL={cpu_count()}"
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
     subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 
@@ -168,5 +172,5 @@ print("-" * 10, "Running CMake prepare", "-" * 40)
 subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
 print("-" * 10, "Building the sundials", "-" * 40)
-make_cmd = ["make", "install"]
+make_cmd = ["make", f"-j{cpu_count()}", "install"]
 subprocess.run(make_cmd, cwd=build_dir, check=True)
