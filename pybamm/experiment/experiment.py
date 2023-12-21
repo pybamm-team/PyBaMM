@@ -42,13 +42,17 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions,
-        period="1 minute",
-        temperature=None,
-        termination=None,
+        operating_conditions: list,
+        period: str = "1 minute",
+        temperature: float = None,
+        termination: list = None,
         drive_cycles=None,
         cccv_handling=None,
     ):
+        if not (isinstance(operating_conditions, list)):
+            raise TypeError("operating_conditions must be list of strings. For example:"
+                            f"\n\n [{operating_conditions}]")
+        
         if cccv_handling is not None:
             raise ValueError(
                 "cccv_handling has been deprecated, use "
