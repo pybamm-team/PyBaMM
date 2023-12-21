@@ -580,9 +580,8 @@ class BaseModel:
                         )
                     )
                     try:
-                        self.variables.update(
-                            submodel.get_coupled_variables(self.variables)
-                        )
+                        submodel_coupled_vars = submodel.get_coupled_variables(self.variables)
+                        self.variables[submodel_name] = submodel_coupled_vars
                         submodels.remove(submodel_name)
                     except KeyError as key:
                         if len(submodels) == 1 or count == 100:
