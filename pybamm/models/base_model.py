@@ -580,8 +580,10 @@ class BaseModel:
                         )
                     )
                     try:
-                        submodel_coupled_vars = submodel.get_coupled_variables(self.variables)
-                        self.variables[submodel_name] = submodel_coupled_vars
+                        model_var_copy = self.variables.copy()
+                        submodel_coupled_result = submodel.get_coupled_variables(self.variables)
+                        self.variables[submodel] = {key: submodel_coupled_result[key] for key in submodel_coupled_result
+                                                    if key not in model_var_copy}
                         submodels.remove(submodel_name)
                     except KeyError as key:
                         if len(submodels) == 1 or count == 100:
