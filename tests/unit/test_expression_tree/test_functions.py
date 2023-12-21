@@ -46,7 +46,7 @@ class TestFunction(TestCase):
         b = pybamm.Scalar(1)
         sina = pybamm.Function(np.sin, b)
         self.assertEqual(sina.evaluate(), np.sin(1))
-        self.assertEqual(sina.name, "function ({})".format(np.sin.__name__))
+        self.assertEqual(sina.name, f"function ({np.sin.__name__})")
 
         c = pybamm.Vector(np.linspace(0, 1))
         cosb = pybamm.Function(np.cos, c)

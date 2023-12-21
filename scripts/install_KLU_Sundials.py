@@ -3,6 +3,7 @@ import subprocess
 import tarfile
 import argparse
 import platform
+from multiprocessing import cpu_count
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
@@ -59,7 +60,7 @@ install_dir = (
 suitesparse_version = "6.0.3"
 suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
-    + "SuiteSparse/archive/v{}.tar.gz".format(suitesparse_version)
+    + f"SuiteSparse/archive/v{suitesparse_version}.tar.gz"
 )
 download_extract_library(suitesparse_url, download_dir)
 
@@ -68,10 +69,8 @@ download_extract_library(suitesparse_url, download_dir)
 # - AMD
 # - COLAMD
 # - BTF
-suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
+suitesparse_dir = f"SuiteSparse-{suitesparse_version}"
 suitesparse_src = os.path.join(download_dir, suitesparse_dir)
-# Build with INSTALL_RPATH set to install_dir and set
-# INSTALL_RPATH_USE_LINK_PATH to TRUE to use RPATH when linking
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
 make_cmd = [
     "make",
@@ -90,13 +89,13 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     # multiple paths at the time of wheel repair. Therefore, it should not be
     # built with an RPATH since it is copied to the install prefix.
     if libdir == "SuiteSparse_config":
-        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_BUILD_PARALLEL_LEVEL={cpu_count()}"
     else:
     # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
     # INSTALL RPATH in order to ensure that the dynamic libraries are found
-    # at runtime just once. Otherwise delocate complains about multiple
-    # references to the SuiteSparse_config dynamic libaries.
-        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+    # at runtime just once. Otherwise, delocate complains about multiple
+    # references to the SuiteSparse_config dynamic library (auditwheel does not).
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE -DCMAKE_BUILD_PARALLEL_LEVEL={cpu_count()}"
     subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 
@@ -123,8 +122,8 @@ cmake_args = [
     "-DEXAMPLES_INSTALL=OFF",
     "-DENABLE_KLU=ON",
     "-DENABLE_OPENMP=ON",
-    "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
-    "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
+    f"-DKLU_INCLUDE_DIR={KLU_INCLUDE_DIR}",
+    f"-DKLU_LIBRARY_DIR={KLU_LIBRARY_DIR}",
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     # on macOS use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
@@ -164,7 +163,7 @@ if not os.path.exists(build_dir):
     print("\n-" * 10, "Creating build dir", "-" * 40)
     os.makedirs(build_dir)
 
-sundials_src = "../sundials-{}".format(sundials_version)
+sundials_src = f"../sundials-{sundials_version}"
 print("-" * 10, "Running CMake prepare", "-" * 40)
 subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
