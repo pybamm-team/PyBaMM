@@ -52,7 +52,7 @@ class Experiment:
         if not (isinstance(operating_conditions, list)):
             raise TypeError("operating_conditions must be list of strings. For example:"
                             f"\n\n [{operating_conditions}]")
-        
+
         if cccv_handling is not None:
             raise ValueError(
                 "cccv_handling has been deprecated, use "
