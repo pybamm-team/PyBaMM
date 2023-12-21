@@ -84,7 +84,8 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             # h = pybamm.PrimaryBroadcast(h,[f'{domain} electrode'])
             H_x_av = pybamm.x_average(H)
             h_x_av = pybamm.x_average(h)
-            ocp_surf = ocp_surf_eq + H * h
+            # variables[f'X-averaged {domain} electrode {phase_name}hysteresis state'] = h_x_av
+            ocp_surf = ocp_surf_eq + H_x_av * h_x_av
             H_s_av = pybamm.size_average(H_x_av)
             h_s_av = pybamm.size_average(h_x_av)
 
@@ -98,12 +99,16 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
 
         current = self.param.current_with_time
-
+        current = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
+        # current = current.orphans[0]
+        # current = current.SecondaryBroadcast(current,f'{domain} electrode')
         Q_cell = variables[f'{Domain} electrode capacity [A.h]']
         dQdU = variables[f'{Domain} electrode {phase_name}differential capacity [A.s.V-1]']
+        dQdU = dQdU.orphans[0]
         K = self.phase_param.K
         K_x = self.phase_param.K_x
-        h = variables[f'{Domain} electrode {phase_name}hysteresis state distribution']
+        h = variables[f'{Domain} electrode {phase_name}hysteresis state']
+        # h_x_av = variables[f'X-averaged {domain} electrode {phase_name}hysteresis state']
 
         dhdt = K * (current/(Q_cell*(dQdU**K_x)))*(1-pybamm.sign(current)*h) #! current is backwards for a halfcell
         self.rhs[h] = dhdt
@@ -112,6 +117,6 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         h = variables[f'{Domain} electrode {phase_name}hysteresis state']
-        h_av = variables[f'{Domain} electrode {phase_name}hysteresis state distribution']
-        self.initial_conditions[h_av] = pybamm.Scalar(0)
+        # h_av = variables[f'{Domain} electrode {phase_name}hysteresis state distribution']
+        # self.initial_conditions[h_av] = pybamm.Scalar(0)
         self.initial_conditions[h] = pybamm.Scalar(0)
