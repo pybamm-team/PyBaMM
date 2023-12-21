@@ -1283,11 +1283,11 @@ class BaseSolver:
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-            (
+
                 f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time}"
                 f"(of which integration time: {solution.integration_time}), "
                 f"Total time: {solution.total_time}"
-            )
+
         )
 
         # Return solution
