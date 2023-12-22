@@ -5,6 +5,7 @@ import argparse
 import sys
 import logging
 import subprocess
+from multiprocessing import cpu_count
 
 from pybamm.util import root_dir
 
@@ -16,6 +17,8 @@ try:
 except ModuleNotFoundError:
     NO_WGET = True
 
+# Build in parallel wherever possible
+os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
 def download_extract_library(url, directory):
     # Download and extract archive at url
