@@ -102,9 +102,7 @@ For an introduction to virtual environments, see
 Optional - scikits.odes solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Users can install `scikits.odes <https://github.com/bmcage/odes>`__ in
-order to use the wrapped SUNDIALS ODE and DAE
-`solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__.
+Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize the wrapped SUNDIALS ODE and DAE `solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__ in PyBaMM.
 
 .. note::
 
@@ -112,7 +110,7 @@ order to use the wrapped SUNDIALS ODE and DAE
 
 .. note::
 
-   The ``scikits.odes`` solver is not supported on Python 3.12 yet, please refer to https://github.com/bmcage/odes/issues/162.
+   The ``scikits.odes`` solver is not supported on Python 3.12 yet. Please refer to https://github.com/bmcage/odes/issues/162.
    There is support for Python 3.8, 3.9, 3.10, and 3.11.
 
 .. tab:: GNU/Linux
@@ -121,10 +119,10 @@ order to use the wrapped SUNDIALS ODE and DAE
 
    .. code:: bash
 
-	   apt install libopenblas-dev
-	   pybamm_install_odes
+      apt install libopenblas-dev
+      pybamm_install_odes
 
-   The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
+   The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 .. tab:: macOS
@@ -136,8 +134,14 @@ order to use the wrapped SUNDIALS ODE and DAE
       brew install openblas
       pybamm_install_odes
 
-   The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
+   The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
+
+   To avoid installation failures when using ``pip install pybamm[odes]``, make sure to set the ``SUNDIALS_INST`` environment variable. If you have installed SUNDIALS using Homebrew, set the variable to the appropriate location. For example:
+
+   .. code:: bash
+
+      export SUNDIALS_INST=$(brew --prefix sundials)
 
 Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
