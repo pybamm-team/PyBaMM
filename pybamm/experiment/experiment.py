@@ -2,6 +2,7 @@
 # Experiment class
 #
 
+from __future__ import annotations
 import pybamm
 from pybamm.step._steps_util import (
     _convert_time_to_seconds,
@@ -42,16 +43,13 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions: list,
+        operating_conditions: list[str],
         period: str = "1 minute",
-        temperature: float = None,
-        termination: list = None,
+        temperature: float | None = None,
+        termination: list[str] | None = None,
         drive_cycles=None,
         cccv_handling=None,
     ):
-        if not (isinstance(operating_conditions, list)):
-            raise TypeError("operating_conditions must be list of strings. For example:"
-                            f"\n\n [{operating_conditions}]")
 
         if cccv_handling is not None:
             raise ValueError(
