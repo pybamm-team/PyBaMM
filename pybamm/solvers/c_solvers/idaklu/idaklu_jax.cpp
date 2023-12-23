@@ -11,19 +11,29 @@
 #include <iostream>
 #include <functional>
 
-// List of instantiated IdakluJax objects
-std::vector<IdakluJax*> idaklu_jax_instances;
+// Initialise static variable
+std::int64_t IdakluJax::universal_count = 0;
+
+// Repository of instantiated IdakluJax objects
+std::map<std::int64_t, IdakluJax*> idaklu_jax_instances;
 
 // Create a new IdakluJax object, assign identifier, add to the objects list and return as pointer
 IdakluJax *create_idaklu_jax() {
   IdakluJax *p = new IdakluJax();
-  p->index = idaklu_jax_instances.size();
-  idaklu_jax_instances.push_back(p);
+  idaklu_jax_instances[p->get_index()] = p;
   return p;
 }
 
-void IdakluJax::register_callback_jaxsolve(Callback h) {
-  callback = h;
+IdakluJax::IdakluJax() {
+  index = universal_count++;
+}
+
+IdakluJax::~IdakluJax() {
+  idaklu_jax_instances.erase(index);
+}
+
+void IdakluJax::register_callback_jaxsolve(CallbackEval h) {
+  callback_eval = h;
 }
 
 void IdakluJax::register_callback_jvp(CallbackJvp h) {
@@ -34,10 +44,10 @@ void IdakluJax::register_callback_vjp(CallbackVjp h) {
   callback_vjp = h;
 }
 
-void IdakluJax::register_callbacks(Callback h, CallbackJvp h_jvp, CallbackVjp h_vjp) {
-  callback = h;
-  callback_jvp = h_jvp;
-  callback_vjp = h_vjp;
+void IdakluJax::register_callbacks(CallbackEval h, CallbackJvp h_jvp, CallbackVjp h_vjp) {
+  register_callback_jaxsolve(h);
+  register_callback_jvp(h_jvp);
+  register_callback_vjp(h_vjp);
 }
 
 void IdakluJax::cpu_idaklu(void *out_tuple, const void **in) {
@@ -51,7 +61,7 @@ void IdakluJax::cpu_idaklu(void *out_tuple, const void **in) {
   for (int i = 0; i < n_inputs; i++)
     inputs[i] = reinterpret_cast<const realtype *>(in[k++])[0];
   void *out = reinterpret_cast<realtype *>(out_tuple);
-  
+
   // Log
   DEBUG("cpu_idaklu");
   DEBUG(index);
@@ -64,13 +74,13 @@ void IdakluJax::cpu_idaklu(void *out_tuple, const void **in) {
   // Convert time vector to an np_array
   py::capsule t_capsule(t, "t_capsule");
   np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
-  
+
   // Convert inputs to an np_array
   py::capsule in_capsule(t, "in_capsule");
   np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
 
   // Call solve obtain function in python to obtain an np_array
-  np_array out_np = callback(t_np, in_np);
+  np_array out_np = callback_eval(t_np, in_np);
   auto out_buf = out_np.request();
   const realtype* out_ptr = reinterpret_cast<realtype*>(out_buf.ptr);
 
@@ -112,7 +122,7 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
     primal_t,
     primal_t_capsule
   );
-  
+
   // Pack primals as np_array
   py::capsule primal_inputs_capsule(primal_inputs, "primal_inputs_capsule");
   np_array primal_inputs_np = np_array(
@@ -121,7 +131,7 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
     primal_inputs,
     primal_inputs_capsule
   );
-  
+
   // Form tangents time vector as np_array
   py::capsule tangent_t_capsule(tangent_t, "tangent_t_capsule");
   np_array tangent_t_np = np_array(
@@ -155,7 +165,6 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
 void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
   int k = 1;  // Start indexing at 1 to skip idaklu_jax index
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
-  const std::int64_t n_vars = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_inputs = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_y_bar0 = *reinterpret_cast<const std::int64_t *>(in[k++]);
   const std::int64_t n_y_bar1 = *reinterpret_cast<const std::int64_t *>(in[k++]);
@@ -179,11 +188,11 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
   DEBUG_v(invar, 1);
   DEBUG_v(t, n_t);
   DEBUG_v(inputs, n_inputs);
-  
+
   // Convert time vector to an np_array
   py::capsule t_capsule(t, "t_capsule");
   np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
-  
+
   // Convert y_bar to an np_array
   py::capsule y_bar_capsule(t, "y_bar_capsule");
   np_array y_bar_np = np_array(
@@ -192,7 +201,7 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
       y_bar,
       y_bar_capsule
     );
-  
+
   // Convert inputs to an np_array
   py::capsule in_capsule(t, "in_capsule");
   np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);

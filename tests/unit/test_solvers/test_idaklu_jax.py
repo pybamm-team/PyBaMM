@@ -114,6 +114,44 @@ class TestIDAKLUJax(TestCase):
         with self.assertRaises(pybamm.SolverError):
             idaklu_jax_solver.get_jaxpr()
 
+    def test_no_output_variables(self):
+        print("No output variables")
+        with self.assertRaises(pybamm.SolverError):
+            idaklu_solver.jaxify(
+                model,
+                t_eval,
+                inputs=inputs,
+            )
+
+    def test_no_inputs(self):
+        print("No inputs")
+        # Regenerate model with no inputs
+        model = pybamm.lithium_ion.DFN()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_geometry(geometry)
+        param.process_model(model)
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 10, var.r_p: 10}
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        t_eval = np.linspace(0, 360, 10)
+        idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+        # Regenerate surrogate data
+        sim = idaklu_solver.solve(model, t_eval)
+        idaklu_jax_solver = idaklu_solver.jaxify(
+            model,
+            t_eval,
+            output_variables=output_variables,
+        )
+        f = idaklu_jax_solver.get_jaxpr()
+        # Check that evaluation can occur (and is correct) with no inputs
+        out = f(t_eval)
+        assert np.allclose(
+            out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
+        )
+
     # Scalar evaluation
 
     @parameterized.expand(testcase)

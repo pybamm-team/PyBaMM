@@ -4,6 +4,9 @@ import logging
 import warnings
 import numbers
 import jax
+
+from typing import Union
+from functools import lru_cache
 from jax import lax
 from jax import numpy as jnp
 from jax.interpreters import ad
@@ -27,18 +30,32 @@ if idaklu_spec is not None:
 
 
 class IDAKLUJax(object):
+    """
+    JAX wrapper for IDAKLU solver
+
+    This class is used by an IDAKLUSolver object and is not intended to be
+    run directly.
+    """
+
     def __init__(self, solver):
         self.jaxpr = None  # JAX expression
         self.idaklu_jax_obj = None  # IDAKLU-JAX object
         self.solver = solver  # Originating IDAKLU Solver object
 
+    def __del__(self):
+        self._deallocate_callbacks()
+
     def get_jaxpr(self):
+        """Returns a JAX expression representing the IDAKLU-wrapped solver object"""
         if self.jaxpr is None:
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
         return self.jaxpr
 
     def get_var(self, f, varname):
-        """Helper function to extract a single variable from the jaxified expression"""
+        """Helper function to extract a single variable from the jaxified expression
+
+        Returns a JAX expression
+        """
 
         def f_isolated(*args, **kwargs):
             out = f(*args, **kwargs)
@@ -53,7 +70,10 @@ class IDAKLUJax(object):
         return f_isolated
 
     def get_vars(self, f, varnames):
-        """Helper function to extract multiple variables from the jaxified expression"""
+        """Helper function to extract multiple variables from the jaxified expression
+
+        Returns a JAX expression
+        """
 
         def f_isolated(*args, **kwargs):
             out = f(*args, **kwargs)
@@ -70,7 +90,11 @@ class IDAKLUJax(object):
         return f_isolated
 
     def jax_value(self, *, f=None, t=None, inputs=None, output_variables=None):
-        """Helper function to compute the gradient of a jaxified expression"""
+        """Helper function to compute the gradient of a jaxified expression
+
+        Returns a numeric (np.ndarray) object (not a JAX expression).
+        Parameters are inferred from the base object, but can be overridden.
+        """
         try:
             f = f if f else self.jaxify_f
             t = t if t else self.jax_t_eval
@@ -81,7 +105,7 @@ class IDAKLUJax(object):
         except AttributeError:
             raise pybamm.SolverError("jaxify() must be called before jax_grad()")
         d = {}
-        for outvar in self.jax_output_variables:
+        for outvar in output_variables:
             d[outvar] = jax.vmap(
                 self.get_var(f, outvar),
                 in_axes=(0, None),
@@ -89,7 +113,11 @@ class IDAKLUJax(object):
         return d
 
     def jax_grad(self, *, f=None, t=None, inputs=None, output_variables=None):
-        """Helper function to compute the gradient of a jaxified expression"""
+        """Helper function to compute the gradient of a jaxified expression
+
+        Returns a numeric (np.ndarray) object (not a JAX expression).
+        Parameters are inferred from the base object, but can be overridden.
+        """
         try:
             f = f if f else self.jaxify_f
             t = t if t else self.jax_t_eval
@@ -100,7 +128,7 @@ class IDAKLUJax(object):
         except AttributeError:
             raise pybamm.SolverError("jaxify() must be called before jax_grad()")
         d = {}
-        for outvar in self.jax_output_variables:
+        for outvar in output_variables:
             d[outvar] = jax.vmap(
                 jax.grad(
                     self.get_var(f, outvar),
@@ -110,11 +138,29 @@ class IDAKLUJax(object):
             )(t, inputs)
         return d
 
+    class _hashabledict(dict):
+        def __hash__(self):
+            return hash(tuple(sorted(self.items())))
+
+    @lru_cache(maxsize=1)
+    def _cached_solve(self, model, t_hashable, *args, **kwargs):
+        """Cache the last solve for reuse"""
+        return self.solver.solve(model, t_hashable, *args, **kwargs)
+
     def _jaxify_solve(self, t, invar, *inputs_values):
+        """Solve the model using the IDAKLU solver
+
+        This method is called by the JAX primitive definition and caches the last solve
+        fo reuse.
+        """
         # Reconstruct dictionary of inputs
-        d = self.jax_inputs.copy()
-        for ix, (k, v) in enumerate(self.jax_inputs.items()):
-            d[k] = inputs_values[ix]
+        if self.jax_inputs is None:
+            d = self._hashabledict()
+        else:
+            # Use hashable dictionaries for caching the solve
+            d = self._hashabledict()
+            for key, value in zip(self.jax_inputs.keys(), inputs_values):
+                d[key] = value
         # Solver
         logging.debug("_jaxify_solve:")
         logging.debug(f"  t_eval: {self.jax_t_eval}")
@@ -122,11 +168,11 @@ class IDAKLUJax(object):
         logging.debug(f"  invar: {invar}")
         logging.debug(f"  inputs: {dict(d)}")
         logging.debug(f"  calculate_sensitivities: {invar is not None}")
-        sim = self.solver.solve(
+        sim = self._cached_solve(
             self.jax_model,
-            self.jax_t_eval,
-            inputs=dict(d),
-            calculate_sensitivities=invar is not None,
+            tuple(self.jax_t_eval),
+            inputs=self._hashabledict(d),
+            calculate_sensitivities=self.jax_inputs is not None,
         )
         if invar is not None:
             if isinstance(invar, numbers.Number):
@@ -148,6 +194,10 @@ class IDAKLUJax(object):
             ).T
 
     def _jax_solve_array_inputs(self, t, inputs_array):
+        """Wrapper for _jax_solve used by IDAKLU callback
+
+        This version assumes all parameters are provided as np.ndarray vectors
+        """
         logging.info("jax_solve_array_inputs")
         logging.debug(f"  t: {type(t)}, {t}")
         logging.debug(f"  inputs_array: {type(inputs_array)}, {inputs_array}")
@@ -160,6 +210,7 @@ class IDAKLUJax(object):
         t: float | np.ndarray,
         *inputs,
     ) -> np.ndarray:
+        """Solver implementation used by f-bind"""
         logging.info("jax_solve")
         logging.debug(f"  t: {type(t)}, {t}")
         logging.debug(f"  inputs: {type(inputs)}, {inputs}")
@@ -170,21 +221,11 @@ class IDAKLUJax(object):
         # Convert to numpy array
         return np.array(out)
 
-    def _jax_jvp_impl_array_inputs(
-        self,
-        primal_t,
-        primal_inputs,
-        tangent_t,
-        tangent_inputs,
-    ):
-        primals = primal_t, *tuple([k for k in primal_inputs])
-        tangents = tangent_t, *tuple([k for k in tangent_inputs])
-        return self._jax_jvp_impl(*primals, *tangents)
-
     def _jax_jvp_impl(
         self,
-        *args,
+        *args: Union[np.ndarray],
     ):
+        """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
         tangents = args[len(args) // 2 :]
         t = primals[0]
@@ -210,28 +251,28 @@ class IDAKLUJax(object):
 
         return np.array(y_dot)
 
-    def _jax_vjp_impl_array_inputs(
+    def _jax_jvp_impl_array_inputs(
         self,
-        y_bar,
-        y_bar_s0,
-        y_bar_s1,
-        invar,
         primal_t,
         primal_inputs,
+        tangent_t,
+        tangent_inputs,
     ):
-        # Reshape y_bar
-        logging.debug("Reshaping y_bar to ", str(y_bar_s0), str(y_bar_s1))
-        y_bar = y_bar.reshape(y_bar_s0, y_bar_s1)
-        logging.debug("y_bar is now: ", str(y_bar))
+        """Wrapper for JVP implementation used by IDAKLU callback
+
+        This version assumes all parameters are provided as np.ndarray vectors
+        """
         primals = primal_t, *tuple([k for k in primal_inputs])
-        return self._jax_vjp_impl(y_bar, invar, *primals)
+        tangents = tangent_t, *tuple([k for k in tangent_inputs])
+        return self._jax_jvp_impl(*primals, *tangents)
 
     def _jax_vjp_impl(
         self,
-        y_bar,
-        invar,
-        *primals,
+        y_bar: np.ndarray,
+        invar: Union[str, int],  # index or name of input variable
+        *primals: np.ndarray,
     ):
+        """VJP implementation used by f_vjp bind"""
         logging.info("py:f_vjp_p_impl")
         logging.debug(f"  py:y_bar: {type(y_bar)}, {y_bar}")
         logging.debug(f"  py:invar: {type(invar)}, {invar}")
@@ -276,27 +317,65 @@ class IDAKLUJax(object):
         y_dot = np.array(y_dot)
         return y_dot
 
-    def _register_solve(self):
+    def _jax_vjp_impl_array_inputs(
+        self,
+        y_bar,
+        y_bar_s0,
+        y_bar_s1,
+        invar,
+        primal_t,
+        primal_inputs,
+    ):
+        """Wrapper for VJP implementation used by IDAKLU callback
+
+        This version assumes all parameters are provided as np.ndarray vectors
+        """
+        # Reshape y_bar
+        logging.debug("Reshaping y_bar to ", str(y_bar_s0), str(y_bar_s1))
+        y_bar = y_bar.reshape(y_bar_s0, y_bar_s1)
+        logging.debug("y_bar is now: ", str(y_bar))
+        primals = primal_t, *tuple([k for k in primal_inputs])
+        return self._jax_vjp_impl(y_bar, invar, *primals)
+
+    def _register_callbacks(self):
         """Register the solve method with the IDAKLU solver"""
-        logging.info("_register_solve")
+        logging.info("_register_callbacks")
         self.idaklu_jax_obj.register_callbacks(
             self._jax_solve_array_inputs,
             self._jax_jvp_impl_array_inputs,
             self._jax_vjp_impl_array_inputs,
         )
 
-    def __del__(self):
-        self._deallocate()
-
-    def _deallocate(self):
-        logging.info("_deallocate")
+    def _deallocate_callbacks(self):
+        """Deallocate callbacks in the IDAKLU solver"""
+        logging.info("_deallocate_callbacks")
         if self.idaklu_jax_obj is not None:
             self.idaklu_jax_obj.register_callbacks(None, None, None)
 
-    def unique_name(self):
+    def _unique_name(self):
+        """Return a unique name for this solver object for naming the JAX primitives"""
         return f"{self.idaklu_jax_obj.get_index()}"
 
     def jaxify(self, *args, **kwargs):
+        """JAXify the model and solver
+
+        This method creates a JAX expression representing the IDAKLU-wrapped solver
+        object. The expression is cached and reused for subsequent calls.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model to be solved
+        t_eval : numeric type, optional
+            The times at which to compute the solution. If None, the times in the model
+            are used.
+        output_variables : list of str, optional
+            The variables to be returned. If None, the variables in the model are used.
+        inputs : dict, optional
+            Any inputs to the model
+        calculate_sensitivities : bool, optional
+            Whether to calculate sensitivities. Default is True.
+        """
         if self.jaxpr is not None:
             warnings.warn(
                 "JAX expression has already been created. "
@@ -319,28 +398,36 @@ class IDAKLUJax(object):
 
         self.jax_model = model
         self.jax_t_eval = t_eval
-        self.jax_output_variables = output_variables
+        self.jax_output_variables = (
+            output_variables if output_variables else self.solver.output_variables
+        )
+        if not self.jax_output_variables:
+            raise pybamm.SolverError("output_variables must be specified")
         self.jax_inputs = inputs
 
         self.idaklu_jax_obj = idaklu.create_idaklu_jax()  # Create IDAKLU-JAX object
-        self._register_solve()  # Register python methods as callbacks in IDAKLU-JAX
+        self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
 
         for _name, _value in idaklu.registrations().items():
             xla_client.register_custom_call_target(
-                f"{_name}_{self.unique_name()}", _value, platform="cpu"
+                f"{_name}_{self._unique_name()}", _value, platform="cpu"
             )
 
         # --- JAX PRIMITIVE DEFINITION ------------------------------------------------
 
-        logging.debug(f"Creating new primitive: {self.unique_name()}")
-        f_p = jax.core.Primitive(f"f_{self.unique_name()}")
+        logging.debug(f"Creating new primitive: {self._unique_name()}")
+        f_p = jax.core.Primitive(f"f_{self._unique_name()}")
         f_p.multiple_results = False  # Returns a single multi-dimensional array
 
-        def f(t, inputs):
-            """
-            Params:
-                t : time
-                inputs : dictionary of input values, e.g.
+        def f(t, inputs=None):
+            """Main function wrapper for the JAX primitive function
+
+            Parameters
+            ----------
+                t : float | np.ndarray
+                    Time sample or vector of time samples
+                inputs : dict, optional
+                    dictionary of input values, e.g.
                          {'Current function [A]': 0.222, 'Separator porosity': 0.3}
             """
             logging.info("f")
@@ -352,7 +439,7 @@ class IDAKLUJax(object):
 
         @f_p.def_impl
         def f_impl(t, *inputs):
-            """Concrete implementation of Primitive"""
+            """Concrete implementation of Primitive (used for non-jitted evaluation)"""
             logging.info("f_impl")
             term_v = self._jaxify_solve(t, None, *inputs)
             logging.debug(f"f_impl [exit]: {type(term_v)}, {term_v}")
@@ -360,25 +447,26 @@ class IDAKLUJax(object):
 
         @f_p.def_abstract_eval
         def f_abstract_eval(t, *inputs):
-            """Abstract evaluation of Primitive
-            Takes abstractions of inputs, returned ShapedArray for result of primitive
-            """
+            """Abstract evaluation of Primitive"""
             logging.info("f_abstract_eval")
             if f_p.multiple_results:
                 shape = t.shape
                 dtype = jax.dtypes.canonicalize_dtype(t.dtype)
-                return (jax.core.ShapedArray(shape, dtype),) * len(output_variables)
+                return (jax.core.ShapedArray(shape, dtype),) * len(
+                    self.jax_output_variables
+                )
             else:
                 shape = t.shape
                 dtype = jax.dtypes.canonicalize_dtype(t.dtype)
-                # y_aval = jax.core.ShapedArray(shape, t.dtype)
-                y_aval = jax.core.ShapedArray((*t.shape, len(output_variables)), dtype)
+                y_aval = jax.core.ShapedArray(
+                    (*t.shape, len(self.jax_output_variables)), dtype
+                )
                 return y_aval
 
         def f_batch(args, batch_axes):
-            """Batching rule for Primitive
-            Takes batched inputs, returns batched outputs and batched axes
-            """
+            """Batch rule for Primitive
+
+            Takes batched inputs, returns batched outputs and batched axes"""
             logging.info("f_batch: ", type(args), type(batch_axes))
             t = args[0]
             inputs = args[1:]
@@ -395,12 +483,17 @@ class IDAKLUJax(object):
         batching.primitive_batchers[f_p] = f_batch
 
         def f_lowering_cpu(ctx, t, *inputs):
+            """CPU lowering rule for Primitive
+
+            This function calls the IDAKLU-JAX custom call target, which reroutes the
+            call to the python callbacks, which call the standard IDAKLU solver.
+            """
             logging.info("f_lowering_cpu")
 
             t_aval = ctx.avals_in[0]
             np_dtype = np.dtype(t_aval.dtype)
             if np_dtype == np.float64:
-                op_name = f"cpu_idaklu_f64_{self.unique_name()}"
+                op_name = f"cpu_idaklu_f64_{self._unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
                 raise NotImplementedError(f"Unsupported dtype {np_dtype}")
@@ -430,7 +523,7 @@ class IDAKLUJax(object):
                         self.idaklu_jax_obj.get_index()
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
                     mlir.ir_constant(len(inputs)),  # 'vars' argument
                     t,
                     *inputs,
@@ -457,6 +550,7 @@ class IDAKLUJax(object):
         # --- JAX PRIMITIVE JVP DEFINITION --------------------------------------------
 
         def f_jvp(primals, tangents):
+            """Main wrapper for the JVP function"""
             logging.info("f_jvp: ", *list(map(type, (*primals, *tangents))))
 
             # Deal with Zero tangents
@@ -477,14 +571,16 @@ class IDAKLUJax(object):
 
         ad.primitive_jvps[f_p] = f_jvp
 
-        f_jvp_p = jax.core.Primitive(f"f_jvp_{self.unique_name()}")
+        f_jvp_p = jax.core.Primitive(f"f_jvp_{self._unique_name()}")
 
         @f_jvp_p.def_impl
         def f_jvp_eval(*args):
+            """Concrete implementation of JVP primitive (for non-jitted evaluation)"""
             logging.info("f_jvp_p_eval: ", type(args))
             return self._jax_jvp_impl(*args)
 
         def f_jvp_batch(args, batch_axes):
+            """Batch rule for JVP primitive"""
             logging.info("f_jvp_batch")
             primals = args[: len(args) // 2]
             tangents = args[len(args) // 2 :]
@@ -544,14 +640,19 @@ class IDAKLUJax(object):
 
         @f_jvp_p.def_abstract_eval
         def f_jvp_abstract_eval(*args):
+            """Abstract evaluation of JVP primitive"""
             logging.info("f_jvp_abstract_eval")
             primals = args[: len(args) // 2]
             t = primals[0]
-            out = jax.core.ShapedArray((*t.shape, len(output_variables)), t.dtype)
+            out = jax.core.ShapedArray(
+                (*t.shape, len(self.jax_output_variables)), t.dtype
+            )
             logging.info("<- f_jvp_abstract_eval")
             return out
 
         def f_jvp_transpose(y_bar, *args):
+            """Transpose rule for JVP primitive"""
+
             # Note: y_bar indexes the OUTPUT variable, e.g. [1, 0, 0] is the
             # first of three outputs. The function returns primals and tangents
             # corresponding to how each of the inputs derives that output, e.g.
@@ -576,6 +677,7 @@ class IDAKLUJax(object):
         ad.primitive_transposes[f_jvp_p] = f_jvp_transpose
 
         def f_jvp_lowering_cpu(ctx, *args):
+            """CPU lowering rule for JVP primitive"""
             logging.info("f_jvp_lowering_cpu")
 
             primals = args[: len(args) // 2]
@@ -589,7 +691,7 @@ class IDAKLUJax(object):
             t_aval = ctx.avals_in[0]
             np_dtype = np.dtype(t_aval.dtype)
             if np_dtype == np.float64:
-                op_name = f"cpu_idaklu_jvp_f64_{self.unique_name()}"
+                op_name = f"cpu_idaklu_jvp_f64_{self._unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
                 raise NotImplementedError(f"Unsupported dtype {np_dtype}")
@@ -621,7 +723,7 @@ class IDAKLUJax(object):
                         self.idaklu_jax_obj.get_index()
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
+                    mlir.ir_constant(len(self.jax_output_variables)),  # 'vars' argument
                     mlir.ir_constant(len(inputs_primals)),  # 'vars' argument
                     t_primal,  # 't'
                     *inputs_primals,  # inputs
@@ -651,9 +753,10 @@ class IDAKLUJax(object):
 
         # --- JAX PRIMITIVE VJP DEFINITION --------------------------------------------
 
-        f_vjp_p = jax.core.Primitive(f"f_vjp_{self.unique_name()}")
+        f_vjp_p = jax.core.Primitive(f"f_vjp_{self._unique_name()}")
 
         def f_vjp(y_bar, invar, *primals):
+            """Main wrapper for the VJP function"""
             logging.info("f_vjp")
             logging.debug(f"  y_bar: {y_bar}, {type(y_bar)}, {y_bar.shape}")
             if isinstance(invar, str):
@@ -662,11 +765,13 @@ class IDAKLUJax(object):
 
         @f_vjp_p.def_impl
         def f_vjp_impl(y_bar, invar, *primals):
+            """Concrete implementation of VJP primitive (for non-jitted evaluation)"""
             logging.info("f_vjp_impl")
             return self._jax_vjp_impl(y_bar, invar, *primals)
 
         @f_vjp_p.def_abstract_eval
         def f_vjp_abstract_eval(*args):
+            """Abstract evaluation of VJP primitive"""
             logging.info("f_vjp_abstract_eval")
             primals = args[: len(args) // 2]
             t = primals[0]
@@ -675,6 +780,7 @@ class IDAKLUJax(object):
             return out
 
         def f_vjp_batch(args, batch_axes):
+            """Batch rule for VJP primitive"""
             logging.info("f_vjp_p_batch")
             y_bars, invar, t, *inputs = args
 
@@ -702,6 +808,7 @@ class IDAKLUJax(object):
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
         def f_vjp_lowering_cpu(ctx, y_bar, invar, *primals):
+            """CPU lowering rule for VJP primitive"""
             logging.info("f_vjp_lowering_cpu")
 
             t_primal = primals[0]
@@ -710,7 +817,7 @@ class IDAKLUJax(object):
             t_aval = ctx.avals_in[2]
             np_dtype = np.dtype(t_aval.dtype)
             if np_dtype == np.float64:
-                op_name = f"cpu_idaklu_vjp_f64_{self.unique_name()}"
+                op_name = f"cpu_idaklu_vjp_f64_{self._unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
                 raise NotImplementedError(f"Unsupported dtype {np_dtype}")
@@ -751,7 +858,6 @@ class IDAKLUJax(object):
                         self.idaklu_jax_obj.get_index()
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(output_variables)),  # 'vars' argument
                     mlir.ir_constant(len(inputs)),  # number of inputs
                     mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
                     mlir.ir_constant(  # 'y_bar' shape[1]
@@ -766,7 +872,6 @@ class IDAKLUJax(object):
                 operand_layouts=[
                     (),  # solver index reference
                     (),  # 'size'
-                    (),  # 'vars'
                     (),  # number of inputs
                     (),  # 'y_bar' shape[0]
                     (),  # 'y_bar' shape[1]

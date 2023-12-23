@@ -89,7 +89,7 @@ PYBIND11_MODULE(idaklu, m)
     "Generate a casadi function",
     py::arg("string"),
     py::return_value_policy::take_ownership);
-  
+
   // IdakluJax interface routines
   m.def("create_idaklu_jax", &create_idaklu_jax,
     "Create an idaklu jax object",
