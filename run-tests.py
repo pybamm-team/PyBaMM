@@ -64,36 +64,31 @@ def run_doc_tests():
     used).
     """
     print("Checking if docs can be built.")
-    p = subprocess.Popen(
-        [
-            "sphinx-build",
-            "-j",
-            "auto",
-            "-b",
-            "doctest",
-            "docs",
-            "docs/build/html",
-            "-W",
-            "--keep-going",
-        ]
-    )
     try:
-        ret = p.wait()
-    except KeyboardInterrupt:
+        subprocess.run(
+            [
+                "sphinx-build",
+                "-j",
+                "auto",
+                "-b",
+                "doctest",
+                "docs",
+                "docs/build/html",
+                "-W",
+                "--keep-going",
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"FAILED with exit code {e.returncode}")
+        sys.exit(e.returncode)
+    finally:
+        # Regardless of whether the doctests pass or fail, attempt to remove the built files.
+        print("Deleting built files.")
         try:
-            p.terminate()
-        except OSError:
-            pass
-        p.wait()
-        print("")
-        sys.exit(1)
-    if ret != 0:
-        print("FAILED")
-        sys.exit(ret)
-    # delete the entire docs/source/build folder + files since it currently
-    # causes problems with nbsphinx in further docs or doctest builds
-    print("Deleting built files.")
-    shutil.rmtree("docs/build")
+            shutil.rmtree("docs/build")
+        except Exception as e:
+            print(f"Error deleting built files: {e}")
 
 
 def run_scripts(executable="python"):
