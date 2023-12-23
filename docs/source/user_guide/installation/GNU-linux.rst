@@ -137,11 +137,23 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize t
    The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
-   To avoid installation failures when using ``pip install pybamm[odes]``, make sure to set the ``SUNDIALS_INST`` environment variable. If you have installed SUNDIALS using Homebrew, set the variable to the appropriate location. For example:
+To avoid installation failures when using ``pip install pybamm[odes]``, make sure to set the ``SUNDIALS_INST`` environment variable. If you have installed SUNDIALS using Homebrew, set the variable to the appropriate location. For example:
 
-   .. code:: bash
+.. code:: bash
 
-      export SUNDIALS_INST=$(brew --prefix sundials)
+   export SUNDIALS_INST=$(brew --prefix sundials)
+
+Ensure that the path matches the installation location on your system. You can verify the installation location by running:
+
+.. code:: bash
+
+   brew info sundials
+
+Look for the installation path, and use that path to set the ``SUNDIALS_INST`` variable.
+
+Note: The location where Homebrew installs SUNDIALS might vary based on the system architecture (ARM or Intel). Adjust the path in the ``export SUNDIALS_INST`` command accordingly.
+
+To avoid manual setup of path the ``pybamm_install_odes`` is recommended for a smoother installation process, as it takes care of automatically downloading and installing the SUNDIALS library on your system.
 
 Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
