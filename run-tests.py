@@ -86,7 +86,7 @@ def run_doc_tests():
         # Regardless of whether the doctests pass or fail, attempt to remove the built files.
         print("Deleting built files.")
         try:
-            shutil.rmtree("docs/build")
+            shutil.rmtree("docs/build/html/.doctrees/")
         except Exception as e:
             print(f"Error deleting built files: {e}")
 
