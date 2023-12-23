@@ -29,9 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Check style
         run: |
@@ -46,12 +46,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -80,7 +80,7 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, and 3.10, and for macOS and Windows with all Python versions
+      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, 3.10, and 3.12; and for macOS and Windows with all Python versions
         if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
         run: python -m nox -s unit
 
@@ -113,6 +113,7 @@ jobs:
 
   #M-series Mac Mini
   build-apple-mseries:
+    if: github.repository_owner == 'pybamm-team'
     needs: style
     runs-on: [self-hosted, macOS, ARM64]
     env:
@@ -120,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4

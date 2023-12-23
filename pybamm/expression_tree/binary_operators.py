@@ -94,16 +94,16 @@ class BinaryOperator(pybamm.Symbol):
             or (self.left.name == "+" and self.name == "-")
             or self.name == "+"
         ):
-            left_str = "({!s})".format(self.left)
+            left_str = f"({self.left!s})"
         else:
-            left_str = "{!s}".format(self.left)
+            left_str = f"{self.left!s}"
         if isinstance(self.right, pybamm.BinaryOperator) and not (
             (self.name == "*" and self.right.name in ["*", "/"]) or self.name == "+"
         ):
-            right_str = "({!s})".format(self.right)
+            right_str = f"({self.right!s})"
         else:
-            right_str = "{!s}".format(self.right)
-        return "{} {} {}".format(left_str, self.name, right_str)
+            right_str = f"{self.right!s}"
+        return f"{left_str} {self.name} {right_str}"
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -337,11 +337,9 @@ class MatrixMultiplication(BinaryOperator):
             return left @ right_jac
         else:
             raise NotImplementedError(
-                """jac of 'MatrixMultiplication' is only
+                f"""jac of 'MatrixMultiplication' is only
              implemented for left of type 'pybamm.Array',
-             not {}""".format(
-                    left.__class__
-                )
+             not {left.__class__}"""
             )
 
     def _binary_evaluate(self, left, right):
@@ -557,7 +555,7 @@ class EqualHeaviside(_Heaviside):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{!s} <= {!s}".format(self.left, self.right)
+        return f"{self.left!s} <= {self.right!s}"
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -574,7 +572,7 @@ class NotEqualHeaviside(_Heaviside):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{!s} < {!s}".format(self.left, self.right)
+        return f"{self.left!s} < {self.right!s}"
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -614,7 +612,7 @@ class Modulo(BinaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{!s} mod {!s}".format(self.left, self.right)
+        return f"{self.left!s} mod {self.right!s}"
 
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
@@ -629,7 +627,7 @@ class Minimum(BinaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "minimum({!s}, {!s})".format(self.left, self.right)
+        return f"minimum({self.left!s}, {self.right!s})"
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -666,7 +664,7 @@ class Maximum(BinaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "maximum({!s}, {!s})".format(self.left, self.right)
+        return f"maximum({self.left!s}, {self.right!s})"
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -1241,11 +1239,14 @@ def minimum(left, right):
     if out is not None:
         return out
 
-    k = pybamm.settings.min_smoothing
+    mode = pybamm.settings.min_max_mode
+    k = pybamm.settings.min_max_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (left.is_constant() and right.is_constant()):
+    if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Minimum(left, right)
+    elif mode == "smooth":
+        out = pybamm.smooth_min(left, right, k)
     else:
         out = pybamm.softminus(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1262,11 +1263,14 @@ def maximum(left, right):
     if out is not None:
         return out
 
-    k = pybamm.settings.max_smoothing
+    mode = pybamm.settings.min_max_mode
+    k = pybamm.settings.min_max_smoothing
     # Return exact approximation if that is the setting or the outcome is a constant
     # (i.e. no need for smoothing)
-    if k == "exact" or (left.is_constant() and right.is_constant()):
+    if mode == "exact" or (left.is_constant() and right.is_constant()):
         out = Maximum(left, right)
+    elif mode == "smooth":
+        out = pybamm.smooth_max(left, right, k)
     else:
         out = pybamm.softplus(left, right, k)
     return pybamm.simplify_if_constant(out)
@@ -1313,8 +1317,8 @@ def _heaviside(left, right, equal):
 
 def softminus(left, right, k):
     """
-    Softplus approximation to the minimum function. k is the smoothing parameter,
-    set by `pybamm.settings.min_smoothing`. The recommended value is k=10.
+    Softminus approximation to the minimum function. k is the smoothing parameter,
+    set by `pybamm.settings.min_max_smoothing`. The recommended value is k=10.
     """
     return pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k
 
@@ -1322,9 +1326,27 @@ def softminus(left, right, k):
 def softplus(left, right, k):
     """
     Softplus approximation to the maximum function. k is the smoothing parameter,
-    set by `pybamm.settings.max_smoothing`. The recommended value is k=10.
+    set by `pybamm.settings.min_max_smoothing`. The recommended value is k=10.
     """
     return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
+
+
+def smooth_min(left, right, k):
+    """
+    Smooth_min approximation to the minimum function. k is the smoothing parameter,
+    set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
+    """
+    sigma = (1.0 / k)**2
+    return ((left + right) - (pybamm.sqrt((left - right)**2 + sigma))) / 2
+
+
+def smooth_max(left, right, k):
+    """
+    Smooth_max approximation to the maximum function. k is the smoothing parameter,
+    set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
+    """
+    sigma = (1.0 / k) ** 2
+    return (pybamm.sqrt((left - right)**2 + sigma) + (left + right)) / 2
 
 
 def sigmoid(left, right, k):
@@ -1370,10 +1392,8 @@ def source(left, right, boundary=False):
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            """'source' only implemented in the 'current collector' domain,
-            but symbols have domains {} and {}""".format(
-                left.domain, right.domain
-            )
+            f"""'source' only implemented in the 'current collector' domain,
+            but symbols have domains {left.domain} and {right.domain}"""
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

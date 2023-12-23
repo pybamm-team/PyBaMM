@@ -227,7 +227,7 @@ class TestSimulation(TestCase):
         options = {"working electrode": "positive"}
         parameter_values["Current function [A]"] = 0.0
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sol = sim.solve([0, 1], initial_soc="{} V".format(ucv))
+        sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
         voltage = sol["Terminal voltage [V]"].entries
         self.assertAlmostEqual(voltage[0], ucv, places=5)
 

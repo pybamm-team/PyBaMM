@@ -48,9 +48,9 @@ class Function(pybamm.Symbol):
             self.name = name
         else:
             try:
-                name = "function ({})".format(function.__name__)
+                name = f"function ({function.__name__})"
             except AttributeError:
-                name = "function ({})".format(function.__class__)
+                name = f"function ({function.__class__})"
         domains = self.get_children_domains(children)
 
         self.function = function
@@ -61,9 +61,9 @@ class Function(pybamm.Symbol):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        out = "{}(".format(self.name[10:-1])
+        out = f"{self.name[10:-1]}("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 

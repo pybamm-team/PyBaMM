@@ -59,7 +59,7 @@ class Interpolant(pybamm.Function):
 
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
-            raise ValueError("interpolator '{}' not recognised".format(interpolator))
+            raise ValueError(f"interpolator '{interpolator}' not recognised")
 
         # Perform some checks on the data
         if isinstance(x, (tuple, list)) and len(x) == 2:
@@ -186,7 +186,7 @@ class Interpolant(pybamm.Function):
                     fill_value=fill_value,
                 )
         else:
-            raise ValueError("Invalid dimension of x: {0}".format(len(x)))
+            raise ValueError(f"Invalid dimension of x: {len(x)}")
 
         # Set name
         if name is None:
@@ -315,7 +315,7 @@ class Interpolant(pybamm.Function):
                 return np.reshape(res, shape)
 
         else:  # pragma: no cover
-            raise ValueError("Invalid dimension: {0}".format(self.dimension))
+            raise ValueError(f"Invalid dimension: {self.dimension}")
 
     def to_json(self):
         """

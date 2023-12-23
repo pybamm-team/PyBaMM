@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   remind:
+    if: github.repository_owner == 'pybamm-team'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

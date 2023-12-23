@@ -6,14 +6,9 @@ from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
 
-try:
-    from setuptools import setup, Extension
-    from setuptools.command.install import install
-    from setuptools.command.build_ext import build_ext
-except ImportError:
-    from distutils.core import setup
-    from distutils.command.install import install
-    from distutils.command.build_ext import build_ext
+from setuptools import setup, Extension
+from setuptools.command.install import install
+from setuptools.command.build_ext import build_ext
 
 
 default_lib_dir = (
@@ -25,13 +20,13 @@ default_lib_dir = (
 
 def set_vcpkg_environment_variables():
     if not os.getenv("VCPKG_ROOT_DIR"):
-        raise EnvironmentError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
+        raise OSError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
     if not os.getenv("VCPKG_DEFAULT_TRIPLET"):
-        raise EnvironmentError(
+        raise OSError(
             "Environment variable 'VCPKG_DEFAULT_TRIPLET' is undefined."
         )
     if not os.getenv("VCPKG_FEATURE_FLAGS"):
-        raise EnvironmentError(
+        raise OSError(
             "Environment variable 'VCPKG_FEATURE_FLAGS' is undefined."
         )
     return (
@@ -78,9 +73,9 @@ class CMakeBuild(build_ext):
             self.sundials_root = os.path.join(default_lib_dir)
 
     def get_build_directory(self):
-        # distutils outputs object files in directory self.build_temp
+        # setuptools outputs object files in directory self.build_temp
         # (typically build/temp.*). This is our CMake build directory.
-        # On Windows, distutils is too smart and appends "Release" or
+        # On Windows, setuptools is too smart and appends "Release" or
         # "Debug" to self.build_temp. So in this case we want the
         # build directory to be the parent directory.
         if system() == "Windows":
@@ -98,17 +93,17 @@ class CMakeBuild(build_ext):
 
         build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "RELEASE")
         cmake_args = [
-            "-DCMAKE_BUILD_TYPE={}".format(build_type),
-            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+            f"-DCMAKE_BUILD_TYPE={build_type}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
         ]
         if self.suitesparse_root:
             cmake_args.append(
-                "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))
+                f"-DSuiteSparse_ROOT={os.path.abspath(self.suitesparse_root)}"
             )
         if self.sundials_root:
             cmake_args.append(
-                "-DSUNDIALS_ROOT={}".format(os.path.abspath(self.sundials_root))
+                f"-DSUNDIALS_ROOT={os.path.abspath(self.sundials_root)}"
             )
 
         build_dir = self.get_build_directory()
@@ -282,12 +277,12 @@ def compile_KLU():
     pybind11_dir = os.path.join(pybamm_project_dir, "pybind11")
     try:
         open(os.path.join(pybind11_dir, "tools", "pybind11Tools.cmake"))
-        logger.info("Found pybind11 directory ({})".format(pybind11_dir))
+        logger.info(f"Found pybind11 directory ({pybind11_dir})")
     except FileNotFoundError:
         PyBind11Found = False
         msg = (
-            "Could not find PyBind11 directory ({})."
-            " Skipping compilation of KLU module.".format(pybind11_dir)
+            f"Could not find PyBind11 directory ({pybind11_dir})."
+            " Skipping compilation of KLU module."
         )
         logger.info(msg)
 

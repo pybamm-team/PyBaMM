@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -48,9 +48,9 @@ jobs:
           LD_LIBRARY_PATH: $HOME/.local/lib
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: asv_new_results
+          name: asv_periodic_results
           path: results
 
   publish-results:
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -73,9 +73,9 @@ jobs:
           token: ${{ secrets.BENCH_PAT }}
 
       - name: Download results artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: asv_new_results
+          name: asv_periodic_results
           path: new_results
 
       - name: Copy new results and push to pybamm-bench repo

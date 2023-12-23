@@ -59,7 +59,7 @@ for key, C_rate in C_rates.items():
     current = 24 * C_rate
     # load the comsol results
     comsol_results_path = pybamm.get_parameters_filepath(
-        "input/comsol_results/comsol_{}C.pickle".format(key)
+        f"input/comsol_results/comsol_{key}C.pickle"
     )
     comsol_variables = pickle.load(open(comsol_results_path, "rb"))
     comsol_time = comsol_variables["time"]
@@ -95,7 +95,7 @@ for key, C_rate in C_rates.items():
         voltage_sol,
         color=color,
         linestyle="-",
-        label="{} C".format(C_rate),
+        label=f"{C_rate} C",
     )
     voltage_difference_plot.plot(
         discharge_capacity_sol[0:end_index], voltage_difference, color=color
