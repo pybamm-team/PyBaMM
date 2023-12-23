@@ -1,4 +1,4 @@
-name: Check URLs with Lychee
+name: Check URLs with Lychee and Sphinx
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - develop
   pull_request:
   schedule:
-    # Run everyday at 3 am UTC
+    # Run every day at 3 am UTC
     - cron: "0 3 * * *"
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      # cache Lychee results to avoid hitting rate limits
+      # Cache Lychee results to avoid hitting rate limits
       - name: Restore lychee cache
         uses: actions/cache@v3
         with:
@@ -23,14 +23,13 @@ jobs:
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
 
-      # check URLs with Lychee
+      # Check URLs with Lychee
       - uses: actions/checkout@v4
 
-      # use stable version for now to avoid breaking changes
       - name: Lychee URL checker
         uses: lycheeverse/lychee-action@v1.8.0
         with:
-          # arguments with file types to check
+          # Arguments with file types to check
           args: >-
             --cache
             --no-progress
@@ -53,10 +52,20 @@ jobs:
             './**/*.ipynb'
             './**/*.json'
             './**/*.toml'
-          # fail the action on broken links
+          # Fail the action on broken links
           fail: true
           jobSummary: true
           format: markdown
         env:
-          # to be used in case rate limits are surpassed
+          # To be used in case rate limits are surpassed
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      # Check Sphinx-related links using Sphinx linkcheck builder
+      - name: Install Sphinx
+        run: |
+          pip install -r docs/requirements.txt
+      - name: Run Sphinx linkcheck
+        run: |
+          sphinx-build -b linkcheck docs docs/build/linkcheck
+
+      # Optionally, you can add more steps to handle Sphinx linkcheck results
