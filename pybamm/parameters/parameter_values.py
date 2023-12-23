@@ -295,8 +295,7 @@ class ParameterValues:
             {
                 "Initial concentration in {} electrode [mol.m-3]".format(
                     options["working electrode"]
-                ): x
-                * c_max
+                ): x * c_max
             }
         )
         return parameter_values
@@ -392,9 +391,7 @@ class ParameterValues:
             `model.variables = {}`)
 
         """
-        pybamm.logger.info(
-            f"Start setting parameters for {unprocessed_model.name}"
-        )
+        pybamm.logger.info(f"Start setting parameters for {unprocessed_model.name}")
 
         # set up inplace vs not inplace
         if inplace:
@@ -414,18 +411,14 @@ class ParameterValues:
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (rhs)"
-            )
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")
             new_variable = self.process_symbol(variable)
             new_rhs[new_variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (algebraic)"
-            )
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (algebraic)")
             new_variable = self.process_symbol(variable)
             new_algebraic[new_variable] = self.process_symbol(equation)
         model.algebraic = new_algebraic
@@ -443,17 +436,13 @@ class ParameterValues:
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (variables)"
-            )
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
             new_variables[variable] = self.process_symbol(equation)
         model.variables = new_variables
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.verbose(
-                f"Processing parameters for event '{event.name}''"
-            )
+            pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
@@ -462,9 +451,7 @@ class ParameterValues:
 
         interpolant_events = self._get_interpolant_events(model)
         for event in interpolant_events:
-            pybamm.logger.verbose(
-                f"Processing parameters for event '{event.name}''"
-            )
+            pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type

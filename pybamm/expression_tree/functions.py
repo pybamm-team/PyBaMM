@@ -10,6 +10,7 @@ from typing import Callable
 import pybamm
 from pybamm.util import have_optional_dependency
 
+
 class Function(pybamm.Symbol):
     """
     A node in the expression tree representing an arbitrary function.
@@ -412,7 +413,7 @@ class Erf(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return 2 / np.sqrt(np.pi) * exp(-children[0] ** 2)
+        return 2 / np.sqrt(np.pi) * exp(-(children[0] ** 2))
 
 
 def erf(child):
