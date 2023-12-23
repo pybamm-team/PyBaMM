@@ -5,6 +5,7 @@ import argparse
 import sys
 import logging
 import subprocess
+from multiprocessing import cpu_count
 
 from pybamm.util import root_dir
 
@@ -12,6 +13,9 @@ if sys.platform == "win32":
     raise Exception("pybamm_install_odes is not supported on Windows.")
 
 SUNDIALS_VERSION = "6.5.0"
+
+# Build in parallel wherever possible
+os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
