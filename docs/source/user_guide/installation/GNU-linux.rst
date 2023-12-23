@@ -102,7 +102,7 @@ For an introduction to virtual environments, see
 Optional - scikits.odes solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize the wrapped SUNDIALS ODE and DAE `solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__ in PyBaMM.
+Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize its interfaced SUNDIALS ODE and DAE `solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__ wrapped in PyBaMM.
 
 .. note::
 
@@ -122,7 +122,6 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize t
       apt install libopenblas-dev
       pybamm_install_odes
 
-   The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 .. tab:: macOS
@@ -131,7 +130,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize t
 
    .. code:: bash
 
-      brew install openblas
+      brew install openblas gcc gfortran
       pybamm_install_odes
 
    The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your

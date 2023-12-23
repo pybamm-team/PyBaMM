@@ -178,7 +178,6 @@ jobs:
           NONINTERACTIVE: 1
         run: |
           brew analytics off
-          brew update
           brew install openblas
           brew reinstall gcc gfortran
 
