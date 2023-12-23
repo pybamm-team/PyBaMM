@@ -331,9 +331,9 @@ class IDAKLUJax(object):
         This version assumes all parameters are provided as np.ndarray vectors
         """
         # Reshape y_bar
-        logging.debug("Reshaping y_bar to ", str(y_bar_s0), str(y_bar_s1))
+        logging.debug(f"Reshaping y_bar to ({y_bar_s0}, {y_bar_s1})")
         y_bar = y_bar.reshape(y_bar_s0, y_bar_s1)
-        logging.debug("y_bar is now: ", str(y_bar))
+        logging.debug(f"y_bar is now: {y_bar}")
         primals = primal_t, *tuple([k for k in primal_inputs])
         return self._jax_vjp_impl(y_bar, invar, *primals)
 
@@ -467,7 +467,7 @@ class IDAKLUJax(object):
             """Batch rule for Primitive
 
             Takes batched inputs, returns batched outputs and batched axes"""
-            logging.info("f_batch: ", type(args), type(batch_axes))
+            logging.info(f"f_batch: {type(args)}, {type(batch_axes)}")
             t = args[0]
             inputs = args[1:]
             if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
@@ -551,7 +551,7 @@ class IDAKLUJax(object):
 
         def f_jvp(primals, tangents):
             """Main wrapper for the JVP function"""
-            logging.info("f_jvp: ", *list(map(type, (*primals, *tangents))))
+            logging.info("f_jvp")
 
             # Deal with Zero tangents
             def make_zero(prim, tan):
@@ -566,7 +566,7 @@ class IDAKLUJax(object):
                 *primals,
                 *zero_mapped_tangents,
             )
-            logging.debug("f_jvp [exit]: ", (type(y), y), (type(y_dot), y_dot))
+            logging.debug(f"f_jvp [exit]: {type(y)}, {y}, {type(y_dot)}, {y_dot}")
             return y, y_dot
 
         ad.primitive_jvps[f_p] = f_jvp
@@ -576,7 +576,7 @@ class IDAKLUJax(object):
         @f_jvp_p.def_impl
         def f_jvp_eval(*args):
             """Concrete implementation of JVP primitive (for non-jitted evaluation)"""
-            logging.info("f_jvp_p_eval: ", type(args))
+            logging.info(f"f_jvp_p_eval: {type(args)}")
             return self._jax_jvp_impl(*args)
 
         def f_jvp_batch(args, batch_axes):
@@ -825,7 +825,7 @@ class IDAKLUJax(object):
             y_bar_aval = ctx.avals_in[0]
             dtype_y_bar = mlir.ir.RankedTensorType.get(y_bar_aval.shape, op_dtype)
             dims_y_bar = dtype_y_bar.shape
-            logging.debug("  y_bar shape: ", dims_y_bar)
+            logging.debug(f"  y_bar shape: {dims_y_bar}")
             layout_y_bar = tuple(range(len(dims_y_bar) - 1, -1, -1))
 
             invar_aval = ctx.avals_in[1]

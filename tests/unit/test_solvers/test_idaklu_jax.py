@@ -40,9 +40,9 @@ sim = idaklu_solver.solve(
 
 # Get jax expressions for IDAKLU solver
 output_variables = [
-    "Terminal voltage [V]",
-    "Discharge capacity [A.h]",
-    "Loss of lithium inventory [%]",
+    "Voltage [V]",
+    "Current [A]",
+    "Time [min]",
 ]
 # Single output variable
 idaklu_jax_solver1 = idaklu_solver.jaxify(
@@ -665,14 +665,14 @@ class TestIDAKLUJax(TestCase):
         print("\ngrad_wrapper_sse")
 
         # Use surrogate for experimental data
-        data = sim["Terminal voltage [V]"](t_eval)
+        data = sim["Voltage [V]"](t_eval)
 
         # Define SSE function
         #
         # Note that although f returns a vector over time, sse() returns a scalar so
         # that it can be passed to grad() directly using time-vector inputs.
         def sse(t, inputs):
-            vf = idaklu_jax_solver.get_var(f, "Terminal voltage [V]")
+            vf = idaklu_jax_solver.get_var(f, "Voltage [V]")
             return jnp.sum((vf(t_eval, inputs) - data) ** 2)
 
         # Create an imperfect prediction
@@ -684,7 +684,7 @@ class TestIDAKLUJax(TestCase):
             inputs=inputs_pred,
             calculate_sensitivities=True,
         )
-        pred = sim_pred["Terminal voltage [V]"]
+        pred = sim_pred["Voltage [V]"]
 
         # Check value against actual SSE
         sse_actual = np.sum((pred(t_eval) - data) ** 2)
