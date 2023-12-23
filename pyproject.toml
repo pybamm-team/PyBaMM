@@ -1,7 +1,6 @@
 [build-system]
 requires = [
     "setuptools>=64",
-    "wheel",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.3; platform_system!='Windows'",
     "cmake; platform_system!='Windows'",
@@ -226,6 +225,7 @@ ignore = [
 
 # NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
+minversion = "6"
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
@@ -234,11 +234,16 @@ required_plugins = [
 addopts = [
   "-nauto",
   "-v",
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
 ]
 testpaths = [
   "docs/source/examples/",
 ]
 console_output_style = "progress"
+xfail_strict = true
+filterwarnings = ["error"]
 
 # Logging configuration
 log_cli = "true"
