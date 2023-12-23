@@ -127,6 +127,7 @@ odes = [
 all = [
     "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
+    "parameterized>=0.9",
     "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]",
 ]
 

@@ -3,18 +3,12 @@ import numpy as np
 import logging
 import warnings
 import numbers
-import jax
 
+from typing import Callable
 from typing import Union
+from typing import List
+
 from functools import lru_cache
-from jax import lax
-from jax import numpy as jnp
-from jax.interpreters import ad
-from jax.interpreters import mlir
-from jax.interpreters import batching
-from jax.interpreters.mlir import custom_call
-from jax.lib import xla_client
-from jax.tree_util import tree_flatten
 
 import importlib.util
 import importlib
@@ -28,16 +22,42 @@ if idaklu_spec is not None:
     except ImportError:  # pragma: no cover
         idaklu_spec = None
 
+if pybamm.have_jax():
+    import jax
+    from jax import lax
+    from jax import numpy as jnp
+    from jax.interpreters import ad
+    from jax.interpreters import mlir
+    from jax.interpreters import batching
+    from jax.interpreters.mlir import custom_call
+    from jax.lib import xla_client
+    from jax.tree_util import tree_flatten
 
-class IDAKLUJax(object):
+
+class IDAKLUJax:
     """
     JAX wrapper for IDAKLU solver
 
-    This class is used by an IDAKLUSolver object and is not intended to be
-    run directly.
+    Objects of this class should be created via an IDAKLUSolver object.
+
+    Parameters
+    ----------
+    solver : :class:`pybamm.IDAKLUSolver`
+        The IDAKLU solver object to be wrapped
     """
 
-    def __init__(self, solver):
+    def __init__(
+        self,
+        solver,
+    ):
+        if not pybamm.have_jax():
+            raise ModuleNotFoundError(
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+            )
+        if not pybamm.have_idaklu():
+            raise ModuleNotFoundError(
+                "IDAKLU is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html"
+            )
         self.jaxpr = None  # JAX expression
         self.idaklu_jax_obj = None  # IDAKLU-JAX object
         self.solver = solver  # Originating IDAKLU Solver object
@@ -51,10 +71,21 @@ class IDAKLUJax(object):
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
         return self.jaxpr
 
-    def get_var(self, f, varname):
+    def get_var(
+        self,
+        f: Callable,
+        varname: str,
+    ):
         """Helper function to extract a single variable from the jaxified expression
 
         Returns a JAX expression
+
+        Parameters
+        ----------
+        f : function
+            The jaxified expression
+        varname : str
+            The name of the variable to extract
         """
 
         def f_isolated(*args, **kwargs):
@@ -69,10 +100,21 @@ class IDAKLUJax(object):
 
         return f_isolated
 
-    def get_vars(self, f, varnames):
+    def get_vars(
+        self,
+        f: Callable,
+        varnames: List[str],
+    ):
         """Helper function to extract multiple variables from the jaxified expression
 
         Returns a JAX expression
+
+        Parameters
+        ----------
+        f : function
+            The jaxified expression
+        varnames : list of str
+            The names of the variables to extract
         """
 
         def f_isolated(*args, **kwargs):
@@ -89,11 +131,29 @@ class IDAKLUJax(object):
 
         return f_isolated
 
-    def jax_value(self, *, f=None, t=None, inputs=None, output_variables=None):
+    def jax_value(
+        self,
+        *,
+        f: Union[Callable, None] = None,
+        t: np.ndarray = None,
+        inputs: Union[dict, None] = None,
+        output_variables: Union[List[str], None] = None,
+    ):
         """Helper function to compute the gradient of a jaxified expression
 
         Returns a numeric (np.ndarray) object (not a JAX expression).
         Parameters are inferred from the base object, but can be overridden.
+
+        Parameters
+        ----------
+        f : function
+            The jaxified expression
+        t : float | np.ndarray, optional
+            Time sample or vector of time samples
+        inputs : dict, optional
+            dictionary of input values
+        output_variables : list of str, optional
+            The variables to be returned. If None, the variables in the model are used.
         """
         try:
             f = f if f else self.jaxify_f
@@ -112,11 +172,29 @@ class IDAKLUJax(object):
             )(t, inputs)
         return d
 
-    def jax_grad(self, *, f=None, t=None, inputs=None, output_variables=None):
+    def jax_grad(
+        self,
+        *,
+        f: Union[Callable, None] = None,
+        t: np.ndarray = None,
+        inputs: Union[dict, None] = None,
+        output_variables: Union[List[str], None] = None,
+    ):
         """Helper function to compute the gradient of a jaxified expression
 
         Returns a numeric (np.ndarray) object (not a JAX expression).
         Parameters are inferred from the base object, but can be overridden.
+
+        Parameters
+        ----------
+        f : function
+            The jaxified expression
+        t : float | np.ndarray, optional
+            Time sample or vector of time samples
+        inputs : dict, optional
+            dictionary of input values
+        output_variables : list of str, optional
+            The variables to be returned. If None, the variables in the model are used.
         """
         try:
             f = f if f else self.jaxify_f
@@ -356,11 +434,19 @@ class IDAKLUJax(object):
         """Return a unique name for this solver object for naming the JAX primitives"""
         return f"{self.idaklu_jax_obj.get_index()}"
 
-    def jaxify(self, *args, **kwargs):
+    def jaxify(
+        self,
+        model,
+        t_eval,
+        *,
+        output_variables=None,
+        inputs=None,
+        calculate_sensitivities=True,
+    ):
         """JAXify the model and solver
 
-        This method creates a JAX expression representing the IDAKLU-wrapped solver
-        object. The expression is cached and reused for subsequent calls.
+        Creates a JAX expression representing the IDAKLU-wrapped solver
+        object.
 
         Parameters
         ----------
@@ -382,7 +468,13 @@ class IDAKLUJax(object):
                 "Overwriting with new expression.",
                 UserWarning,
             )
-        self.jaxpr = self._jaxify(*args, **kwargs)
+        self.jaxpr = self._jaxify(
+            model,
+            t_eval,
+            output_variables=output_variables,
+            inputs=inputs,
+            calculate_sensitivities=calculate_sensitivities,
+        )
         return self.jaxpr
 
     def _jaxify(

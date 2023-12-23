@@ -677,8 +677,40 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             raise pybamm.SolverError("idaklu solver failed")
 
-    def jaxify(self, *args, **kwargs):
-        """Return a jaxified version of the solver"""
+    def jaxify(
+        self,
+        model,
+        t_eval,
+        *,
+        output_variables=None,
+        inputs=None,
+        calculate_sensitivities=True,
+    ):
+        """JAXify the solver object
+
+        Creates a JAX expression representing the IDAKLU-wrapped solver
+        object.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model to be solved
+        t_eval : numeric type, optional
+            The times at which to compute the solution. If None, the times in the model
+            are used.
+        output_variables : list of str, optional
+            The variables to be returned. If None, the variables in the model are used.
+        inputs : dict, optional
+            Any inputs to the model
+        calculate_sensitivities : bool, optional
+            Whether to calculate sensitivities. Default is True.
+        """
         obj = pybamm.IDAKLUJax(self)
-        obj.jaxify(*args, **kwargs)
+        obj.jaxify(
+            model,
+            t_eval,
+            output_variables=output_variables,
+            inputs=inputs,
+            calculate_sensitivities=calculate_sensitivities,
+        )
         return obj

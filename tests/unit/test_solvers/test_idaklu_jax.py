@@ -11,6 +11,9 @@ import jax
 import jax.numpy as jnp
 import unittest
 
+if not pybamm.have_idaklu() or not pybamm.have_jax():
+    print("Skipping IDAKLUJax tests as IDAKLU Solver and/or JAX are not available")
+
 inputs = {
     "Current function [A]": 0.222,
     "Separator porosity": 0.3,
