@@ -1,4 +1,4 @@
-GNU-Linux & MacOS
+gnu-linux-mac & MacOS
 =================
 
 .. contents::
