@@ -285,7 +285,7 @@ class IDAKLUJax:
 
     def _jax_solve(
         self,
-        t: float | np.ndarray,
+        t: Union[float, np.ndarray],
         *inputs,
     ) -> np.ndarray:
         """Solver implementation used by f-bind"""

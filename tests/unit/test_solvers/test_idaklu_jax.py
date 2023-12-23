@@ -11,79 +11,74 @@ import jax
 import jax.numpy as jnp
 import unittest
 
-if not pybamm.have_idaklu() or not pybamm.have_jax():
-    print("Skipping IDAKLUJax tests as IDAKLU Solver and/or JAX are not available")
+if pybamm.have_idaklu() and pybamm.have_jax():
+    inputs = {
+        "Current function [A]": 0.222,
+        "Separator porosity": 0.3,
+    }
 
-inputs = {
-    "Current function [A]": 0.222,
-    "Separator porosity": 0.3,
-}
+    model = pybamm.lithium_ion.DFN()
+    geometry = model.default_geometry
+    param = model.default_parameter_values
+    param.update({key: "[input]" for key in inputs.keys()})
+    param.process_geometry(geometry)
+    param.process_model(model)
+    var = pybamm.standard_spatial_vars
+    var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 10, var.r_p: 10}
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    disc.process_model(model)
+    t_eval = np.linspace(0, 360, 10)
+    idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
-model = pybamm.lithium_ion.DFN()
-geometry = model.default_geometry
-param = model.default_parameter_values
-param.update({key: "[input]" for key in inputs.keys()})
-param.process_geometry(geometry)
-param.process_model(model)
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 10, var.r_p: 10}
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-disc.process_model(model)
-t_eval = np.linspace(0, 360, 10)
-idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+    # Create surrogate data (using base IDAKLU solver)
+    sim = idaklu_solver.solve(
+        model,
+        t_eval,
+        inputs=inputs,
+        calculate_sensitivities=True,
+    )
 
-# Create surrogate data (using base IDAKLU solver)
-sim = idaklu_solver.solve(
-    model,
-    t_eval,
-    inputs=inputs,
-    calculate_sensitivities=True,
-)
+    # Get jax expressions for IDAKLU solver
+    output_variables = [
+        "Voltage [V]",
+        "Current [A]",
+        "Time [min]",
+    ]
+    # Single output variable
+    idaklu_jax_solver1 = idaklu_solver.jaxify(
+        model,
+        t_eval,
+        output_variables=output_variables[:1],
+        inputs=inputs,
+        calculate_sensitivities=True,
+    )
+    f1 = idaklu_jax_solver1.get_jaxpr()
+    # Multiple output variables
+    idaklu_jax_solver3 = idaklu_solver.jaxify(
+        model,
+        t_eval,
+        output_variables=output_variables,
+        inputs=inputs,
+        calculate_sensitivities=True,
+    )
+    f3 = idaklu_jax_solver3.get_jaxpr()
 
-# Get jax expressions for IDAKLU solver
-output_variables = [
-    "Voltage [V]",
-    "Current [A]",
-    "Time [min]",
-]
-# Single output variable
-idaklu_jax_solver1 = idaklu_solver.jaxify(
-    model,
-    t_eval,
-    output_variables=output_variables[:1],
-    inputs=inputs,
-    calculate_sensitivities=True,
-)
-f1 = idaklu_jax_solver1.get_jaxpr()
-# Multiple output variables
-idaklu_jax_solver3 = idaklu_solver.jaxify(
-    model,
-    t_eval,
-    output_variables=output_variables,
-    inputs=inputs,
-    calculate_sensitivities=True,
-)
-f3 = idaklu_jax_solver3.get_jaxpr()
+    # Common test parameters
 
+    in_axes = (0, None)  # vmap over time, not inputs
+    k = 5  # time index for scalar tests
 
-# Common test parameters
+    # Define passthrough wrapper for non-jitted evaluation
+    def no_jit(f):
+        return f
 
-in_axes = (0, None)  # vmap over time, not inputs
-k = 5  # time index for scalar tests
-
-
-# Define passthrough wrapper for non-jitted evaluation
-def no_jit(f):
-    return f
-
-
-testcase = [
-    (output_variables[:1], idaklu_jax_solver1, f1, no_jit),  # single output
-    (output_variables[:1], idaklu_jax_solver1, f1, jax.jit),  # jit single output
-    (output_variables, idaklu_jax_solver3, f3, no_jit),  # multiple outputs
-    (output_variables, idaklu_jax_solver3, f3, jax.jit),  # jit multiple outputs
-]
+    testcase = [
+        (output_variables[:1], idaklu_jax_solver1, f1, no_jit),  # single output
+        (output_variables[:1], idaklu_jax_solver1, f1, jax.jit),  # jit single output
+        (output_variables, idaklu_jax_solver3, f3, no_jit),  # multiple outputs
+        (output_variables, idaklu_jax_solver3, f3, jax.jit),  # jit multiple outputs
+    ]
 
 
 @unittest.skipIf(
