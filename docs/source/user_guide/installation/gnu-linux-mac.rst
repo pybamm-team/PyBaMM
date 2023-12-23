@@ -133,8 +133,8 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
       brew install openblas gcc gfortran
       pybamm_install_odes
 
-   The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
-   system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
+The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
+system (under ``~/.local``), before installing `scikits.odes <https://scikits-odes.readthedocs.io/en/stable/installation.html>`__ . (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with `scikits.odes <https://scikits-odes.readthedocs.io/en/stable/installation.html>`__)
 
 To avoid installation failures when using ``pip install pybamm[odes]``, make sure to set the ``SUNDIALS_INST`` environment variable. If you have installed SUNDIALS using Homebrew, set the variable to the appropriate location. For example:
 
