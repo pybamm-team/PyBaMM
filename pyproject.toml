@@ -223,6 +223,7 @@ ignore = [
 "docs/*" = ["T20"]
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]
+"docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
 # NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
