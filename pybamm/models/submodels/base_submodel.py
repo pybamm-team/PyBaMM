@@ -70,7 +70,7 @@ class BaseSubModel(pybamm.BaseModel):
         super().__init__(name)
         self.domain = domain
         self.name = name
-
+        self.variables_by_submodel = {}
         self.external = external
 
         if options is None or type(options) == dict:  # noqa: E721
