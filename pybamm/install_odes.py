@@ -20,9 +20,11 @@ os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
     import wget
+
     NO_WGET = False
 except ModuleNotFoundError:
     NO_WGET = True
+
 
 def download_extract_library(url, directory):
     # Download and extract archive at url
@@ -36,6 +38,7 @@ def download_extract_library(url, directory):
     tar = tarfile.open(archive)
     tar.extractall(directory)
 
+
 def install_sundials(download_dir, install_dir):
     # Download the SUNDIALS library and compile it.
     logger = logging.getLogger("scikits.odes setup")
@@ -45,9 +48,7 @@ def install_sundials(download_dir, install_dir):
     except OSError:
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
-    url = (
-        f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
-    )
+    url = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)
 
@@ -77,6 +78,7 @@ def install_sundials(download_dir, install_dir):
     make_cmd = ["make", "install"]
     subprocess.run(make_cmd, cwd=build_directory, check=True)
 
+
 def update_LD_LIBRARY_PATH(install_dir):
     # Look for the current python virtual env and add an export statement
     # for LD_LIBRARY_PATH in the activate script. If no virtual env is found,
@@ -97,12 +99,16 @@ def update_LD_LIBRARY_PATH(install_dir):
         elif os.path.exists(zshrc_path):
             script_path = os.path.join(os.environ.get("HOME"), ".zshrc")
         elif os.path.exists(bashrc_path) and os.path.exists(zshrc_path):
-            print("Both .bashrc and .zshrc found in the home directory. Setting .bashrc as path")
+            print(
+                "Both .bashrc and .zshrc found in the home directory. Setting .bashrc as path"
+            )
             script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
         else:
             print("Neither .bashrc nor .zshrc found in the home directory.")
 
-    if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv("LD_LIBRARY_PATH"):
+    if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv(
+        "LD_LIBRARY_PATH"
+    ):
         print(f"{install_dir}/lib was found in LD_LIBRARY_PATH.")
         if os.path.exists(bashrc_path):
             print("--> Not updating venv activate or .bashrc scripts")
@@ -116,6 +122,7 @@ def update_LD_LIBRARY_PATH(install_dir):
                 print(
                     f"Adding {install_dir}/lib to LD_LIBRARY_PATH" f" in {script_path}"
                 )
+
 
 def main(arguments=None):
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -181,6 +188,7 @@ def main(arguments=None):
     os.environ["SUNDIALS_INST"] = SUNDIALS_LIB_DIR
     env = os.environ.copy()
     subprocess.run(["pip", "install", "scikits.odes"], env=env, check=True)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
