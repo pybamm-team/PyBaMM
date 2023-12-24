@@ -706,9 +706,7 @@ class TestIDAKLUJax(TestCase):
                     idaklu_jax_solver.get_var(f, outvar),
                     argnums=1,
                 ),
-            )(
-                t_eval[k], inputs
-            )  # output should be a dictionary of inputs
+            )(t_eval[k], inputs)  # output should be a dictionary of inputs
             print(out)
             flat_out, _ = tree_flatten(out)
             flat_out = np.array([f for f in flat_out]).flatten()
