@@ -476,12 +476,12 @@ class BaseModel:
         """
         if by_submodel:
             submodel_info = self.get_parameter_info(by_submodel=True)
-            for submodel_name, submodel_vars in submodel_info.items():  # Corrected this line
-                if not submodel_vars:  # Corrected this line
+            for submodel_name, submodel_vars in submodel_info.items():
+                if not submodel_vars:
                     print(f"'{submodel_name}' submodel parameters: \nNo parameters\n")
                 else:
                     print(f"'{submodel_name}' submodel parameters:")
-                    info = submodel_vars  # Corrected this line
+                    info = submodel_vars
                     max_param_name_length = 0
                     max_param_type_length = 0
 
