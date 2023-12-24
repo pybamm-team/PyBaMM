@@ -302,9 +302,7 @@ class UserSupplied1DSubMesh(SubMesh1D):
                 """User-suppled edges has should have length (npts + 1) but has length
                 {}.Number of points (npts) for domain {} is {}.""".format(
                     len(edges), spatial_var.domain, npts
-                ).replace(
-                    "\n                ", " "
-                )
+                ).replace("\n                ", " ")
             )
 
         # check end points of edges agree with spatial_lims

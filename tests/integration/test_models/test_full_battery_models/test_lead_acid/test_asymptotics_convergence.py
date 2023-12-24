@@ -41,7 +41,7 @@ class TestAsymptoticConvergence(TestCase):
         full_disc.process_model(full_model)
 
         def get_max_error(current):
-            pybamm.logger.info("current = {}".format(current))
+            pybamm.logger.info(f"current = {current}")
             # Solve, make sure times are the same and use tight tolerances
             t_eval = np.linspace(0, 3600 * 17 / current)
             solver = pybamm.CasadiSolver()

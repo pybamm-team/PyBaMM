@@ -24,7 +24,7 @@ class Matrix(pybamm.Array):
         if isinstance(entries, list):
             entries = np.array(entries)
         if name is None:
-            name = "Matrix {!s}".format(entries.shape)
+            name = f"Matrix {entries.shape!s}"
             if issparse(entries):
                 name = "Sparse " + name
         # Convert all sparse matrices to csr

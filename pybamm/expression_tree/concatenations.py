@@ -58,7 +58,7 @@ class Concatenation(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         out = self.name + "("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 
@@ -77,11 +77,11 @@ class Concatenation(pybamm.Symbol):
         domain = []
         for child in children:
             if not isinstance(child, pybamm.Symbol):
-                raise TypeError("{} is not a pybamm symbol".format(child))
+                raise TypeError(f"{child} is not a pybamm symbol")
             child_domain = child.domain
             if child_domain == []:
                 raise pybamm.DomainError(
-                    "Cannot concatenate child '{}' with empty domain".format(child)
+                    f"Cannot concatenate child '{child}' with empty domain"
                 )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain
@@ -191,7 +191,7 @@ class NumpyConcatenation(Concatenation):
             *children,
             name="numpy_concatenation",
             check_domain=False,
-            concat_fun=np.concatenate
+            concat_fun=np.concatenate,
         )
 
     @classmethod
@@ -201,7 +201,7 @@ class NumpyConcatenation(Concatenation):
             *snippet["children"],
             name="numpy_concatenation",
             domains=snippet["domains"],
-            concat_fun=np.concatenate
+            concat_fun=np.concatenate,
         )
 
         return instance
@@ -280,7 +280,7 @@ class DomainConcatenation(Concatenation):
         instance = super()._from_json(
             *snippet["children"],
             name="domain_concatenation",
-            domains=snippet["domains"]
+            domains=snippet["domains"],
         )
 
         def repack_defaultDict(slices):
@@ -415,7 +415,7 @@ class SparseStack(Concatenation):
             *children,
             name="sparse_stack",
             check_domain=False,
-            concat_fun=concatenation_function
+            concat_fun=concatenation_function,
         )
 
     def _concatenation_new_copy(self, children):

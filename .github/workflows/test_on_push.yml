@@ -21,9 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Check style
         run: |
@@ -38,8 +38,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         # We check coverage on Ubuntu with Python 3.11, so we skip unit tests for it here
+        # TODO: check coverage with Python 3.12 when [odes] supports it
         exclude:
           - os: ubuntu-latest
             python-version: "3.11"
@@ -86,7 +87,7 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -116,6 +117,7 @@ jobs:
         run: python -m nox -s unit
 
   # Runs only on Ubuntu with Python 3.11
+  # TODO: check coverage with Python 3.12 when [odes] supports it
   check_coverage:
     needs: style
     runs-on: ubuntu-latest
@@ -143,7 +145,7 @@ jobs:
 
       - name: Set up Python 3.11
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
@@ -180,7 +182,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     name: Integration tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
@@ -224,7 +226,7 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -253,14 +255,14 @@ jobs:
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-# Runs only on Ubuntu with Python 3.11. Skips IDAKLU module compilation
+# Runs only on Ubuntu with Python 3.12. Skips IDAKLU module compilation
 # for speedups, which is already tested in other jobs.
   run_doctests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Doctests (ubuntu-latest / Python 3.11)
+    name: Doctests (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -270,39 +272,39 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
-          packages: gfortran gcc graphviz pandoc
+          packages: graphviz pandoc
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
+      - name: Install TeXLive for Linux
         run: |
           sudo apt-get update
           sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
 
       - name: Install nox
         run: python -m pip install nox
 
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
+      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.12
         run: python -m nox -s doctests
 
-      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
+      - name: Check if the documentation can be built for GNU/Linux with Python 3.12
         run: python -m nox -s docs
 
-  # Runs only on Ubuntu with Python 3.11
+  # Runs only on Ubuntu with Python 3.12
   run_example_tests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Example notebooks (ubuntu-latest / Python 3.11)
+    name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -322,11 +324,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
 
       - name: Install nox
@@ -348,16 +350,16 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: python -m nox -s pybamm-requires
 
-      - name: Run example notebooks tests for GNU/Linux with Python 3.11
+      - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
-  # Runs only on Ubuntu with Python 3.11
+  # Runs only on Ubuntu with Python 3.12
   run_scripts_tests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Example scripts (ubuntu-latest / Python 3.11)
+    name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -377,11 +379,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
 
       - name: Install nox
@@ -403,5 +405,5 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         run: python -m nox -s pybamm-requires
 
-      - name: Run example scripts tests for GNU/Linux with Python 3.11
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts

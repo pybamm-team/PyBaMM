@@ -54,6 +54,7 @@ from .util import (
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
+
 #
 # Classes for the Expression Tree
 #
@@ -227,12 +228,13 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .experiment.experiment import Experiment
 from . import experiment
+from .experiment import step
 
 
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components

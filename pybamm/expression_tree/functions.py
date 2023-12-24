@@ -10,6 +10,7 @@ from typing import Callable
 import pybamm
 from pybamm.util import have_optional_dependency
 
+
 class Function(pybamm.Symbol):
     """
     A node in the expression tree representing an arbitrary function.
@@ -47,9 +48,9 @@ class Function(pybamm.Symbol):
             self.name = name
         else:
             try:
-                name = "function ({})".format(function.__name__)
+                name = f"function ({function.__name__})"
             except AttributeError:
-                name = "function ({})".format(function.__class__)
+                name = f"function ({function.__class__})"
         domains = self.get_children_domains(children)
 
         self.function = function
@@ -60,9 +61,9 @@ class Function(pybamm.Symbol):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        out = "{}(".format(self.name[10:-1])
+        out = f"{self.name[10:-1]}("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 
@@ -412,7 +413,7 @@ class Erf(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return 2 / np.sqrt(np.pi) * exp(-children[0] ** 2)
+        return 2 / np.sqrt(np.pi) * exp(-(children[0] ** 2))
 
 
 def erf(child):
