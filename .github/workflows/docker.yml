@@ -5,6 +5,8 @@ on:
   push:
     branches:
     - develop
+  release:
+    types: [published]
 
 jobs:
   build_docker_images:
