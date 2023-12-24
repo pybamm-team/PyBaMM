@@ -203,7 +203,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[0]}.multiply({children_vars[1]})"
             elif scipy.sparse.issparse(dummy_eval_right):
@@ -215,7 +217,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"
             else:
@@ -226,12 +230,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[0]}.multiply({children_vars[1]})"
             elif scipy.sparse.issparse(dummy_eval_right):
                 if output_jax and is_scalar(dummy_eval_left):
-                    symbol_str = f"{children_vars[1]}.scalar_multiply({children_vars[0]})"
+                    symbol_str = (
+                        f"{children_vars[1]}.scalar_multiply({children_vars[0]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[1]}.multiply({children_vars[0]})"
             else:

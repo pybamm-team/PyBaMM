@@ -577,9 +577,7 @@ class Simulation:
                             capture the input. Try refining t_eval. Alternatively,
                             passing t_eval = None automatically sets t_eval to be the
                             points in the data.
-                            """.format(
-                                dt_eval_max, dt_data_min
-                            ),
+                            """.format(dt_eval_max, dt_data_min),
                             pybamm.SolverWarning,
                         )
 

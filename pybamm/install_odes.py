@@ -113,7 +113,9 @@ def update_LD_LIBRARY_PATH(install_dir):
             # Just check that export statement is not already there.
             if export_statement not in fh.read():
                 fh.write(export_statement)
-                print(f"Adding {install_dir}/lib to LD_LIBRARY_PATH in {script_path}")
+                print(
+                    f"Adding {install_dir}/lib to LD_LIBRARY_PATH" f" in {script_path}"
+                )
 
 def main(arguments=None):
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

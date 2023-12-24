@@ -57,15 +57,17 @@ subprocess.run(["otool", "-L", os.path.join(casadi_dir, libcpp_name)])
 # This is needed for the casadi python bindings to work while repairing the wheel
 
 subprocess.run(
-    ["cp",
-    os.path.join(casadi_dir, libcasadi_37_name),
-    os.path.join(os.getenv("HOME"),".local/lib")
+    [
+        "cp",
+        os.path.join(casadi_dir, libcasadi_37_name),
+        os.path.join(os.getenv("HOME"), ".local/lib"),
     ]
 )
 
 subprocess.run(
-    ["cp",
-    os.path.join(casadi_dir, libcpp_name),
-    os.path.join(os.getenv("HOME"),".local/lib")
+    [
+        "cp",
+        os.path.join(casadi_dir, libcpp_name),
+        os.path.join(os.getenv("HOME"), ".local/lib"),
     ]
 )

@@ -66,9 +66,7 @@ class Settings:
     @min_max_mode.setter
     def min_max_mode(self, mode):
         if mode not in ["exact", "soft", "smooth"]:
-            raise ValueError(
-                "Smoothing mode must be 'exact', 'soft', or 'smooth'"
-            )
+            raise ValueError("Smoothing mode must be 'exact', 'soft', or 'smooth'")
         self._min_max_mode = mode
 
     @property
@@ -78,13 +76,9 @@ class Settings:
     @min_max_smoothing.setter
     def min_max_smoothing(self, k):
         if self._min_max_mode == "soft" and k <= 0:
-            raise ValueError(
-                "Smoothing parameter must be a strictly positive number"
-            )
+            raise ValueError("Smoothing parameter must be a strictly positive number")
         if self._min_max_mode == "smooth" and k < 1:
-            raise ValueError(
-                "Smoothing parameter must be greater than 1"
-            )
+            raise ValueError("Smoothing parameter must be greater than 1")
         self._min_max_smoothing = k
 
     @property

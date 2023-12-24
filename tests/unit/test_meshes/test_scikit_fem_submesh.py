@@ -280,7 +280,7 @@ class TestScikitFiniteElement2DSubMesh(TestCase):
 
         new_submesh = pybamm.ScikitUniform2DSubMesh._from_json(submesh)
 
-        for x, y in zip(mesh['current collector'].edges, new_submesh.edges):
+        for x, y in zip(mesh["current collector"].edges, new_submesh.edges):
             np.testing.assert_array_equal(x, y)
 
 

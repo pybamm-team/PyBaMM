@@ -175,13 +175,9 @@ class Discretisation:
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        pybamm.logger.verbose(
-            f"Discretise boundary conditions for {model.name}"
-        )
+        pybamm.logger.verbose(f"Discretise boundary conditions for {model.name}")
         self._bcs = self.process_boundary_conditions(model)
-        pybamm.logger.verbose(
-            f"Set internal boundary conditions for {model.name}"
-        )
+        pybamm.logger.verbose(f"Set internal boundary conditions for {model.name}")
         self.set_internal_boundary_conditions(model)
 
         # set up inplace vs not inplace
@@ -898,9 +894,7 @@ class Discretisation:
                     No key set for variable '{}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        symbol.name
-                    )
+                    """.format(symbol.name)
                 )
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1

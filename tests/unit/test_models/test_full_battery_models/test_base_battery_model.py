@@ -361,10 +361,7 @@ class TestBaseBatteryModel(TestCase):
         # thermal half-cell
         with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
             pybamm.BaseBatteryModel(
-                {
-                    "thermal": "x-full",
-                    "working electrode": "positive"
-                }
+                {"thermal": "x-full", "working electrode": "positive"}
             )
         with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
             pybamm.BaseBatteryModel(
@@ -451,9 +448,7 @@ class TestBaseBatteryModel(TestCase):
         self.assertEqual(model.options, options)
 
     def test_save_load_model(self):
-        model = (
-            pybamm.lithium_ion.SPM()
-        )
+        model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.process_model(model)
@@ -463,13 +458,15 @@ class TestBaseBatteryModel(TestCase):
         disc.process_model(model)
 
         # save model
-        model.save_model(filename="test_base_battery_model", mesh=mesh,
-                         variables=model.variables)
+        model.save_model(
+            filename="test_base_battery_model", mesh=mesh, variables=model.variables
+        )
 
         # raises error if variables are saved without mesh
         with self.assertRaises(ValueError):
-            model.save_model(filename="test_base_battery_model",
-                             variables=model.variables)
+            model.save_model(
+                filename="test_base_battery_model", variables=model.variables
+            )
 
         os.remove("test_base_battery_model.json")
 
