@@ -1,5 +1,5 @@
-gnu-linux-mac & MacOS
-=====================
+GNU/Linux & macOS
+=================
 
 .. contents::
 

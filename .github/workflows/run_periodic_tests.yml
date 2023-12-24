@@ -155,8 +155,7 @@ jobs:
           pyenv uninstall -f $( python --version )
 
   test_install_odes:
-    needs: style
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     strategy:
         matrix:
             os: [ubuntu-latest, macos-latest]
@@ -168,7 +167,13 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install gfortran gcc libopenblas-dev
       - name: Install macOS system dependencies
+        if: matrix.os == 'macos-latest'
         env:
           # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
@@ -187,10 +192,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all]
+      - name: Install PyBaMM
+        run: pip install -e .
 
       - name: Test pybamm_install_odes on ${{ matrix.os }}
         run: |
