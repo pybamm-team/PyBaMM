@@ -100,8 +100,7 @@ def update_LD_LIBRARY_PATH(install_dir):
             if export_statement not in fh.read():
                 fh.write(export_statement)
                 print(
-                    f"Adding {install_dir}/lib to LD_LIBRARY_PATH"
-                    f" in {script_path}"
+                    f"Adding {install_dir}/lib to LD_LIBRARY_PATH" f" in {script_path}"
                 )
 
 

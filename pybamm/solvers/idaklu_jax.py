@@ -53,11 +53,11 @@ class IDAKLUJax:
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
-            )
+            )  # pragma: no cover
         if not pybamm.have_idaklu():
             raise ModuleNotFoundError(
                 "IDAKLU is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html"
-            )
+            )  # pragma: no cover
         self.jaxpr = None  # JAX expression
         self.idaklu_jax_obj = None  # IDAKLU-JAX object
         self.solver = solver  # Originating IDAKLU Solver object
@@ -92,7 +92,7 @@ class IDAKLUJax:
             out = f(*args, **kwargs)
             index = self.jax_output_variables.index(varname)
             if out.ndim == 0:
-                return out
+                return out  # pragma: no cover
             elif out.ndim == 1:
                 return out[index]
             else:
@@ -123,7 +123,7 @@ class IDAKLUJax:
                 [self.jax_output_variables.index(varname) for varname in varnames]
             )
             if out.ndim == 0:
-                return out
+                return out  # pragma: no cover
             elif out.ndim == 1:
                 return out[index]
             else:
@@ -163,7 +163,7 @@ class IDAKLUJax:
                 output_variables if output_variables else self.jax_output_variables
             )
         except AttributeError:
-            raise pybamm.SolverError("jaxify() must be called before jax_grad()")
+            raise pybamm.SolverError("jaxify() must be called before jax_value()")
         d = {}
         for outvar in output_variables:
             d[outvar] = jax.vmap(
@@ -293,7 +293,7 @@ class IDAKLUJax:
         logging.debug(f"  t: {type(t)}, {t}")
         logging.debug(f"  inputs: {type(inputs)}, {inputs}")
         if isinstance(t, float):
-            t = np.array(t)
+            t = np.array(t)  # pragma: no cover
         # Returns a jax array
         out = self._jaxify_solve(t, None, *inputs)
         # Convert to numpy array
@@ -360,7 +360,7 @@ class IDAKLUJax:
         inputs = primals[1:]
 
         if isinstance(y_bar, float):
-            y_bar = np.array([y_bar])
+            y_bar = np.array([y_bar])  # pragma: no cover
         if isinstance(invar, float):
             invar = round(invar)
         if isinstance(t, float):
@@ -428,7 +428,7 @@ class IDAKLUJax:
         """Deallocate callbacks in the IDAKLU solver"""
         logging.info("_deallocate_callbacks")
         if self.idaklu_jax_obj is not None:
-            self.idaklu_jax_obj.register_callbacks(None, None, None)
+            self.idaklu_jax_obj.register_callbacks(None, None, None)  # pragma: no cover
 
     def _unique_name(self):
         """Return a unique name for this solver object for naming the JAX primitives"""
@@ -541,19 +541,11 @@ class IDAKLUJax:
         def f_abstract_eval(t, *inputs):
             """Abstract evaluation of Primitive"""
             logging.info("f_abstract_eval")
-            if f_p.multiple_results:
-                shape = t.shape
-                dtype = jax.dtypes.canonicalize_dtype(t.dtype)
-                return (jax.core.ShapedArray(shape, dtype),) * len(
-                    self.jax_output_variables
-                )
-            else:
-                shape = t.shape
-                dtype = jax.dtypes.canonicalize_dtype(t.dtype)
-                y_aval = jax.core.ShapedArray(
-                    (*t.shape, len(self.jax_output_variables)), dtype
-                )
-                return y_aval
+            dtype = jax.dtypes.canonicalize_dtype(t.dtype)
+            y_aval = jax.core.ShapedArray(
+                (*t.shape, len(self.jax_output_variables)), dtype
+            )
+            return y_aval
 
         def f_batch(args, batch_axes):
             """Batch rule for Primitive
@@ -565,7 +557,7 @@ class IDAKLUJax:
             if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
                 # Temporal batching
                 if t.ndim == 0:
-                    return f_p.bind(t, *inputs), None
+                    return f_p.bind(t, *inputs), None  # pragma: no cover
                 return jnp.stack(list(map(lambda tp: f_p.bind(tp, *inputs), t))), 0
             else:
                 raise NotImplementedError(
@@ -588,7 +580,9 @@ class IDAKLUJax:
                 op_name = f"cpu_idaklu_f64_{self._unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
-                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+                raise NotImplementedError(
+                    f"Unsupported dtype {np_dtype}"
+                )  # pragma: no cover
 
             dtype_t = mlir.ir.RankedTensorType(t.type)
             dims_t = dtype_t.shape
@@ -688,7 +682,7 @@ class IDAKLUJax:
                 t = primals[0]
                 inputs = primals[1:]
                 if t.ndim == 0:
-                    return f_jvp_p.bind(t, *inputs), None
+                    return f_jvp_p.bind(t, *inputs), None  # pragma: no cover
                 return (
                     jnp.stack(
                         list(map(lambda tp: f_jvp_p.bind(tp, *inputs, *tangents), t))
@@ -786,7 +780,9 @@ class IDAKLUJax:
                 op_name = f"cpu_idaklu_jvp_f64_{self._unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
-                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+                raise NotImplementedError(
+                    f"Unsupported dtype {np_dtype}"
+                )  # pragma: no cover
 
             dtype_t = mlir.ir.RankedTensorType(t_primal.type)
             dims_t = dtype_t.shape
@@ -879,7 +875,7 @@ class IDAKLUJax:
             if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
                 # Batch over y_bar
                 if y_bars.ndim <= 1:
-                    return jnp.stack(f_vjp(*args)), 0
+                    return jnp.stack(f_vjp(*args)), 0  # pragma: no cover
                 out = list(map(lambda yb: f_vjp(yb, invar, t, *inputs), y_bars))
                 return jnp.stack(out), 0
             elif (
@@ -889,7 +885,7 @@ class IDAKLUJax:
             ):
                 # Batch over time
                 if t.ndim == 0:
-                    return f_vjp(*args), None
+                    return f_vjp(*args), None  # pragma: no cover
                 out = list(map(lambda yt: f_vjp(y_bars, invar, yt, *inputs), t))
                 return jnp.stack(out), 0
             else:
@@ -912,7 +908,9 @@ class IDAKLUJax:
                 op_name = f"cpu_idaklu_vjp_f64_{self._unique_name()}"
                 op_dtype = mlir.ir.F64Type.get()
             else:
-                raise NotImplementedError(f"Unsupported dtype {np_dtype}")
+                raise NotImplementedError(
+                    f"Unsupported dtype {np_dtype}"
+                )  # pragma: no cover
 
             y_bar_aval = ctx.avals_in[0]
             dtype_y_bar = mlir.ir.RankedTensorType.get(y_bar_aval.shape, op_dtype)

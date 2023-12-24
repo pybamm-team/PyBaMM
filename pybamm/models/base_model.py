@@ -437,13 +437,19 @@ class BaseModel:
             if not input_param.domain:
                 parameter_info[input_param.name] = (input_param, "InputParameter")
             else:
-                parameter_info[input_param.name] = (input_param, f"InputParameter in {input_param.domain}")
+                parameter_info[input_param.name] = (
+                    input_param,
+                    f"InputParameter in {input_param.domain}",
+                )
 
         function_parameters = self._find_symbols(pybamm.FunctionParameter)
         for func_param in function_parameters:
             if func_param.name not in parameter_info:
-                input_names =  "', '".join(func_param.input_names)
-                parameter_info[func_param.name] = (func_param, f"FunctionParameter with inputs(s) '{input_names}'")
+                input_names = "', '".join(func_param.input_names)
+                parameter_info[func_param.name] = (
+                    func_param,
+                    f"FunctionParameter with inputs(s) '{input_names}'",
+                )
 
         return parameter_info
 
@@ -454,21 +460,35 @@ class BaseModel:
         max_param_type_length = 0
 
         for param, param_type in info.values():
-            param_name_length = len(getattr(param, 'name', str(param)))
+            param_name_length = len(getattr(param, "name", str(param)))
             param_type_length = len(param_type)
             max_param_name_length = max(max_param_name_length, param_name_length)
             max_param_type_length = max(max_param_type_length, param_type_length)
 
-        header_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
-        row_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+        header_format = (
+            f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+        )
+        row_format = (
+            f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+        )
 
-        table = [header_format.format("Parameter", "Type of parameter"),
-                 header_format.format("=" * max_param_name_length, "=" * max_param_type_length)]
+        table = [
+            header_format.format("Parameter", "Type of parameter"),
+            header_format.format(
+                "=" * max_param_name_length, "=" * max_param_type_length
+            ),
+        ]
 
         for param, param_type in info.values():
-            param_name = getattr(param, 'name', str(param))
-            param_name_lines = [param_name[i:i + max_param_name_length] for i in range(0, len(param_name), max_param_name_length)]
-            param_type_lines = [param_type[i:i + max_param_type_length] for i in range(0, len(param_type), max_param_type_length)]
+            param_name = getattr(param, "name", str(param))
+            param_name_lines = [
+                param_name[i : i + max_param_name_length]
+                for i in range(0, len(param_name), max_param_name_length)
+            ]
+            param_type_lines = [
+                param_type[i : i + max_param_type_length]
+                for i in range(0, len(param_type), max_param_type_length)
+            ]
             max_lines = max(len(param_name_lines), len(param_type_lines))
 
             for i in range(max_lines):
@@ -612,9 +632,7 @@ class BaseModel:
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.verbose(
-                f"Updating {submodel_name} submodel ({self.name})"
-            )
+            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
 

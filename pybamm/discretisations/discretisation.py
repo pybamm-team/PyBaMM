@@ -175,13 +175,9 @@ class Discretisation:
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        pybamm.logger.verbose(
-            f"Discretise boundary conditions for {model.name}"
-        )
+        pybamm.logger.verbose(f"Discretise boundary conditions for {model.name}")
         self._bcs = self.process_boundary_conditions(model)
-        pybamm.logger.verbose(
-            f"Set internal boundary conditions for {model.name}"
-        )
+        pybamm.logger.verbose(f"Set internal boundary conditions for {model.name}")
         self.set_internal_boundary_conditions(model)
 
         # set up inplace vs not inplace

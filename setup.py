@@ -22,13 +22,9 @@ def set_vcpkg_environment_variables():
     if not os.getenv("VCPKG_ROOT_DIR"):
         raise OSError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
     if not os.getenv("VCPKG_DEFAULT_TRIPLET"):
-        raise OSError(
-            "Environment variable 'VCPKG_DEFAULT_TRIPLET' is undefined."
-        )
+        raise OSError("Environment variable 'VCPKG_DEFAULT_TRIPLET' is undefined.")
     if not os.getenv("VCPKG_FEATURE_FLAGS"):
-        raise OSError(
-            "Environment variable 'VCPKG_FEATURE_FLAGS' is undefined."
-        )
+        raise OSError("Environment variable 'VCPKG_FEATURE_FLAGS' is undefined.")
     return (
         os.getenv("VCPKG_ROOT_DIR"),
         os.getenv("VCPKG_DEFAULT_TRIPLET"),
@@ -102,9 +98,7 @@ class CMakeBuild(build_ext):
                 f"-DSuiteSparse_ROOT={os.path.abspath(self.suitesparse_root)}"
             )
         if self.sundials_root:
-            cmake_args.append(
-                f"-DSUNDIALS_ROOT={os.path.abspath(self.sundials_root)}"
-            )
+            cmake_args.append(f"-DSUNDIALS_ROOT={os.path.abspath(self.sundials_root)}")
 
         build_dir = self.get_build_directory()
         if not os.path.exists(build_dir):
