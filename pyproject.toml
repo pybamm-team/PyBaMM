@@ -245,7 +245,12 @@ testpaths = [
 ]
 console_output_style = "progress"
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    # ignore internal nbmake warnings
+    'ignore:unclosed \<socket.socket:ResourceWarning',
+    'ignore:unclosed event loop \<:ResourceWarning',
+]
 
 # Logging configuration
 log_cli = "true"
