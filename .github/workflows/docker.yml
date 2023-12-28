@@ -36,6 +36,7 @@ jobs:
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create tags for Docker images based on build-time arguments
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' && github.event_name != 'release'
         id: tags
         run: |
           if [ "${{ matrix.build-args }}" = "No solvers" ]; then
@@ -50,7 +51,24 @@ jobs:
             echo "tag=all" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create tags for Docker images based on build-time arguments (release)
+        if: github.event_name == 'release' && github.event.action == 'published'
+        id: tags-release
+        run: |
+          if [ "${{ matrix.build-args }}" = "No solvers" ]; then
+            echo "tag=${{ github.event.release.name }}-latest" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "JAX" ]; then
+            echo "tag=${{ github.event.release.name }}-jax" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "ODES" ]; then
+            echo "tag=${{ github.event.release.name }}-odes" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "IDAKLU" ]; then
+            echo "tag=${{ github.event.release.name }}-idaklu" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "ALL" ]; then
+            echo "tag=${{ github.event.release.name }}-all" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push Docker image to Docker Hub (${{ matrix.build-args }})
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' && github.event_name != 'release'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -59,5 +77,12 @@ jobs:
           push: true
           platforms: linux/amd64, linux/arm64
 
-      - name: List built image(s)
-        run: docker images
+      - name: Build and push Docker image to Docker Hub (${{ matrix.build-args}}) (Release)
+        if: github.event_name == 'release' && github.event.action == 'published'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:${{ steps.tags-release.outputs.tag }}
+          push: true
+          platforms: linux/amd64, linux/arm64
