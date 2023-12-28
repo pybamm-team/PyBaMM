@@ -56,15 +56,15 @@ jobs:
         id: tags-release
         run: |
           if [ "${{ matrix.build-args }}" = "No solvers" ]; then
-            echo "tag=${{ github.event.release.name }}-latest" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}-latest" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "JAX" ]; then
-            echo "tag=${{ github.event.release.name }}-jax" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}-jax" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "ODES" ]; then
-            echo "tag=${{ github.event.release.name }}-odes" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}-odes" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "IDAKLU" ]; then
-            echo "tag=${{ github.event.release.name }}-idaklu" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}-idaklu" >> "$GITHUB_OUTPUT"
           elif [ "${{ matrix.build-args }}" = "ALL" ]; then
-            echo "tag=${{ github.event.release.name }}-all" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}-all" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and push Docker image to Docker Hub (${{ matrix.build-args }})
