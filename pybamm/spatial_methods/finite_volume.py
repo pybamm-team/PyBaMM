@@ -1395,8 +1395,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         if symbol not in bcs:
             raise pybamm.ModelError(
-                "Boundary conditions must be provided for "
-                f"{direction}ing '{symbol}'"
+                "Boundary conditions must be provided for " f"{direction}ing '{symbol}'"
             )
 
         if direction == "upwind":

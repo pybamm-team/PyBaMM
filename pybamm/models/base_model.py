@@ -428,6 +428,7 @@ class BaseModel:
         use :py:attr:`model.parameters`.
         """
         parameter_info = {}
+
         if by_submodel:
             for submodel_name, submodel_vars in self.variables_by_submodel.items():
                 submodel_info = {}
@@ -687,9 +688,7 @@ class BaseModel:
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.verbose(
-                f"Updating {submodel_name} submodel ({self.name})"
-            )
+            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
 
@@ -1435,9 +1434,7 @@ class BoundaryConditionsDict(dict):
                     raise pybamm.ModelError(
                         """
                         boundary condition types must be Dirichlet or Neumann, not '{}'
-                        """.format(
-                            bc[1]
-                        )
+                        """.format(bc[1])
                     )
 
         return boundary_conditions
