@@ -135,7 +135,7 @@ class BaseSubModel(pybamm.BaseModel):
     def domain_Domain(self):
         return self._domain, self._Domain
 
-    def get_parameter_info(self):
+    def get_parameter_info(self, by_submodel=False):
         """
         Extracts the parameter information and returns it as a dictionary.
         To get a list of all parameter-like objects without extra information,
