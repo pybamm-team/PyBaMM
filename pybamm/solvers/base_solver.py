@@ -44,14 +44,14 @@ class BaseSolver:
     """
 
     def __init__(
-            self,
-            method=None,
-            rtol=1e-6,
-            atol=1e-6,
-            root_method=None,
-            root_tol=1e-6,
-            extrap_tol=None,
-            output_variables=[],
+        self,
+        method=None,
+        rtol=1e-6,
+        atol=1e-6,
+        root_method=None,
+        root_tol=1e-6,
+        extrap_tol=None,
+        output_variables=[],
     ):
         self.method = method
         self.rtol = rtol
@@ -80,11 +80,11 @@ class BaseSolver:
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
         elif not (
-                method is None
-                or (
-                        isinstance(method, pybamm.BaseSolver)
-                        and method.algebraic_solver is True
-                )
+            method is None
+            or (
+                isinstance(method, pybamm.BaseSolver)
+                and method.algebraic_solver is True
+            )
         ):
             raise pybamm.SolverError("Root method must be an algebraic solver")
         self._root_method = method
@@ -147,7 +147,7 @@ class BaseSolver:
 
         # evaluate initial condition
         y0_total_size = (
-                model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
+            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
         )
         y_zero = np.zeros((y0_total_size, 1))
         if model.convert_to_format == "casadi":
@@ -236,7 +236,7 @@ class BaseSolver:
         # Save CasADi functions for solvers that use CasADi
         # Note: when we pass to casadi the ode part of the problem must be in
         if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
-                self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+            self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
@@ -265,7 +265,7 @@ class BaseSolver:
                 # ExplicitTimeIntegral's are not computed as part of the solver and
                 # do not need to be converted
                 if isinstance(
-                        model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
                 ):
                     continue
                 # Generate Casadi function to calculate variable and derivates
@@ -342,15 +342,15 @@ class BaseSolver:
                 )
 
         if (
-                isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
+            isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
             )
             model.convert_to_format = "casadi"
         if (
-                isinstance(self.root_method, pybamm.CasadiAlgebraicSolver)
-                and model.convert_to_format != "casadi"
+            isinstance(self.root_method, pybamm.CasadiAlgebraicSolver)
+            and model.convert_to_format != "casadi"
         ):
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for calculating ICs with CasADi"
@@ -413,7 +413,7 @@ class BaseSolver:
             return vars_for_processing
 
     def _set_up_model_sensitivities_inplace(
-            self, model, inputs, calculate_sensitivities_explicit
+        self, model, inputs, calculate_sensitivities_explicit
     ):
         """
         Set up model attributes related to sensitivities.
@@ -444,8 +444,8 @@ class BaseSolver:
                 model.bounds[1][: model.len_rhs_and_alg],
             )
         if (
-                model.mass_matrix is not None
-                and model.mass_matrix.shape[0] > model.len_rhs_and_alg
+            model.mass_matrix is not None
+            and model.mass_matrix.shape[0] > model.len_rhs_and_alg
         ):
             if model.mass_matrix_inv is not None:
                 model.mass_matrix_inv = pybamm.Matrix(
@@ -453,7 +453,7 @@ class BaseSolver:
                 )
             model.mass_matrix = pybamm.Matrix(
                 model.mass_matrix.entries[
-                : model.len_rhs_and_alg, : model.len_rhs_and_alg
+                    : model.len_rhs_and_alg, : model.len_rhs_and_alg
                 ]
             )
 
@@ -470,8 +470,8 @@ class BaseSolver:
                     np.repeat(model.bounds[1], n_inputs + 1),
                 )
             if (
-                    model.mass_matrix is not None
-                    and model.mass_matrix.shape[0] == model.len_rhs_and_alg
+                model.mass_matrix is not None
+                and model.mass_matrix.shape[0] == model.len_rhs_and_alg
             ):
                 if model.mass_matrix_inv is not None:
                     model.mass_matrix_inv = pybamm.Matrix(
@@ -495,8 +495,8 @@ class BaseSolver:
         # fine
         if len(model.algebraic) > 0:
             for symbol in itertools.chain(
-                    model.concatenated_rhs.pre_order(),
-                    model.concatenated_algebraic.pre_order(),
+                model.concatenated_rhs.pre_order(),
+                model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, _Heaviside):
                     found_t = False
@@ -544,9 +544,9 @@ class BaseSolver:
                 discontinuity_events.append(event)
             elif event.event_type == pybamm.EventType.SWITCH:
                 if (
-                        isinstance(self, pybamm.CasadiSolver)
-                        and self.mode == "fast with events"
-                        and model.algebraic != {}
+                    isinstance(self, pybamm.CasadiSolver)
+                    and self.mode == "fast with events"
+                    and model.algebraic != {}
                 ):
                     # Save some events to casadi_switch_events for the 'fast with
                     # events' mode of the casadi solver
@@ -566,7 +566,7 @@ class BaseSolver:
                     # stays constant for the rest of the simulation period
                     # We can then cut off the part after the event was crossed
                     event_sigmoid = (
-                            pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
+                        pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
                     )
                     event_casadi = process(
                         event_sigmoid,
@@ -615,7 +615,7 @@ class BaseSolver:
         """
 
         y0_total_size = (
-                model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
+            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
         )
         y_zero = np.zeros((y0_total_size, 1))
 
@@ -753,8 +753,8 @@ class BaseSolver:
             if not isinstance(self, pybamm.DummySolver):
                 # check for a discretised model without original parameters
                 if not (
-                        model.concatenated_rhs is not None
-                        or model.concatenated_algebraic is not None
+                    model.concatenated_rhs is not None
+                    or model.concatenated_algebraic is not None
                 ):
                     raise pybamm.ModelError(
                         "Cannot solve empty model, use `pybamm.DummySolver` instead"
@@ -995,9 +995,9 @@ class BaseSolver:
         # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
         if (
-                self.algebraic_solver is False
-                and len(solutions[0].all_ts) == 1
-                and len(solutions[0].all_ts[0]) == 1
+            self.algebraic_solver is False
+            and len(solutions[0].all_ts) == 1
+            and len(solutions[0].all_ts[0]) == 1
         ):
             raise pybamm.SolverError(
                 "Solution time vector has length 1. "
@@ -1033,10 +1033,10 @@ class BaseSolver:
             v
             for i, v in enumerate(discontinuities)
             if (
-                       i == len(discontinuities) - 1
-                       or discontinuities[i] < discontinuities[i + 1]
-               )
-               and v > 0
+                i == len(discontinuities) - 1
+                or discontinuities[i] < discontinuities[i + 1]
+            )
+            and v > 0
         ]
 
         # remove any discontinuities after end of t_eval
@@ -1098,13 +1098,13 @@ class BaseSolver:
             )
 
     def step(
-            self,
-            old_solution,
-            model,
-            dt,
-            non_linear_time=None,
-            inputs=None,
-            save=True,
+        self,
+        old_solution,
+        model,
+        dt,
+        non_linear_time=None,
+        inputs=None,
+        save=True,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1139,9 +1139,9 @@ class BaseSolver:
             old_solution = pybamm.EmptySolution()
 
         if not (
-                isinstance(old_solution, pybamm.EmptySolution)
-                or old_solution.termination == "final time"
-                or "[experiment]" in old_solution.termination
+            isinstance(old_solution, pybamm.EmptySolution)
+            or old_solution.termination == "final time"
+            or "[experiment]" in old_solution.termination
         ):
             # Return same solution as an event has already been triggered
             # With hack to allow stepping past experiment current / voltage cut-off
@@ -1220,8 +1220,8 @@ class BaseSolver:
             )
 
         if (
-                isinstance(old_solution, pybamm.EmptySolution)
-                and old_solution.termination is None
+            isinstance(old_solution, pybamm.EmptySolution)
+            and old_solution.termination is None
         ):
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
@@ -1270,11 +1270,9 @@ class BaseSolver:
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-
-                f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time}"
-                f"(of which integration time: {solution.integration_time}), "
-                f"Total time: {solution.total_time}"
-
+            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time}"
+            f"(of which integration time: {solution.integration_time}), "
+            f"Total time: {solution.total_time}"
         )
 
         # Return solution
@@ -1371,8 +1369,8 @@ class BaseSolver:
         extrap_events = []
 
         if any(
-                event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-                for event in events
+            event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+            for event in events
         ):
             last_state = solution.last_state
             t = last_state.all_ts[0][0]
@@ -1428,7 +1426,7 @@ class BaseSolver:
 
 
 def process(
-        symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
 ):
     """
     Parameters
@@ -1602,7 +1600,7 @@ def process(
                     casadi_expression = casadi.vertcat(casadi_expression, S_0)
                 else:
                     x0 = casadi_expression[: model.len_rhs]
-                    z0 = casadi_expression[model.len_rhs:]
+                    z0 = casadi_expression[model.len_rhs :]
                     Sx_0 = casadi.jacobian(x0, pS_casadi_stacked).reshape((-1, 1))
                     Sz_0 = casadi.jacobian(z0, pS_casadi_stacked).reshape((-1, 1))
                     casadi_expression = casadi.vertcat(x0, Sx_0, z0, Sz_0)
