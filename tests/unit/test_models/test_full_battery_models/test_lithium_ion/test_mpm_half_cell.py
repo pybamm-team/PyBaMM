@@ -21,9 +21,7 @@ class TestMPM(TestCase):
         # check default parameters are added correctly
         model = pybamm.lithium_ion.MPM({"working electrode": "positive"})
         self.assertEqual(
-            model.default_parameter_values[
-                "Positive minimum particle radius [m]"
-            ],
+            model.default_parameter_values["Positive minimum particle radius [m]"],
             0.0,
         )
 

@@ -53,7 +53,7 @@ plt.yscale("log")
 plt.grid(True)
 plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
 plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
-colors = iter(plt.cycler(color='bgrcmyk'))
+colors = iter(plt.cycler(color="bgrcmyk"))
 
 for key, C_rate in C_rates.items():
     current = 24 * C_rate

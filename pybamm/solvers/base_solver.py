@@ -684,9 +684,7 @@ class BaseSolver:
         try:
             root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
-            raise pybamm.SolverError(
-                f"Could not find consistent states: {e.args[0]}"
-            )
+            raise pybamm.SolverError(f"Could not find consistent states: {e.args[0]}")
         pybamm.logger.debug("Found consistent states")
 
         self.check_extrapolation(root_sol, model.events)
@@ -1044,9 +1042,7 @@ class BaseSolver:
         # remove any discontinuities after end of t_eval
         discontinuities = [v for v in discontinuities if v < t_eval[-1]]
 
-        pybamm.logger.verbose(
-            f"Discontinuity events found at t = {discontinuities}"
-        )
+        pybamm.logger.verbose(f"Discontinuity events found at t = {discontinuities}")
         if isinstance(inputs, list):
             raise pybamm.SolverError(
                 "Cannot solve for a list of input parameters"
@@ -1227,9 +1223,7 @@ class BaseSolver:
                 isinstance(old_solution, pybamm.EmptySolution)
                 and old_solution.termination is None
         ):
-            pybamm.logger.verbose(
-                f"Start stepping {model.name} with {self.name}"
-            )
+            pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
         if isinstance(old_solution, pybamm.EmptySolution):
             if not first_step_this_model:
@@ -1258,9 +1252,7 @@ class BaseSolver:
         self._check_events_with_initial_conditions(t_eval, model, model_inputs)
 
         # Step
-        pybamm.logger.verbose(
-            f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}"
-        )
+        pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
         solution = self._integrate(model, t_eval, model_inputs)
         solution.solve_time = timer.time()
@@ -1493,10 +1485,8 @@ def process(
         jacp = None
         if model.calculate_sensitivities:
             report(
-
                 f"Calculating sensitivities for {name} with respect "
                 f"to parameters {model.calculate_sensitivities} using jax"
-
             )
             jacp = func.get_sensitivities()
         if use_jacobian:
@@ -1514,10 +1504,8 @@ def process(
         # to python evaluator
         if model.calculate_sensitivities:
             report(
-
                 f"Calculating sensitivities for {name} with respect "
                 f"to parameters {model.calculate_sensitivities}"
-
             )
             jacp_dict = {
                 p: symbol.diff(pybamm.InputParameter(p))
@@ -1620,11 +1608,9 @@ def process(
                     casadi_expression = casadi.vertcat(x0, Sx_0, z0, Sz_0)
         elif model.calculate_sensitivities:
             report(
-
                 f"Calculating sensitivities for {name} with respect "
                 f"to parameters {model.calculate_sensitivities} using "
                 "CasADi"
-
             )
             # Compute derivate wrt p-stacked (can be passed to solver to
             # compute sensitivities online)

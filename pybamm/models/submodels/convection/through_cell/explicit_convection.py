@@ -39,11 +39,7 @@ class Explicit(BaseThroughCellModel):
                 x_p = pybamm.standard_spatial_vars.x_p
                 DeltaV_k = param.p.DeltaV
                 p_k = (
-                    -DeltaV_k
-                    * a_j_k_av
-                    / param.F
-                    * ((x_p - 1) ** 2 - param.p.L**2)
-                    / 2
+                    -DeltaV_k * a_j_k_av / param.F * ((x_p - 1) ** 2 - param.p.L**2) / 2
                     + p_s
                 )
                 v_box_k = -DeltaV_k * a_j_k_av / param.F * (x_p - param.L_x)

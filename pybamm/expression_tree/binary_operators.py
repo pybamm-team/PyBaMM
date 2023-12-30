@@ -1336,8 +1336,8 @@ def smooth_min(left, right, k):
     Smooth_min approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
     """
-    sigma = (1.0 / k)**2
-    return ((left + right) - (pybamm.sqrt((left - right)**2 + sigma))) / 2
+    sigma = (1.0 / k) ** 2
+    return ((left + right) - (pybamm.sqrt((left - right) ** 2 + sigma))) / 2
 
 
 def smooth_max(left, right, k):
@@ -1346,7 +1346,7 @@ def smooth_max(left, right, k):
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=100.
     """
     sigma = (1.0 / k) ** 2
-    return (pybamm.sqrt((left - right)**2 + sigma) + (left + right)) / 2
+    return (pybamm.sqrt((left - right) ** 2 + sigma) + (left + right)) / 2
 
 
 def sigmoid(left, right, k):
