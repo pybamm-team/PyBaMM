@@ -10,7 +10,7 @@ if pybamm.have_jax():
     import jax
     import jax.numpy as jnp
     from jax import core, dtypes
-    from jax import linear_util as lu
+    from jax.extend import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
     from jax.config import config
     from jax.flatten_util import ravel_pytree
