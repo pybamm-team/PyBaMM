@@ -426,6 +426,11 @@ class BaseModel:
         Extracts the parameter information and returns it as a dictionary.
         To get a list of all parameter-like objects without extra information,
         use :py:attr:`model.parameters`.
+
+        Parameters
+        ----------
+        by_submodel : bool, optional
+            Whether to return the parameter info sub-model wise or not (default False)
         """
         parameter_info = {}
 
@@ -485,7 +490,7 @@ class BaseModel:
         Parameters
         ----------
         by_submodel : bool, optional
-            Whether to print the parameter info submodel wise or not (default False)
+            Whether to print the parameter info sub-model wise or not (default False)
         """
         if by_submodel:
             submodel_info = self.get_parameter_info(by_submodel=True)
