@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "23.9"
+version = "24.1rc0"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -230,7 +230,7 @@ ignore = [
 
 # NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
-minversion = "6"
+minversion = "24.1rc0"
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
