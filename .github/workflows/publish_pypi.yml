@@ -109,10 +109,19 @@ jobs:
             delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_SKIP: "pp* *musllinux*"
 
-      - name: Upload wheels
+      - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
         with:
-          name: wheels
+          name: linux_wheels
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+      - name: Upload wheels for macOS
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'macos-latest'
+        with:
+          name: macos_wheels
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -151,7 +160,7 @@ jobs:
       - name: Move all package files to files/
         run: |
           mkdir files
-          mv windows_wheels/* wheels/* sdist/* files/
+          mv windows_wheels/* linux_wheels/* macos_wheels/* sdist/* files/
 
       - name: Publish on PyPI
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
