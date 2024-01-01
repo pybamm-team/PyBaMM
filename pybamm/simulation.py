@@ -779,14 +779,11 @@ class Simulation:
                         **user_inputs,
                         "start time": start_time,
                     }
-                    # Make sure we take at least 2 timesteps
-                    npts = max(int(round(dt / op_conds.period)) + 1, 2)
                     try:
                         step_solution = solver.step(
                             current_solution,
                             model,
                             dt,
-                            npts=npts,
                             save=False,
                             **kwargs,
                         )
@@ -946,15 +943,10 @@ class Simulation:
         model = self.op_conds_to_built_models["Rest for padding"]
         solver = self.op_conds_to_built_solvers["Rest for padding"]
 
-        # Make sure we take at least 2 timesteps. The period is hardcoded to 10
-        # minutes,the user can always override it by adding a rest step
-        npts = max(int(round(rest_time / 600)) + 1, 2)
-
         step_solution_with_rest = solver.step(
             step_solution,
             model,
             rest_time,
-            npts=npts,
             save=False,
             **kwargs,
         )
@@ -962,7 +954,7 @@ class Simulation:
         return step_solution_with_rest
 
     def step(
-        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
+        self, dt, solver=None, save=True, starting_solution=None, **kwargs
     ):
         """
         A method to step the model forward one timestep. This method will
@@ -974,9 +966,6 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
         save : bool
             Turn on to store the solution of all previous timesteps
         starting_solution : :class:`pybamm.Solution`
@@ -996,7 +985,7 @@ class Simulation:
             starting_solution = self._solution
 
         self._solution = solver.step(
-            starting_solution, self.built_model, dt, npts=npts, save=save, **kwargs
+            starting_solution, self.built_model, dt, save=save, **kwargs
         )
 
         return self.solution

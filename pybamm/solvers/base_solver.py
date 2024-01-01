@@ -1163,15 +1163,6 @@ class BaseSolver:
         t_start = old_solution.t[-1]
         t_end = t_start
         t_eval = np.array([t_start])
-        if t_start == 0:
-            t_start_shifted = t_start
-        else:
-            # offset t_start by t_start_offset (default 1 ns)
-            # to avoid repeated times in the solution
-            # from having the same time at the end of the previous step and
-            # the start of the next step
-            t_start_shifted = t_start + step_start_offset
-            t_eval[0] = t_start_shifted
 
         if non_linear_time is not None:
             # Checking if non_linear_time lies within range
@@ -1197,6 +1188,16 @@ class BaseSolver:
             t_end = t_start + dt
             # Calculate t_eval
             t_eval = np.linspace(t_start, t_end, 2)
+
+        if t_start == 0:
+            t_start_shifted = t_start
+        else:
+            # offset t_start by t_start_offset (default 1 ns)
+            # to avoid repeated times in the solution
+            # from having the same time at the end of the previous step and
+            # the start of the next step
+            t_start_shifted = t_start + step_start_offset
+            t_eval[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()
