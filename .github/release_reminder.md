@@ -1,6 +1,6 @@
 ---
 title: Create {{ date | date('YY.MM') }} (final or rc0) release
-labels: priority: high
+labels: "priority: high"
 ---
 Quarterly reminder to create a -
 
