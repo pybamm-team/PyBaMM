@@ -953,9 +953,7 @@ class Simulation:
 
         return step_solution_with_rest
 
-    def step(
-        self, dt, solver=None, save=True, starting_solution=None, **kwargs
-    ):
+    def step(self, dt, solver=None, save=True, starting_solution=None, **kwargs):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
