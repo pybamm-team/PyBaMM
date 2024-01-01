@@ -32,7 +32,9 @@ def update_version():
     # pyproject.toml
     with open(os.path.join(pybamm.root_dir(), "pyproject.toml"), "r+") as file:
         output = file.read()
-        replace_version = re.sub('(?<=version = ")(.+)(?=")', release_version, output)
+        replace_version = re.sub(
+            r'(?<=\bversion = ")(.+)(?=")', release_version, output
+        )
         file.truncate(0)
         file.seek(0)
         file.write(replace_version)
