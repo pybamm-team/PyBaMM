@@ -147,8 +147,7 @@ class BaseSubModel(pybamm.BaseModel):
             This method is not available for direct use on submodels. It is recommended to use on the full model.
         """
         raise NotImplementedError(
-            "Cannot use get_parameter_info (or) print_parameter_info directly on a submodel. "
-            "Please use it on the full model."
+            "Cannot use get_parameter_info OR print_parameter_info directly on a submodel. Please use it on the full model."
         )
 
     def get_fundamental_variables(self):
