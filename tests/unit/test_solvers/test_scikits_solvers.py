@@ -740,7 +740,9 @@ class TestScikitsSolvers(TestCase):
         end_time = 5
         step_solution = None
         while time < end_time:
-            step_solution = step_solver.step(step_solution, model, dt=dt, non_linear_time=np.linspace(0, dt, 10))
+            step_solution = step_solver.step(
+                step_solution, model, dt=dt, non_linear_time=np.linspace(0, dt, 10)
+            )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 1.5)
         np.testing.assert_array_less(step_solution.y[-1, :-1], 2.5)
@@ -785,7 +787,9 @@ class TestScikitsSolvers(TestCase):
         end_time = 3
         step_solution = None
         while time < end_time:
-            step_solution = step_solver.step(step_solution, model, dt=dt, non_linear_time=np.linspace(0, dt, 10))
+            step_solution = step_solver.step(
+                step_solution, model, dt=dt, non_linear_time=np.linspace(0, dt, 10)
+            )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
         np.testing.assert_array_less(step_solution.y[-1, :-1], 1.2)
