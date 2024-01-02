@@ -962,7 +962,13 @@ class Simulation:
         return step_solution_with_rest
 
     def step(
-        self, dt, solver=None, non_linear_time=None, save=True, starting_solution=None, **kwargs
+        self,
+        dt,
+        solver=None,
+        non_linear_time=None,
+        save=True,
+        starting_solution=None,
+        **kwargs,
     ):
         """
         A method to step the model forward one timestep. This method will
@@ -996,7 +1002,12 @@ class Simulation:
             starting_solution = self._solution
 
         self._solution = solver.step(
-            starting_solution, self.built_model, dt, non_linear_time=non_linear_time, save=save, **kwargs
+            starting_solution,
+            self.built_model,
+            dt,
+            non_linear_time=non_linear_time,
+            save=save,
+            **kwargs,
         )
 
         return self.solution
