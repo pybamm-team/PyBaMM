@@ -37,7 +37,7 @@ class TestSolution(TestCase):
         # dt should be dimensional
         for t in solution.t[1:]:
             dt = t - old_t
-            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            step_solution = step_solver.step(step_solution, model, dt=dt, non_linear_time=np.linspace(0, dt, 10))
             if t == solution.t[1]:
                 # Create voltage variable
                 step_solution.update("Voltage [V]")
