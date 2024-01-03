@@ -87,7 +87,7 @@ class TestIDAKLUSolver(TestCase):
 
             # Check invalid atol type raises an error
             with self.assertRaises(pybamm.SolverError):
-                solver._check_atol_type({'key': 'value'}, [])
+                solver._check_atol_type({"key": "value"}, [])
 
             # enforce events that won't be triggered
             model.events = [pybamm.Event("an event", var + 1)]
@@ -566,9 +566,9 @@ class TestIDAKLUSolver(TestCase):
         t_eval = np.linspace(0, 3600, 100)
 
         options = {
-            'linear_solver': 'SUNLinSol_KLU',
-            'jacobian': 'sparse',
-            'num_threads': 4,
+            "linear_solver": "SUNLinSol_KLU",
+            "jacobian": "sparse",
+            "num_threads": 4,
         }
 
         # Use a selection of variables of different types
@@ -587,7 +587,8 @@ class TestIDAKLUSolver(TestCase):
 
         # Use the full model as comparison (tested separately)
         solver_all = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
         )
         sol_all = solver_all.solve(
@@ -599,7 +600,8 @@ class TestIDAKLUSolver(TestCase):
 
         # Solve for a subset of variables and compare results
         solver = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
             output_variables=output_variables,
         )
@@ -640,9 +642,9 @@ class TestIDAKLUSolver(TestCase):
         t_eval = np.linspace(0, 3600, 100)
 
         options = {
-            'linear_solver': 'SUNLinSol_KLU',
-            'jacobian': 'sparse',
-            'num_threads': 4,
+            "linear_solver": "SUNLinSol_KLU",
+            "jacobian": "sparse",
+            "num_threads": 4,
         }
 
         # Use a selection of variables of different types
@@ -656,7 +658,8 @@ class TestIDAKLUSolver(TestCase):
 
         # Use the full model as comparison (tested separately)
         solver_all = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
         )
         sol_all = solver_all.solve(
@@ -668,7 +671,8 @@ class TestIDAKLUSolver(TestCase):
 
         # Solve for a subset of variables and compare results
         solver = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
             output_variables=output_variables,
         )

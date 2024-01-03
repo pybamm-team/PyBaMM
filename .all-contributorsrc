@@ -744,7 +744,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/91185083?v=4",
       "profile": "https://github.com/AbhishekChaudharii",
       "contributions": [
-        "doc"
+        "doc",
+        "code"
       ]
     },
     {
@@ -772,6 +773,16 @@
       "profile": "https://github.com/prady0t",
       "contributions": [
         "infra"
+      ]
+    },
+    {
+      "login": "XuboGU",
+      "name": "XuboGU",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53944452?v=4",
+      "profile": "https://github.com/XuboGU",
+      "contributions": [
+        "code",
+        "bug"
       ]
     }
   ],
