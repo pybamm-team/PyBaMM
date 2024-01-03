@@ -1,7 +1,3 @@
-#
-# Experiment class
-#
-
 from __future__ import annotations
 import pybamm
 from .step._steps_util import (
@@ -84,6 +80,8 @@ class Experiment:
                 processed_step = pybamm.step.string(step)
             elif isinstance(step, pybamm.step._Step):
                 processed_step = step
+            else:
+                raise TypeError("Operating conditions must be a Step object or string.")
 
             if processed_step.period is None:
                 processed_step.period = self.period
@@ -125,7 +123,8 @@ class Experiment:
     def __repr__(self):
         return f"pybamm.Experiment({self!s})"
 
-    def read_termination(self, termination):
+    @staticmethod
+    def read_termination(termination):
         """
         Read the termination reason. If this condition is hit, the experiment will stop.
         """
@@ -184,7 +183,8 @@ class Experiment:
 
         return cycles
 
-    def _set_next_start_time(self, operating_conditions):
+    @staticmethod
+    def _set_next_start_time(operating_conditions):
         if all(isinstance(i, str) for i in operating_conditions):
             return operating_conditions
 
@@ -194,7 +194,7 @@ class Experiment:
         for op in reversed(operating_conditions):
             if isinstance(op, str):
                 op = pybamm.step.string(op)
-            elif not isinstance(op, pybamm.step._Step):
+            if not isinstance(op, pybamm.step._Step):
                 raise TypeError(
                     "Operating conditions should be strings or _Step objects"
                 )
