@@ -47,20 +47,7 @@ class Experiment:
         period: str = "1 minute",
         temperature: float | None = None,
         termination: list[str] | None = None,
-        drive_cycles=None,
-        cccv_handling=None,
     ):
-        if cccv_handling is not None:
-            raise ValueError(
-                "cccv_handling has been deprecated, use "
-                "`pybamm.step.cccv_ode(current, voltage)` instead to produce the "
-                "same behavior as the old `cccv_handling='ode'`"
-            )
-        if drive_cycles is not None:
-            raise ValueError(
-                "drive_cycles should now be passed as an experiment step object, e.g. "
-                "`pybamm.step.current(drive_cycle)`"
-            )
         # Save arguments for copying
         self.args = (
             operating_conditions,
