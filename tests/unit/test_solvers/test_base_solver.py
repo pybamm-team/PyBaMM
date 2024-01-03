@@ -75,6 +75,28 @@ class TestBaseSolver(TestCase):
         ):
             solver.step(None, model, dt)
 
+        # Checking if array non_linear_time lies within range
+        dt = 2
+        non_linear_time = np.array([0, 1])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Elements inside array non_linear_time must lie in the closed interval 0 to dt"
+        ):
+            solver.step(None, model, dt, non_linear_time=non_linear_time)
+
+        non_linear_time = np.array([1, dt])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Elements inside array non_linear_time must lie in the closed interval 0 to dt"
+        ):
+            solver.step(None, model, dt, non_linear_time=non_linear_time)
+
+        # Checking difference between elements in non_linear_solve
+        dt = 1
+        non_linear_time = np.array([0, 1e-9, dt])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Time difference between elements in non_linear_time must be at least 1.000 ns"
+        ):
+            solver.step(None, model, dt, non_linear_time=non_linear_time)
+
     def test_solution_time_length_fail(self):
         model = pybamm.BaseModel()
         v = pybamm.Scalar(1)
