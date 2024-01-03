@@ -95,11 +95,13 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     if libdir == "SuiteSparse_config":
         env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
     else:
-    # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
-    # INSTALL RPATH in order to ensure that the dynamic libraries are found
-    # at runtime just once. Otherwise, delocate complains about multiple
-    # references to the SuiteSparse_config dynamic library (auditwheel does not).
-        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+        # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
+        # INSTALL RPATH in order to ensure that the dynamic libraries are found
+        # at runtime just once. Otherwise, delocate complains about multiple
+        # references to the SuiteSparse_config dynamic library (auditwheel does not).
+        env[
+            "CMAKE_OPTIONS"
+        ] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
     subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 

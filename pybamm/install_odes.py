@@ -20,6 +20,7 @@ except ModuleNotFoundError:
 # Build in parallel wherever possible
 os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
+
 def download_extract_library(url, directory):
     # Download and extract archive at url
     if NO_WGET:
