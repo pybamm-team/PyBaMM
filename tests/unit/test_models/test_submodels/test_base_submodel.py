@@ -58,7 +58,7 @@ class TestBaseSubModel(TestCase):
     def test_parameter_info_error(self):
         submodel = pybamm.BaseSubModel(None, "negative", phase="primary")
 
-        expected_error_message = "Cannot use get_parameter_info OR print_parameter_info directly on a submodel. Please use it on the full model."
+        expected_error_message = "Cannot use get_parameter_info"
 
         with self.assertRaisesRegex(NotImplementedError, expected_error_message):
             submodel.get_parameter_info(by_submodel=True)

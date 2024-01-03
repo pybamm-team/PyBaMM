@@ -435,7 +435,7 @@ class BaseModel:
         parameter_info = {}
 
         if by_submodel:
-            for submodel_name, submodel_vars in self.variables_by_submodel.items():
+            for submodel_name, submodel_vars in self._variables_by_submodel.items():
                 submodel_info = {}
                 for var_name, var_symbol in submodel_vars.items():
                     if isinstance(var_symbol, pybamm.Parameter):
@@ -648,7 +648,7 @@ class BaseModel:
 
     def build_fundamental(self):
         # Get the fundamental variables
-        self.variables_by_submodel = {submodel: {} for submodel in self.submodels}
+        self._variables_by_submodel = {submodel: {} for submodel in self.submodels}
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
                 "Getting fundamental variables for {} submodel ({})".format(
@@ -656,10 +656,10 @@ class BaseModel:
                 )
             )
             submodel_fundamental_variables = submodel.get_fundamental_variables()
-            self.variables_by_submodel[submodel_name].update(
+            self._variables_by_submodel[submodel_name].update(
                 submodel_fundamental_variables
             )
-            self.variables.update(submodel.get_fundamental_variables())
+            self.variables.update(submodel_fundamental_variables)
 
         self._built_fundamental = True
 
@@ -684,19 +684,17 @@ class BaseModel:
                     )
                     try:
                         model_var_copy = self.variables.copy()
-                        submodel_coupled_result = submodel.get_coupled_variables(
+                        updated_variables = submodel.get_coupled_variables(
                             self.variables
                         )
-                        self.variables_by_submodel[submodel_name].update(
+                        self._variables_by_submodel[submodel_name].update(
                             {
-                                key: submodel_coupled_result[key]
-                                for key in submodel_coupled_result
+                                key: updated_variables[key]
+                                for key in updated_variables
                                 if key not in model_var_copy
                             }
                         )
-                        self.variables.update(
-                            submodel.get_coupled_variables(self.variables)
-                        )
+                        self.variables.update(updated_variables)
                         submodels.remove(submodel_name)
                     except KeyError as key:
                         if len(submodels) == 1 or count == 100:
