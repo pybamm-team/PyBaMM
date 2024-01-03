@@ -5,3 +5,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # group updates in a single PR
+    groups:
+      actions:
+        patterns:
+          - "*"

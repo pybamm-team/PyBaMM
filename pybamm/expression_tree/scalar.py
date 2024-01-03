@@ -6,6 +6,7 @@ import numpy as np
 import pybamm
 from pybamm.util import have_optional_dependency
 
+
 class Scalar(pybamm.Symbol):
     """
     A node in the expression tree representing a scalar value.

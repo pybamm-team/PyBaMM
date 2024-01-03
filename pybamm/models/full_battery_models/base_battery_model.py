@@ -631,28 +631,26 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 value = (value,)
             else:
                 if not (
-
-                        option
-                        in [
-                            "diffusivity",
-                            "exchange-current density",
-                            "intercalation kinetics",
-                            "interface utilisation",
-                            "lithium plating",
-                            "loss of active material",
-                            "number of MSMR reactions",
-                            "open-circuit potential",
-                            "particle",
-                            "particle mechanics",
-                            "particle phases",
-                            "particle size",
-                            "SEI",
-                            "SEI on cracks",
-                            "stress-induced diffusion",
-                        ]
-                        and isinstance(value, tuple)
-                        and len(value) == 2
-
+                    option
+                    in [
+                        "diffusivity",
+                        "exchange-current density",
+                        "intercalation kinetics",
+                        "interface utilisation",
+                        "lithium plating",
+                        "loss of active material",
+                        "number of MSMR reactions",
+                        "open-circuit potential",
+                        "particle",
+                        "particle mechanics",
+                        "particle phases",
+                        "particle size",
+                        "SEI",
+                        "SEI on cracks",
+                        "stress-induced diffusion",
+                    ]
+                    and isinstance(value, tuple)
+                    and len(value) == 2
                 ):
                     # more possible options that can take 2-tuples to be added
                     # as they come
@@ -1071,9 +1069,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.verbose(
-                f"Updating {submodel_name} submodel ({self.name})"
-            )
+            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
 

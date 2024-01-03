@@ -153,9 +153,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     Could not find acceptable solution: solver terminated
                     successfully, but maximum solution error ({})
                     above tolerance ({})
-                    """.format(
-                        casadi.mmax(casadi.fabs(fun)), self.tol
-                    )
+                    """.format(casadi.mmax(casadi.fabs(fun)), self.tol)
                 )
 
         # Concatenate differential part
