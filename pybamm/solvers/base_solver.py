@@ -1168,7 +1168,7 @@ class BaseSolver:
             # Checking if non_linear_time lies within range
             if non_linear_time[0] != 0 or non_linear_time[-1] != dt:
                 raise pybamm.SolverError(
-                    f"Elements inside array non_linear_time must lie in the closed interval 0 to dt"
+                    "Elements inside array non_linear_time must lie in the closed interval 0 to dt"
                 )
 
             for i in range(len(non_linear_time) - 1):
