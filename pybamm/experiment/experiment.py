@@ -50,7 +50,6 @@ class Experiment:
         drive_cycles=None,
         cccv_handling=None,
     ):
-
         if cccv_handling is not None:
             raise ValueError(
                 "cccv_handling has been deprecated, use "
