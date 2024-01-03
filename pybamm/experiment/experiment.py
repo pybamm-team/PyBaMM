@@ -2,6 +2,7 @@
 # Experiment class
 #
 
+from __future__ import annotations
 import pybamm
 from .step._steps_util import (
     _convert_time_to_seconds,
@@ -21,8 +22,8 @@ class Experiment:
 
     Parameters
     ----------
-    operating_conditions : list
-        List of operating conditions
+    operating_conditions : list[str]
+        List of strings representing the operating conditions.
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
@@ -30,8 +31,8 @@ class Experiment:
         The ambient air temperature in degrees Celsius at which to run the experiment.
         Default is None whereby the ambient temperature is taken from the parameter set.
         This value is overwritten if the temperature is specified in a step.
-    termination : list, optional
-        List of conditions under which to terminate the experiment. Default is None.
+    termination : list[str], optional
+        List of strings representing the conditions to terminate the experiment. Default is None.
         This is different from the termination for individual steps. Termination for
         individual steps is specified in the step itself, and the simulation moves to
         the next step when the termination condition is met
@@ -42,13 +43,14 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions,
-        period="1 minute",
-        temperature=None,
-        termination=None,
+        operating_conditions: list[str],
+        period: str = "1 minute",
+        temperature: float | None = None,
+        termination: list[str] | None = None,
         drive_cycles=None,
         cccv_handling=None,
     ):
+
         if cccv_handling is not None:
             raise ValueError(
                 "cccv_handling has been deprecated, use "
