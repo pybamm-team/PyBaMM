@@ -13,7 +13,6 @@ class DFN(BaseModel):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.DFN()
     >>> model.name
     'Doyle-Fuller-Newman model'

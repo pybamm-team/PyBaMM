@@ -727,6 +727,72 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "chmabaur",
+      "name": "chmabaur",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127507466?v=4",
+      "profile": "https://github.com/chmabaur",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "AbhishekChaudharii",
+      "name": "Abhishek Chaudhari",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91185083?v=4",
+      "profile": "https://github.com/AbhishekChaudharii",
+      "contributions": [
+        "doc",
+        "code"
+      ]
+    },
+    {
+      "login": "shubhambhar007",
+      "name": "Shubham Bhardwaj",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32607282?v=4",
+      "profile": "https://github.com/shubhambhar007",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "jlauber18",
+      "name": "Jonathan Lauber",
+      "avatar_url": "https://avatars.githubusercontent.com/u/28939653?v=4",
+      "profile": "https://github.com/jlauber18",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "prady0t",
+      "name": "Pradyot Ranjan",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99216956?v=4",
+      "profile": "https://github.com/prady0t",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "XuboGU",
+      "name": "XuboGU",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53944452?v=4",
+      "profile": "https://github.com/XuboGU",
+      "contributions": [
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "cringeyburger",
+      "name": "Ankit Meda",
+      "avatar_url": "https://avatars.githubusercontent.com/u/121183876?v=4",
+      "profile": "https://github.com/cringeyburger",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

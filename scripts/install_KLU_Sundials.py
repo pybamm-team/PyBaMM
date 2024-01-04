@@ -59,7 +59,7 @@ install_dir = (
 suitesparse_version = "6.0.3"
 suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
-    + "SuiteSparse/archive/v{}.tar.gz".format(suitesparse_version)
+    + f"SuiteSparse/archive/v{suitesparse_version}.tar.gz"
 )
 download_extract_library(suitesparse_url, download_dir)
 
@@ -68,13 +68,13 @@ download_extract_library(suitesparse_url, download_dir)
 # - AMD
 # - COLAMD
 # - BTF
-suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
+suitesparse_dir = f"SuiteSparse-{suitesparse_version}"
 suitesparse_src = os.path.join(download_dir, suitesparse_dir)
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
 make_cmd = [
     "make",
     "library",
-    'CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX={}"'.format(install_dir),
+    f'CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX={install_dir}"',
 ]
 install_cmd = [
     "make",
@@ -107,8 +107,8 @@ cmake_args = [
     "-DEXAMPLES_ENABLE:BOOL=OFF",
     "-DENABLE_KLU=ON",
     "-DENABLE_OPENMP=ON",
-    "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
-    "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
+    f"-DKLU_INCLUDE_DIR={KLU_INCLUDE_DIR}",
+    f"-DKLU_LIBRARY_DIR={KLU_LIBRARY_DIR}",
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     # on mac use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
@@ -154,9 +154,9 @@ if not os.path.exists(build_dir):
     print("\n-" * 10, "Creating build dir", "-" * 40)
     os.makedirs(build_dir)
 
-sundials_src = "../sundials-{}".format(sundials_version)
+sundials_src = f"../sundials-{sundials_version}"
 print("-" * 10, "Running CMake prepare", "-" * 40)
-subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir, check=True)
+subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]

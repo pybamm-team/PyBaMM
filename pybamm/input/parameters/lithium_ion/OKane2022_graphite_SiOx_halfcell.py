@@ -192,9 +192,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_volume_change_Ai2020(sto, c_s_max):

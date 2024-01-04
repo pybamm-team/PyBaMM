@@ -4,6 +4,7 @@
 from tests import TestCase
 import os
 import unittest
+import unittest.mock as mock
 from tempfile import TemporaryDirectory
 
 import numpy as np
@@ -490,6 +491,28 @@ class TestSymbol(TestCase):
     def test_numpy_array_ufunc(self):
         x = pybamm.Symbol("x")
         self.assertEqual(np.exp(x), pybamm.exp(x))
+
+    def test_to_from_json(self):
+        symc1 = pybamm.Symbol("child1", domain=["domain_1"])
+        symc2 = pybamm.Symbol("child2", domain=["domain_2"])
+        symp = pybamm.Symbol("parent", domain=["domain_3"], children=[symc1, symc2])
+
+        json_dict = {
+            "name": "parent",
+            "id": mock.ANY,
+            "domains": {
+                "primary": ["domain_3"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+        }
+
+        self.assertEqual(symp.to_json(), json_dict)
+
+        json_dict["children"] = [symc1, symc2]
+
+        self.assertEqual(pybamm.Symbol._from_json(json_dict), symp)
 
 
 class TestIsZero(TestCase):

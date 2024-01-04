@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 
-class StandardOutputTests(object):
+class StandardOutputTests:
     """Calls all the tests on the standard output variables."""
 
     def __init__(self, model, parameter_values, disc, solution):
@@ -58,7 +58,7 @@ class StandardOutputTests(object):
             self.run_test_class(VelocityTests)
 
 
-class BaseOutputTest(object):
+class BaseOutputTest:
     def __init__(self, model, param, disc, solution, operating_condition):
         self.model = model
         self.param = param

@@ -61,7 +61,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(method, rtol, atol, root_method, root_tol, extrap_tol)
-        self.name = "Scikits DAE solver ({})".format(method)
+        self.name = f"Scikits DAE solver ({method})"
 
         self.extra_options = extra_options or {}
 

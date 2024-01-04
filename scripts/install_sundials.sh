@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # This script installs both SuiteSparse
-# (https://people.engr.tamu.edu/davis/suitesparse.html) and Sundials
+# (https://people.engr.tamu.edu/davis/suitesparse.html) and SUNDIALS
 # (https://computing.llnl.gov/projects/sundials) from source. For each
 # two library:
-# - Archive downloaded and source code extrated in current working
+# - Archive downloaded and source code extracted in current working
 #   directory.
 # - Library is built and installed.
 #

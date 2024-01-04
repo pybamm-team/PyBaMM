@@ -390,6 +390,30 @@ class TestMesh(TestCase):
         # positive tab should be "left"
         self.assertEqual(mesh["current collector"].tabs["positive tab"], "left")
 
+    def test_to_json(self):
+        r = pybamm.SpatialVariable(
+            "r", domain=["negative particle"], coord_sys="spherical polar"
+        )
+
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+        var_pts = {r: 20}
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        mesh_json = mesh.to_json()
+
+        expected_json = {
+            "submesh_pts": {"negative particle": {"r": 20}},
+            "base_domains": ["negative particle"],
+        }
+
+        self.assertEqual(mesh_json, expected_json)
+
 
 class TestMeshGenerator(TestCase):
     def test_init_name(self):
