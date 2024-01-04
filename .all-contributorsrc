@@ -784,6 +784,15 @@
         "code",
         "bug"
       ]
+    },
+    {
+      "login": "cringeyburger",
+      "name": "Ankit Meda",
+      "avatar_url": "https://avatars.githubusercontent.com/u/121183876?v=4",
+      "profile": "https://github.com/cringeyburger",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
