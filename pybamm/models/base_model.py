@@ -455,6 +455,38 @@ class BaseModel:
                             f"FunctionParameter with inputs(s) '{input_names}'",
                         )
 
+                parameters = self._find_symbols_by_submodel(
+                    pybamm.Parameter, submodel_name
+                )
+                for param in parameters:
+                    submodel_info[param.name] = (param, "Parameter")
+
+                input_parameters = self._find_symbols_by_submodel(
+                    pybamm.InputParameter, submodel_name
+                )
+                for input_param in input_parameters:
+                    if not input_param.domain:
+                        submodel_info[input_param.name] = (
+                            input_param,
+                            "InputParameter",
+                        )
+                    else:
+                        submodel_info[input_param.name] = (
+                            input_param,
+                            f"InputParameter in {input_param.domain}",
+                        )
+
+                function_parameters = self._find_symbols_by_submodel(
+                    pybamm.FunctionParameter, submodel_name
+                )
+                for func_param in function_parameters:
+                    if func_param.name not in parameter_info:
+                        input_names = "', '".join(func_param.input_names)
+                        submodel_info[func_param.name] = (
+                            func_param,
+                            f"FunctionParameter with inputs(s) '{input_names}'",
+                        )
+
                 parameter_info[submodel_name] = submodel_info
 
         else:
@@ -606,6 +638,23 @@ class BaseModel:
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
+        )
+        return list(all_input_parameters)
+
+    def _find_symbols_by_submodel(self, typ, submodel):
+        """Find all the instances of `typ` in the submodel"""
+        unpacker = pybamm.SymbolUnpacker(typ)
+        all_input_parameters = unpacker.unpack_list_of_symbols(
+            list(self.submodels[submodel].rhs.values())
+            + list(self.submodels[submodel].algebraic.values())
+            + list(self.submodels[submodel].initial_conditions.values())
+            + [
+                x[side][0]
+                for x in self.submodels[submodel].boundary_conditions.values()
+                for side in x.keys()
+            ]
+            + list(self._variables_by_submodel[submodel].values())
+            + [event.expression for event in self.submodels[submodel].events]
         )
         return list(all_input_parameters)
 
