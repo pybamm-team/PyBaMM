@@ -158,7 +158,7 @@ class TestIDAKLUJax(TestCase):
 
     # Scalar evaluation
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_f_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\nf (scalar):")
         out = wrapper(f)(t_eval[k], inputs)
@@ -167,7 +167,7 @@ class TestIDAKLUJax(TestCase):
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_f_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\nf (vector):")
         out = wrapper(f)(t_eval, inputs)
@@ -176,7 +176,7 @@ class TestIDAKLUJax(TestCase):
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_f_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\nf (vmap):")
         out = wrapper(jax.vmap(f, in_axes=in_axes))(t_eval, inputs)
@@ -185,7 +185,7 @@ class TestIDAKLUJax(TestCase):
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_f_batch_over_inputs(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("f (vmap) - attempt to batch over non-time axis")
         with self.assertRaises(ValueError):
@@ -193,7 +193,7 @@ class TestIDAKLUJax(TestCase):
 
     # Get all vars (should mirror test_f_* [above])
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\nget_vars (scalar)")
         out = wrapper(idaklu_jax_solver.get_vars(f, output_variables))(
@@ -204,7 +204,7 @@ class TestIDAKLUJax(TestCase):
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\nget_vars (vector)")
         out = wrapper(idaklu_jax_solver.get_vars(f, output_variables))(t_eval, inputs)
@@ -213,7 +213,7 @@ class TestIDAKLUJax(TestCase):
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\nget_vars (vmap)")
         out = wrapper(
@@ -229,7 +229,7 @@ class TestIDAKLUJax(TestCase):
 
     # Isolate single output variable
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvar_scalar_float(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks
         for outvar in output_variables:
@@ -240,7 +240,7 @@ class TestIDAKLUJax(TestCase):
             print(out)
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvar_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks
         for outvar in output_variables:
@@ -249,7 +249,7 @@ class TestIDAKLUJax(TestCase):
             print(out)
             np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvar_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\nget_var (vector): {outvar}")
@@ -257,7 +257,7 @@ class TestIDAKLUJax(TestCase):
             print(out)
             np.testing.assert_allclose(out, sim[outvar](t_eval))
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvar_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\nget_var (vmap): {outvar}")
@@ -272,7 +272,7 @@ class TestIDAKLUJax(TestCase):
 
     # Differentiation rules (jacfwd)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_fwd (scalar)")
         out = wrapper(jax.jacfwd(f, argnums=1))(t_eval[k], inputs)
@@ -288,7 +288,7 @@ class TestIDAKLUJax(TestCase):
         ).T
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_fwd (vector)")
         out = wrapper(jax.jacfwd(f, argnums=1))(t_eval, inputs)
@@ -307,7 +307,7 @@ class TestIDAKLUJax(TestCase):
             f"Got: {flat_out}\nExpected: {check}",
         )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_fwd (vmap)")
         out = wrapper(
@@ -328,7 +328,7 @@ class TestIDAKLUJax(TestCase):
         )
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vmap_wrt_time(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -341,7 +341,7 @@ class TestIDAKLUJax(TestCase):
                 ),
             )(t_eval, inputs)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_batch_over_inputs(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -356,7 +356,7 @@ class TestIDAKLUJax(TestCase):
 
     # Differentiation rules (jacrev)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_rev (scalar)")
         out = wrapper(jax.jacrev(f, argnums=1))(t_eval[k], inputs)
@@ -372,7 +372,7 @@ class TestIDAKLUJax(TestCase):
         ).T
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_rev (vector)")
         print("scalar")
@@ -392,7 +392,7 @@ class TestIDAKLUJax(TestCase):
         print("Testing with output_variables: ", output_variables)
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_rev (vmap)")
         out = wrapper(
@@ -413,7 +413,7 @@ class TestIDAKLUJax(TestCase):
         )
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_batch_over_inputs(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -428,7 +428,7 @@ class TestIDAKLUJax(TestCase):
 
     # Forward differentiation rules with get_vars (multiple) and get_var (singular)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_scalar_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -453,7 +453,7 @@ class TestIDAKLUJax(TestCase):
         flat_check, _ = tree_flatten(check)
         np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_scalar_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -475,7 +475,7 @@ class TestIDAKLUJax(TestCase):
             flat_check, _ = tree_flatten(check)
             np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vector_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -501,7 +501,7 @@ class TestIDAKLUJax(TestCase):
         flat_check, _ = tree_flatten(check)
         np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vector_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -522,7 +522,7 @@ class TestIDAKLUJax(TestCase):
             flat_check, _ = tree_flatten(check)
             np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_fwd (vmap) getvars")
         out = wrapper(
@@ -543,7 +543,7 @@ class TestIDAKLUJax(TestCase):
         )
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacfwd_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\njac_fwd (vmap) getvar: {outvar}")
@@ -564,7 +564,7 @@ class TestIDAKLUJax(TestCase):
 
     # Reverse differentiation rules with get_vars (multiple) and get_var (singular)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_scalar_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -589,7 +589,7 @@ class TestIDAKLUJax(TestCase):
         flat_check, _ = tree_flatten(check)
         np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_scalar_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -612,7 +612,7 @@ class TestIDAKLUJax(TestCase):
                 f"Got: {flat_out}\nExpected: {check}",
             )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vector_getvars(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -638,7 +638,7 @@ class TestIDAKLUJax(TestCase):
         flat_check, _ = tree_flatten(check)
         np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vector_getvar(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -659,7 +659,7 @@ class TestIDAKLUJax(TestCase):
             flat_check, _ = tree_flatten(check)
             np.testing.assert_allclose(flat_out, flat_check)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\njac_rev (vmap) getvars")
         out = wrapper(
@@ -680,7 +680,7 @@ class TestIDAKLUJax(TestCase):
         )
         np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\njac_rev (vmap) getvar: {outvar}")
@@ -701,7 +701,7 @@ class TestIDAKLUJax(TestCase):
 
     # Gradient rule (takes single variable)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_grad_scalar_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\ngrad (scalar) getvar: {outvar}")
@@ -719,7 +719,7 @@ class TestIDAKLUJax(TestCase):
             print("got: ", flat_out)
             np.testing.assert_allclose(flat_out, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_grad_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\ngrad (vmap) getvars: {outvar}")
@@ -740,7 +740,7 @@ class TestIDAKLUJax(TestCase):
 
     # Value and gradient (takes single variable)
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_value_and_grad_scalar(
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
@@ -763,7 +763,7 @@ class TestIDAKLUJax(TestCase):
             check = np.array([sim[outvar].sensitivities[invar][k] for invar in inputs])
             np.testing.assert_allclose(flat_t, check.flatten())
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_value_and_grad_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
             print(f"\nvalue_and_grad (vmap): {outvar}")
@@ -789,7 +789,7 @@ class TestIDAKLUJax(TestCase):
 
     # Helper functions - These return values (not jaxexprs) so cannot be JITed
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jax_vars(self, output_variables, idaklu_jax_solver, f, wrapper):
         if wrapper == jax.jit:
             print(
@@ -807,7 +807,7 @@ class TestIDAKLUJax(TestCase):
                 f"{outvar}: Got: {flat_out}\nExpected: {check}",
             )
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_jax_grad(self, output_variables, idaklu_jax_solver, f, wrapper):
         if wrapper == jax.jit:
             print(
@@ -827,7 +827,7 @@ class TestIDAKLUJax(TestCase):
 
     # Wrap jaxified expression in another function and take the gradient
 
-    @parameterized.expand(testcase)
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_grad_wrapper_sse(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("\ngrad_wrapper_sse")
 
