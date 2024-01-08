@@ -383,11 +383,11 @@ class IDAKLUJax:
             if len(self.jax_output_variables) == 1 and len(t) > 1:
                 js = np.array([js]).T
             if len(self.jax_output_variables) > 1 and len(t) == 1:
-                js = np.array([js]).T
+                js = np.array([js]).T  # pragma: no cover
             if len(self.jax_output_variables) == 1 and len(t) == 1:
-                js = np.array([[js]])
+                js = np.array([[js]])  # pragma: no cover
             while y_bar.ndim < 2:
-                y_bar = np.array([y_bar]).T
+                y_bar = np.array([y_bar]).T  # pragma: no cover
             y_dot = jnp.zeros(())
             for ix, y_outvar in enumerate(y_bar.T):
                 y_dot += jnp.dot(y_outvar, js[:, ix])

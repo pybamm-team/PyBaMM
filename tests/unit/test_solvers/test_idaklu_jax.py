@@ -8,6 +8,7 @@ import pybamm
 import numpy as np
 import unittest
 
+testcase = []
 if pybamm.have_idaklu() and pybamm.have_jax():
     from jax.tree_util import tree_flatten
     import jax
