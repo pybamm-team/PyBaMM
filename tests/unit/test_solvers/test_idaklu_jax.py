@@ -301,9 +301,10 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         )
-        np.testing.assert_allclose(
-            flat_out, check.flatten()
-        ), f"Got: {flat_out}\nExpected: {check}"
+        (
+            np.testing.assert_allclose(flat_out, check.flatten()),
+            f"Got: {flat_out}\nExpected: {check}",
+        )
 
     @parameterized.expand(testcase)
     def test_jacfwd_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -605,9 +606,10 @@ class TestIDAKLUJax(TestCase):
             check = np.array(
                 [sim[outvar].sensitivities[invar][k] for invar in inputs]
             ).T
-            np.testing.assert_allclose(
-                flat_out, check.flatten()
-            ), f"Got: {flat_out}\nExpected: {check}"
+            (
+                np.testing.assert_allclose(flat_out, check.flatten()),
+                f"Got: {flat_out}\nExpected: {check}",
+            )
 
     @parameterized.expand(testcase)
     def test_jacrev_vector_getvars(
@@ -799,9 +801,10 @@ class TestIDAKLUJax(TestCase):
             flat_out, _ = tree_flatten(out[outvar])
             flat_out = np.array([f for f in flat_out]).flatten()
             check = np.array(sim[outvar].data)
-            np.testing.assert_allclose(
-                flat_out, check.flatten()
-            ), f"{outvar}: Got: {flat_out}\nExpected: {check}"
+            (
+                np.testing.assert_allclose(flat_out, check.flatten()),
+                f"{outvar}: Got: {flat_out}\nExpected: {check}",
+            )
 
     @parameterized.expand(testcase)
     def test_jax_grad(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -816,9 +819,10 @@ class TestIDAKLUJax(TestCase):
             flat_out, _ = tree_flatten(out[outvar])
             flat_out = np.array([f for f in flat_out]).flatten()
             check = np.array([sim[outvar].sensitivities[invar] for invar in inputs])
-            np.testing.assert_allclose(
-                flat_out, check.flatten()
-            ), f"{outvar}: Got: {flat_out}\nExpected: {check}"
+            (
+                np.testing.assert_allclose(flat_out, check.flatten()),
+                f"{outvar}: Got: {flat_out}\nExpected: {check}",
+            )
 
     # Wrap jaxified expression in another function and take the gradient
 
@@ -855,9 +859,10 @@ class TestIDAKLUJax(TestCase):
         flat_out, _ = tree_flatten(sse(t_eval, inputs_pred))
         flat_out = np.array([f for f in flat_out]).flatten()
         flat_check_val, _ = tree_flatten(sse_actual)
-        np.testing.assert_allclose(
-            flat_out, flat_check_val, 1e-3
-        ), f"Got: {flat_out}\nExpected: {flat_check_val}"
+        (
+            np.testing.assert_allclose(flat_out, flat_check_val, 1e-3),
+            f"Got: {flat_out}\nExpected: {flat_check_val}",
+        )
 
         # Check grad against actual
         sse_grad_actual = {}
@@ -871,9 +876,10 @@ class TestIDAKLUJax(TestCase):
         flat_out, _ = tree_flatten(sse_grad)
         flat_out = np.array([f for f in flat_out]).flatten()
         flat_check_grad, _ = tree_flatten(sse_grad_actual)
-        np.testing.assert_allclose(
-            flat_out, flat_check_grad, 1e-3
-        ), f"Got: {flat_out}\nExpected: {flat_check_grad}"
+        (
+            np.testing.assert_allclose(flat_out, flat_check_grad, 1e-3),
+            f"Got: {flat_out}\nExpected: {flat_check_grad}",
+        )
 
         # Check value_and_grad return
         sse_val, sse_grad = wrapper(jax.value_and_grad(sse, argnums=1))(
@@ -881,9 +887,11 @@ class TestIDAKLUJax(TestCase):
         )
         flat_sse_grad, _ = tree_flatten(sse_grad)
         flat_sse_grad = np.array([f for f in flat_sse_grad]).flatten()
-        np.testing.assert_allclose(
-            sse_val, flat_check_val, 1e3
-        ), f"Got: {sse_val}\nExpected: {flat_check_val}"
-        np.testing.assert_allclose(
-            flat_sse_grad, flat_check_grad, 1e3
-        ), f"Got: {sse_grad}\nExpected: {sse_grad}"
+        (
+            np.testing.assert_allclose(sse_val, flat_check_val, 1e3),
+            f"Got: {sse_val}\nExpected: {flat_check_val}",
+        )
+        (
+            np.testing.assert_allclose(flat_sse_grad, flat_check_grad, 1e3),
+            f"Got: {sse_grad}\nExpected: {sse_grad}",
+        )
