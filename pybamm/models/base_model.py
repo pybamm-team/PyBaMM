@@ -1378,9 +1378,7 @@ class BoundaryConditionsDict(dict):
                     raise pybamm.ModelError(
                         """
                         boundary condition types must be Dirichlet or Neumann, not '{}'
-                        """.format(
-                            bc[1]
-                        )
+                        """.format(bc[1])
                     )
 
         return boundary_conditions

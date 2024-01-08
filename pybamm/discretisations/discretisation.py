@@ -894,9 +894,7 @@ class Discretisation:
                     No key set for variable '{}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        symbol.name
-                    )
+                    """.format(symbol.name)
                 )
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1

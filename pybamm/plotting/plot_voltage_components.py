@@ -138,8 +138,9 @@ def plot_voltage_components(
     ax.set_xlim([time[0], time[-1]])
     ax.set_xlabel("Time [h]")
 
-    y_min, y_max = 0.98 * min(np.nanmin(V), np.nanmin(ocv)), 1.02 * (
-        max(np.nanmax(V), np.nanmax(ocv))
+    y_min, y_max = (
+        0.98 * min(np.nanmin(V), np.nanmin(ocv)),
+        1.02 * (max(np.nanmax(V), np.nanmax(ocv))),
     )
     ax.set_ylim([y_min, y_max])
 

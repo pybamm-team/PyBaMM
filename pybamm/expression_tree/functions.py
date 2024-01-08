@@ -413,7 +413,7 @@ class Erf(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return 2 / np.sqrt(np.pi) * exp(-children[0] ** 2)
+        return 2 / np.sqrt(np.pi) * exp(-(children[0] ** 2))
 
 
 def erf(child):
