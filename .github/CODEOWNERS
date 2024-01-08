@@ -1,5 +1,4 @@
 # Automatically request reviews from maintainers
-# The CODEOWNERS are listed alphabetically
 
 # Package
 /pybamm/discretisations/ @martinjrobins @rtimms @tinosulzer
