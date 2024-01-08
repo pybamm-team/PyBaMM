@@ -52,7 +52,7 @@ class IDAKLUJax:
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )  # pragma: no cover
         if not pybamm.have_idaklu():
             raise ModuleNotFoundError(
