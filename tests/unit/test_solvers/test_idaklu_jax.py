@@ -2,16 +2,17 @@
 # Tests for the KLU-Jax interface class
 #
 from tests import TestCase
-from jax.tree_util import tree_flatten
 from parameterized import parameterized
 
 import pybamm
 import numpy as np
-import jax
-import jax.numpy as jnp
 import unittest
 
 if pybamm.have_idaklu() and pybamm.have_jax():
+    from jax.tree_util import tree_flatten
+    import jax
+    import jax.numpy as jnp
+
     inputs = {
         "Current function [A]": 0.222,
         "Separator porosity": 0.3,
@@ -150,7 +151,7 @@ class TestIDAKLUJax(TestCase):
         f = idaklu_jax_solver.get_jaxpr()
         # Check that evaluation can occur (and is correct) with no inputs
         out = f(t_eval)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
@@ -161,7 +162,7 @@ class TestIDAKLUJax(TestCase):
         print("\nf (scalar):")
         out = wrapper(f)(t_eval[k], inputs)
         print(out)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
 
@@ -170,7 +171,7 @@ class TestIDAKLUJax(TestCase):
         print("\nf (vector):")
         out = wrapper(f)(t_eval, inputs)
         print(out)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
@@ -179,7 +180,7 @@ class TestIDAKLUJax(TestCase):
         print("\nf (vmap):")
         out = wrapper(jax.vmap(f, in_axes=in_axes))(t_eval, inputs)
         print(out)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
@@ -198,7 +199,7 @@ class TestIDAKLUJax(TestCase):
             t_eval[k], inputs
         )
         print(out)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
 
@@ -207,7 +208,7 @@ class TestIDAKLUJax(TestCase):
         print("\nget_vars (vector)")
         out = wrapper(idaklu_jax_solver.get_vars(f, output_variables))(t_eval, inputs)
         print(out)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
@@ -221,7 +222,7 @@ class TestIDAKLUJax(TestCase):
             ),
         )(t_eval, inputs)
         print(out)
-        assert np.allclose(
+        np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
@@ -236,7 +237,7 @@ class TestIDAKLUJax(TestCase):
                 float(t_eval[k]), inputs
             )
             print(out)
-            assert np.allclose(out, sim[outvar](float(t_eval[k])))
+            np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
     @parameterized.expand(testcase)
     def test_getvar_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -245,7 +246,7 @@ class TestIDAKLUJax(TestCase):
             print(f"\nget_var (scalar; np.ndarray): {outvar}")
             out = wrapper(idaklu_jax_solver.get_var(f, outvar))(t_eval[k], inputs)
             print(out)
-            assert np.allclose(out, sim[outvar](t_eval[k]))
+            np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
 
     @parameterized.expand(testcase)
     def test_getvar_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -253,7 +254,7 @@ class TestIDAKLUJax(TestCase):
             print(f"\nget_var (vector): {outvar}")
             out = wrapper(idaklu_jax_solver.get_var(f, outvar))(t_eval, inputs)
             print(out)
-            assert np.allclose(out, sim[outvar](t_eval))
+            np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     @parameterized.expand(testcase)
     def test_getvar_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -266,7 +267,7 @@ class TestIDAKLUJax(TestCase):
                 ),
             )(t_eval, inputs)
             print(out)
-            assert np.allclose(out, sim[outvar](t_eval))
+            np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     # Differentiation rules (jacfwd)
 
@@ -284,7 +285,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         ).T
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacfwd_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -300,7 +301,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         )
-        assert np.allclose(
+        np.testing.assert_allclose(
             flat_out, check.flatten()
         ), f"Got: {flat_out}\nExpected: {check}"
 
@@ -323,7 +324,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         )
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacfwd_vmap_wrt_time(
@@ -367,7 +368,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         ).T
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacrev_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -387,7 +388,7 @@ class TestIDAKLUJax(TestCase):
             ]
         )
         print("Testing with output_variables: ", output_variables)
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacrev_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -408,7 +409,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         )
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacrev_batch_over_inputs(
@@ -448,7 +449,7 @@ class TestIDAKLUJax(TestCase):
             for invar in inputs
         }
         flat_check, _ = tree_flatten(check)
-        assert np.allclose(flat_out, flat_check)
+        np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacfwd_scalar_getvar(
@@ -470,7 +471,7 @@ class TestIDAKLUJax(TestCase):
             }
             print(f"check: {check}")
             flat_check, _ = tree_flatten(check)
-            assert np.allclose(flat_out, flat_check)
+            np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacfwd_vector_getvars(
@@ -496,7 +497,7 @@ class TestIDAKLUJax(TestCase):
             for invar in inputs
         }
         flat_check, _ = tree_flatten(check)
-        assert np.allclose(flat_out, flat_check)
+        np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacfwd_vector_getvar(
@@ -517,7 +518,7 @@ class TestIDAKLUJax(TestCase):
                 for invar in inputs
             }
             flat_check, _ = tree_flatten(check)
-            assert np.allclose(flat_out, flat_check)
+            np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacfwd_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -538,7 +539,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         )
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacfwd_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -557,7 +558,7 @@ class TestIDAKLUJax(TestCase):
                 for invar in inputs
             }
             flat_check, _ = tree_flatten(check)
-            assert np.allclose(flat_out, flat_check)
+            np.testing.assert_allclose(flat_out, flat_check)
 
     # Reverse differentiation rules with get_vars (multiple) and get_var (singular)
 
@@ -584,7 +585,7 @@ class TestIDAKLUJax(TestCase):
             for invar in inputs
         }
         flat_check, _ = tree_flatten(check)
-        assert np.allclose(flat_out, flat_check)
+        np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacrev_scalar_getvar(
@@ -604,7 +605,7 @@ class TestIDAKLUJax(TestCase):
             check = np.array(
                 [sim[outvar].sensitivities[invar][k] for invar in inputs]
             ).T
-            assert np.allclose(
+            np.testing.assert_allclose(
                 flat_out, check.flatten()
             ), f"Got: {flat_out}\nExpected: {check}"
 
@@ -632,7 +633,7 @@ class TestIDAKLUJax(TestCase):
             for invar in inputs
         }
         flat_check, _ = tree_flatten(check)
-        assert np.allclose(flat_out, flat_check)
+        np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacrev_vector_getvar(
@@ -653,7 +654,7 @@ class TestIDAKLUJax(TestCase):
                 for invar in inputs
             }
             flat_check, _ = tree_flatten(check)
-            assert np.allclose(flat_out, flat_check)
+            np.testing.assert_allclose(flat_out, flat_check)
 
     @parameterized.expand(testcase)
     def test_jacrev_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -674,7 +675,7 @@ class TestIDAKLUJax(TestCase):
                 for outvar in output_variables
             ]
         )
-        assert np.allclose(flat_out, check.flatten())
+        np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_jacrev_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -693,7 +694,7 @@ class TestIDAKLUJax(TestCase):
                 for invar in inputs
             }
             flat_check, _ = tree_flatten(check)
-            assert np.allclose(flat_out, flat_check)
+            np.testing.assert_allclose(flat_out, flat_check)
 
     # Gradient rule (takes single variable)
 
@@ -713,7 +714,7 @@ class TestIDAKLUJax(TestCase):
             check = np.array([sim[outvar].sensitivities[invar][k] for invar in inputs])
             print("expected: ", check.flatten())
             print("got: ", flat_out)
-            assert np.allclose(flat_out, check.flatten())
+            np.testing.assert_allclose(flat_out, check.flatten())
 
     @parameterized.expand(testcase)
     def test_grad_vmap_getvar(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -732,7 +733,7 @@ class TestIDAKLUJax(TestCase):
             flat_out, _ = tree_flatten(out)
             flat_out = np.array([f for f in flat_out]).flatten()
             check = np.array([sim[outvar].sensitivities[invar] for invar in inputs])
-            assert np.allclose(flat_out, check.flatten())
+            np.testing.assert_allclose(flat_out, check.flatten())
 
     # Value and gradient (takes single variable)
 
@@ -752,12 +753,12 @@ class TestIDAKLUJax(TestCase):
             flat_p, _ = tree_flatten(primals)
             flat_p = np.array([f for f in flat_p]).flatten()
             check = np.array(sim[outvar].data[k])
-            assert np.allclose(flat_p, check.flatten())
+            np.testing.assert_allclose(flat_p, check.flatten())
             print(tangents)
             flat_t, _ = tree_flatten(tangents)
             flat_t = np.array([f for f in flat_t]).flatten()
             check = np.array([sim[outvar].sensitivities[invar][k] for invar in inputs])
-            assert np.allclose(flat_t, check.flatten())
+            np.testing.assert_allclose(flat_t, check.flatten())
 
     @parameterized.expand(testcase)
     def test_value_and_grad_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -776,12 +777,12 @@ class TestIDAKLUJax(TestCase):
             flat_p, _ = tree_flatten(primals)
             flat_p = np.array([f for f in flat_p]).flatten()
             check = np.array(sim[outvar].data)
-            assert np.allclose(flat_p, check.flatten())
+            np.testing.assert_allclose(flat_p, check.flatten())
             print(tangents)
             flat_t, _ = tree_flatten(tangents)
             flat_t = np.array([f for f in flat_t]).flatten()
             check = np.array([sim[outvar].sensitivities[invar] for invar in inputs])
-            assert np.allclose(flat_t, check.flatten())
+            np.testing.assert_allclose(flat_t, check.flatten())
 
     # Helper functions - These return values (not jaxexprs) so cannot be JITed
 
@@ -798,7 +799,7 @@ class TestIDAKLUJax(TestCase):
             flat_out, _ = tree_flatten(out[outvar])
             flat_out = np.array([f for f in flat_out]).flatten()
             check = np.array(sim[outvar].data)
-            assert np.allclose(
+            np.testing.assert_allclose(
                 flat_out, check.flatten()
             ), f"{outvar}: Got: {flat_out}\nExpected: {check}"
 
@@ -815,7 +816,7 @@ class TestIDAKLUJax(TestCase):
             flat_out, _ = tree_flatten(out[outvar])
             flat_out = np.array([f for f in flat_out]).flatten()
             check = np.array([sim[outvar].sensitivities[invar] for invar in inputs])
-            assert np.allclose(
+            np.testing.assert_allclose(
                 flat_out, check.flatten()
             ), f"{outvar}: Got: {flat_out}\nExpected: {check}"
 
@@ -854,7 +855,7 @@ class TestIDAKLUJax(TestCase):
         flat_out, _ = tree_flatten(sse(t_eval, inputs_pred))
         flat_out = np.array([f for f in flat_out]).flatten()
         flat_check_val, _ = tree_flatten(sse_actual)
-        assert np.allclose(
+        np.testing.assert_allclose(
             flat_out, flat_check_val, 1e-3
         ), f"Got: {flat_out}\nExpected: {flat_check_val}"
 
@@ -870,7 +871,7 @@ class TestIDAKLUJax(TestCase):
         flat_out, _ = tree_flatten(sse_grad)
         flat_out = np.array([f for f in flat_out]).flatten()
         flat_check_grad, _ = tree_flatten(sse_grad_actual)
-        assert np.allclose(
+        np.testing.assert_allclose(
             flat_out, flat_check_grad, 1e-3
         ), f"Got: {flat_out}\nExpected: {flat_check_grad}"
 
@@ -880,9 +881,9 @@ class TestIDAKLUJax(TestCase):
         )
         flat_sse_grad, _ = tree_flatten(sse_grad)
         flat_sse_grad = np.array([f for f in flat_sse_grad]).flatten()
-        assert np.allclose(
+        np.testing.assert_allclose(
             sse_val, flat_check_val, 1e3
         ), f"Got: {sse_val}\nExpected: {flat_check_val}"
-        assert np.allclose(
+        np.testing.assert_allclose(
             flat_sse_grad, flat_check_grad, 1e3
         ), f"Got: {sse_grad}\nExpected: {sse_grad}"

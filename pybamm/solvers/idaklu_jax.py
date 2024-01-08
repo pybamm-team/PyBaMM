@@ -562,7 +562,7 @@ class IDAKLUJax:
             else:
                 raise NotImplementedError(
                     f"jaxify: batching not implemented for batch_axes = {batch_axes}"
-                )
+                )  # pragma: no cover
 
         batching.primitive_batchers[f_p] = f_batch
 
@@ -720,7 +720,7 @@ class IDAKLUJax:
                 raise NotImplementedError(
                     "f_jvp_batch: batching not implemented for batch_axes = "
                     f"{batch_axes}"
-                )
+                )  # pragma: no cover
 
         batching.primitive_batchers[f_jvp_p] = f_jvp_batch
 
@@ -891,7 +891,7 @@ class IDAKLUJax:
             else:
                 raise Exception(
                     "Batch mode not supported for batch_axes = ", batch_axes
-                )
+                )  # pragma: no cover
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
