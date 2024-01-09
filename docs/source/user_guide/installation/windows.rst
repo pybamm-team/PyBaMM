@@ -73,7 +73,7 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 .. note::
 
-   The Jax solver is not supported on Python 3.8. It is supported on Python 3.9, 3.10, and 3.11.
+   The Jax solver is not supported on Python 3.8. It is supported on Python 3.9, 3.10, 3.11, and 3.12.
 
 .. code:: bash
 
