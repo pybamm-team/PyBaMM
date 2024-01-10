@@ -69,7 +69,7 @@ void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   DEBUG_n(n_inputs);
   DEBUG_v(t, n_t);
   DEBUG_v(inputs, n_inputs);
-  
+
   // Acquire GIL (since this function is called as a capsule)
   py::gil_scoped_acquire acquire;
   PyGILState_STATE state = PyGILState_Ensure();

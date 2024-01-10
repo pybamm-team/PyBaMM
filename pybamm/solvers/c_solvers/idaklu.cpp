@@ -132,7 +132,7 @@ PYBIND11_MODULE(idaklu, m)
     "registrations",
     &Registrations
   );
-  
+
   py::class_<Function>(m, "Function");
 
   py::class_<Solution>(m, "solution")
