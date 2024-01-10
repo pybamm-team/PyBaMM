@@ -1,5 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug Fixes
+
+- Fixed a bug where if the first step(s) in a cycle are skipped then the cycle solution started from the model's initial conditions instead of from the last state of the previous cycle ([#3708](https://github.com/pybamm-team/PyBaMM/pull/3708))
 # [v24.1rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc0) - 2024-01-31
 
 ## Features
