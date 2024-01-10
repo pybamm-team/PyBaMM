@@ -60,7 +60,7 @@ public:
   /**
    * @brief Register callbacks for JAX evaluation, JVP and VJP
    */
-  void register_callback_jaxsolve(CallbackEval h);
+  void register_callback_eval(CallbackEval h);
 
   /**
    * @brief Register callback for JAX evaluation
@@ -80,7 +80,7 @@ public:
   /**
    * @brief JAX evaluation primitive function
    */
-  void cpu_idaklu(void *out_tuple, const void **in);
+  void cpu_idaklu_eval(void *out_tuple, const void **in);
 
   /**
    * @brief JVP primitive function

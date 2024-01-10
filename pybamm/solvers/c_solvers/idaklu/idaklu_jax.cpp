@@ -1,4 +1,3 @@
-#include "common.hpp"
 #include "idaklu_jax.hpp"
 
 #include <pybind11/functional.h>
@@ -32,7 +31,7 @@ IdakluJax::~IdakluJax() {
   idaklu_jax_instances.erase(index);
 }
 
-void IdakluJax::register_callback_jaxsolve(CallbackEval h) {
+void IdakluJax::register_callback_eval(CallbackEval h) {
   callback_eval = h;
 }
 
@@ -44,13 +43,13 @@ void IdakluJax::register_callback_vjp(CallbackVjp h) {
   callback_vjp = h;
 }
 
-void IdakluJax::register_callbacks(CallbackEval h, CallbackJvp h_jvp, CallbackVjp h_vjp) {
-  register_callback_jaxsolve(h);
+void IdakluJax::register_callbacks(CallbackEval h_eval, CallbackJvp h_jvp, CallbackVjp h_vjp) {
+  register_callback_eval(h_eval);
   register_callback_jvp(h_jvp);
   register_callback_vjp(h_vjp);
 }
 
-void IdakluJax::cpu_idaklu(void *out_tuple, const void **in) {
+void IdakluJax::cpu_idaklu_eval(void *out_tuple, const void **in) {
   // Parse the inputs --- note that these come from jax lowering and are NOT np_array's
   int k = 1;  // Start indexing at 1 to skip idaklu_jax index
   const std::int64_t n_t = *reinterpret_cast<const std::int64_t *>(in[k++]);
@@ -64,28 +63,35 @@ void IdakluJax::cpu_idaklu(void *out_tuple, const void **in) {
 
   // Log
   DEBUG("cpu_idaklu");
-  DEBUG(index);
-  DEBUG(n_t);
-  DEBUG(n_vars);
-  DEBUG(n_inputs);
+  DEBUG_n(index);
+  DEBUG_n(n_t);
+  DEBUG_n(n_vars);
+  DEBUG_n(n_inputs);
   DEBUG_v(t, n_t);
   DEBUG_v(inputs, n_inputs);
+  
+  // Acquire GIL (since this function is called as a capsule)
+  py::gil_scoped_acquire acquire;
+  PyGILState_STATE state = PyGILState_Ensure();
 
   // Convert time vector to an np_array
   py::capsule t_capsule(t, "t_capsule");
   np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
 
   // Convert inputs to an np_array
-  py::capsule in_capsule(t, "in_capsule");
+  py::capsule in_capsule(inputs, "in_capsule");
   np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
 
-  // Call solve obtain function in python to obtain an np_array
+  // Call solve function in python to obtain an np_array
   np_array out_np = callback_eval(t_np, in_np);
   auto out_buf = out_np.request();
-  const realtype* out_ptr = reinterpret_cast<realtype*>(out_buf.ptr);
+  const realtype *out_ptr = reinterpret_cast<realtype *>(out_buf.ptr);
 
   // Arrange into 'out' array
-  memcpy(out, out_ptr, n_t*n_vars*sizeof(realtype));
+  memcpy(out, out_ptr, n_t * n_vars * sizeof(realtype));
+
+  // Release GIL
+  PyGILState_Release(state);
 }
 
 void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
@@ -106,13 +112,17 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
 
   // Log
   DEBUG("cpu_idaklu_jvp");
-  DEBUG(n_t);
-  DEBUG(n_vars);
-  DEBUG(n_inputs);
+  DEBUG_n(n_t);
+  DEBUG_n(n_vars);
+  DEBUG_n(n_inputs);
   DEBUG_v(primal_t, n_t);
   DEBUG_v(primal_inputs, n_inputs);
   DEBUG_v(tangent_t, n_t);
   DEBUG_v(tangent_inputs, n_inputs);
+
+  // Acquire GIL (since this function is called as a capsule)
+  py::gil_scoped_acquire acquire;
+  PyGILState_STATE state = PyGILState_Ensure();
 
   // Form primals time vector as np_array
   py::capsule primal_t_capsule(primal_t, "primal_t_capsule");
@@ -156,10 +166,13 @@ void IdakluJax::cpu_idaklu_jvp(void *out_tuple, const void **in) {
     tangent_t_np, tangent_inputs_np
   );
   auto buf = y_dot.request();
-  const realtype* ptr = reinterpret_cast<realtype*>(buf.ptr);
+  const realtype *ptr = reinterpret_cast<realtype *>(buf.ptr);
 
   // Arrange into 'out' array
-  memcpy(out, ptr, n_t*n_vars*sizeof(realtype));
+  memcpy(out, ptr, n_t * n_vars * sizeof(realtype));
+
+  // Release GIL
+  PyGILState_Release(state);
 }
 
 void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
@@ -179,22 +192,25 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
 
   // Log
   DEBUG("cpu_idaklu_vjp");
-  DEBUG(n_t);
-  DEBUG(n_vars);
-  DEBUG(n_inputs);
-  DEBUG(n_y_bar0);
-  DEBUG(n_y_bar1);
+  DEBUG_n(n_t);
+  DEBUG_n(n_inputs);
+  DEBUG_n(n_y_bar0);
+  DEBUG_n(n_y_bar1);
   DEBUG_v(y_bar, n_y_bar0*n_y_bar1);
   DEBUG_v(invar, 1);
   DEBUG_v(t, n_t);
   DEBUG_v(inputs, n_inputs);
+
+  // Acquire GIL (since this function is called as a capsule)
+  py::gil_scoped_acquire acquire;
+  PyGILState_STATE state = PyGILState_Ensure();
 
   // Convert time vector to an np_array
   py::capsule t_capsule(t, "t_capsule");
   np_array t_np = np_array({n_t}, {sizeof(realtype)}, t, t_capsule);
 
   // Convert y_bar to an np_array
-  py::capsule y_bar_capsule(t, "y_bar_capsule");
+  py::capsule y_bar_capsule(y_bar, "y_bar_capsule");
   np_array y_bar_np = np_array(
       {n_y_bar},
       {sizeof(realtype)},
@@ -203,17 +219,20 @@ void IdakluJax::cpu_idaklu_vjp(void *out_tuple, const void **in) {
     );
 
   // Convert inputs to an np_array
-  py::capsule in_capsule(t, "in_capsule");
+  py::capsule in_capsule(inputs, "in_capsule");
   np_array in_np = np_array({n_inputs}, {sizeof(realtype)}, inputs, in_capsule);
 
   // Call VJP function in python to obtain an np_array
   np_array y_dot = callback_vjp(y_bar_np, n_y_bar0, n_y_bar1, invar[0], t_np, in_np);
   auto buf = y_dot.request();
-  const realtype* ptr = reinterpret_cast<realtype*>(buf.ptr);
+  const realtype *ptr = reinterpret_cast<realtype *>(buf.ptr);
 
   // Arrange output
   //memcpy(out, ptr, sizeof(realtype));
   out[0] = ptr[0];  // output is scalar
+
+  // Release GIL
+  PyGILState_Release(state);
 }
 
 template <typename T>
@@ -221,9 +240,9 @@ pybind11::capsule EncapsulateFunction(T* fn) {
   return pybind11::capsule(reinterpret_cast<void*>(fn), "xla._CUSTOM_CALL_TARGET");
 }
 
-void wrap_cpu_idaklu_f64(void *out_tuple, const void **in) {
+void wrap_cpu_idaklu_eval_f64(void *out_tuple, const void **in) {
   const std::int64_t index = *reinterpret_cast<const std::int64_t *>(in[0]);
-  idaklu_jax_instances[index]->cpu_idaklu(out_tuple, in);
+  idaklu_jax_instances[index]->cpu_idaklu_eval(out_tuple, in);
 }
 
 void wrap_cpu_idaklu_jvp_f64(void *out_tuple, const void **in) {
@@ -238,7 +257,7 @@ void wrap_cpu_idaklu_vjp_f64(void *out_tuple, const void **in) {
 
 pybind11::dict Registrations() {
   pybind11::dict dict;
-  dict["cpu_idaklu_f64"] = EncapsulateFunction(wrap_cpu_idaklu_f64);
+  dict["cpu_idaklu_f64"] = EncapsulateFunction(wrap_cpu_idaklu_eval_f64);
   dict["cpu_idaklu_jvp_f64"] = EncapsulateFunction(wrap_cpu_idaklu_jvp_f64);
   dict["cpu_idaklu_vjp_f64"] = EncapsulateFunction(wrap_cpu_idaklu_vjp_f64);
   return dict;

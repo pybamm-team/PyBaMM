@@ -39,7 +39,17 @@ using np_array_int = py::array_t<int64_t>;
 #ifdef NDEBUG
 #define DEBUG(x)
 #else
-#define DEBUG(x) do { std::cerr << __FILE__ << ':' << __LINE__ << ' ' << x << std::endl; } while (0)
+#define DEBUG(x) { \
+    std::cerr << __FILE__ << ":" << __LINE__ << " " << x << std::endl; \
+  }
+#endif
+
+#ifdef NDEBUG_n
+#define DEBUG_n(x)
+#else
+#define DEBUG_n(x) { \
+    std::cerr << __FILE__ << ":" << __LINE__ << "," << #x << " = " << x << std::endl; \
+  }
 #endif
 
 #ifdef NDEBUG
