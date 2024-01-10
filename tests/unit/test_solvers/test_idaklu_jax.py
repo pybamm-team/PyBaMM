@@ -188,7 +188,7 @@ class TestIDAKLUJax(TestCase):
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_f_batch_over_inputs(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("f (vmap) - attempt to batch over non-time axis")
-        inputs_mock = np.array([1., 2., 3.])
+        inputs_mock = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(NotImplementedError):
             wrapper(jax.vmap(f, in_axes=(None, 0)))(t_eval, inputs_mock)
 
@@ -347,7 +347,7 @@ class TestIDAKLUJax(TestCase):
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
         print("\njac_fwd (vmap) attempt to batch over non-time axis")
-        inputs_mock = np.array([1., 2., 3.])
+        inputs_mock = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(NotImplementedError):
             wrapper(
                 jax.vmap(
@@ -420,7 +420,7 @@ class TestIDAKLUJax(TestCase):
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
         print("\njac_rev (vmap) attempt to batch over non-time axis")
-        inputs_mock = np.array([1., 2., 3.])
+        inputs_mock = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(NotImplementedError):
             wrapper(
                 jax.vmap(
