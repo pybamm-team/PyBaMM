@@ -28,7 +28,7 @@ jobs:
       - name: Check style
         run: |
           python -m pip install pre-commit
-          pre-commit run --all
+          pre-commit run -a
 
   run_unit_tests:
     needs: style
