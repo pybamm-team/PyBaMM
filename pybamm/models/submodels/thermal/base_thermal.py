@@ -179,32 +179,58 @@ class BaseThermal(pybamm.BaseSubModel):
         Q = Q_ohm + Q_rxn + Q_rev
 
         # Compute the X-average over the entire cell, including current collectors
+        # Note: this can still be a function of y and z for higher-dimensional pouch
+        # cell models
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
-        # Compute volume-averaged heat source terms
-        Q_ohm_vol_av = self._yz_average(Q_ohm_av)
-        Q_rxn_vol_av = self._yz_average(Q_rxn_av)
-        Q_rev_vol_av = self._yz_average(Q_rev_av)
-        Q_vol_av = self._yz_average(Q_av)
+        # Compute the integrated heat source per unit simulated electrode-pair area
+        # in W.m-2
+        # Note: this can still be a function of y and z for higher-dimensional pouch
+        # cell models
+        Q_ohm_Wm2 = Q_ohm_av * param.L
+        Q_rxn_Wm2 = Q_rxn_av * param.L
+        Q_rev_Wm2 = Q_rev_av * param.L
+        Q_Wm2 = Q_av * param.L
+        # Now average over the electrode height and width
+        Q_ohm_Wm2_av = self._yz_average(Q_ohm_Wm2)
+        Q_rxn_Wm2_av = self._yz_average(Q_rxn_Wm2)
+        Q_rev_Wm2_av = self._yz_average(Q_rev_Wm2)
+        Q_Wm2_av = self._yz_average(Q_Wm2)
+
+        # Compute volume-averaged heat source terms over the *entire cell volume*, not
+        # the product of electrode height * electrode width * electrode stack thickness
+        A = param.L_y * param.L_z  # *modelled* electrode area
+        V = param.V_cell  # *actual* cell volume
+        Q_ohm_vol_av = Q_ohm_Wm2_av * A / V
+        Q_rxn_vol_av = Q_rxn_Wm2_av * A / V
+        Q_rev_vol_av = Q_rev_Wm2_av * A / V
+        Q_vol_av = Q_Wm2_av * A / V
 
         variables.update(
             {
                 "Ohmic heating [W.m-3]": Q_ohm,
                 "X-averaged Ohmic heating [W.m-3]": Q_ohm_av,
                 "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av,
+                "Integrated Ohmic heating per unit electrode-pair area "
+                "[W.m-2]": Q_ohm_Wm2,
                 "Irreversible electrochemical heating [W.m-3]": Q_rxn,
                 "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av,
                 "Volume-averaged irreversible electrochemical heating "
                 + "[W.m-3]": Q_rxn_vol_av,
+                "Integrated irreversible electrochemical heating per unit "
+                + "electrode-pair area [W.m-2]": Q_rxn_Wm2,
                 "Reversible heating [W.m-3]": Q_rev,
                 "X-averaged reversible heating [W.m-3]": Q_rev_av,
                 "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av,
+                "Integrated reversible heating per unit electrode-pair area "
+                "[W.m-2]": Q_rev_Wm2,
                 "Total heating [W.m-3]": Q,
                 "X-averaged total heating [W.m-3]": Q_av,
                 "Volume-averaged total heating [W.m-3]": Q_vol_av,
+                "Integrated total heating per unit electrode-pair area [W.m-2]": Q_Wm2,
                 "Negative current collector Ohmic heating [W.m-3]": Q_ohm_s_cn,
                 "Positive current collector Ohmic heating [W.m-3]": Q_ohm_s_cp,
             }
