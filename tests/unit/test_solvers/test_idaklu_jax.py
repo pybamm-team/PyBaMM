@@ -188,8 +188,9 @@ class TestIDAKLUJax(TestCase):
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_f_batch_over_inputs(self, output_variables, idaklu_jax_solver, f, wrapper):
         print("f (vmap) - attempt to batch over non-time axis")
-        with self.assertRaises(ValueError):
-            wrapper(jax.vmap(f, in_axes=(None, 0)))(t_eval, inputs)
+        inputs_mock = np.array([1., 2., 3.])
+        with self.assertRaises(NotImplementedError):
+            wrapper(jax.vmap(f, in_axes=(None, 0)))(t_eval, inputs_mock)
 
     # Get all vars (should mirror test_f_* [above])
 
@@ -346,13 +347,14 @@ class TestIDAKLUJax(TestCase):
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
         print("\njac_fwd (vmap) attempt to batch over non-time axis")
-        with self.assertRaises(ValueError):
+        inputs_mock = np.array([1., 2., 3.])
+        with self.assertRaises(NotImplementedError):
             wrapper(
                 jax.vmap(
                     jax.jacfwd(f, argnums=1),
                     in_axes=(None, 0),
                 ),
-            )(t_eval, inputs)
+            )(t_eval, inputs_mock)
 
     # Differentiation rules (jacrev)
 
@@ -418,13 +420,14 @@ class TestIDAKLUJax(TestCase):
         self, output_variables, idaklu_jax_solver, f, wrapper
     ):
         print("\njac_rev (vmap) attempt to batch over non-time axis")
-        with self.assertRaises(ValueError):
+        inputs_mock = np.array([1., 2., 3.])
+        with self.assertRaises(NotImplementedError):
             wrapper(
                 jax.vmap(
                     jax.jacrev(f, argnums=1),
                     in_axes=(None, 0),
                 ),
-            )(t_eval, inputs)
+            )(t_eval, inputs_mock)
 
     # Forward differentiation rules with get_vars (multiple) and get_var (singular)
 

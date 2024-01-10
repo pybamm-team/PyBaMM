@@ -62,9 +62,6 @@ class IDAKLUJax:
         self.idaklu_jax_obj = None  # IDAKLU-JAX object
         self.solver = solver  # Originating IDAKLU Solver object
 
-    def __del__(self):
-        self._deallocate_callbacks()
-
     def get_jaxpr(self):
         """Returns a JAX expression representing the IDAKLU-wrapped solver object"""
         if self.jaxpr is None:
@@ -292,8 +289,6 @@ class IDAKLUJax:
         logging.info("jax_solve")
         logging.debug(f"  t: {type(t)}, {t}")
         logging.debug(f"  inputs: {type(inputs)}, {inputs}")
-        if isinstance(t, float):
-            t = np.array(t)  # pragma: no cover
         # Returns a jax array
         out = self._jaxify_solve(t, None, *inputs)
         # Convert to numpy array
@@ -359,8 +354,6 @@ class IDAKLUJax:
         t = primals[0]
         inputs = primals[1:]
 
-        if isinstance(y_bar, float):
-            y_bar = np.array([y_bar])  # pragma: no cover
         if isinstance(invar, float):
             invar = round(invar)
         if isinstance(t, float):
@@ -382,12 +375,6 @@ class IDAKLUJax:
             js = self._jaxify_solve(t, invar, *inputs)
             if len(self.jax_output_variables) == 1 and len(t) > 1:
                 js = np.array([js]).T
-            if len(self.jax_output_variables) > 1 and len(t) == 1:
-                js = np.array([js]).T  # pragma: no cover
-            if len(self.jax_output_variables) == 1 and len(t) == 1:
-                js = np.array([[js]])  # pragma: no cover
-            while y_bar.ndim < 2:
-                y_bar = np.array([y_bar]).T  # pragma: no cover
             y_dot = jnp.zeros(())
             for ix, y_outvar in enumerate(y_bar.T):
                 y_dot += jnp.dot(y_outvar, js[:, ix])
@@ -423,12 +410,6 @@ class IDAKLUJax:
             self._jax_jvp_impl_array_inputs,
             self._jax_vjp_impl_array_inputs,
         )
-
-    def _deallocate_callbacks(self):
-        """Deallocate callbacks in the IDAKLU solver"""
-        logging.info("_deallocate_callbacks")
-        if self.idaklu_jax_obj is not None:
-            self.idaklu_jax_obj.register_callbacks(None, None, None)  # pragma: no cover
 
     def _unique_name(self):
         """Return a unique name for this solver object for naming the JAX primitives"""
@@ -556,13 +537,11 @@ class IDAKLUJax:
             inputs = args[1:]
             if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
                 # Temporal batching
-                if t.ndim == 0:
-                    return f_p.bind(t, *inputs), None  # pragma: no cover
                 return jnp.stack(list(map(lambda tp: f_p.bind(tp, *inputs), t))), 0
             else:
                 raise NotImplementedError(
                     f"jaxify: batching not implemented for batch_axes = {batch_axes}"
-                )  # pragma: no cover
+                )
 
         batching.primitive_batchers[f_p] = f_batch
 
@@ -681,8 +660,6 @@ class IDAKLUJax:
                 # Temporal batching (primals) only
                 t = primals[0]
                 inputs = primals[1:]
-                if t.ndim == 0:
-                    return f_jvp_p.bind(t, *inputs), None  # pragma: no cover
                 return (
                     jnp.stack(
                         list(map(lambda tp: f_jvp_p.bind(tp, *inputs, *tangents), t))
@@ -720,7 +697,7 @@ class IDAKLUJax:
                 raise NotImplementedError(
                     "f_jvp_batch: batching not implemented for batch_axes = "
                     f"{batch_axes}"
-                )  # pragma: no cover
+                )
 
         batching.primitive_batchers[f_jvp_p] = f_jvp_batch
 
@@ -874,8 +851,6 @@ class IDAKLUJax:
 
             if batch_axes[0] is not None and all([b is None for b in batch_axes[1:]]):
                 # Batch over y_bar
-                if y_bars.ndim <= 1:
-                    return jnp.stack(f_vjp(*args)), 0  # pragma: no cover
                 out = list(map(lambda yb: f_vjp(yb, invar, t, *inputs), y_bars))
                 return jnp.stack(out), 0
             elif (
@@ -884,14 +859,12 @@ class IDAKLUJax:
                 and all([b is None for b in batch_axes[3:]])
             ):
                 # Batch over time
-                if t.ndim == 0:
-                    return f_vjp(*args), None  # pragma: no cover
                 out = list(map(lambda yt: f_vjp(y_bars, invar, yt, *inputs), t))
                 return jnp.stack(out), 0
             else:
                 raise Exception(
                     "Batch mode not supported for batch_axes = ", batch_axes
-                )  # pragma: no cover
+                )
 
         batching.primitive_batchers[f_vjp_p] = f_vjp_batch
 
