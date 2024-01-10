@@ -1,0 +1,61 @@
+name: Build and push Docker images to Docker Hub
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - develop
+
+jobs:
+  build_docker_images:
+    # This workflow is only of value to PyBaMM and would always be skipped in forks
+    if: github.repository_owner == 'pybamm-team'
+    name: Image (${{ matrix.build-args }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build-args: ["No solvers", "JAX", "ODES", "IDAKLU", "ALL"]
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create tags for Docker images based on build-time arguments
+        id: tags
+        run: |
+          if [ "${{ matrix.build-args }}" = "No solvers" ]; then
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "JAX" ]; then
+            echo "tag=jax" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "ODES" ]; then
+            echo "tag=odes" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "IDAKLU" ]; then
+            echo "tag=idaklu" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.build-args }}" = "ALL" ]; then
+            echo "tag=all" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push Docker image to Docker Hub (${{ matrix.build-args }})
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: scripts/Dockerfile
+          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
+          push: true
+          platforms: linux/amd64, linux/arm64
+
+      - name: List built image(s)
+        run: docker images

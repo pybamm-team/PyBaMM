@@ -40,7 +40,7 @@ jobs:
           ref: '${{ env.NON_RC_VERSION }}'
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
 
@@ -63,7 +63,17 @@ jobs:
         with:
           message: 'Bump to ${{ env.VERSION }}'
 
+      - name: Make a PR from ${{ env.NON_RC_VERSION }} to develop
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: '${{ env.NON_RC_VERSION }}'
+          destination_branch: "develop"
+          pr_title: "Sync ${{ env.NON_RC_VERSION }} and develop"
+          pr_body: "**Merge as soon as possible to avoid potential conflicts.**"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Make a PR from ${{ env.NON_RC_VERSION }} to main
+        id: release_pr
         if: github.event_name == 'workflow_dispatch' && !startsWith(github.event.inputs.append_to_tag, 'rc')
         uses: repo-sync/pull-request@v2
         with:

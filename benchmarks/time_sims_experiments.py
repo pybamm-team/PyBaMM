@@ -1,4 +1,5 @@
 import pybamm
+from benchmarks.benchmark_utils import set_random_seed
 
 
 class TimeSimulation:
@@ -19,8 +20,14 @@ class TimeSimulation:
         ],
         "GITT": [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 10,
     }
+    param: pybamm.ParameterValues
+    model: pybamm.BaseModel
+    solver: pybamm.BaseSolver
+    exp: pybamm.Experiment
+    sim: pybamm.Simulation
 
     def setup(self, experiment, parameters, model_class, solver_class):
+        set_random_seed()
         if (experiment, parameters, model_class, solver_class) == (
             "GITT",
             "Marquis2019",
@@ -46,5 +53,5 @@ class TimeSimulation:
         exp = pybamm.Experiment(self.experiment_descriptions[experiment])
         pybamm.Simulation(model, parameter_values=param, experiment=exp, solver=solver)
 
-    def time_solve(self, experiment, parameters, model_class, solver_class):
+    def time_solve(self, _experiment, _parameters, _model_class, _solver_class):
         self.sim.solve()

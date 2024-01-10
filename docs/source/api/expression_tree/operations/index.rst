@@ -8,4 +8,5 @@ Classes and functions that operate on the expression tree
   evaluate
   jacobian
   convert_to_casadi
+  serialise
   unpack_symbol

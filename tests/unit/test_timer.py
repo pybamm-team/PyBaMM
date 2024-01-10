@@ -15,7 +15,7 @@ class TestTimer(TestCase):
     """
 
     def __init__(self, name):
-        super(TestTimer, self).__init__(name)
+        super().__init__(name)
 
     def test_timing(self):
         t = pybamm.Timer()

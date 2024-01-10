@@ -9,6 +9,7 @@ import json
 import pybamm
 import copy
 
+
 class TestBPX(TestCase):
     def setUp(self):
         self.base = {
@@ -180,7 +181,6 @@ class TestBPX(TestCase):
             check_constant_output(kappa)
             check_constant_output(De)
 
-
     def test_table_data(self):
         bpx_obj = copy.copy(self.base)
         data = {"x": [0, 1], "y": [0, 1]}
@@ -255,7 +255,6 @@ class TestBPX(TestCase):
 
             pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
 
-
         def arrhenius_assertion(pv, param_key, Ea_key):
             sto = 0.5
             T = 300
@@ -269,11 +268,10 @@ class TestBPX(TestCase):
                 eval_ratio = (
                     pv[param_key](c_e, c_s_surf, c_s_max, T).value
                     / pv[param_key](c_e, c_s_surf, c_s_max, T_ref).value
-                    )
+                )
             else:
                 eval_ratio = (
-                    pv[param_key](sto, T).value
-                    / pv[param_key](sto, T_ref).value
+                    pv[param_key](sto, T).value / pv[param_key](sto, T_ref).value
                 )
 
             calc_ratio = pybamm.exp(Ea / pybamm.constants.R * (1 / T_ref - 1 / T)).value
@@ -300,6 +298,7 @@ class TestBPX(TestCase):
 
         for param_key, Ea_key in zip(param_keys, Ea_keys):
             arrhenius_assertion(pv, param_key, Ea_key)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

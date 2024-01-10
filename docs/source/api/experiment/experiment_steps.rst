@@ -18,3 +18,28 @@ directly:
 
 .. autoclass:: pybamm.step._Step
     :members:
+
+Step terminations
+-----------------
+
+Standard step termination events are implemented by the following classes, which are
+called when the termination is specified by a specific string. These classes can be
+either be called directly or via the string format specified in the class docstring
+
+.. autoclass:: pybamm.step.CrateTermination
+    :members:
+
+.. autoclass:: pybamm.step.CurrentTermination
+    :members:
+
+.. autoclass:: pybamm.step.VoltageTermination
+    :members:
+
+The following classes can be used to define custom terminations for an experiment
+step:
+
+.. autoclass:: pybamm.step.BaseTermination
+    :members:
+
+.. autoclass:: pybamm.step.CustomTermination
+    :members:

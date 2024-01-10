@@ -61,7 +61,7 @@ class JaxSolver(pybamm.BaseSolver):
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         # note: bdf solver itself calculates consistent initial conditions so can set
@@ -71,12 +71,12 @@ class JaxSolver(pybamm.BaseSolver):
         )
         method_options = ["RK45", "BDF"]
         if method not in method_options:
-            raise ValueError("method must be one of {}".format(method_options))
+            raise ValueError(f"method must be one of {method_options}")
         self.ode_solver = False
         if method == "RK45":
             self.ode_solver = True
         self.extra_options = extra_options or {}
-        self.name = "JAX solver ({})".format(method)
+        self.name = f"JAX solver ({method})"
         self._cached_solves = dict()
         pybamm.citations.register("jax2018")
 
@@ -136,11 +136,11 @@ class JaxSolver(pybamm.BaseSolver):
             raise RuntimeError(
                 "Terminate events not supported for this solver."
                 " Model has the following events:"
-                " {}.\nYou can remove events using `model.events = []`."
+                f" {model.events}.\nYou can remove events using `model.events = []`."
                 " It might be useful to first solve the model using a"
                 " different solver to obtain the time of the event, then"
                 " re-solve using no events and a fixed"
-                " end-time".format(model.events)
+                " end-time"
             )
 
         # Initial conditions, make sure they are an 0D array
@@ -215,7 +215,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         y = []
         platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if platform.startswith("cpu"):
+        if len(inputs) <= 1 or platform.startswith("cpu"):
             # cpu execution runs faster when multithreaded
             async def solve_model_for_inputs():
                 async def solve_model_async(inputs_v):
@@ -227,7 +227,11 @@ class JaxSolver(pybamm.BaseSolver):
                 return await asyncio.gather(*coro)
 
             y = asyncio.run(solve_model_for_inputs())
-        elif platform.startswith("gpu") or platform.startswith("tpu"):
+        elif (
+            platform.startswith("gpu")
+            or platform.startswith("tpu")
+            or platform.startswith("metal")
+        ):
             # gpu execution runs faster when parallelised with vmap
             # (see also comment below regarding single-program multiple-data
             #  execution (SPMD) using pmap on multiple XLAs)

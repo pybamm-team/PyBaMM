@@ -49,8 +49,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_electrolyte_potential_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
-
         self.set_sei_submodel()
+        self.set_sei_on_cracks_submodel()
         self.set_lithium_plating_submodel()
         self.set_li_metal_counter_electrode_submodels()
         self.set_total_interface_submodel()
@@ -159,13 +159,17 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        n_Li_lost_sei = self.variables["Loss of lithium to SEI [mol]"]
-        n_Li_lost_reactions = n_Li_lost_sei
-        if "negative electrode" in domains:
+        n_Li_lost_neg_sei = self.variables["Loss of lithium to negative SEI [mol]"]
+        n_Li_lost_pos_sei = self.variables["Loss of lithium to positive SEI [mol]"]
+        n_Li_lost_reactions = n_Li_lost_neg_sei + n_Li_lost_pos_sei
+        for domain in domains:
+            dom = domain.split()[0].lower()
             n_Li_lost_sei_cracks = self.variables[
-                "Loss of lithium to SEI on cracks [mol]"
+                f"Loss of lithium to {dom} SEI on cracks [mol]"
             ]
-            n_Li_lost_pl = self.variables["Loss of lithium to lithium plating [mol]"]
+            n_Li_lost_pl = self.variables[
+                f"Loss of lithium to {dom} lithium plating [mol]"
+            ]
             n_Li_lost_reactions += n_Li_lost_sei_cracks + n_Li_lost_pl
 
         self.variables.update(
@@ -197,8 +201,10 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Total lithium lost [mol]",
             "Total lithium lost from particles [mol]",
             "Total lithium lost from electrolyte [mol]",
-            "Loss of lithium to SEI [mol]",
-            "Loss of capacity to SEI [A.h]",
+            "Loss of lithium to negative SEI [mol]",
+            "Loss of capacity to negative SEI [A.h]",
+            "Loss of lithium to positive SEI [mol]",
+            "Loss of capacity to positive SEI [A.h]",
             "Total lithium lost to side reactions [mol]",
             "Total capacity lost to side reactions [A.h]",
             # Resistance
@@ -210,16 +216,20 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Negative electrode capacity [A.h]",
                 "Loss of active material in negative electrode [%]",
                 "Total lithium in negative electrode [mol]",
-                "Loss of lithium to lithium plating [mol]",
-                "Loss of capacity to lithium plating [A.h]",
-                "Loss of lithium to SEI on cracks [mol]",
-                "Loss of capacity to SEI on cracks [A.h]",
+                "Loss of lithium to negative lithium plating [mol]",
+                "Loss of capacity to negative lithium plating [A.h]",
+                "Loss of lithium to negative SEI on cracks [mol]",
+                "Loss of capacity to negative SEI on cracks [A.h]",
             ]
         if self.options.electrode_types["positive"] == "porous":
             summary_variables += [
                 "Positive electrode capacity [A.h]",
                 "Loss of active material in positive electrode [%]",
                 "Total lithium in positive electrode [mol]",
+                "Loss of lithium to positive lithium plating [mol]",
+                "Loss of capacity to positive lithium plating [A.h]",
+                "Loss of lithium to positive SEI on cracks [mol]",
+                "Loss of capacity to positive SEI on cracks [A.h]",
             ]
 
         self.summary_variables = summary_variables
@@ -245,56 +255,95 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_sei_submodel(self):
-        if self.options.electrode_types["negative"] == "planar":
-            reaction_loc = "interface"
-        elif self.options["x-average side reactions"] == "true":
-            reaction_loc = "x-average"
-        else:
-            reaction_loc = "full electrode"
-
-        phases = self.options.phases["negative"]
-        for phase in phases:
-            if self.options["SEI"] == "none":
-                submodel = pybamm.sei.NoSEI(self.param, self.options, phase)
-            elif self.options["SEI"] == "constant":
-                submodel = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "planar":
+                reaction_loc = "interface"
+            elif self.options["x-average side reactions"] == "true":
+                reaction_loc = "x-average"
             else:
-                submodel = pybamm.sei.SEIGrowth(
-                    self.param, reaction_loc, self.options, phase, cracks=False
-                )
-            self.submodels[f"{phase} sei"] = submodel
-            # Do not set "sei on cracks" submodel for half-cells
-            # For full cells, "sei on cracks" submodel must be set, even if it is zero
-            if reaction_loc != "interface":
-                if (
-                    self.options["SEI"] in ["none", "constant"]
-                    or self.options["SEI on cracks"] == "false"
-                ):
-                    submodel = pybamm.sei.NoSEI(
-                        self.param, self.options, phase, cracks=True
+                reaction_loc = "full electrode"
+            sei_option = getattr(self.options, domain)["SEI"]
+            phases = self.options.phases[domain]
+            for phase in phases:
+                if sei_option == "none":
+                    submodel = pybamm.sei.NoSEI(self.param, domain, self.options, phase)
+                elif sei_option == "constant":
+                    submodel = pybamm.sei.ConstantSEI(
+                        self.param, domain, self.options, phase
                     )
                 else:
                     submodel = pybamm.sei.SEIGrowth(
-                        self.param, reaction_loc, self.options, phase, cracks=True
+                        self.param,
+                        domain,
+                        reaction_loc,
+                        self.options,
+                        phase,
+                        cracks=False,
                     )
-                self.submodels[f"{phase} sei on cracks"] = submodel
+                self.submodels[f"{domain} {phase} sei"] = submodel
+            if len(phases) > 1:
+                self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
+                    self.param, domain, self.options
+                )
 
-        if len(phases) > 1:
-            self.submodels["total sei"] = pybamm.sei.TotalSEI(self.param, self.options)
-            self.submodels["total sei on cracks"] = pybamm.sei.TotalSEI(
-                self.param, self.options, cracks=True
-            )
+    def set_sei_on_cracks_submodel(self):
+        # Do not set "sei on cracks" submodel for a planar electrode. For porous
+        # electrodes, "sei on cracks" submodel must be set, even if it is zero
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                domain = domain.split()[0].lower()
+                sei_option = getattr(self.options, domain)["SEI"]
+                sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
+                phases = self.options.phases[domain]
+                for phase in phases:
+                    if (
+                        sei_option in ["none", "constant"]
+                        or sei_on_cracks_option == "false"
+                    ):
+                        submodel = pybamm.sei.NoSEI(
+                            self.param, domain, self.options, phase, cracks=True
+                        )
+                    else:
+                        if self.options["x-average side reactions"] == "true":
+                            reaction_loc = "x-average"
+                        else:
+                            reaction_loc = "full electrode"
+                        submodel = pybamm.sei.SEIGrowth(
+                            self.param,
+                            domain,
+                            reaction_loc,
+                            self.options,
+                            phase,
+                            cracks=True,
+                        )
+                    self.submodels[f"{domain} {phase} sei on cracks"] = submodel
+                if len(phases) > 1:
+                    self.submodels[
+                        f"{domain} total sei on cracks"
+                    ] = pybamm.sei.TotalSEI(
+                        self.param, domain, self.options, cracks=True
+                    )
 
     def set_lithium_plating_submodel(self):
-        if self.options["lithium plating"] == "none":
-            self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(
-                self.param, self.options
-            )
-        else:
-            x_average = self.options["x-average side reactions"] == "true"
-            self.submodels["lithium plating"] = pybamm.lithium_plating.Plating(
-                self.param, x_average, self.options
-            )
+        # Do not set "lithium plating" submodel for a planar electrode. For porous
+        # electrodes, "lithium plating" submodel must be set, even if it is zero
+        for domain in self.options.whole_cell_domains:
+            if domain != "separator":
+                domain = domain.split()[0].lower()
+                lithium_plating_opt = getattr(self.options, domain)["lithium plating"]
+                if lithium_plating_opt == "none":
+                    self.submodels[
+                        f"{domain} lithium plating"
+                    ] = pybamm.lithium_plating.NoPlating(
+                        self.param, domain, self.options
+                    )
+                else:
+                    x_average = self.options["x-average side reactions"] == "true"
+                    self.submodels[
+                        f"{domain} lithium plating"
+                    ] = pybamm.lithium_plating.Plating(
+                        self.param, domain, x_average, self.options
+                    )
 
     def set_total_interface_submodel(self):
         self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(
@@ -413,3 +462,51 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels[
             "through-cell convection"
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
+
+    def insert_reference_electrode(self, position=None):
+        """
+        Insert a reference electrode to measure the electrolyte potential at a given
+        position in space. Adds model variables for the electrolyte potential at the
+        reference electrode and for the potential difference between the electrode
+        potentials measured at the electrode/current collector interface and the
+        reference electrode. Only implemented for 1D models (i.e. where the
+        'dimensionality' option is 0).
+
+        Parameters
+        ----------
+        position : :class:`pybamm.Symbol`, optional
+            The position in space at which to measure the electrolyte potential. If
+            None, defaults to the mid-point of the separator.
+        """
+        if self.options["dimensionality"] != 0:
+            raise NotImplementedError(
+                "Reference electrode can only be inserted for models where "
+                "'dimensionality' is 0. For other models, please add a reference "
+                "electrode manually."
+            )
+
+        param = self.param
+        if position is None:
+            position = param.n.L + param.s.L / 2
+
+        phi_e_ref = pybamm.EvaluateAt(
+            self.variables["Electrolyte potential [V]"], position
+        )
+        phi_p = pybamm.boundary_value(
+            self.variables["Positive electrode potential [V]"], "right"
+        )
+        variables = {
+            "Positive electrode 3E potential [V]": phi_p - phi_e_ref,
+            "Reference electrode potential [V]": phi_e_ref,
+        }
+
+        if self.options["working electrode"] == "both":
+            phi_n = pybamm.boundary_value(
+                self.variables["Negative electrode potential [V]"], "left"
+            )
+            variables.update(
+                {
+                    "Negative electrode 3E potential [V]": phi_n - phi_e_ref,
+                }
+            )
+        self.variables.update(variables)

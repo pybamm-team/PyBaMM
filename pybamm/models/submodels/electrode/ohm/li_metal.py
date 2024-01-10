@@ -76,9 +76,12 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         self.initial_conditions = {delta_phi: delta_phi_init}
 
     def set_rhs(self, variables):
+        Domain = self.domain.capitalize()
         if self.options["surface form"] == "differential":
             j_pl = variables["Lithium metal plating current density [A.m-2]"]
-            j_sei = variables["SEI interfacial current density [A.m-2]"]
+            j_sei = variables[
+                f"{Domain} electrode SEI interfacial current density [A.m-2]"
+            ]
             sum_j = j_pl + j_sei
 
             i_cc = variables["Current collector current density [A.m-2]"]
@@ -95,9 +98,12 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
             self.rhs[delta_phi] = 1 / C_dl * (i_cc - sum_j)
 
     def set_algebraic(self, variables):
+        Domain = self.domain.capitalize()
         if self.options["surface form"] != "differential":  # also catches "false"
             j_pl = variables["Lithium metal plating current density [A.m-2]"]
-            j_sei = variables["SEI interfacial current density [A.m-2]"]
+            j_sei = variables[
+                f"{Domain} electrode SEI interfacial current density [A.m-2]"
+            ]
             sum_j = j_pl + j_sei
 
             i_cc = variables["Current collector current density [A.m-2]"]

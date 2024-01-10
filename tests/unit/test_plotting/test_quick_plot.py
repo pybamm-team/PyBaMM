@@ -3,6 +3,7 @@ import pybamm
 import unittest
 from tests import TestCase
 import numpy as np
+from tempfile import TemporaryDirectory
 
 
 class TestQuickPlot(TestCase):
@@ -290,11 +291,14 @@ class TestQuickPlot(TestCase):
         quick_plot.plot(0)
 
         # test creating a GIF
-        quick_plot.create_gif(number_of_images=3, duration=3)
-        assert not os.path.exists("plot*.png")
-        assert os.path.exists("plot.gif")
-        os.remove("plot.gif")
-
+        with TemporaryDirectory() as dir_name:
+            test_stub = os.path.join(dir_name, "spm_sim_test")
+            test_file = f"{test_stub}.gif"
+            quick_plot.create_gif(
+                number_of_images=3, duration=3, output_filename=test_file
+            )
+            assert not os.path.exists(f"{test_stub}*.png")
+            assert os.path.exists(test_file)
         pybamm.close_plots()
 
     def test_loqs_spme(self):
@@ -343,7 +347,7 @@ class TestQuickPlot(TestCase):
             # test quick plot of particle for spme
             if (
                 model.name == "Single Particle Model with electrolyte"
-                and model.options["working electrode"] != "positive"
+                and model.options["working electrode"] == "both"
             ):
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",
@@ -503,6 +507,15 @@ class TestQuickPlot(TestCase):
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(1)
         pybamm.close_plots()
+
+
+class TestQuickPlotAxes(unittest.TestCase):
+    def test_quick_plot_axes(self):
+        axes = pybamm.QuickPlotAxes()
+        axes.add(("test 1", "test 2"), 1)
+        self.assertEqual(axes[0], 1)
+        self.assertEqual(axes.by_variable("test 1"), 1)
+        self.assertEqual(axes.by_variable("test 2"), 1)
 
 
 if __name__ == "__main__":

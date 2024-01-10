@@ -47,6 +47,7 @@ from .util import (
     get_parameters_filepath,
     have_jax,
     install_jax,
+    have_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
 )
@@ -189,6 +190,11 @@ from .meshes.scikit_fem_submeshes import (
 )
 
 #
+# Serialisation
+#
+from .models.base_model import load_model
+
+#
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
@@ -202,6 +208,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
@@ -221,12 +228,13 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .experiment.experiment import Experiment
 from . import experiment
+from .experiment import step
 
 
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components

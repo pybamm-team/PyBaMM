@@ -25,7 +25,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
-class Solution(object):
+class Solution:
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
     model.
@@ -321,8 +321,7 @@ class Solution(object):
                 # there will always be a statevector, but just in case
                 if statevector is None:  # pragma: no cover
                     raise RuntimeError(
-                        "Cannot find statevector corresponding to variable {}"
-                        .format(var.name)
+                        f"Cannot find statevector corresponding to variable {var.name}"
                     )
                 y_var = y[statevector.y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_value):
@@ -470,7 +469,7 @@ class Solution(object):
         # Process
         for key in variables:
             cumtrapz_ic = None
-            pybamm.logger.debug("Post-processing {}".format(key))
+            pybamm.logger.debug(f"Post-processing {key}")
             vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
             # Iterate through all models, some may be in the list several times and
@@ -483,13 +482,21 @@ class Solution(object):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
                 elif key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
                 else:
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
             var = pybamm.ProcessedVariable(
@@ -500,9 +507,9 @@ class Solution(object):
             self._variables[key] = var
             self.data[key] = var.data
 
-    def process_casadi_var(self, var_pybamm, inputs, ys):
+    def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", ys.shape[0])
+        y_MX = casadi.MX.sym("y", ys_shape[0])
         inputs_MX_dict = {
             key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
         }
@@ -681,7 +688,7 @@ class Solution(object):
                         or (i > 0 and 48 <= ord(s) <= 57)
                     ):
                         raise ValueError(
-                            "Invalid character '{}' found in '{}'. ".format(s, name)
+                            f"Invalid character '{s}' found in '{name}'. "
                             + "MATLAB variable names must only contain a-z, A-Z, _, "
                             "or 0-9 (except the first position). "
                             "Use the 'short_names' argument to pass an alternative "
@@ -708,7 +715,7 @@ class Solution(object):
                 with open(filename, "w") as outfile:
                     json.dump(data, outfile, cls=NumpyEncoder)
         else:
-            raise ValueError("format '{}' not recognised".format(to_format))
+            raise ValueError(f"format '{to_format}' not recognised")
 
     @property
     def sub_solutions(self):
