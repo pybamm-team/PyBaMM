@@ -1,5 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Add support for BPX version 0.4.0 which allows for blended electrodes and user-defined parameters in BPX([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
+
+## Breaking changes
+
+- Dropped support for BPX version 0.3.0 and below ([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
+
 # [v24.1rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc0) - 2024-01-31
 
 ## Features
