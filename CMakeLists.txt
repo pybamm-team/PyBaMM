@@ -37,6 +37,7 @@ if(NOT PYBIND11_DIR)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
+# The sources list should mirror the list in setup.py
 pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
