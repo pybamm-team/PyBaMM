@@ -2,7 +2,6 @@
 # [run]
 # requires-python = "">=3.8, <3.13""
 # dependencies = [
-#   "wget",
 #   "cmake",
 # ]
 #
@@ -15,28 +14,31 @@ import subprocess
 import tarfile
 import argparse
 import platform
+import concurrent.futures
+import urllib.request
 from multiprocessing import cpu_count
-
-try:
-    # wget module is required to download SUNDIALS or SuiteSparse.
-    import wget
-
-    NO_WGET = False
-except ModuleNotFoundError:
-    NO_WGET = True
 
 
 def download_extract_library(url, download_dir):
     # Download and extract archive at url
-    if NO_WGET:
-        error_msg = (
-            "Could not find wget module."
-            " Please install wget module (pip install wget)."
-        )
-        raise ModuleNotFoundError(error_msg)
-    archive = wget.download(url, out=download_dir)
-    tar = tarfile.open(archive)
-    tar.extractall(download_dir)
+    file_name = url.split("/")[-1]
+    file_path = os.path.join(download_dir, file_name)
+    with urllib.request.urlopen(url) as response:
+        os.makedirs(download_dir, exist_ok=True)
+        with open(file_path, "wb") as out_file:
+            out_file.write(response.read())
+    with tarfile.open(file_path) as tar:
+        tar.extractall(download_dir)
+
+
+def parallel_download(urls, download_dir):
+    # Use 2 processes for parallel downloading
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(download_extract_library, url, download_dir) for url in urls
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            future.result()
 
 
 # First check requirements: make and cmake
@@ -71,13 +73,25 @@ install_dir = (
     else os.path.join(pybamm_dir, args.install_dir)
 )
 
-# 1 --- Download SuiteSparse
+# Parallel download
+
+# 1 --- SuiteSparse
 suitesparse_version = "6.0.3"
 suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
     + f"SuiteSparse/archive/v{suitesparse_version}.tar.gz"
 )
-download_extract_library(suitesparse_url, download_dir)
+
+# 2 --- SUNDIALS
+sundials_version = "6.5.0"
+sundials_url = (
+    "https://github.com/LLNL/sundials/"
+    + f"releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"
+)
+
+parallel_download([suitesparse_url, sundials_url], download_dir)
+
+# 1 --- Install SuiteSparse
 
 # The SuiteSparse KLU module has 4 dependencies:
 # - suitesparseconfig
@@ -117,14 +131,7 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 
-# 2 --- Download SUNDIALS
-sundials_version = "6.5.0"
-sundials_url = (
-    "https://github.com/LLNL/sundials/"
-    + f"releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"
-)
-
-download_extract_library(sundials_url, download_dir)
+# 2 --- Install SUNDIALS
 
 # Set install dir for SuiteSparse libs
 # Ex: if install_dir -> "/usr/local/" then
