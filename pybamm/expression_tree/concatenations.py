@@ -128,10 +128,7 @@ class Concatenation(pybamm.Symbol):
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        children = self.children
-        children_eval = [None] * len(children)
-        for idx, child in enumerate(children):
-            children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
+        children_eval = [child.evaluate(t, y, y_dot, inputs) for child in self.children]
         return self._concatenation_evaluate(children_eval)
 
     def create_copy(self):
@@ -569,7 +566,7 @@ def simplified_domain_concatenation(
     # Simplify Concatenation of StateVectors to a single StateVector
     # The sum of the evalation arrays of the StateVectors must be exactly 1
     if all(isinstance(child, pybamm.StateVector) for child in children):
-        sv_children: list[pybamm.StateVector] = children  # type narrow for mypy
+        sv_children: list[pybamm.StateVector] = children  # type: ignore[assignment]
         longest_eval_array = len(sv_children[-1]._evaluation_array)
         eval_arrays = {}
         for child in sv_children:

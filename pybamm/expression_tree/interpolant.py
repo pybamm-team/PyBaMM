@@ -208,13 +208,13 @@ class Interpolant(pybamm.Function):
     def _from_json(cls, snippet: dict):
         """Create an Interpolant object from JSON data"""
 
+        x1 = []
+
         if len(snippet["x"]) == 1:
-            x = [np.array(x) for x in snippet["x"]]
-        else:
-            x = tuple(np.array(x) for x in snippet["x"])
+            x1 = [np.array(x) for x in snippet["x"]]
 
         return cls(
-            x,
+            x1 if x1 else tuple(np.array(x) for x in snippet["x"]),
             np.array(snippet["y"]),
             snippet["children"],
             name=snippet["name"],

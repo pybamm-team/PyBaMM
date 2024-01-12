@@ -171,6 +171,10 @@ def simplify_if_constant(symbol: S) -> S:
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
+                if isinstance(result, np.ndarray):
+                    # type-narrow for Scalar
+                    new_result = result[0]
+                    return pybamm.Scalar(new_result)
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
@@ -924,7 +928,9 @@ class Symbol:
         # Default behaviour: return False
         return False
 
-    def has_symbol_of_classes(self, symbol_classes: tuple[type[Symbol]] | type[Symbol]):
+    def has_symbol_of_classes(
+        self, symbol_classes: tuple[type[Symbol], ...] | type[Symbol]
+    ):
         """
         Returns True if equation has a term of the class(es) `symbol_class`.
 

@@ -69,7 +69,7 @@ class Jacobian(object):
             jac = symbol._binary_jac(left_jac, right_jac)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            child_jac = self.jac(symbol.child, variable)
+            child_jac = self.jac(symbol.child, variable)  # type: ignore[has-type]
             # _unary_jac defined in derived classes for specific rules
             jac = symbol._unary_jac(child_jac)
 

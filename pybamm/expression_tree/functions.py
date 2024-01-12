@@ -117,7 +117,7 @@ class Function(pybamm.Symbol):
             else:
                 # keep using "derivative" as derivative
                 return pybamm.Function(
-                    self.function.derivative(),
+                    self.function.derivative(),  # type: ignore[attr-defined]
                     *children,
                     derivative="derivative",
                     differentiated_function=self.function,
@@ -311,7 +311,7 @@ def simplified_function(func_class: Type[SF], child: pybamm.Symbol):
         )
         return child._unary_new_copy(func_child_not_broad)
     else:
-        return pybamm.simplify_if_constant(func_class(child))
+        return pybamm.simplify_if_constant(func_class(child))  # type: ignore[call-arg, arg-type]
 
 
 class Arcsinh(SpecificFunction):

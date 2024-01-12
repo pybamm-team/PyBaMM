@@ -462,15 +462,17 @@ class FullBroadcast(Broadcast):
 
     def __init__(
         self,
-        child: NumberType | pybamm.Symbol,
+        child_input: NumberType | float | pybamm.Symbol,
         broadcast_domain: list[str] | str | None = None,
         auxiliary_domains: str | dict | None = None,
         broadcast_domains: dict | None = None,
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
-        if isinstance(child, numbers.Number):
-            child: pybamm.Scalar = pybamm.Scalar(child)  # type: ignore[no-redef]
+        if isinstance(child_input, numbers.Number):
+            child: pybamm.Scalar = pybamm.Scalar(child_input)
+        else:
+            child: pybamm.Symbol = child_input  # type: ignore[no-redef]
 
         if isinstance(auxiliary_domains, str):
             auxiliary_domains = {"secondary": auxiliary_domains}
@@ -534,7 +536,7 @@ class FullBroadcastToEdges(FullBroadcast):
 
     def __init__(
         self,
-        child: NumberType | pybamm.Symbol,
+        child: NumberType | float | pybamm.Symbol,
         broadcast_domain: list[str] | str | None = None,
         auxiliary_domains: str | dict | None = None,
         broadcast_domains: dict | None = None,

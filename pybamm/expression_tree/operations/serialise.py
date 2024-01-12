@@ -51,10 +51,12 @@ class Serialise:
             if isinstance(node, pybamm.Mesh):
                 node_dict.update(node.to_json())
 
-                node_dict["sub_meshes"] = {}
+                submeshes = {}
                 for k, v in node.items():
                     if len(k) == 1 and "ghost cell" not in k[0]:
-                        node_dict["sub_meshes"][k[0]] = self.default(v)
+                        submeshes[k[0]] = self.default(v)
+
+                node_dict["sub_meshes"] = submeshes
 
                 return node_dict
 
