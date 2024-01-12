@@ -307,7 +307,7 @@ class ParameterValues:
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
-        solver_tolerance=1e-6,
+        tol=1e-6,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
@@ -320,7 +320,7 @@ class ParameterValues:
             param=param,
             known_value=known_value,
             options=options,
-            solver_tolerance=solver_tolerance,
+            tol=tol,
         )
         if inplace:
             parameter_values = self
