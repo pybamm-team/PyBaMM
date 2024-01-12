@@ -24,7 +24,9 @@ def download_extract_library(url, download_dir):
     # Download and extract archive at url
     parsed_url = urlparse(url)
     if parsed_url.scheme not in ["http", "https"]:
-        raise ValueError(f"Invalid URL scheme: {parsed_url.scheme}. Only HTTP and HTTPS are allowed.")
+        raise ValueError(
+            f"Invalid URL scheme: {parsed_url.scheme}. Only HTTP and HTTPS are allowed."
+        )
     file_name = url.split("/")[-1]
     file_path = os.path.join(download_dir, file_name)
     with urllib.request.urlopen(url) as response:
