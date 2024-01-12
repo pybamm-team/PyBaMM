@@ -1,3 +1,15 @@
+# /// pyproject
+# [run]
+# requires-python = "<=3.9"
+# dependencies = [
+#   "wget",
+#   "cmake",
+# ]
+#
+# [additional-info]
+# repository = "https://github.com/pybamm-team/PyBaMM"
+# documentation = "https://docs.pybamm.org"
+# ///
 import os
 import subprocess
 import tarfile
