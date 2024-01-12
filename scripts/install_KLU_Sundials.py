@@ -1,6 +1,6 @@
 # /// pyproject
 # [run]
-# requires-python = "">=3.8, <=3.12""
+# requires-python = "">=3.8, <3.13""
 # dependencies = [
 #   "wget",
 #   "cmake",
