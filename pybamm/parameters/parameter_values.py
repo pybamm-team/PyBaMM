@@ -320,7 +320,7 @@ class ParameterValues:
             param=param,
             known_value=known_value,
             options=options,
-            solver_tolerance=solver_tolerance
+            solver_tolerance=solver_tolerance,
         )
         if inplace:
             parameter_values = self

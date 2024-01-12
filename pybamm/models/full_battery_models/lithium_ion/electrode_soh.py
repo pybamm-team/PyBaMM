@@ -727,7 +727,11 @@ class ElectrodeSOHSolver:
             soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
             soc_model.variables["soc"] = soc
             parameter_values.process_model(soc_model)
-            initial_soc = pybamm.AlgebraicSolver(tol=solver_tolerance).solve(soc_model, [0])["soc"].data[0]
+            initial_soc = (
+                pybamm.AlgebraicSolver(tol=solver_tolerance)
+                .solve(soc_model, [0])["soc"]
+                .data[0]
+            )
         elif isinstance(initial_value, (int, float)):
             initial_soc = initial_value
             if not 0 <= initial_soc <= 1:
@@ -1049,8 +1053,12 @@ def calculate_theoretical_energy(
         The total energy of the cell in Wh
     """
     # Get initial and final stoichiometric values.
-    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values, solver_tolerance=solver_tolerance)
-    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values, solver_tolerance=solver_tolerance)
+    x_100, y_100 = get_initial_stoichiometries(
+        initial_soc, parameter_values, solver_tolerance=solver_tolerance
+    )
+    x_0, y_0 = get_initial_stoichiometries(
+        final_soc, parameter_values, solver_tolerance=solver_tolerance
+    )
     Q_p = parameter_values.evaluate(pybamm.LithiumIonParameters().p.prim.Q_init)
     E = theoretical_energy_integral(
         parameter_values,
