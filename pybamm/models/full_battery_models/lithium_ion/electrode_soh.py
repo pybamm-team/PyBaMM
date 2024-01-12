@@ -664,7 +664,7 @@ class ElectrodeSOHSolver:
                 )
             )
 
-    def get_initial_stoichiometries(self, initial_value):
+    def get_initial_stoichiometries(self, initial_value, solver_tolerance=1e-6):
         """
         Calculate initial stoichiometries to start off the simulation at a particular
         state of charge, given voltage limits, open-circuit potentials, etc defined by
@@ -677,6 +677,10 @@ class ElectrodeSOHSolver:
             If integer, interpreted as SOC, must be between 0 and 1.
             If string e.g. "4 V", interpreted as voltage,
             must be between V_min and V_max.
+        solver_tolerance : float, optional
+            The tolerance for the solver used to compute the initial stoichiometries.
+            A lower value results in higher precision but may increase computation time.
+            Default is 1e-6.
 
         Returns
         -------
@@ -723,7 +727,7 @@ class ElectrodeSOHSolver:
             soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
             soc_model.variables["soc"] = soc
             parameter_values.process_model(soc_model)
-            initial_soc = pybamm.AlgebraicSolver().solve(soc_model, [0])["soc"].data[0]
+            initial_soc = pybamm.AlgebraicSolver(tol=solver_tolerance).solve(soc_model, [0])["soc"].data[0]
         elif isinstance(initial_value, (int, float)):
             initial_soc = initial_value
             if not 0 <= initial_soc <= 1:
@@ -766,7 +770,7 @@ class ElectrodeSOHSolver:
         sol = self.solve(inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
-    def get_initial_ocps(self, initial_value):
+    def get_initial_ocps(self, initial_value, solver_tolerance=1e-6):
         """
         Calculate initial open-circuit potentials to start off the simulation at a
         particular state of charge, given voltage limits, open-circuit potentials, etc
@@ -776,6 +780,8 @@ class ElectrodeSOHSolver:
         ----------
         initial_value : float
             Target SOC, must be between 0 and 1.
+        solver_tolerance: float, optional
+            Tolerance for the solver used in calculating initial stoichiometries.
 
         Returns
         -------
@@ -784,7 +790,7 @@ class ElectrodeSOHSolver:
         """
         parameter_values = self.parameter_values
         param = self.param
-        x, y = self.get_initial_stoichiometries(initial_value)
+        x, y = self.get_initial_stoichiometries(initial_value, solver_tolerance)
         if self.options["open-circuit potential"] == "MSMR":
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
@@ -854,6 +860,7 @@ def get_initial_stoichiometries(
     param=None,
     known_value="cyclable lithium capacity",
     options=None,
+    solver_tolerance=1e-6,
 ):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
@@ -878,6 +885,10 @@ def get_initial_stoichiometries(
     options : dict-like, optional
         A dictionary of options to be passed to the model, see
         :class:`pybamm.BatteryModelOptions`.
+    solver_tolerance : float, optional
+        The tolerance for the solver used to compute the initial stoichiometries.
+        A lower value results in higher precision but may increase computation time.
+        Default is 1e-6.
 
     Returns
     -------
@@ -885,7 +896,7 @@ def get_initial_stoichiometries(
         The initial stoichiometries that give the desired initial state of charge
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
-    return esoh_solver.get_initial_stoichiometries(initial_value)
+    return esoh_solver.get_initial_stoichiometries(initial_value, solver_tolerance)
 
 
 def get_min_max_stoichiometries(
@@ -1014,7 +1025,7 @@ def theoretical_energy_integral(parameter_values, param, inputs, points=100):
 
 
 def calculate_theoretical_energy(
-    parameter_values, initial_soc=1.0, final_soc=0.0, points=100
+    parameter_values, initial_soc=1.0, final_soc=0.0, points=100, solver_tolerance=1e-6
 ):
     """
     Calculate maximum energy possible from a cell given OCV, initial soc, and final soc
@@ -1030,14 +1041,16 @@ def calculate_theoretical_energy(
         The soc at end of discharge, default 0.0
     points : int
         The number of points at which to calculate voltage.
+    solver_tolerance: float
+        Tolerance for the solver used in calculating initial and final stoichiometries.
     Returns
     -------
     E
         The total energy of the cell in Wh
     """
     # Get initial and final stoichiometric values.
-    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values)
-    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values)
+    x_100, y_100 = get_initial_stoichiometries(initial_soc, parameter_values, solver_tolerance=solver_tolerance)
+    x_0, y_0 = get_initial_stoichiometries(final_soc, parameter_values, solver_tolerance=solver_tolerance)
     Q_p = parameter_values.evaluate(pybamm.LithiumIonParameters().p.prim.Q_init)
     E = theoretical_energy_integral(
         parameter_values,

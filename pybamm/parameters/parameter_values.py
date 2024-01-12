@@ -307,6 +307,7 @@ class ParameterValues:
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
+        solver_tolerance=1e-6,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
@@ -314,7 +315,12 @@ class ParameterValues:
         """
         param = param or pybamm.LithiumIonParameters(options)
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_value, self, param=param, known_value=known_value, options=options
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            options=options,
+            solver_tolerance=solver_tolerance
         )
         if inplace:
             parameter_values = self
