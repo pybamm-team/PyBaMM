@@ -14,21 +14,45 @@ import subprocess
 import tarfile
 import argparse
 import platform
+import hashlib
 import concurrent.futures
 import urllib.request
 from urllib.parse import urlparse
 from multiprocessing import cpu_count
 
 
-def download_extract_library(url, download_dir):
+def calculate_sha256(file_path):
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        # Read and update hash in chunks of 4K
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+def download_extract_library(url, expected_checksum, download_dir):
+    file_name = url.split("/")[-1]
+    file_path = os.path.join(download_dir, file_name)
+
+    # Check if file already exists and validate checksum
+    if os.path.exists(file_path):
+        print(f"Validating checksum for {file_name}...")
+        actual_checksum = calculate_sha256(file_path)
+        if actual_checksum == expected_checksum:
+            print(f"Checksum valid. Skipping download for {file_name}.")
+            # Extract the archive as the checksum is valid
+            with tarfile.open(file_path) as tar:
+                tar.extractall(download_dir)
+            return
+        else:
+            print(f"Checksum invalid. Redownloading {file_name}.")
+
     # Download and extract archive at url
     parsed_url = urlparse(url)
     if parsed_url.scheme not in ["http", "https"]:
         raise ValueError(
             f"Invalid URL scheme: {parsed_url.scheme}. Only HTTP and HTTPS are allowed."
         )
-    file_name = url.split("/")[-1]
-    file_path = os.path.join(download_dir, file_name)
     with urllib.request.urlopen(url) as response:
         os.makedirs(download_dir, exist_ok=True)
         with open(file_path, "wb") as out_file:
@@ -41,7 +65,10 @@ def parallel_download(urls, download_dir):
     # Use 2 processes for parallel downloading
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         futures = [
-            executor.submit(download_extract_library, url, download_dir) for url in urls
+            executor.submit(
+                download_extract_library, url, expected_checksum, download_dir
+            )
+            for (url, expected_checksum) in urls
         ]
         for future in concurrent.futures.as_completed(futures):
             future.result()
@@ -87,6 +114,9 @@ suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
     + f"SuiteSparse/archive/v{suitesparse_version}.tar.gz"
 )
+suitesparse_checksum = (
+    "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
+)
 
 # 2 --- SUNDIALS
 sundials_version = "6.5.0"
@@ -94,8 +124,12 @@ sundials_url = (
     "https://github.com/LLNL/sundials/"
     + f"releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"
 )
+sundials_checksum = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
 
-parallel_download([suitesparse_url, sundials_url], download_dir)
+parallel_download(
+    [(suitesparse_url, suitesparse_checksum), (sundials_url, sundials_checksum)],
+    download_dir,
+)
 
 # 1 --- Install SuiteSparse
 
