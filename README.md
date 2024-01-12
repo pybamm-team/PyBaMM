@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-73-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-74-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -279,6 +279,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/prady0t"><img src="https://avatars.githubusercontent.com/u/99216956?v=4?s=100" width="100px;" alt="Pradyot Ranjan"/><br /><sub><b>Pradyot Ranjan</b></sub></a><br /><a href="#infra-prady0t" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/XuboGU"><img src="https://avatars.githubusercontent.com/u/53944452?v=4?s=100" width="100px;" alt="XuboGU"/><br /><sub><b>XuboGU</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=XuboGU" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AXuboGU" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/cringeyburger"><img src="https://avatars.githubusercontent.com/u/121183876?v=4?s=100" width="100px;" alt="Ankit Meda"/><br /><sub><b>Ankit Meda</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=cringeyburger" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/AlessioBugetti"><img src="https://avatars.githubusercontent.com/u/38499721?v=4?s=100" width="100px;" alt="Alessio Bugetti"/><br /><sub><b>Alessio Bugetti</b></sub></a><br /><a href="#infra-AlessioBugetti" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
     </tr>
   </tbody>
 </table>
