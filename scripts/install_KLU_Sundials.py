@@ -30,6 +30,7 @@ SUITESPARSE_CHECKSUM = (
     "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
 )
 SUNDIALS_CHECKSUM = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
+DEFAULT_INSTALL_DIR = os.path.join(os.getenv("HOME"), ".local")
 
 
 def install_suitesparse(download_dir):
@@ -245,11 +246,10 @@ if not os.path.exists(download_dir):
     os.makedirs(download_dir)
 
 # Get installation location
-default_install_dir = os.path.join(os.getenv("HOME"), ".local")
 parser = argparse.ArgumentParser(
     description="Download, compile and install Sundials and SuiteSparse."
 )
-parser.add_argument("--install-dir", type=str, default=default_install_dir)
+parser.add_argument("--install-dir", type=str, default=DEFAULT_INSTALL_DIR)
 args = parser.parse_args()
 install_dir = (
     args.install_dir
