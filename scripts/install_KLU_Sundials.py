@@ -254,7 +254,7 @@ def parallel_download(urls, download_dir):
             )
             for (url, expected_checksum) in urls
         ]
-        for future in concurrent.futures.as_completed(futures):
+        for future in futures:
             future.result()
 
 
