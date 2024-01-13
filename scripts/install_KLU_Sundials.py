@@ -144,30 +144,62 @@ def check_libraries_installed(install_dir):
     # Define the directories to check for SUNDIALS and SuiteSparse libraries
     lib_dirs = [install_dir, join(os.getenv("HOME"), ".local"), "/usr/local", "/usr"]
 
-    sundials_lib_found = False
+    sundials_files = [
+        "libsundials_idas",
+        "libsundials_sunlinsolklu",
+        "libsundials_sunlinsoldense",
+        "libsundials_sunlinsolspbcgs",
+        "libsundials_sunlinsollapackdense",
+        "libsundials_sunmatrixsparse",
+        "libsundials_nvecserial",
+        "libsundials_nvecopenmp",
+    ]
+    if platform.system() == "linux":
+        sundials_files = [file + ".so" for file in sundials_files]
+    elif platform.system() == "Darwin":
+        sundials_files = [file + ".dylib" for file in sundials_files]
+    sundials_lib_found = True
     # Check for SUNDIALS libraries in each directory
-    for lib_dir in lib_dirs:
-        if isfile(join(lib_dir, "lib", "libsundials_ida.so")) or isfile(
-            join(lib_dir, "lib", "libsundials_ida.dylib")
-        ):
-            sundials_lib_found = True
-            print(f"SUNDIALS library found at {lib_dir}")
+    for lib_file in sundials_files:
+        file_found = False
+        for lib_dir in lib_dirs:
+            if isfile(join(lib_dir, "lib", lib_file)):
+                file_found = True
+                break
+        if not file_found:
+            sundials_lib_found = False
             break
-
-    if not sundials_lib_found:
+    if sundials_lib_found:
+        print("SUNDIALS library found.")
+    else:
         print("SUNDIALS library not found. Proceeding with installation.")
+
+    suitesparse_files = [
+        "libsuitesparseconfig",
+        "libklu",
+        "libamd",
+        "libcolamd",
+        "libbtf",
+    ]
+    if platform.system() == "linux":
+        suitesparse_files = [file + ".so" for file in suitesparse_files]
+    elif platform.system() == "Darwin":
+        suitesparse_files = [file + ".dylib" for file in suitesparse_files]
 
     suitesparse_lib_found = False
     # Check for SuiteSparse libraries in each directory
-    for lib_dir in lib_dirs:
-        if isfile(join(lib_dir, "lib", "libklu.so")) or isfile(
-            join(lib_dir, "lib", "libklu.dylib")
-        ):
-            suitesparse_lib_found = True
-            print(f"SuiteSparse library found at {lib_dir}")
+    for lib_file in suitesparse_files:
+        file_found = False
+        for lib_dir in lib_dirs:
+            if isfile(join(lib_dir, "lib", lib_file)):
+                file_found = True
+                break
+        if not file_found:
+            suitesparse_lib_found = False
             break
-
-    if not suitesparse_lib_found:
+    if suitesparse_lib_found:
+        print("SuiteSparse library found.")
+    else:
         print("SuiteSparse library not found. Proceeding with installation.")
 
     return sundials_lib_found, suitesparse_lib_found
