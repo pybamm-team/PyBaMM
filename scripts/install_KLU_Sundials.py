@@ -105,15 +105,15 @@ def install_sundials(download_dir, install_dir):
                 "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
             )
             OpenMP_C_LIB_NAMES = "omp"
-            OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
+            # OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
             OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
         elif platform.processor() == "i386":
             LDFLAGS = "-L/usr/local/opt/libomp/lib"
             CPPFLAGS = "-I/usr/local/opt/libomp/include"
             OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
-            OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
+            # OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
             OpenMP_C_LIB_NAMES = "omp"
-            OpenMP_CXX_LIB_NAMES = "omp"
+            # OpenMP_CXX_LIB_NAMES = "omp"
             OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
 
         cmake_args += [
