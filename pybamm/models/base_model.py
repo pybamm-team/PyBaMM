@@ -524,103 +524,105 @@ class BaseModel:
         by_submodel : bool, optional
             Whether to print the parameter info sub-model wise or not (default False)
         """
+
+        def calculate_max_lengths(parameter_dict):
+            """
+            Calculate the maximum length of parameters and parameter type in a dictionary
+
+            Parameters
+            ----------
+            parameter_dict : dict
+                The dict from which maximum lengths are calculated
+            """
+            max_name_length = max(
+                len(getattr(parameter, "name", str(parameter)))
+                for parameter, _ in parameter_dict.values()
+            )
+            max_type_length = max(
+                len(parameter_type) for _, parameter_type in parameter_dict.values()
+            )
+
+            return max_name_length, max_type_length
+
+        def format_table_row(param_name, param_type, max_name_length, max_type_length):
+            """
+            Format the parameter information in a formatted table
+
+            Parameters
+            ----------
+            param_name : str
+                The name of the parameter
+            param_type : str
+                The type of the parameter
+            max_name_length : int
+                The maximum length of the parameter in the dictionary
+            max_type_length : int
+                The maximum length of the parameter type in the dictionary
+            """
+            param_name_lines = [
+                param_name[i : i + max_name_length]
+                for i in range(0, len(param_name), max_name_length)
+            ]
+            param_type_lines = [
+                param_type[i : i + max_type_length]
+                for i in range(0, len(param_type), max_type_length)
+            ]
+            max_lines = max(len(param_name_lines), len(param_type_lines))
+
+            return [
+                f"| {param_name_lines[i]:<{max_name_length}} | {param_type_lines[i]:<{max_type_length}} |"
+                for i in range(max_lines)
+            ]
+
         if by_submodel:
-            submodel_info = self.get_parameter_info(by_submodel=True)
-            for submodel_name, submodel_vars in submodel_info.items():
+            parameter_info = self.get_parameter_info(by_submodel=True)
+            for submodel_name, submodel_vars in parameter_info.items():
                 if not submodel_vars:
                     print(f"'{submodel_name}' submodel parameters: \nNo parameters\n")
                 else:
                     print(f"'{submodel_name}' submodel parameters:")
-                    info = submodel_vars
-                    max_param_name_length = 0
-                    max_param_type_length = 0
-
-                    for param, param_type in info.values():
-                        param_name_length = len(getattr(param, "name", str(param)))
-                        param_type_length = len(param_type)
-                        max_param_name_length = max(
-                            max_param_name_length, param_name_length
-                        )
-                        max_param_type_length = max(
-                            max_param_type_length, param_type_length
-                        )
-
-                    header_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
-                    row_format = f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
+                    (
+                        max_param_name_length,
+                        max_param_type_length,
+                    ) = calculate_max_lengths(submodel_vars)
 
                     table = [
-                        header_format.format("Parameter", "Type of parameter"),
-                        header_format.format(
-                            "=" * max_param_name_length, "=" * max_param_type_length
-                        ),
+                        f"| {'Parameter':<{max_param_name_length}} | {'Type of parameter':<{max_param_type_length}} |",
+                        f"| {'=' * max_param_name_length} | {'=' * max_param_type_length} |",
                     ]
 
-                    for param, param_type in info.values():
+                    for param, param_type in submodel_vars.values():
                         param_name = getattr(param, "name", str(param))
-                        param_name_lines = [
-                            param_name[i : i + max_param_name_length]
-                            for i in range(0, len(param_name), max_param_name_length)
-                        ]
-                        param_type_lines = [
-                            param_type[i : i + max_param_type_length]
-                            for i in range(0, len(param_type), max_param_type_length)
-                        ]
-                        max_lines = max(len(param_name_lines), len(param_type_lines))
-
-                        for i in range(max_lines):
-                            param_line = (
-                                param_name_lines[i] if i < len(param_name_lines) else ""
+                        table.extend(
+                            format_table_row(
+                                param_name,
+                                param_type,
+                                max_param_name_length,
+                                max_param_type_length,
                             )
-                            type_line = (
-                                param_type_lines[i] if i < len(param_type_lines) else ""
-                            )
-                            table.append(row_format.format(param_line, type_line))
+                        )
 
                     print("\n".join(table) + "\n")
 
         else:
             info = self.get_parameter_info()
-            max_param_name_length = 0
-            max_param_type_length = 0
-
-            for param, param_type in info.values():
-                param_name_length = len(getattr(param, "name", str(param)))
-                param_type_length = len(param_type)
-                max_param_name_length = max(max_param_name_length, param_name_length)
-                max_param_type_length = max(max_param_type_length, param_type_length)
-
-            header_format = (
-                f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
-            )
-            row_format = (
-                f"| {{:<{max_param_name_length}}} | {{:<{max_param_type_length}}} |"
-            )
+            max_param_name_length, max_param_type_length = calculate_max_lengths(info)
 
             table = [
-                header_format.format("Parameter", "Type of parameter"),
-                header_format.format(
-                    "=" * max_param_name_length, "=" * max_param_type_length
-                ),
+                f"| {'Parameter':<{max_param_name_length}} | {'Type of parameter':<{max_param_type_length}} |",
+                f"| {'=' * max_param_name_length} | {'=' * max_param_type_length} |",
             ]
 
             for param, param_type in info.values():
                 param_name = getattr(param, "name", str(param))
-                param_name_lines = [
-                    param_name[i : i + max_param_name_length]
-                    for i in range(0, len(param_name), max_param_name_length)
-                ]
-                param_type_lines = [
-                    param_type[i : i + max_param_type_length]
-                    for i in range(0, len(param_type), max_param_type_length)
-                ]
-                max_lines = max(len(param_name_lines), len(param_type_lines))
-
-                for i in range(max_lines):
-                    param_line = (
-                        param_name_lines[i] if i < len(param_name_lines) else ""
+                table.extend(
+                    format_table_row(
+                        param_name,
+                        param_type,
+                        max_param_name_length,
+                        max_param_type_length,
                     )
-                    type_line = param_type_lines[i] if i < len(param_type_lines) else ""
-                    table.append(row_format.format(param_line, type_line))
+                )
 
             print("\n".join(table) + "\n")
 
