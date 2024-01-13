@@ -333,7 +333,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     Ea_D_n = pybamm_dict.get(
         negative_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
-    pybamm_dict[negative_particle.pre_name + "diffusivity activation energy [J.mol-1]"] = Ea_D_n
+    pybamm_dict[
+        negative_particle.pre_name + "diffusivity activation energy [J.mol-1]"
+    ] = Ea_D_n
     D_n_ref = pybamm_dict[negative_electrode.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_n_ref):
@@ -362,7 +364,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     Ea_D_p = pybamm_dict.get(
         positive_electrode.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
     )
-    pybamm_dict[positive_particle.pre_name + "diffusivity activation energy [J.mol-1]"] = Ea_D_p
+    pybamm_dict[
+        positive_particle.pre_name + "diffusivity activation energy [J.mol-1]"
+    ] = Ea_D_p
     D_p_ref = pybamm_dict[positive_electrode.pre_name + "diffusivity [m2.s-1]"]
 
     if callable(D_p_ref):

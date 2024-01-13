@@ -71,7 +71,10 @@ class TestUtil(TestCase):
             d.__getitem__("Open-circuit voltage at 100% SOC [V]")
 
         with self.assertWarns(DeprecationWarning):
-            self.assertEqual(d["Positive electrode diffusivity [m2.s-1]"], d["Positive particle diffusivity [m2.s-1]"])
+            self.assertEqual(
+                d["Positive electrode diffusivity [m2.s-1]"],
+                d["Positive particle diffusivity [m2.s-1]"],
+            )
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
