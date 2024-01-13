@@ -12,7 +12,6 @@ if pybamm.have_jax():
     from jax import core, dtypes
     from jax.extend import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
-    from jax.config import config
     from jax.flatten_util import ravel_pytree
     from jax.interpreters import partial_eval as pe
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten
@@ -20,7 +19,7 @@ if pybamm.have_jax():
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
     if platform != "metal":
-        config.update("jax_enable_x64", True)
+        jax.config.update("jax_enable_x64", True)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
@@ -1009,7 +1008,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     """
     if not pybamm.have_jax():
         raise ModuleNotFoundError(
-            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
         )
 
     def _check_arg(arg):

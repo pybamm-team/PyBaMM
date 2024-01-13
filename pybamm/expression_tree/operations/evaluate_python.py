@@ -11,11 +11,10 @@ import pybamm
 
 if pybamm.have_jax():
     import jax
-    from jax.config import config
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
     if platform != "metal":
-        config.update("jax_enable_x64", True)
+        jax.config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:
@@ -42,7 +41,7 @@ class JaxCooMatrix:
     def __init__(self, row, col, data, shape):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         self.row = jax.numpy.array(row)
@@ -523,7 +522,7 @@ class EvaluatorJax:
     def __init__(self, symbol):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)
