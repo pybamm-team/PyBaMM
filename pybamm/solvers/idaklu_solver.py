@@ -699,7 +699,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The times at which to compute the solution. If None, the times in the model
             are used.
         output_variables : list of str, optional
-            The variables to be returned. If None, the variables in the model are used.
+            The variables to be returned. If None, all variables in the model are used.
         inputs : dict, optional
             Any inputs to the model
         calculate_sensitivities : bool, optional
