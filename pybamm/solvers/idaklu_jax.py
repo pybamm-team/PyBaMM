@@ -70,7 +70,6 @@ class IDAKLUJax:
 
     def get_var(
         self,
-        f: Callable,
         varname: str,
     ):
         """Helper function to extract a single variable from the jaxified expression
@@ -79,14 +78,12 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        f : function
-            The jaxified expression
         varname : str
             The name of the variable to extract
         """
 
         def f_isolated(*args, **kwargs):
-            out = f(*args, **kwargs)
+            out = self.jaxify_f(*args, **kwargs)
             index = self.jax_output_variables.index(varname)
             if out.ndim == 0:
                 return out  # pragma: no cover
@@ -99,7 +96,6 @@ class IDAKLUJax:
 
     def get_vars(
         self,
-        f: Callable,
         varnames: List[str],
     ):
         """Helper function to extract multiple variables from the jaxified expression
@@ -108,14 +104,12 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        f : function
-            The jaxified expression
         varnames : list of str
             The names of the variables to extract
         """
 
         def f_isolated(*args, **kwargs):
-            out = f(*args, **kwargs)
+            out = self.jaxify_f(*args, **kwargs)
             index = np.array(
                 [self.jax_output_variables.index(varname) for varname in varnames]
             )
@@ -131,7 +125,6 @@ class IDAKLUJax:
     def jax_value(
         self,
         *,
-        f: Union[Callable, None] = None,
         t: np.ndarray = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[List[str], None] = None,
@@ -143,8 +136,6 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        f : function
-            The jaxified expression
         t : float | np.ndarray, optional
             Time sample or vector of time samples
         inputs : dict, optional
@@ -153,7 +144,6 @@ class IDAKLUJax:
             The variables to be returned. If None, the variables in the model are used.
         """
         try:
-            f = f if f else self.jaxify_f
             t = t if t else self.jax_t_eval
             inputs = inputs if inputs else self.jax_inputs
             output_variables = (
@@ -164,7 +154,7 @@ class IDAKLUJax:
         d = {}
         for outvar in output_variables:
             d[outvar] = jax.vmap(
-                self.get_var(f, outvar),
+                self.get_var(outvar),
                 in_axes=(0, None),
             )(t, inputs)
         return d
@@ -172,7 +162,6 @@ class IDAKLUJax:
     def jax_grad(
         self,
         *,
-        f: Union[Callable, None] = None,
         t: np.ndarray = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[List[str], None] = None,
@@ -184,8 +173,6 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        f : function
-            The jaxified expression
         t : float | np.ndarray, optional
             Time sample or vector of time samples
         inputs : dict, optional
@@ -194,7 +181,6 @@ class IDAKLUJax:
             The variables to be returned. If None, the variables in the model are used.
         """
         try:
-            f = f if f else self.jaxify_f
             t = t if t else self.jax_t_eval
             inputs = inputs if inputs else self.jax_inputs
             output_variables = (
@@ -206,7 +192,7 @@ class IDAKLUJax:
         for outvar in output_variables:
             d[outvar] = jax.vmap(
                 jax.grad(
-                    self.get_var(f, outvar),
+                    self.get_var(outvar),
                     argnums=1,
                 ),
                 in_axes=(0, None),

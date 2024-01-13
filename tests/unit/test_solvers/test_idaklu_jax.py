@@ -185,7 +185,7 @@ class TestIDAKLUJax(TestCase):
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
-        out = wrapper(idaklu_jax_solver.get_vars(f, output_variables))(
+        out = wrapper(idaklu_jax_solver.get_vars(output_variables))(
             t_eval[k], inputs
         )
         np.testing.assert_allclose(
@@ -194,7 +194,7 @@ class TestIDAKLUJax(TestCase):
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
-        out = wrapper(idaklu_jax_solver.get_vars(f, output_variables))(t_eval, inputs)
+        out = wrapper(idaklu_jax_solver.get_vars(output_variables))(t_eval, inputs)
         np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
@@ -203,7 +203,7 @@ class TestIDAKLUJax(TestCase):
     def test_getvars_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
             jax.vmap(
-                idaklu_jax_solver.get_vars(f, output_variables),
+                idaklu_jax_solver.get_vars(output_variables),
                 in_axes=(0, None),
             ),
         )(t_eval, inputs)
@@ -217,7 +217,7 @@ class TestIDAKLUJax(TestCase):
     def test_getvar_scalar_float(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks
         for outvar in output_variables:
-            out = wrapper(idaklu_jax_solver.get_var(f, outvar))(
+            out = wrapper(idaklu_jax_solver.get_var(outvar))(
                 float(t_eval[k]), inputs
             )
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
@@ -226,13 +226,13 @@ class TestIDAKLUJax(TestCase):
     def test_getvar_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks
         for outvar in output_variables:
-            out = wrapper(idaklu_jax_solver.get_var(f, outvar))(t_eval[k], inputs)
+            out = wrapper(idaklu_jax_solver.get_var(outvar))(t_eval[k], inputs)
             np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvar_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
         for outvar in output_variables:
-            out = wrapper(idaklu_jax_solver.get_var(f, outvar))(t_eval, inputs)
+            out = wrapper(idaklu_jax_solver.get_var(outvar))(t_eval, inputs)
             np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     @parameterized.expand(testcase, skip_on_empty=True)
@@ -240,7 +240,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.vmap(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     in_axes=(0, None),
                 ),
             )(t_eval, inputs)
@@ -394,7 +394,7 @@ class TestIDAKLUJax(TestCase):
     ):
         out = wrapper(
             jax.jacfwd(
-                idaklu_jax_solver.get_vars(f, output_variables),
+                idaklu_jax_solver.get_vars(output_variables),
                 argnums=1,
             ),
         )(t_eval[k], inputs)
@@ -418,7 +418,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.jacfwd(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
             )(t_eval[k], inputs)
@@ -436,7 +436,7 @@ class TestIDAKLUJax(TestCase):
     ):
         out = wrapper(
             jax.jacfwd(
-                idaklu_jax_solver.get_vars(f, output_variables),
+                idaklu_jax_solver.get_vars(output_variables),
                 argnums=1,
             ),
         )(t_eval, inputs)
@@ -461,7 +461,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.jacfwd(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
             )(t_eval, inputs)
@@ -477,7 +477,7 @@ class TestIDAKLUJax(TestCase):
     def test_jacfwd_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
             jax.vmap(
-                jax.jacfwd(idaklu_jax_solver.get_vars(f, output_variables), argnums=1),
+                jax.jacfwd(idaklu_jax_solver.get_vars(output_variables), argnums=1),
                 in_axes=(0, None),
             ),
         )(t_eval, inputs)
@@ -497,7 +497,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.vmap(
-                    jax.jacfwd(idaklu_jax_solver.get_var(f, outvar), argnums=1),
+                    jax.jacfwd(idaklu_jax_solver.get_var(outvar), argnums=1),
                     in_axes=(0, None),
                 ),
             )(t_eval, inputs)
@@ -517,7 +517,7 @@ class TestIDAKLUJax(TestCase):
     ):
         out = wrapper(
             jax.jacrev(
-                idaklu_jax_solver.get_vars(f, output_variables),
+                idaklu_jax_solver.get_vars(output_variables),
                 argnums=1,
             ),
         )(t_eval[k], inputs)
@@ -541,7 +541,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.jacrev(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
             )(t_eval[k], inputs)
@@ -561,7 +561,7 @@ class TestIDAKLUJax(TestCase):
     ):
         out = wrapper(
             jax.jacrev(
-                idaklu_jax_solver.get_vars(f, output_variables),
+                idaklu_jax_solver.get_vars(output_variables),
                 argnums=1,
             ),
         )(t_eval, inputs)
@@ -586,7 +586,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.jacrev(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
             )(t_eval, inputs)
@@ -602,7 +602,7 @@ class TestIDAKLUJax(TestCase):
     def test_jacrev_vmap_getvars(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(
             jax.vmap(
-                jax.jacrev(idaklu_jax_solver.get_vars(f, output_variables), argnums=1),
+                jax.jacrev(idaklu_jax_solver.get_vars(output_variables), argnums=1),
                 in_axes=(0, None),
             ),
         )(t_eval, inputs)
@@ -622,7 +622,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.vmap(
-                    jax.jacrev(idaklu_jax_solver.get_var(f, outvar), argnums=1),
+                    jax.jacrev(idaklu_jax_solver.get_var(outvar), argnums=1),
                     in_axes=(0, None),
                 ),
             )(t_eval, inputs)
@@ -641,7 +641,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             out = wrapper(
                 jax.grad(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
             )(t_eval[k], inputs)  # output should be a dictionary of inputs
@@ -656,7 +656,7 @@ class TestIDAKLUJax(TestCase):
             out = wrapper(
                 jax.vmap(
                     jax.grad(
-                        idaklu_jax_solver.get_var(f, outvar),
+                        idaklu_jax_solver.get_var(outvar),
                         argnums=1,
                     ),
                     in_axes=(0, None),
@@ -676,7 +676,7 @@ class TestIDAKLUJax(TestCase):
         for outvar in output_variables:
             primals, tangents = wrapper(
                 jax.value_and_grad(
-                    idaklu_jax_solver.get_var(f, outvar),
+                    idaklu_jax_solver.get_var(outvar),
                     argnums=1,
                 ),
             )(t_eval[k], inputs)
@@ -695,7 +695,7 @@ class TestIDAKLUJax(TestCase):
             primals, tangents = wrapper(
                 jax.vmap(
                     jax.value_and_grad(
-                        idaklu_jax_solver.get_var(f, outvar),
+                        idaklu_jax_solver.get_var(outvar),
                         argnums=1,
                     ),
                     in_axes=(0, None),
@@ -755,7 +755,7 @@ class TestIDAKLUJax(TestCase):
         # Note that although f returns a vector over time, sse() returns a scalar so
         # that it can be passed to grad() directly using time-vector inputs.
         def sse(t, inputs):
-            vf = idaklu_jax_solver.get_var(f, "Voltage [V]")
+            vf = idaklu_jax_solver.get_var("Voltage [V]")
             return jnp.sum((vf(t_eval, inputs) - data) ** 2)
 
         # Create an imperfect prediction
