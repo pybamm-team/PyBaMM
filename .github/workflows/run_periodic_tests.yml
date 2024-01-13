@@ -36,8 +36,7 @@ jobs:
       - name: Check style
         run: |
           python -m pip install pre-commit
-          git add .
-          pre-commit run ruff
+          pre-commit run -a
 
   build:
     needs: style
@@ -153,3 +152,50 @@ jobs:
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
           pyenv uninstall -f $( python --version )
+
+  test_install_odes:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [ubuntu-latest, macos-latest]
+            python-version: ["3.8", "3.9", "3.10", "3.11"]
+        fail-fast: false
+    name: Test pybamm_install_odes on ${{ matrix.os }}
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install gfortran gcc libopenblas-dev
+      - name: Install macOS system dependencies
+        if: matrix.os == 'macos-latest'
+        env:
+          # Homebrew environment variables
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        run: |
+          brew analytics off
+          brew install openblas
+          brew reinstall gcc gfortran
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install PyBaMM
+        run: python -m pip install -e .
+
+      - name: Test pybamm_install_odes on ${{ matrix.os }}
+        run: |
+          python -m pip cache purge
+          python -m pip install wget cmake
+          pybamm_install_odes

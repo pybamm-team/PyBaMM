@@ -37,7 +37,6 @@ class TestSizeDistributionParameters(TestCase):
         np.testing.assert_almost_equal(values.evaluate(param.n.prim.R_max), 2.5e-5, 3)
         np.testing.assert_almost_equal(values.evaluate(param.p.prim.R_max), 2.5e-5, 3)
 
-
         # check function parameters (size distributions) evaluate
         R_test = pybamm.Scalar(1.0)
         values.evaluate(param.n.prim.f_a_dist(R_test))

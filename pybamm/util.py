@@ -276,10 +276,9 @@ def have_jax():
 
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
-    return (
-        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
-        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
-    )
+    return importlib.metadata.distribution("jax").version.startswith(
+        JAX_VERSION
+    ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
 
 
 def is_constant_and_can_evaluate(symbol):
@@ -351,6 +350,7 @@ def install_jax(arguments=None):  # pragma: no cover
         ]
     )
 
+
 # https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
 def have_optional_dependency(module_name, attribute=None):
     err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
@@ -365,7 +365,7 @@ def have_optional_dependency(module_name, attribute=None):
                 return imported_attribute  # Return the imported attribute
             else:
                 # Raise an ModuleNotFoundError if the attribute is not available
-                raise ModuleNotFoundError(err_msg)      # pragma: no cover
+                raise ModuleNotFoundError(err_msg)  # pragma: no cover
         else:
             # Return the entire module if no attribute is specified
             return module

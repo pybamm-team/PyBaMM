@@ -22,7 +22,7 @@ class TestEcker2015_graphite_halfcell(TestCase):
             "Positive electrode OCP [V]": ([sto], 0.124),
             # Electrolyte
             "Electrolyte diffusivity [m2.s-1]": ([1000, T], 2.593e-10),
-            "Electrolyte conductivity [S.m-1]": ([1000, T], 0.9738)
+            "Electrolyte conductivity [S.m-1]": ([1000, T], 0.9738),
         }
 
         for name, value in fun_test.items():

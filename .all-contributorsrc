@@ -744,7 +744,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/91185083?v=4",
       "profile": "https://github.com/AbhishekChaudharii",
       "contributions": [
-        "doc"
+        "doc",
+        "code"
       ]
     },
     {
@@ -770,6 +771,34 @@
       "name": "Pradyot Ranjan",
       "avatar_url": "https://avatars.githubusercontent.com/u/99216956?v=4",
       "profile": "https://github.com/prady0t",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "XuboGU",
+      "name": "XuboGU",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53944452?v=4",
+      "profile": "https://github.com/XuboGU",
+      "contributions": [
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "cringeyburger",
+      "name": "Ankit Meda",
+      "avatar_url": "https://avatars.githubusercontent.com/u/121183876?v=4",
+      "profile": "https://github.com/cringeyburger",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "AlessioBugetti",
+      "name": "Alessio Bugetti",
+      "avatar_url": "https://avatars.githubusercontent.com/u/38499721?v=4",
+      "profile": "https://github.com/AlessioBugetti",
       "contributions": [
         "infra"
       ]

@@ -105,11 +105,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
-        m_ref
-        * arrhenius
-        * c_e**alpha
-        * c_s_surf**alpha
-        * (c_s_max - c_s_surf) ** alpha
+        m_ref * arrhenius * c_e**alpha * c_s_surf**alpha * (c_s_max - c_s_surf) ** alpha
     )
 
 
@@ -177,18 +173,12 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
-    m_ref = i0_ref / (
-        c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha
-    )
+    m_ref = i0_ref / (c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha)
     E_r = 3e4
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
-        m_ref
-        * arrhenius
-        * c_e**alpha
-        * c_s_surf**alpha
-        * (c_s_max - c_s_surf) ** alpha
+        m_ref * arrhenius * c_e**alpha * c_s_surf**alpha * (c_s_max - c_s_surf) ** alpha
     )
 
 

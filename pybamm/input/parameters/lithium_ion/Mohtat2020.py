@@ -86,9 +86,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
     E_r = 37480
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_entropic_change_PeymanMPM(sto, c_s_max):
@@ -208,9 +206,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
     E_r = 39570
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def NMC_entropic_change_PeymanMPM(sto, c_s_max):
@@ -244,9 +240,9 @@ def NMC_entropic_change_PeymanMPM(sto, c_s_max):
         - 0.5623 * 10 ** (-4) * np.exp(109.451 * sto - 100.006)
     )
 
-    du_dT = (
-        -800 + 779 * u_eq - 284 * u_eq**2 + 46 * u_eq**3 - 2.8 * u_eq**4
-    ) * 10 ** (-3)
+    du_dT = (-800 + 779 * u_eq - 284 * u_eq**2 + 46 * u_eq**3 - 2.8 * u_eq**4) * 10 ** (
+        -3
+    )
 
     return du_dT
 

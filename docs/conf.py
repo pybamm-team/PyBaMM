@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath("./sphinxext/"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2018-2023, The PyBaMM Team"
+copyright = "2018-2024, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version

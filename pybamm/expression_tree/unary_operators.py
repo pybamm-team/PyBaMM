@@ -1115,8 +1115,7 @@ class UpwindDownwind(SpatialOperator):
             )
         if child.evaluates_on_edges("primary") is True:
             raise TypeError(
-                f"Cannot upwind '{child}' since it does not "
-                + "evaluate on nodes."
+                f"Cannot upwind '{child}' since it does not " + "evaluate on nodes."
             )
         super().__init__(name, child)
 
