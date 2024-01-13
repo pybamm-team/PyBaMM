@@ -22,13 +22,21 @@ from urllib.parse import urlparse
 from multiprocessing import cpu_count
 
 
-def install_suitesparse(suitesparse_version, download_dir):
+SUITESPARSE_VERSION = "6.0.3"
+SUNDIALS_VERSION = "6.5.0"
+SUITESPARSE_URL = f"https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v{SUITESPARSE_VERSION}.tar.gz"
+SUNDIALS_URL = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
+SUITESPARSE_CHECKSUM = "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
+SUNDIALS_CHECKSUM = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
+
+
+def install_suitesparse(download_dir):
     # The SuiteSparse KLU module has 4 dependencies:
     # - suitesparseconfig
     # - AMD
     # - COLAMD
     # - BTF
-    suitesparse_dir = f"SuiteSparse-{suitesparse_version}"
+    suitesparse_dir = f"SuiteSparse-{SUITESPARSE_VERSION}"
     suitesparse_src = os.path.join(download_dir, suitesparse_dir)
     print("-" * 10, "Building SuiteSparse_config", "-" * 40)
     make_cmd = [
@@ -62,7 +70,7 @@ def install_suitesparse(suitesparse_version, download_dir):
         subprocess.run(install_cmd, cwd=build_dir, check=True)
 
 
-def install_sundials(sundials_version, download_dir, install_dir):
+def install_sundials(download_dir, install_dir):
     # Set install dir for SuiteSparse libs
     # Ex: if install_dir -> "/usr/local/" then
     # KLU_INCLUDE_DIR -> "/usr/local/include"
@@ -120,7 +128,7 @@ def install_sundials(sundials_version, download_dir, install_dir):
             print("\n-" * 10, "Creating build dir", "-" * 40)
             os.makedirs(build_dir)
 
-        sundials_src = f"../sundials-{sundials_version}"
+        sundials_src = f"../sundials-{SUNDIALS_VERSION}"
         print("-" * 10, "Running CMake prepare", "-" * 40)
         subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
@@ -247,26 +255,6 @@ install_dir = (
     else os.path.join(pybamm_dir, args.install_dir)
 )
 
-# Parallel download
-
-# 1 --- SuiteSparse
-suitesparse_version = "6.0.3"
-suitesparse_url = (
-    "https://github.com/DrTimothyAldenDavis/"
-    + f"SuiteSparse/archive/v{suitesparse_version}.tar.gz"
-)
-suitesparse_checksum = (
-    "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
-)
-
-# 2 --- SUNDIALS
-sundials_version = "6.5.0"
-sundials_url = (
-    "https://github.com/LLNL/sundials/"
-    + f"releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"
-)
-sundials_checksum = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
-
 # Check whether the libraries are installed
 sundials_found, suitesparse_found = check_libraries_installed(install_dir)
 
@@ -274,16 +262,16 @@ sundials_found, suitesparse_found = check_libraries_installed(install_dir)
 if not sundials_found and not suitesparse_found:
     # Both SUNDIALS and SuiteSparse are missing, download and install both
     parallel_download(
-        [(suitesparse_url, suitesparse_checksum), (sundials_url, sundials_checksum)],
+        [(SUITESPARSE_URL, SUITESPARSE_CHECKSUM), (SUNDIALS_URL, SUNDIALS_CHECKSUM)],
         download_dir,
     )
-    install_suitesparse(suitesparse_version, download_dir)
-    install_sundials(sundials_version, download_dir, install_dir)
+    install_suitesparse(download_dir)
+    install_sundials(download_dir, install_dir)
 elif not sundials_found and suitesparse_found:
     # Only SUNDIALS is missing, download and install it
-    parallel_download([(sundials_url, sundials_checksum)], download_dir)
-    install_sundials(sundials_version, download_dir, install_dir)
+    parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
+    install_sundials(download_dir, install_dir)
 elif sundials_found and not suitesparse_found:
     # Only SuiteSparse is missing, download and install it
-    parallel_download([(suitesparse_url, suitesparse_checksum)], download_dir)
-    install_suitesparse(suitesparse_version, download_dir)
+    parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
+    install_suitesparse(download_dir)
