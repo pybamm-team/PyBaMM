@@ -1380,7 +1380,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             upwind_mat = vstack(
                 [
                     csr_matrix(([1], ([0], [0])), shape=(1, n + 1)),
-                    diags([-0.5, 1.5], [0, 1], shape=(n, n + 1)),
+                    # diags([-0.5, 1.5], [0, 1], shape=(n, n + 1)),
+                    diags([1, 0], [-1, 0], shape=(n, n + 1)),
                 ]
             )
             symbol_out = pybamm.Matrix(upwind_mat) @ concat_bc
