@@ -98,6 +98,25 @@ PyBaMM ships with a Python script that automates points 2. and 3. You can run it
 
 	  python scripts/install_KLU_Sundials.py
 
+This script supports optional arguments for custom installations:
+
+- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
+  By default, they are installed in your local directory (usually ``~/.local``).
+
+  Example:
+
+  .. code:: bash
+
+      python scripts/install_KLU_Sundials.py --install-dir ./custom_install_dir
+
+- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
+
+  Example:
+
+  .. code:: bash
+
+      python scripts/install_KLU_Sundials.py --force
+
 .. _pybamm-install:
 
 Installing PyBaMM

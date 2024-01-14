@@ -99,26 +99,17 @@ def install_sundials(download_dir, install_dir):
     if platform.system() == "Darwin":
         # flags to find OpenMP on mac
         if platform.processor() == "arm":
-            LDFLAGS = "-L/opt/homebrew/opt/libomp/lib"
-            CPPFLAGS = "-I/opt/homebrew/opt/libomp/include"
             OpenMP_C_FLAGS = (
                 "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
             )
             OpenMP_C_LIB_NAMES = "omp"
-            # OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
             OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
         elif platform.processor() == "i386":
-            LDFLAGS = "-L/usr/local/opt/libomp/lib"
-            CPPFLAGS = "-I/usr/local/opt/libomp/include"
             OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
-            # OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
             OpenMP_C_LIB_NAMES = "omp"
-            # OpenMP_CXX_LIB_NAMES = "omp"
             OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
 
         cmake_args += [
-            "-DLDFLAGS=" + LDFLAGS,
-            "-DCPPFLAGS=" + CPPFLAGS,
             "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
             "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
             "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
@@ -135,14 +126,14 @@ def install_sundials(download_dir, install_dir):
     print("-" * 10, "Running CMake prepare", "-" * 40)
     subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
-    print("-" * 10, "Building the sundials", "-" * 40)
+    print("-" * 10, "Building SUNDIALS", "-" * 40)
     make_cmd = ["make", f"-j{cpu_count()}", "install"]
     subprocess.run(make_cmd, cwd=build_dir, check=True)
 
 
 def check_libraries_installed(install_dir):
     # Define the directories to check for SUNDIALS and SuiteSparse libraries
-    lib_dirs = [install_dir, join(os.getenv("HOME"), ".local"), "/usr/local", "/usr"]
+    lib_dirs = [install_dir]
 
     sundials_files = [
         "libsundials_idas",
@@ -154,7 +145,7 @@ def check_libraries_installed(install_dir):
         "libsundials_nvecserial",
         "libsundials_nvecopenmp",
     ]
-    if platform.system() == "linux":
+    if platform.system() == "Linux":
         sundials_files = [file + ".so" for file in sundials_files]
     elif platform.system() == "Darwin":
         sundials_files = [file + ".dylib" for file in sundials_files]
@@ -164,15 +155,15 @@ def check_libraries_installed(install_dir):
         file_found = False
         for lib_dir in lib_dirs:
             if isfile(join(lib_dir, "lib", lib_file)):
+                print(f"{lib_file} found.")
                 file_found = True
                 break
         if not file_found:
+            print(
+                f"{lib_file} not found. Proceeding with SUNDIALS library installation."
+            )
             sundials_lib_found = False
             break
-    if sundials_lib_found:
-        print("SUNDIALS library found.")
-    else:
-        print("SUNDIALS library not found. Proceeding with installation.")
 
     suitesparse_files = [
         "libsuitesparseconfig",
@@ -181,26 +172,26 @@ def check_libraries_installed(install_dir):
         "libcolamd",
         "libbtf",
     ]
-    if platform.system() == "linux":
+    if platform.system() == "Linux":
         suitesparse_files = [file + ".so" for file in suitesparse_files]
     elif platform.system() == "Darwin":
         suitesparse_files = [file + ".dylib" for file in suitesparse_files]
 
-    suitesparse_lib_found = False
+    suitesparse_lib_found = True
     # Check for SuiteSparse libraries in each directory
     for lib_file in suitesparse_files:
         file_found = False
         for lib_dir in lib_dirs:
             if isfile(join(lib_dir, "lib", lib_file)):
+                print(f"{lib_file} found.")
                 file_found = True
                 break
         if not file_found:
+            print(
+                f"{lib_file} not found. Proceeding with SuiteSparse library installation."
+            )
             suitesparse_lib_found = False
             break
-    if suitesparse_lib_found:
-        print("SuiteSparse library found.")
-    else:
-        print("SuiteSparse library not found. Proceeding with installation.")
 
     return sundials_lib_found, suitesparse_lib_found
 
@@ -281,6 +272,11 @@ if not os.path.exists(download_dir):
 parser = argparse.ArgumentParser(
     description="Download, compile and install Sundials and SuiteSparse."
 )
+parser.add_argument(
+    "--force",
+    action="store_true",
+    help="Force installation even if libraries are already found. This will overwrite the pre-existing files.",
+)
 parser.add_argument("--install-dir", type=str, default=DEFAULT_INSTALL_DIR)
 args = parser.parse_args()
 install_dir = (
@@ -289,23 +285,33 @@ install_dir = (
     else os.path.join(pybamm_dir, args.install_dir)
 )
 
-# Check whether the libraries are installed
-sundials_found, suitesparse_found = check_libraries_installed(install_dir)
-
-# Determine which libraries to download based on whether they were found
-if not sundials_found and not suitesparse_found:
-    # Both SUNDIALS and SuiteSparse are missing, download and install both
-    parallel_download(
-        [(SUITESPARSE_URL, SUITESPARSE_CHECKSUM), (SUNDIALS_URL, SUNDIALS_CHECKSUM)],
-        download_dir,
+if args.force:
+    print(
+        "The '--force' option is activated: installation will be forced, ignoring any existing libraries."
     )
-    install_suitesparse(download_dir)
-    install_sundials(download_dir, install_dir)
-elif not sundials_found and suitesparse_found:
-    # Only SUNDIALS is missing, download and install it
-    parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
-    install_sundials(download_dir, install_dir)
-elif sundials_found and not suitesparse_found:
-    # Only SuiteSparse is missing, download and install it
-    parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
-    install_suitesparse(download_dir)
+    sundials_found, suitesparse_found = False, False
+else:
+    # Check whether the libraries are installed
+    sundials_found, suitesparse_found = check_libraries_installed(install_dir)
+
+if __name__ == "__main__":
+    # Determine which libraries to download based on whether they were found
+    if not sundials_found and not suitesparse_found:
+        # Both SUNDIALS and SuiteSparse are missing, download and install both
+        parallel_download(
+            [
+                (SUITESPARSE_URL, SUITESPARSE_CHECKSUM),
+                (SUNDIALS_URL, SUNDIALS_CHECKSUM),
+            ],
+            download_dir,
+        )
+        install_suitesparse(download_dir)
+        install_sundials(download_dir, install_dir)
+    elif not sundials_found and suitesparse_found:
+        # Only SUNDIALS is missing, download and install it
+        parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
+        install_sundials(download_dir, install_dir)
+    elif sundials_found and not suitesparse_found:
+        # Only SuiteSparse is missing, download and install it
+        parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
+        install_suitesparse(download_dir)
