@@ -15,10 +15,10 @@ import tarfile
 import argparse
 import platform
 import hashlib
-import concurrent.futures
 import urllib.request
 from os.path import join, isfile
 from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import cpu_count
 
 
@@ -124,20 +124,20 @@ def install_sundials(download_dir, install_dir):
             "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
         ]
 
-        # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
-        # download_dir
-        build_dir = os.path.abspath(os.path.join(download_dir, "build_sundials"))
-        if not os.path.exists(build_dir):
-            print("\n-" * 10, "Creating build dir", "-" * 40)
-            os.makedirs(build_dir)
+    # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
+    # download_dir
+    build_dir = os.path.abspath(os.path.join(download_dir, "build_sundials"))
+    if not os.path.exists(build_dir):
+        print("\n-" * 10, "Creating build dir", "-" * 40)
+        os.makedirs(build_dir)
 
-        sundials_src = f"../sundials-{SUNDIALS_VERSION}"
-        print("-" * 10, "Running CMake prepare", "-" * 40)
-        subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
+    sundials_src = f"../sundials-{SUNDIALS_VERSION}"
+    print("-" * 10, "Running CMake prepare", "-" * 40)
+    subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
-        print("-" * 10, "Building the sundials", "-" * 40)
-        make_cmd = ["make", f"-j{cpu_count()}", "install"]
-        subprocess.run(make_cmd, cwd=build_dir, check=True)
+    print("-" * 10, "Building the sundials", "-" * 40)
+    make_cmd = ["make", f"-j{cpu_count()}", "install"]
+    subprocess.run(make_cmd, cwd=build_dir, check=True)
 
 
 def check_libraries_installed(install_dir):
@@ -247,7 +247,7 @@ def download_extract_library(url, expected_checksum, download_dir):
 
 def parallel_download(urls, download_dir):
     # Use 2 processes for parallel downloading
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(urls)) as executor:
+    with ThreadPoolExecutor(max_workers=len(urls)) as executor:
         futures = [
             executor.submit(
                 download_extract_library, url, expected_checksum, download_dir
