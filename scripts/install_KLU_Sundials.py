@@ -114,6 +114,8 @@ def install_sundials(download_dir, install_dir):
             OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
             OpenMP_C_LIB_NAMES = "omp"
             OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
+        else:
+            raise NotImplementedError("Unsupported processor architecture.")
 
         cmake_args += [
             "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
@@ -182,6 +184,10 @@ def check_libraries_installed(install_dir):
         suitesparse_files = [file + ".so" for file in suitesparse_files]
     elif platform.system() == "Darwin":
         suitesparse_files = [file + ".dylib" for file in suitesparse_files]
+    else:
+        raise NotImplementedError(
+            f"Unsupported operating system: {platform.system()}. This script currently supports only Linux and macOS."
+        )
 
     suitesparse_lib_found = True
     # Check for SuiteSparse libraries in each directory
@@ -325,3 +331,6 @@ if __name__ == "__main__":
         # Only SuiteSparse is missing, download and install it
         parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
         install_suitesparse(download_dir)
+    else:
+        # Both libraries are found and no force installation is requested
+        print("Both SUNDIALS and SuiteSparse libraries are already installed.")
