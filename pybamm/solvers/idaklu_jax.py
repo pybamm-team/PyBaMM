@@ -92,7 +92,7 @@ class IDAKLUJax:
                 Time sample or vector of time samples
             inputs : dict, optional
                 dictionary of input values, e.g.
-                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+                {'Current function [A]': 0.222, 'Separator porosity': 0.3}
         """
         if self.jaxpr is None:
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
@@ -104,10 +104,11 @@ class IDAKLUJax:
     ):
         """Helper function to extract a single variable from the jaxified expression
 
-        Returns a JAX expression having isolated a single variable from the model
-        Example:
+        Returns a JAX expression having isolated a single variable from the model.
+        For example::
+
             f = idaklu_jax.get_var('Current function [A]')
-            current_data = f(t, inputs=None)
+            data = f(t, inputs=None)
 
         Parameters
         ----------
@@ -123,7 +124,7 @@ class IDAKLUJax:
                 Time sample or vector of time samples
             inputs : dict, optional
                 dictionary of input values, e.g.
-                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+                {'Current function [A]': 0.222, 'Separator porosity': 0.3}
         """
 
         def f_isolated(*args, **kwargs):
@@ -144,8 +145,9 @@ class IDAKLUJax:
     ):
         """Helper function to extract multiple variables from the jaxified expression
 
-        Returns a JAX expression having isolated a set of variables from the model
-        Example:
+        Returns a JAX expression having isolated a set of variables from the model.
+        For example::
+
             f = idaklu_jax.get_vars(['Current function [A]', 'Separator porosity'])
             data = f(t, inputs=None)
 
