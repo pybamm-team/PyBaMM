@@ -68,6 +68,17 @@ class TestPlotVoltageComponents(TestCase):
         _, ax_out = sim.plot_voltage_components(ax=ax, show_legend=True)
         self.assertEqual(ax_out, ax)
 
+    def test_plot_without_solution(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        with self.assertRaises(ValueError) as error:
+            sim.plot_voltage_components()
+
+        self.assertEqual(
+            str(error.exception), "The simulation has not been solved yet."
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
