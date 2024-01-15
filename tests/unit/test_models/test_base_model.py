@@ -160,6 +160,64 @@ class TestBaseModel(TestCase):
         }
         model.print_parameter_info()
 
+    def test_get_parameter_info(self):
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.InputParameter("c")
+        d = pybamm.InputParameter("d")
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u * a}
+        model.algebraic = {v: v - b}
+        model.initial_conditions = {u: c, v: d}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.variables = {"v+f+i": v + f + i}
+        model.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+
+        parameter_info = model.get_parameter_info()
+        self.assertEqual(parameter_info["a"][1], "InputParameter")
+        self.assertEqual(parameter_info["b"][1], "InputParameter in ['test']")
+        self.assertIn("c", parameter_info)
+        self.assertIn("d", parameter_info)
+        self.assertIn("e", parameter_info)
+        self.assertIn("f", parameter_info)
+        self.assertEqual(parameter_info["g"][1], "Parameter")
+        self.assertIn("h", parameter_info)
+        self.assertIn("i", parameter_info)
+
+    def test_get_parameter_info_submodel(self):
+        model = pybamm.lithium_ion.SPM()
+        submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
+        parameter_info = model.get_parameter_info(by_submodel=True)
+
+        expected_error_message = "Cannot use get_parameter_info"
+
+        with self.assertRaisesRegex(NotImplementedError, expected_error_message):
+            submodel.get_parameter_info(by_submodel=True)
+
+        with self.assertRaisesRegex(NotImplementedError, expected_error_message):
+            submodel.get_parameter_info(by_submodel=False)
+
+        self.assertIn("Current variable [A]", parameter_info["external circuit"])
+        self.assertEqual(parameter_info["Negative interface utilisation"], {})
+        self.assertEqual(
+            parameter_info["external circuit"]["Electrode width [m]"][1], "Parameter"
+        )
+        self.assertEqual(
+            parameter_info["electrolyte transport efficiency"]["Separator porosity"][1],
+            "FunctionParameter with inputs(s) 'Through-cell distance (x) [m]'",
+        )
+
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model
         model = pybamm.BaseModel()
