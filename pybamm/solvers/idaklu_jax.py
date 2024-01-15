@@ -53,7 +53,7 @@ class IDAKLUJax:
         t_eval,
         output_variables=None,
         inputs=None,
-        calculate_sensitivities=None,
+        calculate_sensitivities=True,
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
@@ -245,7 +245,7 @@ class IDAKLUJax:
             self.jax_model,
             tuple(self.jax_t_eval),
             inputs=self._hashabledict(d),
-            calculate_sensitivities=self.jax_inputs is not None,
+            calculate_sensitivities=self.jax_calculate_sensitivities,
         )
         if invar is not None:
             if isinstance(invar, numbers.Number):
@@ -475,6 +475,7 @@ class IDAKLUJax:
         if not self.jax_output_variables:
             raise pybamm.SolverError("output_variables must be specified")
         self.jax_inputs = inputs
+        self.jax_calculate_sensitivities = calculate_sensitivities
 
         self.idaklu_jax_obj = idaklu.create_idaklu_jax()  # Create IDAKLU-JAX object
         self._register_callbacks()  # Register python methods as callbacks in IDAKLU-JAX
