@@ -41,8 +41,6 @@ def plot_voltage_components(
         solution = input_data.solution
     elif isinstance(input_data, Solution):
         solution = input_data
-    else:
-        raise ValueError("Input must be a Solution or Simulation object")
     plt = have_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
