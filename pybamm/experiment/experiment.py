@@ -141,6 +141,21 @@ class Experiment:
     def read_termination(self, termination):
         """
         Read the termination reason. If this condition is hit, the experiment will stop.
+
+        Parameters
+        ----------
+        termination : list[str], optional
+           A single string, or a list of strings, representing the conditions to terminate the experiment.
+           Only capacity or voltage can be provided as a termination reason.
+           e.g. '4 Ah capacity' or ['80% capacity', '2.5 V']
+
+        Returns
+        -------
+        dict
+           A dictionary of the termination conditions.
+           e.g. {'capacity': (4.0, 'Ah')} or
+           {'capacity': (80.0, '%'), 'voltage': (2.5, 'V')}
+
         """
         if termination is None:
             return {}
