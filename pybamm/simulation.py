@@ -1194,6 +1194,44 @@ class Simulation:
                 """
             )
 
+    def plot_voltage_components(
+        self,
+        ax=None,
+        show_legend=True,
+        split_by_electrode=False,
+        testing=False,
+        **kwargs_fill,
+    ):
+        """
+        Generate a plot showing the component overpotentials that make up the voltage
+
+        Parameters
+        ----------
+        ax : matplotlib Axis, optional
+            The axis on which to put the plot. If None, a new figure and axis is created.
+        show_legend : bool, optional
+            Whether to display the legend. Default is True.
+        split_by_electrode : bool, optional
+            Whether to show the overpotentials for the negative and positive electrodes
+            separately. Default is False.
+        testing : bool, optional
+            Whether to actually make the plot (turned off for unit tests).
+        kwargs_fill
+            Keyword arguments, passed to ax.fill_between.
+
+        """
+        if self.solution is None:
+            raise ValueError("The simulation has not been solved yet.")
+
+        return pybamm.plot_voltage_components(
+            self.solution,
+            ax=ax,
+            show_legend=show_legend,
+            split_by_electrode=split_by_electrode,
+            testing=testing,
+            **kwargs_fill,
+        )
+
 
 def load_sim(filename):
     """Load a saved simulation"""
