@@ -55,7 +55,6 @@ class IDAKLUJax:
         model,
         t_eval,
         output_variables=None,
-        inputs=None,
         calculate_sensitivities=True,
     ):
         if not pybamm.have_jax():
@@ -71,13 +70,13 @@ class IDAKLUJax:
         )
         self.idaklu_jax_obj = None  # Low-level IDAKLU-JAX primitives object
         self.solver = solver  # Originating IDAKLU Solver object
+        self.jax_inputs = {k: [] for k, v in model.get_parameter_info().items()}
 
         # JAXify the solver ready for use
         self.jaxify(
             model,
             t_eval,
             output_variables=output_variables,
-            inputs=inputs,
             calculate_sensitivities=calculate_sensitivities,
         )
 
@@ -183,7 +182,6 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        *,
         t: np.ndarray = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[List[str], None] = None,
@@ -195,17 +193,15 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        t : float | np.ndarray, optional
+        t : float | np.ndarray
             Time sample or vector of time samples
-        inputs : dict, optional
+        inputs : dict
             dictionary of input values
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
         """
         if self.jaxpr is None:
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
-        t = t if t else self.jax_t_eval
-        inputs = inputs if inputs else self.jax_inputs
         output_variables = (
             output_variables if output_variables else self.jax_output_variables
         )
@@ -219,7 +215,6 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        *,
         t: np.ndarray = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[List[str], None] = None,
@@ -231,17 +226,15 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        t : float | np.ndarray, optional
+        t : float | np.ndarray
             Time sample or vector of time samples
-        inputs : dict, optional
+        inputs : dict
             dictionary of input values
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
         """
         if self.jaxpr is None:
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
-        t = t if t else self.jax_t_eval
-        inputs = inputs if inputs else self.jax_inputs
         output_variables = (
             output_variables if output_variables else self.jax_output_variables
         )
@@ -464,7 +457,6 @@ class IDAKLUJax:
         t_eval,
         *,
         output_variables=None,
-        inputs=None,
         calculate_sensitivities=True,
     ):
         """JAXify the model and solver
@@ -481,8 +473,6 @@ class IDAKLUJax:
             are used.
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
-        inputs : dict, optional
-            Any inputs to the model
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         """
@@ -496,7 +486,6 @@ class IDAKLUJax:
             model,
             t_eval,
             output_variables=output_variables,
-            inputs=inputs,
             calculate_sensitivities=calculate_sensitivities,
         )
         return self.jaxpr
@@ -507,7 +496,6 @@ class IDAKLUJax:
         t_eval,
         *,
         output_variables=None,
-        inputs=None,
         calculate_sensitivities=True,
     ):
         """JAXify the model and solver"""
@@ -519,7 +507,6 @@ class IDAKLUJax:
         )
         if not self.jax_output_variables:
             raise pybamm.SolverError("output_variables must be specified")
-        self.jax_inputs = inputs
         self.jax_calculate_sensitivities = calculate_sensitivities
 
         self.idaklu_jax_obj = idaklu.create_idaklu_jax()  # Create IDAKLU-JAX object
@@ -965,7 +952,7 @@ class IDAKLUJax:
                         self.idaklu_jax_obj.get_index()
                     ),  # solver index reference
                     mlir.ir_constant(size_t),  # 'size' argument
-                    mlir.ir_constant(len(inputs)),  # number of inputs
+                    mlir.ir_constant(len(self.jax_inputs)),  # number of inputs
                     mlir.ir_constant(dims_y_bar[0]),  # 'y_bar' shape[0]
                     mlir.ir_constant(  # 'y_bar' shape[1]
                         dims_y_bar[1] if len(dims_y_bar) > 1 else -1

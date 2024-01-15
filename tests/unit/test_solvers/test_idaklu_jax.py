@@ -53,7 +53,6 @@ if pybamm.have_idaklu() and pybamm.have_jax():
         model,
         t_eval,
         output_variables=output_variables[:1],
-        inputs=inputs,
         calculate_sensitivities=True,
     )
     f1 = idaklu_jax_solver1.get_jaxpr()
@@ -62,7 +61,6 @@ if pybamm.have_idaklu() and pybamm.have_jax():
         model,
         t_eval,
         output_variables=output_variables,
-        inputs=inputs,
         calculate_sensitivities=True,
     )
     f3 = idaklu_jax_solver3.get_jaxpr()
@@ -96,7 +94,6 @@ class TestIDAKLUJax(TestCase):
             model,
             t_eval,
             output_variables=output_variables,
-            inputs=inputs,
             calculate_sensitivities=True,
         )
         with self.assertWarns(UserWarning):
@@ -104,7 +101,6 @@ class TestIDAKLUJax(TestCase):
                 model,
                 t_eval,
                 output_variables=output_variables,
-                inputs=inputs,
                 calculate_sensitivities=True,
             )
 
@@ -113,7 +109,6 @@ class TestIDAKLUJax(TestCase):
             model,
             t_eval,
             output_variables=output_variables,
-            inputs=inputs,
             calculate_sensitivities=True,
         )
         # simulate failure in initialisation
@@ -130,7 +125,6 @@ class TestIDAKLUJax(TestCase):
             idaklu_solver.jaxify(
                 model,
                 t_eval,
-                inputs=inputs,
             )
 
     def test_no_inputs(self):
@@ -720,7 +714,7 @@ class TestIDAKLUJax(TestCase):
         if wrapper == jax.jit:
             # Skipping test_jax_vars for jax.jit, jit not supported on helper functions
             return
-        out = idaklu_jax_solver.jax_value()
+        out = idaklu_jax_solver.jax_value(t_eval, inputs)
         for outvar in output_variables:
             flat_out, _ = tree_flatten(out[outvar])
             flat_out = np.array([f for f in flat_out]).flatten()
@@ -735,7 +729,7 @@ class TestIDAKLUJax(TestCase):
         if wrapper == jax.jit:
             # Skipping test_jax_grad for jax.jit, jit not supported on helper functions
             return
-        out = idaklu_jax_solver.jax_grad()
+        out = idaklu_jax_solver.jax_grad(t_eval, inputs)
         for outvar in output_variables:
             flat_out, _ = tree_flatten(out[outvar])
             flat_out = np.array([f for f in flat_out]).flatten()

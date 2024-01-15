@@ -683,7 +683,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_eval,
         *,
         output_variables=None,
-        inputs=None,
         calculate_sensitivities=True,
     ):
         """JAXify the solver object
@@ -708,7 +707,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             model,
             t_eval,
             output_variables=output_variables,
-            inputs=inputs,
             calculate_sensitivities=calculate_sensitivities,
         )
         return obj
