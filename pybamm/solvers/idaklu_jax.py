@@ -77,7 +77,19 @@ class IDAKLUJax:
         )
 
     def get_jaxpr(self):
-        """Returns a JAX expression representing the IDAKLU-wrapped solver object"""
+        """Returns a JAX expression representing the IDAKLU-wrapped solver object
+
+        Returns
+        -------
+        A JAX expression with the following call signature:
+            f(t, inputs=None)
+        where:
+            t : float | np.ndarray
+                Time sample or vector of time samples
+            inputs : dict, optional
+                dictionary of input values, e.g.
+                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+        """
         if self.jaxpr is None:
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
         return self.jaxpr
@@ -88,12 +100,26 @@ class IDAKLUJax:
     ):
         """Helper function to extract a single variable from the jaxified expression
 
-        Returns a JAX expression
+        Returns a JAX expression having isolated a single variable from the model
+        Example:
+            f = idaklu_jax.get_var('Current function [A]')
+            current_data = f(t, inputs=None)
 
         Parameters
         ----------
         varname : str
             The name of the variable to extract
+
+        Returns
+        -------
+        A JAX expression with the following call signature:
+            f(t, inputs=None)
+        where:
+            t : float | np.ndarray
+                Time sample or vector of time samples
+            inputs : dict, optional
+                dictionary of input values, e.g.
+                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
         """
 
         def f_isolated(*args, **kwargs):
@@ -114,12 +140,26 @@ class IDAKLUJax:
     ):
         """Helper function to extract multiple variables from the jaxified expression
 
-        Returns a JAX expression
+        Returns a JAX expression having isolated a set of variables from the model
+        Example:
+            f = idaklu_jax.get_vars(['Current function [A]', 'Separator porosity'])
+            data = f(t, inputs=None)
 
         Parameters
         ----------
         varnames : list of str
             The names of the variables to extract
+
+        Returns
+        -------
+        A JAX expression with the following call signature:
+            f(t, inputs=None)
+        where:
+            t : float | np.ndarray
+                Time sample or vector of time samples
+            inputs : dict, optional
+                dictionary of input values, e.g.
+                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
         """
 
         def f_isolated(*args, **kwargs):
