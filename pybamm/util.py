@@ -368,3 +368,33 @@ def have_optional_dependency(module_name, attribute=None):
     except ModuleNotFoundError:
         # Raise an ModuleNotFoundError if the module or attribute is not available
         raise ModuleNotFoundError(err_msg)
+
+
+def lazy_import(name):
+    """
+    Lazily import a module.
+
+    This function finds the module specification, creates a LazyLoader for the
+    loader, creates a module from the specification, updates the sys.modules
+    dictionary, and finally, executes the module.
+
+    Parameters:
+    - name (str): The name of the module to import.
+
+    Returns:
+    - module: The lazily imported module.
+    """
+    # Find the module specification
+    spec = importlib.util.find_spec(name)
+    loader = importlib.util.LazyLoader(spec.loader)
+    spec.loader = loader
+
+    # Create a module from the specification
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+
+    # Execute the module
+    loader.exec_module(module)
+
+    # Return the lazily imported module
+    return module
