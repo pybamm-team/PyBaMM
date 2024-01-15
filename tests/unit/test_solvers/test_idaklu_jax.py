@@ -15,22 +15,23 @@ if pybamm.have_idaklu() and pybamm.have_jax():
     import jax.numpy as jnp
 
     inputs = {
-        "Current function [A]": 0.222,
-        "Separator porosity": 0.3,
+        "a": 0.1,
+        "b": 0.2,
     }
 
-    model = pybamm.lithium_ion.DFN()
-    geometry = model.default_geometry
-    param = model.default_parameter_values
-    param.update({key: "[input]" for key in inputs.keys()})
-    param.process_geometry(geometry)
-    param.process_model(model)
-    var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 10, var.r_p: 10}
-    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-    disc.process_model(model)
-    t_eval = np.linspace(0, 360, 10)
+    model = pybamm.BaseModel()
+    v = pybamm.Variable("v")
+    u1 = pybamm.Variable("u1")
+    u2 = pybamm.Variable("u2")
+    a = pybamm.InputParameter("a")
+    b = pybamm.InputParameter("b")
+    model.rhs = {u1: a * v, u2: b * v}
+    model.algebraic = {v: 1 - v}
+    model.initial_conditions = {u1: 0, u2: 0, v: 1}
+    model.variables = {"v": v, "u1": u1, "u2": u2}
+    disc = pybamm.Discretisation()
+    disc.process_model(model, remove_independent_variables_from_rhs=False)
+    t_eval = np.linspace(0, 1, 100)
     idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
     # Create surrogate data (using base IDAKLU solver)
@@ -43,9 +44,9 @@ if pybamm.have_idaklu() and pybamm.have_jax():
 
     # Get jax expressions for IDAKLU solver
     output_variables = [
-        "Voltage [V]",
-        "Current [A]",
-        "Time [min]",
+        "v",
+        "u1",
+        "u2",
     ]
     # Single output variable
     idaklu_jax_solver1 = idaklu_solver.jaxify(
@@ -134,17 +135,15 @@ class TestIDAKLUJax(TestCase):
 
     def test_no_inputs(self):
         # Regenerate model with no inputs
-        model = pybamm.lithium_ion.DFN()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_geometry(geometry)
-        param.process_model(model)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 10, var.r_p: 10}
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        t_eval = np.linspace(0, 360, 10)
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        u1 = pybamm.Variable("u1")
+        u2 = pybamm.Variable("u2")
+        model.rhs = {u1: 0.1 * v, u2: 0.2 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u1: 0, u2: 0, v: 1}
+        model.variables = {"v": v, "u1": u1, "u2": u2}
+        t_eval = np.linspace(0, 1, 100)
         idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
         # Regenerate surrogate data
         sim = idaklu_solver.solve(model, t_eval)
@@ -756,26 +755,26 @@ class TestIDAKLUJax(TestCase):
     def test_grad_wrapper_sse(self, output_variables, idaklu_jax_solver, f, wrapper):
 
         # Use surrogate for experimental data
-        data = sim["Voltage [V]"](t_eval)
+        data = sim["v"](t_eval)
 
         # Define SSE function
         #
         # Note that although f returns a vector over time, sse() returns a scalar so
         # that it can be passed to grad() directly using time-vector inputs.
         def sse(t, inputs):
-            vf = idaklu_jax_solver.get_var("Voltage [V]")
+            vf = idaklu_jax_solver.get_var("v")
             return jnp.sum((vf(t_eval, inputs) - data) ** 2)
 
         # Create an imperfect prediction
         inputs_pred = inputs.copy()
-        inputs_pred["Current function [A]"] = 0.150
+        inputs_pred["a"] = 0.150
         sim_pred = idaklu_solver.solve(
             model,
             t_eval,
             inputs=inputs_pred,
             calculate_sensitivities=True,
         )
-        pred = sim_pred["Voltage [V]"]
+        pred = sim_pred["v"]
 
         # Check value against actual SSE
         sse_actual = np.sum((pred(t_eval) - data) ** 2)
