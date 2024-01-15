@@ -839,7 +839,20 @@ class Simulation:
 
                     steps.append(step_solution)
 
-                    cycle_solution = cycle_solution + step_solution
+                    # If there haven't been any successful steps yet in this cycle, then
+                    # carry the solution over from the previous cycle (but
+                    # `step_solution` should still be an EmptySolution so that in the
+                    # list of returned step solutions we can see which steps were
+                    # skipped)
+                    if (
+                        cycle_solution is None
+                        and isinstance(step_solution, pybamm.EmptySolution)
+                        and not isinstance(current_solution, pybamm.EmptySolution)
+                    ):
+                        cycle_solution = current_solution.last_state
+                    else:
+                        cycle_solution = cycle_solution + step_solution
+
                     current_solution = cycle_solution
 
                     callbacks.on_step_end(logs)
