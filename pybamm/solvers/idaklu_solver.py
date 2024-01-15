@@ -700,13 +700,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             are used.
         output_variables : list of str, optional
             The variables to be returned. If None, all variables in the model are used.
-        inputs : dict, optional
-            Any inputs to the model
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         """
-        obj = pybamm.IDAKLUJax(self)
-        obj.jaxify(
+        obj = pybamm.IDAKLUJax(
+            self,  # IDAKLU solver instance
             model,
             t_eval,
             output_variables=output_variables,

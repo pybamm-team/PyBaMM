@@ -108,7 +108,15 @@ class TestIDAKLUJax(TestCase):
             )
 
     def test_uninitialised(self):
-        idaklu_jax_solver = pybamm.IDAKLUJax(idaklu_solver)
+        idaklu_jax_solver = idaklu_solver.jaxify(
+            model,
+            t_eval,
+            output_variables=output_variables,
+            inputs=inputs,
+            calculate_sensitivities=True,
+        )
+        # simulate failure in initialisation
+        idaklu_jax_solver.jaxpr = None
         with self.assertRaises(pybamm.SolverError):
             idaklu_jax_solver.get_jaxpr()
         with self.assertRaises(pybamm.SolverError):

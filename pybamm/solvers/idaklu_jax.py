@@ -49,6 +49,11 @@ class IDAKLUJax:
     def __init__(
         self,
         solver,
+        model,
+        t_eval,
+        output_variables=None,
+        inputs=None,
+        calculate_sensitivities=None,
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
@@ -58,9 +63,18 @@ class IDAKLUJax:
             raise ModuleNotFoundError(
                 "IDAKLU is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html"
             )  # pragma: no cover
-        self.jaxpr = None  # JAX expression
-        self.idaklu_jax_obj = None  # IDAKLU-JAX object
+        self.jaxpr = None  # JAX expression representing the IDAKLU-wrapped solver object
+        self.idaklu_jax_obj = None  # Low-level IDAKLU-JAX primitives object
         self.solver = solver  # Originating IDAKLU Solver object
+
+        # JAXify the solver ready for use
+        self.jaxify(
+            model,
+            t_eval,
+            output_variables=output_variables,
+            inputs=inputs,
+            calculate_sensitivities=calculate_sensitivities,
+        )
 
     def get_jaxpr(self):
         """Returns a JAX expression representing the IDAKLU-wrapped solver object"""
@@ -143,14 +157,13 @@ class IDAKLUJax:
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
         """
-        try:
-            t = t if t else self.jax_t_eval
-            inputs = inputs if inputs else self.jax_inputs
-            output_variables = (
-                output_variables if output_variables else self.jax_output_variables
-            )
-        except AttributeError:
-            raise pybamm.SolverError("jaxify() must be called before jax_value()")
+        if self.jaxpr is None:
+            raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
+        t = t if t else self.jax_t_eval
+        inputs = inputs if inputs else self.jax_inputs
+        output_variables = (
+            output_variables if output_variables else self.jax_output_variables
+        )
         d = {}
         for outvar in output_variables:
             d[outvar] = jax.vmap(
@@ -180,14 +193,13 @@ class IDAKLUJax:
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
         """
-        try:
-            t = t if t else self.jax_t_eval
-            inputs = inputs if inputs else self.jax_inputs
-            output_variables = (
-                output_variables if output_variables else self.jax_output_variables
-            )
-        except AttributeError:
-            raise pybamm.SolverError("jaxify() must be called before jax_grad()")
+        if self.jaxpr is None:
+            raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
+        t = t if t else self.jax_t_eval
+        inputs = inputs if inputs else self.jax_inputs
+        output_variables = (
+            output_variables if output_variables else self.jax_output_variables
+        )
         d = {}
         for outvar in output_variables:
             d[outvar] = jax.vmap(
