@@ -323,14 +323,12 @@ if __name__ == "__main__":
         )
         install_suitesparse(download_dir)
         install_sundials(download_dir, install_dir)
-    elif not sundials_found and suitesparse_found:
-        # Only SUNDIALS is missing, download and install it
-        parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
-        install_sundials(download_dir, install_dir)
-    elif sundials_found and not suitesparse_found:
-        # Only SuiteSparse is missing, download and install it
-        parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
-        install_suitesparse(download_dir)
     else:
-        # Both libraries are found and no force installation is requested
-        print("Both SUNDIALS and SuiteSparse libraries are already installed.")
+        if not sundials_found:
+            # Only SUNDIALS is missing, download and install it
+            parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
+            install_sundials(download_dir, install_dir)
+        if not suitesparse_found:
+            # Only SuiteSparse is missing, download and install it
+            parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
+            install_suitesparse(download_dir)
