@@ -538,6 +538,7 @@ class IDAKLUJax:
             """
             logger.info("f")
             flatargs, treedef = tree_flatten((t, inputs))
+            self.jax_inputs = inputs
             out = f_p.bind(*flatargs)
             return out
 
