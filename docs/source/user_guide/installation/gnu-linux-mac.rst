@@ -119,7 +119,8 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      apt install libopenblas-dev
+      apt-get install libopenblas-dev
+      pip install wget cmake
       pybamm_install_odes
 
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
@@ -131,6 +132,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
    .. code:: bash
 
       brew install openblas gcc gfortran
+      pip install wget cmake
       pybamm_install_odes
 
 The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
@@ -161,7 +163,7 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 .. note::
 
-   The Jax solver is not supported on Python 3.8. It is supported on Python 3.9, 3.10, and 3.11.
+   The Jax solver is only supported for Python versions 3.9 through 3.12.
 
 .. code:: bash
 
