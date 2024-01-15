@@ -192,9 +192,7 @@ class TestIDAKLUJax(TestCase):
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
-        out = wrapper(idaklu_jax_solver.get_vars(output_variables))(
-            t_eval[k], inputs
-        )
+        out = wrapper(idaklu_jax_solver.get_vars(output_variables))(t_eval[k], inputs)
         np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
@@ -224,9 +222,7 @@ class TestIDAKLUJax(TestCase):
     def test_getvar_scalar_float(self, output_variables, idaklu_jax_solver, f, wrapper):
         # Per variable checks
         for outvar in output_variables:
-            out = wrapper(idaklu_jax_solver.get_var(outvar))(
-                float(t_eval[k]), inputs
-            )
+            out = wrapper(idaklu_jax_solver.get_var(outvar))(float(t_eval[k]), inputs)
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
     @parameterized.expand(testcase, skip_on_empty=True)
@@ -753,7 +749,6 @@ class TestIDAKLUJax(TestCase):
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_grad_wrapper_sse(self, output_variables, idaklu_jax_solver, f, wrapper):
-
         # Use surrogate for experimental data
         data = sim["v"](t_eval)
 

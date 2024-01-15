@@ -66,7 +66,9 @@ class IDAKLUJax:
             raise ModuleNotFoundError(
                 "IDAKLU is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html"
             )  # pragma: no cover
-        self.jaxpr = None  # JAX expression representing the IDAKLU-wrapped solver object
+        self.jaxpr = (
+            None  # JAX expression representing the IDAKLU-wrapped solver object
+        )
         self.idaklu_jax_obj = None  # Low-level IDAKLU-JAX primitives object
         self.solver = solver  # Originating IDAKLU Solver object
 
