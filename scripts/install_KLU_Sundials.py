@@ -15,6 +15,7 @@ import tarfile
 import argparse
 import platform
 import hashlib
+import shutil
 import urllib.request
 from os.path import join, isfile
 from urllib.parse import urlparse
@@ -31,6 +32,11 @@ SUITESPARSE_CHECKSUM = (
 )
 SUNDIALS_CHECKSUM = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
 DEFAULT_INSTALL_DIR = os.path.join(os.getenv("HOME"), ".local")
+
+
+def safe_remove_dir(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
 
 
 def install_suitesparse(download_dir):
@@ -155,7 +161,7 @@ def check_libraries_installed(install_dir):
         file_found = False
         for lib_dir in lib_dirs:
             if isfile(join(lib_dir, "lib", lib_file)):
-                print(f"{lib_file} found.")
+                print(f"{lib_file} found in {lib_dir}.")
                 file_found = True
                 break
         if not file_found:
@@ -183,7 +189,7 @@ def check_libraries_installed(install_dir):
         file_found = False
         for lib_dir in lib_dirs:
             if isfile(join(lib_dir, "lib", lib_file)):
-                print(f"{lib_file} found.")
+                print(f"{lib_file} found in {lib_dir}.")
                 file_found = True
                 break
         if not file_found:
@@ -213,6 +219,7 @@ def download_extract_library(url, expected_checksum, download_dir):
     if os.path.exists(file_path):
         print(f"Validating checksum for {file_name}...")
         actual_checksum = calculate_sha256(file_path)
+        print(f"Found {actual_checksum} against {expected_checksum}")
         if actual_checksum == expected_checksum:
             print(f"Checksum valid. Skipping download for {file_name}.")
             # Extract the archive as the checksum is valid
@@ -289,6 +296,9 @@ if args.force:
     print(
         "The '--force' option is activated: installation will be forced, ignoring any existing libraries."
     )
+    safe_remove_dir(os.path.join(download_dir, "build_sundials"))
+    safe_remove_dir(os.path.join(download_dir, f"SuiteSparse-{SUITESPARSE_VERSION}"))
+    safe_remove_dir(os.path.join(download_dir, f"sundials-{SUNDIALS_VERSION}"))
     sundials_found, suitesparse_found = False, False
 else:
     # Check whether the libraries are installed
