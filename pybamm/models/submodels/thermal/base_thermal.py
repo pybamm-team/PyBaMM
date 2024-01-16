@@ -205,45 +205,48 @@ class BaseThermal(pybamm.BaseSubModel):
         # variables are per electrode pair
         n_elec = param.n_electrodes_parallel
         A = param.L_y * param.L_z  # *modelled* electrode area
-        Q_ohm_tot = Q_ohm_Wm2_av * n_elec * A
-        Q_rxn_tot = Q_rxn_Wm2_av * n_elec * A
-        Q_rev_tot = Q_rev_Wm2_av * n_elec * A
-        Q_vol_tot = Q_Wm2_av * n_elec * A
+        Q_ohm_W = Q_ohm_Wm2_av * n_elec * A
+        Q_rxn_W = Q_rxn_Wm2_av * n_elec * A
+        Q_rev_W = Q_rev_Wm2_av * n_elec * A
+        Q_W = Q_Wm2_av * n_elec * A
 
         # Compute volume-averaged heat source terms over the *entire cell volume*, not
         # the product of electrode height * electrode width * electrode stack thickness
         V = param.V_cell  # *actual* cell volume
-        Q_ohm_vol_av = Q_ohm_tot / V
-        Q_rxn_vol_av = Q_rxn_tot / V
-        Q_rev_vol_av = Q_rev_tot / V
-        Q_vol_av = Q_vol_tot / V
+        Q_ohm_vol_av = Q_ohm_W / V
+        Q_rxn_vol_av = Q_rxn_W / V
+        Q_rev_vol_av = Q_rev_W / V
+        Q_vol_av = Q_W / V
 
         variables.update(
             {
+                # Ohmic
                 "Ohmic heating [W.m-3]": Q_ohm,
                 "X-averaged Ohmic heating [W.m-3]": Q_ohm_av,
                 "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av,
-                "Integrated Ohmic heating per unit electrode-pair area "
-                "[W.m-2]": Q_ohm_Wm2,
-                "Total Ohmic heating [W]": Q_ohm_tot,
+                "Ohmic heating per unit electrode-pair area [W.m-2]": Q_ohm_Wm2,
+                "Ohmic heating [W]": Q_ohm_W,
+                # Irreversible
                 "Irreversible electrochemical heating [W.m-3]": Q_rxn,
                 "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av,
                 "Volume-averaged irreversible electrochemical heating "
                 + "[W.m-3]": Q_rxn_vol_av,
-                "Integrated irreversible electrochemical heating per unit "
+                "Irreversible electrochemical heating per unit "
                 + "electrode-pair area [W.m-2]": Q_rxn_Wm2,
-                "Total irreversible electrochemical heating [W]": Q_rxn_tot,
+                "Irreversible electrochemical heating [W]": Q_rxn_W,
+                # Reversible
                 "Reversible heating [W.m-3]": Q_rev,
                 "X-averaged reversible heating [W.m-3]": Q_rev_av,
                 "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av,
-                "Integrated reversible heating per unit electrode-pair area "
-                "[W.m-2]": Q_rev_Wm2,
-                "Total reversible heating [W]": Q_rev_tot,
+                "Reversible heating per unit electrode-pair area " "[W.m-2]": Q_rev_Wm2,
+                "Reversible heating [W]": Q_rev_W,
+                # Total
                 "Total heating [W.m-3]": Q,
-                "Total heating [W]": Q_vol_tot,
                 "X-averaged total heating [W.m-3]": Q_av,
                 "Volume-averaged total heating [W.m-3]": Q_vol_av,
-                "Integrated total heating per unit electrode-pair area [W.m-2]": Q_Wm2,
+                "Total heating per unit electrode-pair area [W.m-2]": Q_Wm2,
+                "Total heating [W]": Q_W,
+                # Current collector
                 "Negative current collector Ohmic heating [W.m-3]": Q_ohm_s_cn,
                 "Positive current collector Ohmic heating [W.m-3]": Q_ohm_s_cp,
             }
