@@ -213,23 +213,60 @@ class TestIDAKLUJax(TestCase):
     # Isolate single output variable
 
     @parameterized.expand(testcase, skip_on_empty=True)
-    def test_getvar_scalar_float(self, output_variables, idaklu_jax_solver, f, wrapper):
-        # Per variable checks
+    def test_getvar_scalar_float_jaxpr(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using the default JAX expression (self.jaxpr)
         for outvar in output_variables:
             out = wrapper(idaklu_jax_solver.get_var(outvar))(float(t_eval[k]), inputs)
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
     @parameterized.expand(testcase, skip_on_empty=True)
-    def test_getvar_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
-        # Per variable checks
+    def test_getvar_scalar_float_f(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using a provided JAX expression (f)
+        for outvar in output_variables:
+            out = wrapper(idaklu_jax_solver.get_var(f, outvar))(float(t_eval[k]), inputs)
+            np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
+
+    @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvar_scalar_jaxpr(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using the default JAX expression (self.jaxpr)
         for outvar in output_variables:
             out = wrapper(idaklu_jax_solver.get_var(outvar))(t_eval[k], inputs)
             np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
 
     @parameterized.expand(testcase, skip_on_empty=True)
-    def test_getvar_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
+    def test_getvar_scalar_f(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using a provided JAX expression (f)
+        for outvar in output_variables:
+            out = wrapper(idaklu_jax_solver.get_var(outvar))(t_eval[k], inputs)
+            np.testing.assert_allclose(out, sim[outvar](t_eval[k]))
+
+    @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvar_vector_jaxpr(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using the default JAX expression (self.jaxpr)
         for outvar in output_variables:
             out = wrapper(idaklu_jax_solver.get_var(outvar))(t_eval, inputs)
+            np.testing.assert_allclose(out, sim[outvar](t_eval))
+
+    @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvar_vector_f(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using a provided JAX expression (f)
+        for outvar in output_variables:
+            out = wrapper(idaklu_jax_solver.get_var(f, outvar))(t_eval, inputs)
+            np.testing.assert_allclose(out, sim[outvar](t_eval))
+
+    @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvar_vector_array(self, output_variables, idaklu_jax_solver, f, wrapper):
+        # Per variable checks using a provided np.ndarray
+        if wrapper == jax.jit:
+            return  # test does not involve a JAX expression
+        array = np.array(
+            [
+                sim[outvar](t_eval)
+                for outvar in output_variables
+            ]
+        ).T
+        for outvar in output_variables:
+            out = idaklu_jax_solver.get_var(array, outvar)
             np.testing.assert_allclose(out, sim[outvar](t_eval))
 
     @parameterized.expand(testcase, skip_on_empty=True)

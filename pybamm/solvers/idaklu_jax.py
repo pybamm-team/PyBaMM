@@ -85,14 +85,15 @@ class IDAKLUJax:
 
         Returns
         -------
-        A JAX expression with the following call signature:
-            f(t, inputs=None)
-        where:
-            t : float | np.ndarray
-                Time sample or vector of time samples
-            inputs : dict, optional
-                dictionary of input values, e.g.
-                {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+        Callable
+            A JAX expression with the following call signature:
+                f(t, inputs=None)
+            where:
+                t : float | np.ndarray
+                    Time sample or vector of time samples
+                inputs : dict, optional
+                    dictionary of input values, e.g.
+                    {'Current function [A]': 0.222, 'Separator porosity': 0.3}
         """
         if self.jaxpr is None:
             raise pybamm.SolverError("jaxify() must be called before get_jaxpr()")
@@ -100,35 +101,69 @@ class IDAKLUJax:
 
     def get_var(
         self,
-        varname: str,
+        *args,
     ):
-        """Helper function to extract a single variable from the jaxified expression
+        """Helper function to extract a single variable
 
-        Returns a JAX expression having isolated a single variable from the model.
-        For example::
+        Isolates a single variable from the model output.
+        Can be called on a JAX expression (which returns a JAX expression), or on a
+        numeric (np.ndarray) object (which returns a slice of the output).
 
-            f = idaklu_jax.get_var('Current function [A]')
+        Example call using default JAX expression, returns a JAX expression::
+
+            f = idaklu_jax.get_var("Voltage [V]")
             data = f(t, inputs=None)
+
+        Example call using a custom function, returns a JAX expression::
+
+            f = idaklu_jax.get_var(jax.jit(f), "Voltage [V]")
+            data = f(t, inputs=None)
+
+        Example call to slice a matrix, returns an np.array::
+
+            data = idaklu_jax.get_var(
+                jax.fwd(f, argnums=1)(t_eval, inputs)['Current function [A]'],
+                'Voltage [V]'
+            )
 
         Parameters
         ----------
+        f : Callable | np.ndarray, optional
+            Expression or array from which to extract the target variable
         varname : str
             The name of the variable to extract
 
         Returns
         -------
-        A JAX expression with the following call signature:
-            f(t, inputs=None)
-        where:
-            t : float | np.ndarray
-                Time sample or vector of time samples
-            inputs : dict, optional
-                dictionary of input values, e.g.
-                {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+        Callable
+            If called with a JAX expression, returns a JAX expression with the following
+            call signature:
+                f(t, inputs=None)
+            where:
+                t : float | np.ndarray
+                    Time sample or vector of time samples
+                inputs : dict, optional
+                    dictionary of input values, e.g.
+                    {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+        np.ndarray
+            If called with a numeric (np.ndarray) object, returns a slice of the output
+            corresponding to the target variable.
         """
 
-        def f_isolated(*args, **kwargs):
-            out = self.jaxify_f(*args, **kwargs)
+        # Identify the call signature
+        if len(args) == 1:
+            # Called on the default JAX expression
+            f = self.jaxpr
+            varname = args[0]
+        elif len(args) == 2:
+            # Called on a custom function
+            f = args[0]
+            varname = args[1]
+        else:
+            raise ValueError("Invalid call signature")
+
+        # Utility function to slice the output
+        def slice_out(out):
             index = self.jax_output_variables.index(varname)
             if out.ndim == 0:
                 return out  # pragma: no cover
@@ -137,39 +172,81 @@ class IDAKLUJax:
             else:
                 return out[:, index]
 
+        # If the jaxified expression is not a function, return a slice
+        if not callable(f):
+            return slice_out(f)
+
+        # Otherwise, return a function that slices the output
+        def f_isolated(*args, **kwargs):
+            return slice_out(self.jaxify_f(*args, **kwargs))
+
         return f_isolated
 
     def get_vars(
         self,
-        varnames: List[str],
+        *args,
     ):
-        """Helper function to extract multiple variables from the jaxified expression
+        """Helper function to extract a list of variables
 
-        Returns a JAX expression having isolated a set of variables from the model.
-        For example::
+        Isolates a list of variables from the model output.
+        Can be called on a JAX expression (which returns a JAX expression), or on a
+        numeric (np.ndarray) object (which returns a slice of the output).
 
-            f = idaklu_jax.get_vars(['Current function [A]', 'Separator porosity'])
+        Example call using default JAX expression, returns a JAX expression::
+
+            f = idaklu_jax.get_vars(["Voltage [V]", "Current [A]"])
             data = f(t, inputs=None)
+
+        Example call using a custom function, returns a JAX expression::
+
+            f = idaklu_jax.get_vars(jax.jit(f), ["Voltage [V]", "Current [A]"])
+            data = f(t, inputs=None)
+
+        Example call to slice a matrix, returns an np.array::
+
+            data = idaklu_jax.get_vars(
+                jax.fwd(f, argnums=1)(t_eval, inputs)['Current function [A]'],
+                ["Voltage [V]", "Current [A]"]
+            )
 
         Parameters
         ----------
-        varnames : list of str
+        f : Callable | np.ndarray, optional
+            Expression or array from which to extract the target variables
+        varname : list of str
             The names of the variables to extract
 
         Returns
         -------
-        A JAX expression with the following call signature:
-            f(t, inputs=None)
-        where:
-            t : float | np.ndarray
-                Time sample or vector of time samples
-            inputs : dict, optional
-                dictionary of input values, e.g.
-                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+        Callable
+            If called with a JAX expression, returns a JAX expression with the following
+            call signature:
+                f(t, inputs=None)
+            where:
+                t : float | np.ndarray
+                    Time sample or vector of time samples
+                inputs : dict, optional
+                    dictionary of input values, e.g.
+                    {'Current function [A]': 0.222, 'Separator porosity': 0.3}
+        np.ndarray
+            If called with a numeric (np.ndarray) object, returns a slice of the output
+            corresponding to the target variables.
         """
 
-        def f_isolated(*args, **kwargs):
-            out = self.jaxify_f(*args, **kwargs)
+        # Identify the call signature
+        if len(args) == 1:
+            # Called on the default JAX expression
+            f = self.jaxpr
+            varnames = args[0]
+        elif len(args) == 2:
+            # Called on a custom function
+            f = args[0]
+            varnames = args[1]
+        else:
+            raise ValueError("Invalid call signature")
+
+        # Utility function to slice the output
+        def slice_out(out):
             index = np.array(
                 [self.jax_output_variables.index(varname) for varname in varnames]
             )
@@ -179,6 +256,14 @@ class IDAKLUJax:
                 return out[index]
             else:
                 return out[:, index]
+
+        # If the jaxified expression is not a function, return a slice
+        if not callable(f):
+            return slice_out(f)
+
+        # Otherwise, return a function that slices the output
+        def f_isolated(*args, **kwargs):
+            return slice_out(self.jaxify_f(*args, **kwargs))
 
         return f_isolated
 
