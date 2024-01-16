@@ -190,7 +190,12 @@ def main(arguments=None):
     # see https://scikits-odes.readthedocs.io/en/latest/installation.html#id1
     os.environ["SUNDIALS_INST"] = SUNDIALS_LIB_DIR
     env = os.environ.copy()
-    subprocess.run(["pip", "install", "scikits.odes"], env=env, check=True)
+    logger.info("Installing scikits.odes via pip")
+    subprocess.run(
+        [f"{sys.executable}", "-m", "pip", "install", "scikits.odes", "--verbose"],
+        env=env,
+        check=True,
+    )
 
 
 if __name__ == "__main__":
