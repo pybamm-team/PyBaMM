@@ -21,9 +21,9 @@ This file contains the workflow required to make a `PyBaMM` release on GitHub, P
 
 ## rcX releases (manual)
 
-If a new release candidate is required after the release of `rc0` -
+If a new release candidate is required after the release of `rc{X-1}` -
 
-1. Fix a bug in `vYY.MM` (no new features should be added to `vYY.MM` once `rc0` is released) and `develop` individually.
+1. Cherry-pick the bug fix (no new features should be added to `vYY.MM` once `rc{X-1}` is released) commit to `vYY.MM` branch once the fix is merged into `develop`. The CHANGELOG entry for such fixes should go under the `rc{X-1}` heading in `CHANGELOG.md`
 
 2. Run `update_version.yml` manually while using `append_to_tag` to specify the release candidate version number (`rc1`, `rc2`, ...).
 
@@ -36,7 +36,7 @@ If a new release candidate is required after the release of `rc0` -
    - `vcpkg.json`
    - `CHANGELOG.md`
 
-      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
+      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR will be created to update version strings in `develop`. Updation in CHANGELOG will not be included in this PR (to avoid conflicts); hence, it must be updated manually in this PR.
 
 4. Create a new GitHub _pre-release_ with the same tag (`vYY.MMrcX`) from the `vYY.MM` branch and a description copied from `CHANGELOG.md`.
 
