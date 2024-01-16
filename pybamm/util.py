@@ -377,11 +377,13 @@ def lazy_import(name, attribute=None):
     This function finds the module specification, creates a LazyLoader for the
     loader, creates a module from the specification, updates the sys.modules
     dictionary, and finally, executes the module. If an attribute is specified,
-    it checks if it's available.
+    it checks if it's available. If attribute is set to '*', it imports all
+    attributes using wildcard.
 
     Parameters:
     - name (str): The name of the module to import.
     - attribute (str, optional): The name of the attribute to import.
+        If set to '*', all attributes will be imported.
 
     Returns:
     - module or attribute: The lazily imported module or attribute.
@@ -400,8 +402,11 @@ def lazy_import(name, attribute=None):
         loader.exec_module(module)
 
         if attribute:
-            # If an attribute is specified, check if it's available
-            if hasattr(module, attribute):
+            if attribute == "*":
+                # If attribute is set to '*', import all attributes using wildcard
+                return module
+            elif hasattr(module, attribute):
+                # If a specific attribute is specified, check if it's available
                 imported_attribute = getattr(module, attribute)
                 return imported_attribute  # Return the imported attribute
             else:
