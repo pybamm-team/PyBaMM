@@ -1,6 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Bug fixes
+# [v24.1rc1](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc1) - 2024-01-31
+
 
 - Fixed a bug where if the first step(s) in a cycle are skipped then the cycle solution started from the model's initial conditions instead of from the last state of the previous cycle ([#3708](https://github.com/pybamm-team/PyBaMM/pull/3708))
 - Fixed a bug where the lumped thermal model conflates cell volume with electrode volume  ([#3707](https://github.com/pybamm-team/PyBaMM/pull/3707))
