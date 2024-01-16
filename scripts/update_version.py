@@ -89,7 +89,7 @@ def update_version():
             # for rcX and final releases, update the already existing rc
             # release heading
             for i in range(0, len(output_list)):
-                if "rc" in output_list[i]:
+                if re.search("[v]\d\d\.\drc\d", output_list[i]):
                     output_list[i] = changelog_line2[:-1]
         file.truncate(0)
         file.seek(0)
