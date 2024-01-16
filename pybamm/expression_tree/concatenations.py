@@ -8,8 +8,6 @@ from collections import defaultdict
 import numpy as np
 from scipy.sparse import issparse, vstack
 from typing import Sequence
-from typing_extensions import TypeGuard
-from pybamm.hints import S
 
 import pybamm
 from pybamm.util import have_optional_dependency
