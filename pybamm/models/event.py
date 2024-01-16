@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 import numpy as np
 
-from typing import TypeVar, Type
+from typing import TypeVar
 
 
 class EventType(Enum):
@@ -55,7 +55,7 @@ class Event:
         self._event_type = event_type
 
     @classmethod
-    def _from_json(cls: Type[E], snippet: dict) -> E:
+    def _from_json(cls: type[E], snippet: dict) -> E:
         """
         Reconstructs an Event instance during deserialisation of a JSON file.
 

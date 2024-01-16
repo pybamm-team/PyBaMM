@@ -6,7 +6,7 @@ import numbers
 
 import numpy as np
 from scipy import special
-from typing import Sequence, Callable, Type
+from typing import Sequence, Callable
 from typing_extensions import TypeVar
 
 import pybamm
@@ -298,7 +298,7 @@ class SpecificFunction(Function):
 SF = TypeVar("SF", bound=SpecificFunction)
 
 
-def simplified_function(func_class: Type[SF], child: pybamm.Symbol):
+def simplified_function(func_class: type[SF], child: pybamm.Symbol):
     """
     Simplifications implemented before applying the function.
     Currently only implemented for one-child functions.
