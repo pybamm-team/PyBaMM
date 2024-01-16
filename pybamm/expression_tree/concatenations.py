@@ -592,10 +592,3 @@ def domain_concatenation(children: list[pybamm.Symbol], mesh: pybamm.Mesh):
     """Helper function to create domain concatenations."""
     # TODO: add option to turn off simplifications
     return simplified_domain_concatenation(children, mesh)
-
-
-def all_children_are(
-    children: list[pybamm.Symbol],
-    class_type: type[S],
-) -> TypeGuard[list[S]]:
-    return all(isinstance(child, class_type) for child in children)

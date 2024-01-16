@@ -8,7 +8,7 @@ import sys
 import numpy as np
 from typing import TYPE_CHECKING, Literal
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import sympy
 
 import pybamm

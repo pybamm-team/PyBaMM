@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pybamm
 from pybamm.util import have_optional_dependency
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import sympy
 
 

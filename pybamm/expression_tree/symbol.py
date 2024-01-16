@@ -7,22 +7,13 @@ import numbers
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
-from typing import (
-    TYPE_CHECKING,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Sequence, cast
 
 import pybamm
 from pybamm.util import have_optional_dependency
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
-if TYPE_CHECKING:
-    from pybamm.expression_tree.binary_operators import (
-        Addition,
-        Subtraction,
-        Multiplication,
-        Division,
-    )
+if TYPE_CHECKING:  # pragma: no cover
     import casadi
     from hints import S
 
@@ -171,9 +162,9 @@ def simplify_if_constant(symbol: S) -> S:
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                if isinstance(result, np.ndarray):
+                if isinstance(result, np.ndarray):  # pragma: no cover
                     # type-narrow for Scalar
-                    new_result = result[0]
+                    new_result = cast(float, result)
                     return pybamm.Scalar(new_result)
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
@@ -582,27 +573,27 @@ class Symbol:
             {k: v for k, v in self.domains.items() if v != []},
         )
 
-    def __add__(self, other: Symbol | float | np.ndarray) -> Addition:
+    def __add__(self, other: Symbol | float | np.ndarray) -> pybamm.Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(self, other)
 
-    def __radd__(self, other: Symbol | float | np.ndarray) -> Addition:
+    def __radd__(self, other: Symbol | float | np.ndarray) -> pybamm.Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(other, self)
 
-    def __sub__(self, other: Symbol | float | np.ndarray) -> Subtraction:
+    def __sub__(self, other: Symbol | float | np.ndarray) -> pybamm.Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(self, other)
 
-    def __rsub__(self, other: Symbol | float | np.ndarray) -> Subtraction:
+    def __rsub__(self, other: Symbol | float | np.ndarray) -> pybamm.Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(other, self)
 
-    def __mul__(self, other: Symbol | float | np.ndarray) -> Multiplication:
+    def __mul__(self, other: Symbol | float | np.ndarray) -> pybamm.Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(self, other)
 
-    def __rmul__(self, other: Symbol | float | np.ndarray) -> Multiplication:
+    def __rmul__(self, other: Symbol | float | np.ndarray) -> pybamm.Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
@@ -618,11 +609,11 @@ class Symbol:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
-    def __truediv__(self, other: Symbol | float | np.ndarray) -> Division:
+    def __truediv__(self, other: Symbol | float | np.ndarray) -> pybamm.Division:
         """return a :class:`Division` object."""
         return pybamm.divide(self, other)
 
-    def __rtruediv__(self, other: Symbol | float | np.ndarray) -> Division:
+    def __rtruediv__(self, other: Symbol | float | np.ndarray) -> pybamm.Division:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 

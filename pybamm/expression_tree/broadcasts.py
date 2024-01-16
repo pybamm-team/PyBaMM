@@ -59,7 +59,7 @@ class Broadcast(pybamm.SpatialOperator):
         # Differentiate the child and broadcast the result in the same way
         return self._unary_new_copy(self.child.diff(variable))
 
-    def reduce_one_dimension(self):
+    def reduce_one_dimension(self):  # pragma: no cover
         """Reduce the broadcast by one dimension."""
         raise NotImplementedError
 
