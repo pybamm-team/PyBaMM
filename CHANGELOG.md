@@ -1,7 +1,18 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+
+- Fixed a bug where if the first step(s) in a cycle are skipped then the cycle solution started from the model's initial conditions instead of from the last state of the previous cycle ([#3708](https://github.com/pybamm-team/PyBaMM/pull/3708))
+- Fixed a bug where the lumped thermal model conflates cell volume with electrode volume  ([#3707](https://github.com/pybamm-team/PyBaMM/pull/3707))
+
+## Breaking changes
+- The parameters `GeometricParameters.A_cooling` and `GeometricParameters.V_cell` are now automatically computed from the electrode heights, widths and thicknesses if the "cell geometry" option is "pouch" and from the parameters "Cell cooling surface area [m2]" and "Cell volume [m3]", respectively, otherwise. When using the lumped thermal model we recommend using the "arbitrary" cell geometry and specifying the parameters "Cell cooling surface area [m2]", "Cell volume [m3]" and "Total heat transfer coefficient [W.m-2.K-1]" directly. ([#3707](https://github.com/pybamm-team/PyBaMM/pull/3707))
+
+# [v24.1rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc0) - 2024-01-31
+
 ## Features
 
+- The `pybamm_install_odes` command now includes support for macOS systems and can be used to set up SUNDIALS and install the `scikits.odes` solver on macOS ([#3417](https://github.com/pybamm-team/PyBaMM/pull/3417), [#3706](https://github.com/pybamm-team/PyBaMM/3706]))
 - Added support for Python 3.12 ([#3531](https://github.com/pybamm-team/PyBaMM/pull/3531))
 - Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
 - Added custom experiment terminations ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
@@ -15,6 +26,7 @@
 
 ## Bug fixes
 
+- Reverted a change to the coupled degradation example notebook that caused it to be unstable for large numbers of cycles ([#3691](https://github.com/pybamm-team/PyBaMM/pull/3691))
 - Fixed a bug where simulations using the CasADi-based solvers would fail randomly with the half-cell model ([#3494](https://github.com/pybamm-team/PyBaMM/pull/3494))
 - Fixed bug that made identical Experiment steps with different end times crash ([#3516](https://github.com/pybamm-team/PyBaMM/pull/3516))
 - Fixed bug in calculation of theoretical energy that made it very slow ([#3506](https://github.com/pybamm-team/PyBaMM/pull/3506))
