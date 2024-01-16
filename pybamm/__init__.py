@@ -13,6 +13,7 @@ import os
 # Version info
 #
 from pybamm.version import __version__
+from pybamm.util import lazy_import
 
 #
 # Constants
@@ -221,7 +222,8 @@ from .solvers.scipy_solver import ScipySolver
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
-from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
+IDAKLUSolver = lazy_import("pybamm.solvers.idaklu_solver","IDAKLUSolver")
+have_idaklu = lazy_import("pybamm.solvers.idaklu_solver", "have_idaklu")
 
 #
 # Experiments
