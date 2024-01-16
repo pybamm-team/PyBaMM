@@ -115,7 +115,9 @@ def install_sundials(download_dir, install_dir):
             OpenMP_C_LIB_NAMES = "omp"
             OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
         else:
-            raise NotImplementedError("Unsupported processor architecture.")
+            raise NotImplementedError(
+                f"Unsupported processor architecture: {platform.processor()}. Only 'arm' and 'i386' architectures are supported."
+            )
 
         cmake_args += [
             "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
