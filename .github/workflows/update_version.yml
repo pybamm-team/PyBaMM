@@ -14,7 +14,7 @@ jobs:
   update-version:
     # This workflow is only of value to PyBaMM and would always be skipped in forks
     # if: github.repository_owner == 'pybamm-team'
-    # runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Get current date for the first release candidate
