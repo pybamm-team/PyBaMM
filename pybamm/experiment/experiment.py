@@ -73,7 +73,7 @@ class Experiment:
         for cycle in operating_conditions:
             # Check types and convert to list
             if not isinstance(cycle, tuple):
-                cycle = (cycle,)
+                cycle = (cycle,)  # type: ignore[assignment]
             operating_conditions_cycles.append(cycle)
 
         self.operating_conditions_cycles = operating_conditions_cycles
