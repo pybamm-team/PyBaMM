@@ -93,6 +93,12 @@ jobs:
             - [x] Update to ${{ env.VERSION }}
             - [ ] Check the [release workflow](https://github.com/pybamm-team/PyBaMM/blob/develop/.github/release_workflow.md)
 
+      # checkout to the version branch for the final release
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_dispatch' && !startsWith(github.event.inputs.append_to_tag, 'rc')
+        with:
+          ref: '${{ env.NON_RC_VERSION }}'
+
       # for final releases, create a PR from version branch to main
       - name: Make a PR from ${{ env.NON_RC_VERSION }} to main
         id: release_pr
