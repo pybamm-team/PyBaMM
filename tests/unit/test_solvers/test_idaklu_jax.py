@@ -185,7 +185,9 @@ class TestIDAKLUJax(TestCase):
     # Get all vars (should mirror test_f_* [above])
 
     @parameterized.expand(testcase, skip_on_empty=True)
-    def test_getvars_call_signature(self, output_variables, idaklu_jax_solver, f, wrapper):
+    def test_getvars_call_signature(
+        self, output_variables, idaklu_jax_solver, f, wrapper
+    ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
         with self.assertRaises(ValueError):
@@ -210,14 +212,14 @@ class TestIDAKLUJax(TestCase):
         )
 
     @parameterized.expand(testcase, skip_on_empty=True)
-    def test_getvars_vector_array(self, output_variables, idaklu_jax_solver, f, wrapper):
+    def test_getvars_vector_array(
+        self, output_variables, idaklu_jax_solver, f, wrapper
+    ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
         array = np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         out = idaklu_jax_solver.get_vars(array, output_variables)
-        np.testing.assert_allclose(
-            out, array
-        )
+        np.testing.assert_allclose(out, array)
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
@@ -234,7 +236,9 @@ class TestIDAKLUJax(TestCase):
     # Isolate single output variable
 
     @parameterized.expand(testcase, skip_on_empty=True)
-    def test_getvar_call_signature(self, output_variables, idaklu_jax_solver, f, wrapper):
+    def test_getvar_call_signature(
+        self, output_variables, idaklu_jax_solver, f, wrapper
+    ):
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
         with self.assertRaises(ValueError):
