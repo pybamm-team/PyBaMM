@@ -138,7 +138,9 @@ class IDAKLUJax:
         Callable
             If called with a JAX expression, returns a JAX expression with the following
             call signature:
+
                 f(t, inputs=None)
+
             where:
                 t : float | np.ndarray
                     Time sample or vector of time samples
@@ -221,7 +223,9 @@ class IDAKLUJax:
         Callable
             If called with a JAX expression, returns a JAX expression with the following
             call signature:
+
                 f(t, inputs=None)
+
             where:
                 t : float | np.ndarray
                     Time sample or vector of time samples

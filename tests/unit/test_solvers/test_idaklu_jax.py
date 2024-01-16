@@ -185,6 +185,17 @@ class TestIDAKLUJax(TestCase):
     # Get all vars (should mirror test_f_* [above])
 
     @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvars_call_signature(self, output_variables, idaklu_jax_solver, f, wrapper):
+        if wrapper == jax.jit:
+            return  # test does not involve a JAX expression
+        with self.assertRaises(ValueError):
+            idaklu_jax_solver.get_vars()  # no variable name specified
+        idaklu_jax_solver.get_vars(output_variables)  # (okay)
+        idaklu_jax_solver.get_vars(f, output_variables)  # (okay)
+        with self.assertRaises(ValueError):
+            idaklu_jax_solver.get_vars(1, 2, 3)  # too many arguments
+
+    @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvars_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(idaklu_jax_solver.get_vars(output_variables))(t_eval[k], inputs)
         np.testing.assert_allclose(
@@ -196,6 +207,16 @@ class TestIDAKLUJax(TestCase):
         out = wrapper(idaklu_jax_solver.get_vars(output_variables))(t_eval, inputs)
         np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
+        )
+
+    @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvars_vector_array(self, output_variables, idaklu_jax_solver, f, wrapper):
+        if wrapper == jax.jit:
+            return  # test does not involve a JAX expression
+        array = np.array([sim[outvar](t_eval) for outvar in output_variables]).T
+        out = idaklu_jax_solver.get_vars(array, output_variables)
+        np.testing.assert_allclose(
+            out, array
         )
 
     @parameterized.expand(testcase, skip_on_empty=True)
@@ -211,6 +232,17 @@ class TestIDAKLUJax(TestCase):
         )
 
     # Isolate single output variable
+
+    @parameterized.expand(testcase, skip_on_empty=True)
+    def test_getvar_call_signature(self, output_variables, idaklu_jax_solver, f, wrapper):
+        if wrapper == jax.jit:
+            return  # test does not involve a JAX expression
+        with self.assertRaises(ValueError):
+            idaklu_jax_solver.get_var()  # no variable name specified
+        idaklu_jax_solver.get_var(output_variables[0])  # (okay)
+        idaklu_jax_solver.get_var(f, output_variables[0])  # (okay)
+        with self.assertRaises(ValueError):
+            idaklu_jax_solver.get_var(1, 2, 3)  # too many arguments
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_getvar_scalar_float_jaxpr(
