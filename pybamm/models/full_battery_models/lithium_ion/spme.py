@@ -14,7 +14,6 @@ class SPMe(SPM):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.SPMe()
     >>> model.name
     'Single Particle Model with electrolyte'

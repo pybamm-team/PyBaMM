@@ -225,7 +225,7 @@ class Symbol:
         auxiliary_domains: dict[str, str] | None = None,
         domains: dict[str, list[str]] | None = None,
     ):
-        super(Symbol, self).__init__()
+        super().__init__()
         self.name = name
 
         if children is None:
@@ -486,9 +486,9 @@ class Symbol:
         anytree = have_optional_dependency("anytree")
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
-                print("{}{} = {}".format(pre, node.name, node.value))
+                print(f"{pre}{node.name} = {node.value}")
             else:
-                print("{}{}".format(pre, node.name))
+                print(f"{pre}{node.name}")
 
     def visualise(self, filename: str):
         """
@@ -511,7 +511,7 @@ class Symbol:
 
         try:
             DotExporter(
-                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+                new_node, nodeattrfunc=lambda node: f'label="{node.label}"'
             ).to_picture(filename)
         except FileNotFoundError:  # pragma: no cover
             # raise error but only through logger so that test passes
@@ -557,7 +557,6 @@ class Symbol:
         Examples
         --------
 
-        >>> import pybamm
         >>> a = pybamm.Symbol('a')
         >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
@@ -748,7 +747,7 @@ class Symbol:
         if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
             raise TypeError(
                 "Jacobian can only be taken with respect to a 'StateVector' "
-                "or 'StateVectorDot', but {} is a {}".format(variable, type(variable))
+                f"or 'StateVectorDot', but {variable} is a {type(variable)}"
             )
         return jac.jac(self, variable)
 
@@ -788,7 +787,7 @@ class Symbol:
         """
         raise NotImplementedError(
             "method self.evaluate() not implemented for symbol "
-            "{!s} of type {}".format(self, type(self))
+            f"{self!s} of type {type(self)}"
         )
 
     def evaluate(
@@ -961,10 +960,8 @@ class Symbol:
         copy.deepcopy(), which is slow.
         """
         raise NotImplementedError(
-            """method self.new_copy() not implemented
-            for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            f"""method self.new_copy() not implemented
+            for symbol {self!s} of type {type(self)}"""
         )
 
     def new_copy(self):
@@ -1047,7 +1044,7 @@ class Symbol:
         try:
             self.shape_for_testing
         except ValueError as e:
-            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+            raise pybamm.ShapeError(f"Cannot find shape (original error: {e})")
 
     @property
     def print_name(self):

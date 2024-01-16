@@ -5,7 +5,7 @@ from __future__ import annotations
 import pybamm
 
 
-class Jacobian(object):
+class Jacobian:
     """
     Helper class to calculate the Jacobian of an expression.
 
@@ -92,9 +92,7 @@ class Jacobian(object):
                 jac = symbol._jac(variable)
             except NotImplementedError:
                 raise NotImplementedError(
-                    "Cannot calculate Jacobian of symbol of type '{}'".format(
-                        type(symbol)
-                    )
+                    f"Cannot calculate Jacobian of symbol of type '{type(symbol)}'"
                 )
 
         # Jacobian by default removes the domain(s)

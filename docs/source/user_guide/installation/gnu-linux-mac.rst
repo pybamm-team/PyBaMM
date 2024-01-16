@@ -1,4 +1,4 @@
-GNU-Linux & MacOS
+GNU/Linux & macOS
 =================
 
 .. contents::
@@ -6,7 +6,7 @@ GNU-Linux & MacOS
 Prerequisites
 -------------
 
-To use PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
+To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
 .. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
 
@@ -50,7 +50,7 @@ User install
 
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution Python files.
-First, make sure you are using Python 3.8, 3.9, 3.10, or 3.11.
+First, make sure you are using Python 3.8, 3.9, 3.10, 3.11, or 3.12.
 To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash
@@ -102,10 +102,16 @@ For an introduction to virtual environments, see
 Optional - scikits.odes solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Users can install `scikits.odes <https://github.com/bmcage/odes>`__ in
-order to use the wrapped SUNDIALS ODE and DAE
-`solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__.
-Currently, only GNU/Linux and macOS are supported.
+Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize its interfaced SUNDIALS ODE and DAE `solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__ wrapped in PyBaMM.
+
+.. note::
+
+   Currently, only GNU/Linux and macOS are supported.
+
+.. note::
+
+   The ``scikits.odes`` solver is not supported on Python 3.12 yet. Please refer to https://github.com/bmcage/odes/issues/162.
+   There is support for Python 3.8, 3.9, 3.10, and 3.11.
 
 .. tab:: GNU/Linux
 
@@ -113,10 +119,10 @@ Currently, only GNU/Linux and macOS are supported.
 
    .. code:: bash
 
-	   apt install libopenblas-dev
-	   pybamm_install_odes
+      apt-get install libopenblas-dev
+      pip install wget cmake
+      pybamm_install_odes
 
-   The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 .. tab:: macOS
@@ -125,15 +131,39 @@ Currently, only GNU/Linux and macOS are supported.
 
    .. code:: bash
 
-	  pip install scikits.odes
+      brew install openblas gcc gfortran
+      pip install wget cmake
+      pybamm_install_odes
 
-   Assuming that SUNDIALS was installed as described :ref:`above<user-install-label>`.
+The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
+system (under ``~/.local``), before installing `scikits.odes <https://scikits-odes.readthedocs.io/en/stable/installation.html>`__ . (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with `scikits.odes <https://scikits-odes.readthedocs.io/en/stable/installation.html>`__)
+
+To avoid installation failures when using ``pip install pybamm[odes]``, make sure to set the ``SUNDIALS_INST`` environment variable. If you have installed SUNDIALS using Homebrew, set the variable to the appropriate location. For example:
+
+.. code:: bash
+
+   export SUNDIALS_INST=$(brew --prefix sundials)
+
+Ensure that the path matches the installation location on your system. You can verify the installation location by running:
+
+.. code:: bash
+
+   brew info sundials
+
+Look for the installation path, and use that path to set the ``SUNDIALS_INST`` variable.
+
+Note: The location where Homebrew installs SUNDIALS might vary based on the system architecture (ARM or Intel). Adjust the path in the ``export SUNDIALS_INST`` command accordingly.
+
+To avoid manual setup of path the ``pybamm_install_odes`` is recommended for a smoother installation process, as it takes care of automatically downloading and installing the SUNDIALS library on your system.
 
 Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
-Currently, only GNU/Linux and macOS are supported.
+
+.. note::
+
+   The Jax solver is only supported for Python versions 3.9 through 3.12.
 
 .. code:: bash
 

@@ -56,8 +56,9 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if stress_option == "true":
             # Ai2019 eq [12]
-            Omega = domain_param.Omega
-            E = domain_param.E
+            sto = c / phase_param.c_max
+            Omega = pybamm.r_average(domain_param.Omega(sto, T))
+            E = pybamm.r_average(domain_param.E(sto, T))
             nu = domain_param.nu
             theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
             stress_factor = 1 + theta_M * (c - domain_param.c_0)
@@ -198,9 +199,7 @@ class BaseParticle(pybamm.BaseSubModel):
         f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)  # [m-1]
 
         # Number-based particle-size distribution
-        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(
-            f_a_dist / R**2, R
-        )  # [m-1]
+        f_num_dist = (f_a_dist / R**2) / pybamm.Integral(f_a_dist / R**2, R)  # [m-1]
 
         # True mean radii and standard deviations, calculated from the f_a_dist that
         # was given, all have units [m]

@@ -5,8 +5,17 @@ import argparse
 import sys
 import logging
 import subprocess
+from multiprocessing import cpu_count
 
 from pybamm.util import root_dir
+
+if sys.platform == "win32":
+    raise Exception("pybamm_install_odes is not supported on Windows.")
+
+SUNDIALS_VERSION = "6.5.0"
+
+# Build in parallel wherever possible
+os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
@@ -15,6 +24,9 @@ try:
     NO_WGET = False
 except ModuleNotFoundError:
     NO_WGET = True
+
+# Build in parallel wherever possible
+os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
 
 def download_extract_library(url, directory):
@@ -33,19 +45,13 @@ def download_extract_library(url, directory):
 def install_sundials(download_dir, install_dir):
     # Download the SUNDIALS library and compile it.
     logger = logging.getLogger("scikits.odes setup")
-    sundials_version = "6.5.0"
 
     try:
         subprocess.run(["cmake", "--version"])
     except OSError:
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
-    url = (
-        "https://github.com/LLNL/"
-        + "sundials/releases/download/v{}/sundials-{}.tar.gz".format(
-            sundials_version, sundials_version
-        )
-    )
+    url = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)
 
@@ -54,7 +60,7 @@ def install_sundials(download_dir, install_dir):
         "-DSUNDIALS_INDEX_SIZE=32",
         "-DBUILD_ARKODE:BOOL=OFF",
         "-DEXAMPLES_ENABLE:BOOL=OFF",
-        "-DCMAKE_INSTALL_PREFIX=" + install_dir,
+        f"-DCMAKE_INSTALL_PREFIX={install_dir}",
     ]
 
     # SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
@@ -66,7 +72,7 @@ def install_sundials(download_dir, install_dir):
 
     print("-" * 10, "Running CMake prepare", "-" * 40)
     subprocess.run(
-        ["cmake", "../sundials-{}".format(sundials_version), *cmake_args],
+        ["cmake", f"../sundials-{SUNDIALS_VERSION}", *cmake_args],
         cwd=build_directory,
         check=True,
     )
@@ -77,33 +83,47 @@ def install_sundials(download_dir, install_dir):
 
 
 def update_LD_LIBRARY_PATH(install_dir):
-    # Look for current python virtual env and add export statement
-    # for LD_LIBRARY_PATH in activate script.  If no virtual env found,
-    # then the current user's .bashrc file is modified instead.
+    # Look for the current python virtual env and add an export statement
+    # for LD_LIBRARY_PATH in the activate script. If no virtual env is found,
+    # the current user's .bashrc file is modified instead.
 
-    export_statement = "export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH".format(
-        install_dir
-    )
+    export_statement = f"export LD_LIBRARY_PATH={install_dir}/lib:$LD_LIBRARY_PATH"
 
+    home_dir = os.environ.get("HOME")
+    bashrc_path = os.path.join(home_dir, ".bashrc")
+    zshrc_path = os.path.join(home_dir, ".zshrc")
     venv_path = os.environ.get("VIRTUAL_ENV")
+
     if venv_path:
         script_path = os.path.join(venv_path, "bin/activate")
     else:
-        script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+        if os.path.exists(bashrc_path):
+            script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+        elif os.path.exists(zshrc_path):
+            script_path = os.path.join(os.environ.get("HOME"), ".zshrc")
+        elif os.path.exists(bashrc_path) and os.path.exists(zshrc_path):
+            print(
+                "Both .bashrc and .zshrc found in the home directory. Setting .bashrc as path"
+            )
+            script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+        else:
+            print("Neither .bashrc nor .zshrc found in the home directory.")
 
-    if os.getenv("LD_LIBRARY_PATH") and "{}/lib".format(install_dir) in os.getenv(
+    if os.getenv("LD_LIBRARY_PATH") and f"{install_dir}/lib" in os.getenv(
         "LD_LIBRARY_PATH"
     ):
-        print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
-        print("--> Not updating venv activate or .bashrc scripts")
+        print(f"{install_dir}/lib was found in LD_LIBRARY_PATH.")
+        if os.path.exists(bashrc_path):
+            print("--> Not updating venv activate or .bashrc scripts")
+        if os.path.exists(zshrc_path):
+            print("--> Not updating venv activate or .zshrc scripts")
     else:
         with open(script_path, "a+") as fh:
             # Just check that export statement is not already there.
             if export_statement not in fh.read():
                 fh.write(export_statement)
                 print(
-                    "Adding {}/lib to LD_LIBRARY_PATH"
-                    " in {}".format(install_dir, script_path)
+                    f"Adding {install_dir}/lib to LD_LIBRARY_PATH" f" in {script_path}"
                 )
 
 
@@ -139,24 +159,24 @@ def main(arguments=None):
         else os.path.join(pybamm_dir, args.install_dir)
     )
 
-    # Check is sundials is already installed
+    # Check if sundials is already installed
     SUNDIALS_LIB_DIRS = [join(os.getenv("HOME"), ".local"), "/usr/local", "/usr"]
 
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)
     for DIR in SUNDIALS_LIB_DIRS:
-        logger.info("Looking for sundials at {}".format(DIR))
+        logger.info(f"Looking for sundials at {DIR}")
         SUNDIALS_FOUND = isfile(join(DIR, "lib", "libsundials_ida.so")) or isfile(
             join(DIR, "lib", "libsundials_ida.dylib")
         )
         if SUNDIALS_FOUND:
             SUNDIALS_LIB_DIR = DIR
-            logger.info("Found sundials at {}".format(SUNDIALS_LIB_DIR))
+            logger.info(f"Found sundials at {SUNDIALS_LIB_DIR}")
             break
 
     if not SUNDIALS_FOUND:
         logger.info("Could not find sundials libraries.")
-        logger.info("Installing sundials in {}".format(install_dir))
+        logger.info(f"Installing sundials in {install_dir}")
         download_dir = os.path.join(pybamm_dir, "sundials")
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
@@ -170,7 +190,12 @@ def main(arguments=None):
     # see https://scikits-odes.readthedocs.io/en/latest/installation.html#id1
     os.environ["SUNDIALS_INST"] = SUNDIALS_LIB_DIR
     env = os.environ.copy()
-    subprocess.run(["pip", "install", "scikits.odes"], env=env, check=True)
+    logger.info("Installing scikits.odes via pip")
+    subprocess.run(
+        [f"{sys.executable}", "-m", "pip", "install", "scikits.odes", "--verbose"],
+        env=env,
+        check=True,
+    )
 
 
 if __name__ == "__main__":

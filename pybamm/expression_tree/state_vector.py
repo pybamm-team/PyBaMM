@@ -49,17 +49,13 @@ class StateVectorBase(pybamm.Symbol):
                 raise TypeError("all y_slices must be slice objects")
         if name is None:
             if y_slices[0].start is None:
-                name = base_name + "[0:{:d}".format(y_slice.stop)
+                name = base_name + f"[0:{y_slice.stop:d}"
             else:
-                name = base_name + "[{:d}:{:d}".format(
-                    y_slices[0].start, y_slices[0].stop
-                )
+                name = base_name + f"[{y_slices[0].start:d}:{y_slices[0].stop:d}"
             if len(y_slices) > 1:
-                name += ",{:d}:{:d}".format(y_slices[1].start, y_slices[1].stop)
+                name += f",{y_slices[1].start:d}:{y_slices[1].stop:d}"
                 if len(y_slices) > 2:
-                    name += ",...,{:d}:{:d}]".format(
-                        y_slices[-1].start, y_slices[-1].stop
-                    )
+                    name += f",...,{y_slices[-1].start:d}:{y_slices[-1].stop:d}]"
                 else:
                     name += "]"
             else:

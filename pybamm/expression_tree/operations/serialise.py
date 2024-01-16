@@ -175,7 +175,7 @@ class Serialise:
             `battery_model`.
         """
 
-        with open(filename, "r") as f:
+        with open(filename) as f:
             model_data = json.load(f)
 
         recon_model_dict = {

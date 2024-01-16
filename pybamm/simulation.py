@@ -193,16 +193,6 @@ class Simulation:
                 op_conds.type = "current"
                 op_conds.value = op_conds.value * capacity
 
-            # Update terminations
-            termination = op_conds.termination
-            for term in termination:
-                term_type = term["type"]
-                if term_type == "C-rate":
-                    # Change type to current
-                    term["type"] = "current"
-                    # Scale C-rate with capacity to obtain current
-                    term["value"] = term["value"] * capacity
-
             # Add time to the experiment times
             dt = op_conds.duration
             if dt is None:
@@ -295,46 +285,9 @@ class Simulation:
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
-            if term["type"] == "current":
-                new_model.events.append(
-                    pybamm.Event(
-                        "Current cut-off [A] [experiment]",
-                        abs(new_model.variables["Current [A]"]) - term["value"],
-                    )
-                )
-
-            # add voltage events to the model
-            if term["type"] == "voltage":
-                # The voltage event should be positive at the start of charge/
-                # discharge. We use the sign of the current or power input to
-                # figure out whether the voltage event is greater than the starting
-                # voltage (charge) or less (discharge) and set the sign of the
-                # event accordingly
-                if isinstance(op.value, pybamm.Interpolant) or isinstance(
-                    op.value, pybamm.Multiplication
-                ):
-                    inpt = {"start time": 0}
-                    init_curr = op.value.evaluate(t=0, inputs=inpt).flatten()[0]
-                    sign = np.sign(init_curr)
-                else:
-                    sign = np.sign(op.value)
-                if sign > 0:
-                    name = "Discharge"
-                else:
-                    name = "Charge"
-                if sign != 0:
-                    # Event should be positive at initial conditions for both
-                    # charge and discharge
-                    new_model.events.append(
-                        pybamm.Event(
-                            f"{name} voltage cut-off [V] [experiment]",
-                            sign
-                            * (
-                                new_model.variables["Battery voltage [V]"]
-                                - term["value"]
-                            ),
-                        )
-                    )
+            event = term.get_event(new_model.variables, op.value)
+            if event is not None:
+                new_model.events.append(event)
 
         # Keep the min and max voltages as safeguards but add some tolerances
         # so that they are not triggered before the voltage limits in the
@@ -625,9 +578,7 @@ class Simulation:
                             capture the input. Try refining t_eval. Alternatively,
                             passing t_eval = None automatically sets t_eval to be the
                             points in the data.
-                            """.format(
-                                dt_eval_max, dt_data_min
-                            ),
+                            """.format(dt_eval_max, dt_data_min),
                             pybamm.SolverWarning,
                         )
 
@@ -889,7 +840,20 @@ class Simulation:
 
                     steps.append(step_solution)
 
-                    cycle_solution = cycle_solution + step_solution
+                    # If there haven't been any successful steps yet in this cycle, then
+                    # carry the solution over from the previous cycle (but
+                    # `step_solution` should still be an EmptySolution so that in the
+                    # list of returned step solutions we can see which steps were
+                    # skipped)
+                    if (
+                        cycle_solution is None
+                        and isinstance(step_solution, pybamm.EmptySolution)
+                        and not isinstance(current_solution, pybamm.EmptySolution)
+                    ):
+                        cycle_solution = current_solution.last_state
+                    else:
+                        cycle_solution = cycle_solution + step_solution
+
                     current_solution = cycle_solution
 
                     callbacks.on_step_end(logs)
@@ -1167,7 +1131,13 @@ class Simulation:
         return self._solution
 
     def save(self, filename):
-        """Save simulation using pickle"""
+        """Save simulation using pickle module.
+
+        Parameters
+        ----------
+        filename : str
+            The file extension can be arbitrary, but it is common to use ".pkl" or ".pickle"
+        """
         if self._model.convert_to_format == "python":
             # We currently cannot save models in the 'python' format
             raise NotImplementedError(

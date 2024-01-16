@@ -9,7 +9,7 @@ import numpy as np
 from scipy import special
 
 
-class CasadiConverter(object):
+class CasadiConverter:
     def __init__(self, casadi_symbols=None):
         self._casadi_symbols = casadi_symbols or {}
 
@@ -153,7 +153,7 @@ class CasadiConverter(object):
                     )
                 else:  # pragma: no cover
                     raise NotImplementedError(
-                        "Unknown interpolator: {0}".format(symbol.interpolator)
+                        f"Unknown interpolator: {symbol.interpolator}"
                     )
 
                 if len(converted_children) == 1:
@@ -168,9 +168,7 @@ class CasadiConverter(object):
                     return res
                 else:  # pragma: no cover
                     raise ValueError(
-                        "Invalid converted_children count: {0}".format(
-                            len(converted_children)
-                        )
+                        f"Invalid converted_children count: {len(converted_children)}"
                     )
 
             elif symbol.function.__name__.startswith("elementwise_grad_of_"):
@@ -220,7 +218,5 @@ class CasadiConverter(object):
                 """
                 Cannot convert symbol of type '{}' to CasADi. Symbols must all be
                 'linear algebra' at this stage.
-                """.format(
-                    type(symbol)
-                )
+                """.format(type(symbol))
             )

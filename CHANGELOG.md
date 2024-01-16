@@ -1,15 +1,39 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug Fixes
+
+- Fixed a bug where if the first step(s) in a cycle are skipped then the cycle solution started from the model's initial conditions instead of from the last state of the previous cycle ([#3708](https://github.com/pybamm-team/PyBaMM/pull/3708))
+# [v24.1rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc0) - 2024-01-31
+
 ## Features
 
+- The `pybamm_install_odes` command now includes support for macOS systems and can be used to set up SUNDIALS and install the `scikits.odes` solver on macOS ([#3417](https://github.com/pybamm-team/PyBaMM/pull/3417), [#3706](https://github.com/pybamm-team/PyBaMM/3706]))
+- Added support for Python 3.12 ([#3531](https://github.com/pybamm-team/PyBaMM/pull/3531))
+- Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
+- Added custom experiment terminations ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
+- Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
+- Added a new unary operator, `EvaluateAt`, that evaluates a spatial variable at a given position ([#3573](https://github.com/pybamm-team/PyBaMM/pull/3573))
+- Added a method, `insert_reference_electrode`, to `pybamm.lithium_ion.BaseModel` that insert a reference electrode to measure the electrolyte potential at a given position in space and adds new variables that mimic a 3E cell setup. ([#3573](https://github.com/pybamm-team/PyBaMM/pull/3573))
 - Serialisation added so models can be written to/read from JSON ([#3397](https://github.com/pybamm-team/PyBaMM/pull/3397))
+- Added a `get_parameter_info` method for models and modified "print_parameter_info" functionality to extract all parameters and their type in a tabular and readable format ([#3584](https://github.com/pybamm-team/PyBaMM/pull/3584))
+- Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
+
 
 ## Bug fixes
 
+- Reverted a change to the coupled degradation example notebook that caused it to be unstable for large numbers of cycles ([#3691](https://github.com/pybamm-team/PyBaMM/pull/3691))
 - Fixed a bug where simulations using the CasADi-based solvers would fail randomly with the half-cell model ([#3494](https://github.com/pybamm-team/PyBaMM/pull/3494))
 - Fixed bug that made identical Experiment steps with different end times crash ([#3516](https://github.com/pybamm-team/PyBaMM/pull/3516))
 - Fixed bug in calculation of theoretical energy that made it very slow ([#3506](https://github.com/pybamm-team/PyBaMM/pull/3506))
 - The irreversible plating model now increments `f"{Domain} dead lithium concentration [mol.m-3]"`, not `f"{Domain} lithium plating concentration [mol.m-3]"` as it did previously. ([#3485](https://github.com/pybamm-team/PyBaMM/pull/3485))
+
+## Optimizations
+
+- Updated `jax` and `jaxlib` to the latest available versions and added Windows (Python 3.9+) support for the Jax solver ([#3550](https://github.com/pybamm-team/PyBaMM/pull/3550))
+
+## Breaking changes
+
+- Dropped support for the `[jax]` extra, i.e., the Jax solver when running on Python 3.8. The Jax solver is now available on Python 3.9 and above ([#3550](https://github.com/pybamm-team/PyBaMM/pull/3550))
 
 # [v23.9](https://github.com/pybamm-team/PyBaMM/tree/v23.9) - 2023-10-31
 

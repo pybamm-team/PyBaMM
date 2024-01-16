@@ -8,6 +8,7 @@ from sympy.printing.latex import LatexPrinter
 
 class CustomPrint(LatexPrinter):
     """Override SymPy methods to match PyBaMM's requirements"""
+
     def _print_Derivative(self, expr):
         """Override :meth:`sympy.printing.latex.LatexPrinter._print_Derivative`"""
         eqn = super()._print_Derivative(expr)

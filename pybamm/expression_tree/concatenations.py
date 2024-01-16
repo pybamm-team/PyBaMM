@@ -70,7 +70,7 @@ class Concatenation(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         out = self.name + "("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 
@@ -89,11 +89,11 @@ class Concatenation(pybamm.Symbol):
         domain: list = []
         for child in children:
             if not isinstance(child, pybamm.Symbol):
-                raise TypeError("{} is not a pybamm symbol".format(child))
+                raise TypeError(f"{child} is not a pybamm symbol")
             child_domain = child.domain
             if child_domain == []:
                 raise pybamm.DomainError(
-                    "Cannot concatenate child '{}' with empty domain".format(child)
+                    f"Cannot concatenate child '{child}' with empty domain"
                 )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain

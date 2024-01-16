@@ -56,10 +56,12 @@ class TestMPM(TestCase):
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]"
-                "": parameter_values["Negative electrode OCP [V]"],
-                "Negative electrode delithiation OCP [V]"
-                "": parameter_values["Negative electrode OCP [V]"],
+                "Negative electrode lithiation OCP [V]" "": parameter_values[
+                    "Negative electrode OCP [V]"
+                ],
+                "Negative electrode delithiation OCP [V]" "": parameter_values[
+                    "Negative electrode OCP [V]"
+                ],
             },
             check_already_exists=False,
         )
