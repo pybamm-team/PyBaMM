@@ -36,7 +36,7 @@ If a new release candidate is required after the release of `rc{X-1}` -
    - `vcpkg.json`
    - `CHANGELOG.md`
 
-      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR will be created to update version strings in `develop`. Updation in CHANGELOG will not be included in this PR (to avoid conflicts); hence, it must be updated manually in this PR.
+      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR will be created to update version strings in `develop`.
 
 4. Create a new GitHub _pre-release_ with the same tag (`vYY.MMrcX`) from the `vYY.MM` branch and a description copied from `CHANGELOG.md`.
 
@@ -57,7 +57,7 @@ Once satisfied with the release candidates -
    - `vcpkg.json`
    - `CHANGELOG.md`
 
-      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR from `vvYY.MM` to `develop` will be created (to sync the branches).
+      These changes will be automatically pushed to the existing `vYY.MM` branch and a PR will be created to update version strings in `develop`.
 
 3. Next, a PR from `vYY.MM` to `main` will be generated that should be merged once all the tests pass.
 
