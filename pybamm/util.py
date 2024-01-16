@@ -370,31 +370,49 @@ def have_optional_dependency(module_name, attribute=None):
         raise ModuleNotFoundError(err_msg)
 
 
-def lazy_import(name):
+def lazy_import(name, attribute=None):
     """
-    Lazily import a module.
+    Lazily import a module or attribute.
 
     This function finds the module specification, creates a LazyLoader for the
     loader, creates a module from the specification, updates the sys.modules
-    dictionary, and finally, executes the module.
+    dictionary, and finally, executes the module. If an attribute is specified,
+    it checks if it's available.
 
     Parameters:
     - name (str): The name of the module to import.
+    - attribute (str, optional): The name of the attribute to import.
 
     Returns:
-    - module: The lazily imported module.
+    - module or attribute: The lazily imported module or attribute.
     """
-    # Find the module specification
-    spec = importlib.util.find_spec(name)
-    loader = importlib.util.LazyLoader(spec.loader)
-    spec.loader = loader
+    try:
+        # Try to find the module specification
+        spec = importlib.util.find_spec(name)
+        loader = importlib.util.LazyLoader(spec.loader)
+        spec.loader = loader
 
-    # Create a module from the specification
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
+        # Create a module from the specification
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
 
-    # Execute the module
-    loader.exec_module(module)
+        # Execute the module
+        loader.exec_module(module)
 
-    # Return the lazily imported module
-    return module
+        if attribute:
+            # If an attribute is specified, check if it's available
+            if hasattr(module, attribute):
+                imported_attribute = getattr(module, attribute)
+                return imported_attribute  # Return the imported attribute
+            else:
+                # Raise an AttributeError if the attribute is not available
+                raise AttributeError(
+                    f"Attribute '{attribute}' not found in module '{name}'"
+                )
+        else:
+            # Return the entire module if no attribute is specified
+            return module
+
+    except ModuleNotFoundError:
+        # If the module is not available, raise an exception
+        raise ModuleNotFoundError(f"Module '{name}' not found.")
