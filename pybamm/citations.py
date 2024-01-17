@@ -1,29 +1,19 @@
-#
-# Bibliographical information for PyBaMM
-# Inspired by firedrake/PETSc citation workflow
-# https://firedrakeproject.org/citing.html
-#
 import pybamm
-import os
-import warnings
-from sys import _getframe
 from pybamm.util import have_optional_dependency
+import warnings
+import os
+from sys import _getframe
 
 
 class Citations:
-
-    """Entry point to citations management.
+    """
+    Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
 
     Citations listed in `pybamm/CITATIONS.bib` can be registered with their citation
     key. For all other works provide a BibTeX Citation to :meth:`register`.
 
-    Examples
-    --------
-    >>> pybamm.citations.register("Sulzer2021")
-    >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
-    >>> pybamm.print_citations("citations.txt")
     """
 
     def __init__(self):
@@ -73,29 +63,32 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        parse_file = have_optional_dependency("pybtex.database", "parse_file")
-        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
-        bib_data = parse_file(citations_file, bib_format="bibtex")
-        for key, entry in bib_data.entries.items():
-            self._add_citation(key, entry)
+        citations_file = citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
+        parse_file = have_optional_dependency("bibtexparser", "parse_file")
+        bib_data = parse_file(citations_file)
+        entries = bib_data.entries
+        for entry in entries:
+            # print(entry.key)
+            self._add_citation(entry.key, entry)
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
 
-        Entry = have_optional_dependency("pybtex.database", "Entry")
         # Check input types are correct
+        Entry = have_optional_dependency("bibtexparser.model", "Entry")
         if not isinstance(key, str) or not isinstance(entry, Entry):
             raise TypeError()
 
         # Warn if overwriting a previous citation
-        new_citation = entry.to_string("bibtex")
+        new_citation = entry
         if key in self._all_citations and new_citation != self._all_citations[key]:
             warnings.warn(f"Replacing citation for {key}")
 
         # Add to database
         self._all_citations[key] = new_citation
+        # print(new_citation)
 
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
@@ -150,23 +143,22 @@ class Citations:
         key: str
             A BibTeX formatted citation
         """
-        PybtexError = have_optional_dependency("pybtex.scanner", "PybtexError")
-        parse_string = have_optional_dependency("pybtex.database", "parse_string")
+
+        # Parse string as a bibtex citation, and check that a citation was found
         try:
-            # Parse string as a bibtex citation, and check that a citation was found
-            bib_data = parse_string(key, bib_format="bibtex")
+            parse_string = have_optional_dependency("bibtexparser", "parse_string")
+            bib_data = parse_string(key)
             if not bib_data.entries:
-                raise PybtexError("no entries found")
+                print("no entries found")
 
             # Add and register all citations
-            for key, entry in bib_data.entries.items():
+            for entry in bib_data.entries:
                 # Add to _all_citations dictionary
-                self._add_citation(key, entry)
+                self._add_citation(entry.key, entry)
                 # Add to _papers_to_cite set
-                self._papers_to_cite.add(key)
+                self._papers_to_cite.add(entry.key)
                 return
-        except PybtexError:
-            # Unable to parse / unknown key
+        except:
             raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
     def _tag_citations(self):
@@ -178,47 +170,10 @@ class Citations:
             for key, entry in self._citation_tags.items():
                 print(f"{key} was cited due to the use of {entry}")
 
-    def print(self, filename=None, output_format="text", verbose=False):
-        """Print all citations that were used for running simulations. The verbose
-        option is provided to print tags for citations in the output such that it can
-        can be seen where the citations were registered due to the use of PyBaMM models
-        and solvers in the code.
+    def print(self, filename=None, verbose=False):
 
-        .. note::
-            If a citation is registered manually, it will not be tagged.
-
-        .. warning::
-            This function will notify the user if a citation that has been previously
-            registered is invalid or cannot be parsed.
-
-        Parameters
-        ----------
-        filename : str, optional
-            Filename to which to print citations. If None, citations are printed
-            to the terminal.
-        verbose: bool, optional
-            If True, prints the citation tags for the citations that have been
-            registered. An example of the output is shown below.
-
-        Examples
-        --------
-        .. code-block:: python
-
-            pybamm.lithium_ion.SPM()
-            pybamm.Citations.print(verbose=True) or pybamm.print_citations(verbose=True)
-
-        will append the following at the end of the list of citations:
-
-        .. code-block::
-
-            Citations registered:
-
-            Marquis2019 was cited due to the use of SPM
-
-        """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
-        pybtex = have_optional_dependency("pybtex")
         try:
             for key in self._unknown_citations:
                 self._parse_citation(key)
@@ -230,28 +185,31 @@ class Citations:
             # delete the invalid citation from the set
             self._unknown_citations.remove(key)
 
-        if output_format == "text":
-            citations = pybtex.format_from_strings(
-                self._cited, style="plain", output_backend="plaintext"
-            )
-        elif output_format == "bibtex":
-            citations = "\n".join(self._cited)
-        else:
-            raise pybamm.OptionError(
-                f"Output format {output_format} not recognised."
-                "It should be 'text' or 'bibtex'."
-            )
+        citations = self._cited
 
         if filename is None:
-            print(citations)
+            # print(citations)
+            for entry in citations:
+                self._string_formatting(entry)
             if verbose:
                 self._tag_citations()  # pragma: no cover
         else:
             with open(filename, "w") as f:
                 f.write(citations)
 
+    def _string_formatting(self, entry):
+        txt_format = ' '
+        for key, value in entry.items():
+            if key != "ID" and key != "ENTRYTYPE":
+                txt_format = txt_format + " " + str(value)
+        print(f" {txt_format} \n")
 
-def print_citations(filename=None, output_format="text", verbose=False):
+    @property
+    def citation_err_msg(self):
+        return self._citation_err_msg
+
+
+def print_citations(filename=None, verbose=False):
     """See :meth:`Citations.print`"""
     if citations._citation_err_msg is not None:
         raise ImportError(
@@ -260,7 +218,7 @@ def print_citations(filename=None, output_format="text", verbose=False):
             "https://bitbucket.org/pybtex-devs/pybtex/issues/148/. "
             "Please manually cite all the references."
             "\nError encountered -\n"
-            f"{citations._citation_err_msg}"
+            f"{citations.citation_err_msg}"
         )
     else:
         if verbose:  # pragma: no cover
@@ -269,9 +227,9 @@ def print_citations(filename=None, output_format="text", verbose=False):
                     "Verbose output is available only for the terminal and not for printing to files",
                 )
             else:
-                citations.print(filename, output_format, verbose=True)
+                citations.print(filename, verbose=True)
         else:
-            pybamm.citations.print(filename, output_format)
+            citations.print(filename)
 
 
 citations = Citations()
