@@ -144,7 +144,7 @@ class Experiment:
 
         Parameters
         ----------
-        termination : list[str], optional
+        termination : str or list[str], optional
            A single string, or a list of strings, representing the conditions to terminate the experiment.
            Only capacity or voltage can be provided as a termination reason.
            e.g. '4 Ah capacity' or ['80% capacity', '2.5 V']
