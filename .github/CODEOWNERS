@@ -9,7 +9,7 @@
 /pybamm/meshes/ @martinjrobins @rtimms @tinosulzer @rtimms
 /pybamm/models/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms
 /pybamm/parameters/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms  @kratman
-/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @tinosulzer @rtimms  @kratman
+/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @tinosulzer @rtimms  @kratman @agriyakhetarpal 
 /pybamm/solvers/ @martinjrobins @rtimms @tinosulzer @TomTranter @rtimms
 /pybamm/spatial_methods/ @martinjrobins @rtimms @tinosulzer @rtimms
 /pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/, will not recurse
