@@ -63,7 +63,9 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        citations_file = citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
+        citations_file = citations_file = os.path.join(
+            pybamm.root_dir(), "pybamm", "CITATIONS.bib"
+        )
         parse_file = have_optional_dependency("bibtexparser", "parse_file")
         bib_data = parse_file(citations_file)
         entries = bib_data.entries
@@ -171,7 +173,6 @@ class Citations:
                 print(f"{key} was cited due to the use of {entry}")
 
     def print(self, filename=None, verbose=False):
-
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
         try:
@@ -198,7 +199,7 @@ class Citations:
                 f.write(citations)
 
     def _string_formatting(self, entry):
-        txt_format = ' '
+        txt_format = " "
         for key, value in entry.items():
             if key != "ID" and key != "ENTRYTYPE":
                 txt_format = txt_format + " " + str(value)
