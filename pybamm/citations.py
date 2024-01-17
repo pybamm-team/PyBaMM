@@ -1,8 +1,3 @@
-#
-# Bibliographical information for PyBaMM
-# Inspired by firedrake/PETSc citation workflow
-# https://firedrakeproject.org/citing.html
-#
 import pybamm
 from pybamm.util import have_optional_dependency
 import warnings
@@ -11,18 +6,14 @@ from sys import _getframe
 
 
 class Citations:
-    """Entry point to citations management.
+    """
+    Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
 
     Citations listed in `pybamm/CITATIONS.bib` can be registered with their citation
     key. For all other works provide a BibTeX Citation to :meth:`register`.
 
-    Examples
-    --------
-    >>> pybamm.citations.register("Sulzer2021")
-    >>> pybamm.citations.register("@misc{Newton1687, title={Mathematical...}}")
-    >>> pybamm.print_citations("citations.txt")
     """
 
     def __init__(self):
@@ -72,7 +63,9 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        citations_file = citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
+        citations_file = citations_file = os.path.join(
+            pybamm.root_dir(), "pybamm", "CITATIONS.bib"
+        )
         parse_file = have_optional_dependency("bibtexparser", "parse_file")
         bib_data = parse_file(citations_file)
         entries = bib_data.entries
@@ -180,44 +173,6 @@ class Citations:
                 print(f"{key} was cited due to the use of {entry}")
 
     def print(self, filename=None, verbose=False):
-        """Print all citations that were used for running simulations. The verbose
-         option is provided to print tags for citations in the output such that it can
-         can be seen where the citations were registered due to the use of PyBaMM models
-         and solvers in the code.
-
-         .. note::
-             If a citation is registered manually, it will not be tagged.
-
-         .. warning::
-             This function will notify the user if a citation that has been previously
-             registered is invalid or cannot be parsed.
-
-         Parameters
-         ----------
-         filename : str, optional
-             Filename to which to print citations. If None, citations are printed
-             to the terminal.
-         verbose: bool, optional
-             If True, prints the citation tags for the citations that have been
-             registered. An example of the output is shown below.
-
-         Examples
-         --------
-         .. code-block:: python
-
-             pybamm.lithium_ion.SPM()
-             pybamm.Citations.print(verbose=True) or pybamm.print_citations(verbose=True)
-
-         will append the following at the end of the list of citations:
-
-         .. code-block::
-
-             Citations registered:
-
-             Marquis2019 was cited due to the use of SPM
-
-         """
-
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
         try:
@@ -244,7 +199,7 @@ class Citations:
                 f.write(citations)
 
     def _string_formatting(self, entry):
-        txt_format = ' '
+        txt_format = " "
         for key, value in entry.items():
             if key != "ID" and key != "ENTRYTYPE":
                 txt_format = txt_format + " " + str(value)
