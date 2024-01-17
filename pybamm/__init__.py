@@ -41,20 +41,18 @@ Timer = lazy_import("pybamm.util", "Timer")
 TimerTime = lazy_import("pybamm.util", "TimerTime")
 FuzzyDict = lazy_import("pybamm.util", "FuzzyDict")
 
-from .util import (
-    root_dir,
-    rmse,
-    load,
-    is_constant_and_can_evaluate,
-)
-from .util import (
-    get_parameters_filepath,
-    have_jax,
-    install_jax,
-    have_optional_dependency,
-    is_jax_compatible,
-    get_git_commit_info,
-)
+root_dir = lazy_import("pybamm.util", "root_dir")
+rmse = lazy_import("pybamm.util", "rmse")
+load = lazy_import("pybamm.util", "load")
+is_constant_and_can_evaluate = lazy_import("pybamm.util", "is_constant_and_can_evaluate")
+
+get_parameters_filepath = lazy_import("pybamm.util", "get_parameters_filepath")
+have_jax = lazy_import("pybamm.util", "have_jax")
+install_jax = lazy_import("pybamm.util", "install_jax")
+have_optional_dependency = lazy_import("pybamm.util", "have_optional_dependency")
+is_jax_compatible = lazy_import("pybamm.util", "is_jax_compatible")
+get_git_commit_info = lazy_import("pybamm.util", "get_git_commit_info")
+
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
