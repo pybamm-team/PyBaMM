@@ -21,10 +21,10 @@
 /benchmarks/ @brosaplanella @Saransh-cpp @agriyakhetarpal @arjxn-py
 
 # Documentation
-/docs/ @pybamm-team/maintainers
+/docs/ @kratman @arjxn-py @agriyakhetarpal 
 
 # Example scripts
-/examples/ @pybamm-team/maintainers
+/examples/ @kratman @agriyakhetarpal 
 
 # Installation and other scripts
 /scripts/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
