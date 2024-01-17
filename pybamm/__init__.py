@@ -37,7 +37,10 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, TimerTime, FuzzyDict
+Timer = lazy_import("pybamm.util", "Timer")
+TimerTime = lazy_import("pybamm.util", "TimerTime")
+FuzzyDict = lazy_import("pybamm.util", "FuzzyDict")
+
 from .util import (
     root_dir,
     rmse,
