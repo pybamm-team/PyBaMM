@@ -108,18 +108,17 @@ SymbolUnpacker = lazy_import("pybamm.expression_tree.operations.unpack_symbols",
 #
 # Model classes
 #
-from .models.base_model import BaseModel
-from .models.event import Event
-from .models.event import EventType
+BaseModel = lazy_import("pybamm.models.base_model", "BaseModel")
+Event = lazy_import("pybamm.models.event", "Event")
+EventType = lazy_import("pybamm.models.event", "EventType")
 
 # Battery models
-from .models.full_battery_models.base_battery_model import (
-    BaseBatteryModel,
-    BatteryModelOptions,
-)
-from .models.full_battery_models import lead_acid
-from .models.full_battery_models import lithium_ion
-from .models.full_battery_models import equivalent_circuit
+BaseBatteryModel = lazy_import("pybamm.models.full_battery_models.base_battery_model", "BaseBatteryModel")
+BatteryModelOptions = lazy_import("pybamm.models.full_battery_models.base_battery_model", "BatteryModelOptions")
+
+lead_acid = lazy_import("pybamm.models.full_battery_models.lead_acid", "lead_acid")
+lithium_ion = lazy_import("pybamm.models.full_battery_models.lithium_ion", "lithium_ion")
+equivalent_circuit = lazy_import("pybamm.models.full_battery_models.equivalent_circuit", "equivalent_circuit")
 
 #
 # Submodel classes
