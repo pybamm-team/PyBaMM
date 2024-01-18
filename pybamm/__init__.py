@@ -141,11 +141,11 @@ transport_efficiency = lazy_import("pybamm.models.submodels.transport_efficiency
 particle_mechanics = lazy_import("pybamm.models.submodels.particle_mechanics", "particle_mechanics")
 equivalent_circuit_elements = lazy_import("pybamm.models.submodels.equivalent_circuit_elements", "equivalent_circuit_elements")
 
-from .models.submodels.interface import kinetics
-from .models.submodels.interface import sei
-from .models.submodels.interface import lithium_plating
-from .models.submodels.interface import interface_utilisation
-from .models.submodels.interface import open_circuit_potential
+kinetics = lazy_import("pybamm.models.submodels.interface.kinetics", "kinetics")
+sei = lazy_import("pybamm.models.submodels.interface.sei", "sei")
+lithium_plating = lazy_import("pybamm.models.submodels.interface.lithium_plating", "lithium_plating")
+interface_utilisation = lazy_import("pybamm.models.submodels.interface.interface_utilisation", "interface_utilisation")
+open_circuit_potential = lazy_import("pybamm.models.submodels.interface.open_circuit_potential", "open_circuit_potential")
 
 #
 # Geometry
