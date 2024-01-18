@@ -150,11 +150,11 @@ open_circuit_potential = lazy_import("pybamm.models.submodels.interface.open_cir
 #
 # Geometry
 #
-from .geometry.geometry import Geometry
-from .geometry.battery_geometry import battery_geometry
+Geometry = lazy_import("pybamm.geometry.geometry", "Geometry")
+battery_geometry = lazy_import("pybamm.geometry.battery_geometry", "battery_geometry")
 
-from .expression_tree.independent_variable import KNOWN_COORD_SYS
-from .geometry import standard_spatial_vars
+KNOWN_COORD_SYS = lazy_import("pybamm.expression_tree.independent_variable", "KNOWN_COORD_SYS")
+standard_spatial_vars = lazy_import("pybamm.geometry.standard_spatial_vars", "standard_spatial_vars")
 
 #
 # Parameter classes and methods
