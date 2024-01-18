@@ -82,11 +82,23 @@ if pybamm.have_idaklu() and pybamm.have_jax():
     ]
 
 
+# Check the interface throws an appropriate error if either IDAKLU or JAX not available
+@unittest.skipIf(
+    pybamm.have_idaklu() and pybamm.have_jax(),
+    "Both IDAKLU and JAX are available",
+)
+class TestIDAKLUJax_NoJax(TestCase):
+    def test_instantiate_fails(self):
+        with self.assertRaises(ModuleNotFoundError):
+            pybamm.IDAKLUJax([], [], [])
+
+
 @unittest.skipIf(
     not pybamm.have_idaklu() or not pybamm.have_jax(),
     "IDAKLU Solver and/or JAX are not available",
 )
 class TestIDAKLUJax(TestCase):
+
     # Initialisation tests
 
     def test_initialise_twice(self):
