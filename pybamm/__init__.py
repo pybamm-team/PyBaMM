@@ -94,19 +94,16 @@ StateVectorDot = lazy_import("pybamm.expression_tree.state_vector", "StateVector
 from .expression_tree.exceptions import *
 
 # Operations
-from .expression_tree.operations.evaluate_python import (
-    find_symbols,
-    id_to_python_variable,
-    to_python,
-    EvaluatorPython,
-)
+find_symbols = lazy_import("pybamm.expression_tree.operations.evaluate_python", "find_symbols")
+id_to_python_variable = lazy_import("pybamm.expression_tree.operations.evaluate_python", "id_to_python_variable")
+to_python = lazy_import("pybamm.expression_tree.operations.evaluate_python", "to_python")
+EvaluatorPython = lazy_import("pybamm.expression_tree.operations.evaluate_python", "EvaluatorPython")
 
-from .expression_tree.operations.evaluate_python import EvaluatorJax
-from .expression_tree.operations.evaluate_python import JaxCooMatrix
-
-from .expression_tree.operations.jacobian import Jacobian
-from .expression_tree.operations.convert_to_casadi import CasadiConverter
-from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+EvaluatorJax = lazy_import("pybamm.expression_tree.operations.evaluate_python", "EvaluatorJax")
+JaxCooMatrix = lazy_import("pybamm.expression_tree.operations.evaluate_python", "JaxCooMatrix")
+Jacobian = lazy_import("pybamm.expression_tree.operations.jacobian", "Jacobian")
+CasadiConverter = lazy_import("pybamm.expression_tree.operations.convert_to_casadi", "CasadiConverter")
+SymbolUnpacker = lazy_import("pybamm.expression_tree.operations.unpack_symbols", "SymbolUnpacker")
 
 #
 # Model classes
