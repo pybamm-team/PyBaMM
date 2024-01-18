@@ -62,10 +62,10 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             reaction_names = [""]
             if phase_name == "":
                 reaction_names += ["SEI "]
-                if self.options.electrode_types["negative"] == "porous":
-                    # separate plating reaction only if the negative electrode is
-                    # porous, since plating is the main reaction
-                    # SEI on cracks only in a porous negative electrode
+                if self.options.electrode_types[domain] == "porous":
+                    # separate plating reaction only if the electrode is porous,
+                    # since plating is the main reaction otherwise.
+                    # Likewise, SEI on cracks only in a porous electrode
                     reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
@@ -110,7 +110,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             new_variables[
                 f"Sum of {domain} electrode {phase_name}"
                 "electrolyte reaction source terms [A.m-3]"
-            ] += (s_k * a_j_k)
+            ] += s_k * a_j_k
             new_variables[
                 f"Sum of x-averaged {domain} electrode {phase_name}"
                 "electrolyte reaction source terms [A.m-3]"

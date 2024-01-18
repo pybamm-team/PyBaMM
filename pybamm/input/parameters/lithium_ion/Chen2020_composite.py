@@ -37,9 +37,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def silicon_ocp_lithiation_Mark2016(sto):
@@ -167,9 +165,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
@@ -238,9 +234,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     E_r = 17800
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def electrolyte_diffusivity_Nyman2008(c_e, T):
@@ -334,9 +328,18 @@ def get_parameter_values():
         "chemistry": "lithium_ion",
         # sei
         "Primary: Ratio of lithium moles to SEI moles": 2.0,
+        "Primary: Inner SEI reaction proportion": 0.5,
         "Primary: Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Primary: Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Primary: SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "Primary: SEI resistivity [Ohm.m]": 200000.0,
+        "Primary: Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Primary: Bulk solvent concentration [mol.m-3]": 2636.0,
+        "Primary: Inner SEI open-circuit potential [V]": 0.1,
+        "Primary: Outer SEI open-circuit potential [V]": 0.8,
+        "Primary: Inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Primary: Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Primary: Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Primary: Initial inner SEI thickness [m]": 2.5e-09,
         "Primary: Initial outer SEI thickness [m]": 2.5e-09,
         "Primary: EC initial concentration in electrolyte [mol.m-3]": 4541.0,
@@ -345,9 +348,18 @@ def get_parameter_values():
         "Primary: SEI open-circuit potential [V]": 0.4,
         "Primary: SEI growth activation energy [J.mol-1]": 0.0,
         "Secondary: Ratio of lithium moles to SEI moles": 2.0,
+        "Secondary: Inner SEI reaction proportion": 0.5,
         "Secondary: Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Secondary: Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Secondary: SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "Secondary: SEI resistivity [Ohm.m]": 200000.0,
+        "Secondary: Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Secondary: Bulk solvent concentration [mol.m-3]": 2636.0,
+        "Secondary: Inner SEI open-circuit potential [V]": 0.1,
+        "Secondary: Outer SEI open-circuit potential [V]": 0.8,
+        "Secondary: Inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Secondary: Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Secondary: Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Secondary: Initial inner SEI thickness [m]": 2.5e-09,
         "Secondary: Initial outer SEI thickness [m]": 2.5e-09,
         "Secondary: EC initial concentration in electrolyte [mol.m-3]": 4541.0,
@@ -355,6 +367,7 @@ def get_parameter_values():
         "Secondary: SEI kinetic rate constant [m.s-1]": 1e-12,
         "Secondary: SEI open-circuit potential [V]": 0.4,
         "Secondary: SEI growth activation energy [J.mol-1]": 0.0,
+        "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         # cell
         "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,

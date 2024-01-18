@@ -43,7 +43,7 @@ class ScipySolver(pybamm.BaseSolver):
         )
         self.ode_solver = True
         self.extra_options = extra_options or {}
-        self.name = "Scipy solver ({})".format(method)
+        self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")
 
     def _integrate(self, model, t_eval, inputs_dict=None):
@@ -123,7 +123,7 @@ class ScipySolver(pybamm.BaseSolver):
             t_eval=t_eval,
             method=self.method,
             dense_output=True,
-            **extra_options
+            **extra_options,
         )
         integration_time = timer.time()
 

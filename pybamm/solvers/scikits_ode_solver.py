@@ -57,7 +57,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.extra_options = extra_options or {}
         self.ode_solver = True
-        self.name = "Scikits ODE solver ({})".format(method)
+        self.name = f"Scikits ODE solver ({method})"
 
         pybamm.citations.register("Malengier2018")
         pybamm.citations.register("Hindmarsh2000")

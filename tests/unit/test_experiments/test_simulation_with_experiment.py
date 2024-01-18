@@ -519,6 +519,25 @@ class TestSimulationExperiment(TestCase):
                 decimal=5,
             )
 
+    def test_skipped_step_continuous(self):
+        model = pybamm.lithium_ion.SPM({"SEI": "solvent-diffusion limited"})
+        experiment = pybamm.Experiment(
+            [
+                ("Rest for 24 hours (1 hour period)",),
+                (
+                    "Charge at C/3 until 4.1 V",
+                    "Hold at 4.1V until C/20",
+                    "Discharge at C/3 until 2.5 V",
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(initial_soc=1)
+        np.testing.assert_array_almost_equal(
+            sim.solution.cycles[0].last_state.y.full(),
+            sim.solution.cycles[1].steps[-1].first_state.y.full(),
+        )
+
     def test_all_empty_solution_errors(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -764,6 +783,28 @@ class TestSimulationExperiment(TestCase):
 
         # Check that there are only 3 built models (unique steps + padding rest)
         self.assertEqual(len(sim.op_conds_to_built_models), 3)
+
+    def test_experiment_custom_termination(self):
+        def neg_stoich_cutoff(variables):
+            return variables["Negative electrode stoichiometry"] - 0.5
+
+        neg_stoich_termination = pybamm.step.CustomTermination(
+            name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
+        )
+
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [pybamm.step.c_rate(1, termination=neg_stoich_termination)]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve(calc_esoh=False)
+        self.assertEqual(
+            sol.cycles[0].steps[0].termination,
+            "event: Negative stoichiometry cut-off [experiment]",
+        )
+
+        neg_stoich = sol["Negative electrode stoichiometry"].data
+        self.assertAlmostEqual(neg_stoich[-1], 0.5, places=4)
 
 
 if __name__ == "__main__":

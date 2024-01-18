@@ -13,7 +13,6 @@ class MPM(SPM):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.MPM()
     >>> model.name
     'Many-Particle Model'
@@ -47,6 +46,6 @@ class MPM(SPM):
     def default_parameter_values(self):
         default_params = super().default_parameter_values
         default_params = pybamm.get_size_distribution_parameters(
-            default_params, electrode=self.options["working electrode"]
+            default_params, working_electrode=self.options["working electrode"]
         )
         return default_params

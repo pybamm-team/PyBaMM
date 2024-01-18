@@ -52,7 +52,6 @@ class Thevenin(pybamm.BaseModel):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.equivalent_circuit.Thevenin()
     >>> model.name
     'Thevenin Equivalent Circuit Model'
@@ -208,7 +207,7 @@ class Thevenin(pybamm.BaseModel):
         self._build_model()
 
         self._built = True
-        pybamm.logger.info("Finished building {}".format(self.name))
+        pybamm.logger.info(f"Finished building {self.name}")
 
     @property
     def default_parameter_values(self):

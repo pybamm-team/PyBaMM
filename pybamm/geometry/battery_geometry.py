@@ -140,9 +140,7 @@ def battery_geometry(
             )
     else:
         raise pybamm.GeometryError(
-            "Invalid form factor '{}' (should be 'pouch' or 'cylindrical'".format(
-                form_factor
-            )
+            f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
         )
 
     return pybamm.Geometry(geometry)

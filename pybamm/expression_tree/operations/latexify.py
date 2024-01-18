@@ -5,10 +5,9 @@ import copy
 import re
 import warnings
 
-import sympy
-
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
+from pybamm.util import have_optional_dependency
 
 
 def get_rng_min_max_name(rng, min_or_max):
@@ -88,14 +87,15 @@ class Latexify:
         Returns a list of boundary condition equations with ranges in front of
         the equations.
         """
+        sympy = have_optional_dependency("sympy")
         bcs_eqn_list = []
         bcs = self.model.boundary_conditions.get(var, None)
 
         if bcs:
             # Take range minimum from the first domain
-            var_name = list(self.model.default_geometry[var.domain[0]].keys())[0]
-            rng_left = list(self.model.default_geometry[var.domain[0]].values())[0]
-            rng_right = list(self.model.default_geometry[var.domain[-1]].values())[0]
+            var_name = next(iter(self.model.default_geometry[var.domain[0]].keys()))
+            rng_left = next(iter(self.model.default_geometry[var.domain[0]].values()))
+            rng_right = next(iter(self.model.default_geometry[var.domain[-1]].values()))
 
             # Trim name (r_n --> r)
             var_name = re.findall(r"(.)_*.*", str(var_name))[0]
@@ -118,6 +118,7 @@ class Latexify:
 
     def _get_param_var(self, node):
         """Returns a list of parameters and a list of variables."""
+        sympy = have_optional_dependency("sympy")
         param_list = []
         var_list = []
         dfs_nodes = [node]
@@ -160,6 +161,7 @@ class Latexify:
         return param_list, var_list
 
     def latexify(self, output_variables=None):
+        sympy = have_optional_dependency("sympy")
         # Voltage is the default output variable if it exists
         if output_variables is None:
             if "Voltage [V]" in self.model.variables:

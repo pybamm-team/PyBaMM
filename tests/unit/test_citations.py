@@ -50,13 +50,13 @@ class TestCitations(unittest.TestCase):
         # Text Style
         with temporary_filename() as filename:
             pybamm.print_citations(filename, "text")
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
         # Bibtext Style
         with temporary_filename() as filename:
             pybamm.print_citations(filename, "bibtex")
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
         # Write to stdout
@@ -101,7 +101,7 @@ class TestCitations(unittest.TestCase):
             pybamm.citations.register(r"@article{NotACitation, title = {A New Title}}")
             pybamm.citations._parse_citation(
                 r"@article{NotACitation, title = {A New Title}}"
-            )  # noqa: E501
+            )
         self.assertIn("NotACitation", pybamm.citations._papers_to_cite)
         self.assertNotEqual(
             pybamm.citations._all_citations["NotACitation"], old_citation
