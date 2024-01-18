@@ -36,7 +36,7 @@ class Broadcast(pybamm.SpatialOperator):
     def __init__(
         self,
         child: pybamm.Symbol,
-        domains: dict[str, list[str]],
+        domains: dict[str, list[str] | str],
         name: str | None = None,
     ):
         if name is None:
@@ -464,8 +464,8 @@ class FullBroadcast(Broadcast):
         self,
         child_input: NumberType | float | pybamm.Symbol,
         broadcast_domain: list[str] | str | None = None,
-        auxiliary_domains: str | dict | None = None,
-        broadcast_domains: dict | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        broadcast_domains: dict[str, list[str] | str] | None = None,
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
@@ -538,8 +538,8 @@ class FullBroadcastToEdges(FullBroadcast):
         self,
         child: NumberType | float | pybamm.Symbol,
         broadcast_domain: list[str] | str | None = None,
-        auxiliary_domains: str | dict | None = None,
-        broadcast_domains: dict | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        broadcast_domains: dict[str, list[str] | str] | None = None,
         name: str | None = None,
     ):
         name = name or "broadcast to edges"

@@ -422,7 +422,7 @@ class SparseStack(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):  #: Iterable[pybamm.Concatenation]
+    def __init__(self, *children):
         children = list(children)
         if not any(issparse(child.evaluate_for_shape()) for child in children):
             concatenation_function = np.vstack

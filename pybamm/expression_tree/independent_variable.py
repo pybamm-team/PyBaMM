@@ -36,8 +36,8 @@ class IndependentVariable(pybamm.Symbol):
         self,
         name: str,
         domain: list[str] | str | None = None,
-        auxiliary_domains: dict | None = None,
-        domains: dict | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
     ) -> None:
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
@@ -129,8 +129,8 @@ class SpatialVariable(IndependentVariable):
         self,
         name: str,
         domain: list[str] | str | None = None,
-        auxiliary_domains: dict | None = None,
-        domains: dict | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
         coord_sys=None,
     ) -> None:
         self.coord_sys = coord_sys
@@ -190,8 +190,8 @@ class SpatialVariableEdge(SpatialVariable):
         self,
         name: str,
         domain: list[str] | str | None = None,
-        auxiliary_domains: dict | None = None,
-        domains: dict | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
         coord_sys=None,
     ) -> None:
         super().__init__(name, domain, auxiliary_domains, domains, coord_sys)

@@ -56,7 +56,7 @@ def create_object_of_size(size: int, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domains: dict, typ="vector"):
+def evaluate_for_shape_using_domain(domains: dict[str, list[str] | str], typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
@@ -213,7 +213,7 @@ class Symbol:
         children: Sequence[Symbol] | None = None,
         domain: list[str] | str | None = None,
         auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str]] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
     ):
         super().__init__()
         self.name = name
@@ -402,7 +402,7 @@ class Symbol:
         self,
         domain: list[str] | str | None,
         auxiliary_domains: dict[str, str] | None,
-        domains: dict | None,
+        domains: dict[str, list[str] | str] | None,
     ):
         if domains is None:
             if isinstance(domain, str):

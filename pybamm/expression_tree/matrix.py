@@ -15,11 +15,11 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.ndarray | list | csr_matrix,
+        entries: np.ndarray | list[float] | csr_matrix,
         name: str | None = None,
         domain: list[str] | None = None,
         auxiliary_domains: dict[str, str] | None = None,
-        domains: dict | None = None,
+        domains: dict[str, list[str] | str] | None = None,
         entries_string: str | None = None,
     ) -> None:
         if isinstance(entries, list):

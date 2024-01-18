@@ -25,7 +25,12 @@ class UnaryOperator(pybamm.Symbol):
         child node
     """
 
-    def __init__(self, name: str, child: pybamm.Symbol, domains: dict | None = None):
+    def __init__(
+        self,
+        name: str,
+        child: pybamm.Symbol,
+        domains: dict[str, list[str] | str] | None = None,
+    ):
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
@@ -395,7 +400,12 @@ class SpatialOperator(UnaryOperator):
         child node
     """
 
-    def __init__(self, name: str, child: pybamm.Symbol, domains: dict | None = None):
+    def __init__(
+        self,
+        name: str,
+        child: pybamm.Symbol,
+        domains: dict[str, list[str] | str] | None = None,
+    ):
         super().__init__(name, child, domains)
 
     def to_json(self):

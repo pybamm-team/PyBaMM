@@ -14,11 +14,11 @@ class Vector(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.ndarray | list | np.matrix,
+        entries: np.ndarray | list[float] | np.matrix,
         name: str | None = None,
         domain: list[str] | str | None = None,
         auxiliary_domains: dict[str, str] | None = None,
-        domains: dict | None = None,
+        domains: dict[str, list[str] | str] | None = None,
         entries_string: str | None = None,
     ) -> None:
         if isinstance(entries, (list, np.matrix)):
@@ -30,7 +30,9 @@ class Vector(pybamm.Array):
             raise ValueError(
                 """
                 Entries must have 1 dimension or be column vector, not have shape {}
-                """.format(entries.shape)
+                """.format(
+                    entries.shape
+                )
             )
         if name is None:
             name = f"Column vector of length {entries.shape[0]!s}"

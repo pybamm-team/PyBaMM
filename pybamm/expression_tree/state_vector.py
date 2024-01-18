@@ -40,9 +40,9 @@ class StateVectorBase(pybamm.Symbol):
         base_name="y",
         name: str | None = None,
         domain: list[str] | str | None = None,
-        auxiliary_domains: dict | None = None,
-        domains: dict[str, list[str]] | None = None,
-        evaluation_array: list | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
+        evaluation_array: list[bool] | None = None,
     ):
         for y_slice in y_slices:
             if not isinstance(y_slice, slice):
@@ -260,9 +260,9 @@ class StateVector(StateVectorBase):
         *y_slices: slice,
         name: str | None = None,
         domain: list[str] | str | None = None,
-        auxiliary_domains: dict | None = None,
-        domains: dict[str, list[str]] | None = None,
-        evaluation_array: list | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
+        evaluation_array: list[bool] | None = None,
     ):
         super().__init__(
             *y_slices,
@@ -344,9 +344,9 @@ class StateVectorDot(StateVectorBase):
         *y_slices: slice,
         name: str | None = None,
         domain: list[str] | str | None = None,
-        auxiliary_domains: dict | None = None,
-        domains: dict[str, list[str]] | None = None,
-        evaluation_array: list | None = None,
+        auxiliary_domains: dict[str, str] | None = None,
+        domains: dict[str, list[str] | str] | None = None,
+        evaluation_array: list[bool] | None = None,
     ):
         super().__init__(
             *y_slices,
