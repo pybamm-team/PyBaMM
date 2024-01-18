@@ -123,25 +123,24 @@ equivalent_circuit = lazy_import("pybamm.models.full_battery_models.equivalent_c
 #
 # Submodel classes
 #
-from .models.submodels.base_submodel import BaseSubModel
+BaseSubModel = lazy_import("pybamm.models.submodels.base_submodel", "BaseSubModel")
 
-from .models.submodels import (
-    active_material,
-    convection,
-    current_collector,
-    electrolyte_conductivity,
-    electrolyte_diffusion,
-    electrode,
-    external_circuit,
-    interface,
-    oxygen_diffusion,
-    particle,
-    porosity,
-    thermal,
-    transport_efficiency,
-    particle_mechanics,
-    equivalent_circuit_elements,
-)
+active_material = lazy_import("pybamm.models.submodels.active_material", "active_material")
+convection = lazy_import("pybamm.models.submodels.convection", "convection")
+current_collector = lazy_import("pybamm.models.submodels.current_collector", "current_collector")
+electrolyte_conductivity = lazy_import("pybamm.models.submodels.electrolyte_conductivity", "electrolyte_conductivity")
+electrolyte_diffusion = lazy_import("pybamm.models.submodels.electrolyte_diffusion", "electrolyte_diffusion")
+electrode = lazy_import("pybamm.models.submodels.electrode", "electrode")
+external_circuit = lazy_import("pybamm.models.submodels.external_circuit", "external_circuit")
+interface = lazy_import("pybamm.models.submodels.interface", "interface")
+oxygen_diffusion = lazy_import("pybamm.models.submodels.oxygen_diffusion", "oxygen_diffusion")
+particle = lazy_import("pybamm.models.submodels.particle", "particle")
+porosity = lazy_import("pybamm.models.submodels.porosity", "porosity")
+thermal = lazy_import("pybamm.models.submodels.thermal", "thermal")
+transport_efficiency = lazy_import("pybamm.models.submodels.transport_efficiency", "transport_efficiency")
+particle_mechanics = lazy_import("pybamm.models.submodels.particle_mechanics", "particle_mechanics")
+equivalent_circuit_elements = lazy_import("pybamm.models.submodels.equivalent_circuit_elements", "equivalent_circuit_elements")
+
 from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
