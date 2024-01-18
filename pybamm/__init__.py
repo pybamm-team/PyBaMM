@@ -53,9 +53,15 @@ have_optional_dependency = lazy_import("pybamm.util", "have_optional_dependency"
 is_jax_compatible = lazy_import("pybamm.util", "is_jax_compatible")
 get_git_commit_info = lazy_import("pybamm.util", "get_git_commit_info")
 
-from .logger import logger, set_logging_level, get_new_logger
-from .settings import settings
-from .citations import Citations, citations, print_citations
+logger = lazy_import("pybamm.logger", "logger")
+set_logging_level = lazy_import("pybamm.logger", "set_logging_level")
+get_new_logger = lazy_import("pybamm.logger", "get_new_logger")
+
+settings = lazy_import("pybamm.settings","settings")
+
+Citations = lazy_import("pybamm.citations", "Citations")
+citations = lazy_import("pybamm.citations", "citations")
+print_citations = lazy_import("pybamm.citations", "print_citations")
 
 #
 # Classes for the Expression Tree
