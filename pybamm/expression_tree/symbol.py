@@ -15,7 +15,6 @@ from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 if TYPE_CHECKING:  # pragma: no cover
     import casadi
-    from hints import S
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
@@ -149,7 +148,7 @@ def is_matrix_minus_one(expr: Symbol):
     return is_matrix_x(expr, -1)
 
 
-def simplify_if_constant(symbol: S) -> S:
+def simplify_if_constant(symbol: pybamm.Symbol):
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
