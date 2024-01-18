@@ -793,6 +793,18 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "AlessioBugetti",
+      "name": "Alessio Bugetti",
+      "avatar_url": "https://avatars.githubusercontent.com/u/38499721?v=4",
+      "profile": "https://github.com/AlessioBugetti",
+      "contributions": [
+        "infra",
+        "code",
+        "doc",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
