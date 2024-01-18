@@ -98,7 +98,6 @@ class TestIDAKLUJax_NoJax(TestCase):
     "IDAKLU Solver and/or JAX are not available",
 )
 class TestIDAKLUJax(TestCase):
-
     # Initialisation tests
 
     def test_initialise_twice(self):
