@@ -159,20 +159,24 @@ standard_spatial_vars = lazy_import("pybamm.geometry.standard_spatial_vars", "st
 #
 # Parameter classes and methods
 #
-from .parameters.parameter_values import ParameterValues
-from .parameters import constants
-from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
-from .parameters.electrical_parameters import (
-    electrical_parameters,
-    ElectricalParameters,
-)
-from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
-from .parameters.lithium_ion_parameters import LithiumIonParameters
-from .parameters.lead_acid_parameters import LeadAcidParameters
-from .parameters.ecm_parameters import EcmParameters
+ParameterValues = lazy_import("pybamm.parameters.parameter_values", "ParameterValues")
+constants = lazy_import("pybamm.parameters.constants", "constants")
+geometric_parameters = lazy_import("pybamm.parameters.geometric_parameters", "geometric_parameters")
+GeometricParameters = lazy_import("pybamm.parameters.geometric_parameters", "GeometricParameters")
+
+electrical_parameters = lazy_import("pybamm.parameters.electrical_parameters", "electrical_parameters")
+ElectricalParameters = lazy_import("pybamm.parameters.electrical_parameters", "ElectricalParameters")
+
+thermal_parameters = lazy_import("pybamm.parameters.thermal_parameters", "thermal_parameters")
+ThermalParameters = lazy_import("pybamm.parameters.thermal_parameters", "ThermalParameters")
+LithiumIonParameters = lazy_import("pybamm.parameters.lithium_ion_parameters", "LithiumIonParameters")
+LeadAcidParameters = lazy_import("pybamm.parameters.lead_acid_parameters", "LeadAcidParameters")
+EcmParameters = lazy_import("pybamm.parameters.ecm_parameters", "EcmParameters")
 from .parameters.size_distribution_parameters import *
-from .parameters.parameter_sets import parameter_sets
-from .parameters_cli import add_parameter, remove_parameter, edit_parameter
+parameter_sets = lazy_import("pybamm.parameters.parameter_sets", "parameter_sets")
+add_parameter = lazy_import("pybamm.parameters_cli", "add_parameter")
+remove_parameter = lazy_import("pybamm.parameters_cli", "remove_parameter")
+edit_parameter = lazy_import("pybamm.parameters_cli", "edit_parameter")
 
 #
 # Mesh and Discretisation classes
