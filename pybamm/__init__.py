@@ -69,22 +69,27 @@ print_citations = lazy_import("pybamm.citations", "print_citations")
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-from .expression_tree.array import Array, linspace, meshgrid
-from .expression_tree.matrix import Matrix
+Array = lazy_import("pybamm.expression_tree.array", "Array")
+linspace = lazy_import("pybamm.expression_tree.array", "linspace")
+meshgrid = lazy_import("pybamm.expression_tree.array", "meshgrid")
+Matrix = lazy_import("pybamm.expression_tree.matrix", "Matrix")
 from .expression_tree.unary_operators import *
 from .expression_tree.averages import *
-from .expression_tree.averages import _BaseAverage
+_BaseAverage = lazy_import("pybamm.expression_tree.averages", "_BaseAverage")
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
-from .expression_tree.interpolant import Interpolant
-from .expression_tree.input_parameter import InputParameter
-from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.scalar import Scalar
+Interpolant = lazy_import("pybamm.expression_tree.interpolant", "Interpolant")
+InputParameter = lazy_import("pybamm.expression_tree.input_parameter", "InputParameter")
+Parameter = lazy_import("pybamm.expression_tree.parameter", "Parameter")
+FunctionParameter = lazy_import("pybamm.expression_tree.parameter", "FunctionParameter")
+Scalar = lazy_import("pybamm.expression_tree.scalar", "Scalar")
 from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
-from .expression_tree.vector import Vector
-from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
+Vector = lazy_import("pybamm.expression_tree.vector", "Vector")
+StateVectorBase = lazy_import("pybamm.expression_tree.state_vector", "StateVectorBase")
+StateVector = lazy_import("pybamm.expression_tree.state_vector", "StateVector")
+StateVectorDot = lazy_import("pybamm.expression_tree.state_vector", "StateVectorDot")
 
 from .expression_tree.exceptions import *
 
