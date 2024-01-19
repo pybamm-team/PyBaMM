@@ -56,7 +56,7 @@ class SEIGrowth(BaseModel):
                     scale=c_sei_0,
                 )
                 c_av.print_name = f"c_{pos}_av"
-                c = pybamm.PrimaryBroadcast(c_av, "negative electrode")
+                c = pybamm.PrimaryBroadcast(c_av, f"{domain} electrode")
             elif self.reaction_loc == "full electrode":
                 c_sei_0 = self.phase_param.a_typ * (
                     self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
@@ -64,7 +64,7 @@ class SEIGrowth(BaseModel):
                 )
                 c = pybamm.Variable(
                     f"{Domain} {pos} {self.reaction_name}concentration [mol.m-3]",
-                    domain="negative electrode",
+                    domain=f"{domain} electrode",
                     auxiliary_domains={"secondary": "current collector"},
                     scale=c_sei_0,
                 )
@@ -215,11 +215,11 @@ class SEIGrowth(BaseModel):
                 f"{Domain} outer {self.reaction_name}concentration [mol.m-2]"
             ]
             j_inner = variables[
-                f"{Domain} inner {self.reaction_name}"
+                f"{Domain} electrode inner {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
             j_outer = variables[
-                f"{Domain} outer {self.reaction_name}"
+                f"{Domain} electrode outer {self.reaction_name}"
                 "interfacial current density [A.m-2]"
             ]
             a = 1
@@ -276,7 +276,8 @@ class SEIGrowth(BaseModel):
         dcdt_SEI_inner = a * j_inner / (param.F * phase_param.z_sei)
         dcdt_SEI_outer = a * j_outer / (param.F * phase_param.z_sei)
 
-        if self.options["SEI"].startswith("ec reaction limited"):
+        SEI_option = getattr(self.options, domain)["SEI"]
+        if SEI_option.startswith("ec reaction limited"):
             self.rhs = {c_outer: -dcdt_SEI_outer}
         else:
             self.rhs = {c_inner: -dcdt_SEI_inner, c_outer: -dcdt_SEI_outer}

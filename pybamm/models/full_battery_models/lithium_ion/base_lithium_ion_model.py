@@ -297,6 +297,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
+                if self.options["x-average side reactions"] == "true":
+                    reaction_loc = "x-average"
+                else:
+                    reaction_loc = "full electrode"
                 sei_option = getattr(self.options, domain)["SEI"]
                 sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
                 phases = self.options.phases[domain]
@@ -309,10 +313,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                             self.param, domain, self.options, phase, cracks=True
                         )
                     else:
-                        if self.options["x-average side reactions"] == "true":
-                            reaction_loc = "x-average"
-                        else:
-                            reaction_loc = "full electrode"
                         submodel = pybamm.sei.SEIGrowth(
                             self.param,
                             domain,

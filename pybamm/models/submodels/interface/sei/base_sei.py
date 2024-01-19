@@ -90,6 +90,10 @@ class BaseModel(BaseInterface):
                 "concentration [mol.m-3]": c_outer_av,
             }
 
+        # Get variables related to the total thickness
+        c_sei = c_inner + c_outer
+        variables.update(self._get_standard_total_concentration_variables(c_sei))
+
         return variables
 
     def _get_standard_total_concentration_variables(self, c_sei):

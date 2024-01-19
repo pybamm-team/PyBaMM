@@ -24,13 +24,13 @@ class SEIThickness(BaseModel):
         Whether this is a submodel for standard SEI or SEI on cracks
     """
 
-    def __init__(self, param, reaction_loc, options, phase, cracks=False):
-        super().__init__(param, options=options, phase=phase, cracks=cracks)
+    def __init__(self, param, domain, reaction_loc, options, phase, cracks=False):
+        super().__init__(param, domain, options=options, phase=phase, cracks=cracks)
         self.reaction_loc = reaction_loc
 
     def get_coupled_variables(self, variables):
         """Update variables related to the SEI thickness."""
-        Domain = self.domain.capitalize()
+        domain, Domain = self.domain_Domain
         phase_param = self.phase_param
         reaction_name = self.reaction_name
 
@@ -46,7 +46,7 @@ class SEIThickness(BaseModel):
                 c_to_L_outer = phase_param.V_bar_outer
             else:
                 a = variables[
-                    f"Negative electrode {self.phase_name}"
+                    f"{Domain} electrode {self.phase_name}"
                     "surface area to volume ratio [m-1]"
                 ]
                 c_to_L_inner = phase_param.V_bar_inner / a
@@ -55,12 +55,20 @@ class SEIThickness(BaseModel):
 
         if self.reaction_loc == "interface":
             # c is an interfacial quantity [mol.m-2]
-            c_inner = variables[f"Inner {reaction_name}concentration [mol.m-2]"]
-            c_outer = variables[f"Outer {reaction_name}concentration [mol.m-2]"]
+            c_inner = variables[
+                f"{Domain} inner {reaction_name}concentration [mol.m-2]"
+            ]
+            c_outer = variables[
+                f"{Domain} outer {reaction_name}concentration [mol.m-2]"
+            ]
         else:
             # c is a bulk quantity [mol.m-3]
-            c_inner = variables[f"Inner {reaction_name}concentration [mol.m-3]"]
-            c_outer = variables[f"Outer {reaction_name}concentration [mol.m-3]"]
+            c_inner = variables[
+                f"{Domain} inner {reaction_name}concentration [mol.m-3]"
+            ]
+            c_outer = variables[
+                f"{Domain} outer {reaction_name}concentration [mol.m-3]"
+            ]
 
         if self.reaction == "SEI":
             L_inner = c_inner * c_to_L_inner  # inner SEI thickness
@@ -97,14 +105,14 @@ class SEIThickness(BaseModel):
 
         variables.update(
             {
-                f"Inner {reaction_name}thickness [m]": L_inner,
-                f"X-averaged inner {reaction_name}thickness [m]": L_inner_av,
-                f"Outer {reaction_name}thickness [m]": L_outer,
-                f"X-averaged outer {reaction_name}thickness [m]": L_outer_av,
-                f"{reaction_name}thickness [m]": L_SEI,
-                f"X-averaged {reaction_name}thickness [m]": L_SEI_av,
-                f"Total {reaction_name}thickness [m]": L_SEI,
-                f"X-averaged total {reaction_name}thickness [m]": L_SEI_av,
+                f"{Domain} inner {reaction_name}thickness [m]": L_inner,
+                f"X-averaged {domain} inner {reaction_name}thickness [m]": L_inner_av,
+                f"{Domain} outer {reaction_name}thickness [m]": L_outer,
+                f"X-averaged {domain} outer {reaction_name}thickness [m]": L_outer_av,
+                f"{Domain} {reaction_name}thickness [m]": L_SEI,
+                f"X-averaged {domain} {reaction_name}thickness [m]": L_SEI_av,
+                f"{Domain} total {reaction_name}thickness [m]": L_SEI,
+                f"X-averaged {domain} total {reaction_name}thickness [m]": L_SEI_av,
             }
         )
 
@@ -118,7 +126,9 @@ class SEIThickness(BaseModel):
         else:
             if self.reaction_loc == "interface":
                 # c is an interfacial quantity [mol.m-2]
-                c_sei = variables[f"Total {self.reaction_name}concentration [mol.m-2]"]
+                c_sei = variables[
+                    f"{Domain} total {self.reaction_name}concentration [mol.m-2]"
+                ]
                 c_sei_av = pybamm.yz_average(c_sei)
                 c_sei_0 = (
                     self.phase_param.L_inner_0 / self.phase_param.V_bar_inner
@@ -128,7 +138,8 @@ class SEIThickness(BaseModel):
             else:
                 # c is a bulk quantity [mol.m-3]
                 c_sei = variables[
-                    f"X-averaged total {self.reaction_name}concentration [mol.m-3]"
+                    f"X-averaged {domain} total {self.reaction_name}"
+                    "concentration [mol.m-3]"
                 ]
                 c_sei_av = pybamm.yz_average(c_sei)
                 c_sei_0 = self.phase_param.a_typ * (
@@ -160,8 +171,8 @@ class SEIThickness(BaseModel):
 
         variables.update(
             {
-                f"Loss of lithium to {self.reaction_name}[mol]": Q_sei,
-                f"Loss of capacity to {self.reaction_name}[A.h]": Q_sei
+                f"Loss of lithium to {domain} {self.reaction_name}[mol]": Q_sei,
+                f"Loss of capacity to {domain} {self.reaction_name}[A.h]": Q_sei
                 * self.param.F
                 / 3600,
             }
