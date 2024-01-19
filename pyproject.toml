@@ -218,7 +218,6 @@ ignore = [
     "RET506",      # Unnecessary `elif`
     "B018",        # Found useless expression
     "RUF002",      # Docstring contains ambiguous
-    "UP007",       # For pyupgrade
 ]
 
 [tool.ruff.lint.per-file-ignores]
