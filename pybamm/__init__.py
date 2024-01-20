@@ -64,52 +64,52 @@ print_citations = lazy_import("pybamm.citations", "print_citations")
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-Array = lazy_import("pybamm.expression_tree.array", "Array")
-linspace = lazy_import("pybamm.expression_tree.array", "linspace")
-meshgrid = lazy_import("pybamm.expression_tree.array", "meshgrid")
-Matrix = lazy_import("pybamm.expression_tree.matrix", "Matrix")
+from .expression_tree.array import Array, linspace, meshgrid
+from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.averages import *
-_BaseAverage = lazy_import("pybamm.expression_tree.averages", "_BaseAverage")
+from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
-Interpolant = lazy_import("pybamm.expression_tree.interpolant", "Interpolant")
-InputParameter = lazy_import("pybamm.expression_tree.input_parameter", "InputParameter")
-Parameter = lazy_import("pybamm.expression_tree.parameter", "Parameter")
-FunctionParameter = lazy_import("pybamm.expression_tree.parameter", "FunctionParameter")
-Scalar = lazy_import("pybamm.expression_tree.scalar", "Scalar")
+from .expression_tree.interpolant import Interpolant
+from .expression_tree.input_parameter import InputParameter
+from .expression_tree.parameter import Parameter, FunctionParameter
+from .expression_tree.scalar import Scalar
 from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
-Vector = lazy_import("pybamm.expression_tree.vector", "Vector")
-StateVectorBase = lazy_import("pybamm.expression_tree.state_vector", "StateVectorBase")
-StateVector = lazy_import("pybamm.expression_tree.state_vector", "StateVector")
-StateVectorDot = lazy_import("pybamm.expression_tree.state_vector", "StateVectorDot")
+from .expression_tree.vector import Vector
+from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
 from .expression_tree.exceptions import *
 
 # Operations
-find_symbols = lazy_import("pybamm.expression_tree.operations.evaluate_python", "find_symbols")
-id_to_python_variable = lazy_import("pybamm.expression_tree.operations.evaluate_python", "id_to_python_variable")
-to_python = lazy_import("pybamm.expression_tree.operations.evaluate_python", "to_python")
-EvaluatorPython = lazy_import("pybamm.expression_tree.operations.evaluate_python", "EvaluatorPython")
+from .expression_tree.operations.evaluate_python import (
+    find_symbols,
+    id_to_python_variable,
+    to_python,
+    EvaluatorPython,
+)
 
-EvaluatorJax = lazy_import("pybamm.expression_tree.operations.evaluate_python", "EvaluatorJax")
-JaxCooMatrix = lazy_import("pybamm.expression_tree.operations.evaluate_python", "JaxCooMatrix")
-Jacobian = lazy_import("pybamm.expression_tree.operations.jacobian", "Jacobian")
-CasadiConverter = lazy_import("pybamm.expression_tree.operations.convert_to_casadi", "CasadiConverter")
-SymbolUnpacker = lazy_import("pybamm.expression_tree.operations.unpack_symbols", "SymbolUnpacker")
+from .expression_tree.operations.evaluate_python import EvaluatorJax
+from .expression_tree.operations.evaluate_python import JaxCooMatrix
+
+from .expression_tree.operations.jacobian import Jacobian
+from .expression_tree.operations.convert_to_casadi import CasadiConverter
+from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 
 #
 # Model classes
 #
-BaseModel = lazy_import("pybamm.models.base_model", "BaseModel")
-Event = lazy_import("pybamm.models.event", "Event")
-EventType = lazy_import("pybamm.models.event", "EventType")
+from .models.base_model import BaseModel
+from .models.event import Event
+from .models.event import EventType
 
 # Battery models
-BaseBatteryModel = lazy_import("pybamm.models.full_battery_models.base_battery_model", "BaseBatteryModel")
-BatteryModelOptions = lazy_import("pybamm.models.full_battery_models.base_battery_model", "BatteryModelOptions")
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel,
+    BatteryModelOptions,
+)
 
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
@@ -118,7 +118,7 @@ from .models.full_battery_models import equivalent_circuit
 #
 # Submodel classes
 #
-BaseSubModel = lazy_import("pybamm.models.submodels.base_submodel", "BaseSubModel")
+from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
     active_material,
@@ -147,10 +147,10 @@ from .models.submodels.interface import open_circuit_potential
 #
 # Geometry
 #
-Geometry = lazy_import("pybamm.geometry.geometry", "Geometry")
-battery_geometry = lazy_import("pybamm.geometry.battery_geometry", "battery_geometry")
+from .geometry.geometry import Geometry
+from .geometry.battery_geometry import battery_geometry
 
-KNOWN_COORD_SYS = lazy_import("pybamm.expression_tree.independent_variable", "KNOWN_COORD_SYS")
+from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
