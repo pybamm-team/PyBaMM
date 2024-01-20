@@ -14,6 +14,7 @@ import os
 #
 from pybamm.version import __version__
 from pybamm.util import lazy_import
+import lazy_loader as lazy
 
 #
 # Constants
@@ -34,24 +35,18 @@ PARAMETER_PATH = [
 ]
 
 
-#
-# Utility classes and methods
-#
-Timer = lazy_import("pybamm.util", "Timer")
-TimerTime = lazy_import("pybamm.util", "TimerTime")
-FuzzyDict = lazy_import("pybamm.util", "FuzzyDict")
-
-root_dir = lazy_import("pybamm.util", "root_dir")
-rmse = lazy_import("pybamm.util", "rmse")
-load = lazy_import("pybamm.util", "load")
-is_constant_and_can_evaluate = lazy_import("pybamm.util", "is_constant_and_can_evaluate")
-
-get_parameters_filepath = lazy_import("pybamm.util", "get_parameters_filepath")
-have_jax = lazy_import("pybamm.util", "have_jax")
-install_jax = lazy_import("pybamm.util", "install_jax")
-have_optional_dependency = lazy_import("pybamm.util", "have_optional_dependency")
-is_jax_compatible = lazy_import("pybamm.util", "is_jax_compatible")
-get_git_commit_info = lazy_import("pybamm.util", "get_git_commit_info")
+__getattr__, __dir__, __all__ = lazy.attach(
+    __name__,
+    submod_attrs={
+        #
+        # Utility classes and methods
+        #
+        'util': ['Timer', 'TimerTime', 'FuzzyDict',
+                 'root_dir', 'rmse', 'load', 'is_constant_and_can_evaluate',
+                 'get_parameters_filepath', 'have_jax', 'install_jax',
+                 'have_optional_dependency', 'is_jax_compatible', 'get_git_commit_info'],
+    }
+)
 
 logger = lazy_import("pybamm.logger", "logger")
 set_logging_level = lazy_import("pybamm.logger", "set_logging_level")
