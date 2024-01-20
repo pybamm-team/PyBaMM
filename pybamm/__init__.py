@@ -116,36 +116,38 @@ EventType = lazy_import("pybamm.models.event", "EventType")
 BaseBatteryModel = lazy_import("pybamm.models.full_battery_models.base_battery_model", "BaseBatteryModel")
 BatteryModelOptions = lazy_import("pybamm.models.full_battery_models.base_battery_model", "BatteryModelOptions")
 
-lead_acid = lazy_import("pybamm.models.full_battery_models.lead_acid", "lead_acid")
-lithium_ion = lazy_import("pybamm.models.full_battery_models.lithium_ion", "lithium_ion")
-equivalent_circuit = lazy_import("pybamm.models.full_battery_models.equivalent_circuit", "equivalent_circuit")
+from .models.full_battery_models import lead_acid
+from .models.full_battery_models import lithium_ion
+from .models.full_battery_models import equivalent_circuit
 
 #
 # Submodel classes
 #
 BaseSubModel = lazy_import("pybamm.models.submodels.base_submodel", "BaseSubModel")
 
-active_material = lazy_import("pybamm.models.submodels.active_material", "active_material")
-convection = lazy_import("pybamm.models.submodels.convection", "convection")
-current_collector = lazy_import("pybamm.models.submodels.current_collector", "current_collector")
-electrolyte_conductivity = lazy_import("pybamm.models.submodels.electrolyte_conductivity", "electrolyte_conductivity")
-electrolyte_diffusion = lazy_import("pybamm.models.submodels.electrolyte_diffusion", "electrolyte_diffusion")
-electrode = lazy_import("pybamm.models.submodels.electrode", "electrode")
-external_circuit = lazy_import("pybamm.models.submodels.external_circuit", "external_circuit")
-interface = lazy_import("pybamm.models.submodels.interface", "interface")
-oxygen_diffusion = lazy_import("pybamm.models.submodels.oxygen_diffusion", "oxygen_diffusion")
-particle = lazy_import("pybamm.models.submodels.particle", "particle")
-porosity = lazy_import("pybamm.models.submodels.porosity", "porosity")
-thermal = lazy_import("pybamm.models.submodels.thermal", "thermal")
-transport_efficiency = lazy_import("pybamm.models.submodels.transport_efficiency", "transport_efficiency")
-particle_mechanics = lazy_import("pybamm.models.submodels.particle_mechanics", "particle_mechanics")
-equivalent_circuit_elements = lazy_import("pybamm.models.submodels.equivalent_circuit_elements", "equivalent_circuit_elements")
+from .models.submodels import (
+    active_material,
+    convection,
+    current_collector,
+    electrolyte_conductivity,
+    electrolyte_diffusion,
+    electrode,
+    external_circuit,
+    interface,
+    oxygen_diffusion,
+    particle,
+    porosity,
+    thermal,
+    transport_efficiency,
+    particle_mechanics,
+    equivalent_circuit_elements,
+)
 
-kinetics = lazy_import("pybamm.models.submodels.interface.kinetics", "kinetics")
-sei = lazy_import("pybamm.models.submodels.interface.sei", "sei")
-lithium_plating = lazy_import("pybamm.models.submodels.interface.lithium_plating", "lithium_plating")
-interface_utilisation = lazy_import("pybamm.models.submodels.interface.interface_utilisation", "interface_utilisation")
-open_circuit_potential = lazy_import("pybamm.models.submodels.interface.open_circuit_potential", "open_circuit_potential")
+from .models.submodels.interface import kinetics
+from .models.submodels.interface import sei
+from .models.submodels.interface import lithium_plating
+from .models.submodels.interface import interface_utilisation
+from .models.submodels.interface import open_circuit_potential
 
 #
 # Geometry
@@ -154,29 +156,25 @@ Geometry = lazy_import("pybamm.geometry.geometry", "Geometry")
 battery_geometry = lazy_import("pybamm.geometry.battery_geometry", "battery_geometry")
 
 KNOWN_COORD_SYS = lazy_import("pybamm.expression_tree.independent_variable", "KNOWN_COORD_SYS")
-standard_spatial_vars = lazy_import("pybamm.geometry.standard_spatial_vars", "standard_spatial_vars")
+from .geometry import standard_spatial_vars
 
 #
 # Parameter classes and methods
 #
-ParameterValues = lazy_import("pybamm.parameters.parameter_values", "ParameterValues")
-constants = lazy_import("pybamm.parameters.constants", "constants")
-geometric_parameters = lazy_import("pybamm.parameters.geometric_parameters", "geometric_parameters")
-GeometricParameters = lazy_import("pybamm.parameters.geometric_parameters", "GeometricParameters")
-
-electrical_parameters = lazy_import("pybamm.parameters.electrical_parameters", "electrical_parameters")
-ElectricalParameters = lazy_import("pybamm.parameters.electrical_parameters", "ElectricalParameters")
-
-thermal_parameters = lazy_import("pybamm.parameters.thermal_parameters", "thermal_parameters")
-ThermalParameters = lazy_import("pybamm.parameters.thermal_parameters", "ThermalParameters")
-LithiumIonParameters = lazy_import("pybamm.parameters.lithium_ion_parameters", "LithiumIonParameters")
-LeadAcidParameters = lazy_import("pybamm.parameters.lead_acid_parameters", "LeadAcidParameters")
-EcmParameters = lazy_import("pybamm.parameters.ecm_parameters", "EcmParameters")
+from .parameters.parameter_values import ParameterValues
+from .parameters import constants
+from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
+from .parameters.electrical_parameters import (
+    electrical_parameters,
+    ElectricalParameters,
+)
+from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
+from .parameters.lithium_ion_parameters import LithiumIonParameters
+from .parameters.lead_acid_parameters import LeadAcidParameters
+from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
-parameter_sets = lazy_import("pybamm.parameters.parameter_sets", "parameter_sets")
-add_parameter = lazy_import("pybamm.parameters_cli", "add_parameter")
-remove_parameter = lazy_import("pybamm.parameters_cli", "remove_parameter")
-edit_parameter = lazy_import("pybamm.parameters_cli", "edit_parameter")
+from .parameters.parameter_sets import parameter_sets
+from .parameters_cli import add_parameter, remove_parameter, edit_parameter
 
 #
 # Mesh and Discretisation classes
