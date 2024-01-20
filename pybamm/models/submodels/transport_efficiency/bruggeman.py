@@ -39,7 +39,7 @@ class Bruggeman(BaseModel):
                     tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
                 else:
                     Domain = domain.capitalize()
-                    phi_k = (1 - variables[f"{Domain} porosity"])
+                    phi_k = 1 - variables[f"{Domain} porosity"]
                     pybamm.citations.register("bruggeman1935berechnung")
                     b_k = self.param.domain_params[domain.split()[0]].b_s
                     tor_k = phi_k**b_k

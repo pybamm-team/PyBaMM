@@ -39,7 +39,7 @@ class HyperbolaOfRevolution(BaseModel):
                     tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
                 else:
                     Domain = domain.capitalize()
-                    phi_k = (1 - variables[f"{Domain} porosity"])
+                    phi_k = 1 - variables[f"{Domain} porosity"]
                     tor_k = 2 - phi_k
                 tor_dict[domain] = tor_k
         variables.update(self._get_standard_transport_efficiency_variables(tor_dict))

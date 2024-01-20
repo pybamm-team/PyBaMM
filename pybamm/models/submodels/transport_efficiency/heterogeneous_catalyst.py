@@ -30,7 +30,7 @@ class HeterogeneousCatalyst(BaseModel):
             for domain in self.options.whole_cell_domains:
                 Domain = domain.capitalize()
                 eps_k = variables[f"{Domain} porosity"]
-                tor_k = eps_k / (1 - (1- eps_k)**(1/3))
+                tor_k = eps_k / (1 - (1 - eps_k) ** (1 / 3))
                 tor_dict[domain] = tor_k
         elif self.component == "Electrode":
             tor_dict = {}
@@ -39,8 +39,8 @@ class HeterogeneousCatalyst(BaseModel):
                     tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
                 else:
                     Domain = domain.capitalize()
-                    phi_k = (1 - variables[f"{Domain} porosity"])
-                    tor_k = phi_k / (1 - (1- phi_k)**(1/3))
+                    phi_k = 1 - variables[f"{Domain} porosity"]
+                    tor_k = phi_k / (1 - (1 - phi_k) ** (1 / 3))
                 tor_dict[domain] = tor_k
         variables.update(self._get_standard_transport_efficiency_variables(tor_dict))
 
