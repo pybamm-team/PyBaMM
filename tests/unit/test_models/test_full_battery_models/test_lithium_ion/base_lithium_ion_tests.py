@@ -421,3 +421,22 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_transport_efficiency_tortuosity_factor(self):
         options = {"transport efficiency": "tortuosity factor"}
         self.check_well_posedness(options)
+
+    def test_well_posed_composite_kinetic_hysteresis(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "exchange-current density": (
+                ("current sigmoid", "single"),
+                "current sigmoid",
+            ),
+            "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_diffusion_hysteresis(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "diffusivity": (("current sigmoid", "current sigmoid"), "current sigmoid"),
+            "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
+        self.check_well_posedness(options)

@@ -119,9 +119,7 @@ for i, t in enumerate(plot_times):
         color=color,
         label="Numerical" if i == 0 else "",
     )
-    plt.plot(
-        xx, T_exact(xx, t), "-", color=color, label="Exact (t={})".format(plot_times[i])
-    )
+    plt.plot(xx, T_exact(xx, t), "-", color=color, label=f"Exact (t={plot_times[i]})")
 plt.xlabel("x", fontsize=16)
 plt.ylabel("T", fontsize=16)
 plt.legend()

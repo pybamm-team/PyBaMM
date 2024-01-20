@@ -64,30 +64,38 @@ if (NOT DEFINED USE_PYTHON_CASADI)
   set(USE_PYTHON_CASADI TRUE)
 endif()
 
+# Use importlib to find the casadi path without importing it. This is useful
+# to find the path for the build-time dependency, not the run-time dependency.
 execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
-    "import casadi as _; print(_.__path__[0])"
+    "import importlib.util; print(next(iter(importlib.util.find_spec('casadi').submodule_search_locations)))"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+  message("Found Python casadi path: ${CASADI_DIR}")
 endif()
-message("Found python casadi path: ${CASADI_DIR}")
 
 if(${USE_PYTHON_CASADI})
-  message("Trying to link against python casadi package")
-  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+  message("Trying to link against Python casadi package")
+  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED NO_DEFAULT_PATH)
 else()
-  message("Trying to link against any casadi package apart from the python one")
+  message("Trying to link against any casadi package apart from the Python one")
   set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
   find_package(casadi CONFIG REQUIRED)
 endif()
 
+set_target_properties(
+  idaklu PROPERTIES
+  INSTALL_RPATH "${CASADI_DIR}"
+  INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
-message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}")
+message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
@@ -98,6 +106,7 @@ if(DEFINED VCPKG_ROOT_DIR)
   find_package(SuiteSparse CONFIG REQUIRED)
 else()
   find_package(SuiteSparse REQUIRED)
+  message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})

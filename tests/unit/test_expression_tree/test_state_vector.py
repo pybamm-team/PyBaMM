@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 
 import unittest
+import unittest.mock as mock
 
 
 class TestStateVector(TestCase):
@@ -61,6 +62,39 @@ class TestStateVector(TestCase):
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
+
+    def test_to_from_json(self):
+        original_debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = False
+
+        array = np.array([1, 2, 3, 4, 5])
+        sv = pybamm.StateVector(slice(0, 10), evaluation_array=array)
+
+        json_dict = {
+            "name": "y[0:10]",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "y_slice": [
+                {
+                    "start": 0,
+                    "stop": 10,
+                    "step": None,
+                }
+            ],
+            "evaluation_array": [1, 2, 3, 4, 5],
+        }
+
+        self.assertEqual(sv.to_json(), json_dict)
+
+        self.assertEqual(pybamm.StateVector._from_json(json_dict), sv)
+
+        # Turn debug mode back to what is was before
+        pybamm.settings.debug_mode = original_debug_mode
 
 
 class TestStateVectorDot(TestCase):

@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 
-class StandardOutputComparison(object):
+class StandardOutputComparison:
     """Calls all the tests comparing standard output variables."""
 
     def __init__(self, solutions):
@@ -56,7 +56,7 @@ class StandardOutputComparison(object):
             self.run_test_class(PorosityComparison, skip_first_timestep)
 
 
-class BaseOutputComparison(object):
+class BaseOutputComparison:
     def __init__(self, time, solutions):
         self.t = time
         self.solutions = solutions
