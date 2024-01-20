@@ -1,4 +1,4 @@
-transport_efficiency
+Transport Efficiency
 ====================
 
 .. toctree::
