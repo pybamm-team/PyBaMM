@@ -45,18 +45,11 @@ __getattr__, __dir__, __all__ = lazy.attach(
                  'root_dir', 'rmse', 'load', 'is_constant_and_can_evaluate',
                  'get_parameters_filepath', 'have_jax', 'install_jax',
                  'have_optional_dependency', 'is_jax_compatible', 'get_git_commit_info'],
+        'logger': ['logger', 'set_logging_level', 'get_new_logger'],
+        'settings': ['settings'],
+        'citations': ['Citations', 'citations', 'print_citations']
     }
 )
-
-logger = lazy_import("pybamm.logger", "logger")
-set_logging_level = lazy_import("pybamm.logger", "set_logging_level")
-get_new_logger = lazy_import("pybamm.logger", "get_new_logger")
-
-settings = lazy_import("pybamm.settings","settings")
-
-Citations = lazy_import("pybamm.citations", "Citations")
-citations = lazy_import("pybamm.citations", "citations")
-print_citations = lazy_import("pybamm.citations", "print_citations")
 
 #
 # Classes for the Expression Tree
