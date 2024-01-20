@@ -30,7 +30,7 @@ class OrderedPacking(BaseModel):
             for domain in self.options.whole_cell_domains:
                 Domain = domain.capitalize()
                 eps_k = variables[f"{Domain} porosity"]
-                tor_k = (3 - eps_k)*0.5
+                tor_k = (3 - eps_k) * 0.5
                 tor_dict[domain] = tor_k
         elif self.component == "Electrode":
             tor_dict = {}
@@ -39,8 +39,8 @@ class OrderedPacking(BaseModel):
                     tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
                 else:
                     Domain = domain.capitalize()
-                    phi_k = (1 - variables[f"{Domain} porosity"])
-                    tor_k = (3 - phi_k)*0.5
+                    phi_k = 1 - variables[f"{Domain} porosity"]
+                    tor_k = (3 - phi_k) * 0.5
                 tor_dict[domain] = tor_k
         variables.update(self._get_standard_transport_efficiency_variables(tor_dict))
 

@@ -37,7 +37,7 @@ class TortuosityFactor(BaseModel):
                     tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
                 else:
                     Domain = domain.capitalize()
-                    phi_k = (1 - variables[f"{Domain} porosity"])
+                    phi_k = 1 - variables[f"{Domain} porosity"]
                     tau_k = self.param.domain_params[domain.split()[0]].tau_s
                     tor_k = phi_k / tau_k
                 tor_dict[domain] = tor_k
