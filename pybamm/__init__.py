@@ -63,6 +63,10 @@ from .expression_tree.binary_operators import *
 from .expression_tree.parameter import Parameter
 from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
 from .expression_tree.averages import _BaseAverage
+from .expression_tree import Min, Max
+
+from .parameters import thermal_parameters
+from .plotting import dynamic_plot
 
 import lazy_loader
 
@@ -909,7 +913,6 @@ __getattr__, __dir__, __all__ = lazy_loader.attach(
             'q_e',
             'separator',
             'size_distribution_parameters',
-            'thermal_parameters',
         ],
         'parameters_cli': [
             'add_parameter',
@@ -1326,7 +1329,7 @@ __all__ = ['ABSOLUTE_PATH', 'AbsoluteValue', 'Addition', 'Ai2020',
            'substrings', 'subtract', 'surf', 'surface_form_ohm',
            'surface_potential_form', 'swelling_only', 'symbol',
            'sympy_overrides', 't', 'tafel', 'tanh',
-           'theoretical_energy_integral', 'thermal', 'thermal_parameters',
+           'theoretical_energy_integral', 'thermal',
            'thevenin', 'through_cell', 'to_python', 'total_active_material',
            'total_interfacial_current', 'total_main_kinetics',
            'total_particle_concentration', 'total_sei', 'transport_efficiency',
