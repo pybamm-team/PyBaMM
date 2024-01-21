@@ -32,12 +32,37 @@ PARAMETER_PATH = [
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
 
+from .util import Timer, TimerTime, FuzzyDict, have_jax
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
 
 from .models.base_model import BaseModel
 from .geometry.battery_geometry import battery_geometry
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel,
+    BatteryModelOptions,
+)
+from .expression_tree.symbol import Symbol
+from .expression_tree import (SpatialOperator,
+                              Concatenation,
+                              is_scalar_zero,
+                              is_scalar_one,
+                              is_scalar_minus_one,
+                              is_scalar_minus_one,
+                              is_matrix_zero,
+                              is_matrix_one,
+                              is_matrix_minus_one,
+                              Integral,
+                              Function,
+                              Array,
+                            )
+from .expression_tree import *
+from .expression_tree.broadcasts import Broadcast
+from .expression_tree.binary_operators import *
+from .expression_tree.parameter import Parameter
+from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
+from .expression_tree.averages import _BaseAverage
 
 import lazy_loader
 
