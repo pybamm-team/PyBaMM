@@ -36,6 +36,9 @@ from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
 
+from .models.base_model import BaseModel
+from .geometry.battery_geometry import battery_geometry
+
 import lazy_loader
 
 
@@ -342,7 +345,6 @@ __getattr__, __dir__, __all__ = lazy_loader.attach(
             'R_n_edge',
             'R_p',
             'R_p_edge',
-            'battery_geometry',
             'geometry',
             'r_macro',
             'r_macro_edge',
@@ -559,7 +561,6 @@ __getattr__, __dir__, __all__ = lazy_loader.attach(
             'BaseKinetics',
             'BaseLeadingOrderSurfaceForm',
             'BaseMechanics',
-            'BaseModel',
             'BaseOpenCircuitPotential',
             'BaseParticle',
             'BasePlating',
@@ -991,7 +992,7 @@ __all__ = ['ABSOLUTE_PATH', 'AbsoluteValue', 'Addition', 'Ai2020',
            'BaseEffectiveResistance', 'BaseElectrode',
            'BaseElectrolyteConductivity', 'BaseElectrolyteDiffusion',
            'BaseIndefiniteIntegral', 'BaseInterface', 'BaseKinetics',
-           'BaseLeadingOrderSurfaceForm', 'BaseMechanics', 'BaseModel',
+           'BaseLeadingOrderSurfaceForm', 'BaseMechanics',
            'BaseOpenCircuitPotential', 'BaseParameters', 'BaseParticle',
            'BasePlating', 'BasePotentialPair', 'BaseSolver', 'BaseSubModel',
            'BaseTermination', 'BaseThermal', 'BaseThroughCellModel',
@@ -1108,7 +1109,7 @@ __all__ = ['ABSOLUTE_PATH', 'AbsoluteValue', 'Addition', 'Ai2020',
            'base_through_cell_convection', 'base_transport_efficiency',
            'base_transverse_convection', 'base_utilisation', 'basic_dfn',
            'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_full',
-           'basic_spm', 'batch_study', 'battery_geometry', 'binary_operators',
+           'basic_spm', 'batch_study', 'binary_operators',
            'boundary_gradient', 'boundary_value', 'bpx', 'broadcasts',
            'bruggeman_transport_efficiency', 'butler_volmer', 'c1', 'c1_data',
            'c_rate', 'c_solvers', 'calculate_theoretical_energy',
