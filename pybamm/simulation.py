@@ -336,7 +336,10 @@ class Simulation:
         """
         A method to set the parameters in the model and the associated geometry.
         """
-
+        msg = (
+        "pybamm.set_paramters is meant to be accessed directly."
+        )
+        warn(msg, DeprecationWarning)
         if self.model_with_set_params:
             return
 
