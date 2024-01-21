@@ -178,6 +178,7 @@ class Simulation:
 
     def set_up_and_parameterise_experiment(self):
         """
+        This is a helper function.
         Set up a simulation to run with an experiment. This creates a dictionary of
         inputs (current/voltage/power, running time, stopping condition) for each
         operating condition in the experiment. The model will then be solved by
@@ -186,6 +187,10 @@ class Simulation:
         This needs to be done here and not in the Experiment class because the nominal
         cell capacity (from the parameters) is used to convert C-rate to current.
         """
+        msg = (
+        "pybamm.simulation.set_up_and_parameterise_experiment is not meant to be accessed directly."
+        )
+        warn(msg, DeprecationWarning)
         # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
         for op_conds in self.experiment.operating_conditions_steps:
