@@ -16,6 +16,7 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
+    "EAGER_IMPORT": "",
 }
 VENV_DIR = Path("./venv").resolve()
 
