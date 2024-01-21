@@ -655,10 +655,10 @@ class QuickPlot:
 
         Parameters
         ----------
-        step : float
+        step : float, optional
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
             of the total time.
-        testing : bool
+        testing : bool, optional
             Whether to actually make the plot (turned off for unit tests)
 
         """
