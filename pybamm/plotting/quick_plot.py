@@ -472,6 +472,8 @@ class QuickPlot:
         ----------
         t : float
             Dimensional time (in 'time_units') at which to plot.
+        dynamic : bool, optional
+            Determine whether to allocate space for a slider at the bottom of the plot when generating a dynamic plot.
         """
 
         plt = have_optional_dependency("matplotlib.pyplot")
