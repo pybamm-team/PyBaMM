@@ -771,11 +771,11 @@ class QuickPlot:
 
         Parameters
         ----------
-        number_of_images : int (optional)
+        number_of_images : int, optional
             Number of images/plots to be compiled for a GIF.
-        duration : float (optional)
+        duration : float, optional
             Duration of visibility of a single image/plot in the created GIF.
-        output_filename : str (optional)
+        output_filename : str, optional
             Name of the generated GIF file.
 
         """
