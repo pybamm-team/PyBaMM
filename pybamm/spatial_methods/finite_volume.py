@@ -149,10 +149,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                 out = divergence_matrix @ (r_edges * discretised_symbol)
         elif coord_sys == "cartesian":
             out = divergence_matrix @ discretised_symbol
-        elif coord_sys is not None:
-            raise ValueError(
-                f"Coordinate system is {coord_sys}, not in"
-                " cartesian, cylindrical polar, spherical polar, None")
+        else:
+            if coord_sys is not None:
+                raise ValueError(
+                    f"Coordinate system is {coord_sys}, not in"
+                    " cartesian, cylindrical polar, spherical polar, None"
+                )
         return out
 
 

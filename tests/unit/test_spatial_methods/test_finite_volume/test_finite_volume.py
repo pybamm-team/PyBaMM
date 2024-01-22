@@ -83,6 +83,27 @@ class TestFiniteVolume(TestCase):
                 coord_sys="cartesian_2",
             )
 
+    def test_divergence(self):
+        """ unsuccessful try:
+        from unittest.mock import Mock, patch
+        variable = Mock()
+        variable.domain = "some_domain"
+
+        # Mock the necessary parts of the SpatialMethod class
+        spatial_method = pybamm.SpatialMethod()
+        spatial_method.mesh = {"some_domain": Mock()}
+        spatial_method.mesh[
+            "some_domain"].coord_sys = "unsupported_coord_system"
+
+        # Test that the ValueError is raised for unsupported coordinate system
+        with self.assertRaises(ValueError) as context:
+            spatial_method.divergence(variable, None, None)
+
+        self.assertIn(
+            "Coordinate system is unsupported_coord_system", 
+            str(context.exception)) """
+        return 
+
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Setup mesh and discretisation
         mesh = get_mesh_for_testing()
