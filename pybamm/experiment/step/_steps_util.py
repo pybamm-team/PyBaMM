@@ -128,7 +128,7 @@ class _Step:
                 t,
                 y,
                 pybamm.t - pybamm.InputParameter("start time"),
-                name="Current Drive Cycle",
+                name="Drive Cycle",
             )
             self.period = np.diff(t).min()
         else:
