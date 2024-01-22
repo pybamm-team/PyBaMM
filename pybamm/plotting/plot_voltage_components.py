@@ -4,10 +4,12 @@
 import numpy as np
 
 from pybamm.util import have_optional_dependency
+from pybamm.simulation import Simulation
+from pybamm.solvers.solution import Solution
 
 
 def plot_voltage_components(
-    solution,
+    input_data,
     ax=None,
     show_legend=True,
     split_by_electrode=False,
@@ -19,8 +21,8 @@ def plot_voltage_components(
 
     Parameters
     ----------
-    solution : :class:`pybamm.Solution`
-        Solution object from which to extract voltage components
+    input_data : :class:`pybamm.Solution` or :class:`pybamm.Simulation`
+        Solution or Simulation object from which to extract voltage components.
     ax : matplotlib Axis, optional
         The axis on which to put the plot. If None, a new figure and axis is created.
     show_legend : bool, optional
@@ -34,6 +36,11 @@ def plot_voltage_components(
         Keyword arguments, passed to ax.fill_between
 
     """
+    # Check if the input is a Simulation and extract Solution
+    if isinstance(input_data, Simulation):
+        solution = input_data.solution
+    elif isinstance(input_data, Solution):
+        solution = input_data
     plt = have_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
