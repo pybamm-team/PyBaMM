@@ -187,9 +187,7 @@ class Simulation:
         This needs to be done here and not in the Experiment class because the nominal
         cell capacity (from the parameters) is used to convert C-rate to current.
         """
-        msg = (
-        "pybamm.simulation.set_up_and_parameterise_experiment is not meant to be accessed directly."
-        )
+        msg = "pybamm.simulation.set_up_and_parameterise_experiment is not meant to be accessed directly."
         warn(msg, DeprecationWarning)
         # Update experiment using capacity
         capacity = self._parameter_values["Nominal cell capacity [A.h]"]
@@ -222,10 +220,8 @@ class Simulation:
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
-        msg = (
-        "pybamm.simulation.set_up_and_parameterise_model_for_experiment is not meant to be accessed directly."
-        )
-        warn(msg,DeprecationWarning)
+        msg = "pybamm.simulation.set_up_and_parameterise_model_for_experiment is not meant to be accessed directly."
+        warn(msg, DeprecationWarning)
         self.experiment_unique_steps_to_model = {}
         for op_number, op in enumerate(self.experiment.unique_steps):
             new_model = self._model.new_copy()
@@ -336,9 +332,7 @@ class Simulation:
         """
         A method to set the parameters in the model and the associated geometry.
         """
-        msg = (
-        "pybamm.set_paramters is meant to be accessed directly."
-        )
+        msg = "pybamm.set_paramters is meant to be accessed directly."
         warn(msg, DeprecationWarning)
         if self.model_with_set_params:
             return
