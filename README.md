@@ -14,7 +14,7 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-75-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-76-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -281,6 +281,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/cringeyburger"><img src="https://avatars.githubusercontent.com/u/121183876?v=4?s=100" width="100px;" alt="Ankit Meda"/><br /><sub><b>Ankit Meda</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=cringeyburger" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/AlessioBugetti"><img src="https://avatars.githubusercontent.com/u/38499721?v=4?s=100" width="100px;" alt="Alessio Bugetti"/><br /><sub><b>Alessio Bugetti</b></sub></a><br /><a href="#infra-AlessioBugetti" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=AlessioBugetti" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=AlessioBugetti" title="Documentation">📖</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=AlessioBugetti" title="Tests">⚠️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/kawaMANMI"><img src="https://avatars.githubusercontent.com/u/39382602?v=4?s=100" width="100px;" alt="kawaMANMI"/><br /><sub><b>kawaMANMI</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AkawaMANMI" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=kawaMANMI" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://akhilsharma.info"><img src="https://avatars.githubusercontent.com/u/68015525?v=4?s=100" width="100px;" alt="AKHIL SHARMA"/><br /><sub><b>AKHIL SHARMA</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Akhil-Sharma30" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
