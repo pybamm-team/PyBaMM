@@ -125,7 +125,10 @@ class _Step:
                 raise ValueError("Drive cycle must start at t=0")
 
             self.value = pybamm.Interpolant(
-                t, y, pybamm.t - pybamm.InputParameter("start time"),name = 'Current Drive Cycle'
+                t,
+                y,
+                pybamm.t - pybamm.InputParameter("start time"),
+                name="Current Drive Cycle",
             )
             self.period = np.diff(t).min()
         else:
