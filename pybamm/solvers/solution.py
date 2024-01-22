@@ -801,6 +801,42 @@ class Solution:
 
         return new_sol
 
+    def plot_voltage_components(
+        self,
+        ax=None,
+        show_legend=True,
+        split_by_electrode=False,
+        testing=False,
+        **kwargs_fill,
+    ):
+        """
+        Generate a plot showing the component overpotentials that make up the voltage
+
+        Parameters
+        ----------
+        ax : matplotlib Axis, optional
+            The axis on which to put the plot. If None, a new figure and axis is created.
+        show_legend : bool, optional
+            Whether to display the legend. Default is True.
+        split_by_electrode : bool, optional
+            Whether to show the overpotentials for the negative and positive electrodes
+            separately. Default is False.
+        testing : bool, optional
+            Whether to actually make the plot (turned off for unit tests).
+        kwargs_fill
+            Keyword arguments, passed to ax.fill_between.
+
+        """
+        # Use 'self' here as the solution object
+        return pybamm.plot_voltage_components(
+            self,
+            ax=ax,
+            show_legend=show_legend,
+            split_by_electrode=split_by_electrode,
+            testing=testing,
+            **kwargs_fill,
+        )
+
 
 class EmptySolution:
     def __init__(self, termination=None, t=None):
