@@ -5,7 +5,7 @@ import pybamm
 import unittest
 import numpy as np
 from datetime import datetime
-
+from pybamm.experiment.step import _Step
 
 class TestExperimentSteps(unittest.TestCase):
     def test_step(self):
@@ -275,7 +275,13 @@ class TestExperimentSteps(unittest.TestCase):
         event = neg_stoich_termination.get_event(variables, None)
         self.assertEqual(event.name, "Negative stoichiometry cut-off [experiment]")
         self.assertEqual(event.expression, 2)
+    
+    def test_drive_cycle_start_time(self):
+        # An example where start_time t>0
+        t = np.array([[1, 1], [2, 2], [3, 3]])
 
+        with self.assertRaisesRegex(ValueError, "Drive cycle must start at t=0"):
+           _Step('current', t)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
