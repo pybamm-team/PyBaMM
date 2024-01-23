@@ -80,7 +80,8 @@ plot = [
 ]
 # For the Citations class
 cite = [
-    "pybtex>=0.24.0",
+     "pybtex>=0.24.0",
+     "bibtexparser>=2.0.0b5",
 ]
 # To generate LaTeX strings
 latexify = [

@@ -7,7 +7,7 @@ import io
 import unittest
 import contextlib
 import warnings
-from pybtex.database import Entry
+from bibtexparser.model import Entry
 from tempfile import NamedTemporaryFile
 
 
@@ -47,15 +47,10 @@ class TestCitations(unittest.TestCase):
     def test_print_citations(self):
         pybamm.citations._reset()
 
-        # Text Style
-        with temporary_filename() as filename:
-            pybamm.print_citations(filename, "text")
-            with open(filename) as f:
-                self.assertTrue(len(f.readlines()) > 0)
 
         # Bibtext Style
         with temporary_filename() as filename:
-            pybamm.print_citations(filename, "bibtex")
+            pybamm.print_citations(filename)
             with open(filename) as f:
                 self.assertTrue(len(f.readlines()) > 0)
 
@@ -64,11 +59,11 @@ class TestCitations(unittest.TestCase):
         with contextlib.redirect_stdout(f):
             pybamm.print_citations()
         self.assertTrue(
-            "Python Battery Mathematical Modelling (PyBaMM)." in f.getvalue()
+            "   {Python Battery Mathematical Modelling (PyBaMM)}" in f.getvalue()
         )
 
-        with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
-            pybamm.print_citations("test_citations.txt", "bad format")
+        # with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
+        #     pybamm.print_citations("test_citations.txt", "bad format")
 
         pybamm.citations._citation_err_msg = "Error"
         with self.assertRaisesRegex(ImportError, "Error"):
@@ -111,7 +106,7 @@ class TestCitations(unittest.TestCase):
         """Test type validation of ``_add_citation``"""
         pybamm.citations.register(1)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(KeyError):
             pybamm.citations._parse_citation(1)
 
         with self.assertRaises(TypeError):

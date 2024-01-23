@@ -9,7 +9,6 @@ import warnings
 import os
 from sys import _getframe
 
-
 class Citations:
     """Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
@@ -72,7 +71,7 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        citations_file = citations_file = os.path.join(
+        citations_file = os.path.join(
             pybamm.root_dir(), "pybamm", "CITATIONS.bib"
         )
         parse_file = have_optional_dependency("bibtexparser", "parse_file")
@@ -158,7 +157,7 @@ class Citations:
             parse_string = have_optional_dependency("bibtexparser", "parse_string")
             bib_data = parse_string(key)
             if not bib_data.entries:
-                print("no entries found")
+                raise Exception("no entries found")
 
             # Add and register all citations
             for entry in bib_data.entries:
@@ -167,7 +166,7 @@ class Citations:
                 # Add to _papers_to_cite set
                 self._papers_to_cite.add(entry.key)
                 return
-        except:
+        except Exception:
             raise KeyError(f"Not a bibtex citation or known citation: {key}")
 
     def _tag_citations(self):
@@ -182,7 +181,7 @@ class Citations:
     def print(self, filename=None, verbose=False):
         """Print all citations that were used for running simulations. The verbose
         option is provided to print tags for citations in the output such that it can
-        can be seen where the citations were registered due to the use of PyBaMM models
+        be seen where the citations were registered due to the use of PyBaMM models
         and solvers in the code.
 
         .. note::
@@ -231,21 +230,22 @@ class Citations:
         citations = self._cited
 
         if filename is None:
-            # print(citations)
             for entry in citations:
-                self._string_formatting(entry)
+                print(self._string_formatting(entry))
             if verbose:
                 self._tag_citations()  # pragma: no cover
         else:
             with open(filename, "w") as f:
-                f.write(citations)
+                for entry in citations:
+                    f.write(self._string_formatting(entry))
+
 
     def _string_formatting(self, entry):
         txt_format = " "
         for key, value in entry.items():
             if key != "ID" and key != "ENTRYTYPE":
                 txt_format = txt_format + " " + str(value)
-        print(f" {txt_format} \n")
+        return f" {txt_format} \n"
 
     @property
     def citation_err_msg(self):
@@ -256,9 +256,7 @@ def print_citations(filename=None, verbose=False):
     """See :meth:`Citations.print`"""
     if citations._citation_err_msg is not None:
         raise ImportError(
-            f"Citations could not be registered. If you are on Google Colab - "
-            "pybtex does not work with Google Colab due to a known bug - "
-            "https://bitbucket.org/pybtex-devs/pybtex/issues/148/. "
+            f"Citations could not be registered."
             "Please manually cite all the references."
             "\nError encountered -\n"
             f"{citations.citation_err_msg}"
