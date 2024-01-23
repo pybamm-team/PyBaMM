@@ -163,7 +163,13 @@ class FunctionParameter(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id`"""
         self._id = hash(
-            (self.__class__, self.name, self.diff_variable, *tuple([child.id for child in self.children]), *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.diff_variable,
+                *tuple([child.id for child in self.children]),
+                *tuple(self.domain),
+            )
         )
 
     def diff(self, variable):

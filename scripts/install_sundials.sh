@@ -43,6 +43,10 @@ download $SUNDIALS_ROOT_ADDR $SUNDIALS_ARCHIVE_NAME
 extract $SUITESPARSE_ARCHIVE_NAME
 extract $SUNDIALS_ARCHIVE_NAME
 
+# Build in parallel wherever possible
+export MAKEFLAGS="-j$(nproc)"
+export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
+
 ### Compile and install SUITESPARSE ###
 # SuiteSparse is required to compile SUNDIALS's
 # KLU solver.

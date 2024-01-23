@@ -11,11 +11,10 @@ import pybamm
 
 if pybamm.have_jax():
     import jax
-    from jax.config import config
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
     if platform != "metal":
-        config.update("jax_enable_x64", True)
+        jax.config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:
@@ -42,7 +41,7 @@ class JaxCooMatrix:
     def __init__(self, row, col, data, shape):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         self.row = jax.numpy.array(row)
@@ -203,7 +202,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[0]}.multiply({children_vars[1]})"
             elif scipy.sparse.issparse(dummy_eval_right):
@@ -215,7 +216,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"
             else:
@@ -226,12 +229,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[0]}.multiply({children_vars[1]})"
             elif scipy.sparse.issparse(dummy_eval_right):
                 if output_jax and is_scalar(dummy_eval_left):
-                    symbol_str = f"{children_vars[1]}.scalar_multiply({children_vars[0]})"
+                    symbol_str = (
+                        f"{children_vars[1]}.scalar_multiply({children_vars[0]})"
+                    )
                 else:
                     symbol_str = f"{children_vars[1]}.multiply({children_vars[0]})"
             else:
@@ -515,7 +522,7 @@ class EvaluatorJax:
     def __init__(self, symbol):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)

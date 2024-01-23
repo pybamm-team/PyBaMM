@@ -42,8 +42,19 @@ class GeometricParameters(BaseParameters):
         self.r_inner = pybamm.Parameter("Inner cell radius [m]")
         self.r_outer = pybamm.Parameter("Outer cell radius [m]")
         self.A_cc = self.L_y * self.L_z  # Current collector cross sectional area
-        self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
-        self.V_cell = pybamm.Parameter("Cell volume [m3]")
+
+        # Cell surface area and volume (for thermal models only)
+        cell_geometry = self.options.get("cell geometry", None)
+        if cell_geometry == "pouch":
+            # assuming a single-layer pouch cell for now, see
+            # https://github.com/pybamm-team/PyBaMM/issues/1777
+            self.A_cooling = 2 * (
+                self.L_y * self.L_z + self.L_z * self.L + self.L_y * self.L
+            )
+            self.V_cell = self.L_y * self.L_z * self.L
+        else:
+            self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
+            self.V_cell = pybamm.Parameter("Cell volume [m3]")
 
 
 class DomainGeometricParameters(BaseParameters):

@@ -123,7 +123,7 @@ class ScipySolver(pybamm.BaseSolver):
             t_eval=t_eval,
             method=self.method,
             dense_output=True,
-            **extra_options
+            **extra_options,
         )
         integration_time = timer.time()
 

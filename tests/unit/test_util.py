@@ -12,7 +12,8 @@ from unittest.mock import patch
 from io import StringIO
 from tempfile import TemporaryDirectory
 
-anytree = sys.modules['anytree']
+anytree = sys.modules["anytree"]
+
 
 class TestUtil(TestCase):
     """
@@ -31,7 +32,7 @@ class TestUtil(TestCase):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
     def test_is_constant_and_can_evaluate(self):
-        sys.modules['anytree'] = anytree
+        sys.modules["anytree"] = anytree
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
         symbol = pybamm.StateVector(slice(0, 1))
@@ -96,9 +97,11 @@ class TestUtil(TestCase):
             bibtexparser = sys.modules['bibtexparser']
             sys.modules['bibtexparser'] = None
             pybamm.print_citations()
-        with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency anytree is not available."):
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "Optional dependency anytree is not available."
+        ):
             with TemporaryDirectory() as dir_name:
-                sys.modules['anytree'] = None
+                sys.modules["anytree"] = None
                 test_stub = os.path.join(dir_name, "test_visualize")
                 test_name = f"{test_stub}.png"
                 c = pybamm.Variable("c", "negative electrode")
