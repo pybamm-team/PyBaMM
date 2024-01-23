@@ -93,9 +93,11 @@ class TestUtil(TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
     def test_have_optional_dependency(self):
-        with self.assertRaisesRegex(ModuleNotFoundError, "Optional dependency bibtexparser is not available."):
-            bibtexparser = sys.modules['bibtexparser']
-            sys.modules['bibtexparser'] = None
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "Optional dependency bibtexparser is not available."
+        ):
+            bibtexparser = sys.modules["bibtexparser"]
+            sys.modules["bibtexparser"] = None
             pybamm.print_citations()
         with self.assertRaisesRegex(
             ModuleNotFoundError, "Optional dependency anytree is not available."
@@ -109,7 +111,7 @@ class TestUtil(TestCase):
                 sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
                 sym.visualise(test_name)
 
-        sys.modules['bibtexparser'] = bibtexparser
+        sys.modules["bibtexparser"] = bibtexparser
         pybamm.util.have_optional_dependency("bibtexparser")
         pybamm.print_citations()
 

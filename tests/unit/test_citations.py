@@ -47,7 +47,6 @@ class TestCitations(unittest.TestCase):
     def test_print_citations(self):
         pybamm.citations._reset()
 
-
         # Bibtext Style
         with temporary_filename() as filename:
             pybamm.print_citations(filename)
