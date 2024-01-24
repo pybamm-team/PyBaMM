@@ -6,7 +6,11 @@
 - Updated `plot_voltage_components.py` to support both `Simulation` and `Solution` objects. Added new methods in both `Simulation` and `Solution` classes for allow the syntax `simulation.plot_voltage_components` and `solution.plot_voltage_components`. Updated `test_plot_voltage_components.py` to reflect these changes ([#3723](https://github.com/pybamm-team/PyBaMM/pull/3723)).
 - The SEI thickness decreased at some intervals when the 'electron-migration limited' model was used. It has been corrected ([#3622](https://github.com/pybamm-team/PyBaMM/pull/3622))
 
-# [v24.1rc1](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc1) - 2024-01-17
+## Features
+
+- Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
+
+# [v24.1rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc2) - 2024-01-24
 
 ## Features
 
@@ -24,6 +28,7 @@
 
 ## Bug fixes
 
+- Fixed a bug that lead to a `ShapeError` when specifying "Ambient temperature [K]" as an `Interpolant` with an isothermal model ([#3761](https://github.com/pybamm-team/PyBaMM/pull/3761))
 - Fixed a bug where if the first step(s) in a cycle are skipped then the cycle solution started from the model's initial conditions instead of from the last state of the previous cycle ([#3708](https://github.com/pybamm-team/PyBaMM/pull/3708))
 - Fixed a bug where the lumped thermal model conflates cell volume with electrode volume  ([#3707](https://github.com/pybamm-team/PyBaMM/pull/3707))
 - Reverted a change to the coupled degradation example notebook that caused it to be unstable for large numbers of cycles ([#3691](https://github.com/pybamm-team/PyBaMM/pull/3691))
