@@ -67,6 +67,15 @@ class TestExperiment(TestCase):
         )
         self.assertEqual(experiment.cycle_lengths, [2, 1, 1])
 
+    def test_invalid_step_type(self):
+        unprocessed = {1.0}
+        period = 1
+        temperature = 300.0
+        with self.assertRaisesRegex(
+            TypeError, "Operating conditions must be a Step object or string."
+        ):
+            pybamm.Experiment.process_steps(unprocessed, period, temperature)
+
     def test_str_repr(self):
         conds = ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"]
         experiment = pybamm.Experiment(conds)
