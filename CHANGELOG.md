@@ -5,11 +5,14 @@
 - Updated `plot_voltage_components.py` to support both `Simulation` and `Solution` objects. Added new methods in both `Simulation` and `Solution` classes for allow the syntax `simulation.plot_voltage_components` and `solution.plot_voltage_components`. Updated `test_plot_voltage_components.py` to reflect these changes ([#3723](https://github.com/pybamm-team/PyBaMM/pull/3723)).
 - The SEI thickness decreased at some intervals when the 'electron-migration limited' model was used. It has been corrected ([#3622](https://github.com/pybamm-team/PyBaMM/pull/3622))
 
+## Features
+
+- Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
+
 # [v24.1rc1](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc1) - 2024-01-17
 
 ## Features
 
-- Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
 - The `pybamm_install_odes` command now includes support for macOS systems and can be used to set up SUNDIALS and install the `scikits.odes` solver on macOS ([#3417](https://github.com/pybamm-team/PyBaMM/pull/3417), [#3706](https://github.com/pybamm-team/PyBaMM/3706]))
 - Added support for Python 3.12 ([#3531](https://github.com/pybamm-team/PyBaMM/pull/3531))
 - Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
