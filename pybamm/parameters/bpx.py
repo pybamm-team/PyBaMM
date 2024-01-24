@@ -27,9 +27,7 @@ def process_float_function_table(value, name):
     Process BPX FloatFunctionTable to a float, python function or data for a pybamm
     Interpolant.
     """
-    if value is None:
-        pass
-    elif isinstance(value, Function):
+    if isinstance(value, Function):
         value = value.to_python_function(preamble=preamble)
     elif isinstance(value, InterpolatedTable):
         # return (name, (x, y)) to match the output of
@@ -453,11 +451,6 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
             and name == "particle"
         ):
             particle_instance = getattr(instance, "particle")
-            if len(particle_instance.keys()) > 2:
-                raise NotImplementedError(
-                    "PyBaMM does not support more than two "
-                    "particle phases in blended electrodes"
-                )
             # Loop over phases
             for i, phase_name in enumerate(particle_instance.keys()):
                 phase_instance = particle_instance[phase_name]

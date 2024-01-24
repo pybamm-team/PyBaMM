@@ -365,6 +365,69 @@ class TestBPX(TestCase):
             sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
             sim.solve(calc_esoh=False)
 
+    def test_bpx_blended_error(self):
+        bpx_obj = copy.copy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = {
+            "Thickness [m]": 5.23e-05,
+            "Conductivity [S.m-1]": 0.789,
+            "Porosity": 0.277493,
+            "Transport efficiency": 0.1462,
+            "Particle": {
+                "Large Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 8e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Medium Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 4e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Small Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 1e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+            },
+        }
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            with self.assertRaisesRegex(NotImplementedError, "PyBaMM does not support"):
+                pybamm.ParameterValues.create_from_bpx(tmp.name)
+
     def test_bpx_user_defined(self):
         bpx_obj = copy.copy(self.base)
         data = {"x": [0, 1], "y": [0, 1]}
