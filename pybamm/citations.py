@@ -216,6 +216,7 @@ class Citations:
             Marquis2019 was cited due to the use of SPM
 
         """
+        bibtexparser = have_optional_dependency("bibtexparser")
         try:
             for key in self._unknown_citations:
                 self._parse_citation(key)
