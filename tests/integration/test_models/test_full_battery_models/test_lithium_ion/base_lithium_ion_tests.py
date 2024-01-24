@@ -272,10 +272,9 @@ class BaseIntegrationTestLithiumIon:
             "r_n": 26,  # negative particle
             "r_p": 26,  # positive particle
         }
-        self.run_basic_processing_test(options,
-                                       parameter_values=parameter_values,
-                                       var_pts=var_pts
-                                       )
+        self.run_basic_processing_test(
+            options, parameter_values=parameter_values, var_pts=var_pts
+        )
 
     def test_positive_cracking(self):
         options = {"particle mechanics": ("none", "swelling and cracking")}
@@ -287,10 +286,9 @@ class BaseIntegrationTestLithiumIon:
             "r_n": 26,  # negative particle
             "r_p": 26,  # positive particle
         }
-        self.run_basic_processing_test(options,
-                                       parameter_values=parameter_values,
-                                       var_pts=var_pts
-                                       )
+        self.run_basic_processing_test(
+            options, parameter_values=parameter_values, var_pts=var_pts
+        )
 
     def test_both_cracking(self):
         options = {"particle mechanics": "swelling and cracking"}
@@ -302,10 +300,9 @@ class BaseIntegrationTestLithiumIon:
             "r_n": 26,  # negative particle
             "r_p": 26,  # positive particle
         }
-        self.run_basic_processing_test(options,
-                                       parameter_values=parameter_values,
-                                       var_pts=var_pts
-                                       )
+        self.run_basic_processing_test(
+            options, parameter_values=parameter_values, var_pts=var_pts
+        )
 
     def test_both_swelling_only(self):
         options = {"particle mechanics": "swelling only"}

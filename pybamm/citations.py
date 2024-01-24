@@ -9,6 +9,7 @@ import warnings
 import os
 from sys import _getframe
 
+
 class Citations:
     """Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
@@ -71,9 +72,7 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        citations_file = os.path.join(
-            pybamm.root_dir(), "pybamm", "CITATIONS.bib"
-        )
+        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
         parse_file = have_optional_dependency("bibtexparser", "parse_file")
         bib_data = parse_file(citations_file)
         entries = bib_data.entries
@@ -239,7 +238,6 @@ class Citations:
             with open(filename, "w") as f:
                 for entry in citations:
                     f.write(self._string_formatting(entry))
-
 
     def _string_formatting(self, entry):
         txt_format = " "

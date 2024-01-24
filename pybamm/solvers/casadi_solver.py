@@ -183,9 +183,7 @@ class CasadiSolver(pybamm.BaseSolver):
             t = t_eval[0]
             t_f = t_eval[-1]
 
-            pybamm.logger.debug(
-                f"Start solving {model.name} with {self.name}"
-            )
+            pybamm.logger.debug(f"Start solving {model.name} with {self.name}")
 
             if self.mode == "safe without grid":
                 # in "safe without grid" mode,

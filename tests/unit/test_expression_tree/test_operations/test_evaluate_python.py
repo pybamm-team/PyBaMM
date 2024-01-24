@@ -45,9 +45,7 @@ class TestEvaluate(TestCase):
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
-        self.assertEqual(
-            list(variable_symbols.values())[2], f"{var_a} + {var_b}"
-        )
+        self.assertEqual(list(variable_symbols.values())[2], f"{var_a} + {var_b}")
 
         # test identical subtree
         constant_symbols = OrderedDict()
@@ -65,14 +63,10 @@ class TestEvaluate(TestCase):
         # test values of variable_symbols
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
         self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
-        self.assertEqual(
-            list(variable_symbols.values())[2], f"{var_a} + {var_b}"
-        )
+        self.assertEqual(list(variable_symbols.values())[2], f"{var_a} + {var_b}")
 
         var_child = pybamm.id_to_python_variable(expr.children[0].id)
-        self.assertEqual(
-            list(variable_symbols.values())[3], f"{var_child} + {var_b}"
-        )
+        self.assertEqual(list(variable_symbols.values())[3], f"{var_child} + {var_b}")
 
         # test unary op
         constant_symbols = OrderedDict()
@@ -107,9 +101,7 @@ class TestEvaluate(TestCase):
         self.assertEqual(list(variable_symbols.keys())[1], expr.id)
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
         var_funct = pybamm.id_to_python_variable(expr.id, True)
-        self.assertEqual(
-            list(variable_symbols.values())[1], f"{var_funct}({var_a})"
-        )
+        self.assertEqual(list(variable_symbols.values())[1], f"{var_funct}({var_a})")
 
         # test matrix
         constant_symbols = OrderedDict()
