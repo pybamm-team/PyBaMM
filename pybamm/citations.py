@@ -215,7 +215,6 @@ class Citations:
             Marquis2019 was cited due to the use of SPM
 
         """
-        bibtexparser = have_optional_dependency("bibtexparser")
         try:
             for key in self._unknown_citations:
                 self._parse_citation(key)
@@ -240,6 +239,9 @@ class Citations:
                     f.write(self._string_formatting(entry))
 
     def _string_formatting(self, entry):
+        bibtexparser = have_optional_dependency("bibtexparser")
+        if not isinstance(entry, bibtexparser.model.Entry):
+            raise TypeError()
         txt_format = " "
         for key, value in entry.items():
             if key != "ID" and key != "ENTRYTYPE":
