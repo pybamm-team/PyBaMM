@@ -16,7 +16,7 @@ import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 
 
-class BaseSolver(object):
+class BaseSolver:
     """Solve a discretised model.
 
     Parameters
@@ -314,7 +314,7 @@ class BaseSolver(object):
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
             raise pybamm.SolverError(
-                "Cannot use ODE solver '{}' to solve DAE model".format(self.name)
+                f"Cannot use ODE solver '{self.name}' to solve DAE model"
             )
         # Check model.rhs for algebraic solvers
         if self.algebraic_solver is True and len(model.rhs) > 0:
@@ -338,16 +338,14 @@ class BaseSolver(object):
             except pybamm.DiscretisationError as e:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, "
-                    "model should be discretised before solving ({})".format(e)
+                    f"model should be discretised before solving ({e})"
                 )
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
-                "Converting {} to CasADi for solving with CasADi solver".format(
-                    model.name
-                )
+                f"Converting {model.name} to CasADi for solving with CasADi solver"
             )
             model.convert_to_format = "casadi"
         if (
@@ -355,9 +353,7 @@ class BaseSolver(object):
             and model.convert_to_format != "casadi"
         ):
             pybamm.logger.warning(
-                "Converting {} to CasADi for calculating ICs with CasADi".format(
-                    model.name
-                )
+                f"Converting {model.name} to CasADi for calculating ICs with CasADi"
             )
             model.convert_to_format = "casadi"
 
@@ -688,9 +684,7 @@ class BaseSolver(object):
         try:
             root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
-            raise pybamm.SolverError(
-                "Could not find consistent states: {}".format(e.args[0])
-            )
+            raise pybamm.SolverError(f"Could not find consistent states: {e.args[0]}")
         pybamm.logger.debug("Found consistent states")
 
         self.check_extrapolation(root_sol, model.events)
@@ -702,7 +696,6 @@ class BaseSolver(object):
         model,
         t_eval=None,
         inputs=None,
-        initial_conditions=None,
         nproc=None,
         calculate_sensitivities=False,
     ):
@@ -721,14 +714,10 @@ class BaseSolver(object):
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
-        initial_conditions : :class:`pybamm.Symbol`, optional
-            Initial conditions to use when solving the model. If None (default),
-            `model.concatenated_initial_conditions` is used. Otherwise, must be a symbol
-            of size `len(model.rhs) + len(model.algebraic)`.
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivites : list of str or bool
+        calculate_sensitivities : list of str or bool
             If true, solver calculates sensitivities of all input parameters.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
@@ -748,7 +737,7 @@ class BaseSolver(object):
             If multiple calls to `solve` pass in different models
 
         """
-        pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+        pybamm.logger.info(f"Start solving {model.name} with {self.name}")
 
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
@@ -762,9 +751,14 @@ class BaseSolver(object):
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             if not isinstance(self, pybamm.DummySolver):
-                raise pybamm.ModelError(
-                    "Cannot solve empty model, use `pybamm.DummySolver` instead"
-                )
+                # check for a discretised model without original parameters
+                if not (
+                    model.concatenated_rhs is not None
+                    or model.concatenated_algebraic is not None
+                ):
+                    raise pybamm.ModelError(
+                        "Cannot solve empty model, use `pybamm.DummySolver` instead"
+                    )
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
@@ -783,7 +777,7 @@ class BaseSolver(object):
                     "'t_eval' can be provided as an array of times at which to "
                     "return the solution, or as a list [t0, tf] where t0 is the "
                     "initial time and tf is the final time, but has been provided "
-                    "as a list of length {}.".format(len(t_eval))
+                    f"as a list of length {len(t_eval)}."
                 )
             else:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
@@ -976,7 +970,7 @@ class BaseSolver(object):
 
         # Report times
         if len(solutions) == 1:
-            pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+            pybamm.logger.info(f"Finish solving {model.name} ({termination})")
             pybamm.logger.info(
                 (
                     "Set-up time: {}, Solve time: {} (of which integration time: {}), "
@@ -989,7 +983,7 @@ class BaseSolver(object):
                 )
             )
         else:
-            pybamm.logger.info("Finish solving {} for all inputs".format(model.name))
+            pybamm.logger.info(f"Finish solving {model.name} for all inputs")
             pybamm.logger.info(
                 ("Set-up time: {}, Solve time: {}, Total time: {}").format(
                     solutions[0].set_up_time,
@@ -1048,9 +1042,7 @@ class BaseSolver(object):
         # remove any discontinuities after end of t_eval
         discontinuities = [v for v in discontinuities if v < t_eval[-1]]
 
-        pybamm.logger.verbose(
-            "Discontinuity events found at t = {}".format(discontinuities)
-        )
+        pybamm.logger.verbose(f"Discontinuity events found at t = {discontinuities}")
         if isinstance(inputs, list):
             raise pybamm.SolverError(
                 "Cannot solve for a list of input parameters"
@@ -1209,9 +1201,7 @@ class BaseSolver(object):
             isinstance(old_solution, pybamm.EmptySolution)
             and old_solution.termination is None
         ):
-            pybamm.logger.verbose(
-                "Start stepping {} with {}".format(model.name, self.name)
-            )
+            pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
         if isinstance(old_solution, pybamm.EmptySolution):
             if not first_step_this_model:
@@ -1240,9 +1230,7 @@ class BaseSolver(object):
         self._check_events_with_initial_conditions(t_eval, model, model_inputs)
 
         # Step
-        pybamm.logger.verbose(
-            "Stepping for {:.0f} < t < {:.0f}".format(t_start_shifted, t_end)
-        )
+        pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
         solution = self._integrate(model, t_eval, model_inputs)
         solution.solve_time = timer.time()
@@ -1258,7 +1246,7 @@ class BaseSolver(object):
         solution.set_up_time = set_up_time
 
         # Report times
-        pybamm.logger.verbose("Finish stepping {} ({})".format(model.name, termination))
+        pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
             (
                 "Set-up time: {}, Step time: {} (of which integration time: {}), "
@@ -1327,7 +1315,7 @@ class BaseSolver(object):
                         "(possibly due to NaNs)"
                     )
                 # Add the event to the solution object
-                solution.termination = "event: {}".format(termination_event)
+                solution.termination = f"event: {termination_event}"
             # Update t, y and inputs to include event time and state
             # Note: if the final entry of t is equal to the event time we skip
             # this (having duplicate entries causes an error later in ProcessedVariable)
@@ -1479,10 +1467,8 @@ def process(
         jacp = None
         if model.calculate_sensitivities:
             report(
-                (
-                    f"Calculating sensitivities for {name} with respect "
-                    f"to parameters {model.calculate_sensitivities} using jax"
-                )
+                f"Calculating sensitivities for {name} with respect "
+                f"to parameters {model.calculate_sensitivities} using jax"
             )
             jacp = func.get_sensitivities()
         if use_jacobian:
@@ -1500,10 +1486,8 @@ def process(
         # to python evaluator
         if model.calculate_sensitivities:
             report(
-                (
-                    f"Calculating sensitivities for {name} with respect "
-                    f"to parameters {model.calculate_sensitivities}"
-                )
+                f"Calculating sensitivities for {name} with respect "
+                f"to parameters {model.calculate_sensitivities}"
             )
             jacp_dict = {
                 p: symbol.diff(pybamm.InputParameter(p))
@@ -1606,11 +1590,9 @@ def process(
                     casadi_expression = casadi.vertcat(x0, Sx_0, z0, Sz_0)
         elif model.calculate_sensitivities:
             report(
-                (
-                    f"Calculating sensitivities for {name} with respect "
-                    f"to parameters {model.calculate_sensitivities} using "
-                    "CasADi"
-                )
+                f"Calculating sensitivities for {name} with respect "
+                f"to parameters {model.calculate_sensitivities} using "
+                "CasADi"
             )
             # Compute derivate wrt p-stacked (can be passed to solver to
             # compute sensitivities online)

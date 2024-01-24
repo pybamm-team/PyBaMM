@@ -10,9 +10,8 @@ if pybamm.have_jax():
     import jax
     import jax.numpy as jnp
     from jax import core, dtypes
-    from jax import linear_util as lu
+    from jax.extend import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
-    from jax.config import config
     from jax.flatten_util import ravel_pytree
     from jax.interpreters import partial_eval as pe
     from jax.tree_util import tree_flatten, tree_map, tree_unflatten
@@ -20,7 +19,7 @@ if pybamm.have_jax():
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
     if platform != "metal":
-        config.update("jax_enable_x64", True)
+        jax.config.update("jax_enable_x64", True)
 
     MAX_ORDER = 5
     NEWTON_MAXITER = 4
@@ -217,9 +216,7 @@ if pybamm.have_jax():
         state["rtol"] = rtol
         state["M"] = mass
         EPS = jnp.finfo(y0.dtype).eps
-        state["newton_tol"] = jnp.maximum(
-            10 * EPS / rtol, jnp.minimum(0.03, rtol**0.5)
-        )
+        state["newton_tol"] = jnp.maximum(10 * EPS / rtol, jnp.minimum(0.03, rtol**0.5))
 
         scale_y0 = atol + rtol * jnp.abs(y0)
         y0, not_converged = _select_initial_conditions(
@@ -645,7 +642,8 @@ if pybamm.have_jax():
             # try again
             (state, updated_jacobian) = tree_map(
                 partial(
-                    jnp.where, not_converged * (updated_jacobian == False)  # noqa: E712
+                    jnp.where,
+                    not_converged * (updated_jacobian == False),  # noqa: E712
                 ),
                 (_update_jacobian(state, jac), True),
                 (state, False + updated_jacobian),
@@ -676,7 +674,7 @@ if pybamm.have_jax():
             #     )
 
             (state, step_accepted) = tree_map(
-                partial(jnp.where, converged * (error_norm > 1)),  # noqa: E712
+                partial(jnp.where, converged * (error_norm > 1)),
                 (_update_step_size_and_lu(state, factor), False),
                 (state, converged),
             )
@@ -883,8 +881,11 @@ if pybamm.have_jax():
             """
             return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
 
-        aug_mass = (mass, mass, onp.array(1.0)) + arg_dicts_to_values(
-            tree_map(arg_to_identity, args)
+        aug_mass = (
+            mass,
+            mass,
+            onp.array(1.0),
+            *arg_dicts_to_values(tree_map(arg_to_identity, args)),
         )
 
         def scan_fun(carry, i):
@@ -961,7 +962,7 @@ if pybamm.have_jax():
     @lu.transformation
     def ravel_first_arg_(unravel, y_flat, *args):
         y = unravel(y_flat)
-        ans = yield (y,) + args, {}
+        ans = yield (y, *args), {}
         ans_flat, _ = ravel_pytree(ans)
         yield ans_flat
 
@@ -1007,7 +1008,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     """
     if not pybamm.have_jax():
         raise ModuleNotFoundError(
-            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+            "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
         )
 
     def _check_arg(arg):

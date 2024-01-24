@@ -208,14 +208,14 @@ class TestSimulation(TestCase):
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model)
-        sim.solve([0,1], initial_soc = 0.9)
+        sim.solve([0, 1], initial_soc=0.9)
         self.assertEqual(sim._built_initial_soc, 0.9)
 
         # Test whether initial_soc works with half cell (build)
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model)
-        sim.build(initial_soc = 0.9)
+        sim.build(initial_soc=0.9)
         self.assertEqual(sim._built_initial_soc, 0.9)
 
         # Test whether initial_soc works with half cell when it is a voltage
@@ -227,7 +227,7 @@ class TestSimulation(TestCase):
         options = {"working electrode": "positive"}
         parameter_values["Current function [A]"] = 0.0
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sol = sim.solve([0,1], initial_soc = "{} V".format(ucv))
+        sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
         voltage = sol["Terminal voltage [V]"].entries
         self.assertAlmostEqual(voltage[0], ucv, places=5)
 
@@ -302,11 +302,9 @@ class TestSimulation(TestCase):
             sim = pybamm.Simulation(model)
             sim.solve([0, 600])
             with self.assertRaisesRegex(
-                    NotImplementedError,
-                    "Cannot save simulation if model format is python"
+                NotImplementedError, "Cannot save simulation if model format is python"
             ):
                 sim.save(test_name)
-
 
     def test_load_param(self):
         # Test load_sim for parameters imports
@@ -362,6 +360,26 @@ class TestSimulation(TestCase):
             sim.save(test_name)
             sim_load = pybamm.load_sim(test_name)
             self.assertEqual(sim.model.name, sim_load.model.name)
+
+    def test_save_load_model(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        # test exception if not discretised
+        with self.assertRaises(NotImplementedError):
+            sim.save_model("sim_save")
+
+        # save after solving
+        sim.solve([0, 600])
+        sim.save_model("sim_save")
+
+        # load model
+        saved_model = pybamm.load_model("sim_save.json")
+
+        self.assertEqual(model.options, saved_model.options)
+
+        os.remove("sim_save.json")
 
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())

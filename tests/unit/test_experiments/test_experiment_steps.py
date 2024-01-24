@@ -5,6 +5,7 @@ import pybamm
 import unittest
 import numpy as np
 from datetime import datetime
+from pybamm.experiment.step import _Step
 
 
 class TestExperimentSteps(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.type, "voltage")
         self.assertEqual(step.value, 1)
         self.assertEqual(step.duration, 3600)
-        self.assertEqual(step.termination, [{"type": "voltage", "value": 2.5}])
+        self.assertEqual(step.termination, [pybamm.step.VoltageTermination(2.5)])
         self.assertEqual(step.period, 60)
         self.assertEqual(step.temperature, 298.15)
         self.assertEqual(step.tags, ["test"])
@@ -155,25 +156,25 @@ class TestExperimentSteps(unittest.TestCase):
                 "type": "C-rate",
                 "value": -1,
                 "duration": None,
-                "termination": [{"type": "voltage", "value": 4.1}],
+                "termination": [pybamm.step.VoltageTermination(4.1)],
             },
             {
                 "value": 4.1,
                 "type": "voltage",
                 "duration": None,
-                "termination": [{"type": "current", "value": 0.05}],
+                "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
                 "type": "voltage",
                 "duration": None,
-                "termination": [{"type": "C-rate", "value": 0.02}],
+                "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
                 "type": "C-rate",
                 "value": 1 / 3,
                 "duration": 7200.0,
-                "termination": [{"type": "voltage", "value": 2.5}],
+                "termination": [pybamm.step.VoltageTermination(2.5)],
             },
         ]
 
@@ -263,6 +264,25 @@ class TestExperimentSteps(unittest.TestCase):
         # Test bad start_times
         with self.assertRaisesRegex(TypeError, "`start_time` should be"):
             pybamm.step._Step("current", 1, duration=3600, start_time="bad start_time")
+
+    def test_custom_termination(self):
+        def neg_stoich_cutoff(variables):
+            return variables["Negative electrode stoichiometry"] - 1
+
+        neg_stoich_termination = pybamm.step.CustomTermination(
+            name="Negative stoichiometry cut-off", event_function=neg_stoich_cutoff
+        )
+        variables = {"Negative electrode stoichiometry": 3}
+        event = neg_stoich_termination.get_event(variables, None)
+        self.assertEqual(event.name, "Negative stoichiometry cut-off [experiment]")
+        self.assertEqual(event.expression, 2)
+
+    def test_drive_cycle_start_time(self):
+        # An example where start_time t>0
+        t = np.array([[1, 1], [2, 2], [3, 3]])
+
+        with self.assertRaisesRegex(ValueError, "Drive cycle must start at t=0"):
+            _Step("current", t)
 
 
 if __name__ == "__main__":

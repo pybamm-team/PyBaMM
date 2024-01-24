@@ -13,7 +13,6 @@ class MPM(SPM):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.MPM()
     >>> model.name
     'Many-Particle Model'

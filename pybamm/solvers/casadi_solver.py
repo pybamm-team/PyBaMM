@@ -102,9 +102,9 @@ class CasadiSolver(pybamm.BaseSolver):
             self.mode = mode
         else:
             raise ValueError(
-                "invalid mode '{}'. Must be 'safe', for solving with events, "
+                f"invalid mode '{mode}'. Must be 'safe', for solving with events, "
                 "'fast', for solving quickly without events, or 'safe without grid' or "
-                "'fast with events' (both experimental)".format(mode)
+                "'fast with events' (both experimental)"
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max or 600
@@ -126,7 +126,7 @@ class CasadiSolver(pybamm.BaseSolver):
             self.perturb_algebraic_initial_conditions = (
                 perturb_algebraic_initial_conditions
             )
-        self.name = "CasADi solver with '{}' mode".format(mode)
+        self.name = f"CasADi solver with '{mode}' mode"
 
         # Initialize
         self.integrators_maxcount = integrators_maxcount
@@ -183,9 +183,7 @@ class CasadiSolver(pybamm.BaseSolver):
             t = t_eval[0]
             t_f = t_eval[-1]
 
-            pybamm.logger.debug(
-                "Start solving {} with {}".format(model.name, self.name)
-            )
+            pybamm.logger.debug(f"Start solving {model.name} with {self.name}")
 
             if self.mode == "safe without grid":
                 # in "safe without grid" mode,

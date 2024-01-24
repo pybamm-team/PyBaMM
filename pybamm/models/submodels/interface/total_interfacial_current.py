@@ -110,7 +110,7 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
             new_variables[
                 f"Sum of {domain} electrode {phase_name}"
                 "electrolyte reaction source terms [A.m-3]"
-            ] += (s_k * a_j_k)
+            ] += s_k * a_j_k
             new_variables[
                 f"Sum of x-averaged {domain} electrode {phase_name}"
                 "electrolyte reaction source terms [A.m-3]"

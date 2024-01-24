@@ -17,14 +17,27 @@ def update_version():
     Opens file and updates the version number
     """
     release_version = os.getenv("VERSION")[1:]
-    last_day_of_month = date.today() + relativedelta(day=31)
-
+    release_date = (
+        date.today()
+        if "rc" in release_version
+        else date.today() + relativedelta(day=31)
+    )
 
     # pybamm/version.py
     with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
         output = file.read()
         replace_version = re.sub(
             '(?<=__version__ = ")(.+)(?=")', release_version, output
+        )
+        file.truncate(0)
+        file.seek(0)
+        file.write(replace_version)
+
+    # pyproject.toml
+    with open(os.path.join(pybamm.root_dir(), "pyproject.toml"), "r+") as file:
+        output = file.read()
+        replace_version = re.sub(
+            r'(?<=\bversion = ")(.+)(?=")', release_version, output
         )
         file.truncate(0)
         file.seek(0)
@@ -38,26 +51,6 @@ def update_version():
         file.seek(0)
         file.write(replace_version)
 
-    # docs/source/_static/versions.json for readthedocs build
-    if "rc" not in release_version:
-        with open(
-            os.path.join(pybamm.root_dir(), "docs", "_static", "versions.json"),
-            "r+",
-        ) as file:
-            output = file.read()
-            json_data = json.loads(output)
-            json_data.insert(
-                2,
-                {
-                    "name": f"v{release_version}",
-                    "version": f"{release_version}",
-                    "url": f"https://docs.pybamm.org/en/v{release_version}/",
-                },
-            )
-            file.truncate(0)
-            file.seek(0)
-            file.write(json.dumps(json_data, indent=4))
-
     # vcpkg.json
     with open(os.path.join(pybamm.root_dir(), "vcpkg.json"), "r+") as file:
         output = file.read()
@@ -68,7 +61,7 @@ def update_version():
         file.write(replace_version)
 
     # Get latest commit id from pybamm-team/sundials-vcpkg-registry
-    cmd = "git ls-remote https://github.com/pybamm-team/sundials-vcpkg-registry | grep refs/heads/main | cut -f 1 | tr -d '\n'"  # noqa: E501
+    cmd = "git ls-remote https://github.com/pybamm-team/sundials-vcpkg-registry | grep refs/heads/main | cut -f 1 | tr -d '\n'"
     latest_commit_id = os.popen(cmd).read()
 
     # vcpkg-configuration.json
@@ -83,16 +76,21 @@ def update_version():
         file.write(replace_commit_id)
 
     changelog_line1 = "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n"
-    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {last_day_of_month}\n\n"  # noqa: E501
+    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {release_date}\n\n"
 
     # CHANGELOG.md
     with open(os.path.join(pybamm.root_dir(), "CHANGELOG.md"), "r+") as file:
         output_list = file.readlines()
         output_list[0] = changelog_line1
+        # add a new heading for rc0 releases
         if "rc0" in release_version:
             output_list.insert(2, changelog_line2)
         else:
-            output_list[2] = changelog_line2
+            # for rcX and final releases, update the already existing rc
+            # release heading
+            for i in range(0, len(output_list)):
+                if re.search("[v]\d\d\.\drc\d", output_list[i]):
+                    output_list[i] = changelog_line2[:-1]
         file.truncate(0)
         file.seek(0)
         file.writelines(output_list)
