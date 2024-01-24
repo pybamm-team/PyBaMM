@@ -9,7 +9,7 @@
 
 - Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
 
-# [v24.1rc1](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc1) - 2024-01-17
+# [v24.1rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc2) - 2024-01-24
 
 ## Features
 
