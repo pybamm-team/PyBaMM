@@ -38,11 +38,11 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""
+    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        session.install("wget", "cmake", silent=False)
-        session.run("python", "scripts/install_KLU_Sundials.py")
+        session.install("cmake", silent=False)
+        session.run("python", "scripts/install_KLU_Sundials.py", *session.posargs)
         if not os.path.exists("./pybind11"):
             session.run(
                 "git",
@@ -255,11 +255,11 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
+    # Run in single-threaded mode, see
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1643
     else:
         session.run(
             "sphinx-build",
-            "-j",
-            "auto",
             "-b",
             "html",
             "-W",

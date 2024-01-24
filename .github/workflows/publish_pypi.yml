@@ -59,7 +59,7 @@ jobs:
           .\bootstrap-vcpkg.bat
 
       - name: Cache packages installed through vcpkg on Windows
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: vckpg_binary_cache
         with:
@@ -213,7 +213,7 @@ jobs:
   open_failure_issue:
     needs: [build_windows_wheels, build_macos_and_linux_wheels, build_sdist]
     name: Open an issue if build fails
-    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
