@@ -1,7 +1,3 @@
-#
-# Experiment class
-#
-
 from __future__ import annotations
 import pybamm
 from .step._steps_util import (
@@ -47,20 +43,7 @@ class Experiment:
         period: str = "1 minute",
         temperature: float | None = None,
         termination: list[str] | None = None,
-        drive_cycles=None,
-        cccv_handling=None,
     ):
-        if cccv_handling is not None:
-            raise ValueError(
-                "cccv_handling has been deprecated, use "
-                "`pybamm.step.cccv_ode(current, voltage)` instead to produce the "
-                "same behavior as the old `cccv_handling='ode'`"
-            )
-        if drive_cycles is not None:
-            raise ValueError(
-                "drive_cycles should now be passed as an experiment step object, e.g. "
-                "`pybamm.step.current(drive_cycle)`"
-            )
         # Save arguments for copying
         self.args = (
             operating_conditions,
@@ -71,7 +54,6 @@ class Experiment:
 
         operating_conditions_cycles = []
         for cycle in operating_conditions:
-            # Check types and convert to list
             if not isinstance(cycle, tuple):
                 cycle = (cycle,)
             operating_conditions_cycles.append(cycle)
@@ -84,26 +66,14 @@ class Experiment:
         )
 
         # Convert strings to pybamm.step._Step objects
-        # We only do this once per unique step, do avoid unnecessary conversions
+        # We only do this once per unique step, to avoid unnecessary conversions
         # Assign experiment period and temperature if not specified in step
         self.period = _convert_time_to_seconds(period)
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
-        processed_steps = {}
-        for step in self.operating_conditions_steps_unprocessed:
-            if repr(step) in processed_steps:
-                continue
-            elif isinstance(step, str):
-                processed_step = pybamm.step.string(step)
-            elif isinstance(step, pybamm.step._Step):
-                processed_step = step
-
-            if processed_step.period is None:
-                processed_step.period = self.period
-            if processed_step.temperature is None:
-                processed_step.temperature = self.temperature
-
-            processed_steps[repr(step)] = processed_step
+        processed_steps = self.process_steps(
+            self.operating_conditions_steps_unprocessed, self.period, self.temperature
+        )
 
         self.operating_conditions_steps = [
             processed_steps[repr(step)]
@@ -129,6 +99,27 @@ class Experiment:
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
+    @staticmethod
+    def process_steps(unprocessed_steps, period, temp):
+        processed_steps = {}
+        for step in unprocessed_steps:
+            if repr(step) in processed_steps:
+                continue
+            elif isinstance(step, str):
+                processed_step = pybamm.step.string(step)
+            elif isinstance(step, pybamm.step._Step):
+                processed_step = step
+            else:
+                raise TypeError("Operating conditions must be a Step object or string.")
+
+            if processed_step.period is None:
+                processed_step.period = period
+            if processed_step.temperature is None:
+                processed_step.temperature = temp
+
+            processed_steps[repr(step)] = processed_step
+        return processed_steps
+
     def __str__(self):
         return str(self.operating_conditions_cycles)
 
@@ -138,7 +129,8 @@ class Experiment:
     def __repr__(self):
         return f"pybamm.Experiment({self!s})"
 
-    def read_termination(self, termination):
+    @staticmethod
+    def read_termination(termination):
         """
         Read the termination reason. If this condition is hit, the experiment will stop.
         """
@@ -197,7 +189,8 @@ class Experiment:
 
         return cycles
 
-    def _set_next_start_time(self, operating_conditions):
+    @staticmethod
+    def _set_next_start_time(operating_conditions):
         if all(isinstance(i, str) for i in operating_conditions):
             return operating_conditions
 
@@ -207,7 +200,7 @@ class Experiment:
         for op in reversed(operating_conditions):
             if isinstance(op, str):
                 op = pybamm.step.string(op)
-            elif not isinstance(op, pybamm.step._Step):
+            if not isinstance(op, pybamm.step._Step):
                 raise TypeError(
                     "Operating conditions should be strings or _Step objects"
                 )

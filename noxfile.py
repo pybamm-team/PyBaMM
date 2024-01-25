@@ -255,11 +255,11 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
+    # Run in single-threaded mode, see
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1643
     else:
         session.run(
             "sphinx-build",
-            "-j",
-            "auto",
             "-b",
             "html",
             "-W",

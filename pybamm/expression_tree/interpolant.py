@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import interpolate
 from typing import Sequence
-import warnings
+
 
 import pybamm
 
@@ -51,14 +51,6 @@ class Interpolant(pybamm.Function):
         extrapolate: bool = True,
         entries_string: str | None = None,
     ):
-        # "cubic spline" has been renamed to "cubic"
-        if interpolator == "cubic spline":
-            interpolator = "cubic"
-            warnings.warn(
-                "The 'cubic spline' interpolator has been renamed to 'cubic'.",
-                DeprecationWarning,
-            )
-
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")
