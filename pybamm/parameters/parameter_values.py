@@ -94,6 +94,7 @@ class ParameterValues:
             raise ValueError("Target SOC should be between 0 and 1")
 
         from bpx import parse_bpx_file, get_electrode_concentrations
+        from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
         from .bpx import _bpx_to_param_dict
 
         # parse bpx
@@ -111,9 +112,25 @@ class ParameterValues:
             # ahead with the low voltage limit.
 
         # get initial concentrations based on SOC
-        c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
-        pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
-        pybamm_dict["Initial concentration in positive electrode [mol.m-3]"] = c_p_init
+        # Note: we cannot set SOC for blended electrodes,
+        # see https://github.com/pybamm-team/PyBaMM/issues/2682
+        bpx_neg = bpx.parameterisation.negative_electrode
+        bpx_pos = bpx.parameterisation.positive_electrode
+        if isinstance(bpx_neg, (ElectrodeBlended, ElectrodeBlendedSPM)) or isinstance(
+            bpx_pos, (ElectrodeBlended, ElectrodeBlendedSPM)
+        ):
+            pybamm.logger.warning(
+                "Initial concentrations cannot be set using stoichiometry limits for "
+                "blend electrodes. Please set the initial concentrations manually."
+            )
+        else:
+            c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
+            pybamm_dict[
+                "Initial concentration in negative electrode [mol.m-3]"
+            ] = c_n_init
+            pybamm_dict[
+                "Initial concentration in positive electrode [mol.m-3]"
+            ] = c_p_init
 
         return pybamm.ParameterValues(pybamm_dict)
 
