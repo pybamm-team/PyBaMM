@@ -590,18 +590,18 @@ def full_like(symbols: tuple[pybamm.Symbol, ...], fill_value: float) -> pybamm.S
         return pybamm.Scalar(fill_value)
     try:
         shape = sum_symbol.shape
-        # use vector or matrix
-        if shape[1] == 1:
-            array_type: type[pybamm.Vector] = pybamm.Vector
-        else:
-            array_type: type[pybamm.Matrix] = pybamm.Matrix  # type:ignore[no-redef]
+
         # return dense array, except for a matrix of zeros
         if shape[1] != 1 and fill_value == 0:
             entries = csr_matrix(shape)
         else:
             entries = fill_value * np.ones(shape)
 
-        return array_type(entries, domains=sum_symbol.domains)
+        # use vector or matrix
+        if shape[1] == 1:
+            return pybamm.Vector(entries, domains=sum_symbol.domains)
+        else:
+            return pybamm.Matrix(entries, domains=sum_symbol.domains)
 
     except NotImplementedError:
         if (

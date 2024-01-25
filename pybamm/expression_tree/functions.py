@@ -75,7 +75,7 @@ class Function(pybamm.Symbol):
             return pybamm.Scalar(1)
         else:
             children = self.orphans
-            partial_derivatives = [None] * len(children)
+            partial_derivatives: list[None | pybamm.Symbol] = [None] * len(children)
             for i, child in enumerate(self.children):
                 # if variable appears in the function, differentiate
                 # function, and apply chain rule
@@ -87,9 +87,9 @@ class Function(pybamm.Symbol):
             # remove None entries
             partial_derivatives = [x for x in partial_derivatives if x is not None]
 
-            derivative = sum(partial_derivatives)  # type: ignore[arg-type]
+            derivative = sum(partial_derivatives)
             if derivative == 0:
-                derivative = pybamm.Scalar(0)  # type: ignore[assignment]
+                return pybamm.Scalar(0)
 
             return derivative
 

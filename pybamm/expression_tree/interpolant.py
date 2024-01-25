@@ -129,14 +129,14 @@ class Interpolant(pybamm.Function):
             self.dimension = 1
             if interpolator == "linear":
                 if extrapolate is False:
-                    fill_value = np.nan
+                    fill_value_1: float | str = np.nan
                 elif extrapolate is True:
-                    fill_value = "extrapolate"  # type: ignore[assignment]
+                    fill_value_1 = "extrapolate"
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y.T,
                     bounds_error=False,
-                    fill_value=fill_value,
+                    fill_value=fill_value_1,
                 )
             elif interpolator == "cubic":
                 interpolating_function = interpolate.CubicSpline(

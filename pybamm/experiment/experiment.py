@@ -43,7 +43,7 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions: list[str],
+        operating_conditions: list[str | tuple[str]],
         period: str = "1 minute",
         temperature: float | None = None,
         termination: list[str] | None = None,
@@ -73,7 +73,7 @@ class Experiment:
         for cycle in operating_conditions:
             # Check types and convert to list
             if not isinstance(cycle, tuple):
-                cycle = (cycle,)  # type: ignore[assignment]
+                cycle = (cycle,)
             operating_conditions_cycles.append(cycle)
 
         self.operating_conditions_cycles = operating_conditions_cycles

@@ -247,12 +247,15 @@ class Serialise:
         try:
             empty_class = self._Empty()
             empty_class.__class__ = class_
+
+            return empty_class
+
         except TypeError:
             # Mesh objects have a different layouts
-            empty_class = self._EmptyDict()  # type: ignore[assignment]
-            empty_class.__class__ = class_
+            empty_dict_class = self._EmptyDict()
+            empty_dict_class.__class__ = class_
 
-        return empty_class
+            return empty_dict_class
 
     def _deconstruct_pybamm_dicts(self, dct: dict):
         """

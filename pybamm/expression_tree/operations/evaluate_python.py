@@ -70,9 +70,7 @@ class JaxCooMatrix:
         """
         # assume b is a column vector
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-        return result.at[self.row].add(
-            self.data.reshape(-1, 1) * b[self.col]  # type:ignore[index]
-        )
+        return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
 
     def scalar_multiply(self, b: float):
         """
