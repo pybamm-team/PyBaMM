@@ -33,10 +33,12 @@ class SEIThickness(BaseModel):
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
         reaction_name = self.reaction_name
+        SEI_option = getattr(self.options, domain)["SEI"]
+        crack_option = getattr(self.options, domain)["SEI on cracks"]
 
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
-        if self.options["SEI"] == "none":
+        if SEI_option == "none":
             c_to_L_inner = 1
             c_to_L_outer = 1
             R_sei = 1
@@ -89,7 +91,7 @@ class SEIThickness(BaseModel):
         # Thickness variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
             # if SEI on cracks is false, skip over roughness to avoid division by zero
-            if self.options["SEI on cracks"] == "false":
+            if crack_option == "false":
                 L_inner = c_inner * c_to_L_inner
                 L_outer = c_outer * c_to_L_outer
             else:
@@ -118,10 +120,9 @@ class SEIThickness(BaseModel):
 
         # Calculate change in total SEI moles with respect to initial state
         # If there is no SEI, skip and return 0 because parameters may be undefined
-        crack_opt = self.options["SEI on cracks"]
-        if self.reaction == "SEI" and self.options["SEI"] == "none":
+        if self.reaction == "SEI" and SEI_option == "none":
             Q_sei = pybamm.Scalar(0)
-        elif self.reaction == "SEI on cracks" and crack_opt == "false":
+        elif self.reaction == "SEI on cracks" and crack_option == "false":
             Q_sei = pybamm.Scalar(0)
         else:
             if self.reaction_loc == "interface":
