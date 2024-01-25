@@ -670,7 +670,16 @@ class Symbol:
         return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
     def __bool__(self):
-        raise NotImplementedError("Boolean operator not defined for Symbols.")
+        raise NotImplementedError(
+            "Boolean operator not defined for Symbols. You might be seeing this message because you are trying to "
+            "specify an if statement based on the value of a symbol, e.g." \
+            "\nif x < 0:\n" \
+            "\ty = 1\n" \
+            "else:\n" \
+            "\ty = 2\n" \
+            "In this case, use heaviside functions instead:" \
+            "\ny = 1 * (x < 0) + 2 * (x >= 0)"
+        )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         """
