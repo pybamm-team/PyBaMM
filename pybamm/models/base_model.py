@@ -101,7 +101,7 @@ class BaseModel:
         self._rhs = {}
         self._algebraic = {}
         self._initial_conditions = {}
-        self._boundary_conditions = {}
+        self._boundary_conditions = BoundaryConditionsDict({})
         self._variables = pybamm.FuzzyDict({})
         self._events = []
         self._concatenated_rhs = None
