@@ -338,11 +338,15 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
 
             if callable(D_ref):
-                pybamm_dict[phase_domain_pre_name.replace('electrode', 'particle') + "diffusivity [m2.s-1]"] = partial(
-                    _diffusivity, D_ref=D_ref, Ea=Ea_D
-                )
+                pybamm_dict[
+                    phase_domain_pre_name.replace("electrode", "particle")
+                    + "diffusivity [m2.s-1]"
+                ] = partial(_diffusivity, D_ref=D_ref, Ea=Ea_D)
             elif isinstance(D_ref, tuple):
-                pybamm_dict[phase_domain_pre_name.replace('electrode', 'particle') + "diffusivity [m2.s-1]"] = partial(
+                pybamm_dict[
+                    phase_domain_pre_name.replace("electrode", "particle")
+                    + "diffusivity [m2.s-1]"
+                ] = partial(
                     _diffusivity,
                     D_ref=partial(
                         _interpolant_func, name=D_ref[0], x=D_ref[1][0], y=D_ref[1][1]
@@ -350,9 +354,10 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                     Ea=Ea_D,
                 )
             else:
-                pybamm_dict[phase_domain_pre_name.replace('electrode', 'particle') + "diffusivity [m2.s-1]"] = partial(
-                    _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
-                )
+                pybamm_dict[
+                    phase_domain_pre_name.replace("electrode", "particle")
+                    + "diffusivity [m2.s-1]"
+                ] = partial(_diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True)
 
     # electrolyte
     Ea_D_e = pybamm_dict.get(
