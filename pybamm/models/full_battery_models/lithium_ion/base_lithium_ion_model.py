@@ -54,6 +54,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_lithium_plating_submodel()
         self.set_li_metal_counter_electrode_submodels()
         self.set_total_interface_submodel()
+        self.set_pe_degradation_submodel()
 
         if build:
             self.build_model()
@@ -157,6 +158,39 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
+        # LLI of cyclable lithium
+        if self.options["PE degradation"] == "phase transition":
+            for domain in domains:
+                Domain = domain.capitalize()
+                self.variables[
+                    f"Total cyclable lithium in {domain} [mol]"
+                ] = sum(
+                    self.variables[
+                        f"Total cyclable lithium in {phase} phase "
+                        f"in {domain} [mol]"
+                    ]
+                    for phase in self.options.phases[domain.split()[0]]
+                )
+            n_Li_particles_cyc = sum(
+                self.variables[
+                    f"Total cyclable lithium in {domain} [mol]"
+                ] for domain in domains
+            )
+            n_Li_cyc = n_Li_particles_cyc + n_Li_e
+            LLI_cyc = (
+                1 - n_Li_particles_cyc / param.n_Li_particles_init_cyc
+            ) * 100
+
+            self.variables.update(
+                {
+                    "LLI_cyc [%]": LLI_cyc,
+                    "Loss of cyclable lithium inventory [%]": LLI_cyc,
+                    "Total cyclable lithium [mol]": n_Li_cyc,
+                    "Total cyclable lithium in particles [mol]"
+                    "": n_Li_particles_cyc,
+                }
+            )
+
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
         n_Li_lost_neg_sei = self.variables["Loss of lithium to negative SEI [mol]"]
@@ -253,6 +287,41 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
                     self.param, domain, reaction, self.options, phase
                 )
+
+    def set_pe_degradation_submodel(self):
+        # specify the degradation domain
+        domain = "positive"
+
+        # replace the fickian particle submodel
+        # make sure set_pe_degradation_submodel comes after
+        # set_particle_submodel
+        if self.options["PE degradation"] == "phase transition":
+            for phase in self.options.phases[domain]:
+                par_submod = f"{domain} {phase} particle"
+                if par_submod not in self.submodels:
+                    raise pybamm.ModelError(
+                        "The particle submodel has not been called yet."
+                        "Make sure it is invoked before "
+                        "calling phase transition submodel."
+                    )
+                elif not isinstance(
+                    self.submodels[par_submod], pybamm.particle.FickianDiffusion
+                ):
+                    raise pybamm.TypeError(
+                        "The particle submodel is not fickian type."
+                    )
+                else:
+                    self.submodels[
+                        par_submod
+                    ] = pybamm.pe_degradation.PhaseTransition(
+                        self.param, domain, self.options, phase=phase,
+                        x_average=self.x_average
+                    )
+                    self.submodels[
+                        f"{domain} {phase} total particle concentration"
+                    ] = pybamm.pe_degradation.TotalConcentration(
+                        self.param, domain, self.options, phase
+                    )
 
     def set_sei_submodel(self):
         for domain in ["negative", "positive"]:

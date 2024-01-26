@@ -146,6 +146,13 @@ class SpatialVariable(IndependentVariable):
             ["particle" in dom for dom in domain]
         ):
             raise pybamm.DomainError(f"domain cannot be particle if name is '{name}'")
+        elif name in ["r_co", "r_sh"] and not (
+            len(domain) == 1 and "positive" in domain[0]
+        ):
+            raise pybamm.DomainError(
+                "domain must be positive core and shell if name is 'r_co' "
+                "and 'r_sh', respectively."
+            )
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

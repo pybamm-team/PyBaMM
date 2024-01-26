@@ -23,7 +23,10 @@ class XAverage(_BaseAverage):
     def __init__(self, child):
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif all(n in child.domain[0] for n in ["positive", "particle"]):
+        elif (all(n in child.domain[0] for n in ["positive", "particle"])
+            or all(n in child.domain[0] for n in ["positive", "core"])
+            or all(n in child.domain[0] for n in ["positive", "shell"])
+        ):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
@@ -257,13 +260,16 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
-    has_particle_domain = symbol.domain != [] and symbol.domain[0].endswith("particle")
+    has_r_domain = symbol.domain != [] and (
+        symbol.domain[0].endswith("particle") or
+        symbol.domain[0] in ["positive core", "positive shell"]
+    )
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif not has_particle_domain:
+    elif not has_r_domain:
         return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
@@ -276,7 +282,7 @@ def r_average(symbol):
     # If symbol is a Broadcast onto a particle domain, its average value is its child
     elif (
         isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast))
-        and has_particle_domain
+        and has_r_domain
     ):
         return symbol.reduce_one_dimension()
     # Average of a sum is sum of averages

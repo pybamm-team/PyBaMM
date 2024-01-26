@@ -182,3 +182,65 @@ R_p_edge = pybamm.SpatialVariableEdge(
     },
     coord_sys="cartesian",
 )
+
+# Spatial variables for the core and shell phases in the core-shell model
+# for PE phase transition caused degradation
+# the core domain (0, s) and shell domain (s, R) have been mapped to (0, R_typ)
+# core variable  r_co = r / s * R_typ, r goes from 0 to s
+# shell variable r_sh = (r - s) / (R - s) * R_typ, r goes from s to R
+r_co = pybamm.SpatialVariable(
+    "r_co",
+    domain=["positive core"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar"
+)
+r_sh = pybamm.SpatialVariable(
+    "r_sh",
+    domain=["positive shell"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    # note the coordinate system is different from that of r_co
+    # thus the rhs of eqs residing in the core and shell differs
+    coord_sys="cartesian"
+)
+r_co_prim = pybamm.SpatialVariable(
+    "r_co_prim",
+    domain=["positive primary core"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar"
+)
+r_sh_prim = pybamm.SpatialVariable(
+    "r_sh_prim",
+    domain=["positive primary shell"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian"
+)
+r_co_sec = pybamm.SpatialVariable(
+    "r_co_sec",
+    domain=["positive secondary core"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="spherical polar"
+)
+r_sh_sec = pybamm.SpatialVariable(
+    "r_sh_sec",
+    domain=["positive secondary shell"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian"
+)

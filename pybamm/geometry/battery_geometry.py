@@ -70,6 +70,44 @@ def battery_geometry(
                         }
                     )
 
+    if (
+        options is not None
+        and options["PE degradation"] == "phase transition"
+    ):
+        geo_domain = geo.domain_params["positive"]
+        phases = int(getattr(options, domain)["particle phases"])
+        if phases == 1:
+            geometry.update(
+                {
+                    "positive core": {
+                        "r_co": {"min":0, "max": geo_domain.prim.R_typ}
+                    },
+                    "positive shell": {
+                        "r_sh": {"min": 0, "max": geo_domain.prim.R_typ}
+                    },
+                }
+            )
+            # geometry.pop("positive particle")
+        elif phases >= 2:
+            geometry.update(
+                {
+                    "positive primary core": {
+                        "r_co_prim": {"min": 0, "max": geo_domain.prim.R_typ}
+                    },
+                    "positive secondary core": {
+                        "r_co_sec": {"min": 0, "max": geo_domain.sec.R_typ}
+                    },
+                    "positive primary shell": {
+                        "r_sh_prim": {"min": 0, "max": geo_domain.prim.R_typ}
+                    },
+                    "positive secondary shell": {
+                        "r_sh_sec": {"min": 0, "max": geo_domain.sec.R_typ}
+                    },
+                }
+            )
+            # geometry.pop("positive primary particle")
+            # geometry.pop("positive secondary particle")
+
     # Add particle size domains
     if (
         options is not None
