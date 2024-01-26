@@ -127,6 +127,12 @@ class LithiumIonParameters(BaseParameters):
         self.Q_Li_particles_init = self.n_Li_particles_init * self.F / 3600
         self.Q_Li_init = self.n_Li_init * self.F / 3600
 
+        # initial cyclable lithium
+        if self.options["PE degradation"] == "phase transition":
+            self.n_Li_particles_init_cyc = (
+                self.n.n_Li_init_cyc + self.p.n_Li_init_cyc
+            )
+
         # Reference OCP based on initial concentration
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
 
@@ -297,6 +303,10 @@ class DomainLithiumIonParameters(BaseParameters):
 
         self.n_Li_init = sum(phase.n_Li_init for phase in self.phase_params.values())
         self.Q_Li_init = sum(phase.Q_Li_init for phase in self.phase_params.values())
+        if self.main_param.options["PE degradation"] == "phase transition":
+            self.n_Li_init_cyc = sum(
+                phase.n_Li_init_cyc for phase in self.phase_params.values()
+            )
 
         # Tortuosity parameters
         self.b_s = self.geo.b_s
@@ -550,6 +560,96 @@ class ParticleLithiumIonParameters(BaseParameters):
         if self.options["particle shape"] == "spherical":
             self.a_typ = 3 * pybamm.xyz_average(self.epsilon_s) / self.R_typ
 
+        # Phase transition caused degradation parameters (core-shell model)
+        if self.options["PE degradation"] == "phase transition":
+            # limit of the stoichiometry range, assume homogeneous in electrode
+            # to calculate cyclable lithium
+            self.c_bott = pybamm.Parameter(
+                f"{pref}Minimum concentration in {domain} electrode "
+                "when fully discharged [mol.m-3]"
+            )
+            if domain == "positive":
+                self.c_o_core = pybamm.Parameter(
+                    f"{pref}Constant oxygen concentration in the core [mol.m-3]"
+                )
+                self.c_c_thrd = pybamm.Parameter(
+                    f"{pref}Threshold lithium concentration for "
+                    "phase transition [mol.m-3]"
+                )
+                self.c_s_trap = pybamm.Parameter(
+                    f"{pref}Trapped lithium concentration in the shell [mol.m-3]"
+                )
+                self.k_1 = pybamm.Parameter(
+                    f"{pref}Forward chemical reaction coefficient [m.s-1]"
+                )
+                self.k_2 = pybamm.Parameter(
+                    f"{pref}Reverse chemical reaction coefficient [m4.mol-1.s-1]"
+                )
+                # self.D_o = pybamm.Parameter(
+                #     f"{pref}Positive shell oxygen diffusivity [m2.s-1]"
+                # )
+                self.s_nd_init = pybamm.Parameter(
+                    f"{pref}Initial core-shell phase boundary location"
+                )
+                self.R_shell = pybamm.Parameter(
+                    "Positive electrode shell resistivity [Ohm.m]"
+                )
+
+                r_co = pybamm.SpatialVariable(
+                    "r_co",
+                    domain=[f"{domain} {self.phase_name}core"],
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                    coord_sys="spherical polar",
+                )
+                # Initial lithium concentration in the core, usually the same as c_init
+                self.c_c_init = pybamm.FunctionParameter(
+                    f"{pref}Initial lithium concentration in {domain} core [mol.m-3]",
+                    {
+                        "Radial distance (r_co) [m]": r_co,
+                        "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+                            x, f"{domain} {phase_name}core"
+                        ),
+                    },
+                )
+                r_sh = pybamm.SpatialVariable(
+                    "r_sh",
+                    domain=[f"{domain} {self.phase_name}shell"],
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                    coord_sys="cartesian",
+                )
+                # Initial oxygen concentration in the shell
+                self.c_o_init = pybamm.FunctionParameter(
+                    f"{pref}Initial oxygen concentration in {domain} shell [mol.m-3]",
+                    {
+                        "Dimensionless shell distance (r_sh)": r_sh / self.R_typ,
+                        "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+                            x, f"{domain} {phase_name}shell"
+                        ),
+                    },
+                )
+
+                eps_c_init_cyc_av = pybamm.xyz_average(
+                    self.epsilon_s * pybamm.r_average(self.c_c_init - self.c_bott)
+                )
+                # add the LAM effect to cyclable lithium
+                lam_pe = pybamm.Scalar(1) - self.s_nd_init ** 3
+                self.n_Li_init_cyc = eps_c_init_cyc_av * (
+                    self.domain_param.L * main.A_cc * (1 - lam_pe)
+                )
+            else:
+                eps_c_init_cyc_av = pybamm.xyz_average(
+                    self.epsilon_s * pybamm.r_average(self.c_init - self.c_bott)
+                )
+                self.n_Li_init_cyc = eps_c_init_cyc_av * (
+                    self.domain_param.L * main.A_cc
+                )
+
     def D(self, c_s, T, lithiation=None):
         """
         Dimensional diffusivity in particle. In the parameter sets this is defined as
@@ -572,6 +672,21 @@ class ParticleLithiumIonParameters(BaseParameters):
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode {lithiation}"
             "diffusivity [m2.s-1]",
+            inputs,
+        )
+
+    def D_o(self, c_o, T):
+        """
+        Dimensional diffusivity in positive core.
+        Is defined as a function of dimensional oxygen concentration (mol/m3)
+        """
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{self.phase_prefactor}{Domain} shell oxygen concentration": c_o,
+            "Temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} shell oxygen diffusivity [m2.s-1]",
             inputs,
         )
 
