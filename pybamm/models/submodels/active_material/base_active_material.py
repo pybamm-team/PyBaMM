@@ -101,6 +101,8 @@ class BaseModel(pybamm.BaseSubModel):
                 {
                     f"{Domain} {phase_name}particle radius": R / self.phase_param.R_typ,
                     f"{Domain} {phase_name}particle radius [m]": R,
+                    f"X-averaged {domain} {phase_name}particle radius"
+                    "": R_av / self.phase_param.R_typ,
                     f"X-averaged {domain} {phase_name}particle radius [m]": R_av,
                     f"{Domain} electrode {phase_name}"
                     "surface area to volume ratio [m-1]": a,
