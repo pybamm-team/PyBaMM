@@ -121,6 +121,9 @@ test.json
 # vcpkg
 vcpkg_installed/
 
+# spider
+.spyproject/
+
 # benchmarks
 html/
 results/
