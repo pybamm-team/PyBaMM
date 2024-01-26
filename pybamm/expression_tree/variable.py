@@ -145,7 +145,7 @@ class VariableBase(pybamm.Symbol):
 
 class Variable(VariableBase):
     """
-    A node in the expression tree represending a dependent variable.
+    A node in the expression tree represending an independent variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`pybamm.StateVector` node.
