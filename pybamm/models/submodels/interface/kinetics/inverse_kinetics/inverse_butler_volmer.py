@@ -30,6 +30,7 @@ class InverseButlerVolmer(BaseInterface):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
+        phase_name = self.phase_name
 
         ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
 
@@ -80,7 +81,27 @@ class InverseButlerVolmer(BaseInterface):
             eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
 
-        delta_phi = eta_r + ocp - eta_sei  # = phi_s - phi_e
+        # With phase-transformed shell layer in positive electrode particle
+        if domain == "positive" and (
+            self.options["PE degradation"] == "phase transition"
+        ):
+            R_shell = self.phase_param.R_shell
+            s_nd_av = variables[
+                f"X-averaged {domain} {phase_name}particle "
+                "moving phase boundary location"
+            ]
+            R_av = variables[
+                f"X-averaged {domain} {phase_name}particle radius [m]"
+            ]
+            eta_shell = -j_tot * (pybamm.Scalar(1) - s_nd_av) * R_av * R_shell
+
+            variables.update(
+                self._get_standard_pe_shell_overpotential_variables(eta_shell)
+            )
+        else:
+            eta_shell = pybamm.Scalar(0)
+
+        delta_phi = eta_r + ocp - eta_sei - eta_shell # = phi_s - phi_e
 
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
