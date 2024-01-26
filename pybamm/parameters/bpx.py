@@ -335,6 +335,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]",
                 0.0,
             )
+            pybamm_dict[phase_domain_pre_name.replace("electrode", "particle") + "diffusivity activation energy [J.mol-1]"] = Ea_D
             D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
 
             if callable(D_ref):
