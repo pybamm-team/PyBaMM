@@ -129,9 +129,7 @@ class LithiumIonParameters(BaseParameters):
 
         # initial cyclable lithium
         if self.options["PE degradation"] == "phase transition":
-            self.n_Li_particles_init_cyc = (
-                self.n.n_Li_init_cyc + self.p.n_Li_init_cyc
-            )
+            self.n_Li_particles_init_cyc = self.n.n_Li_init_cyc + self.p.n_Li_init_cyc
 
         # Reference OCP based on initial concentration
         self.ocv_init = self.p.prim.U_init - self.n.prim.U_init
@@ -638,7 +636,7 @@ class ParticleLithiumIonParameters(BaseParameters):
                     self.epsilon_s * pybamm.r_average(self.c_c_init - self.c_bott)
                 )
                 # add the LAM effect to cyclable lithium
-                lam_pe = pybamm.Scalar(1) - self.s_nd_init ** 3
+                lam_pe = pybamm.Scalar(1) - self.s_nd_init**3
                 self.n_Li_init_cyc = eps_c_init_cyc_av * (
                     self.domain_param.L * main.A_cc * (1 - lam_pe)
                 )

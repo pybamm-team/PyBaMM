@@ -153,7 +153,7 @@ class BaseKinetics(BaseInterface):
             eta_sei = pybamm.Scalar(0)
         eta_r += eta_sei
 
-        # Add shell resistance in the positive electrode 
+        # Add shell resistance in the positive electrode
         if domain == "positive":
             if self.options["PE degradation"] == "phase transition":
                 R_shell = self.phase_param.R_shell

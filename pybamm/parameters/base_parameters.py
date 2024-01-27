@@ -101,8 +101,12 @@ class NullParameters:
     def __getattribute__(self, name):
         "Returns 0 for some parameters that aren't found by __getattribute__"
         if name in [
-            "epsilon_s", "Q_init", "n_Li_init", "Q_Li_init", "R_typ",
-            "n_Li_init_cyc"
+            "epsilon_s",
+            "Q_init",
+            "n_Li_init",
+            "Q_Li_init",
+            "R_typ",
+            "n_Li_init_cyc",
         ]:
             return pybamm.Scalar(0)
         else:

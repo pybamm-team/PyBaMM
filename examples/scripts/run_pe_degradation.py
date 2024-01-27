@@ -1,5 +1,5 @@
 """
-    This tutorial runs the core-shell model for phase transition caused PE 
+    This tutorial runs the core-shell model for phase transition caused PE
     (NMC811) degradation, based on the paper
     -- Mingzhao Zhuo, Gregory Offer, Monica Marinescu, "Degradation model of
        high-nickel positive electrodes: Effects of loss of active material and
@@ -13,15 +13,13 @@
     Fig. 9: c_s = 20000, rho = 1e6
 """
 import pybamm
-import numpy as np
-import matplotlib.pyplot as plt
 
-#%%
+# %%
 model = pybamm.lithium_ion.SPM({"PE degradation": "phase transition"})
 param = pybamm.ParameterValues("Zhuo2023")
 experiment = pybamm.Experiment(
     [
-        (   
+        (
             "Charge at 0.5 C until 4.2 V",
             "Hold at 4.2 V until C/50",
             "Rest for 60 minutes",
@@ -29,16 +27,18 @@ experiment = pybamm.Experiment(
             "Hold at 2.8 V until C/50",
             "Rest for 60 minutes",
         )
-    ] * 20,
+    ]
+    * 20,
 )
 sim = pybamm.Simulation(
-    model, experiment=experiment, 
+    model,
+    experiment=experiment,
     parameter_values=param,
     # solver=pybamm.CasadiSolver("fast with events"),
 )
-#%%
+# %%
 solution = sim.solve(calc_esoh=False)
-#%%
+# %%
 output_variables = [
     "X-averaged positive particle moving phase boundary location",
     "X-averaged positive electrode shell layer overpotential [V]",
@@ -46,7 +46,7 @@ output_variables = [
     "LLI_cyc [%]",
     "Cell SoC",
     [
-        "Total cyclable lithium in primary phase in positive electrode [mol]", 
+        "Total cyclable lithium in primary phase in positive electrode [mol]",
         "Total cyclable lithium in primary phase in negative electrode [mol]",
         "Total cyclable lithium in particles [mol]",
     ],

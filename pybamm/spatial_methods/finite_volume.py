@@ -1000,29 +1000,22 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
         elif isinstance(symbol, pybamm.BoundaryCellValue):
-
             if symbol.side == "left":
-
                 sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts))
                 additive = pybamm.Scalar(0)
 
-
             elif symbol.side == "right":
-
                 sub_matrix = csr_matrix(
-                            ([1], ([0], [prim_pts - 1])), shape=(1, prim_pts)
-                        )
+                    ([1], ([0], [prim_pts - 1])), shape=(1, prim_pts)
+                )
                 additive = pybamm.Scalar(0)
 
         elif isinstance(symbol, pybamm.BoundaryCellLength):
-
             if symbol.side == "left":
-
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = pybamm.Scalar(dx0)
 
             elif symbol.side == "right":
-
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = pybamm.Scalar(dxN)
 
@@ -1343,7 +1336,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # model and leads to failure of associative law of multiplication.
                 # Keep in mind D1 and D2 involve the length scale of the actual
                 # domain and the magnitude of 'array', so its value is unpredictable.
-                # The suggestion is to add 1e-16 to beta (if it helps regularise 
+                # The suggestion is to add 1e-16 to beta (if it helps regularise
                 # D_eff as intended), which only involves the domain scale ~micrometer 1e-6
                 D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
 

@@ -111,25 +111,21 @@ class PrimaryBroadcast(Broadcast):
                 "positive electrode",
             ]
             or "particle" in broadcast_domain[0]
-            or "core"     in broadcast_domain[0]
-            or "shell"    in broadcast_domain[0]
+            or "core" in broadcast_domain[0]
+            or "shell" in broadcast_domain[0]
         ):
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle (core or shell) or particle size domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and not (
-                "particle" in broadcast_domain[0] or
-                "core"     in broadcast_domain[0] or
-                "shell"    in broadcast_domain[0]
-            )
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and not (
+            "particle" in broadcast_domain[0]
+            or "core" in broadcast_domain[0]
+            or "shell" in broadcast_domain[0]
         ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
@@ -144,9 +140,12 @@ class PrimaryBroadcast(Broadcast):
                 domain"""
             )
         elif child.domain[0] in [
-            "negative particle", "positive particle",
-            "negative core",     "positive core",
-            "negative shell",    "positive shell",
+            "negative particle",
+            "positive particle",
+            "negative core",
+            "positive core",
+            "negative shell",
+            "positive shell",
         ]:
             raise pybamm.DomainError(
                 "Cannot do primary broadcast from particle (core or shell) domain"
@@ -233,9 +232,12 @@ class SecondaryBroadcast(Broadcast):
         # Can only do secondary broadcast from particle to electrode or current
         # collector or from electrode to current collector
         if child.domain[0] in [
-            "negative particle", "positive particle",
-            "negative core",     "positive core",
-            "negative shell",    "positive shell",
+            "negative particle",
+            "positive particle",
+            "negative core",
+            "positive core",
+            "negative shell",
+            "positive shell",
         ] and broadcast_domain[0] not in [
             "negative particle size",
             "positive particle size",
