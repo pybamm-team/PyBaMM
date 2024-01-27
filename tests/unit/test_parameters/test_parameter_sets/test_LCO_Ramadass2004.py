@@ -16,7 +16,7 @@ class TestRamadass2004(TestCase):
         c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
         fun_test = {
             # Positive electrode
-            "Positive electrode diffusivity [m2.s-1]": ([sto, T], 1e-14),
+            "Positive particle diffusivity [m2.s-1]": ([sto, T], 1e-14),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_p_max, T],
                 1.4517,
@@ -27,7 +27,7 @@ class TestRamadass2004(TestCase):
             ),
             "Positive electrode OCP [V]": ([sto], 4.1249),
             # Negative electrode
-            "Negative electrode diffusivity [m2.s-1]": ([sto, T], 3.9e-14),
+            "Negative particle diffusivity [m2.s-1]": ([sto, T], 3.9e-14),
             "Negative electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_n_max, T],
                 2.2007,

@@ -21,7 +21,7 @@ class TestOKane2022_graphite_SiOx_halfcell(TestCase):
             ),
             "Dead lithium decay rate [s-1]": ([1e-8], 5e-7),
             # Positive electrode
-            "Positive electrode diffusivity [m2.s-1]": ([sto, T], 3.3e-14),
+            "Positive particle diffusivity [m2.s-1]": ([sto, T], 3.3e-14),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1000, 16566.5, 33133, T],
                 0.33947,
