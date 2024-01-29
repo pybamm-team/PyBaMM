@@ -95,7 +95,7 @@ jobs:
         run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: matrix.os != 'windows-latest'
         with:
           path: |
@@ -152,7 +152,7 @@ jobs:
         run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             # Repository files
@@ -232,7 +232,7 @@ jobs:
         run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: matrix.os != 'windows-latest'
         with:
           path: |
@@ -263,6 +263,8 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
@@ -331,7 +333,7 @@ jobs:
         run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             # Repository files
@@ -385,7 +387,7 @@ jobs:
         run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             # Repository files

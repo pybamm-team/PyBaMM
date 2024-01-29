@@ -824,6 +824,15 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "HarshvirSandhu",
+      "name": "Harshvir Sandhu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/75773763?v=4",
+      "profile": "https://github.com/HarshvirSandhu",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
