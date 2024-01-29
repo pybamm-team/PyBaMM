@@ -10,6 +10,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from io import StringIO
+from tempfile import TemporaryDirectory
+
+anytree = sys.modules["anytree"]
 
 
 class TestUtil(TestCase):
@@ -29,6 +32,7 @@ class TestUtil(TestCase):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
     def test_is_constant_and_can_evaluate(self):
+        sys.modules["anytree"] = anytree
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
         symbol = pybamm.StateVector(slice(0, 1))
@@ -44,6 +48,7 @@ class TestUtil(TestCase):
                 "SEI current": 3,
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
+                "Positive particle diffusivity [m2.s-1]": 6,
             }
         )
         self.assertEqual(d["test"], 1)
@@ -64,6 +69,12 @@ class TestUtil(TestCase):
 
         with self.assertRaisesRegex(KeyError, "Upper voltage"):
             d.__getitem__("Open-circuit voltage at 100% SOC [V]")
+
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(
+                d["Positive electrode diffusivity [m2.s-1]"],
+                d["Positive particle diffusivity [m2.s-1]"],
+            )
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
@@ -87,6 +98,29 @@ class TestUtil(TestCase):
         git_commit_info = pybamm.get_git_commit_info()
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
+
+    def test_have_optional_dependency(self):
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "Optional dependency pybtex is not available."
+        ):
+            pybtex = sys.modules["pybtex"]
+            sys.modules["pybtex"] = None
+            pybamm.print_citations()
+        with self.assertRaisesRegex(
+            ModuleNotFoundError, "Optional dependency anytree is not available."
+        ):
+            with TemporaryDirectory() as dir_name:
+                sys.modules["anytree"] = None
+                test_stub = os.path.join(dir_name, "test_visualize")
+                test_name = f"{test_stub}.png"
+                c = pybamm.Variable("c", "negative electrode")
+                d = pybamm.Variable("d", "negative electrode")
+                sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
+                sym.visualise(test_name)
+
+        sys.modules["pybtex"] = pybtex
+        pybamm.util.have_optional_dependency("pybtex")
+        pybamm.print_citations()
 
 
 class TestSearch(TestCase):

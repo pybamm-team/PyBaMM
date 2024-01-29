@@ -3,7 +3,7 @@
 #
 
 
-class SymbolUnpacker(object):
+class SymbolUnpacker:
     """
     Helper class to unpack a (set of) symbol(s) to find all instances of a class.
     Uses caching to speed up the process.

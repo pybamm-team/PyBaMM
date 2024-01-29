@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 from datetime import datetime
+from .step_termination import _read_termination
 
 _examples = """
 
@@ -119,8 +120,15 @@ class _Step:
                 t, y = value[:, 0], value[:, 1]
                 self.duration = t.max()
 
+            # Check that drive cycle starts at t=0
+            if t[0] > 0:
+                raise ValueError("Drive cycle must start at t=0")
+
             self.value = pybamm.Interpolant(
-                t, y, pybamm.t - pybamm.InputParameter("start time")
+                t,
+                y,
+                pybamm.t - pybamm.InputParameter("start time"),
+                name="Drive Cycle",
             )
             self.period = np.diff(t).min()
         else:
@@ -136,8 +144,10 @@ class _Step:
             termination = [termination]
         self.termination = []
         for term in termination:
-            typ, value = _convert_electric(term)
-            self.termination.append({"type": typ, "value": value})
+            if isinstance(term, str):
+                term = _convert_electric(term)
+            term = _read_termination(term)
+            self.termination.append(term)
 
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
@@ -193,10 +203,7 @@ class _Step:
         }
 
     def __eq__(self, other):
-        return (
-            isinstance(other, _Step)
-            and self.hash_args == other.hash_args
-        )
+        return isinstance(other, _Step) and self.hash_args == other.hash_args
 
     def __hash__(self):
         return hash(self.basic_repr())

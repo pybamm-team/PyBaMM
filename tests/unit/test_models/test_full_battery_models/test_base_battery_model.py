@@ -7,6 +7,7 @@ import pybamm
 import unittest
 import io
 from contextlib import redirect_stdout
+import os
 
 OPTIONS_DICT = {
     "surface form": "differential",
@@ -49,7 +50,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
-"""  # noqa: E501
+"""
 
 
 class TestBaseBatteryModel(TestCase):
@@ -360,10 +361,7 @@ class TestBaseBatteryModel(TestCase):
         # thermal half-cell
         with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
             pybamm.BaseBatteryModel(
-                {
-                    "thermal": "x-full",
-                    "working electrode": "positive"
-                }
+                {"thermal": "x-full", "working electrode": "positive"}
             )
         with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
             pybamm.BaseBatteryModel(
@@ -448,6 +446,29 @@ class TestBaseBatteryModel(TestCase):
         options = pybamm.FuzzyDict({"thermal": "isothermal"})
         model = pybamm.BaseBatteryModel(options)
         self.assertEqual(model.options, options)
+
+    def test_save_load_model(self):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # save model
+        model.save_model(
+            filename="test_base_battery_model", mesh=mesh, variables=model.variables
+        )
+
+        # raises error if variables are saved without mesh
+        with self.assertRaises(ValueError):
+            model.save_model(
+                filename="test_base_battery_model", variables=model.variables
+            )
+
+        os.remove("test_base_battery_model.json")
 
 
 class TestOptions(TestCase):

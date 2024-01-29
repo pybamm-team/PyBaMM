@@ -224,7 +224,7 @@ class FullAlgebraic(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-    """  # noqa: E501
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
@@ -258,7 +258,7 @@ class FullDifferential(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-    """  # noqa: E501
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)

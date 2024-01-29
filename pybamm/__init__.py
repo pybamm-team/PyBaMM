@@ -47,6 +47,7 @@ from .util import (
     get_parameters_filepath,
     have_jax,
     install_jax,
+    have_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
 )
@@ -163,7 +164,6 @@ from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
 from .parameters.parameter_sets import parameter_sets
-from .parameters_cli import add_parameter, remove_parameter, edit_parameter
 
 #
 # Mesh and Discretisation classes
@@ -187,6 +187,11 @@ from .meshes.scikit_fem_submeshes import (
     ScikitChebyshev2DSubMesh,
     UserSupplied2DSubMesh,
 )
+
+#
+# Serialisation
+#
+from .models.base_model import load_model
 
 #
 # Spatial Methods
@@ -222,12 +227,13 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .experiment.experiment import Experiment
 from . import experiment
+from .experiment import step
 
 
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components

@@ -34,6 +34,9 @@ Unary Operators
 .. autoclass:: pybamm.Mass
   :members:
 
+.. autoclass:: pybamm.BoundaryMass
+  :members:
+
 .. autoclass:: pybamm.Integral
   :members:
 
@@ -56,6 +59,9 @@ Unary Operators
   :members:
 
 .. autoclass:: pybamm.BoundaryGradient
+  :members:
+
+.. autoclass:: pybamm.EvaluateAt
   :members:
 
 .. autoclass:: pybamm.UpwindDownwind

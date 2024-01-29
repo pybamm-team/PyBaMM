@@ -18,6 +18,36 @@ class TestSubMesh1D(TestCase):
         with self.assertRaises(pybamm.GeometryError):
             pybamm.SubMesh1D(edges, None, tabs=tabs)
 
+    def test_to_json(self):
+        edges = np.linspace(0, 1, 10)
+        tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
+        mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
+
+        mesh_json = mesh.to_json()
+
+        expected_json = {
+            "edges": [
+                0.0,
+                0.1111111111111111,
+                0.2222222222222222,
+                0.3333333333333333,
+                0.4444444444444444,
+                0.5555555555555556,
+                0.6666666666666666,
+                0.7777777777777777,
+                0.8888888888888888,
+                1.0,
+            ],
+            "coord_sys": None,
+            "tabs": {"negative tab": "left", "positive tab": "right"},
+        }
+
+        self.assertEqual(mesh_json, expected_json)
+
+        # check tabs work
+        new_mesh = pybamm.Uniform1DSubMesh._from_json(mesh_json)
+        self.assertEqual(mesh.tabs, new_mesh.tabs)
+
 
 class TestUniform1DSubMesh(TestCase):
     def test_exceptions(self):

@@ -21,7 +21,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
     """
 
-    def __init__(self, name="Electrode-specific SOH model"):
+    def __init__(self, name="ElectrodeSOH model"):
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
@@ -140,7 +140,7 @@ def get_min_max_stoichiometries(
     parameter_values : pybamm.ParameterValues
         The parameter values to use in the calculation
     """
-    esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell(options)
+    esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell("ElectrodeSOH")
     param = pybamm.LithiumIonParameters(options)
     esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
     Q_w = parameter_values.evaluate(param.p.Q_init)

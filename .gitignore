@@ -107,9 +107,13 @@ KLU_module_deps
 # setup
 setup.log
 
+# odes setup
+scikits_odes_setup.log
+
 # test
 test.c
 test.json
+.pytest_cache/
 
 # tox
 .tox/
@@ -138,6 +142,7 @@ results/
 # do not ignore images in _static folder in docs
 !docs/_static/favicon/favicon.png
 !docs/_static/pybamm_logo.png
+!docs/_static/pybamm_logo_whitetext.png
 
 # tests
 test_callback.log

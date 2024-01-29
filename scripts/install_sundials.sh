@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # This script installs both SuiteSparse
-# (https://people.engr.tamu.edu/davis/suitesparse.html) and Sundials
+# (https://people.engr.tamu.edu/davis/suitesparse.html) and SUNDIALS
 # (https://computing.llnl.gov/projects/sundials) from source. For each
 # two library:
-# - Archive downloaded and source code extrated in current working
+# - Archive downloaded and source code extracted in current working
 #   directory.
 # - Library is built and installed.
 #
@@ -42,6 +42,10 @@ download $SUITESPARSE_ROOT_ADDR $SUITESPARSE_ARCHIVE_NAME
 download $SUNDIALS_ROOT_ADDR $SUNDIALS_ARCHIVE_NAME
 extract $SUITESPARSE_ARCHIVE_NAME
 extract $SUNDIALS_ARCHIVE_NAME
+
+# Build in parallel wherever possible
+export MAKEFLAGS="-j$(nproc)"
+export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
 
 ### Compile and install SUITESPARSE ###
 # SuiteSparse is required to compile SUNDIALS's

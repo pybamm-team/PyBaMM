@@ -50,6 +50,7 @@ class LithiumIonParameters(BaseParameters):
         self.T_ref = self.therm.T_ref
         self.T_init = self.therm.T_init
         self.T_amb = self.therm.T_amb
+        self.T_amb_av = self.therm.T_amb_av
         self.h_edge = self.therm.h_edge
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
@@ -302,14 +303,11 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
-        self.E = pybamm.Parameter(f"{Domain} electrode Young's modulus [Pa]")
         self.c_0 = pybamm.Parameter(
             f"{Domain} electrode reference concentration for free of deformation "
             "[mol.m-3]"
         )
-        self.Omega = pybamm.Parameter(
-            f"{Domain} electrode partial molar volume [m3.mol-1]"
-        )
+
         self.l_cr_0 = pybamm.Parameter(f"{Domain} electrode initial crack length [m]")
         self.w_cr = pybamm.Parameter(f"{Domain} electrode initial crack width [m]")
         self.rho_cr = pybamm.Parameter(
@@ -346,6 +344,22 @@ class DomainLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
+        )
+
+    def Omega(self, sto, T):
+        """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode partial molar volume [m3.mol-1]", inputs
+        )
+
+    def E(self, sto, T):
+        """Dimensional Young's modulus"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode Young's modulus [Pa]", inputs
         )
 
     def sigma(self, T):
@@ -556,7 +570,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode {lithiation}"
+            f"{self.phase_prefactor}{Domain} particle {lithiation}"
             "diffusivity [m2.s-1]",
             inputs,
         )

@@ -192,9 +192,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_volume_change_Ai2020(sto, c_s_max):
@@ -460,7 +458,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in positive electrode [mol.m-3]": 33133.0,
-        "Positive electrode diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
+        "Positive particle diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
         "Positive electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.25,
         "Positive electrode active material volume fraction": 0.75,

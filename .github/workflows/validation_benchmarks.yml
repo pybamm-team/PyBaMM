@@ -9,6 +9,7 @@ on:
 
 jobs:
   build:
+    if: github.repository_owner == 'pybamm-team'
     name: Dispatch to `pybamm-validation`
     runs-on: ubuntu-latest
     steps:

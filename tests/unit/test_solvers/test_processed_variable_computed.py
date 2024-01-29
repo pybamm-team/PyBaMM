@@ -171,11 +171,15 @@ class TestProcessedVariableComputed(TestCase):
         np.testing.assert_array_equal(processed_var.unroll(), y_sol)
 
         # Check no error when data dimension is transposed vs node/edge
-        processed_var.mesh.nodes, processed_var.mesh.edges = \
-            processed_var.mesh.edges, processed_var.mesh.nodes
+        processed_var.mesh.nodes, processed_var.mesh.edges = (
+            processed_var.mesh.edges,
+            processed_var.mesh.nodes,
+        )
         processed_var.initialise_1D()
-        processed_var.mesh.nodes, processed_var.mesh.edges = \
-            processed_var.mesh.edges, processed_var.mesh.nodes
+        processed_var.mesh.nodes, processed_var.mesh.edges = (
+            processed_var.mesh.edges,
+            processed_var.mesh.nodes,
+        )
 
         # Check that there are no errors with domain-specific attributes
         #  (see ProcessedVariableComputed.initialise_1D() for details)
@@ -209,7 +213,7 @@ class TestProcessedVariableComputed(TestCase):
             pybamm.BaseModel(),
             {},
             np.linspace(0, 1, 1),
-            np.zeros((var_pts[x])),
+            np.zeros(var_pts[x]),
             "test",
         )
 

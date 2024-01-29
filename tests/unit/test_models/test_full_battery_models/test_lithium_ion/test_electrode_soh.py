@@ -40,18 +40,8 @@ class TestElectrodeSOH(TestCase):
                     k: sol_split[k].data[0]
                     for k in ["x_0", "y_0", "x_100", "y_100", "Q_p"]
                 }
-                energy = pybamm.lithium_ion.electrode_soh.theoretical_energy_integral(
-                    parameter_values, inputs
-                )
+                energy = esoh_solver.theoretical_energy_integral(inputs)
                 self.assertAlmostEqual(sol[key], energy, places=5)
-
-        # should still work with old inputs
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
-        inputs = {"V_min": 3, "V_max": 4.2, "n_Li": n_Li, "C_n": Q_n, "C_p": Q_p}
-
-        # Solve the model and check outputs
-        sol = esoh_solver.solve(inputs)
-        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
 
     def test_known_solution_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
