@@ -411,7 +411,9 @@ class ProcessedVariableComputed:
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True, **kwargs):
+    def __call__(
+        self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True, **kwargs
+    ):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
@@ -421,7 +423,9 @@ class ProcessedVariableComputed:
         spatial_vars.update(kwargs)
 
         # Remove any None arguments
-        spatial_vars = {key: value for key, value in spatial_vars.items() if value is not None}
+        spatial_vars = {
+            key: value for key, value in spatial_vars.items() if value is not None
+        }
 
         # Use xarray interpolation, return numpy array
         return self._xr_data_array.interp(**spatial_vars).values
