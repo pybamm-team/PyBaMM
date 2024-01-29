@@ -16,7 +16,7 @@
 
 - Dropped support for BPX version 0.3.0 and below ([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
 
-# [v24.1rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.1rc2) - 2024-01-24
+# [v24.1](https://github.com/pybamm-team/PyBaMM/tree/v24.1) - 2024-01-31
 
 ## Features
 
