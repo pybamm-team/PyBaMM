@@ -241,7 +241,7 @@ class Citations:
     def _string_formatting(self, entry):
         bibtexparser = have_optional_dependency("bibtexparser")
         if not isinstance(entry, bibtexparser.model.Entry):
-            raise TypeError()
+            raise TypeError("Input for string formatting must be an instance of bibtexparser.model.Entry")
         txt_format = " "
         for key, value in entry.items():
             if key != "ID" and key != "ENTRYTYPE":
