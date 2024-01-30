@@ -117,6 +117,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     env:
       GITHUB_PATH: ${PYENV_ROOT/bin:$PATH}
+      LD_LIBRARY_PATH: $HOME/.local/lib
     strategy:
       fail-fast: false
       matrix:
@@ -137,7 +138,8 @@ jobs:
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
           python -m pip install --upgrade pip nox
-          python -m nox -s pybamm-requires
+          brew uninstall sundials
+          python -m nox -s pybamm-requires -- --force
           python -m nox -s unit
 
       - name: Run integration tests for M-series macOS runner
