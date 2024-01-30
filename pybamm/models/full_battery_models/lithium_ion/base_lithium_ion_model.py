@@ -256,12 +256,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_sei_submodel(self):
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "planar":
-                reaction_loc = "interface"
-            elif self.options["x-average side reactions"] == "true":
-                reaction_loc = "x-average"
-            else:
-                reaction_loc = "full electrode"
             sei_option = getattr(self.options, domain)["SEI"]
             phases = self.options.phases[domain]
             for phase in phases:
@@ -275,7 +269,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                     submodel = pybamm.sei.SEIGrowth(
                         self.param,
                         domain,
-                        reaction_loc,
                         self.options,
                         phase,
                         cracks=False,
@@ -284,7 +277,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.submodels[
                     f"{domain} {phase} sei thickness"
                 ] = pybamm.sei.SEIThickness(
-                    self.param, domain, reaction_loc, self.options, phase, cracks=False
+                    self.param, domain, self.options, phase, cracks=False
                 )
             if len(phases) > 1:
                 self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
@@ -297,10 +290,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
-                if self.options["x-average side reactions"] == "true":
-                    reaction_loc = "x-average"
-                else:
-                    reaction_loc = "full electrode"
                 sei_option = getattr(self.options, domain)["SEI"]
                 sei_on_cracks_option = getattr(self.options, domain)["SEI on cracks"]
                 phases = self.options.phases[domain]
@@ -316,7 +305,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                         submodel = pybamm.sei.SEIGrowth(
                             self.param,
                             domain,
-                            reaction_loc,
                             self.options,
                             phase,
                             cracks=True,
@@ -327,7 +315,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                     ] = pybamm.sei.SEIThickness(
                         self.param,
                         domain,
-                        reaction_loc,
                         self.options,
                         phase,
                         cracks=True,

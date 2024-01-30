@@ -29,11 +29,14 @@ class SEIGrowth(BaseModel):
         Whether this is a submodel for standard SEI or SEI on cracks
     """
 
-    def __init__(
-        self, param, domain, reaction_loc, options, phase="primary", cracks=False
-    ):
+    def __init__(self, param, domain, options, phase="primary", cracks=False):
         super().__init__(param, domain, options=options, phase=phase, cracks=cracks)
-        self.reaction_loc = reaction_loc
+        if self.options.electrode_types[domain] == "planar":
+            self.reaction_loc = "interface"
+        elif self.options["x-average side reactions"] == "true":
+            self.reaction_loc = "x-average"
+        else:
+            self.reaction_loc = "full electrode"
         SEI_option = getattr(self.options, domain)["SEI"]
         if SEI_option == "ec reaction limited":
             pybamm.citations.register("Yang2017")
