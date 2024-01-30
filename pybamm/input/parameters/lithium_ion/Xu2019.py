@@ -257,7 +257,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in positive electrode [mol.m-3]": 48230.0,
-        "Positive electrode diffusivity [m2.s-1]": 1e-14,
+        "Positive particle diffusivity [m2.s-1]": 1e-14,
         "Positive electrode OCP [V]": nmc_ocp_Xu2019,
         "Positive electrode porosity": 0.331,
         "Positive electrode active material volume fraction": 0.518,
