@@ -191,6 +191,11 @@ def main(arguments=None):
     os.environ["SUNDIALS_INST"] = SUNDIALS_LIB_DIR
     env = os.environ.copy()
     logger.info("Installing scikits.odes via pip")
+    logger.info("Purging scikits.odes whels from pip cache if present")
+    subprocess.run(
+        [f"{sys.executable}", "-m", "pip", "cache", "remove", "scikits.odes"],
+        check=True,
+    )
     subprocess.run(
         [f"{sys.executable}", "-m", "pip", "install", "scikits.odes", "--verbose"],
         env=env,
