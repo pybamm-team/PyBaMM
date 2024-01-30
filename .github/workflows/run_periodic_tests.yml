@@ -147,6 +147,7 @@ jobs:
           # Don't use Homebrew to install SUNDIALS because scikits.odes looks for
           # in Homebrew folders instead, which we don't want
           brew uninstall sundials --force
+          pip cache remove scikits.odes
           python -m nox -s pybamm-requires -- --force
           python -m nox -s unit
 
