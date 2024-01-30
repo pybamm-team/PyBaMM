@@ -133,7 +133,7 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
-      - name: Build wheels on macOS
+      - name: Build wheels on macOS amd64
         if: matrix.os == 'macos-latest'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
@@ -150,11 +150,45 @@ jobs:
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-      - name: Upload wheels for macOS
+      - name: Upload wheels for macOS amd64
         uses: actions/upload-artifact@v4
         if: matrix.os == 'macos-latest'
         with:
-          name: macos_wheels
+          name: macos_amd64_wheels
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_macos_arm64_wheels:
+    name: Wheels (macos-arm64)
+    # Current runner is macOS X 14+ on GitHub-hosted runners
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.8
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.11.1
+
+      - name: Install SuiteSparse and SUNDIALS on macOS
+        run: |
+          brew install graphviz openblas libomp
+          brew reinstall gcc
+          python -m pip install cmake wget
+          python scripts/install_KLU_Sundials.py
+
+      - name: Build wheels on macOS arm64
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel
+          CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
+
+      - name: Upload wheels for macOS arm64
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos_arm64_wheels
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -182,7 +216,7 @@ jobs:
     # This job is only of value to PyBaMM and would always be skipped in forks
     if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
     name: Upload package to PyPI
-    needs: [build_macos_and_linux_wheels, build_windows_wheels, build_sdist]
+    needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -191,7 +225,7 @@ jobs:
       - name: Move all package files to files/
         run: |
           mkdir files
-          mv windows_wheels/* linux_wheels/* macos_wheels/* sdist/* files/
+          mv windows_wheels/* linux_wheels/* macos_amd64_wheels/* macos_arm64_wheels/* sdist/* files/
 
       - name: Publish on PyPI
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
@@ -213,7 +247,7 @@ jobs:
   open_failure_issue:
     needs: [build_windows_wheels, build_macos_and_linux_wheels, build_sdist]
     name: Open an issue if build fails
-    if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
+    if: ${{ contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
