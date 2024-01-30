@@ -110,7 +110,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: python -m nox -s scripts
 
-  #M-series Mac Mini
+  # M-series Mac Mini
   build-apple-mseries:
     if: github.repository_owner == 'pybamm-team'
     needs: style
@@ -124,28 +124,29 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install python & create virtualenv
+      - name: Install Python & create virtualenv
         shell: bash
         run: |
           eval "$(pyenv init -)"
           pyenv install ${{ matrix.python-version }} -s
           pyenv virtualenv ${{ matrix.python-version }} pybamm-${{ matrix.python-version }}
 
-      - name: Install dependencies & run unit tests for Windows and MacOS
+      - name: Install build-time dependencies & run unit tests for M-series macOS runner
         shell: bash
         run: |
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
-          python -m pip install --upgrade pip wheel setuptools nox
+          python -m pip install --upgrade pip nox
+          python -m nox -s pybamm-requires
           python -m nox -s unit
 
-      - name: Run integration tests for Windows and MacOS
+      - name: Run integration tests for M-series macOS runner
         run: |
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
           python -m nox -s integration
 
-      - name: Uninstall pyenv-virtualenv & python
+      - name: Uninstall pyenv-virtualenv & Python
         if: always()
         shell: bash
         run: |
