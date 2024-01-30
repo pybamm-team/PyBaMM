@@ -134,11 +134,19 @@ jobs:
 
       - name: Install build-time dependencies & run unit tests for M-series macOS runner
         shell: bash
+        env:
+          # Point scikits.odes to the correct SUNDIALS installation
+          SUNDIALS_INST: $HOME/.local/lib
+          # Homebrew environment variables
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          NONINTERACTIVE: 1
         run: |
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
           python -m pip install --upgrade pip nox
-          brew uninstall sundials
+          # Don't use Homebrew to install SUNDIALS because scikits.odes looks for
+          # in Homebrew folders instead, which we don't want
+          brew uninstall sundials --force
           python -m nox -s pybamm-requires -- --force
           python -m nox -s unit
 
