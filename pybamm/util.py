@@ -6,6 +6,7 @@
 #
 import argparse
 import importlib.util
+import importlib.metadata
 import numbers
 import os
 import pathlib
@@ -18,11 +19,10 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import importlib.metadata
-
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM
+# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
+# in the extras dependencies in pyproject.toml, and therefore must be kept in sync.
 JAX_VERSION = "0.4"
 JAXLIB_VERSION = "0.4"
 
@@ -122,16 +122,16 @@ class FuzzyDict(dict):
             )
         elif print_values:
             # Else print results, including dict items
-            print("\n".join("{}\t{}".format(k, v) for k, v in results.items()))
+            print("\n".join(f"{k}\t{v}" for k, v in results.items()))
         else:
             # Just print keys
-            print("\n".join("{}".format(k) for k in results.keys()))
+            print("\n".join(f"{k}" for k in results.keys()))
 
     def copy(self):
         return FuzzyDict(super().copy())
 
 
-class Timer(object):
+class Timer:
     """
     Provides accurate timing.
 
@@ -171,13 +171,13 @@ class TimerTime:
         """
         time = self.value
         if time < 1e-6:
-            return "{:.3f} ns".format(time * 1e9)
+            return f"{time * 1e9:.3f} ns"
         if time < 1e-3:
-            return "{:.3f} us".format(time * 1e6)
+            return f"{time * 1e6:.3f} us"
         if time < 1:
-            return "{:.3f} ms".format(time * 1e3)
+            return f"{time * 1e3:.3f} ms"
         elif time < 60:
-            return "{:.3f} s".format(time)
+            return f"{time:.3f} s"
         output = []
         time = int(round(time))
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
@@ -271,10 +271,9 @@ def have_jax():
 
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
-    return (
-        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
-        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
-    )
+    return importlib.metadata.distribution("jax").version.startswith(
+        JAX_VERSION
+    ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
 
 
 def is_constant_and_can_evaluate(symbol):
@@ -346,9 +345,10 @@ def install_jax(arguments=None):  # pragma: no cover
         ]
     )
 
+
 # https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
 def have_optional_dependency(module_name, attribute=None):
-    err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."  # noqa: E501
+    err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
     try:
         # Attempt to import the specified module
         module = importlib.import_module(module_name)
@@ -360,7 +360,7 @@ def have_optional_dependency(module_name, attribute=None):
                 return imported_attribute  # Return the imported attribute
             else:
                 # Raise an ModuleNotFoundError if the attribute is not available
-                raise ModuleNotFoundError(err_msg)      # pragma: no cover
+                raise ModuleNotFoundError(err_msg)  # pragma: no cover
         else:
             # Return the entire module if no attribute is specified
             return module

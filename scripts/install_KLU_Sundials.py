@@ -3,6 +3,7 @@ import subprocess
 import tarfile
 import argparse
 import platform
+from multiprocessing import cpu_count
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
@@ -36,6 +37,9 @@ try:
 except OSError:
     raise RuntimeError("CMake must be installed.")
 
+# Build in parallel wherever possible
+os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
+
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 download_dir = os.path.join(pybamm_dir, "install_KLU_Sundials")
@@ -59,7 +63,7 @@ install_dir = (
 suitesparse_version = "6.0.3"
 suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
-    + "SuiteSparse/archive/v{}.tar.gz".format(suitesparse_version)
+    + f"SuiteSparse/archive/v{suitesparse_version}.tar.gz"
 )
 download_extract_library(suitesparse_url, download_dir)
 
@@ -68,22 +72,37 @@ download_extract_library(suitesparse_url, download_dir)
 # - AMD
 # - COLAMD
 # - BTF
-suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
+suitesparse_dir = f"SuiteSparse-{suitesparse_version}"
 suitesparse_src = os.path.join(download_dir, suitesparse_dir)
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
 make_cmd = [
     "make",
     "library",
-    'CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX={}"'.format(install_dir),
 ]
 install_cmd = [
     "make",
+    f"-j{cpu_count()}",
     "install",
 ]
 print("-" * 10, "Building SuiteSparse", "-" * 40)
+# Set CMAKE_OPTIONS as environment variables to pass to the GNU Make command
+env = os.environ.copy()
 for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     build_dir = os.path.join(suitesparse_src, libdir)
-    subprocess.run(make_cmd, cwd=build_dir, check=True)
+    # We want to ensure that libsuitesparseconfig.dylib is not repeated in
+    # multiple paths at the time of wheel repair. Therefore, it should not be
+    # built with an RPATH since it is copied to the install prefix.
+    if libdir == "SuiteSparse_config":
+        env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
+    else:
+        # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
+        # INSTALL RPATH in order to ensure that the dynamic libraries are found
+        # at runtime just once. Otherwise, delocate complains about multiple
+        # references to the SuiteSparse_config dynamic library (auditwheel does not).
+        env[
+            "CMAKE_OPTIONS"
+        ] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+    subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
     subprocess.run(install_cmd, cwd=build_dir, check=True)
 
 # 2 --- Download SUNDIALS
@@ -104,13 +123,15 @@ KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
 cmake_args = [
     "-DENABLE_LAPACK=ON",
     "-DSUNDIALS_INDEX_SIZE=32",
-    "-DEXAMPLES_ENABLE:BOOL=OFF",
+    "-DEXAMPLES_ENABLE_C=OFF",
+    "-DEXAMPLES_ENABLE_CXX=OFF",
+    "-DEXAMPLES_INSTALL=OFF",
     "-DENABLE_KLU=ON",
     "-DENABLE_OPENMP=ON",
-    "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
-    "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
+    f"-DKLU_INCLUDE_DIR={KLU_INCLUDE_DIR}",
+    f"-DKLU_LIBRARY_DIR={KLU_LIBRARY_DIR}",
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
-    # on mac use fixed paths rather than rpath
+    # on macOS use fixed paths rather than rpath
     "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
 ]
 
@@ -121,9 +142,7 @@ if platform.system() == "Darwin":
         LDFLAGS = "-L/opt/homebrew/opt/libomp/lib"
         CPPFLAGS = "-I/opt/homebrew/opt/libomp/include"
         OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
-        OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
         OpenMP_C_LIB_NAMES = "omp"
-        OpenMP_CXX_LIB_NAMES = "omp"
         OpenMP_libomp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
         OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
     elif platform.processor() == "i386":
@@ -133,17 +152,13 @@ if platform.system() == "Darwin":
         OpenMP_CXX_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
         OpenMP_C_LIB_NAMES = "omp"
         OpenMP_CXX_LIB_NAMES = "omp"
-        OpenMP_libomp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
         OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
 
     cmake_args += [
         "-DLDFLAGS=" + LDFLAGS,
         "-DCPPFLAGS=" + CPPFLAGS,
         "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
-        "-DOpenMP_CXX_FLAGS=" + OpenMP_CXX_FLAGS,
         "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
-        "-DOpenMP_CXX_LIB_NAMES=" + OpenMP_CXX_LIB_NAMES,
-        "-DOpenMP_libomp_LIBRARY=" + OpenMP_libomp_LIBRARY,
         "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
     ]
 
@@ -154,10 +169,10 @@ if not os.path.exists(build_dir):
     print("\n-" * 10, "Creating build dir", "-" * 40)
     os.makedirs(build_dir)
 
-sundials_src = "../sundials-{}".format(sundials_version)
+sundials_src = f"../sundials-{sundials_version}"
 print("-" * 10, "Running CMake prepare", "-" * 40)
-subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir, check=True)
+subprocess.run(["cmake", sundials_src, *cmake_args], cwd=build_dir, check=True)
 
 print("-" * 10, "Building the sundials", "-" * 40)
-make_cmd = ["make", "install"]
+make_cmd = ["make", f"-j{cpu_count()}", "install"]
 subprocess.run(make_cmd, cwd=build_dir, check=True)

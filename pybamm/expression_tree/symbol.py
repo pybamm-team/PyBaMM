@@ -206,7 +206,7 @@ class Symbol:
         auxiliary_domains=None,
         domains=None,
     ):
-        super(Symbol, self).__init__()
+        super().__init__()
         self.name = name
 
         if children is None:
@@ -231,6 +231,26 @@ class Symbol:
                 for x in self.pre_order()
             ):
                 self.test_shape()
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """
+        Reconstructs a Symbol instance during deserialisation of a JSON file.
+
+        Parameters
+        ----------
+        snippet: dict
+            Contains the information needed to reconstruct a specific instance.
+            At minimum, should contain "name", "children" and "domains".
+        """
+
+        instance = cls.__new__(cls)
+
+        instance.__init__(
+            snippet["name"], children=snippet["children"], domains=snippet["domains"]
+        )
+
+        return instance
 
     @property
     def children(self):
@@ -403,9 +423,12 @@ class Symbol:
         need to hash once.
         """
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
+            (
+                self.__class__,
+                self.name,
+                *tuple([child.id for child in self.children]),
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     @property
@@ -443,9 +466,9 @@ class Symbol:
         anytree = have_optional_dependency("anytree")
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
-                print("{}{} = {}".format(pre, node.name, node.value))
+                print(f"{pre}{node.name} = {node.value}")
             else:
-                print("{}{}".format(pre, node.name))
+                print(f"{pre}{node.name}")
 
     def visualise(self, filename):
         """
@@ -468,7 +491,7 @@ class Symbol:
 
         try:
             DotExporter(
-                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+                new_node, nodeattrfunc=lambda node: f'label="{node.label}"'
             ).to_picture(filename)
         except FileNotFoundError:  # pragma: no cover
             # raise error but only through logger so that test passes
@@ -514,7 +537,6 @@ class Symbol:
         Examples
         --------
 
-        >>> import pybamm
         >>> a = pybamm.Symbol('a')
         >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
@@ -696,7 +718,7 @@ class Symbol:
         if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
             raise TypeError(
                 "Jacobian can only be taken with respect to a 'StateVector' "
-                "or 'StateVectorDot', but {} is a {}".format(variable, type(variable))
+                f"or 'StateVectorDot', but {variable} is a {type(variable)}"
             )
         return jac.jac(self, variable)
 
@@ -730,7 +752,7 @@ class Symbol:
         """
         raise NotImplementedError(
             "method self.evaluate() not implemented for symbol "
-            "{!s} of type {}".format(self, type(self))
+            f"{self!s} of type {type(self)}"
         )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
@@ -888,10 +910,8 @@ class Symbol:
         copy.deepcopy(), which is slow.
         """
         raise NotImplementedError(
-            """method self.new_copy() not implemented
-            for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            f"""method self.new_copy() not implemented
+            for symbol {self!s} of type {type(self)}"""
         )
 
     def new_copy(self):
@@ -974,7 +994,7 @@ class Symbol:
         try:
             self.shape_for_testing
         except ValueError as e:
-            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+            raise pybamm.ShapeError(f"Cannot find shape (original error: {e})")
 
     @property
     def print_name(self):
@@ -988,3 +1008,16 @@ class Symbol:
     def to_equation(self):
         sympy = have_optional_dependency("sympy")
         return sympy.Symbol(str(self.name))
+
+    def to_json(self):
+        """
+        Method to serialise a Symbol object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+        }
+
+        return json_dict

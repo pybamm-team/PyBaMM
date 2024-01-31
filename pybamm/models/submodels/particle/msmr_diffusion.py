@@ -262,9 +262,7 @@ class MSMRDiffusion(BaseParticle):
         N_s = c_max * x * (1 - x) * f * D_eff * pybamm.grad(U)
         variables.update(
             {
-                f"{Domain} {phase_name}particle rhs [V.s-1]": -(
-                    1 / (R_broad_nondim**2)
-                )
+                f"{Domain} {phase_name}particle rhs [V.s-1]": -(1 / (R_broad_nondim**2))
                 * pybamm.div(N_s)
                 / c_max
                 / dxdU,

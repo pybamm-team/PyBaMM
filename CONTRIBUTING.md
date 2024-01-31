@@ -44,7 +44,7 @@ You now have everything you need to start making changes!
 
 ### B. Writing your code
 
-6. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
+6. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](https://www.rebeccabarter.com/blog/2023-09-11-from_r_to_python)).
 7. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
 8. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
 9. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
@@ -216,7 +216,7 @@ You may also test multiple notebooks this way. Passing the path to a folder will
 nox -s examples -- docs/source/examples/notebooks/models/
 ```
 
-You may also use an appropriate [glob pattern](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns) to run all notebooks matching a particular folder or name pattern.
+You may also use an appropriate [glob pattern](https://docs.python.org/3/library/glob.html) to run all notebooks matching a particular folder or name pattern.
 
 To edit the structure and how the Jupyter notebooks get rendered in the Sphinx documentation (using `nbsphinx`), install [Pandoc](https://pandoc.org/installing.html) on your system, either using `conda` (through the `conda-forge` channel)
 
@@ -411,21 +411,23 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ## Infrastructure
 
-### Setuptools
+### Installation
 
-Installation of PyBaMM _and dependencies_ is handled via [setuptools](http://setuptools.readthedocs.io/)
+Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/) and [setuptools](http://setuptools.readthedocs.io/). It uses `CMake` to compile C++ extensions using [`pybind11`](https://pybind11.readthedocs.io/en/stable/) and [`casadi`](https://web.casadi.org/). The installation process is described in detail in the [source installation](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) page and is configured through the `CMakeLists.txt` file.
 
 Configuration files:
 
 ```
 setup.py
+pyproject.toml
+MANIFEST.in
 ```
 
-Note that this file must be kept in sync with the version number in [pybamm/**init**.py](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/__init__.py).
+Note: `MANIFEST.in` is used to include and exclude non-Python files and auxiliary package data for PyBaMM when distributing it. If a file is not included in `MANIFEST.in`, it will not be included in the source distribution (SDist) and subsequently not be included in the binary distribution (wheel).
 
-### Continuous Integration using GitHub actions
+### Continuous Integration using GitHub Actions
 
-Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub actions](https://github.com/features/actions).
+Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub Actions](https://github.com/features/actions).
 
 Tests are run for different operating systems, and for all Python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 

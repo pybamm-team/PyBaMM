@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -26,7 +25,7 @@ sys.path.append(os.path.abspath("./sphinxext/"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2018-2023, The PyBaMM Team"
+copyright = "2018-2024, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
@@ -76,6 +75,7 @@ napoleon_google_docstring = False
 
 doctest_global_setup = """
 from docs import *
+import pybamm
 """
 
 # Add any paths that contain templates here, relative to this directory.
@@ -122,7 +122,7 @@ html_favicon = "_static/favicon/favicon.png"
 html_theme_options = {
     "logo": {
         "image_light": "pybamm_logo.png",
-        "image_dark": "pybamm_logo.png",
+        "image_dark": "pybamm_logo_whitetext.png",
     },
     "icon_links": [
         {
@@ -142,11 +142,6 @@ html_theme_options = {
         },
     ],
     "collapse_navigation": True,
-    # should be kept versioned to use for the version warning bar
-    "switcher": {
-        "version_match": version,
-        "json_url": "https://docs.pybamm.org/en/latest/_static/versions.json",
-    },
     # turn to False to not fail build if json_url is not found
     "check_switcher": True,
     # for dark mode toggle and social media links
@@ -156,6 +151,10 @@ html_theme_options = {
     "navbar_persistent": "algolia-searchbox",
     "navigation_with_keys": False,
     "use_edit_page_button": True,
+    "analytics": {
+        "plausible_analytics_domain": "docs.pybamm.org",
+        "plausible_analytics_url": "https://plausible.io/js/script.js",
+    },
     "pygment_light_style": "xcode",
     "pygment_dark_style": "monokai",
     "footer_start": [
@@ -168,7 +167,7 @@ html_theme_options = {
     ],
 }
 
-html_title = "%s v%s Manual" % (project, version)
+html_title = f"{project} v{version} Manual"
 html_last_updated_fmt = "%Y-%m-%d"
 html_css_files = ["pybamm.css"]
 html_context = {"default_mode": "light"}
