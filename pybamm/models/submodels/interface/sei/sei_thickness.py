@@ -40,8 +40,8 @@ class SEIThickness(BaseModel):
         reaction_name = self.reaction_name
         SEI_option = getattr(self.options, domain)["SEI"]
         crack_option = getattr(self.options, domain)["SEI on cracks"]
-        # if self.options["working electrode"] != "both" and domain == "negative":
-        # crack_option = "false"  # required if SEI on cracks is used for half-cells
+        if self.options["working electrode"] != "both" and domain == "negative":
+            crack_option = "false"  # required if SEI on cracks is used for half-cells
 
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
