@@ -347,3 +347,25 @@ class BaseIntegrationTestLithiumIon:
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
+
+    def test_basic_processing_temperature_interpolant(self):
+        times = np.arange(0, 4000, 10)
+        tmax = max(times)
+
+        def temp_drive_cycle(y, z, t):
+            return pybamm.Interpolant(
+                times,
+                298.15 + 20 * (times / tmax),
+                t,
+            )
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "Initial temperature [K]": 298.15,
+                "Ambient temperature [K]": temp_drive_cycle,
+            }
+        )
+        model = self.model()
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
