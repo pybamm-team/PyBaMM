@@ -43,6 +43,18 @@ jobs:
         exclude:
           - os: ubuntu-latest
             python-version: "3.11"
+        # Include macOS M1 runners
+        include:
+          - os: macos-14
+            python-version: "3.8"
+          - os: macos-14
+            python-version: "3.9"
+          - os: macos-14
+            python-version: "3.10"
+          - os: macos-14
+            python-version: "3.11"
+          - os: macos-14
+            python-version: "3.12"
     name: Unit tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
@@ -180,6 +192,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        # Include macOS M1 runners
+        include:
+          - os: macos-14
+            python-version: "3.8"
+          - os: macos-14
+            python-version: "3.9"
+          - os: macos-14
+            python-version: "3.10"
+          - os: macos-14
+            python-version: "3.11"
+          - os: macos-14
+            python-version: "3.12"
     name: Integration tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
