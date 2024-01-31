@@ -175,13 +175,13 @@ jobs:
         run: |
           brew install graphviz openblas libomp
           brew reinstall gcc
-          python -m pip install cmake wget
+          python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on macOS arm64
-        run: pipx run cibuildwheel --output-dir wheelhouse
+        run: python -m pipx run cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
           CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
