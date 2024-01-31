@@ -31,7 +31,7 @@ class TestCompareOutputsTwoPhase(TestCase):
             "Maximum concentration in negative electrode [mol.m-3]",
             "Initial concentration in negative electrode [mol.m-3]",
             "Negative particle radius [m]",
-            "Negative electrode diffusivity [m2.s-1]",
+            "Negative particle diffusivity [m2.s-1]",
             "Negative electrode exchange-current density [A.m-2]",
         ]:
             parameter_values_two_phase.update(

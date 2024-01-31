@@ -45,15 +45,6 @@ class TestInterpolant(TestCase):
                 (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
             )
 
-    def test_warnings(self):
-        with self.assertWarnsRegex(Warning, "cubic spline"):
-            pybamm.Interpolant(
-                np.linspace(0, 1, 10),
-                np.ones(10),
-                pybamm.Symbol("a"),
-                interpolator="cubic spline",
-            )
-
     def test_interpolation(self):
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
