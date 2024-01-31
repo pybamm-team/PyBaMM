@@ -169,7 +169,7 @@ jobs:
           python-version: '3.10'
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.11.1
+        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
