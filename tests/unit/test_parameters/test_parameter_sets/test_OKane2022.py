@@ -21,7 +21,7 @@ class TestOKane2022(TestCase):
             ),
             "Dead lithium decay rate [s-1]": ([1e-8], 5e-7),
             # Negative electrode
-            "Negative electrode diffusivity [m2.s-1]": ([sto, T], 3.3e-14),
+            "Negative particle diffusivity [m2.s-1]": ([sto, T], 3.3e-14),
             "Negative electrode exchange-current density [A.m-2]": (
                 [1000, 16566.5, 33133, T],
                 0.33947,
@@ -29,7 +29,7 @@ class TestOKane2022(TestCase):
             "Negative electrode cracking rate": ([T], 3.9e-20),
             "Negative electrode volume change": ([sto, 33133], 0.0897),
             # Positive electrode
-            "Positive electrode diffusivity [m2.s-1]": ([sto, T], 4e-15),
+            "Positive particle diffusivity [m2.s-1]": ([sto, T], 4e-15),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1000, 31552, 63104, T],
                 3.4123,

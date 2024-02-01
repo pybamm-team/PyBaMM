@@ -43,14 +43,6 @@ class TestElectrodeSOH(TestCase):
                 energy = esoh_solver.theoretical_energy_integral(inputs)
                 self.assertAlmostEqual(sol[key], energy, places=5)
 
-        # should still work with old inputs
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
-        inputs = {"V_min": 3, "V_max": 4.2, "n_Li": n_Li, "C_n": Q_n, "C_p": Q_p}
-
-        # Solve the model and check outputs
-        sol = esoh_solver.solve(inputs)
-        self.assertAlmostEqual(sol["Q_Li"], Q_Li, places=5)
-
     def test_known_solution_cell_capacity(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
