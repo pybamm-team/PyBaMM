@@ -93,6 +93,10 @@ class TestBatchStudy(TestCase):
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
             bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
+            with self.assertRaisesRegex(ValueError, "The simulations have not been solved yet."):
+                pybamm.BatchStudy(
+                    models={"SPM": spm, "SPM uniform": spm_uniform}
+                ).create_gif()
             bs.solve([0, 10])
 
             # Create a temporary file name

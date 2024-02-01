@@ -86,6 +86,7 @@ class BatchStudy:
         self.repeats = repeats
         self.permutations = permutations
         self.quick_plot = None
+        self.sims = []
 
         if not self.permutations:
             for name in self.INPUT_LIST:
@@ -113,7 +114,7 @@ class BatchStudy:
         For more information on the parameters used in the solve,
         See :meth:`pybamm.Simulation.solve`
         """
-        self.sims = []
+
         iter_func = product if self.permutations else zip
 
         # Instantiate items in INPUT_LIST based on the value of self.permutations
@@ -196,7 +197,8 @@ class BatchStudy:
             Name of the generated GIF file.
 
         """
-
+        if not self.sims:
+            raise ValueError("The simulations have not been solved yet.")
         if self.quick_plot is None:
             self.quick_plot = pybamm.QuickPlot(self.sims)
 
