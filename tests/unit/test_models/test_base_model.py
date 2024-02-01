@@ -196,8 +196,38 @@ class TestBaseModel(TestCase):
         self.assertIn("i", parameter_info)
 
     def test_get_parameter_info_submodel(self):
-        model = pybamm.lithium_ion.SPM()
+        model = pybamm.BaseModel()
         submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.FunctionParameter("c", {})
+        d = pybamm.FunctionParameter("d", {})
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+
+        sub1 = pybamm.BaseSubModel(None)
+        sub1.rhs = {u: -u * a}
+        sub1.initial_conditions = {u: c}
+        sub1.variables = {"u": u}
+        sub1.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+        }
+        sub2 = pybamm.BaseSubModel(None)
+        sub2.algebraic = {v: v - b}
+        sub2.variables = {"v": v, "v+f+i": v + f + i}
+        sub2.initial_conditions = {v: d}
+        sub2.boundary_conditions = {
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+        model.submodels = {"sub1": sub1, "sub2": sub2}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.build_model()
         parameter_info = model.get_parameter_info(by_submodel=True)
 
         expected_error_message = "Cannot use get_parameter_info"
@@ -208,14 +238,19 @@ class TestBaseModel(TestCase):
         with self.assertRaisesRegex(NotImplementedError, expected_error_message):
             submodel.get_parameter_info(by_submodel=False)
 
-        self.assertIn("Current variable [A]", parameter_info["external circuit"])
-        self.assertEqual(parameter_info["Negative interface utilisation"], {})
+        self.assertIn("a", parameter_info["sub1"])
+        self.assertIn("b", parameter_info["sub2"])
+        self.assertEqual(parameter_info["sub1"]["a"][1], "InputParameter")
+        self.assertEqual(parameter_info["sub2"]["b"][1], "InputParameter in ['test']")
+        self.assertEqual(parameter_info["sub1"]["g"][1], "Parameter")
+        self.assertEqual(parameter_info["sub2"]["h"][1], "Parameter")
         self.assertEqual(
-            parameter_info["external circuit"]["Electrode width [m]"][1], "Parameter"
+            parameter_info["sub1"]["c"][1],
+            "FunctionParameter with inputs(s) ''",
         )
         self.assertEqual(
-            parameter_info["electrolyte transport efficiency"]["Separator porosity"][1],
-            "FunctionParameter with inputs(s) 'Through-cell distance (x) [m]'",
+            parameter_info["sub2"]["d"][1],
+            "FunctionParameter with inputs(s) ''",
         )
 
     def test_read_input_parameters(self):
