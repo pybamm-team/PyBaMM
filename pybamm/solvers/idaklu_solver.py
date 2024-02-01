@@ -281,10 +281,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Convert derivative functions for sensitivities
                 if (len(inputs) > 0) and (model.calculate_sensitivities):
                     self.dvar_dy_idaklu_fcns.append(
-                        idaklu.generate_function(self.computed_dvar_dy_fcns[key].serialize())
+                        idaklu.generate_function(
+                            self.computed_dvar_dy_fcns[key].serialize()
+                        )
                     )
                     self.dvar_dp_idaklu_fcns.append(
-                        idaklu.generate_function(self.computed_dvar_dp_fcns[key].serialize())
+                        idaklu.generate_function(
+                            self.computed_dvar_dp_fcns[key].serialize()
+                        )
                     )
 
         else:

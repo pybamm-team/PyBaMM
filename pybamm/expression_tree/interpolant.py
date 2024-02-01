@@ -3,7 +3,6 @@
 #
 import numpy as np
 from scipy import interpolate
-import warnings
 
 import pybamm
 
@@ -49,14 +48,6 @@ class Interpolant(pybamm.Function):
         extrapolate=True,
         entries_string=None,
     ):
-        # "cubic spline" has been renamed to "cubic"
-        if interpolator == "cubic spline":
-            interpolator = "cubic"
-            warnings.warn(
-                "The 'cubic spline' interpolator has been renamed to 'cubic'.",
-                DeprecationWarning,
-            )
-
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")
@@ -243,7 +234,13 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name, self.entries_string, *tuple([child.id for child in self.children]), *tuple(self.domain))
+            (
+                self.__class__,
+                self.name,
+                self.entries_string,
+                *tuple([child.id for child in self.children]),
+                *tuple(self.domain),
+            )
         )
 
     def _function_new_copy(self, children):

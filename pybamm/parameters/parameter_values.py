@@ -94,6 +94,7 @@ class ParameterValues:
             raise ValueError("Target SOC should be between 0 and 1")
 
         from bpx import parse_bpx_file, get_electrode_concentrations
+        from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
         from .bpx import _bpx_to_param_dict
 
         # parse bpx
@@ -111,9 +112,25 @@ class ParameterValues:
             # ahead with the low voltage limit.
 
         # get initial concentrations based on SOC
-        c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
-        pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = c_n_init
-        pybamm_dict["Initial concentration in positive electrode [mol.m-3]"] = c_p_init
+        # Note: we cannot set SOC for blended electrodes,
+        # see https://github.com/pybamm-team/PyBaMM/issues/2682
+        bpx_neg = bpx.parameterisation.negative_electrode
+        bpx_pos = bpx.parameterisation.positive_electrode
+        if isinstance(bpx_neg, (ElectrodeBlended, ElectrodeBlendedSPM)) or isinstance(
+            bpx_pos, (ElectrodeBlended, ElectrodeBlendedSPM)
+        ):
+            pybamm.logger.warning(
+                "Initial concentrations cannot be set using stoichiometry limits for "
+                "blend electrodes. Please set the initial concentrations manually."
+            )
+        else:
+            c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
+            pybamm_dict[
+                "Initial concentration in negative electrode [mol.m-3]"
+            ] = c_n_init
+            pybamm_dict[
+                "Initial concentration in positive electrode [mol.m-3]"
+            ] = c_p_init
 
         return pybamm.ParameterValues(pybamm_dict)
 
@@ -295,8 +312,7 @@ class ParameterValues:
             {
                 "Initial concentration in {} electrode [mol.m-3]".format(
                     options["working electrode"]
-                ): x
-                * c_max
+                ): x * c_max
             }
         )
         return parameter_values
@@ -308,6 +324,7 @@ class ParameterValues:
         known_value="cyclable lithium capacity",
         inplace=True,
         options=None,
+        tol=1e-6,
     ):
         """
         Set the initial stoichiometry of each electrode, based on the initial
@@ -315,7 +332,12 @@ class ParameterValues:
         """
         param = param or pybamm.LithiumIonParameters(options)
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(
-            initial_value, self, param=param, known_value=known_value, options=options
+            initial_value,
+            self,
+            param=param,
+            known_value=known_value,
+            options=options,
+            tol=tol,
         )
         if inplace:
             parameter_values = self
@@ -392,9 +414,7 @@ class ParameterValues:
             `model.variables = {}`)
 
         """
-        pybamm.logger.info(
-            f"Start setting parameters for {unprocessed_model.name}"
-        )
+        pybamm.logger.info(f"Start setting parameters for {unprocessed_model.name}")
 
         # set up inplace vs not inplace
         if inplace:
@@ -414,18 +434,14 @@ class ParameterValues:
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (rhs)"
-            )
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")
             new_variable = self.process_symbol(variable)
             new_rhs[new_variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (algebraic)"
-            )
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (algebraic)")
             new_variable = self.process_symbol(variable)
             new_algebraic[new_variable] = self.process_symbol(equation)
         model.algebraic = new_algebraic
@@ -443,17 +459,13 @@ class ParameterValues:
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.verbose(
-                f"Processing parameters for {variable!r} (variables)"
-            )
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
             new_variables[variable] = self.process_symbol(equation)
         model.variables = new_variables
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.verbose(
-                f"Processing parameters for event '{event.name}''"
-            )
+            pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
@@ -462,9 +474,7 @@ class ParameterValues:
 
         interpolant_events = self._get_interpolant_events(model)
         for event in interpolant_events:
-            pybamm.logger.verbose(
-                f"Processing parameters for event '{event.name}''"
-            )
+            pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type

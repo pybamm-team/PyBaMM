@@ -77,9 +77,7 @@ class TestJacobian(TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         func = 2**v
-        jacobian = np.array(
-            [[0, 0, 2**3 * np.log(2), 0], [0, 0, 0, 2**4 * np.log(2)]]
-        )
+        jacobian = np.array([[0, 0, 2**3 * np.log(2), 0], [0, 0, 0, 2**4 * np.log(2)]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 

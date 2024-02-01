@@ -1,7 +1,7 @@
 Experiment step functions
 =========================
 
-The following functions can be used to define steps in an experiment.
+The following functions can be used to define steps in an experiment. Note that the drive cycle must start at t=0
 
 .. autofunction:: pybamm.step.string
 

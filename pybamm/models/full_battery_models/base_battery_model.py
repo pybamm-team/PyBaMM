@@ -4,7 +4,6 @@
 
 import pybamm
 from functools import cached_property
-import warnings
 
 from pybamm.expression_tree.operations.serialise import Serialise
 
@@ -631,28 +630,26 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 value = (value,)
             else:
                 if not (
-
-                        option
-                        in [
-                            "diffusivity",
-                            "exchange-current density",
-                            "intercalation kinetics",
-                            "interface utilisation",
-                            "lithium plating",
-                            "loss of active material",
-                            "number of MSMR reactions",
-                            "open-circuit potential",
-                            "particle",
-                            "particle mechanics",
-                            "particle phases",
-                            "particle size",
-                            "SEI",
-                            "SEI on cracks",
-                            "stress-induced diffusion",
-                        ]
-                        and isinstance(value, tuple)
-                        and len(value) == 2
-
+                    option
+                    in [
+                        "diffusivity",
+                        "exchange-current density",
+                        "intercalation kinetics",
+                        "interface utilisation",
+                        "lithium plating",
+                        "loss of active material",
+                        "number of MSMR reactions",
+                        "open-circuit potential",
+                        "particle",
+                        "particle mechanics",
+                        "particle phases",
+                        "particle size",
+                        "SEI",
+                        "SEI on cracks",
+                        "stress-induced diffusion",
+                    ]
+                    and isinstance(value, tuple)
+                    and len(value) == 2
                 ):
                     # more possible options that can take 2-tuples to be added
                     # as they come
@@ -685,24 +682,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             f"Possible values are {self.possible_options[option]}"
                         )
 
-        # Issue a warning to let users know that the 'lumped' thermal option (or
-        # equivalently 'x-lumped' with 0D current collectors) now uses the total heat
-        # transfer coefficient, surface area for cooling, and cell volume parameters,
-        # regardless of the 'cell geometry option' chosen.
-        thermal_option = options["thermal"]
-        dimensionality_option = options["dimensionality"]
-        if thermal_option == "lumped" or (
-            thermal_option == "x-lumped" and dimensionality_option == 0
-        ):
-            message = (
-                f"The '{thermal_option}' thermal option with "
-                f"'dimensionality' {dimensionality_option} now uses the parameters "
-                "'Cell cooling surface area [m2]', 'Cell volume [m3]' and "
-                "'Total heat transfer coefficient [W.m-2.K-1]' to compute the cell "
-                "cooling term, regardless of the value of the the 'cell geometry' "
-                "option. Please update your parameters accordingly."
-            )
-            warnings.warn(message, pybamm.OptionWarning, stacklevel=2)
         super().__init__(options.items())
 
     @property
@@ -1071,9 +1050,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.verbose(
-                f"Updating {submodel_name} submodel ({self.name})"
-            )
+            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
 

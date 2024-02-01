@@ -458,7 +458,7 @@ class TestSimulationExperiment(TestCase):
 
         # Change a parameter to an input
         param = pybamm.ParameterValues("Marquis2019")
-        param["Negative electrode diffusivity [m2.s-1]"] = (
+        param["Negative particle diffusivity [m2.s-1]"] = (
             pybamm.InputParameter("Dsn") * 3.9e-14
         )
 
@@ -518,6 +518,25 @@ class TestSimulationExperiment(TestCase):
                 sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
                 decimal=5,
             )
+
+    def test_skipped_step_continuous(self):
+        model = pybamm.lithium_ion.SPM({"SEI": "solvent-diffusion limited"})
+        experiment = pybamm.Experiment(
+            [
+                ("Rest for 24 hours (1 hour period)",),
+                (
+                    "Charge at C/3 until 4.1 V",
+                    "Hold at 4.1V until C/20",
+                    "Discharge at C/3 until 2.5 V",
+                ),
+            ]
+        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve(initial_soc=1)
+        np.testing.assert_array_almost_equal(
+            sim.solution.cycles[0].last_state.y.full(),
+            sim.solution.cycles[1].steps[-1].first_state.y.full(),
+        )
 
     def test_all_empty_solution_errors(self):
         model = pybamm.lithium_ion.SPM()
