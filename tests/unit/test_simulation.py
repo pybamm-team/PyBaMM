@@ -398,7 +398,9 @@ class TestSimulation(TestCase):
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
             sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-            with self.assertRaisesRegex(ValueError, "The simulation has not been solved yet."):
+            with self.assertRaisesRegex(
+                ValueError, "The simulation has not been solved yet."
+            ):
                 sim.create_gif()
             sim.solve(t_eval=[0, 10])
 
