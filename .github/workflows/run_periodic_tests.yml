@@ -46,9 +46,21 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        # Include macOS M1 runners
+        include:
+          - os: macos-14
+            python-version: "3.10"
+          - os: macos-14
+            python-version: "3.11"
+          - os: macos-14
+            python-version: "3.12"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -89,7 +101,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v3.1.5
 
       - name: Run integration tests
         run: python -m nox -s integration
@@ -110,13 +122,14 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: python -m nox -s scripts
 
-  #M-series Mac Mini
+  # M-series Mac Mini
   build-apple-mseries:
     if: github.repository_owner == 'pybamm-team'
     needs: style
     runs-on: [self-hosted, macOS, ARM64]
     env:
       GITHUB_PATH: ${PYENV_ROOT/bin:$PATH}
+      LD_LIBRARY_PATH: $HOME/.local/lib
     strategy:
       fail-fast: false
       matrix:
@@ -124,28 +137,39 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install python & create virtualenv
+      - name: Install Python & create virtualenv
         shell: bash
         run: |
           eval "$(pyenv init -)"
           pyenv install ${{ matrix.python-version }} -s
           pyenv virtualenv ${{ matrix.python-version }} pybamm-${{ matrix.python-version }}
 
-      - name: Install dependencies & run unit tests for Windows and MacOS
+      - name: Install build-time dependencies & run unit tests for M-series macOS runner
         shell: bash
+        env:
+          # Point scikits.odes to the correct SUNDIALS installation
+          SUNDIALS_INST: $HOME/.local/lib
+          # Homebrew environment variables
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          NONINTERACTIVE: 1
         run: |
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
-          python -m pip install --upgrade pip wheel setuptools nox
+          python -m pip install --upgrade pip nox
+          # Don't use Homebrew to install SUNDIALS because scikits.odes looks for
+          # in Homebrew folders instead, which we don't want
+          brew uninstall sundials --force
+          pip cache remove scikits.odes
+          python -m nox -s pybamm-requires -- --force
           python -m nox -s unit
 
-      - name: Run integration tests for Windows and MacOS
+      - name: Run integration tests for M-series macOS runner
         run: |
           eval "$(pyenv init -)"
           pyenv activate pybamm-${{ matrix.python-version }}
           python -m nox -s integration
 
-      - name: Uninstall pyenv-virtualenv & python
+      - name: Uninstall pyenv-virtualenv & Python
         if: always()
         shell: bash
         run: |
@@ -159,8 +183,16 @@ jobs:
         matrix:
             os: [ubuntu-latest, macos-latest]
             python-version: ["3.8", "3.9", "3.10", "3.11"]
+          # Include macOS M1 runners
+            include:
+              - os: macos-14
+                python-version: "3.10"
+              - os: macos-14
+                python-version: "3.11"
+              - os: macos-14
+                python-version: "3.12"
         fail-fast: false
-    name: Test pybamm_install_odes on ${{ matrix.os }}
+    name: Test pybamm_install_odes (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
       - name: Check out PyBaMM repository
