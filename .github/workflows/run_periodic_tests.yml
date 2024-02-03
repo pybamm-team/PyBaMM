@@ -54,7 +54,15 @@ jobs:
             python-version: "3.11"
           - os: macos-14
             python-version: "3.12"
-
+    env:
+        PYBAMM_USE_VCPKG: 1
+        VCPKG_ROOT_DIR: C:\vcpkg
+        VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+        VCPKG_FEATURE_FLAGS: manifests,registries
+        CMAKE_GENERATOR: "Visual Studio 17 2022"
+        CMAKE_GENERATOR_PLATFOR: x64
+        CMAKE_BUILD_PARALLEL_LEVEL: 4
+        
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
