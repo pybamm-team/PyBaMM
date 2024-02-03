@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import subprocess
+from multiprocessing import cpu_count
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
@@ -81,6 +82,9 @@ class CMakeBuild(build_ext):
     def run(self):
         if not self.extensions:
             return
+
+        # Build in parallel wherever possible
+        os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
         if system() == "Windows":
             use_python_casadi = False

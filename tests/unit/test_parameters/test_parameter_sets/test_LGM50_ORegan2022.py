@@ -23,7 +23,7 @@ class TestORegan2022(TestCase):
                 [298.15],
                 902.6502,
             ),
-            "Positive electrode diffusivity [m2.s-1]": ([0.5, 298.15], 7.2627e-15),
+            "Positive particle diffusivity [m2.s-1]": ([0.5, 298.15], 7.2627e-15),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_p_max, 298.15],
                 2.1939,
@@ -40,7 +40,7 @@ class TestORegan2022(TestCase):
                 [298.15],
                 847.7155,
             ),
-            "Negative electrode diffusivity [m2.s-1]": ([0.5, 298.15], 2.8655e-16),
+            "Negative particle diffusivity [m2.s-1]": ([0.5, 298.15], 2.8655e-16),
             "Negative electrode exchange-current density [A.m-2]": (
                 [1e3, 1e4, c_n_max, 298.15],
                 1.0372,

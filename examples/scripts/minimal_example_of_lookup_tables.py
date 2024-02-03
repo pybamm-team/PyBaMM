@@ -22,7 +22,7 @@ def process_2D(name, data):
 parameter_values = pybamm.ParameterValues(pybamm.parameter_sets.Chen2020)
 
 # overwrite the diffusion coefficient with a 2D lookup table
-D_s_n = parameter_values["Negative electrode diffusivity [m2.s-1]"]
+D_s_n = parameter_values["Negative particle diffusivity [m2.s-1]"]
 df = pd.DataFrame(
     {
         "T": [0, 0, 25, 25, 45, 45],
@@ -31,7 +31,7 @@ df = pd.DataFrame(
     }
 )
 df["T"] = df["T"] + 273.15
-D_s_n_data = process_2D("Negative electrode diffusivity [m2.s-1]", df)
+D_s_n_data = process_2D("Negative particle diffusivity [m2.s-1]", df)
 
 
 def D_s_n(sto, T):
@@ -39,7 +39,7 @@ def D_s_n(sto, T):
     return pybamm.Interpolant(x, y, [T, sto], name)
 
 
-parameter_values["Negative electrode diffusivity [m2.s-1]"] = D_s_n
+parameter_values["Negative particle diffusivity [m2.s-1]"] = D_s_n
 
 k_n = parameter_values["Negative electrode exchange-current density [A.m-2]"]
 
