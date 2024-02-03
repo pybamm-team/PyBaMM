@@ -6,6 +6,8 @@ import os
 import platform
 import subprocess  # nosec
 import unittest
+from io import StringIO
+import sys
 
 import casadi
 import numpy as np
@@ -252,6 +254,106 @@ class TestBaseModel(TestCase):
             parameter_info["sub2"]["d"][1],
             "FunctionParameter with inputs(s) ''",
         )
+
+    def test_print_parameter_info(self):
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.FunctionParameter("c", {})
+        d = pybamm.FunctionParameter("d", {})
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+
+        sub1 = pybamm.BaseSubModel(None)
+        sub1.rhs = {u: -u * a}
+        sub1.initial_conditions = {u: c}
+        sub1.variables = {"u": u}
+        sub1.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+        }
+        sub2 = pybamm.BaseSubModel(None)
+        sub2.algebraic = {v: v - b}
+        sub2.variables = {"v": v, "v+f+i": v + f + i}
+        sub2.initial_conditions = {v: d}
+        sub2.boundary_conditions = {
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+        sub3 = pybamm.BaseSubModel(None)
+        model.submodels = {"sub1": sub1, "sub2": sub2, "sub3": sub3}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.build_model()
+        captured_output = StringIO()
+        sys.stdout = captured_output
+
+        model.print_parameter_info()
+        sys.stdout = sys.__stdout__
+
+        result = captured_output.getvalue().strip()
+        self.assertIn("a", result)
+        self.assertIn("b", result)
+        self.assertIn("InputParameter", result)
+        self.assertIn("InputParameter in ['test']", result)
+        self.assertIn("Parameter", result)
+        self.assertIn("FunctionParameter with inputs(s) ''", result)
+
+    def test_print_parameter_info_submodel(self):
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.FunctionParameter("c", {})
+        d = pybamm.FunctionParameter("d", {})
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+
+        sub1 = pybamm.BaseSubModel(None)
+        sub1.rhs = {u: -u * a}
+        sub1.initial_conditions = {u: c}
+        sub1.variables = {"u": u}
+        sub1.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+        }
+        sub2 = pybamm.BaseSubModel(None)
+        sub2.algebraic = {v: v - b}
+        sub2.variables = {"v": v, "v+f+i": v + f + i}
+        sub2.initial_conditions = {v: d}
+        sub2.boundary_conditions = {
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+        sub3 = pybamm.BaseSubModel(None)
+        model.submodels = {"sub1": sub1, "sub2": sub2, "sub3": sub3}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.build_model()
+        captured_output = StringIO()
+        sys.stdout = captured_output
+
+        model.print_parameter_info(by_submodel=True)
+        sys.stdout = sys.__stdout__
+
+        result = captured_output.getvalue().strip()
+        self.assertIn("'sub1' submodel parameters:", result)
+        self.assertIn("'sub2' submodel parameters:", result)
+        self.assertIn("Parameter", result)
+        self.assertIn("InputParameter", result)
+        self.assertIn("FunctionParameter with inputs(s) ''", result)
+        self.assertIn("InputParameter in ['test']", result)
+        self.assertIn("g", result)
+        self.assertIn("a", result)
+        self.assertIn("c", result)
+        self.assertIn("h", result)
+        self.assertIn("b", result)
+        self.assertIn("d", result)
 
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model
