@@ -457,6 +457,16 @@ class Solution:
             {name: np.array(value) for name, value in summary_variables.items()}
         )
 
+    def _exprtree_contains(self, expr, expr_type):
+        """Does the expression tree contain a given type of node?"""
+        if type(expr) is expr_type:
+            return True
+        elif "children" in dir(expr):
+            for child in expr.children:
+                if self._exprtree_contains(child, expr_type):
+                    return True
+        return False
+
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # make sure that sensitivities are extracted if required
@@ -478,7 +488,15 @@ class Solution:
             for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
-                if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                if ys.size == 0 and self._exprtree_contains(
+                    var_pybamm, pybamm.expression_tree.state_vector.StateVector
+                ):
+                    raise KeyError(
+                        f"Cannot process variable '{key}' as it was not part of the "
+                        "solve. Please re-run the solve with `output_variables` set to "
+                        "include this variable."
+                    )
+                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
