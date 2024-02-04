@@ -2,8 +2,10 @@
 # Test the experiment step termination classes
 #
 
-import pybamm 
+import pybamm
 import pytest
+
+
 class TestExperimentStepTermination:
     def test_base_termination(self):
         term = pybamm.step.BaseTermination(1)
