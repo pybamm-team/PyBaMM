@@ -102,6 +102,8 @@ jobs:
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
         uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run integration tests
         run: python -m nox -s integration
