@@ -74,7 +74,7 @@ jobs:
           sudo apt install texlive-full
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
         run: |
           brew analytics off
           brew install graphviz openblas libomp
@@ -206,7 +206,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install gfortran gcc libopenblas-dev
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
         env:
           # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
