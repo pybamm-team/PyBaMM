@@ -1072,6 +1072,8 @@ class Simulation:
             Name of the generated GIF file.
 
         """
+        if self.solution is None:
+            raise ValueError("The simulation has not been solved yet.")
         if self.quick_plot is None:
             self.quick_plot = pybamm.QuickPlot(self._solution)
 

@@ -215,7 +215,8 @@
       "profile": "https://github.com/jonchapman1",
       "contributions": [
         "ideas",
-        "fundingFinding"
+        "fundingFinding",
+        "doc"
       ]
     },
     {
@@ -772,7 +773,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/99216956?v=4",
       "profile": "https://github.com/prady0t",
       "contributions": [
-        "infra"
+        "infra",
+        "code",
+        "test"
       ]
     },
     {
