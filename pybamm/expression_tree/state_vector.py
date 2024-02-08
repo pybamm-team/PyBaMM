@@ -4,9 +4,9 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
-from typing import Any
 
 import pybamm
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 
 class StateVectorBase(pybamm.Symbol):
@@ -39,9 +39,9 @@ class StateVectorBase(pybamm.Symbol):
         *y_slices: slice,
         base_name="y",
         name: str | None = None,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         evaluation_array: list[bool] | None = None,
     ):
         for y_slice in y_slices:
@@ -259,9 +259,9 @@ class StateVector(StateVectorBase):
         self,
         *y_slices: slice,
         name: str | None = None,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         evaluation_array: list[bool] | None = None,
     ):
         super().__init__(
@@ -276,10 +276,10 @@ class StateVector(StateVectorBase):
 
     def _base_evaluate(
         self,
-        t: Any = None,
+        t: float | None = None,
         y: np.ndarray | None = None,
-        y_dot: Any = None,
-        inputs: Any = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y is None:
@@ -343,9 +343,9 @@ class StateVectorDot(StateVectorBase):
         self,
         *y_slices: slice,
         name: str | None = None,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         evaluation_array: list[bool] | None = None,
     ):
         super().__init__(
@@ -360,10 +360,10 @@ class StateVectorDot(StateVectorBase):
 
     def _base_evaluate(
         self,
-        t: Any = None,
-        y: Any = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
-        inputs: Any = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y_dot is None:

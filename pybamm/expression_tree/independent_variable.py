@@ -3,10 +3,11 @@
 #
 from __future__ import annotations
 import sympy
-from typing import Any
+import numpy as np
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
@@ -35,9 +36,9 @@ class IndependentVariable(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
     ) -> None:
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
@@ -83,9 +84,9 @@ class Time(IndependentVariable):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: Any = None,
-        y_dot: Any = None,
-        inputs: Any = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if t is None:
@@ -128,9 +129,9 @@ class SpatialVariable(IndependentVariable):
     def __init__(
         self,
         name: str,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         coord_sys=None,
     ) -> None:
         self.coord_sys = coord_sys
@@ -189,9 +190,9 @@ class SpatialVariableEdge(SpatialVariable):
     def __init__(
         self,
         name: str,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         coord_sys=None,
     ) -> None:
         super().__init__(name, domain, auxiliary_domains, domains, coord_sys)

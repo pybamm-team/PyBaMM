@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 import pybamm
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 
 class Vector(pybamm.Array):
@@ -16,9 +17,9 @@ class Vector(pybamm.Array):
         self,
         entries: np.ndarray | list[float] | np.matrix,
         name: str | None = None,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         entries_string: str | None = None,
     ) -> None:
         if isinstance(entries, (list, np.matrix)):

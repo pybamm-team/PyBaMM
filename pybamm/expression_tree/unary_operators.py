@@ -568,8 +568,9 @@ class Integral(SpatialOperator):
     def __init__(
         self,
         child,
-        integration_variable: list[pybamm.IndependentVariable]
-        | pybamm.IndependentVariable,
+        integration_variable: (
+            list[pybamm.IndependentVariable] | pybamm.IndependentVariable
+        ),
     ):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]

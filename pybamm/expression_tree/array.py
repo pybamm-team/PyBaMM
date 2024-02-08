@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 if TYPE_CHECKING:  # pragma: no cover
     import sympy
@@ -43,9 +44,9 @@ class Array(pybamm.Symbol):
         self,
         entries: np.ndarray | list[float] | csr_matrix,
         name: str | None = None,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         entries_string: str | None = None,
     ) -> None:
         # if
@@ -140,7 +141,13 @@ class Array(pybamm.Symbol):
             entries_string=self.entries_string,
         )
 
-    def _base_evaluate(self, t, y, y_dot, inputs):
+    def _base_evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._entries
 

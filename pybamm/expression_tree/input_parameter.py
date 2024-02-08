@@ -7,6 +7,8 @@ import numpy as np
 import scipy.sparse
 import pybamm
 
+from pybamm.type_definitions import DomainType
+
 
 class InputParameter(pybamm.Symbol):
     """
@@ -29,7 +31,7 @@ class InputParameter(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: list[str] | str | None = None,
+        domain: DomainType = None,
         expected_size: int | None = None,
     ) -> None:
         # Expected size defaults to 1 if no domain else None (gets set later)

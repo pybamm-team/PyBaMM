@@ -6,6 +6,7 @@ import numpy as np
 import numbers
 import pybamm
 from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 
 class VariableBase(pybamm.Symbol):
@@ -50,9 +51,9 @@ class VariableBase(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         bounds: tuple[pybamm.Symbol] | None = None,
         print_name: str | None = None,
         scale: float | pybamm.Symbol | None = 1,

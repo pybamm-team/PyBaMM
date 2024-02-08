@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numbers
 import numpy as np
-from typing import Literal, Any
+from typing import Literal
 
 import pybamm
 from pybamm.util import have_optional_dependency
@@ -65,10 +65,10 @@ class Scalar(pybamm.Symbol):
 
     def _base_evaluate(
         self,
-        t: Any = None,
-        y: Any = None,
-        y_dot: Any = None,
-        inputs: Any = None,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value

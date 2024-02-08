@@ -6,11 +6,10 @@ import numbers
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from typing import Type, SupportsFloat
+from typing import SupportsFloat
 
 import pybamm
-
-NumberType = Type[SupportsFloat]
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 
 class Broadcast(pybamm.SpatialOperator):
@@ -462,10 +461,10 @@ class FullBroadcast(Broadcast):
 
     def __init__(
         self,
-        child_input: NumberType | float | pybamm.Symbol,
-        broadcast_domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        broadcast_domains: dict[str, list[str] | str] | None = None,
+        child_input: SupportsFloat | pybamm.Symbol,
+        broadcast_domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        broadcast_domains: DomainsType = None,
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
@@ -536,10 +535,10 @@ class FullBroadcastToEdges(FullBroadcast):
 
     def __init__(
         self,
-        child: NumberType | float | pybamm.Symbol,
-        broadcast_domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        broadcast_domains: dict[str, list[str] | str] | None = None,
+        child: SupportsFloat | pybamm.Symbol,
+        broadcast_domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        broadcast_domains: DomainsType = None,
         name: str | None = None,
     ):
         name = name or "broadcast to edges"

@@ -6,6 +6,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 
 class Matrix(pybamm.Array):
@@ -17,9 +18,9 @@ class Matrix(pybamm.Array):
         self,
         entries: np.ndarray | list[float] | csr_matrix,
         name: str | None = None,
-        domain: list[str] | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
         entries_string: str | None = None,
     ) -> None:
         if isinstance(entries, list):

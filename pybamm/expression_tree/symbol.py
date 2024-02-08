@@ -15,6 +15,13 @@ from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 if TYPE_CHECKING:  # pragma: no cover
     import casadi
+    from pybamm.type_definitions import (
+        ChildSymbol,
+        ChildValue,
+        DomainType,
+        AuxiliaryDomainType,
+        DomainsType,
+    )
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
 EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
@@ -211,9 +218,9 @@ class Symbol:
         self,
         name: str,
         children: Sequence[Symbol] | None = None,
-        domain: list[str] | str | None = None,
-        auxiliary_domains: dict[str, str] | None = None,
-        domains: dict[str, list[str] | str] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
     ):
         super().__init__()
         self.name = name
@@ -400,9 +407,9 @@ class Symbol:
 
     def read_domain_or_domains(
         self,
-        domain: list[str] | str | None,
-        auxiliary_domains: dict[str, str] | None,
-        domains: dict[str, list[str] | str] | None,
+        domain: DomainType,
+        auxiliary_domains: AuxiliaryDomainType,
+        domains: DomainsType,
     ):
         if domains is None:
             if isinstance(domain, str):
@@ -572,51 +579,47 @@ class Symbol:
             {k: v for k, v in self.domains.items() if v != []},
         )
 
-    def __add__(self, other: Symbol | float | np.ndarray) -> pybamm.Addition:
+    def __add__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(self, other)
 
-    def __radd__(self, other: Symbol | float | np.ndarray) -> pybamm.Addition:
+    def __radd__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(other, self)
 
-    def __sub__(self, other: Symbol | float | np.ndarray) -> pybamm.Subtraction:
+    def __sub__(self, other: ChildSymbol) -> pybamm.Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(self, other)
 
-    def __rsub__(self, other: Symbol | float | np.ndarray) -> pybamm.Subtraction:
+    def __rsub__(self, other: ChildSymbol) -> pybamm.Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(other, self)
 
-    def __mul__(self, other: Symbol | float | np.ndarray) -> pybamm.Multiplication:
+    def __mul__(self, other: ChildSymbol) -> pybamm.Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(self, other)
 
-    def __rmul__(self, other: Symbol | float | np.ndarray) -> pybamm.Multiplication:
+    def __rmul__(self, other: ChildSymbol) -> pybamm.Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
-    def __matmul__(
-        self, other: Symbol | float | np.ndarray
-    ) -> pybamm.MatrixMultiplication:
+    def __matmul__(self, other: ChildSymbol) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(self, other)
 
-    def __rmatmul__(
-        self, other: Symbol | float | np.ndarray
-    ) -> pybamm.MatrixMultiplication:
+    def __rmatmul__(self, other: ChildSymbol) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
-    def __truediv__(self, other: Symbol | float | np.ndarray) -> pybamm.Division:
+    def __truediv__(self, other: ChildSymbol) -> pybamm.Division:
         """return a :class:`Division` object."""
         return pybamm.divide(self, other)
 
-    def __rtruediv__(self, other: Symbol | float | np.ndarray) -> pybamm.Division:
+    def __rtruediv__(self, other: ChildSymbol) -> pybamm.Division:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other: Symbol | float | np.ndarray) -> pybamm.Power:
+    def __pow__(self, other: ChildSymbol) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
@@ -795,7 +798,7 @@ class Symbol:
         y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
         inputs: dict | str | None = None,
-    ) -> float | np.ndarray:
+    ) -> ChildValue:
         """Evaluate expression tree (wrapper to allow using dict of known values).
 
         Parameters
