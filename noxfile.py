@@ -16,6 +16,7 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
+    "PIP_NO_BINARY": "scikits.odes",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -68,6 +69,15 @@ def run_coverage(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,jax]", silent=False)
         else:
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
             session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
@@ -91,6 +101,15 @@ def run_integration(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,jax]", silent=False)
         else:
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
             session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
@@ -123,6 +142,15 @@ def run_unit(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,jax]", silent=False)
         else:
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
             session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
@@ -180,6 +208,15 @@ def set_dev(session):
                 external=True,
             )
         else:
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
             session.run(
                 python,
                 "-m",
@@ -224,6 +261,15 @@ def run_tests(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,jax]", silent=False)
         else:
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
             session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):

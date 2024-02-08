@@ -116,6 +116,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
@@ -172,6 +173,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
@@ -263,6 +265,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
@@ -363,6 +366,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
@@ -417,6 +421,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12
