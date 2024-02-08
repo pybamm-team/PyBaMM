@@ -2,7 +2,6 @@
 # Function classes and methods
 #
 from __future__ import annotations
-import numbers
 
 import numpy as np
 from scipy import special
@@ -43,7 +42,7 @@ class Function(pybamm.Symbol):
         # Turn numbers into scalars
         children = list(children)
         for idx, child in enumerate(children):
-            if isinstance(child, numbers.Number):
+            if isinstance(child, (float, int, np.number)):
                 children[idx] = pybamm.Scalar(child)
 
         if name is not None:

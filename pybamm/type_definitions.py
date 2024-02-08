@@ -4,6 +4,8 @@ from typing import Union
 import numpy as np
 import pybamm
 
+# numbers.Number should not be used for type hints
+Numeric = Union[int, float, np.number]
 
 # expression tree
 ChildValue = Union[float, np.ndarray]

@@ -2,12 +2,12 @@
 # Unary operator classes and methods
 #
 from __future__ import annotations
-import numbers
 
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
 import pybamm
 from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import DomainsType
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -29,9 +29,9 @@ class UnaryOperator(pybamm.Symbol):
         self,
         name: str,
         child: pybamm.Symbol,
-        domains: dict[str, list[str] | str] | None = None,
+        domains: DomainsType = None,
     ):
-        if isinstance(child, numbers.Number):
+        if isinstance(child, (float, int, np.number)):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
 

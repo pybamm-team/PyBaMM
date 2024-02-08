@@ -2,7 +2,6 @@
 # Parameter classes
 #
 from __future__ import annotations
-import numbers
 import sys
 
 import numpy as np
@@ -107,7 +106,7 @@ class FunctionParameter(pybamm.Symbol):
 
         # Turn numbers into scalars
         for idx, child in enumerate(children_list):
-            if isinstance(child, numbers.Number):
+            if isinstance(child, (float, int, np.number)):
                 children_list[idx] = pybamm.Scalar(child)
 
         domains = self.get_children_domains(children_list)

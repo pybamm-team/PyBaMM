@@ -168,11 +168,9 @@ def simplify_if_constant(symbol: pybamm.Symbol):
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                if isinstance(result, np.ndarray):  # pragma: no cover
-                    # type-narrow for Scalar
-                    new_result = cast(float, result)
-                    return pybamm.Scalar(new_result)
-                return pybamm.Scalar(result)
+                # type-narrow for Scalar
+                new_result = cast(float, result)
+                return pybamm.Scalar(new_result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
                     return pybamm.Vector(result, domains=symbol.domains)
@@ -850,7 +848,7 @@ class Symbol:
         # Default behaviour is False
         return False
 
-    def evaluate_ignoring_errors(self, t: float | None = 0):  # none
+    def evaluate_ignoring_errors(self, t: float | None = 0):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
         as a scalar or vector (e.g. Time, Parameter, Variable, StateVector), then None

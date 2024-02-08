@@ -2,14 +2,18 @@
 # Unary operator classes and methods
 #
 from __future__ import annotations
-import numbers
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from typing import SupportsFloat
+from typing import cast
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import (
+    DomainType,
+    AuxiliaryDomainType,
+    DomainsType,
+    Numeric,
+)
 
 
 class Broadcast(pybamm.SpatialOperator):
@@ -85,7 +89,7 @@ class PrimaryBroadcast(Broadcast):
 
     Parameters
     ----------
-    child : :class:`Symbol`
+    child : :class:`Symbol`, numeric
         child node
     broadcast_domain : iterable of str
         Primary domain for broadcast. This will become the domain of the symbol
@@ -95,13 +99,17 @@ class PrimaryBroadcast(Broadcast):
 
     def __init__(
         self,
-        child: numbers.Number | pybamm.Symbol,
+        child: Numeric | pybamm.Symbol,
         broadcast_domain: list[str] | str,
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
-        if isinstance(child, numbers.Number):
+        if isinstance(child, (float, int, np.number)):
             child = pybamm.Scalar(child)
+
+        # cast child to Symbol for mypy
+        child = cast(pybamm.Symbol, child)
+
         # Convert domain to list if it's a string
         if isinstance(broadcast_domain, str):
             broadcast_domain = [broadcast_domain]
@@ -189,7 +197,7 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
 
     def __init__(
         self,
-        child: numbers.Number | pybamm.Symbol,
+        child: Numeric | pybamm.Symbol,
         broadcast_domain: list[str] | str,
         name: str | None = None,
     ):
@@ -461,14 +469,14 @@ class FullBroadcast(Broadcast):
 
     def __init__(
         self,
-        child_input: SupportsFloat | pybamm.Symbol,
+        child_input: Numeric | pybamm.Symbol,
         broadcast_domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         broadcast_domains: DomainsType = None,
         name: str | None = None,
     ):
         # Convert child to scalar if it is a number
-        if isinstance(child_input, numbers.Number):
+        if isinstance(child_input, (float, int, np.number)):
             child: pybamm.Scalar = pybamm.Scalar(child_input)
         else:
             child: pybamm.Symbol = child_input  # type: ignore[no-redef]
@@ -535,7 +543,7 @@ class FullBroadcastToEdges(FullBroadcast):
 
     def __init__(
         self,
-        child: SupportsFloat | pybamm.Symbol,
+        child: Numeric | pybamm.Symbol,
         broadcast_domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         broadcast_domains: DomainsType = None,

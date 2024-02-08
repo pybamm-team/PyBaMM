@@ -2,12 +2,12 @@
 # Scalar class
 #
 from __future__ import annotations
-import numbers
 import numpy as np
 from typing import Literal
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import Numeric
 
 
 class Scalar(pybamm.Symbol):
@@ -26,7 +26,7 @@ class Scalar(pybamm.Symbol):
 
     def __init__(
         self,
-        value: float | numbers.Number | np.bool_,
+        value: Numeric,
         name: str | None = None,
     ) -> None:
         # set default name if not provided

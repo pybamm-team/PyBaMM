@@ -11,22 +11,22 @@ import functools
 import pybamm
 from pybamm.util import have_optional_dependency
 
-from typing import Callable
+from typing import Callable, cast
 
 # create type alias(s)
-from pybamm.type_definitions import ChildSymbol, ChildValue
+from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
 
 
 def _preprocess_binary(
     left: ChildSymbol, right: ChildSymbol
 ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
-    if isinstance(left, numbers.Number):
+    if isinstance(left, (float, int, np.number)):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
-    if isinstance(right, numbers.Number):
+    if isinstance(right, (float, int, np.number)):
         right = pybamm.Scalar(right)
     elif isinstance(right, np.ndarray):
         if right.ndim > 1:
@@ -1494,7 +1494,7 @@ def sigmoid(
 
 
 def source(
-    left: numbers.Number | pybamm.Symbol,
+    left: Numeric | pybamm.Symbol,
     right: pybamm.Symbol,
     boundary=False,
 ):
@@ -1513,7 +1513,7 @@ def source(
     Parameters
     ----------
 
-    left : :class:`Symbol`
+    left : :class:`Symbol`, numeric
         The left child node, which represents the expression for the source term.
     right : :class:`Symbol`
         The right child node. This is the symbol whose boundary conditions are
@@ -1527,6 +1527,9 @@ def source(
     # Broadcast if left is number
     if isinstance(left, numbers.Number):
         left = pybamm.PrimaryBroadcast(left, "current collector")
+
+    # force type cast for mypy
+    left = cast(pybamm.Symbol, left)
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

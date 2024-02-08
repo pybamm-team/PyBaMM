@@ -6,7 +6,12 @@ import numpy as np
 import numbers
 import pybamm
 from pybamm.util import have_optional_dependency
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import (
+    DomainType,
+    AuxiliaryDomainType,
+    DomainsType,
+    Numeric,
+)
 
 
 class VariableBase(pybamm.Symbol):
@@ -83,7 +88,7 @@ class VariableBase(pybamm.Symbol):
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values: tuple[numbers.Number, numbers.Number]):
+    def bounds(self, values: tuple[Numeric, Numeric]):
         if values is None:
             values = (-np.inf, np.inf)
         else:
