@@ -78,7 +78,7 @@ def run_coverage(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -110,7 +110,7 @@ def run_integration(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -151,7 +151,7 @@ def run_unit(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -270,7 +270,7 @@ def run_tests(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
