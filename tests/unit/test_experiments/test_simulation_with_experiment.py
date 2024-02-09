@@ -458,7 +458,7 @@ class TestSimulationExperiment(TestCase):
 
         # Change a parameter to an input
         param = pybamm.ParameterValues("Marquis2019")
-        param["Negative electrode diffusivity [m2.s-1]"] = (
+        param["Negative particle diffusivity [m2.s-1]"] = (
             pybamm.InputParameter("Dsn") * 3.9e-14
         )
 

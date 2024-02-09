@@ -16,6 +16,7 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
+    "PIP_NO_BINARY": "scikits.odes",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -68,7 +69,16 @@ def run_coverage(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
+            session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -91,7 +101,20 @@ def run_integration(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
+<<<<<<< HEAD
             session.install("-e", ".[all,dev,jax,odes]", silent=False)
+=======
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
+            session.install("-e", ".[all,jax,odes]", silent=False)
+>>>>>>> develop
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -123,7 +146,20 @@ def run_unit(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
+<<<<<<< HEAD
             session.install("-e", ".[all,dev,jax,odes]", silent=False)
+=======
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
+            session.install("-e", ".[all,jax,odes]", silent=False)
+>>>>>>> develop
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -180,6 +216,15 @@ def set_dev(session):
                 external=True,
             )
         else:
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
             session.run(
                 python,
                 "-m",
@@ -224,7 +269,20 @@ def run_tests(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
+<<<<<<< HEAD
             session.install("-e", ".[all,dev,jax,odes]", silent=False)
+=======
+            session.run_always(
+                sys.executable,
+                "-m",
+                "pip",
+                "cache",
+                "remove",
+                "scikits.odes",
+                external=True,
+            )
+            session.install("-e", ".[all,jax,odes]", silent=False)
+>>>>>>> develop
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -255,11 +313,11 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
+    # Run in single-threaded mode, see
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1643
     else:
         session.run(
             "sphinx-build",
-            "-j",
-            "auto",
             "-b",
             "html",
             "-W",
