@@ -101,9 +101,6 @@ def run_integration(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
-<<<<<<< HEAD
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-=======
             session.run_always(
                 sys.executable,
                 "-m",
@@ -114,7 +111,6 @@ def run_integration(session):
                 external=True,
             )
             session.install("-e", ".[all,jax,odes]", silent=False)
->>>>>>> develop
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -146,9 +142,6 @@ def run_unit(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
-<<<<<<< HEAD
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-=======
             session.run_always(
                 sys.executable,
                 "-m",
@@ -159,7 +152,6 @@ def run_unit(session):
                 external=True,
             )
             session.install("-e", ".[all,jax,odes]", silent=False)
->>>>>>> develop
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -269,9 +261,6 @@ def run_tests(session):
         if sys.version_info > (3, 12):
             session.install("-e", ".[all,dev,jax]", silent=False)
         else:
-<<<<<<< HEAD
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-=======
             session.run_always(
                 sys.executable,
                 "-m",
@@ -282,7 +271,6 @@ def run_tests(session):
                 external=True,
             )
             session.install("-e", ".[all,jax,odes]", silent=False)
->>>>>>> develop
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
