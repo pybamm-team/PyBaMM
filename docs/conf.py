@@ -317,7 +317,7 @@ if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
 
 if os.environ.get("READTHEDOCS_VERSION") == "stable":
     notebooks_version = version
-    append_to_url = f"tree/blob/v{notebooks_version}"
+    append_to_url = f"blob/v{notebooks_version}"
 
 if os.environ.get("READTHEDOCS_VERSION_TYPE") == "external":
     notebooks_version = os.environ.get("READTHEDOCS_GIT_COMMIT_HASH")
