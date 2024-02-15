@@ -203,7 +203,7 @@ class TestScikitFiniteElement(TestCase):
         u = np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi**2 * u
+        soln = -(np.pi**2) * u
         np.testing.assert_array_almost_equal(
             eqn_zz_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=3
         )
@@ -226,7 +226,7 @@ class TestScikitFiniteElement(TestCase):
         u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi**2 * u
+        soln = -(np.pi**2) * u
         np.testing.assert_array_almost_equal(
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=2
         )
@@ -287,7 +287,7 @@ class TestScikitFiniteElement(TestCase):
         u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi**2 * u
+        soln = -(np.pi**2) * u
         np.testing.assert_array_almost_equal(
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
         )
@@ -350,7 +350,7 @@ class TestScikitFiniteElement(TestCase):
         u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
-        soln = -np.pi**2 * u
+        soln = -(np.pi**2) * u
         np.testing.assert_array_almost_equal(
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
         )

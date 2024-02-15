@@ -1,9 +1,6 @@
-#
-# Experiment class
-#
-
+from __future__ import annotations
 import pybamm
-from pybamm.step._steps_util import (
+from .step._steps_util import (
     _convert_time_to_seconds,
     _convert_temperature_to_kelvin,
 )
@@ -21,8 +18,8 @@ class Experiment:
 
     Parameters
     ----------
-    operating_conditions : list
-        List of operating conditions
+    operating_conditions : list[str]
+        List of strings representing the operating conditions.
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
@@ -30,8 +27,8 @@ class Experiment:
         The ambient air temperature in degrees Celsius at which to run the experiment.
         Default is None whereby the ambient temperature is taken from the parameter set.
         This value is overwritten if the temperature is specified in a step.
-    termination : list, optional
-        List of conditions under which to terminate the experiment. Default is None.
+    termination : list[str], optional
+        List of strings representing the conditions to terminate the experiment. Default is None.
         This is different from the termination for individual steps. Termination for
         individual steps is specified in the step itself, and the simulation moves to
         the next step when the termination condition is met
@@ -42,24 +39,11 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions,
-        period="1 minute",
-        temperature=None,
-        termination=None,
-        drive_cycles=None,
-        cccv_handling=None,
+        operating_conditions: list[str],
+        period: str = "1 minute",
+        temperature: float | None = None,
+        termination: list[str] | None = None,
     ):
-        if cccv_handling is not None:
-            raise ValueError(
-                "cccv_handling has been deprecated, use "
-                "`pybamm.step.cccv_ode(current, voltage)` instead to produce the "
-                "same behavior as the old `cccv_handling='ode'`"
-            )
-        if drive_cycles is not None:
-            raise ValueError(
-                "drive_cycles should now be passed as an experiment step object, e.g. "
-                "`pybamm.step.current(drive_cycle)`"
-            )
         # Save arguments for copying
         self.args = (
             operating_conditions,
@@ -68,14 +52,8 @@ class Experiment:
             termination,
         )
 
-        self.datetime_formats = [
-            "Day %j %H:%M:%S",
-            "%Y-%m-%d %H:%M:%S",
-        ]
-
         operating_conditions_cycles = []
         for cycle in operating_conditions:
-            # Check types and convert to list
             if not isinstance(cycle, tuple):
                 cycle = (cycle,)
             operating_conditions_cycles.append(cycle)
@@ -83,27 +61,30 @@ class Experiment:
         self.operating_conditions_cycles = operating_conditions_cycles
         self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
 
-        operating_conditions_steps_unprocessed = self._set_next_start_time(
+        self.operating_conditions_steps_unprocessed = self._set_next_start_time(
             [cond for cycle in operating_conditions_cycles for cond in cycle]
         )
 
         # Convert strings to pybamm.step._Step objects
-        # We only do this once per unique step, do avoid unnecessary conversions
-        unique_steps_unprocessed = set(operating_conditions_steps_unprocessed)
-        processed_steps = {}
-        for step in unique_steps_unprocessed:
-            if isinstance(step, str):
-                processed_steps[step] = pybamm.step.string(step)
-            elif isinstance(step, pybamm.step._Step):
-                processed_steps[step] = step
+        # We only do this once per unique step, to avoid unnecessary conversions
+        # Assign experiment period and temperature if not specified in step
+        self.period = _convert_time_to_seconds(period)
+        self.temperature = _convert_temperature_to_kelvin(temperature)
+
+        processed_steps = self.process_steps(
+            self.operating_conditions_steps_unprocessed, self.period, self.temperature
+        )
+
+        self.operating_conditions_steps = [
+            processed_steps[repr(step)]
+            for step in self.operating_conditions_steps_unprocessed
+        ]
 
         # Save the processed unique steps and the processed operating conditions
         # for every step
         self.unique_steps = set(processed_steps.values())
-        self.operating_conditions_steps = [
-            processed_steps[step] for step in operating_conditions_steps_unprocessed
-        ]
 
+        # Allocate experiment global variables
         self.initial_start_time = self.operating_conditions_steps[0].start_time
 
         if (
@@ -118,14 +99,26 @@ class Experiment:
         self.termination_string = termination
         self.termination = self.read_termination(termination)
 
-        # Modify steps with period and temperature in place
-        self.period = _convert_time_to_seconds(period)
-        self.temperature = _convert_temperature_to_kelvin(temperature)
-        for step in self.unique_steps:
-            if step.period is None:
-                step.period = self.period
-            if step.temperature is None:
-                step.temperature = self.temperature
+    @staticmethod
+    def process_steps(unprocessed_steps, period, temp):
+        processed_steps = {}
+        for step in unprocessed_steps:
+            if repr(step) in processed_steps:
+                continue
+            elif isinstance(step, str):
+                processed_step = pybamm.step.string(step)
+            elif isinstance(step, pybamm.step._Step):
+                processed_step = step
+            else:
+                raise TypeError("Operating conditions must be a Step object or string.")
+
+            if processed_step.period is None:
+                processed_step.period = period
+            if processed_step.temperature is None:
+                processed_step.temperature = temp
+
+            processed_steps[repr(step)] = processed_step
+        return processed_steps
 
     def __str__(self):
         return str(self.operating_conditions_cycles)
@@ -134,11 +127,27 @@ class Experiment:
         return Experiment(*self.args)
 
     def __repr__(self):
-        return "pybamm.Experiment({!s})".format(self)
+        return f"pybamm.Experiment({self!s})"
 
-    def read_termination(self, termination):
+    @staticmethod
+    def read_termination(termination):
         """
         Read the termination reason. If this condition is hit, the experiment will stop.
+
+        Parameters
+        ----------
+        termination : str or list[str], optional
+           A single string, or a list of strings, representing the conditions to terminate the experiment.
+           Only capacity or voltage can be provided as a termination reason.
+           e.g. '4 Ah capacity' or ['80% capacity', '2.5 V']
+
+        Returns
+        -------
+        dict
+           A dictionary of the termination conditions.
+           e.g. {'capacity': (4.0, 'Ah')} or
+           {'capacity': (80.0, '%'), 'voltage': (2.5, 'V')}
+
         """
         if termination is None:
             return {}
@@ -195,7 +204,8 @@ class Experiment:
 
         return cycles
 
-    def _set_next_start_time(self, operating_conditions):
+    @staticmethod
+    def _set_next_start_time(operating_conditions):
         if all(isinstance(i, str) for i in operating_conditions):
             return operating_conditions
 
@@ -205,7 +215,7 @@ class Experiment:
         for op in reversed(operating_conditions):
             if isinstance(op, str):
                 op = pybamm.step.string(op)
-            elif not isinstance(op, pybamm.step._Step):
+            if not isinstance(op, pybamm.step._Step):
                 raise TypeError(
                     "Operating conditions should be strings or _Step objects"
                 )

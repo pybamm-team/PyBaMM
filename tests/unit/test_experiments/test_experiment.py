@@ -67,6 +67,15 @@ class TestExperiment(TestCase):
         )
         self.assertEqual(experiment.cycle_lengths, [2, 1, 1])
 
+    def test_invalid_step_type(self):
+        unprocessed = {1.0}
+        period = 1
+        temperature = 300.0
+        with self.assertRaisesRegex(
+            TypeError, "Operating conditions must be a Step object or string."
+        ):
+            pybamm.Experiment.process_steps(unprocessed, period, temperature)
+
     def test_str_repr(self):
         conds = ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"]
         experiment = pybamm.Experiment(conds)
@@ -91,38 +100,32 @@ class TestExperiment(TestCase):
         ):
             pybamm.Experiment([(1, 2, 3)])
 
-    def test_deprecations(self):
-        with self.assertRaisesRegex(ValueError, "cccv_handling"):
-            pybamm.Experiment([], cccv_handling="something")
-        with self.assertRaisesRegex(ValueError, "drive_cycles"):
-            pybamm.Experiment([], drive_cycles="something")
-
     def test_termination(self):
         experiment = pybamm.Experiment(["Discharge at 1 C for 20 seconds"])
         self.assertEqual(experiment.termination, {})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="80.7% capacity"
+            ["Discharge at 1 C for 20 seconds"], termination=["80.7% capacity"]
         )
         self.assertEqual(experiment.termination, {"capacity": (80.7, "%")})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="80.7 % capacity"
+            ["Discharge at 1 C for 20 seconds"], termination=["80.7 % capacity"]
         )
         self.assertEqual(experiment.termination, {"capacity": (80.7, "%")})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="4.1Ah capacity"
+            ["Discharge at 1 C for 20 seconds"], termination=["4.1Ah capacity"]
         )
         self.assertEqual(experiment.termination, {"capacity": (4.1, "Ah")})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="4.1 A.h capacity"
+            ["Discharge at 1 C for 20 seconds"], termination=["4.1 A.h capacity"]
         )
         self.assertEqual(experiment.termination, {"capacity": (4.1, "Ah")})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="3V"
+            ["Discharge at 1 C for 20 seconds"], termination=["3V"]
         )
         self.assertEqual(experiment.termination, {"voltage": (3, "V")})
 
@@ -183,24 +186,27 @@ class TestExperiment(TestCase):
             )
 
     def test_set_next_start_time(self):
-        # Defined dummy experiment to access _set_next_start_time
-        experiment = pybamm.Experiment(["Rest for 1 hour"])
         raw_op = [
             pybamm.step._Step(
                 "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 8, 0)
             ),
+            pybamm.step._Step("voltage", 2.5, duration=3600, start_time=None),
             pybamm.step._Step(
                 "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 12, 0)
             ),
             pybamm.step._Step("current", 1, duration=3600, start_time=None),
+            pybamm.step._Step("voltage", 2.5, duration=3600, start_time=None),
             pybamm.step._Step(
                 "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 15, 0)
             ),
         ]
+        experiment = pybamm.Experiment(raw_op)
         processed_op = experiment._set_next_start_time(raw_op)
 
         expected_next = [
+            None,
             datetime(2023, 1, 1, 12, 0),
+            None,
             None,
             datetime(2023, 1, 1, 15, 0),
             None,
@@ -208,15 +214,21 @@ class TestExperiment(TestCase):
 
         expected_end = [
             datetime(2023, 1, 1, 12, 0),
+            datetime(2023, 1, 1, 12, 0),
+            datetime(2023, 1, 1, 15, 0),
             datetime(2023, 1, 1, 15, 0),
             datetime(2023, 1, 1, 15, 0),
             None,
         ]
 
+        # Test method directly
         for next, end, op in zip(expected_next, expected_end, processed_op):
             # useful form for debugging
             self.assertEqual(op.next_start_time, next)
             self.assertEqual(op.end_time, end)
+
+        # TODO: once #3176 is completed, the test should pass for
+        # operating_conditions_steps (or equivalent) as well
 
 
 if __name__ == "__main__":

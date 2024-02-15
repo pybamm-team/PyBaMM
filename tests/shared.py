@@ -268,3 +268,9 @@ def get_cylindrical_discretisation_for_testing(
         mesh=get_cylindrical_mesh_for_testing(xpts, rpts, rcellpts, include_particles),
         cc_method=pybamm.FiniteVolume,
     )
+
+
+def get_base_model_with_battery_geometry(**kwargs):
+    model = pybamm.BaseModel()
+    model._geometry = pybamm.battery_geometry(**kwargs)
+    return model

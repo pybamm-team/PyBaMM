@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_diffusivity_Ecker2015(sto, T):
@@ -30,9 +31,9 @@ def graphite_diffusivity_Ecker2015(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 8.4e-13 * pybamm.exp(-11.3 * sto) + 8.2e-15
+    D_ref = 8.4e-13 * np.exp(-11.3 * sto) + 8.2e-15
     E_D_s = 3.03e4
-    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R * T)) * pybamm.exp(
+    arrhenius = np.exp(-E_D_s / (pybamm.constants.R * T)) * np.exp(
         E_D_s / (pybamm.constants.R * 296)
     )
 
@@ -88,12 +89,12 @@ def graphite_ocp_Ecker2015(sto):
     t = 0.196176
 
     u_eq = (
-        a * pybamm.exp(-b * sto)
-        + c * pybamm.exp(-d * (sto - e))
-        - r * pybamm.tanh(s * (sto - t))
-        - g * pybamm.tanh(h * (sto - i))
-        - j * pybamm.tanh(k * (sto - m))
-        - n * pybamm.exp(o * (sto - p))
+        a * np.exp(-b * sto)
+        + c * np.exp(-d * (sto - e))
+        - r * np.tanh(s * (sto - t))
+        - g * np.tanh(h * (sto - i))
+        - j * np.tanh(k * (sto - m))
+        - n * np.exp(o * (sto - p))
         + q
     )
 
@@ -142,13 +143,11 @@ def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_m
     )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 53400
 
-    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(
+    arrhenius = np.exp(-E_r / (pybamm.constants.R * T)) * np.exp(
         E_r / (pybamm.constants.R * 296.15)
     )
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def nco_diffusivity_Ecker2015(sto, T):
@@ -180,9 +179,9 @@ def nco_diffusivity_Ecker2015(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 3.7e-13 - 3.4e-13 * pybamm.exp(-12 * (sto - 0.62) * (sto - 0.62))
+    D_ref = 3.7e-13 - 3.4e-13 * np.exp(-12 * (sto - 0.62) * (sto - 0.62))
     E_D_s = 8.06e4
-    arrhenius = pybamm.exp(-E_D_s / (pybamm.constants.R * T)) * pybamm.exp(
+    arrhenius = np.exp(-E_D_s / (pybamm.constants.R * T)) * np.exp(
         E_D_s / (pybamm.constants.R * 296.15)
     )
 
@@ -235,11 +234,11 @@ def nco_ocp_Ecker2015(sto):
 
     u_eq = (
         a * sto
-        - c * pybamm.tanh(d * (sto - e))
-        - r * pybamm.tanh(s * (sto - t))
-        - g * pybamm.tanh(h * (sto - i))
-        - j * pybamm.tanh(k * (sto - m))
-        - n * pybamm.tanh(o * (sto - p))
+        - c * np.tanh(d * (sto - e))
+        - r * np.tanh(s * (sto - t))
+        - g * np.tanh(h * (sto - i))
+        - j * np.tanh(k * (sto - m))
+        - n * np.tanh(o * (sto - p))
         + q
     )
     return u_eq
@@ -287,13 +286,11 @@ def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T
     )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
 
     E_r = 4.36e4
-    arrhenius = pybamm.exp(-E_r / (pybamm.constants.R * T)) * pybamm.exp(
+    arrhenius = np.exp(-E_r / (pybamm.constants.R * T)) * np.exp(
         E_r / (pybamm.constants.R * 296.15)
     )
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def electrolyte_diffusivity_Ecker2015(c_e, T):
@@ -376,8 +373,8 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
 
     # add temperature dependence
     E_k_e = 1.71e4
-    C = 296 * pybamm.exp(E_k_e / (pybamm.constants.R * 296))
-    sigma_e = C * sigma_e_296 * pybamm.exp(-E_k_e / (pybamm.constants.R * T)) / T
+    C = 296 * np.exp(E_k_e / (pybamm.constants.R * 296))
+    sigma_e = C * sigma_e_296 * np.exp(-E_k_e / (pybamm.constants.R * T)) / T
 
     return sigma_e
 
@@ -465,7 +462,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 14.0,
         "Maximum concentration in negative electrode [mol.m-3]": 31920.0,
-        "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Ecker2015,
+        "Negative particle diffusivity [m2.s-1]": graphite_diffusivity_Ecker2015,
         "Negative electrode OCP [V]": graphite_ocp_Ecker2015,
         "Negative electrode porosity": 0.329,
         "Negative electrode active material volume fraction": 0.372403,
@@ -481,7 +478,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 68.1,
         "Maximum concentration in positive electrode [mol.m-3]": 48580.0,
-        "Positive electrode diffusivity [m2.s-1]": nco_diffusivity_Ecker2015,
+        "Positive particle diffusivity [m2.s-1]": nco_diffusivity_Ecker2015,
         "Positive electrode OCP [V]": nco_ocp_Ecker2015,
         "Positive electrode porosity": 0.296,
         "Positive electrode active material volume fraction": 0.40832,

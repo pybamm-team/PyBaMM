@@ -40,12 +40,13 @@ For an example, see the `Marquis2019`_ parameter sets.
 
     import pybamm
 
+
     def get_parameter_values():
-        """ Doc string for cell-alpha """
+        """Doc string for cell-alpha"""
         return {
             "chemistry": "lithium_ion",
             "citation": "@book{van1995python, title={Python reference manual}}",
-            ...
+            # ...
         }
 
 Then register ``get_parameter_values`` to ``pybamm_parameter_sets`` in ``pyproject.toml``:
@@ -98,7 +99,7 @@ Lithium-ion Parameter Sets
 ==========================
 {% for k,v in parameter_sets.items() if v.chemistry == "lithium_ion" %}
 {{k}}
-----------------------------
+--------------------------------
 {{ parameter_sets.get_docstring(k) }}
 {% endfor %}
 

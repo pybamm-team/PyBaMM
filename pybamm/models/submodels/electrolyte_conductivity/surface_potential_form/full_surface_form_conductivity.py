@@ -224,7 +224,7 @@ class FullAlgebraic(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-    """  # noqa: E501
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
@@ -258,7 +258,7 @@ class FullDifferential(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-    """  # noqa: E501
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
@@ -269,7 +269,9 @@ class FullDifferential(BaseModel):
 
         domain, Domain = self.domain_Domain
 
-        C_dl = self.domain_param.C_dl
+        T = variables[f"{Domain} electrode temperature [K]"]
+
+        C_dl = self.domain_param.C_dl(T)
 
         delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
         i_e = variables[f"{Domain} electrolyte current density [A.m-2]"]

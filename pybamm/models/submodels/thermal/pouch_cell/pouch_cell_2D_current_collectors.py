@@ -55,58 +55,74 @@ class CurrentCollector2D(BaseThermal):
         T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating [W.m-3]"]
         T_amb = variables["Ambient temperature [K]"]
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
 
-        # Account for surface area to volume ratio of pouch cell in cooling
-        # coefficient. Note: the factor 1/delta^2 comes from the choice of
-        # non-dimensionalisation
+        # Calculate cooling
+        Q_yz_surface_W_per_m2 = -(self.param.n.h_cc(y, z) + self.param.p.h_cc(y, z)) * (
+            T_av - T_amb
+        )
+        Q_edge_W_per_m2 = -self.param.h_edge(y, z) * (T_av - T_amb)
+
+        # Account for surface area to volume ratio of pouch cell in surface cooling
+        # term
         yz_surface_area = self.param.L_y * self.param.L_z
         cell_volume = self.param.L * self.param.L_y * self.param.L_z
-        yz_surface_cooling_coefficient = (
-            -(self.param.n.h_cc + self.param.p.h_cc) * yz_surface_area / cell_volume
+        Q_yz_surface = pybamm.source(
+            Q_yz_surface_W_per_m2 * yz_surface_area / cell_volume, T_av
         )
-
-        edge_cooling_coefficient = self.param.h_edge
+        # Edge cooling appears as a boundary term, so no need to account for surface
+        # area to volume ratio
+        Q_edge = pybamm.source(Q_edge_W_per_m2, T_av, boundary=True)
 
         # Governing equations contain:
         #   - source term for y-z surface cooling
         #   - boundary source term of edge cooling
         # Boundary conditions contain:
         #   - Neumann condition for tab cooling
+        # Note: pybamm.source() is used to ensure the source term is multiplied by the
+        # correct mass matrix when discretised. The first argument is the source term
+        # and the second argument is the variable governed by the equation that the
+        # source term appears in.
+        # Note: not correct if lambda_eff is a function of T_av - need to implement div
+        # in 2D rather than doing laplacian directly
         self.rhs = {
             T_av: (
-                pybamm.laplacian(T_av)
+                self.param.lambda_eff(T_av) * pybamm.laplacian(T_av)
                 + pybamm.source(Q_av, T_av)
-                + yz_surface_cooling_coefficient * pybamm.source(T_av - T_amb, T_av)
-                - edge_cooling_coefficient
-                * pybamm.source(T_av - T_amb, T_av, boundary=True)
+                + Q_yz_surface
+                + Q_edge
             )
             / self.param.rho_c_p_eff(T_av)
         }
 
-        # TODO: Make h_edge a function of position to have bottom/top/side cooled cells.
-
     def set_boundary_conditions(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
         T_amb = variables["Ambient temperature [K]"]
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+
+        # Calculate heat fluxes
+        q_tab_n = -self.param.n.h_tab * (T_av - T_amb)
+        q_tab_p = -self.param.p.h_tab * (T_av - T_amb)
+        q_edge = -self.param.h_edge(y, z) * (T_av - T_amb)
 
         # Subtract the edge cooling from the tab portion so as to not double count
         # Note: tab cooling is also only applied on the current collector hence
-        # the (l_cn / l) and (l_cp / l) prefactors.
-        # We also still have edge cooling on the region: x in (0, 1)
-        h_tab_n_corrected = (self.param.n.L_cc / self.param.L) * (
-            self.param.n.h_tab - self.param.h_edge
+        # the (l_cn / l) and (l_cp / l) prefactors. We still have edge cooling
+        # in the region: x in (0, 1)
+        negative_tab_bc = (self.param.n.L_cc / self.param.L) * pybamm.boundary_value(
+            (q_tab_n - q_edge) / self.param.n.lambda_cc(T_av),
+            "negative tab",
         )
-        h_tab_p_corrected = (self.param.p.L_cc / self.param.L) * (
-            self.param.p.h_tab - self.param.h_edge
+        positive_tab_bc = (self.param.p.L_cc / self.param.L) * pybamm.boundary_value(
+            (q_tab_p - q_edge) / self.param.p.lambda_cc(T_av), "positive tab"
         )
-
-        T_av_n = pybamm.boundary_value(T_av, "negative tab")
-        T_av_p = pybamm.boundary_value(T_av, "positive tab")
 
         self.boundary_conditions = {
             T_av: {
-                "negative tab": (-h_tab_n_corrected * (T_av_n - T_amb), "Neumann"),
-                "positive tab": (-h_tab_p_corrected * (T_av_p - T_amb), "Neumann"),
+                "negative tab": (negative_tab_bc, "Neumann"),
+                "positive tab": (positive_tab_bc, "Neumann"),
             }
         }
 

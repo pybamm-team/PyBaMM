@@ -1,5 +1,5 @@
-# Negative particle surface tangetial stress close to the separator 
-# for the Enertech cells Ai2020 JES 
+# Negative particle surface tangetial stress close to the separator
+# for the Enertech cells Ai2020 JES
 # time [s] and normalised stress sigma_t_surf_n/E_n
 0,-1.0741e-17
 2,0.00031276

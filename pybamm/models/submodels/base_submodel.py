@@ -73,7 +73,7 @@ class BaseSubModel(pybamm.BaseModel):
 
         self.external = external
 
-        if options is None or type(options) == dict:
+        if options is None or type(options) == dict:  # noqa: E721
             options = pybamm.BatteryModelOptions(options)
 
         self.options = options
@@ -128,9 +128,7 @@ class BaseSubModel(pybamm.BaseModel):
                 self._Domain = domain.capitalize()
         else:
             raise pybamm.DomainError(
-                "Domain '{}' not recognised (must be one of {})".format(
-                    domain, ok_domain_list
-                )
+                f"Domain '{domain}' not recognised (must be one of {ok_domain_list})"
             )
 
     @property

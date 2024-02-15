@@ -22,9 +22,9 @@ jobs:
   benchmarks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
       - name: Install nox and asv
@@ -42,31 +42,32 @@ jobs:
           asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
           ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: asv_new_results
+          name: asv_over_history_results
           path: results
 
   publish-results:
+    if: github.repository_owner == 'pybamm-team'
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
       - name: Install asv
         run: pip install asv
       - name: Checkout pybamm-bench repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
       - name: Download results artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: asv_new_results
+          name: asv_over_history_results
           path: new_results
       - name: Copy new results and push to pybamm-bench repo
         env:

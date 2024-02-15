@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
@@ -59,7 +60,7 @@ def nmc_ocp_Xu2019(sto):
         - 2.0843 * (sto**3)
         + 3.5146 * (sto**4)
         - 2.2166 * (sto**5)
-        - 0.5623e-4 * pybamm.exp(109.451 * sto - 100.006)
+        - 0.5623e-4 * np.exp(109.451 * sto - 100.006)
     )
 
     # # only valid in range ~(0.25,0.95)
@@ -74,7 +75,7 @@ def nmc_ocp_Xu2019(sto):
     #     - 9578.599274 * sto ** 2
     #     + 1409.309503 * sto
     #     - 85.31153081
-    #     - 0.0003 * pybamm.exp(7.657 * sto ** 115)
+    #     - 0.0003 * np.exp(7.657 * sto ** 115)
     # )
 
     return u_eq
@@ -248,15 +249,15 @@ def get_parameter_values():
         "Negative electrode OCP [V]": 0.0,
         "Negative electrode conductivity [S.m-1]": 10776000.0,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
-        "Typical plated lithium concentration [mol.m-3]": 76900.0,
-        "Exchange-current density for plating [A.m-2]"
+        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
+        "Exchange-current density for lithium metal electrode [A.m-2]"
         "": li_metal_electrolyte_exchange_current_density_Xu2019,
         "Negative electrode charge transfer coefficient": 0.5,
         "Negative electrode double-layer capacity [F.m-2]": 0.2,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in positive electrode [mol.m-3]": 48230.0,
-        "Positive electrode diffusivity [m2.s-1]": 1e-14,
+        "Positive particle diffusivity [m2.s-1]": 1e-14,
         "Positive electrode OCP [V]": nmc_ocp_Xu2019,
         "Positive electrode porosity": 0.331,
         "Positive electrode active material volume fraction": 0.518,

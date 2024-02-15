@@ -1,110 +1,127 @@
-.. _examples:
+.. _pybamm_examples:
 
-########
 Examples
-########
+========
 
-A collection of Python scripts and Jupyter notebooks that demonstrate how to use PyBaMM.
-For further examples, see the `PyBaMM case studies GitHub repository <https://github.com/pybamm-team/pybamm-example-results>`_.
+This folder contains a collection of Jupyter notebooks that demonstrate how to use PyBaMM and reveal some of its functionalities and inner workings.
+The notebooks are organised into subfolders, and can be viewed in the galleries below.
 
-.. toctree::
-    :maxdepth: 2
 
-    notebooks/index
+.. nbgallery::
+    :caption: Getting Started
+    :glob:
 
-.. _notebooks:
+    notebooks/getting_started/tutorial-1-how-to-run-a-model.ipynb
+    notebooks/getting_started/tutorial-2-compare-models.ipynb
+    notebooks/getting_started/tutorial-3-basic-plotting.ipynb
+    notebooks/getting_started/tutorial-4-setting-parameter-values.ipynb
+    notebooks/getting_started/tutorial-5-run-experiments.ipynb
+    notebooks/getting_started/tutorial-6-managing-simulation-outputs.ipynb
+    notebooks/getting_started/tutorial-7-model-options.ipynb
+    notebooks/getting_started/tutorial-8-solver-options.ipynb
+    notebooks/getting_started/tutorial-9-changing-the-mesh.ipynb
+    notebooks/getting_started/tutorial-10-creating-a-model.ipynb
+    notebooks/getting_started/tutorial-11-creating-a-submodel.ipynb
 
-For new users we recommend the Getting Started notebooks. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM. 
-For more detailed notebooks, please see the examples listed below.
+.. nbgallery::
+    :caption: Creating Models
+    :glob:
 
-.. _google-colab:
+    notebooks/creating_models/1-an-ode-model.ipynb
+    notebooks/creating_models/2-a-pde-model.ipynb
+    notebooks/creating_models/3-negative-particle-problem.ipynb
+    notebooks/creating_models/4-comparing-full-and-reduced-order-models.ipynb
+    notebooks/creating_models/5-half-cell-model.ipynb
+    notebooks/creating_models/6-a-simple-SEI-model.ipynb
 
-You may run the notebooks in `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_. 
+.. nbgallery::
+    :caption: Expression Tree
+    :glob:
 
-This page contains a number of examples showing how to use PyBaMM. Each example was created as a `Jupyter notebook <https://jupyter.org/>`_.
-These notebooks can be downloaded and used locally by running
+    notebooks/expression_tree/expression-tree.ipynb
+    notebooks/expression_tree/broadcasts.ipynb
 
-.. code:: bash
+.. nbgallery::
+    :caption: Models
+    :glob:
 
-    $ jupyter notebook
+    notebooks/models/compare-comsol-discharge-curve.ipynb
+    notebooks/models/compare-ecker-data.ipynb
+    notebooks/models/compare-lithium-ion.ipynb
+    notebooks/models/compare-particle-diffusion-models.ipynb
+    notebooks/models/composite_particle.ipynb
+    notebooks/models/coupled-degradation.ipynb
+    notebooks/models/DFN-with-particle-size-distributions.ipynb
+    notebooks/models/DFN.ipynb
+    notebooks/models/electrode-state-of-health.ipynb
+    notebooks/models/half-cell.ipynb
+    notebooks/models/jelly-roll-model.ipynb
+    notebooks/models/latexify.ipynb
+    notebooks/models/lead-acid.ipynb
+    notebooks/models/lithium-plating.ipynb
+    notebooks/models/MPM.ipynb
+    notebooks/models/MSMR.ipynb
+    notebooks/models/pouch-cell-model.ipynb
+    notebooks/models/rate-capability.ipynb
+    notebooks/models/saving_models.ipynb
+    notebooks/models/SEI-on-cracks.ipynb
+    notebooks/models/simulate-3E-cell.ipynb
+    notebooks/models/simulating-ORegan-2022-parameter-set.ipynb
+    notebooks/models/SPM.ipynb
+    notebooks/models/SPMe.ipynb
+    notebooks/models/submodel_cracking_DFN_or_SPM.ipynb
+    notebooks/models/loss_of_active_materials.ipynb
+    notebooks/models/thermal-models.ipynb
+    notebooks/models/unsteady-heat-equation.ipynb
+    notebooks/models/using-model-options_thermal-example.ipynb
+    notebooks/models/using-submodels.ipynb
+    notebooks/models/Validating_mechanical_models_Enertech_DFN.ipynb
 
-from your local PyBaMM repository or used online through `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_.
-Alternatively, you can simply copy/paste the relevant code.
+.. nbgallery::
+    :caption: Parameterization
+    :glob:
 
-Using PyBaMM
-------------
+    notebooks/parameterization/change-input-current.ipynb
+    notebooks/parameterization/parameter-values.ipynb
+    notebooks/parameterization/parameterization.ipynb
 
-The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
+.. nbgallery::
+    :caption: Simulations and Experiments
+    :glob:
 
--  `Run the Single Particle Model (SPM) <./notebooks/models/SPM.ipynb>`__
--  `Compare models <./notebooks/models/lead-acid.ipynb>`__
--  `Comparison with COMSOL <./notebooks/models/compare-comsol-discharge-curve.ipynb>`__
+    notebooks/simulations_and_experiments/callbacks.ipynb
+    notebooks/simulations_and_experiments/custom-experiments.ipynb
+    notebooks/simulations_and_experiments/experiments-start-time.ipynb
+    notebooks/simulations_and_experiments/rpt-experiment.ipynb
+    notebooks/simulations_and_experiments/simulating-long-experiments.ipynb
+    notebooks/simulations_and_experiments/simulation-class.ipynb
 
-It is also easy to add new models or change the setting that are used:
+.. nbgallery::
+    :caption: Plotting
+    :glob:
 
--  `Add a model (example) <./creating_models/index.rst>`__
--  `Change model options <./models/using-model-options_thermal-example.ipynb>`__
--  `Using submodels <./using-submodels.ipynb>`__
--  `Change the settings <./change-settings.ipynb>`__ (parameters, spatial method, or solver)
--  `Change the applied current <./parameterization/change-input-current.ipynb>`__
+    notebooks/plotting/customize-quick-plot.ipynb
+    notebooks/plotting/plot-voltage-components.ipynb
 
-Expression tree structure
--------------------------
+.. nbgallery::
+    :caption: Solvers
+    :glob:
 
-PyBaMM is built around an expression tree structure.
+    notebooks/solvers/dae-solver.ipynb
+    notebooks/solvers/ode-solver.ipynb
+    notebooks/solvers/speed-up-solver.ipynb
 
--  `The expression tree notebook <expression_tree/expression-tree.ipynb>`__ explains how this works, from model creation to solution.
--  `The broadcast notebook <expression_tree/broadcasts.ipynb>`__ explains the different types of broadcast.
+.. nbgallery::
+    :caption: Spatial Methods
+    :glob:
 
-The following notebooks are specific to different stages of the PyBaMM
-pipeline, such as choosing a model, spatial method, or solver.
+    notebooks/spatial_methods/finite-volumes.ipynb
 
-Models
-~~~~~~
+.. nbgallery::
+    :caption: Miscellaneous Notebooks
+    :glob:
 
-Several battery models are implemented and can easily be used or `compared <./models/lead-acid.ipynb>`__. The notebooks below show the
-solution of each individual model.
-
-Once you are comfortable with the expression tree structure, a good
-starting point to understand the models in PyBaMM is to take a look at
-
-the `basic SPM <https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/models/full_battery_models/lithium_ion/basic_spm.py>`__
-and `basic DFN <https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/models/full_battery_models/lithium_ion/basic_dfn.py>`__,
-
-since these define the entire model (variables, equations, initial and
-boundary conditions, events) in a single class and so are easier to
-understand. However, we recommend that you subsequently use the full
-models as they offer much greater flexibility for coupling different
-physical effects and visualising a greater range of variables.
-
-Lithium-ion models
-^^^^^^^^^^^^^^^^^^
-
--  `Single-Particle Model <./models/SPM.ipynb>`__
--  `Single-Particle Model with electrolyte <./models/SPMe.ipynb>`__
--  `Doyle-Fuller-Newman Model <./models/DFN.ipynb>`__
-
-Lead-acid models
-^^^^^^^^^^^^^^^^
-
--  `Full porous-electrode <https://docs.pybamm.org/en/latest/source/api/models/lead_acid/full.html>`__
--  `Leading-Order Quasi-Static <https://docs.pybamm.org/en/latest/source/api/models/lead_acid/loqs.html>`__
-
-Spatial Methods
-~~~~~~~~~~~~~~~
-
-The following spatial methods are implemented
-
--  `Finite Volumes <./spatial_methods/finite-volumes.ipynb>`__ (1D only)
--  Spectral Volumes (1D only)
--  Finite Elements (only for 2D current collector domains)
-
-Solvers
-~~~~~~~
-
-The following notebooks show examples for generic ODE and DAE solvers.
-Several solvers are implemented in PyBaMM and we encourage users to try
-different ones to find the most appropriate one for their models.
-
--  `ODE solver <./solvers/ode-solver.ipynb>`__
--  `DAE solver <./solvers/dae-solver.ipynb>`__
+    notebooks/batch_study.ipynb
+    notebooks/change-settings.ipynb
+    notebooks/initialize-model-with-solution.ipynb
+    notebooks/solution-data-and-processed-variables.ipynb

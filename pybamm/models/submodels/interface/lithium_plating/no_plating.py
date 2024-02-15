@@ -16,12 +16,12 @@ class NoPlating(BasePlating):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
         zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), "negative electrode", "current collector"
+            pybamm.Scalar(0), f"{self.domain} electrode", "current collector"
         )
         variables = self._get_standard_concentration_variables(zero, zero)
         variables.update(self._get_standard_overpotential_variables(zero))

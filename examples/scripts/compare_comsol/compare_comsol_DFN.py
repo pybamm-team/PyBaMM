@@ -17,7 +17,7 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
 comsol_results_path = pybamm.get_parameters_filepath(
-    "input/comsol_results/comsol_{}C.pickle".format(C_rate)
+    f"input/comsol_results/comsol_{C_rate}C.pickle"
 )
 comsol_variables = pickle.load(open(comsol_results_path, "rb"))
 
@@ -102,6 +102,7 @@ comsol_voltage.secondary_mesh = None
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.lithium_ion.BaseModel()
+comsol_model._geometry = pybamm_model.default_geometry
 comsol_model.variables = {
     "Negative particle surface concentration [mol.m-3]": comsol_c_n_surf,
     "Electrolyte concentration [mol.m-3]": comsol_c_e,

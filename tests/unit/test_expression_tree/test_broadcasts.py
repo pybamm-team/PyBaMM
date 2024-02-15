@@ -332,6 +332,33 @@ class TestBroadcasts(TestCase):
         a = pybamm.PrimaryBroadcast(0, "test").to_equation()
         self.assertEqual(a, 0)
 
+    def test_diff(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.PrimaryBroadcast(a, "separator")
+        y = np.array([5])
+        # diff of broadcast is broadcast of diff
+        d = b.diff(a)
+        self.assertIsInstance(d, pybamm.PrimaryBroadcast)
+        self.assertEqual(d.child.evaluate(y=y), 1)
+        # diff of broadcast w.r.t. itself is 1
+        d = b.diff(b)
+        self.assertIsInstance(d, pybamm.Scalar)
+        self.assertEqual(d.evaluate(y=y), 1)
+        # diff of broadcast of a constant is 0
+        c = pybamm.PrimaryBroadcast(pybamm.Scalar(4), "separator")
+        d = c.diff(a)
+        self.assertIsInstance(d, pybamm.Scalar)
+        self.assertEqual(d.evaluate(y=y), 0)
+
+    def test_to_from_json_error(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.PrimaryBroadcast(a, "separator")
+        with self.assertRaises(NotImplementedError):
+            b.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.PrimaryBroadcast._from_json({})
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

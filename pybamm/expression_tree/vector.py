@@ -29,12 +29,10 @@ class Vector(pybamm.Array):
             raise ValueError(
                 """
                 Entries must have 1 dimension or be column vector, not have shape {}
-                """.format(
-                    entries.shape
-                )
+                """.format(entries.shape)
             )
         if name is None:
-            name = "Column vector of length {!s}".format(entries.shape[0])
+            name = f"Column vector of length {entries.shape[0]!s}"
 
         super().__init__(
             entries, name, domain, auxiliary_domains, domains, entries_string

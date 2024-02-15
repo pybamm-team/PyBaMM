@@ -30,8 +30,8 @@ def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4, p5, p6 = coeffs
     A = p1 * (1 + (T - p2))
-    B = 1 + p3 * pybamm.sqrt(c) + p4 * (1 + p5 * pybamm.exp(1000 / T)) * c
-    C = 1 + c**4 * (p6 * pybamm.exp(1000 / T))
+    B = 1 + p3 * pybamm.sqrt(c) + p4 * (1 + p5 * np.exp(1000 / T)) * c
+    C = 1 + c**4 * (p6 * np.exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
 
     return sigma_e / 10
@@ -64,9 +64,9 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
     """
     c = c_e / 1000  # mol.m-3 -> mol.l
     p1, p2, p3, p4 = coeffs
-    A = p1 * pybamm.exp(p2 * c)
-    B = pybamm.exp(p3 / T)
-    C = pybamm.exp(p4 * c / T)
+    A = p1 * np.exp(p2 * c)
+    B = np.exp(p3 / T)
+    C = np.exp(p4 * c / T)
     D_e = A * B * C * 1e-10  # m2/s
 
     return D_e
@@ -276,16 +276,16 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
         ** (
             a0 * sto
             + c0
-            + a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
-            + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
-            + a3 * pybamm.exp(-((sto - b3) ** 2) / c3)
-            + a4 * pybamm.exp(-((sto - b4) ** 2) / c4)
+            + a1 * np.exp(-((sto - b1) ** 2) / c1)
+            + a2 * np.exp(-((sto - b2) ** 2) / c2)
+            + a3 * np.exp(-((sto - b3) ** 2) / c3)
+            + a4 * np.exp(-((sto - b4) ** 2) / c4)
         )
         * 3.0321  # correcting factor (see O'Regan et al 2021)
     )
 
     E_D_s = d * pybamm.constants.R
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -314,11 +314,11 @@ def graphite_LGM50_ocp_Chen2020(sto):
     """
 
     U = (
-        1.9793 * pybamm.exp(-39.3631 * sto)
+        1.9793 * np.exp(-39.3631 * sto)
         + 0.2482
-        - 0.0909 * pybamm.tanh(29.8538 * (sto - 0.1234))
-        - 0.04478 * pybamm.tanh(14.9159 * (sto - 0.2769))
-        - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
+        - 0.0909 * np.tanh(29.8538 * (sto - 0.1234))
+        - 0.04478 * np.tanh(14.9159 * (sto - 0.2769))
+        - 0.0205 * np.tanh(30.4444 * (sto - 0.6103))
     )
 
     return U
@@ -357,7 +357,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_ORegan2022(
     i_ref = 2.668  # (A/m2)
     alpha = 0.792
     E_r = 4e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
 
@@ -474,9 +474,8 @@ def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     dUdT = (
         a0 * sto
         + c0
-        + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
-        + a1
-        * (pybamm.tanh(d1 * (sto - (b1 - c1))) - pybamm.tanh(d1 * (sto - (b1 + c1))))
+        + a2 * np.exp(-((sto - b2) ** 2) / c2)
+        + a1 * (np.tanh(d1 * (sto - (b1 - c1))) - np.tanh(d1 * (sto - (b1 + c1))))
     ) / 1000  # fit in mV / K
 
     return dUdT
@@ -505,7 +504,7 @@ def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     """
 
     E_r = 3.5e3
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     sigma = 0.8473 * arrhenius
 
@@ -552,15 +551,15 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
         10
         ** (
             c0
-            + a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
-            + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
-            + a3 * pybamm.exp(-((sto - b3) ** 2) / c3)
+            + a1 * np.exp(-((sto - b1) ** 2) / c1)
+            + a2 * np.exp(-((sto - b2) ** 2) / c2)
+            + a3 * np.exp(-((sto - b3) ** 2) / c3)
         )
         * 2.7  # correcting factor (see O'Regan et al 2021)
     )
 
     E_D_s = d * pybamm.constants.R
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -591,9 +590,9 @@ def nmc_LGM50_ocp_Chen2020(sto):
     U = (
         -0.809 * sto
         + 4.4875
-        - 0.0428 * pybamm.tanh(18.5138 * (sto - 0.5542))
-        - 17.7326 * pybamm.tanh(15.789 * (sto - 0.3117))
-        + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.312))
+        - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * np.tanh(15.789 * (sto - 0.3117))
+        + 17.5842 * np.tanh(15.9308 * (sto - 0.312))
     )
 
     return U
@@ -631,7 +630,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2022(
     i_ref = 5.028  # (A/m2)
     alpha = 0.43
     E_r = 2.401e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
 
@@ -742,8 +741,7 @@ def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     c2 = 0.02179
 
     dUdT = (
-        a1 * pybamm.exp(-((sto - b1) ** 2) / c1)
-        + a2 * pybamm.exp(-((sto - b2) ** 2) / c2)
+        a1 * np.exp(-((sto - b1) ** 2) / c1) + a2 * np.exp(-((sto - b2) ** 2) / c2)
     ) / 1000
     # fit in mV / K
 
@@ -955,7 +953,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 29583.0,
-        "Negative electrode diffusivity [m2.s-1]"
+        "Negative particle diffusivity [m2.s-1]"
         "": graphite_LGM50_diffusivity_ORegan2022,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
@@ -978,7 +976,7 @@ def get_parameter_values():
         "Positive electrode conductivity [S.m-1]"
         "": nmc_LGM50_electronic_conductivity_ORegan2022,
         "Maximum concentration in positive electrode [mol.m-3]": 51765.0,
-        "Positive electrode diffusivity [m2.s-1]": nmc_LGM50_diffusivity_ORegan2022,
+        "Positive particle diffusivity [m2.s-1]": nmc_LGM50_diffusivity_ORegan2022,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,

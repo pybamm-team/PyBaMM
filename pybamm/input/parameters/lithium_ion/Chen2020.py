@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_LGM50_ocp_Chen2020(sto):
@@ -25,11 +26,11 @@ def graphite_LGM50_ocp_Chen2020(sto):
     """
 
     u_eq = (
-        1.9793 * pybamm.exp(-39.3631 * sto)
+        1.9793 * np.exp(-39.3631 * sto)
         + 0.2482
-        - 0.0909 * pybamm.tanh(29.8538 * (sto - 0.1234))
-        - 0.04478 * pybamm.tanh(14.9159 * (sto - 0.2769))
-        - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
+        - 0.0909 * np.tanh(29.8538 * (sto - 0.1234))
+        - 0.04478 * np.tanh(14.9159 * (sto - 0.2769))
+        - 0.0205 * np.tanh(30.4444 * (sto - 0.6103))
     )
 
     return u_eq
@@ -67,11 +68,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     """
     m_ref = 6.48e-7  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 35000
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
@@ -100,9 +99,9 @@ def nmc_LGM50_ocp_Chen2020(sto):
     u_eq = (
         -0.8090 * sto
         + 4.4875
-        - 0.0428 * pybamm.tanh(18.5138 * (sto - 0.5542))
-        - 17.7326 * pybamm.tanh(15.7890 * (sto - 0.3117))
-        + 17.5842 * pybamm.tanh(15.9308 * (sto - 0.3120))
+        - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
+        + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
     )
 
     return u_eq
@@ -138,11 +137,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     """
     m_ref = 3.42e-6  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = 17800
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def electrolyte_diffusivity_Nyman2008(c_e, T):
@@ -276,7 +273,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
-        "Negative electrode diffusivity [m2.s-1]": 3.3e-14,
+        "Negative particle diffusivity [m2.s-1]": 3.3e-14,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,
@@ -294,7 +291,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
-        "Positive electrode diffusivity [m2.s-1]": 4e-15,
+        "Positive particle diffusivity [m2.s-1]": 4e-15,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,

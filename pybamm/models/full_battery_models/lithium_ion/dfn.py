@@ -13,7 +13,6 @@ class DFN(BaseModel):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.DFN()
     >>> model.name
     'Doyle-Fuller-Newman model'
@@ -65,6 +64,10 @@ class DFN(BaseModel):
                 ]:
                     submod = pybamm.particle.PolynomialProfile(
                         self.param, domain, self.options, phase=phase
+                    )
+                elif particle == "MSMR":
+                    submod = pybamm.particle.MSMRDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=False
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
                 self.submodels[

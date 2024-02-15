@@ -8,6 +8,7 @@
 *.mat
 *.csv
 *.hidden
+*.pkl
 
 # don't ignore important .txt and .csv files
 !requirements*
@@ -106,9 +107,13 @@ KLU_module_deps
 # setup
 setup.log
 
+# odes setup
+scikits_odes_setup.log
+
 # test
 test.c
 test.json
+.pytest_cache/
 
 # tox
 .tox/
@@ -133,3 +138,11 @@ results/
 # do not ignore SPM images for notebooks in docs
 !docs/source/examples/notebooks/models/spm1.png
 !docs/source/examples/notebooks/models/spm2.png
+
+# do not ignore images in _static folder in docs
+!docs/_static/favicon/favicon.png
+!docs/_static/pybamm_logo.png
+!docs/_static/pybamm_logo_whitetext.png
+
+# tests
+test_callback.log

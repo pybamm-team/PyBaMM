@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_diffusivity_Kim2011(sto, T):
@@ -27,7 +28,7 @@ def graphite_diffusivity_Kim2011(sto, T):
 
     D_ref = 9 * 10 ** (-14)
     E_D_s = 4e3
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -46,15 +47,15 @@ def graphite_ocp_Kim2011(sto):
 
     u_eq = (
         0.124
-        + 1.5 * pybamm.exp(-70 * sto)
-        - 0.0351 * pybamm.tanh((sto - 0.286) / 0.083)
-        - 0.0045 * pybamm.tanh((sto - 0.9) / 0.119)
-        - 0.035 * pybamm.tanh((sto - 0.99) / 0.05)
-        - 0.0147 * pybamm.tanh((sto - 0.5) / 0.034)
-        - 0.102 * pybamm.tanh((sto - 0.194) / 0.142)
-        - 0.022 * pybamm.tanh((sto - 0.98) / 0.0164)
-        - 0.011 * pybamm.tanh((sto - 0.124) / 0.0226)
-        + 0.0155 * pybamm.tanh((sto - 0.105) / 0.029)
+        + 1.5 * np.exp(-70 * sto)
+        - 0.0351 * np.tanh((sto - 0.286) / 0.083)
+        - 0.0045 * np.tanh((sto - 0.9) / 0.119)
+        - 0.035 * np.tanh((sto - 0.99) / 0.05)
+        - 0.0147 * np.tanh((sto - 0.5) / 0.034)
+        - 0.102 * np.tanh((sto - 0.194) / 0.142)
+        - 0.022 * np.tanh((sto - 0.98) / 0.0164)
+        - 0.011 * np.tanh((sto - 0.124) / 0.0226)
+        + 0.0155 * np.tanh((sto - 0.105) / 0.029)
     )
 
     return u_eq
@@ -101,14 +102,10 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     )
 
     E_r = 3e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
-        m_ref
-        * arrhenius
-        * c_e**alpha
-        * c_s_surf**alpha
-        * (c_s_max - c_s_surf) ** alpha
+        m_ref * arrhenius * c_e**alpha * c_s_surf**alpha * (c_s_max - c_s_surf) ** alpha
     )
 
 
@@ -137,7 +134,7 @@ def nca_diffusivity_Kim2011(sto, T):
     """
     D_ref = 3 * 10 ** (-15)
     E_D_s = 2e4
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -176,18 +173,12 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
-    m_ref = i0_ref / (
-        c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha
-    )
+    m_ref = i0_ref / (c_e_ref**alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref**alpha)
     E_r = 3e4
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return (
-        m_ref
-        * arrhenius
-        * c_e**alpha
-        * c_s_surf**alpha
-        * (c_s_max - c_s_surf) ** alpha
+        m_ref * arrhenius * c_e**alpha * c_s_surf**alpha * (c_s_max - c_s_surf) ** alpha
     )
 
 
@@ -217,9 +208,9 @@ def electrolyte_diffusivity_Kim2011(c_e, T):
     """
 
     D_c_e = (
-        5.84 * 10 ** (-7) * pybamm.exp(-2870 / T) * (c_e / 1000) ** 2
-        - 33.9 * 10 ** (-7) * pybamm.exp(-2920 / T) * (c_e / 1000)
-        + 129 * 10 ** (-7) * pybamm.exp(-3200 / T)
+        5.84 * 10 ** (-7) * np.exp(-2870 / T) * (c_e / 1000) ** 2
+        - 33.9 * 10 ** (-7) * np.exp(-2920 / T) * (c_e / 1000)
+        + 129 * 10 ** (-7) * np.exp(-3200 / T)
     )
 
     return D_c_e
@@ -251,9 +242,9 @@ def electrolyte_conductivity_Kim2011(c_e, T):
     """
 
     sigma_e = (
-        3.45 * pybamm.exp(-798 / T) * (c_e / 1000) ** 3
-        - 48.5 * pybamm.exp(-1080 / T) * (c_e / 1000) ** 2
-        + 244 * pybamm.exp(-1440 / T) * (c_e / 1000)
+        3.45 * np.exp(-798 / T) * (c_e / 1000) ** 3
+        - 48.5 * np.exp(-1080 / T) * (c_e / 1000) ** 2
+        + 244 * np.exp(-1440 / T) * (c_e / 1000)
     )
 
     return sigma_e
@@ -283,7 +274,7 @@ def nca_ocp_Kim2011(sto):
         + 264.427 * sto**2
         - 66.3691 * sto
         + 11.8058
-        - 0.61386 * pybamm.exp(5.8201 * sto**136.4)
+        - 0.61386 * np.exp(5.8201 * sto**136.4)
     )
 
     return U_posi
@@ -371,7 +362,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
-        "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Kim2011,
+        "Negative particle diffusivity [m2.s-1]": graphite_diffusivity_Kim2011,
         "Negative electrode OCP [V]": graphite_ocp_Kim2011,
         "Negative electrode porosity": 0.4,
         "Negative electrode active material volume fraction": 0.51,
@@ -389,7 +380,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49000.0,
-        "Positive electrode diffusivity [m2.s-1]": nca_diffusivity_Kim2011,
+        "Positive particle diffusivity [m2.s-1]": nca_diffusivity_Kim2011,
         "Positive electrode OCP [V]": nca_ocp_Kim2011,
         "Positive electrode porosity": 0.4,
         "Positive electrode active material volume fraction": 0.41,

@@ -60,6 +60,7 @@ class TestCopy(TestCase):
             pybamm.maximum(a, b),
             pybamm.SparseStack(mat, mat),
             pybamm.Equality(a, b),
+            pybamm.EvaluateAt(a, 0),
         ]:
             self.assertEqual(symbol, symbol.new_copy())
 

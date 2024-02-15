@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 
 
 def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
@@ -25,7 +26,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     D_ref = 3.9 * 10 ** (-14)
     E_D_s = 42770
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -48,8 +49,8 @@ def graphite_ocp_Ramadass2004(sto):
         + 0.029 * (sto**0.5)
         - 0.0172 / sto
         + 0.0019 / (sto**1.5)
-        + 0.2808 * pybamm.exp(0.9 - 15 * sto)
-        - 0.7984 * pybamm.exp(0.4465 * sto - 0.4108)
+        + 0.2808 * np.exp(0.9 - 15 * sto)
+        - 0.7984 * np.exp(0.4465 * sto - 0.4108)
     )
 
     return u_eq
@@ -86,11 +87,9 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     """
     m_ref = 4.854 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
     E_r = 37480
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_entropic_change_Moura2016(sto, c_s_max):
@@ -110,15 +109,15 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
 
     """
     du_dT = (
-        -1.5 * (120.0 / c_s_max) * pybamm.exp(-120 * sto)
-        + (0.0351 / (0.083 * c_s_max)) * ((pybamm.cosh((sto - 0.286) / 0.083)) ** (-2))
-        - (0.0045 / (0.119 * c_s_max)) * ((pybamm.cosh((sto - 0.849) / 0.119)) ** (-2))
-        - (0.035 / (0.05 * c_s_max)) * ((pybamm.cosh((sto - 0.9233) / 0.05)) ** (-2))
-        - (0.0147 / (0.034 * c_s_max)) * ((pybamm.cosh((sto - 0.5) / 0.034)) ** (-2))
-        - (0.102 / (0.142 * c_s_max)) * ((pybamm.cosh((sto - 0.194) / 0.142)) ** (-2))
-        - (0.022 / (0.0164 * c_s_max)) * ((pybamm.cosh((sto - 0.9) / 0.0164)) ** (-2))
-        - (0.011 / (0.0226 * c_s_max)) * ((pybamm.cosh((sto - 0.124) / 0.0226)) ** (-2))
-        + (0.0155 / (0.029 * c_s_max)) * ((pybamm.cosh((sto - 0.105) / 0.029)) ** (-2))
+        -1.5 * (120.0 / c_s_max) * np.exp(-120 * sto)
+        + (0.0351 / (0.083 * c_s_max)) * ((np.cosh((sto - 0.286) / 0.083)) ** (-2))
+        - (0.0045 / (0.119 * c_s_max)) * ((np.cosh((sto - 0.849) / 0.119)) ** (-2))
+        - (0.035 / (0.05 * c_s_max)) * ((np.cosh((sto - 0.9233) / 0.05)) ** (-2))
+        - (0.0147 / (0.034 * c_s_max)) * ((np.cosh((sto - 0.5) / 0.034)) ** (-2))
+        - (0.102 / (0.142 * c_s_max)) * ((np.cosh((sto - 0.194) / 0.142)) ** (-2))
+        - (0.022 / (0.0164 * c_s_max)) * ((np.cosh((sto - 0.9) / 0.0164)) ** (-2))
+        - (0.011 / (0.0226 * c_s_max)) * ((np.cosh((sto - 0.124) / 0.0226)) ** (-2))
+        + (0.0155 / (0.029 * c_s_max)) * ((np.cosh((sto - 0.105) / 0.029)) ** (-2))
     )
 
     return du_dT
@@ -149,7 +148,7 @@ def lico2_diffusivity_Ramadass2004(sto, T):
     """
     D_ref = 1 * 10 ** (-14)
     E_D_s = 18550
-    arrhenius = pybamm.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_s / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius
 
@@ -224,11 +223,9 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     """
     m_ref = 2.252 * 10 ** (-6)  # (A/m2)(m3/mol)**1.5
     E_r = 39570
-    arrhenius = pybamm.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def lico2_entropic_change_Moura2016(sto, c_s_max):
@@ -252,17 +249,12 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     sto = stretch * sto
 
     du_dT = (
-        0.07645
-        * (-54.4806 / c_s_max)
-        * ((1.0 / pybamm.cosh(30.834 - 54.4806 * sto)) ** 2)
-        + 2.1581 * (-50.294 / c_s_max) * ((pybamm.cosh(52.294 - 50.294 * sto)) ** (-2))
-        + 0.14169
-        * (19.854 / c_s_max)
-        * ((pybamm.cosh(11.0923 - 19.8543 * sto)) ** (-2))
-        - 0.2051 * (5.4888 / c_s_max) * ((pybamm.cosh(1.4684 - 5.4888 * sto)) ** (-2))
-        - (0.2531 / 0.1316 / c_s_max)
-        * ((pybamm.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
-        - (0.02167 / 0.006 / c_s_max) * ((pybamm.cosh((sto - 0.525) / 0.006)) ** (-2))
+        0.07645 * (-54.4806 / c_s_max) * ((1.0 / np.cosh(30.834 - 54.4806 * sto)) ** 2)
+        + 2.1581 * (-50.294 / c_s_max) * ((np.cosh(52.294 - 50.294 * sto)) ** (-2))
+        + 0.14169 * (19.854 / c_s_max) * ((np.cosh(11.0923 - 19.8543 * sto)) ** (-2))
+        - 0.2051 * (5.4888 / c_s_max) * ((np.cosh(1.4684 - 5.4888 * sto)) ** (-2))
+        - (0.2531 / 0.1316 / c_s_max) * ((np.cosh((-sto + 0.56478) / 0.1316)) ** (-2))
+        - (0.02167 / 0.006 / c_s_max) * ((np.cosh((sto - 0.525) / 0.006)) ** (-2))
     )
 
     return du_dT
@@ -294,7 +286,7 @@ def electrolyte_diffusivity_Ramadass2004(c_e, T):
 
     D_c_e = 7.5e-10
     E_D_e = 37040
-    arrhenius = pybamm.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_D_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
 
@@ -336,7 +328,7 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
     ) * 1e3  # and here there should not be an exponent
 
     E_k_e = 34700
-    arrhenius = pybamm.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = np.exp(E_k_e / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius
 
@@ -416,7 +408,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 30555.0,
-        "Negative electrode diffusivity [m2.s-1]"
+        "Negative particle diffusivity [m2.s-1]"
         "": graphite_mcmb2528_diffusivity_Dualfoil1998,
         "Negative electrode OCP [V]": graphite_ocp_Ramadass2004,
         "Negative electrode porosity": 0.485,
@@ -436,7 +428,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in positive electrode [mol.m-3]": 51555.0,
-        "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Ramadass2004,
+        "Positive particle diffusivity [m2.s-1]": lico2_diffusivity_Ramadass2004,
         "Positive electrode OCP [V]": lico2_ocp_Ramadass2004,
         "Positive electrode porosity": 0.385,
         "Positive electrode active material volume fraction": 0.59,

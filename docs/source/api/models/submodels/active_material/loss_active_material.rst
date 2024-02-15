@@ -1,4 +1,4 @@
-Loss of Active Material 
+Loss of Active Material
 =======================
 
 .. autoclass:: pybamm.active_material.LossActiveMaterial

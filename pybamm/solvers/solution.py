@@ -25,7 +25,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
-class Solution(object):
+class Solution:
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
     model.
@@ -130,6 +130,9 @@ class Solution(object):
 
         # Initialize empty summary variables
         self._summary_variables = None
+
+        # Initialise initial start time
+        self.initial_start_time = None
 
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
@@ -308,7 +311,19 @@ class Solution(object):
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                y_var = y[model.variables[var.name].y_slices[0]]
+                var = model.variables[var.name]
+                # find the statevector corresponding to this variable
+                statevector = None
+                for node in var.pre_order():
+                    if isinstance(node, pybamm.StateVector):
+                        statevector = node
+
+                # there will always be a statevector, but just in case
+                if statevector is None:  # pragma: no cover
+                    raise RuntimeError(
+                        f"Cannot find statevector corresponding to variable {var.name}"
+                    )
+                y_var = y[statevector.y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_value):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
@@ -421,6 +436,15 @@ class Solution(object):
     def summary_variables(self):
         return self._summary_variables
 
+    @property
+    def initial_start_time(self):
+        return self._initial_start_time
+
+    @initial_start_time.setter
+    def initial_start_time(self, value):
+        """Updates the initial start time of the experiment"""
+        self._initial_start_time = value
+
     def set_summary_variables(self, all_summary_variables):
         summary_variables = {var: [] for var in all_summary_variables[0]}
         for sum_vars in all_summary_variables:
@@ -445,7 +469,7 @@ class Solution(object):
         # Process
         for key in variables:
             cumtrapz_ic = None
-            pybamm.logger.debug("Post-processing {}".format(key))
+            pybamm.logger.debug(f"Post-processing {key}")
             vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
             # Iterate through all models, some may be in the list several times and
@@ -458,13 +482,21 @@ class Solution(object):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                     vars_pybamm[i] = var_pybamm
                 elif key in model._variables_casadi:
                     var_casadi = model._variables_casadi[key]
                 else:
-                    var_casadi = self.process_casadi_var(var_pybamm, inputs, ys)
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
                     model._variables_casadi[key] = var_casadi
                 vars_casadi.append(var_casadi)
             var = pybamm.ProcessedVariable(
@@ -475,9 +507,9 @@ class Solution(object):
             self._variables[key] = var
             self.data[key] = var.data
 
-    def process_casadi_var(self, var_pybamm, inputs, ys):
+    def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", ys.shape[0])
+        y_MX = casadi.MX.sym("y", ys_shape[0])
         inputs_MX_dict = {
             key: casadi.MX.sym("input", value.shape[0]) for key, value in inputs.items()
         }
@@ -656,7 +688,7 @@ class Solution(object):
                         or (i > 0 and 48 <= ord(s) <= 57)
                     ):
                         raise ValueError(
-                            "Invalid character '{}' found in '{}'. ".format(s, name)
+                            f"Invalid character '{s}' found in '{name}'. "
                             + "MATLAB variable names must only contain a-z, A-Z, _, "
                             "or 0-9 (except the first position). "
                             "Use the 'short_names' argument to pass an alternative "
@@ -683,7 +715,7 @@ class Solution(object):
                 with open(filename, "w") as outfile:
                     json.dump(data, outfile, cls=NumpyEncoder)
         else:
-            raise ValueError("format '{}' not recognised".format(to_format))
+            raise ValueError(f"format '{to_format}' not recognised")
 
     @property
     def sub_solutions(self):
@@ -768,6 +800,42 @@ class Solution(object):
         new_sol.set_up_time = self.set_up_time
 
         return new_sol
+
+    def plot_voltage_components(
+        self,
+        ax=None,
+        show_legend=True,
+        split_by_electrode=False,
+        testing=False,
+        **kwargs_fill,
+    ):
+        """
+        Generate a plot showing the component overpotentials that make up the voltage
+
+        Parameters
+        ----------
+        ax : matplotlib Axis, optional
+            The axis on which to put the plot. If None, a new figure and axis is created.
+        show_legend : bool, optional
+            Whether to display the legend. Default is True.
+        split_by_electrode : bool, optional
+            Whether to show the overpotentials for the negative and positive electrodes
+            separately. Default is False.
+        testing : bool, optional
+            Whether to actually make the plot (turned off for unit tests).
+        kwargs_fill
+            Keyword arguments, passed to ax.fill_between.
+
+        """
+        # Use 'self' here as the solution object
+        return pybamm.plot_voltage_components(
+            self,
+            ax=ax,
+            show_legend=show_legend,
+            split_by_electrode=split_by_electrode,
+            testing=testing,
+            **kwargs_fill,
+        )
 
 
 class EmptySolution:

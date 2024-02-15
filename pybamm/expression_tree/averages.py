@@ -188,10 +188,8 @@ def z_average(symbol):
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
-            """z-average only implemented in the 'current collector' domain,
-            but symbol has domains {}""".format(
-                symbol.domain
-            )
+            f"""z-average only implemented in the 'current collector' domain,
+            but symbol has domains {symbol.domain}"""
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
@@ -224,10 +222,8 @@ def yz_average(symbol):
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
-            """y-z-average only implemented in the 'current collector' domain,
-            but symbol has domains {}""".format(
-                symbol.domain
-            )
+            f"""y-z-average only implemented in the 'current collector' domain,
+            but symbol has domains {symbol.domain}"""
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
@@ -273,7 +269,7 @@ def r_average(symbol):
     # "positive electrode", take the r-average of the child then broadcast back
     elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
         "secondary"
-    ] in [["positive electrode"], ["negative electrode"], ["working electrode"]]:
+    ] in [["positive electrode"], ["negative electrode"]]:
         child = symbol.orphans[0]
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])

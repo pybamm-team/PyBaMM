@@ -3,12 +3,20 @@
 #
 from tests import TestCase
 import unittest
+import unittest.mock as mock
 
 import numpy as np
-import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
+from pybamm.util import have_optional_dependency
+
+EMPTY_DOMAINS = {
+    "primary": [],
+    "secondary": [],
+    "tertiary": [],
+    "quaternary": [],
+}
 
 
 class TestBinaryOperators(TestCase):
@@ -54,6 +62,26 @@ class TestBinaryOperators(TestCase):
         summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
         self.assertEqual(summ2, pybamm.Scalar(4))
 
+    def test_addition_numpy_array(self):
+        a = pybamm.Symbol("a")
+        # test adding symbol and numpy array
+        # converts numpy array to vector
+        array = np.array([1, 2, 3])
+        summ3 = pybamm.Addition(a, array)
+        self.assertIsInstance(summ3, pybamm.Addition)
+        self.assertIsInstance(summ3.children[0], pybamm.Symbol)
+        self.assertIsInstance(summ3.children[1], pybamm.Vector)
+
+        summ4 = array + a
+        self.assertIsInstance(summ4.children[0], pybamm.Vector)
+
+        # should error if numpy array is not 1D
+        array = np.array([[1, 2, 3], [4, 5, 6]])
+        with self.assertRaisesRegex(ValueError, "left must be a 1D array"):
+            pybamm.Addition(array, a)
+        with self.assertRaisesRegex(ValueError, "right must be a 1D array"):
+            pybamm.Addition(a, array)
+
     def test_power(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
@@ -76,9 +104,7 @@ class TestBinaryOperators(TestCase):
         self.assertEqual((a**b).diff(b).evaluate(y=y), 5**3 * np.log(5))
         self.assertEqual((a**b).diff(a).evaluate(y=y), 3 * 5**2)
         self.assertEqual((a**b).diff(a**b).evaluate(), 1)
-        self.assertEqual(
-            (a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4
-        )
+        self.assertEqual((a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4)
         self.assertEqual((a**a).diff(b).evaluate(y=y), 0)
 
         # addition
@@ -304,6 +330,12 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(1 < b + 2, -1 < b)
         self.assertEqual(b + 1 > 2, b > 1)
 
+        # expression with a subtract
+        expr = 2 * (b < 1) - (b > 3)
+        self.assertEqual(expr.evaluate(y=np.array([0])), 2)
+        self.assertEqual(expr.evaluate(y=np.array([2])), 0)
+        self.assertEqual(expr.evaluate(y=np.array([4])), -1)
+
     def test_equality(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
@@ -378,8 +410,8 @@ class TestBinaryOperators(TestCase):
         )
 
         # Test that smooth min/max are used when the setting is changed
-        pybamm.settings.min_smoothing = 10
-        pybamm.settings.max_smoothing = 10
+        pybamm.settings.min_max_mode = "soft"
+        pybamm.settings.min_max_smoothing = 10
 
         self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.softminus(a, b, 10)))
         self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.softplus(a, b, 10)))
@@ -391,8 +423,46 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(str(pybamm.maximum(a, b)), str(b))
 
         # Change setting back for other tests
-        pybamm.settings.min_smoothing = "exact"
-        pybamm.settings.max_smoothing = "exact"
+        pybamm.settings.set_smoothing_parameters("exact")
+
+    def test_smooth_minus_plus(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+
+        minimum = pybamm.smooth_min(a, b, 3000)
+        self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
+        self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
+
+        maximum = pybamm.smooth_max(a, b, 3000)
+        self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
+        self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
+
+        minimum = pybamm.smooth_min(a, b, 1)
+        self.assertEqual(
+            str(minimum),
+            "0.5 * (1.0 + y[0:1] - sqrt(1.0 + (1.0 - y[0:1]) ** 2.0))",
+        )
+        maximum = pybamm.smooth_max(a, b, 1)
+        self.assertEqual(
+            str(maximum),
+            "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])",
+        )
+
+        # Test that smooth min/max are used when the setting is changed
+        pybamm.settings.min_max_mode = "smooth"
+
+        pybamm.settings.min_max_smoothing = 1
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.smooth_min(a, b, 1)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.smooth_max(a, b, 1)))
+
+        pybamm.settings.min_max_smoothing = 3000
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual(str(pybamm.minimum(a, b)), str(a))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(b))
+
+        # Change setting back for other tests
+        pybamm.settings.set_smoothing_parameters("exact")
 
     def test_binary_simplifications(self):
         a = pybamm.Scalar(0)
@@ -720,6 +790,7 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(pybamm.inner(a3, a3).evaluate(), 9)
 
     def test_to_equation(self):
+        sympy = have_optional_dependency("sympy")
         # Test print_name
         pybamm.Addition.print_name = "test"
         self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))
@@ -743,6 +814,72 @@ class TestBinaryOperators(TestCase):
 
         # Test NotEqualHeaviside
         self.assertEqual(pybamm.NotEqualHeaviside(2, 4).to_equation(), True)
+
+    def test_to_json(self):
+        # Test Addition
+        add_json = {
+            "name": "+",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+        add = pybamm.Addition(2, 4)
+
+        self.assertEqual(add.to_json(), add_json)
+
+        add_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
+        self.assertEqual(pybamm.Addition._from_json(add_json), add)
+
+        # Test Power
+        pow_json = {
+            "name": "**",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        pow = pybamm.Power(7, 2)
+        self.assertEqual(pow.to_json(), pow_json)
+
+        pow_json["children"] = [pybamm.Scalar(7), pybamm.Scalar(2)]
+        self.assertEqual(pybamm.Power._from_json(pow_json), pow)
+
+        # Test Division
+        div_json = {
+            "name": "/",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        div = pybamm.Division(10, 5)
+        self.assertEqual(div.to_json(), div_json)
+
+        div_json["children"] = [pybamm.Scalar(10), pybamm.Scalar(5)]
+        self.assertEqual(pybamm.Division._from_json(div_json), div)
+
+        # Test EqualHeaviside
+        equal_json = {
+            "name": "<=",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        equal_h = pybamm.EqualHeaviside(2, 4)
+        self.assertEqual(equal_h.to_json(), equal_json)
+
+        equal_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
+        self.assertEqual(pybamm.EqualHeaviside._from_json(equal_json), equal_h)
+
+        # Test notEqualHeaviside
+        not_equal_json = {
+            "name": "<",
+            "id": mock.ANY,
+            "domains": EMPTY_DOMAINS,
+        }
+
+        ne_h = pybamm.NotEqualHeaviside(2, 4)
+        self.assertEqual(ne_h.to_json(), not_equal_json)
+
+        not_equal_json["children"] = [pybamm.Scalar(2), pybamm.Scalar(4)]
+        self.assertEqual(pybamm.NotEqualHeaviside._from_json(not_equal_json), ne_h)
 
 
 if __name__ == "__main__":

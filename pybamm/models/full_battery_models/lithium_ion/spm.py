@@ -13,7 +13,6 @@ class SPM(BaseModel):
 
     Examples
     --------
-    >>> import pybamm
     >>> model = pybamm.lithium_ion.SPM()
     >>> model.name
     'Single Particle Model'
@@ -48,7 +47,7 @@ class SPM(BaseModel):
             pybamm.citations.register("Marquis2019")
 
         if (
-            self.options["SEI"] not in ["none", "constant"]
+            self.options["SEI"] not in ["none", "constant", ("constant", "none")]
             or self.options["lithium plating"] != "none"
         ):
             pybamm.citations.register("BrosaPlanella2022")
@@ -104,6 +103,10 @@ class SPM(BaseModel):
                 ]:
                     submod = pybamm.particle.XAveragedPolynomialProfile(
                         self.param, domain, self.options, phase=phase
+                    )
+                elif particle == "MSMR":
+                    submod = pybamm.particle.MSMRDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=True
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
                 self.submodels[

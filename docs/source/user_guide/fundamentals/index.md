@@ -43,11 +43,13 @@ One of PyBaMM's unique features is the `Experiment` class, which allows users to
 ```python
 pybamm.Experiment(
     [
-        ("Discharge at C/10 for 10 hours or until 3.3 V",
-        "Rest for 1 hour",
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour")
+        (
+            "Discharge at C/10 for 10 hours or until 3.3 V",
+            "Rest for 1 hour",
+            "Charge at 1 A until 4.1 V",
+            "Hold at 4.1 V until 50 mA",
+            "Rest for 1 hour",
+        )
     ]
     * 3,
 )
@@ -68,10 +70,10 @@ solution = sim.solve()
 solution.plot()
 ```
 
-Finally, PyBaMM provides cusotm visualization tools:
+Finally, PyBaMM provides custom visualization tools:
 
 - [](quick_plot): for easily plotting simulation outputs in a grid, including comparing multiple simulations
-- [](plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
+- [](pybamm.plot_voltage_components): for plotting the component overpotentials that make up a voltage curve
 
 Users are not limited to these tools and can plot the output of a simulation solution by accessing the underlying numpy array for the solution variables as
 

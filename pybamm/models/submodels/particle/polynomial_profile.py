@@ -194,7 +194,8 @@ class PolynomialProfile(BaseParticle):
             T = pybamm.PrimaryBroadcast(
                 variables[f"{Domain} electrode temperature [K]"], [f"{domain} particle"]
             )
-            D_eff = self._get_effective_diffusivity(c_s, T)
+            current = variables["Total current density [A.m-2]"]
+            D_eff = self._get_effective_diffusivity(c_s, T, current)
             r = pybamm.SpatialVariable(
                 f"r_{domain[0]}",
                 domain=[f"{domain} particle"],

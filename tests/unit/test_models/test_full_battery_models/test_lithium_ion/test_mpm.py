@@ -21,10 +21,8 @@ class TestMPM(TestCase):
         # check default parameters are added correctly
         model = pybamm.lithium_ion.MPM()
         self.assertEqual(
-            model.default_parameter_values[
-                "Negative area-weighted mean particle radius [m]"
-            ],
-            1e-05,
+            model.default_parameter_values["Negative minimum particle radius [m]"],
+            0.0,
         )
 
     def test_lumped_thermal_model_1D(self):
@@ -107,6 +105,16 @@ class TestMPM(TestCase):
         options = {"stress-induced diffusion": "true"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
+
+    def test_msmr(self):
+        options = {
+            "open-circuit potential": "MSMR",
+            "particle": "MSMR",
+            "number of MSMR reactions": ("6", "4"),
+            "intercalation kinetics": "MSMR",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
 
 
 class TestMPMExternalCircuits(TestCase):

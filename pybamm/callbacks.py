@@ -3,7 +3,7 @@
 # Callbacks are used to perform actions (e.g. logging, saving)
 # at certain points in the simulation
 # Inspired by Keras callbacks
-# https://github.com/keras-team/keras/blob/master/keras/callbacks.py
+# https://github.com/keras-team/keras/blob/master/keras/callbacks/callback.py
 #
 import pybamm
 import numpy as np
@@ -217,7 +217,7 @@ class LoggingCallback(Callback):
 
     def on_experiment_end(self, logs):
         elapsed_time = logs["elapsed time"]
-        self.logger.notice("Finish experiment simulation, took {}".format(elapsed_time))
+        self.logger.notice(f"Finish experiment simulation, took {elapsed_time}")
 
     def on_experiment_error(self, logs):
         error = logs["error"]
