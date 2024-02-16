@@ -16,6 +16,13 @@ import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 
 
+def validate_max_step(max_step):
+    """Assert that max_Step is valid and return it."""
+    if max_step <= 0:
+        raise ValueError("`max_step` must be positive.")
+    return max_step
+
+
 class BaseSolver:
     """Solve a discretised model.
 
@@ -38,6 +45,9 @@ class BaseSolver:
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
@@ -51,7 +61,7 @@ class BaseSolver:
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
-        max_step=None,
+        max_step=np.inf,
         output_variables=[],
     ):
         self.method = method
@@ -60,7 +70,7 @@ class BaseSolver:
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
-        self.max_step = max_step
+        self.max_step = validate_max_step(max_step)
         self.output_variables = output_variables
         self._model_set_up = {}
 
