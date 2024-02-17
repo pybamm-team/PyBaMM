@@ -198,38 +198,74 @@ class TestBaseModel(TestCase):
         self.assertIn("i", parameter_info)
 
     def test_get_parameter_info_submodel(self):
-        model = pybamm.BaseModel()
         submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b", "test")
-        c = pybamm.FunctionParameter("c", {})
-        d = pybamm.FunctionParameter("d", {})
-        e = pybamm.InputParameter("e")
-        f = pybamm.InputParameter("f")
-        g = pybamm.Parameter("g")
-        h = pybamm.Parameter("h")
-        i = pybamm.Parameter("i")
 
-        u = pybamm.Variable("u")
-        v = pybamm.Variable("v")
+        class SubModel1(pybamm.BaseSubModel):
+            def get_fundamental_variables(self):
+                u = pybamm.Variable("u")
 
-        sub1 = pybamm.BaseSubModel(None)
-        sub1.rhs = {u: -u * a}
-        sub1.initial_conditions = {u: c}
-        sub1.variables = {"u": u}
-        sub1.boundary_conditions = {
-            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
-        }
-        sub2 = pybamm.BaseSubModel(None)
-        sub2.algebraic = {v: v - b}
-        sub2.variables = {"v": v, "v+f+i": v + f + i}
-        sub2.initial_conditions = {v: d}
-        sub2.boundary_conditions = {
-            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
-        }
+                variables = {"u": u}
+                return variables
+
+            def get_coupled_variables(self, variables):
+                x = pybamm.Parameter("x")
+                w = pybamm.InputParameter("w")
+                f = pybamm.InputParameter("f", "test")
+                variables.update({"w": w, "x": x, "f": f})
+                return variables
+
+            def set_rhs(self, variables):
+                a = pybamm.InputParameter("a")
+                u = variables["u"]
+                self.rhs = {u: -u * a}
+
+            def set_boundary_conditions(self, variables):
+                g = pybamm.Parameter("g")
+                u = variables["u"]
+                self.boundary_conditions = {
+                    u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+                }
+
+            def set_initial_conditions(self, variables):
+                c = pybamm.FunctionParameter("c", {})
+                u = variables["u"]
+                self.initial_conditions = {u: c}
+
+            def set_events(self, variables):
+                e = pybamm.InputParameter("e")
+                u = variables["u"]
+                self.events = [pybamm.Event("u=e", u - e)]
+
+        class SubModel2(pybamm.BaseSubModel):
+            def get_fundamental_variables(self):
+                v = pybamm.Variable("v")
+                i = pybamm.FunctionParameter("i", {})
+                variables = {"v": v, "i": i}
+                return variables
+
+            def set_rhs(self, variables):
+                b = pybamm.InputParameter("b", "test")
+                v = variables["v"]
+                self.rhs = {v: v - b}
+
+            def set_boundary_conditions(self, variables):
+                h = pybamm.Parameter("h")
+                v = variables["v"]
+                self.boundary_conditions = {
+                    v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+                }
+
+            def set_initial_conditions(self, variables):
+                d = pybamm.FunctionParameter("d", {})
+                v = variables["v"]
+                self.initial_conditions = {v: d}
+
+        sub1 = SubModel1(None)
+        sub2 = SubModel2(None)
+        model = pybamm.BaseModel()
         model.submodels = {"sub1": sub1, "sub2": sub2}
-        model.events = [pybamm.Event("u=e", u - e)]
         model.build_model()
+
         parameter_info = model.get_parameter_info(by_submodel=True)
 
         expected_error_message = "Cannot use get_parameter_info"
@@ -243,8 +279,12 @@ class TestBaseModel(TestCase):
         self.assertIn("a", parameter_info["sub1"])
         self.assertIn("b", parameter_info["sub2"])
         self.assertEqual(parameter_info["sub1"]["a"][1], "InputParameter")
-        self.assertEqual(parameter_info["sub2"]["b"][1], "InputParameter in ['test']")
+        self.assertEqual(parameter_info["sub1"]["w"][1], "InputParameter")
+        self.assertEqual(parameter_info["sub1"]["e"][1], "InputParameter")
         self.assertEqual(parameter_info["sub1"]["g"][1], "Parameter")
+        self.assertEqual(parameter_info["sub1"]["x"][1], "Parameter")
+        self.assertEqual(parameter_info["sub1"]["f"][1], "InputParameter in ['test']")
+        self.assertEqual(parameter_info["sub2"]["b"][1], "InputParameter in ['test']")
         self.assertEqual(parameter_info["sub2"]["h"][1], "Parameter")
         self.assertEqual(
             parameter_info["sub1"]["c"][1],
@@ -252,6 +292,10 @@ class TestBaseModel(TestCase):
         )
         self.assertEqual(
             parameter_info["sub2"]["d"][1],
+            "FunctionParameter with inputs(s) ''",
+        )
+        self.assertEqual(
+            parameter_info["sub2"]["i"][1],
             "FunctionParameter with inputs(s) ''",
         )
 
