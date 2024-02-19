@@ -6,7 +6,7 @@ import pybamm
 import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
-from base_solver import validate_max_step
+from .base_solver import validate_max_step
 
 
 class AlgebraicSolver(pybamm.BaseSolver):

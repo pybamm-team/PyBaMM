@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import numbers
 import scipy.sparse as sparse
+from .base_solver import validate_max_step
 
 import importlib
 
@@ -113,6 +114,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 if key not in options:
                     options[key] = value
         self._options = options
+
+        self.max_step = validate_max_step(max_step)
 
         self.output_variables = output_variables
 
