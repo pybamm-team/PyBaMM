@@ -38,9 +38,7 @@ end_time = solution.t[-1]
 step_solver = pybamm.CasadiSolver()
 step_solution = None
 while time < end_time:
-    step_solution = step_solver.step(
-        step_solution, model, dt=dt, t_eval=t_eval
-    )
+    step_solution = step_solver.step(step_solution, model, dt=dt, t_eval=t_eval)
     time += dt
 
 # plot
