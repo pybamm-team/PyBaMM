@@ -7,6 +7,7 @@ import numpy as np
 import warnings
 from scipy.interpolate import interp1d
 from .lrudict import LRUDict
+from base_solver import validate_max_step
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -41,6 +42,9 @@ class CasadiSolver(pybamm.BaseSolver):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     max_step_decrease_count : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
@@ -81,6 +85,7 @@ class CasadiSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
+        max_step=np.inf,
         max_step_decrease_count=5,
         dt_max=None,
         extrap_tol=None,
@@ -96,6 +101,7 @@ class CasadiSolver(pybamm.BaseSolver):
             atol,
             root_method,
             root_tol,
+            max_step,
             extrap_tol,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
@@ -106,6 +112,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 "'fast', for solving quickly without events, or 'safe without grid' or "
                 "'fast with events' (both experimental)"
             )
+        self.max_step = validate_max_step(max_step)
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max or 600
 
