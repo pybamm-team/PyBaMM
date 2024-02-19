@@ -1102,7 +1102,7 @@ class BaseSolver:
         old_solution,
         model,
         dt,
-        non_linear_time=None,
+        t_eval=None,
         inputs=None,
         save=True,
     ):
@@ -1120,9 +1120,10 @@ class BaseSolver:
             initial_conditions
         dt : numeric type
             The timestep (in seconds) over which to step the solution
-        non_linear_time : list or numpy.ndarray, optional
-            An array of time (in ascending order and not necessarily linearly distributed)
-            to return step solutions at.
+        t_eval : list or numpy.ndarray, optional
+            An array of times at which to return the solution during the step
+            (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
+            By default, the solution is returned at t0 and t0 + dt.
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
@@ -1160,34 +1161,20 @@ class BaseSolver:
             raise pybamm.SolverError(
                 f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
             )
-        t_start = old_solution.t[-1]
-        t_end = t_start
-        t_eval = np.array([t_start])
 
-        if non_linear_time is not None:
-            # Checking if non_linear_time lies within range
-            if non_linear_time[0] != 0 or non_linear_time[-1] != dt:
+        if t_eval is not None:
+            # Checking if t_eval lies within range
+            if t_eval[0] != 0 or t_eval[-1] != dt:
                 raise pybamm.SolverError(
-                    "Elements inside array non_linear_time must lie in the closed interval 0 to dt"
+                    "Elements inside array t_eval must lie in the closed interval 0 to dt"
                 )
 
-            for i in range(len(non_linear_time) - 1):
-                time_diff = non_linear_time[i + 1] - non_linear_time[i]
-                if time_diff <= step_start_offset:
-                    raise pybamm.SolverError(
-                        f"Time difference between elements in non_linear_time must be at least "
-                        f"{pybamm.TimerTime(step_start_offset)} "
-                    )
-
-                t_end = t_end + time_diff
-                # Append to t_eval
-                t_eval = np.append(t_eval, t_end)
-
         else:
-            t_start = old_solution.t[-1]
-            t_end = t_start + dt
-            # Calculate t_eval
-            t_eval = np.linspace(t_start, t_end, 2)
+            t_eval = np.array([0, dt])
+
+        t_start = old_solution.t[-1]
+        t_eval = t_start + t_eval
+        t_end = t_start + dt
 
         if t_start == 0:
             t_start_shifted = t_start

@@ -325,7 +325,7 @@ class TestCasadiSolver(TestCase):
 
         # Step again with different inputs
         step_sol_2 = solver.step(
-            step_sol, model, dt, non_linear_time=np.linspace(0, dt, 5), inputs={"a": -1}
+            step_sol, model, dt, t_eval=np.linspace(0, dt, 5), inputs={"a": -1}
         )
         np.testing.assert_array_almost_equal(
             step_sol_2.t,
@@ -367,7 +367,7 @@ class TestCasadiSolver(TestCase):
         step_solution = None
         while time < end_time:
             step_solution = step_solver.step(
-                step_solution, model, dt=dt, non_linear_time=np.linspace(0, dt, 10)
+                step_solution, model, dt=dt, t_eval=np.linspace(0, dt, 10)
             )
             time += dt
         np.testing.assert_array_less(step_solution.y.full()[0, :-1], 1.5)

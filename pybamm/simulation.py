@@ -786,7 +786,7 @@ class Simulation:
                             current_solution,
                             model,
                             dt,
-                            non_linear_time=np.linspace(0, dt, npts),
+                            t_eval=np.linspace(0, dt, npts),
                             save=False,
                             **kwargs,
                         )
@@ -967,7 +967,7 @@ class Simulation:
             step_solution,
             model,
             rest_time,
-            non_linear_time=np.linspace(0, rest_time, npts),
+            t_eval=np.linspace(0, rest_time, npts),
             save=False,
             **kwargs,
         )
@@ -978,7 +978,7 @@ class Simulation:
         self,
         dt,
         solver=None,
-        non_linear_time=None,
+        t_eval=None,
         save=True,
         starting_solution=None,
         **kwargs,
@@ -993,8 +993,10 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
-        non_linear_time : list or numpy.ndarray, optional
-            An array of times at which to return the solution during the step (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt). By default, the solution is returned at t0 and t0 + dt.
+        t_eval : list or numpy.ndarray, optional
+            An array of times at which to return the solution during the step
+            (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
+            By default, the solution is returned at t0 and t0 + dt.
             to return step solutions at.
         save : bool
             Turn on to store the solution of all previous timesteps
@@ -1018,7 +1020,7 @@ class Simulation:
             starting_solution,
             self.built_model,
             dt,
-            non_linear_time=non_linear_time,
+            t_eval=t_eval,
             save=save,
             **kwargs,
         )
