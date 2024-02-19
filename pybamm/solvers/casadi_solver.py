@@ -101,8 +101,8 @@ class CasadiSolver(pybamm.BaseSolver):
             atol,
             root_method,
             root_tol,
-            max_step,
             extrap_tol,
+            max_step,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode

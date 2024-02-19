@@ -5,6 +5,7 @@ import numpy as onp
 import asyncio
 
 import pybamm
+from .base_solver import validate_max_step
 
 if pybamm.have_jax():
     import jax
@@ -43,6 +44,9 @@ class JaxSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation
@@ -57,6 +61,7 @@ class JaxSolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=None,
+        max_step=onp.inf,
         extra_options=None,
     ):
         if not pybamm.have_jax():
@@ -67,7 +72,12 @@ class JaxSolver(pybamm.BaseSolver):
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
         super().__init__(
-            method, rtol, atol, root_method=root_method, extrap_tol=extrap_tol
+            method,
+            rtol,
+            atol,
+            root_method=root_method,
+            extrap_tol=extrap_tol,
+            max_step=max_step,
         )
         method_options = ["RK45", "BDF"]
         if method not in method_options:
@@ -77,6 +87,7 @@ class JaxSolver(pybamm.BaseSolver):
             self.ode_solver = True
         self.extra_options = extra_options or {}
         self.name = f"JAX solver ({method})"
+        self.max_step = validate_max_step(max_step)
         self._cached_solves = dict()
         pybamm.citations.register("jax2018")
 
