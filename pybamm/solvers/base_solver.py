@@ -1103,6 +1103,7 @@ class BaseSolver:
         model,
         dt,
         t_eval=None,
+        npts=None,
         inputs=None,
         save=True,
     ):
@@ -1124,6 +1125,7 @@ class BaseSolver:
             An array of times at which to return the solution during the step
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
+        npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
@@ -1161,6 +1163,11 @@ class BaseSolver:
             raise pybamm.SolverError(
                 f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
             )
+
+        # Raise deprecation warning for npts and convert it to t_eval
+        if npts is not None:
+            warnings.warn("The 'npts' parameter is deprecated, use 't_eval' instead.", DeprecationWarning, stacklevel=2)
+            t_eval = np.linspace(0, dt, npts)
 
         if t_eval is not None:
             # Checking if t_eval lies within range

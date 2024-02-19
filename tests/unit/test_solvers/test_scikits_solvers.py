@@ -531,7 +531,7 @@ class TestScikitsSolvers(TestCase):
         np.testing.assert_allclose(step_sol.y[0], np.exp(-0.1 * step_sol.t))
 
         # Step again (return 5 points)
-        step_sol_2 = solver.step(step_sol, model, dt, np.linspace(0, dt, 5))
+        step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.array([0, 1, 1 + 1e-9, 1.25, 1.5, 1.75, 2])
         )
@@ -565,7 +565,7 @@ class TestScikitsSolvers(TestCase):
         np.testing.assert_allclose(step_sol.y[-1, :], 2 * np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
-        step_sol_2 = solver.step(step_sol, model, dt, np.linspace(0, dt, 5))
+        step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.array([0, 1, 1 + 1e-9, 1.25, 1.5, 1.75, 2])
         )
@@ -741,7 +741,7 @@ class TestScikitsSolvers(TestCase):
         step_solution = None
         while time < end_time:
             step_solution = step_solver.step(
-                step_solution, model, dt=dt, t_eval=np.linspace(0, dt, 10)
+                step_solution, model, dt=dt, npts=10
             )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 1.5)
@@ -788,7 +788,7 @@ class TestScikitsSolvers(TestCase):
         step_solution = None
         while time < end_time:
             step_solution = step_solver.step(
-                step_solution, model, dt=dt, t_eval=np.linspace(0, dt, 10)
+                step_solution, model, dt=dt, npts=10
             )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
