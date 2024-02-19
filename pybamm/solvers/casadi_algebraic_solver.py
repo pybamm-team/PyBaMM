@@ -4,6 +4,7 @@
 import casadi
 import pybamm
 import numpy as np
+from base_solver import validate_max_step
 
 
 class CasadiAlgebraicSolver(pybamm.BaseSolver):
@@ -17,6 +18,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     ----------
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     extra_options : dict, optional
         Any options to pass to the CasADi rootfinder.
         Please consult `CasADi documentation <https://tinyurl.com/y7hrxm7d>`_ for
@@ -24,10 +28,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
     """
 
-    def __init__(self, tol=1e-6, extra_options=None):
+    def __init__(self, tol=1e-6, max_step=np.inf, extra_options=None):
         super().__init__()
         self.tol = tol
         self.name = "CasADi algebraic solver"
+        self.max_step = validate_max_step(max_step)
         self.algebraic_solver = True
         self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
