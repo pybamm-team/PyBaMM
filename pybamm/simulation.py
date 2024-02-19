@@ -997,7 +997,6 @@ class Simulation:
             An array of times at which to return the solution during the step
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
-            to return step solutions at.
         save : bool
             Turn on to store the solution of all previous timesteps
         starting_solution : :class:`pybamm.Solution`
