@@ -4,7 +4,7 @@
 import casadi
 import pybamm
 import numpy as np
-from base_solver import validate_max_step
+from .base_solver import validate_max_step
 
 
 class CasadiAlgebraicSolver(pybamm.BaseSolver):

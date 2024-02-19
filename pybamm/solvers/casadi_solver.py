@@ -7,7 +7,7 @@ import numpy as np
 import warnings
 from scipy.interpolate import interp1d
 from .lrudict import LRUDict
-from base_solver import validate_max_step
+from .base_solver import validate_max_step
 
 
 class CasadiSolver(pybamm.BaseSolver):
