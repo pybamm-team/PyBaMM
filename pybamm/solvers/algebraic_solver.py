@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
+from base_solver import validate_max_step
 
 
 class AlgebraicSolver(pybamm.BaseSolver):
@@ -24,14 +25,18 @@ class AlgebraicSolver(pybamm.BaseSolver):
         specified in the form "lsq_methodname"
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     extra_options : dict, optional
         Any options to pass to the rootfinder. Vary depending on which method is chosen.
         Please consult `SciPy documentation <https://tinyurl.com/ybr6cfqs>`_ for
         details.
     """
 
-    def __init__(self, method="lm", tol=1e-6, extra_options=None):
+    def __init__(self, method="lm", tol=1e-6, max_step=np.inf, extra_options=None):
         super().__init__(method=method)
+        self.max_step = validate_max_step(max_step)
         self.tol = tol
         self.extra_options = extra_options or {}
         self.name = f"Algebraic solver ({method})"
