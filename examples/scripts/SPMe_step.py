@@ -32,6 +32,7 @@ solution = solver.solve(model, t_eval)
 
 # step model
 dt = 500
+# t_eval is an array of time in the interval 0 to dt, dt being size of the step.
 t_eval = np.array([0, 50, 100, 200, 500])
 time = 0
 end_time = solution.t[-1]
