@@ -24,7 +24,7 @@ class CasadiSolver(pybamm.BaseSolver):
             - "fast with events": perform direct integration of the whole timespan, \
             then go back and check where events were crossed. Experimental only.
             - "safe": perform step-and-check integration in global steps of size \
-            dt_max, checking whether events have been triggered. Recommended for \
+            dt_event, checking whether events have been triggered. Recommended for \
             simulations of a full charge or discharge.
             - "safe without grid": perform step-and-check integration step-by-step. \
             Takes more steps than "safe" mode, but doesn't require creating the grid \
@@ -48,7 +48,7 @@ class CasadiSolver(pybamm.BaseSolver):
     max_step_decrease_count : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
-    dt_max : float, optional
+    dt_event : float, optional
         The maximum global step size (in seconds) used in "safe" mode. If None
         the default value is 600 seconds.
     extrap_tol : float, optional
@@ -87,7 +87,7 @@ class CasadiSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         max_step=np.inf,
         max_step_decrease_count=5,
-        dt_max=None,
+        dt_event=None,
         extrap_tol=None,
         extra_options_setup=None,
         extra_options_call=None,
@@ -114,7 +114,7 @@ class CasadiSolver(pybamm.BaseSolver):
             )
         self.max_step = validate_max_step(max_step)
         self.max_step_decrease_count = max_step_decrease_count
-        self.dt_max = dt_max or 600
+        self.dt_event = dt_event or 600
 
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
@@ -212,24 +212,24 @@ class CasadiSolver(pybamm.BaseSolver):
                 solution = None
                 use_grid = True
 
-            # Try to integrate in global steps of size dt_max. Note: dt_max must
+            # Try to integrate in global steps of size dt_event. Note: dt_event must
             # be at least as big as the the biggest step in t_eval (multiplied
             # by some tolerance, here 1.01) to avoid an empty integration window below
-            dt_max = self.dt_max
+            dt_event = self.dt_event
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
-            if dt_max < dt_eval_max:
+            if dt_event < dt_eval_max:
                 pybamm.logger.debug(
-                    "Setting dt_max to be as big as the largest step in "
+                    "Setting dt_event to be as big as the largest step in "
                     f"t_eval ({dt_eval_max})"
                 )
-                dt_max = dt_eval_max
+                dt_event = dt_eval_max
             termination_due_to_small_dt = False
             first_ts_solved = False
             while t < t_f:
                 # Step
                 solved = False
                 count = 0
-                dt = dt_max
+                dt = dt_event
                 while not solved:
                     # Get window of time to integrate over (so that we return
                     # all the points in t_eval, not just t and t+dt)
@@ -273,13 +273,13 @@ class CasadiSolver(pybamm.BaseSolver):
                         # needed, but this won't affect the global timesteps. The
                         # global timestep will only be reduced after the first timestep.
                         if first_ts_solved:
-                            dt_max = dt
+                            dt_event = dt
                         if count > self.max_step_decrease_count:
                             message = (
                                 "Maximum number of decreased steps occurred at "
                                 f"t={t} (final SolverError: '{error}'). "
-                                "For a full solution try reducing dt_max (currently, "
-                                f"dt_max={dt_max}) and/or reducing the size of the "
+                                "For a full solution try reducing dt_event (currently, "
+                                f"dt_event={dt_event}) and/or reducing the size of the "
                                 "time steps or period of the experiment."
                             )
                             if first_ts_solved and self.return_solution_if_failed_early:

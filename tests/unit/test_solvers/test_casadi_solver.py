@@ -141,7 +141,9 @@ class TestCasadiSolver(TestCase):
         disc = pybamm.Discretisation()
         model_disc = disc.process_model(model, inplace=False)
         solver = pybamm.CasadiSolver(
-            dt_max=1e-3, return_solution_if_failed_early=True, max_step_decrease_count=2
+            dt_event=1e-3,
+            return_solution_if_failed_early=True,
+            max_step_decrease_count=2,
         )
         # Solve with failure at t=2
         # Solution fails early but manages to take some steps so we return it anyway
@@ -152,7 +154,9 @@ class TestCasadiSolver(TestCase):
         self.assertLess(solution.t[-1], 20)
         # Solve with failure at t=0
         solver = pybamm.CasadiSolver(
-            dt_max=1e-3, return_solution_if_failed_early=True, max_step_decrease_count=2
+            dt_event=1e-3,
+            return_solution_if_failed_early=True,
+            max_step_decrease_count=2,
         )
         model.initial_conditions = {var: 0, var2: 1}
         model_disc = disc.process_model(model, inplace=False)
@@ -195,7 +199,7 @@ class TestCasadiSolver(TestCase):
 
         # Solve using "safe" mode with debug off
         pybamm.settings.debug_mode = False
-        solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8, dt_max=1)
+        solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8, dt_event=1)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y.full()[0], 1.5)
@@ -210,8 +214,8 @@ class TestCasadiSolver(TestCase):
         )
         pybamm.settings.debug_mode = True
 
-        # Try dt_max=0 to enforce using all timesteps
-        solver = pybamm.CasadiSolver(dt_max=0, rtol=1e-8, atol=1e-8)
+        # Try dt_event=0 to enforce using all timesteps
+        solver = pybamm.CasadiSolver(dt_event=0, rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y.full()[0], 1.5)

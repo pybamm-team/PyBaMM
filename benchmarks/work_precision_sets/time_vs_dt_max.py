@@ -12,7 +12,7 @@ parameters = [
 
 models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
 
-dt_max = [
+dt_event = [
     10,
     20,
     50,
@@ -70,8 +70,8 @@ for ax, model_, model_name in zip(
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
 
-        for t in dt_max:
-            solver = pybamm.CasadiSolver(dt_max=t)
+        for t in dt_event:
+            solver = pybamm.CasadiSolver(dt_event=t)
 
             solver.solve(model, t_eval=t_eval)
             time = 0
@@ -85,20 +85,20 @@ for ax, model_, model_name in zip(
 
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_xlabel("dt_max")
+        ax.set_xlabel("dt_event")
         ax.set_ylabel("time(s)")
         ax.set_title(f"{model_name}")
-        ax.plot(dt_max, time_points)
+        ax.plot(dt_event, time_points)
 
 plt.tight_layout()
 plt.gca().legend(
     parameters,
     loc="upper right",
 )
-plt.savefig(f"benchmarks/benchmark_images/time_vs_dt_max_{pybamm.__version__}.png")
+plt.savefig(f"benchmarks/benchmark_images/time_vs_dt_event_{pybamm.__version__}.png")
 
 
-content = f"## Solve Time vs dt_max\n<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>\n"
+content = f"## Solve Time vs dt_event\n<img src='./benchmark_images/time_vs_dt_event_{pybamm.__version__}.png'>\n"
 
 with open("./benchmarks/release_work_precision_sets.md") as original:
     data = original.read()

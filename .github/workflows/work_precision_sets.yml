@@ -21,7 +21,7 @@ jobs:
         run: python -m pip install pybamm==${{ env.VERSION }}
       - name: Run time_vs_* benchmarks for PyBaMM v${{ env.VERSION }}
         run: |
-          python benchmarks/work_precision_sets/time_vs_dt_max.py
+          python benchmarks/work_precision_sets/time_vs_dt_event.py
           python benchmarks/work_precision_sets/time_vs_mesh_size.py
           python benchmarks/work_precision_sets/time_vs_no_of_states.py
           python benchmarks/work_precision_sets/time_vs_reltols.py
