@@ -1166,7 +1166,11 @@ class BaseSolver:
 
         # Raise deprecation warning for npts and convert it to t_eval
         if npts is not None:
-            warnings.warn("The 'npts' parameter is deprecated, use 't_eval' instead.", DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                "The 'npts' parameter is deprecated, use 't_eval' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             t_eval = np.linspace(0, dt, npts)
 
         if t_eval is not None:
