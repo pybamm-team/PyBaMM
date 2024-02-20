@@ -8,6 +8,8 @@ import numpy as np
 import importlib
 import scipy.sparse as sparse
 
+from .base_solver import validate_max_step
+
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
     scikits_odes_spec = importlib.util.find_spec("scikits.odes")
@@ -38,6 +40,9 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `scikits.odes documentation
@@ -55,15 +60,19 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=None,
+        max_step=np.inf,
         extra_options=None,
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, rtol, atol, root_method, root_tol, extrap_tol)
+        super().__init__(
+            method, rtol, atol, root_method, root_tol, extrap_tol, max_step
+        )
         self.name = f"Scikits DAE solver ({method})"
 
         self.extra_options = extra_options or {}
+        self.max_step = validate_max_step(max_step)
 
         pybamm.citations.register("Malengier2018")
         pybamm.citations.register("Hindmarsh2000")
