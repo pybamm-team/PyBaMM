@@ -14,7 +14,7 @@ class TestEcker2015_graphite_halfcell(TestCase):
 
         fun_test = {
             # Positive electrode
-            "Positive electrode diffusivity [m2.s-1]": ([sto, T], 1.219e-14),
+            "Positive particle diffusivity [m2.s-1]": ([sto, T], 1.219e-14),
             "Positive electrode exchange-current density [A.m-2]": (
                 [1000, 15960, 31920, T],
                 6.2517,
