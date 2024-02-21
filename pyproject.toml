@@ -268,3 +268,15 @@ concurrency = ["multiprocessing"]
 ignore = [
     "PP003"  # list wheel as a build-dep
 ]
+
+[tool.mypy]
+ignore_missing_imports = true
+allow_redefinition = true
+disable_error_code = ["call-overload", "operator"]
+
+[[tool.mypy.overrides]]
+module = [
+        "pybamm.models.base_model.*",
+        "pybamm.models.full_battery_models.base_battery_model.*"
+        ]
+disable_error_code = "attr-defined"
