@@ -385,6 +385,10 @@ class TestBaseSolver(TestCase):
                     sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
                 )
 
+    def test_validate_max_step(self):
+        with self.assertRaisesRegex(ValueError, "`max_step` must be positive."):
+            pybamm.validate_max_step(-1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
