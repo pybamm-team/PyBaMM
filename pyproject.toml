@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.1rc2"
+version = "24.1"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -108,6 +108,8 @@ dev = [
     "nox",
     # For coverage
     "coverage[toml]",
+    # For test parameterization
+    "parameterized>=0.9",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",

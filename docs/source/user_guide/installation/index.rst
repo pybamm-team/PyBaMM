@@ -155,6 +155,7 @@ Dependency                                                                      
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
 `coverage <https://coverage.readthedocs.io/en/>`__                               \-                 dev                For calculating coverage of tests.
+`parameterized <https://github.com/wolever/parameterized>`__                     \-                 dev                For test parameterization.
 `pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running Jupyter notebooks tests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.

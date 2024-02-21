@@ -183,7 +183,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 30555,
-        "Negative electrode diffusivity [m2.s-1]": 3e-15,
+        "Negative particle diffusivity [m2.s-1]": 3e-15,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.36,
         "Negative electrode active material volume fraction": 0.58,
@@ -198,7 +198,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.33795074,
         "Maximum concentration in positive electrode [mol.m-3]": 22806.0,
-        "Positive electrode diffusivity [m2.s-1]": 5.9e-18,
+        "Positive particle diffusivity [m2.s-1]": 5.9e-18,
         "Positive electrode OCP [V]": LFP_ocp_Afshar2017,
         "Positive electrode porosity": 0.426,
         "Positive electrode active material volume fraction": 0.374,
