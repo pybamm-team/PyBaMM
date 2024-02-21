@@ -1,4 +1,9 @@
+from __future__ import annotations
+
 from enum import Enum
+import numpy as np
+
+from typing import TypeVar
 
 
 class EventType(Enum):
@@ -24,6 +29,9 @@ class EventType(Enum):
     SWITCH = 3
 
 
+E = TypeVar("E", bound="Event")
+
+
 class Event:
     """
 
@@ -47,7 +55,7 @@ class Event:
         self._event_type = event_type
 
     @classmethod
-    def _from_json(cls, snippet: dict):
+    def _from_json(cls: type[E], snippet: dict) -> E:
         """
         Reconstructs an Event instance during deserialisation of a JSON file.
 
@@ -58,17 +66,19 @@ class Event:
             Should contain "name", "expression" and "event_type".
         """
 
-        instance = cls.__new__(cls)
-
-        instance.__init__(
+        return cls(
             snippet["name"],
             snippet["expression"],
             event_type=EventType(snippet["event_type"][1]),
         )
 
-        return instance
-
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | None = None,
+    ):
         """
         Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
         """
