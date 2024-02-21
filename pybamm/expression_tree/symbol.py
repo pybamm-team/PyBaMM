@@ -983,18 +983,6 @@ class Symbol:
         else:
             return evaluated_self.shape
 
-    def contains(self, expr_type):
-        """
-        Does the symbol tree contain a given node type?
-        """
-        if type(self) is expr_type:
-            return True
-        elif "children" in dir(self):
-            for child in self.children:
-                if child.contains(expr_type):
-                    return True
-        return False
-
     @property
     def ndim_for_testing(self):
         """

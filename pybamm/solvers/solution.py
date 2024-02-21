@@ -478,7 +478,7 @@ class Solution:
             for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
-                if ys.size == 0 and var_pybamm.contains(
+                if ys.size == 0 and var_pybamm.has_symbol_of_classes(
                     pybamm.expression_tree.state_vector.StateVector
                 ):
                     raise KeyError(
