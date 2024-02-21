@@ -1,6 +1,6 @@
-#include "idaklu/casadi_solver.hpp"
-#include "idaklu/common.hpp"
-#include "idaklu/python.hpp"
+#include <vector>
+#include <iostream>
+#include <functional>
 
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
@@ -8,7 +8,10 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
-#include <vector>
+#include "idaklu/casadi_solver.hpp"
+#include "idaklu/idaklu_jax.hpp"
+#include "idaklu/common.hpp"
+#include "idaklu/python.hpp"
 
 Function generate_function(const std::string &data)
 {
@@ -56,9 +59,6 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
 
-  //py::bind_vector<std::vector<Function>>(m, "VectorFunction");
-  //py::implicitly_convertible<py::iterable, std::vector<Function>>();
-
   m.def("create_casadi_solver", &create_casadi_solver,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
@@ -89,6 +89,49 @@ PYBIND11_MODULE(idaklu, m)
     "Generate a casadi function",
     py::arg("string"),
     py::return_value_policy::take_ownership);
+
+  // IdakluJax interface routines
+  py::class_<IdakluJax>(m, "IdakluJax")
+    .def(
+      "register_callback_eval",
+      &IdakluJax::register_callback_eval,
+      "Register a callback for function evaluation",
+      py::arg("callback")
+    )
+    .def(
+      "register_callback_jvp",
+      &IdakluJax::register_callback_jvp,
+      "Register a callback for JVP evaluation",
+      py::arg("callback")
+    )
+    .def(
+      "register_callback_vjp",
+      &IdakluJax::register_callback_vjp,
+      "Register a callback for the VJP evaluation",
+      py::arg("callback")
+    )
+    .def(
+      "register_callbacks",
+      &IdakluJax::register_callbacks,
+      "Register callbacks for function evaluation, JVP evaluation, and VJP evaluation",
+      py::arg("callback_eval"),
+      py::arg("callback_jvp"),
+      py::arg("callback_vjp")
+    )
+    .def(
+      "get_index",
+      &IdakluJax::get_index,
+      "Get the index of the JAXified instance"
+    );
+  m.def(
+    "create_idaklu_jax",
+    &create_idaklu_jax,
+    "Create an idaklu jax object"
+  );
+  m.def(
+    "registrations",
+    &Registrations
+  );
 
   py::class_<Function>(m, "Function");
 

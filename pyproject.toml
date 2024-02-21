@@ -108,6 +108,8 @@ dev = [
     "nox",
     # For coverage
     "coverage[toml]",
+    # For test parameterization
+    "parameterized>=0.9",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
