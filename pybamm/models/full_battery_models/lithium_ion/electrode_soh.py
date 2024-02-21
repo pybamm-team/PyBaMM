@@ -199,6 +199,7 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         x_n = param.n.prim.x
         x_p = param.p.prim.x
 
+        T = param.T_ref
         V_max = param.voltage_high_cut
         V_min = param.voltage_low_cut
         Q_n = pybamm.InputParameter("Q_n")
@@ -214,21 +215,21 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         if "Un_0" in solve_for:
             Un_0 = pybamm.Variable("Un(x_0)")
             Up_0 = V_min + Un_0
-            x_0 = x_n(Un_0)
-            y_0 = x_p(Up_0)
+            x_0 = x_n(Un_0, T)
+            y_0 = x_p(Up_0, T)
 
         # Define variables for 100% state of charge
         # TODO: thermal effects (include dU/dT)
         if "Un_100" in solve_for:
             Un_100 = pybamm.Variable("Un(x_100)")
             Up_100 = V_max + Un_100
-            x_100 = x_n(Un_100)
-            y_100 = x_p(Up_100)
+            x_100 = x_n(Un_100, T)
+            y_100 = x_p(Up_100, T)
         else:
             Un_100 = pybamm.InputParameter("Un(x_100)")
             Up_100 = pybamm.InputParameter("Up(y_100)")
-            x_100 = x_n(Un_100)
-            y_100 = x_p(Up_100)
+            x_100 = x_n(Un_100, T)
+            y_100 = x_p(Up_100, T)
 
         # Define equations for 100% state of charge
         if "Un_100" in solve_for:
@@ -1057,14 +1058,15 @@ def _get_msmr_potential_model(parameter_values, param):
     V_min = param.voltage_low_cut
     x_n = param.n.prim.x
     x_p = param.p.prim.x
+    T = param.T_ref
     model = pybamm.BaseModel()
     Un = pybamm.Variable("Un")
     Up = pybamm.Variable("Up")
     x = pybamm.InputParameter("x")
     y = pybamm.InputParameter("y")
     model.algebraic = {
-        Un: x_n(Un) - x,
-        Up: x_p(Up) - y,
+        Un: x_n(Un, T) - x,
+        Up: x_p(Up, T) - y,
     }
     model.initial_conditions = {
         Un: 1 - x,
