@@ -10,7 +10,6 @@
 #include <sundials/sundials_config.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_types.h> /* defs. of realtype, sunindextype      */
 
-
 #if SUNDIALS_VERSION_MAJOR >= 6
   #include <sundials/sundials_context.h>
 #endif
@@ -26,8 +25,6 @@
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix           */
 
-
-
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
@@ -37,14 +34,11 @@ using np_array_dense = py::array_t<realtype, py::array::c_style | py::array::for
 using np_array_int = py::array_t<int64_t>;
 
 #ifdef NDEBUG
-#define DEBUG(x)
-#else
-#define DEBUG(x) do { std::cerr << __FILE__ << ':' << __LINE__ << ' ' << x << std::endl; } while (0)
-#endif
-
-#ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
 #define DEBUG_VECTORn(vector)
+#define DEBUG_v(v, N)
+#define DEBUG(x)
+#define DEBUG_n(x)
 #else
 
 #define DEBUG_VECTORn(vector, N) {\
@@ -79,6 +73,14 @@ using np_array_int = py::array_t<int64_t>;
     } \
   } \
   std::cout << "]" << std::endl;  }
+
+#define DEBUG(x) { \
+    std::cerr << __FILE__ << ":" << __LINE__ << " " << x << std::endl; \
+  }
+
+#define DEBUG_n(x) { \
+    std::cerr << __FILE__ << ":" << __LINE__ << "," << #x << " = " << x << std::endl; \
+  }
 
 #endif
 

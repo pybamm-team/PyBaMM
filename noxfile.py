@@ -67,7 +67,7 @@ def run_coverage(session):
     session.install("setuptools", silent=False)
     if sys.platform != "win32":
         if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
         else:
             session.run_always(
                 sys.executable,
@@ -78,12 +78,12 @@ def run_coverage(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
+            session.install("-e", ".[all,dev]", silent=False)
         else:
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("coverage", "run", "run-tests.py", "--nosub")
     session.run("coverage", "combine")
     session.run("coverage", "xml")
@@ -99,7 +99,7 @@ def run_integration(session):
     session.install("setuptools", silent=False)
     if sys.platform != "win32":
         if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
         else:
             session.run_always(
                 sys.executable,
@@ -110,12 +110,12 @@ def run_integration(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
+            session.install("-e", ".[all,dev]", silent=False)
         else:
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
 
@@ -140,7 +140,7 @@ def run_unit(session):
     session.install("setuptools", silent=False)
     if sys.platform != "win32":
         if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
         else:
             session.run_always(
                 sys.executable,
@@ -151,12 +151,12 @@ def run_unit(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
+            session.install("-e", ".[all,dev]", silent=False)
         else:
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -259,7 +259,7 @@ def run_tests(session):
     session.install("setuptools", silent=False)
     if sys.platform != "win32":
         if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
         else:
             session.run_always(
                 sys.executable,
@@ -270,12 +270,12 @@ def run_tests(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes]", silent=False)
+            session.install("-e", ".[all,dev,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
+            session.install("-e", ".[all,dev]", silent=False)
         else:
-            session.install("-e", ".[all,jax]", silent=False)
+            session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
