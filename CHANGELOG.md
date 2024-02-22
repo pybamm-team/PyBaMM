@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- MSMR open-circuit voltage model now depends on the temperature ([#3832](https://github.com/pybamm-team/PyBaMM/pull/3832))
+
 # [v24.1](https://github.com/pybamm-team/PyBaMM/tree/v24.1) - 2024-01-31
 
 ## Features
