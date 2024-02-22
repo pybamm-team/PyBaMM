@@ -163,7 +163,6 @@ from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
 from .parameters.parameter_sets import parameter_sets
-from .parameters_cli import add_parameter, remove_parameter, edit_parameter
 
 #
 # Mesh and Discretisation classes
@@ -220,6 +219,7 @@ from .solvers.scipy_solver import ScipySolver
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
+from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #

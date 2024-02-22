@@ -92,7 +92,7 @@ latexify = [
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx",
+    "bpx>=0.4.0",
 ]
 # Low-overhead progress bars
 tqdm = [
@@ -108,6 +108,8 @@ dev = [
     "nox",
     # For coverage
     "coverage[toml]",
+    # For test parameterization
+    "parameterized>=0.9",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
@@ -134,9 +136,6 @@ all = [
 ]
 
 [project.scripts]
-pybamm_edit_parameter = "pybamm.parameters_cli:edit_parameter"
-pybamm_add_parameter = "pybamm.parameters_cli:add_parameter"
-pybamm_rm_parameter = "pybamm.parameters_cli:remove_parameter"
 pybamm_install_odes = "pybamm.install_odes:main"
 pybamm_install_jax = "pybamm.util:install_jax"
 
@@ -269,3 +268,15 @@ concurrency = ["multiprocessing"]
 ignore = [
     "PP003"  # list wheel as a build-dep
 ]
+
+[tool.mypy]
+ignore_missing_imports = true
+allow_redefinition = true
+disable_error_code = ["call-overload", "operator"]
+
+[[tool.mypy.overrides]]
+module = [
+        "pybamm.models.base_model.*",
+        "pybamm.models.full_battery_models.base_battery_model.*"
+        ]
+disable_error_code = "attr-defined"

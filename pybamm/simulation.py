@@ -1,6 +1,8 @@
 #
 # Simulation class
 #
+from __future__ import annotations
+
 import pickle
 import pybamm
 import numpy as np
@@ -10,7 +12,6 @@ import sys
 from functools import lru_cache
 from datetime import timedelta
 from pybamm.util import have_optional_dependency
-from typing import Optional
 
 from pybamm.expression_tree.operations.serialise import Serialise
 
@@ -1072,6 +1073,8 @@ class Simulation:
             Name of the generated GIF file.
 
         """
+        if self.solution is None:
+            raise ValueError("The simulation has not been solved yet.")
         if self.quick_plot is None:
             self.quick_plot = pybamm.QuickPlot(self._solution)
 
@@ -1165,7 +1168,7 @@ class Simulation:
 
     def save_model(
         self,
-        filename: Optional[str] = None,
+        filename: str | None = None,
         mesh: bool = False,
         variables: bool = False,
     ):
@@ -1206,6 +1209,44 @@ class Simulation:
                 Ensure the model has been built (e.g. run `build()`) before saving.
                 """
             )
+
+    def plot_voltage_components(
+        self,
+        ax=None,
+        show_legend=True,
+        split_by_electrode=False,
+        testing=False,
+        **kwargs_fill,
+    ):
+        """
+        Generate a plot showing the component overpotentials that make up the voltage
+
+        Parameters
+        ----------
+        ax : matplotlib Axis, optional
+            The axis on which to put the plot. If None, a new figure and axis is created.
+        show_legend : bool, optional
+            Whether to display the legend. Default is True.
+        split_by_electrode : bool, optional
+            Whether to show the overpotentials for the negative and positive electrodes
+            separately. Default is False.
+        testing : bool, optional
+            Whether to actually make the plot (turned off for unit tests).
+        kwargs_fill
+            Keyword arguments, passed to ax.fill_between.
+
+        """
+        if self.solution is None:
+            raise ValueError("The simulation has not been solved yet.")
+
+        return pybamm.plot_voltage_components(
+            self.solution,
+            ax=ax,
+            show_legend=show_legend,
+            split_by_electrode=split_by_electrode,
+            testing=testing,
+            **kwargs_fill,
+        )
 
 
 def load_sim(filename):

@@ -478,7 +478,15 @@ class Solution:
             for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
-                if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                if ys.size == 0 and var_pybamm.has_symbol_of_classes(
+                    pybamm.expression_tree.state_vector.StateVector
+                ):
+                    raise KeyError(
+                        f"Cannot process variable '{key}' as it was not part of the "
+                        "solve. Please re-run the solve with `output_variables` set to "
+                        "include this variable."
+                    )
+                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
@@ -800,6 +808,42 @@ class Solution:
         new_sol.set_up_time = self.set_up_time
 
         return new_sol
+
+    def plot_voltage_components(
+        self,
+        ax=None,
+        show_legend=True,
+        split_by_electrode=False,
+        testing=False,
+        **kwargs_fill,
+    ):
+        """
+        Generate a plot showing the component overpotentials that make up the voltage
+
+        Parameters
+        ----------
+        ax : matplotlib Axis, optional
+            The axis on which to put the plot. If None, a new figure and axis is created.
+        show_legend : bool, optional
+            Whether to display the legend. Default is True.
+        split_by_electrode : bool, optional
+            Whether to show the overpotentials for the negative and positive electrodes
+            separately. Default is False.
+        testing : bool, optional
+            Whether to actually make the plot (turned off for unit tests).
+        kwargs_fill
+            Keyword arguments, passed to ax.fill_between.
+
+        """
+        # Use 'self' here as the solution object
+        return pybamm.plot_voltage_components(
+            self,
+            ax=ax,
+            show_legend=show_legend,
+            split_by_electrode=split_by_electrode,
+            testing=testing,
+            **kwargs_fill,
+        )
 
 
 class EmptySolution:
