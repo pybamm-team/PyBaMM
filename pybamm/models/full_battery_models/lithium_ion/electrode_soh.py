@@ -679,20 +679,20 @@ class ElectrodeSOHSolver:
             soc = pybamm.Variable("soc")
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
+            T_ref = parameter_values["Reference temperature [K]"]
             if self.options["open-circuit potential"] == "MSMR":
                 xn = param.n.prim.x
                 xp = param.p.prim.x
                 Up = pybamm.Variable("Up")
                 Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - xn(Un)
-                soc_model.algebraic[Un] = y - xp(Up)
+                soc_model.algebraic[Up] = x - xn(Un, T_ref)
+                soc_model.algebraic[Un] = y - xp(Up, T_ref)
                 soc_model.initial_conditions[Un] = 0
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
             else:
                 Up = param.p.prim.U
                 Un = param.n.prim.U
-                T_ref = parameter_values["Reference temperature [K]"]
                 soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min

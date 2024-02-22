@@ -498,9 +498,13 @@ class MSMRStoichiometryVariables(BaseParticle):
                 ]
                 T = variables[f"X-averaged {domain} electrode temperature [K]"]
 
+            T_distribution = pybamm.PrimaryBroadcast(
+                pybamm.PrimaryBroadcast(T, f"{domain} particle size"),
+                f"{domain} particle",
+            )
             # Calculate the stoichiometry distribution from the potential distribution
-            x_distribution = self.phase_param.x(U_distribution, T)
-            dxdU_distribution = self.phase_param.dxdU(U_distribution, T)
+            x_distribution = self.phase_param.x(U_distribution, T_distribution)
+            dxdU_distribution = self.phase_param.dxdU(U_distribution, T_distribution)
 
             # Standard stoichiometry and concentration distribution variables
             # (size-dependent)
