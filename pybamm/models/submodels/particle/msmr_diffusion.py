@@ -462,12 +462,8 @@ class MSMRStoichiometryVariables(BaseParticle):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        if self.x_average is False:
-            U = variables[f"{Domain} {phase_name}particle potential [V]"]
-            T = variables[f"{Domain} electrode temperature [K]"]
-        else:
-            U = variables[f"X-averaged {domain} {phase_name}particle potential [V]"]
-            T = variables[f"X-averaged {domain} electrode temperature [K]"]
+        U = variables[f"{Domain} {phase_name}particle potential [V]"]
+        T = variables[f"{Domain} electrode temperature [K]"]
 
         # Standard fractional occupancy variables (these are indexed by reaction number)
         variables.update(self._get_standard_fractional_occupancy_variables(U, T))
@@ -486,18 +482,10 @@ class MSMRStoichiometryVariables(BaseParticle):
         variables.update(self._get_standard_differential_stoichiometry_variables(dxdU))
 
         if self.size_distribution is True:
-            if self.x_average is False:
-                U_distribution = variables[
-                    f"{Domain} {phase_name}particle potential distribution [V]"
-                ]
-                T = variables[f"{Domain} electrode temperature [K]"]
-            else:
-                U_distribution = variables[
-                    f"X-averaged {domain} {phase_name}particle "
-                    "potential distribution [V]"
-                ]
-                T = variables[f"X-averaged {domain} electrode temperature [K]"]
-
+            U_distribution = variables[
+                f"{Domain} {phase_name}particle potential distribution [V]"
+            ]
+            T = variables[f"{Domain} electrode temperature [K]"]
             T_distribution = pybamm.PrimaryBroadcast(
                 pybamm.PrimaryBroadcast(T, f"{domain} particle size"),
                 f"{domain} particle",
