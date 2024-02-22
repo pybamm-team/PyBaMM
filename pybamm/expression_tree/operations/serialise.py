@@ -7,8 +7,6 @@ import importlib
 import numpy as np
 import re
 
-from typing import Optional
-
 
 class Serialise:
     """
@@ -48,15 +46,17 @@ class Serialise:
     class _MeshEncoder(json.JSONEncoder):
         """Converts PyBaMM meshes into a JSON-serialisable format"""
 
-        def default(self, node: dict):
+        def default(self, node: pybamm.Mesh):
             node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
             if isinstance(node, pybamm.Mesh):
                 node_dict.update(node.to_json())
 
-                node_dict["sub_meshes"] = {}
+                submeshes = {}
                 for k, v in node.items():
                     if len(k) == 1 and "ghost cell" not in k[0]:
-                        node_dict["sub_meshes"][k[0]] = self.default(v)
+                        submeshes[k[0]] = self.default(v)
+
+                node_dict["sub_meshes"] = submeshes
 
                 return node_dict
 
@@ -80,9 +80,9 @@ class Serialise:
     def save_model(
         self,
         model: pybamm.BaseModel,
-        mesh: Optional[pybamm.Mesh] = None,
-        variables: Optional[pybamm.FuzzyDict] = None,
-        filename: Optional[str] = None,
+        mesh: pybamm.Mesh | None = None,
+        variables: pybamm.FuzzyDict | None = None,
+        filename: str | None = None,
     ):
         """Saves a discretised model to a JSON file.
 
@@ -114,7 +114,7 @@ class Serialise:
             "pybamm_version": pybamm.__version__,
             "name": model.name,
             "options": model.options,
-            "bounds": [bound.tolist() for bound in model.bounds],
+            "bounds": [bound.tolist() for bound in model.bounds],  # type: ignore[attr-defined]
             "concatenated_rhs": self._SymbolEncoder().default(model._concatenated_rhs),
             "concatenated_algebraic": self._SymbolEncoder().default(
                 model._concatenated_algebraic
@@ -144,7 +144,7 @@ class Serialise:
             json.dump(model_json, f)
 
     def load_model(
-        self, filename: str, battery_model: Optional[pybamm.BaseModel] = None
+        self, filename: str, battery_model: pybamm.BaseModel | None = None
     ) -> pybamm.BaseModel:
         """
         Loads a discretised, ready to solve model into PyBaMM.
@@ -247,12 +247,15 @@ class Serialise:
         try:
             empty_class = self._Empty()
             empty_class.__class__ = class_
+
+            return empty_class
+
         except TypeError:
             # Mesh objects have a different layouts
-            empty_class = self._EmptyDict()
-            empty_class.__class__ = class_
+            empty_dict_class = self._EmptyDict()
+            empty_dict_class.__class__ = class_
 
-        return empty_class
+            return empty_dict_class
 
     def _deconstruct_pybamm_dicts(self, dct: dict):
         """
