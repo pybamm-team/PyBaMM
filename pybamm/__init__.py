@@ -54,7 +54,6 @@ from .util import (
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
-
 #
 # Classes for the Expression Tree
 #
