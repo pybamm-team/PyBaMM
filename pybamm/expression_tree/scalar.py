@@ -77,7 +77,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
-    def create_copy(self):
+    def create_copy(self, new_children=None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Scalar(self.value, self.name)
 
