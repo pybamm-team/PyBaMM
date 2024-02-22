@@ -58,9 +58,13 @@ class UnaryOperator(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return f"{self.name}({self.child!s})"
 
-    def create_copy(self):
+    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_child = self.child.new_copy()
+        # FIXUP: I guess there should be a check that the domains match?
+        if new_children is None:
+            new_child = self.child.new_copy()
+        else:
+            new_child = new_children[0]
         return self._unary_new_copy(new_child)
 
     def _unary_new_copy(self, child):

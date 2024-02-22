@@ -75,7 +75,7 @@ class Time(IndependentVariable):
     def _from_json(cls, snippet: dict):
         return cls()
 
-    def create_copy(self):
+    def create_copy(self, new_children=None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
@@ -158,7 +158,7 @@ class SpatialVariable(IndependentVariable):
         ):
             raise pybamm.DomainError(f"domain cannot be particle if name is '{name}'")
 
-    def create_copy(self):
+    def create_copy(self, new_children=None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
 

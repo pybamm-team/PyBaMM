@@ -129,9 +129,10 @@ class Concatenation(pybamm.Symbol):
         children_eval = [child.evaluate(t, y, y_dot, inputs) for child in self.children]
         return self._concatenation_evaluate(children_eval)
 
-    def create_copy(self):
+    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_children = [child.new_copy() for child in self.children]
+        if new_children is None:
+            new_children = [child.new_copy() for child in self.children]
         return self._concatenation_new_copy(new_children)
 
     def _concatenation_new_copy(self, children):

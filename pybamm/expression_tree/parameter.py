@@ -28,7 +28,7 @@ class Parameter(pybamm.Symbol):
     def __init__(self, name: str) -> None:
         super().__init__(name)
 
-    def create_copy(self) -> pybamm.Parameter:
+    def create_copy(self, new_children=None) -> pybamm.Parameter:
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name)
 
@@ -193,7 +193,7 @@ class FunctionParameter(pybamm.Symbol):
             print_name=self.print_name + "'",
         )
 
-    def create_copy(self):
+    def create_copy(self, new_children=None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         out = self._function_parameter_new_copy(
             self._input_names, self.orphans, print_name=self.print_name
