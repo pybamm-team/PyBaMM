@@ -363,35 +363,6 @@ class ElectrodeSOHSolver:
         return [x100_sim, x0_sim]
 
     def solve(self, inputs):
-        if "n_Li" in inputs:
-            warnings.warn(
-                "Input 'n_Li' has been replaced by 'Q_Li', which is 'n_Li * F / 3600'. "
-                "This will be automatically calculated for now. "
-                "Q_Li can be read from parameters as 'param.Q_Li_particles_init'",
-                DeprecationWarning,
-            )
-            n_Li = inputs.pop("n_Li")
-            inputs["Q_Li"] = n_Li * pybamm.constants.F.value / 3600
-        if "C_n" in inputs:
-            warnings.warn("Input 'C_n' has been renamed to 'Q_n'", DeprecationWarning)
-            inputs["Q_n"] = inputs.pop("C_n")
-        if "C_p" in inputs:
-            warnings.warn("Input 'C_p' has been renamed to 'Q_p'", DeprecationWarning)
-            inputs["Q_p"] = inputs.pop("C_p")
-        if inputs.pop("V_min", None) is not None:
-            warnings.warn(
-                "V_min has been removed from the inputs. "
-                "The 'Open-circuit voltage at 0% SOC [V]' "
-                "parameter is now used automatically.",
-                DeprecationWarning,
-            )
-        if inputs.pop("V_max", None) is not None:
-            warnings.warn(
-                "V_max has been removed from the inputs. "
-                "The 'Open-circuit voltage at 100% SOC [V]' "
-                "parameter is now used automatically.",
-                DeprecationWarning,
-            )
         ics = self._set_up_solve(inputs)
         try:
             sol = self._solve_full(inputs, ics)
