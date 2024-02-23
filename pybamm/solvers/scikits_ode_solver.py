@@ -1,6 +1,7 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+# mypy: ignore-errors
 import casadi
 import pybamm
 

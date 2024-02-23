@@ -221,6 +221,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 from .solvers.base_solver import validate_max_step
 
+from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #

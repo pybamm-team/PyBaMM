@@ -11,7 +11,7 @@ from .electrode_soh import (
 )
 from .electrode_soh_half_cell import (
     ElectrodeSOHHalfCell,
-    get_initial_stoichiometry_half_cell
+    get_initial_stoichiometry_half_cell,
 )
 from .spm import SPM
 from .spme import SPMe
