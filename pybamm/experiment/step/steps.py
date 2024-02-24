@@ -1,6 +1,7 @@
 #
 # Public functions to create steps for use in an experiment.
 #
+import numpy as np
 import pybamm
 from .base_step import (
     BaseStepExplicit,
@@ -131,6 +132,10 @@ class Current(BaseStepExplicit):
     Current is positive for discharge and negative for charge.
     """
 
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
+        super().__init__(value, **kwargs)
+
     def current_value(self, variables):
         return self.value
 
@@ -147,6 +152,10 @@ class CRate(BaseStepExplicit):
     C-rate-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
     C-rate is positive for discharge and negative for charge.
     """
+
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
+        super().__init__(value, **kwargs)
 
     def current_value(self, variables):
         return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
@@ -190,15 +199,13 @@ class Power(BaseStepImplicit):
     ----------
     value : float
         The value of the power function [W].
-    control : str, optional
-        Whether the control is algebraic or differential. Default is algebraic.
     **kwargs
         Any other keyword arguments are passed to the step class
     """
 
-    def __init__(self, value, control="algebraic", **kwargs):
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
         super().__init__(value, **kwargs)
-        self.control = control
 
     def get_parameter_values(self, variables):
         return {"Power function [W]": self.value}
@@ -225,15 +232,13 @@ class Resistance(BaseStepImplicit):
     ----------
     value : float
         The value of the power function [W].
-    control : str, optional
-        Whether the control is algebraic or differential. Default is algebraic.
     **kwargs
         Any other keyword arguments are passed to the step class
     """
 
-    def __init__(self, value, control="algebraic", **kwargs):
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
         super().__init__(value, **kwargs)
-        self.control = control
 
     def get_parameter_values(self, variables):
         return {"Resistance function [Ohm]": self.value}
@@ -262,7 +267,11 @@ def rest(duration=None, **kwargs):
 class CustomStepExplicit(BaseStepExplicit):
     """
     Custom step class where the current value is explicitly given as a function of
-    other variables.
+    other variables. When using this class, the user must be careful not to create
+    an expression that depends on the current itself, as this will lead to a
+    circular dependency. For example, in some models, the voltage is an explicit
+    function of the current, so the user should not create a step that depends on
+    the voltage. An expression that works for one model may not work for another.
 
     Parameters
     ----------
@@ -286,6 +295,8 @@ class CustomStepExplicit(BaseStepExplicit):
         The start time of the step.
     description : str, optional
         A description of the step.
+    direction : str, optional
+        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
 
     Examples
     --------
@@ -305,9 +316,13 @@ class CustomStepExplicit(BaseStepExplicit):
     def __init__(self, current_value_function, **kwargs):
         super().__init__(None, **kwargs)
         self.current_value_function = current_value_function
+        self.kwargs = kwargs
 
     def current_value(self, variables):
         return self.current_value_function(variables)
+
+    def copy(self):
+        return CustomStepExplicit(self.current_value_function, **self.kwargs)
 
 
 class CustomStepImplicit(BaseStepImplicit):
@@ -351,6 +366,8 @@ class CustomStepImplicit(BaseStepImplicit):
         The start time of the step.
     description : str, optional
         A description of the step.
+    direction : str, optional
+        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
 
     Examples
     --------
@@ -370,11 +387,12 @@ class CustomStepImplicit(BaseStepImplicit):
     target power:
 
     >>> def power_control(variables):
-    ...     P_target = 4
-    ...     P = variables["Power [W]"]
-    ...     # small time constant to avoid large overshoot
-    ...     K_P = 0.01
-    ...     return -K_P * (P - P_target)
+    ...     V = variables["Voltage [V]"]
+    ...     # Large time constant to avoid large overshoot. The user should be careful
+    ...     # to choose a time constant that is appropriate for the model being used,
+    ...     # as well as choosing the appropriate sign for the time constant.
+    ...     K_V = 100
+    ...     return K_V * (V - 4.2)
 
     Create the step with a 2.5 V termination condition. Now we need to specify that
     the control is differential.
@@ -390,8 +408,35 @@ class CustomStepImplicit(BaseStepImplicit):
         if control not in ["algebraic", "differential"]:
             raise ValueError("control must be either 'algebraic' or 'differential'")
         self.control = control
+        self.kwargs = kwargs
 
     def get_submodel(self, model):
         return pybamm.external_circuit.FunctionControl(
             model.param, self.current_rhs_function, model.options, control=self.control
         )
+
+    def copy(self):
+        return CustomStepImplicit(
+            self.current_rhs_function, self.control, **self.kwargs
+        )
+
+
+def value_based_charge_or_discharge(step_value):
+    """
+    Determine whether the step is a charge or discharge step based on the value of the
+    step
+    """
+    if isinstance(step_value, np.ndarray):
+        init_curr = step_value[0, 1]
+    elif isinstance(step_value, pybamm.Symbol):
+        inpt = {"start time": 0}
+        init_curr = step_value.evaluate(t=0, inputs=inpt).flatten()[0]
+    else:
+        init_curr = step_value
+    sign = np.sign(init_curr)
+    if sign == 0:
+        return "Rest"
+    elif sign > 0:
+        return "Discharge"
+    else:
+        return "Charge"

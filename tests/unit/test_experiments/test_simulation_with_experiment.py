@@ -771,6 +771,40 @@ class TestSimulationExperiment(TestCase):
         # Check that there are only 3 built models (unique steps + padding rest)
         self.assertEqual(len(sim.steps_to_built_models), 3)
 
+    def test_experiment_custom_steps(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # Explicit control
+        def custom_step_constant(variables):
+            return 1
+
+        custom_constant = pybamm.step.CustomStepExplicit(
+            custom_step_constant, duration=1, period=0.1
+        )
+
+        experiment = pybamm.Experiment([custom_constant])
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve()
+        np.testing.assert_array_equal(sol["Current [A]"].data, 1)
+
+        # Implicit control (algebraic)
+        def custom_step_voltage(variables):
+            return 100 * (variables["Voltage [V]"] - 4.2)
+
+        for control in ["differential"]:
+            with self.subTest(control=control):
+                custom_step_alg = pybamm.step.CustomStepImplicit(
+                    custom_step_voltage, control=control, duration=100, period=10
+                )
+
+                experiment = pybamm.Experiment([custom_step_alg])
+                sim = pybamm.Simulation(model, experiment=experiment)
+                sol = sim.solve()
+                # sol.plot()
+                np.testing.assert_array_almost_equal(
+                    sol["Voltage [V]"].data[2:], 4.2, decimal=3
+                )
+
     def test_experiment_custom_termination(self):
         def neg_stoich_cutoff(variables):
             return variables["Negative electrode stoichiometry"] - 0.5

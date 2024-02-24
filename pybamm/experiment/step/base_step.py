@@ -54,6 +54,8 @@ class BaseStep:
         The start time of the step.
     description : str, optional
         A description of the step.
+    direction : str, optional
+        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
     """
 
     def __init__(
@@ -66,6 +68,7 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
+        direction=None,
     ):
         # Check if drive cycle
         self.is_drive_cycle = isinstance(value, np.ndarray)
@@ -102,6 +105,9 @@ class BaseStep:
             self.repr_args += f", start_time={start_time}"
         if description:
             self.repr_args += f", description={description}"
+        if direction:
+            self.repr_args += f", direction={direction}"
+            self.hash_args += f", direction={direction}"
 
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
@@ -159,6 +165,29 @@ class BaseStep:
             raise TypeError("`start_time` should be a datetime.datetime object")
         self.next_start_time = None
         self.end_time = None
+
+        self.direction = direction
+
+    def copy(self):
+        """
+        Return a copy of the step.
+
+        Returns
+        -------
+        :class:`pybamm.Step`
+            A copy of the step.
+        """
+        return self.__class__(
+            self.value,
+            duration=self.duration,
+            termination=self.termination,
+            period=self.period,
+            temperature=self.temperature,
+            tags=self.tags,
+            start_time=self.start_time,
+            description=self.description,
+            direction=self.direction,
+        )
 
     def __str__(self):
         if self.description is not None:
@@ -238,7 +267,7 @@ class BaseStep:
 
     def update_model_events(self, new_model):
         for term in self.termination:
-            event = term.get_event(new_model.variables, self.value)
+            event = term.get_event(new_model.variables, self)
             if event is not None:
                 new_model.events.append(event)
 

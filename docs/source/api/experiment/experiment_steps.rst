@@ -19,6 +19,17 @@ directly:
 .. autoclass:: pybamm.step.BaseStep
     :members:
 
+Custom steps
+------------
+
+Custom steps can be defined using either explicit or implicit control:
+
+.. autoclass:: pybamm.step.CustomStepExplicit
+    :members:
+
+.. autoclass:: pybamm.step.CustomStepImplicit
+    :members:
+
 Step terminations
 -----------------
 

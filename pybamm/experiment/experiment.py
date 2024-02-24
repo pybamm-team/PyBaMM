@@ -102,7 +102,9 @@ class Experiment:
             elif isinstance(step, str):
                 processed_step = pybamm.step.string(step)
             elif isinstance(step, pybamm.step.BaseStep):
-                processed_step = step
+                # Copy the step to avoid modifying the original with the period and
+                # temperature and any other changes
+                processed_step = step.copy()
             else:
                 raise TypeError("Operating conditions must be a Step object or string.")
 
@@ -112,6 +114,7 @@ class Experiment:
                 processed_step.temperature = temp
 
             processed_steps[repr(step)] = processed_step
+
         return processed_steps
 
     def __str__(self):
