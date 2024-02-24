@@ -32,7 +32,7 @@ class FunctionControl(BaseModel):
         param = self.param
         # Current is a variable
         i_var = pybamm.Variable("Current variable [A]", scale=param.Q)
-        if self.control in ["algebraic", "differential without max"]:
+        if self.control in ["algebraic", "differential"]:
             I = i_var
         elif self.control == "differential with max":
             i_input = pybamm.FunctionParameter(

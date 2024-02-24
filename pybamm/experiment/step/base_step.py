@@ -266,7 +266,7 @@ class BaseStepExplicit(BaseStep):
         return new_model, new_parameter_values
 
 
-class BaseStepAlgebraic(BaseStep):
+class BaseStepImplicit(BaseStep):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

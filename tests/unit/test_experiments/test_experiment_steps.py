@@ -271,6 +271,32 @@ class TestExperimentSteps(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Drive cycle must start at t=0"):
             pybamm.step.current(t)
 
+    def test_custom_steps(self):
+        def custom_step_constant(variables):
+            return 1
+
+        custom_constant = pybamm.step.CustomStepExplicit(custom_step_constant)
+
+        self.assertEqual(custom_constant.current_value_function({}), 1)
+
+        def custom_step_voltage(variables):
+            return variables["Voltage [V]"] - 4.1
+
+        custom_step_alg = pybamm.step.CustomStepImplicit(custom_step_voltage)
+
+        self.assertEqual(custom_step_alg.control, "algebraic")
+        self.assertAlmostEqual(
+            custom_step_alg.current_rhs_function({"Voltage [V]": 4.2}), 0.1
+        )
+
+        custom_step_diff = pybamm.step.CustomStepImplicit(
+            custom_step_voltage, control="differential"
+        )
+        self.assertEqual(custom_step_diff.control, "differential")
+
+        with self.assertRaisesRegex(ValueError, "control must be"):
+            pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

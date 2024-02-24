@@ -1,3 +1,3 @@
 from .steps import *
-from .steps import BaseStep, BaseStepExplicit, BaseStepAlgebraic
+from .base_step import BaseStep, BaseStepExplicit, BaseStepImplicit
 from .step_termination import *

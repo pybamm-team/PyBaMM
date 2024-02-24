@@ -4,7 +4,7 @@
 import pybamm
 from .base_step import (
     BaseStepExplicit,
-    BaseStepAlgebraic,
+    BaseStepImplicit,
     _convert_electric,
     _examples,
 )
@@ -159,7 +159,7 @@ def c_rate(value, **kwargs):
     return CRate(value, **kwargs)
 
 
-class Voltage(BaseStepAlgebraic):
+class Voltage(BaseStepImplicit):
     """
     Voltage-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
     Voltage should always be positive.
@@ -181,7 +181,7 @@ def voltage(*args, **kwargs):
     return Voltage(*args, **kwargs)
 
 
-class Power(BaseStepAlgebraic):
+class Power(BaseStepImplicit):
     """
     Power-controlled step.
     Power is positive for discharge and negative for charge.
@@ -216,7 +216,7 @@ def power(value, **kwargs):
     return Power(value, **kwargs)
 
 
-class Resistance(BaseStepAlgebraic):
+class Resistance(BaseStepImplicit):
     """
     Resistance-controlled step.
     Resistance is positive for discharge and negative for charge.
@@ -257,3 +257,141 @@ def rest(duration=None, **kwargs):
     (see :meth:`pybamm.step.current`).
     """
     return Current(0, duration=duration, **kwargs)
+
+
+class CustomStepExplicit(BaseStepExplicit):
+    """
+    Custom step class where the current value is explicitly given as a function of
+    other variables.
+
+    Parameters
+    ----------
+    current_value_function : callable
+        A function that takes in a dictionary of variables and returns the current
+        value.
+    duration : float, optional
+        The duration of the step in seconds.
+    termination : str or list, optional
+        A string or list of strings indicating the condition(s) that will terminate the
+        step. If a list, the step will terminate when any of the conditions are met.
+    period : float or string, optional
+        The period of the step. If a float, the value is in seconds. If a string, the
+        value should be a valid time string, e.g. "1 hour".
+    temperature : float or string, optional
+        The temperature of the step. If a float, the value is in Kelvin. If a string,
+        the value should be a valid temperature string, e.g. "25 oC".
+    tags : str or list, optional
+        A string or list of strings indicating the tags associated with the step.
+    start_time : str or datetime, optional
+        The start time of the step.
+    description : str, optional
+        A description of the step.
+
+    Examples
+    --------
+    Control the current to always be equal to a target power divided by voltage
+    (this is one way to implement a power control step):
+
+    >>> def current_function(variables):
+    ...     P = 4
+    ...     V = variables["Voltage [V]"]
+    ...     return P / V
+
+    Create the step with a 2.5 V termination condition:
+
+    >>> step = pybamm.CustomStepExplicit(current_function, termination="2.5V")
+    """
+
+    def __init__(self, current_value_function, **kwargs):
+        super().__init__(None, **kwargs)
+        self.current_value_function = current_value_function
+
+    def current_value(self, variables):
+        return self.current_value_function(variables)
+
+
+class CustomStepImplicit(BaseStepImplicit):
+    """
+    Custom step, see :class:`pybamm.step.BaseStep` for arguments.
+
+    Parameters
+    ----------
+    current_rhs_function : callable
+        A function that takes in a dictionary of variables and returns the equation
+        controlling the current.
+
+    control : str, optional
+        Whether the control is algebraic or differential. Default is algebraic, in
+        which case the equation is
+
+        .. math::
+            0 = f(\\text{{variables}})
+
+        where :math:`f` is the current_rhs_function.
+
+        If control is "differential", the equation is
+
+        .. math::
+            \\frac{dI}{dt} = f(\\text{{variables}})
+
+    duration : float, optional
+        The duration of the step in seconds.
+    termination : str or list, optional
+        A string or list of strings indicating the condition(s) that will terminate the
+        step. If a list, the step will terminate when any of the conditions are met.
+    period : float or string, optional
+        The period of the step. If a float, the value is in seconds. If a string, the
+        value should be a valid time string, e.g. "1 hour".
+    temperature : float or string, optional
+        The temperature of the step. If a float, the value is in Kelvin. If a string,
+        the value should be a valid temperature string, e.g. "25 oC".
+    tags : str or list, optional
+        A string or list of strings indicating the tags associated with the step.
+    start_time : str or datetime, optional
+        The start time of the step.
+    description : str, optional
+        A description of the step.
+
+    Examples
+    --------
+    Control the current so that the voltage is constant (without using the built-in
+    voltage control):
+
+    >>> def voltage_control(variables):
+    ...     V = variables["Voltage [V]"]
+    ...     return V - 4.2
+
+    Create the step with a duration of 1h. In this case we don't need to specify that
+    the control is algebraic, as this is the default.
+
+    >>> step = pybamm.CustomStepImplicit(voltage_control, duration=3600)
+
+    Alternatively, control the current by a differential equation to achieve a
+    target power:
+
+    >>> def power_control(variables):
+    ...     P_target = 4
+    ...     P = variables["Power [W]"]
+    ...     # small time constant to avoid large overshoot
+    ...     K_P = 0.01
+    ...     return -K_P * (P - P_target)
+
+    Create the step with a 2.5 V termination condition. Now we need to specify that
+    the control is differential.
+
+    >>> step = pybamm.CustomStepImplicit(
+    ...     power_control, termination="2.5V", control="differential"
+    ... )
+    """
+
+    def __init__(self, current_rhs_function, control="algebraic", **kwargs):
+        super().__init__(None, **kwargs)
+        self.current_rhs_function = current_rhs_function
+        if control not in ["algebraic", "differential"]:
+            raise ValueError("control must be either 'algebraic' or 'differential'")
+        self.control = control
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.FunctionControl(
+            model.param, self.current_rhs_function, model.options, control=self.control
+        )
