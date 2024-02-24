@@ -16,7 +16,7 @@ The following functions can be used to define steps in an experiment. Note that 
 These functions return the following step class, which is not intended to be used
 directly:
 
-.. autoclass:: pybamm.step._Step
+.. autoclass:: pybamm.step.BaseStep
     :members:
 
 Step terminations

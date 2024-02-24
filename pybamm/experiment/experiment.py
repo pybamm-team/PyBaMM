@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pybamm
-from .step._steps_util import (
+from .step.base_step import (
     _convert_time_to_seconds,
     _convert_temperature_to_kelvin,
 )
@@ -10,8 +10,8 @@ class Experiment:
     """
     Base class for experimental conditions under which to run the model. In general, a
     list of operating conditions should be passed in. Each operating condition should
-    be either a `pybamm.step._Step` class, created using one of the methods
-    `pybamm.step.current`, `pybamm.step.c_rate`, `pybamm.step.voltage`
+    be either a `pybamm.step.BaseStep` class, which can be created using one of the
+    methods `pybamm.step.current`, `pybamm.step.c_rate`, `pybamm.step.voltage`
     , `pybamm.step.power`, `pybamm.step.resistance`, or
     `pybamm.step.string`, or a string, in which case the string is passed to
     `pybamm.step.string`.
@@ -52,45 +52,39 @@ class Experiment:
             termination,
         )
 
-        operating_conditions_cycles = []
+        cycles = []
         for cycle in operating_conditions:
             if not isinstance(cycle, tuple):
                 cycle = (cycle,)
-            operating_conditions_cycles.append(cycle)
+            cycles.append(cycle)
 
-        self.operating_conditions_cycles = operating_conditions_cycles
-        self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
+        self.cycles = cycles
+        self.cycle_lengths = [len(cycle) for cycle in cycles]
 
-        self.operating_conditions_steps_unprocessed = self._set_next_start_time(
-            [cond for cycle in operating_conditions_cycles for cond in cycle]
+        self.steps_unprocessed = self._set_next_start_time(
+            [cond for cycle in cycles for cond in cycle]
         )
 
-        # Convert strings to pybamm.step._Step objects
+        # Convert strings to pybamm.step.BaseStep objects
         # We only do this once per unique step, to avoid unnecessary conversions
         # Assign experiment period and temperature if not specified in step
         self.period = _convert_time_to_seconds(period)
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
         processed_steps = self.process_steps(
-            self.operating_conditions_steps_unprocessed, self.period, self.temperature
+            self.steps_unprocessed, self.period, self.temperature
         )
 
-        self.operating_conditions_steps = [
-            processed_steps[repr(step)]
-            for step in self.operating_conditions_steps_unprocessed
-        ]
+        self.steps = [processed_steps[repr(step)] for step in self.steps_unprocessed]
 
         # Save the processed unique steps and the processed operating conditions
         # for every step
         self.unique_steps = set(processed_steps.values())
 
         # Allocate experiment global variables
-        self.initial_start_time = self.operating_conditions_steps[0].start_time
+        self.initial_start_time = self.steps[0].start_time
 
-        if (
-            self.operating_conditions_steps[0].end_time is not None
-            and self.initial_start_time is None
-        ):
+        if self.steps[0].end_time is not None and self.initial_start_time is None:
             raise ValueError(
                 "When using experiments with `start_time`, the first step must have a "
                 "`start_time`."
@@ -107,7 +101,7 @@ class Experiment:
                 continue
             elif isinstance(step, str):
                 processed_step = pybamm.step.string(step)
-            elif isinstance(step, pybamm.step._Step):
+            elif isinstance(step, pybamm.step.BaseStep):
                 processed_step = step
             else:
                 raise TypeError("Operating conditions must be a Step object or string.")
@@ -121,7 +115,7 @@ class Experiment:
         return processed_steps
 
     def __str__(self):
-        return str(self.operating_conditions_cycles)
+        return str(self.cycles)
 
     def copy(self):
         return Experiment(*self.args)
@@ -196,7 +190,7 @@ class Experiment:
             A list of cycles in which the tag appears
         """
         cycles = []
-        for i, cycle in enumerate(self.operating_conditions_cycles):
+        for i, cycle in enumerate(self.cycles):
             for step in cycle:
                 if tag in step.tags:
                     cycles.append(i)
@@ -205,26 +199,28 @@ class Experiment:
         return cycles
 
     @staticmethod
-    def _set_next_start_time(operating_conditions):
-        if all(isinstance(i, str) for i in operating_conditions):
-            return operating_conditions
+    def _set_next_start_time(steps):
+        if all(isinstance(i, str) for i in steps):
+            return steps
 
         end_time = None
         next_start_time = None
 
-        for op in reversed(operating_conditions):
-            if isinstance(op, str):
-                op = pybamm.step.string(op)
-            if not isinstance(op, pybamm.step._Step):
+        # Loop over the steps in reverse order, setting the end time of each step to the
+        # start time of the next step
+        for step in reversed(steps):
+            if isinstance(step, str):
+                step = pybamm.step.string(step)
+            if not isinstance(step, pybamm.step.BaseStep):
                 raise TypeError(
                     "Operating conditions should be strings or _Step objects"
                 )
 
-            op.next_start_time = next_start_time
-            op.end_time = end_time
+            step.next_start_time = next_start_time
+            step.end_time = end_time
 
-            next_start_time = op.start_time
+            next_start_time = step.start_time
             if next_start_time:
                 end_time = next_start_time
 
-        return operating_conditions
+        return steps

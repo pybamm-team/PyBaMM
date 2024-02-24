@@ -1,7 +1,13 @@
 #
 # Public functions to create steps for use in an experiment.
 #
-from ._steps_util import _Step, _convert_electric, _examples
+import pybamm
+from .base_step import (
+    BaseStepExplicit,
+    BaseStepAlgebraic,
+    _convert_electric,
+    _examples,
+)
 
 
 def string(string, **kwargs):
@@ -20,12 +26,11 @@ def string(string, **kwargs):
         "3 minutes" or "1 hour". The stopping conditions should be
         a circuit state, e.g. "1 A", "C/50" or "3 V".
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
+        Any other keyword arguments are passed to the step class
 
     Returns
     -------
-    :class:`pybamm.step._Step`
+    :class:`pybamm.step.BaseStep`
         A step parsed from the string.
     """
     if not isinstance(string, str):
@@ -74,7 +79,7 @@ def string(string, **kwargs):
 
     # read remaining instruction
     if string.startswith("Rest"):
-        typ = "current"
+        step_class = Current
         value = 0
     elif string.startswith("Run"):
         raise ValueError(
@@ -102,8 +107,16 @@ def string(string, **kwargs):
         # Make current positive for discharge and negative for charge
         value *= sign
 
-    return _Step(
-        typ,
+        # Use the appropriate step class
+        step_class = {
+            "current": Current,
+            "voltage": Voltage,
+            "power": Power,
+            "C-rate": CRate,
+            "resistance": Resistance,
+        }[typ]
+
+    return step_class(
         value,
         duration=duration,
         termination=termination,
@@ -112,109 +125,130 @@ def string(string, **kwargs):
     )
 
 
+class Current(BaseStepExplicit):
+    """
+    Current-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
+    Current is positive for discharge and negative for charge.
+    """
+
+    def current_value(self, variables):
+        return self.value
+
+
 def current(value, **kwargs):
     """
-    Create a current-controlled step.
-    Current is positive for discharge and negative for charge.
-
-    Parameters
-    ----------
-    value : float
-        The current value in A. It can be a number or a 2-column array (for drive cycles).
-    **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A current-controlled step.
+    Current-controlled step, see :class:`pybamm.step.Current`.
     """
-    return _Step("current", value, **kwargs)
+    return Current(value, **kwargs)
+
+
+class CRate(BaseStepExplicit):
+    """
+    C-rate-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
+    C-rate is positive for discharge and negative for charge.
+    """
+
+    def current_value(self, variables):
+        return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
 
 
 def c_rate(value, **kwargs):
     """
-    Create a C-rate controlled step.
-    C-rate is positive for discharge and negative for charge.
-
-    Parameters
-    ----------
-    value : float
-        The C-rate value. It can be a number or a 2-column array (for drive cycles).
-    **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A C-rate controlled step.
+    C-rate-controlled step, see :class:`pybamm.step.CRate`.
     """
-    return _Step("C-rate", value, **kwargs)
+    return CRate(value, **kwargs)
 
 
-def voltage(value, **kwargs):
+class Voltage(BaseStepAlgebraic):
     """
-    Create a voltage-controlled step.
+    Voltage-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
     Voltage should always be positive.
-
-    Parameters
-    ----------
-    value : float
-        The voltage value in V. It can be a number or a 2-column array (for drive cycles).
-    **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A voltage-controlled step.
     """
-    return _Step("voltage", value, **kwargs)
+
+    def get_parameter_values(self, variables):
+        return {"Voltage function [V]": self.value}
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.VoltageFunctionControl(
+            model.param, model.options
+        )
 
 
-def power(value, **kwargs):
+def voltage(*args, **kwargs):
     """
-    Create a power-controlled step.
+    Voltage-controlled step, see :class:`pybamm.step.Voltage`.
+    """
+    return Voltage(*args, **kwargs)
+
+
+class Power(BaseStepAlgebraic):
+    """
+    Power-controlled step.
     Power is positive for discharge and negative for charge.
 
     Parameters
     ----------
     value : float
-        The power value in W. It can be a number or a 2-column array (for drive cycles).
+        The value of the power function [W].
+    control : str, optional
+        Whether the control is algebraic or differential. Default is algebraic.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A power-controlled step.
+        Any other keyword arguments are passed to the step class
     """
-    return _Step("power", value, **kwargs)
+
+    def __init__(self, value, control="algebraic", **kwargs):
+        super().__init__(value, **kwargs)
+        self.control = control
+
+    def get_parameter_values(self, variables):
+        return {"Power function [W]": self.value}
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.PowerFunctionControl(
+            model.param, model.options, control=self.control
+        )
 
 
-def resistance(value, **kwargs):
+def power(value, **kwargs):
     """
-    Create a resistance-controlled step.
+    Power-controlled step, see :class:`pybamm.step.Power`.
+    """
+    return Power(value, **kwargs)
+
+
+class Resistance(BaseStepAlgebraic):
+    """
+    Resistance-controlled step.
     Resistance is positive for discharge and negative for charge.
 
     Parameters
     ----------
     value : float
-        The resistance value in Ohm. It can be a number or a 2-column array (for drive cycles).
+        The value of the power function [W].
+    control : str, optional
+        Whether the control is algebraic or differential. Default is algebraic.
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A resistance-controlled step.
+        Any other keyword arguments are passed to the step class
     """
-    return _Step("resistance", value, **kwargs)
+
+    def __init__(self, value, control="algebraic", **kwargs):
+        super().__init__(value, **kwargs)
+        self.control = control
+
+    def get_parameter_values(self, variables):
+        return {"Resistance function [Ohm]": self.value}
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.ResistanceFunctionControl(
+            model.param, model.options, control=self.control
+        )
+
+
+def resistance(value, **kwargs):
+    """
+    Resistance-controlled step, see :class:`pybamm.step.Resistance`.
+    """
+    return Resistance(value, **kwargs)
 
 
 def rest(duration=None, **kwargs):
@@ -222,4 +256,4 @@ def rest(duration=None, **kwargs):
     Create a rest step, equivalent to a constant current step with value 0
     (see :meth:`pybamm.step.current`).
     """
-    return current(0, duration=duration, **kwargs)
+    return Current(0, duration=duration, **kwargs)
