@@ -1,6 +1,8 @@
 #
 # Base model class
 #
+from __future__ import annotations
+
 import numbers
 import warnings
 from collections import OrderedDict
@@ -131,10 +133,9 @@ class BaseModel:
         """
         Create a model instance from a serialised object.
         """
-        instance = cls.__new__(cls)
 
         # append the model name with _saved to differentiate
-        instance.__init__(name=properties["name"] + "_saved")
+        instance = cls(name=properties["name"] + "_saved")
 
         instance.options = properties["options"]
 
@@ -1424,7 +1425,7 @@ class BaseModel:
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
 
 
-def load_model(filename, battery_model: BaseModel = None):
+def load_model(filename, battery_model: BaseModel | None = None):
     """
     Load in a saved model from a JSON file
 
