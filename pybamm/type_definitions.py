@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 from typing import Union, List, Dict
-from typing_extensions import TypeAlias
 import numpy as np
 import pybamm
+from pybamm.util import have_optional_dependency
+
+TypeAlias = have_optional_dependency("typing_extensions", "TypeAlias")
 
 # numbers.Number should not be used for type hints
 Numeric: TypeAlias = Union[int, float, np.number]
