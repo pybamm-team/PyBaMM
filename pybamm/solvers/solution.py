@@ -478,7 +478,15 @@ class Solution:
             for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
-                if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                if ys.size == 0 and var_pybamm.has_symbol_of_classes(
+                    pybamm.expression_tree.state_vector.StateVector
+                ):
+                    raise KeyError(
+                        f"Cannot process variable '{key}' as it was not part of the "
+                        "solve. Please re-run the solve with `output_variables` set to "
+                        "include this variable."
+                    )
+                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
