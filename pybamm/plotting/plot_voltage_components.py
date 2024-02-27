@@ -49,7 +49,7 @@ def plot_voltage_components(
 
     if ax is not None:
         fig = None
-        testing = True
+        show_plot = False
     else:
         fig, ax = plt.subplots(figsize=(8, 4))
 
@@ -152,7 +152,7 @@ def plot_voltage_components(
     )
     ax.set_ylim([y_min, y_max])
 
-    if not testing:  # pragma: no cover
+    if show_plot:  # pragma: no cover
         plt.show()
 
     return fig, ax
