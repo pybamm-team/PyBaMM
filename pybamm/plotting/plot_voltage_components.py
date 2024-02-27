@@ -13,7 +13,7 @@ def plot_voltage_components(
     ax=None,
     show_legend=True,
     split_by_electrode=False,
-    testing=False,
+    show_plot=True,
     **kwargs_fill,
 ):
     """
@@ -30,8 +30,9 @@ def plot_voltage_components(
     split_by_electrode : bool, optional
         Whether to show the overpotentials for the negative and positive electrodes
         separately. Default is False.
-    testing : bool, optional
-        Whether to actually make the plot (turned off for unit tests)
+    show_plot : bool, optional
+        Whether to show the plots. Default is True. Set to False if you want to
+        only display the plot after plt.show() has been called.
     kwargs_fill
         Keyword arguments, passed to ax.fill_between
 
@@ -48,7 +49,7 @@ def plot_voltage_components(
 
     if ax is not None:
         fig = None
-        testing = True
+        show_plot = False
     else:
         fig, ax = plt.subplots(figsize=(8, 4))
 
@@ -151,7 +152,7 @@ def plot_voltage_components(
     )
     ax.set_ylim([y_min, y_max])
 
-    if not testing:  # pragma: no cover
+    if show_plot:  # pragma: no cover
         plt.show()
 
     return fig, ax
