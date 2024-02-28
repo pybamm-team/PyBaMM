@@ -564,7 +564,7 @@ class BaseModel:
         max_lines = max(len(param_name_lines), len(param_type_lines))
 
         return [
-            f"| {param_name_lines[i]:<{max_name_length}} | {param_type_lines[i]:<{max_type_length}} |"
+            f"│ {param_name_lines[i]:<{max_name_length}} │ {param_type_lines[i]:<{max_type_length}} │"
             for i in range(max_lines)
         ]
 
@@ -591,8 +591,9 @@ class BaseModel:
                     ) = self._calculate_max_lengths(submodel_vars)
 
                     table = [
-                        f"| {'Parameter':<{max_param_name_length}} | {'Type of parameter':<{max_param_type_length}} |",
-                        f"| {'=' * max_param_name_length} | {'=' * max_param_type_length} |",
+                        f"┌─{'─' * max_param_name_length}─┬─{'─' * max_param_type_length}─┐",
+                        f"│ {'Parameter':<{max_param_name_length}} │ {'Type of parameter':<{max_param_type_length}} │",
+                        f"├─{'─' * max_param_name_length}─┼─{'─' * max_param_type_length}─┤",
                     ]
 
                     for param, param_type in submodel_vars.values():
@@ -605,6 +606,11 @@ class BaseModel:
                                 max_param_type_length,
                             )
                         )
+                    table.extend(
+                        [
+                            f"└─{'─' * max_param_name_length}─┴─{'─' * max_param_type_length}─┘",
+                        ]
+                    )
 
                     print("\n".join(table) + "\n")
 
@@ -615,8 +621,9 @@ class BaseModel:
             )
 
             table = [
-                f"| {'Parameter':<{max_param_name_length}} | {'Type of parameter':<{max_param_type_length}} |",
-                f"| {'=' * max_param_name_length} | {'=' * max_param_type_length} |",
+                f"┌─{'─' * max_param_name_length}─┬─{'─' * max_param_type_length}─┐",
+                f"│ {'Parameter':<{max_param_name_length}} │ {'Type of parameter':<{max_param_type_length}} │",
+                f"├─{'─' * max_param_name_length}─┼─{'─' * max_param_type_length}─┤",
             ]
 
             for param, param_type in info.values():
@@ -629,6 +636,12 @@ class BaseModel:
                         max_param_type_length,
                     )
                 )
+
+            table.extend(
+                [
+                    f"└─{'─' * max_param_name_length}─┴─{'─' * max_param_type_length}─┘",
+                ]
+            )
 
             print("\n".join(table) + "\n")
 
