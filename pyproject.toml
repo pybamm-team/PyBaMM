@@ -41,6 +41,7 @@ dependencies = [
     "casadi>=3.6.3",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
+    "typing-extensions>=4.10.0",
 ]
 
 [project.urls]
