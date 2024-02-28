@@ -4,7 +4,6 @@
 import pybamm
 import numpy as np
 from functools import lru_cache
-import warnings
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -527,8 +526,6 @@ class ElectrodeSOHSolver:
                     f"Q_Li={Q_Li:.4f} Ah is outside the range of possible values "
                     f"[{Q_Li_min:.4f}, {Q_Li_max:.4f}]."
                 )
-            if Q_Li > Q_p:
-                warnings.warn(f"Q_Li={Q_Li:.4f} Ah is greater than Q_p={Q_p:.4f} Ah.")
 
             # Update (tighten) stoich limits based on total lithium content and
             # electrode capacities
