@@ -357,7 +357,6 @@ class TestBaseModel(TestCase):
         g = pybamm.Parameter("g")
         h = pybamm.Parameter("h")
         i = pybamm.Parameter("i")
-
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
 
