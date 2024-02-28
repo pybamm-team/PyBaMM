@@ -60,6 +60,7 @@ class Citations:
         self.register("Sulzer2021")
         self.register("Harris2020")
 
+    @staticmethod
     def _caller_name():
         """
         Returns the qualified name of classes that call :meth:`register` internally.

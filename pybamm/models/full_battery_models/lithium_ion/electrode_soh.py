@@ -667,7 +667,7 @@ class ElectrodeSOHSolver:
             V_min = parameter_values.evaluate(param.ocp_soc_0_dimensional)
             V_max = parameter_values.evaluate(param.ocp_soc_100_dimensional)
 
-            if not V_min < V_init < V_max:
+            if not V_min <= V_init <= V_max:
                 raise ValueError(
                     f"Initial voltage {V_init}V is outside the voltage limits "
                     f"({V_min}, {V_max})"
