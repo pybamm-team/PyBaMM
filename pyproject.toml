@@ -266,13 +266,21 @@ concurrency = ["multiprocessing"]
 
 [tool.repo-review]
 ignore = [
-    "PP003"  # list wheel as a build-dep
+    "PP003",  # list wheel as a build-dep
+    "PC160",  # codespell
+    "PC180",  # prettier
+
 ]
 
 [tool.mypy]
 ignore_missing_imports = true
 allow_redefinition = true
 disable_error_code = ["call-overload", "operator"]
+enable_error_code = [
+    "ignore-without-code",
+    "truthy-bool",
+    "redundant-expr",
+]
 
 [[tool.mypy.overrides]]
 module = [

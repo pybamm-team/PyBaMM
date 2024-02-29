@@ -34,7 +34,7 @@ def _preprocess_binary(
         right = pybamm.Vector(right)
 
     # Check both left and right are pybamm Symbols
-    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):  # type: ignore[redundant-expr]
         raise NotImplementedError(
             """BinaryOperator not implemented for symbols of type {} and {}""".format(
                 type(left), type(right)

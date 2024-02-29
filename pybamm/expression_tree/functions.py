@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy import special
-from typing import Sequence, Callable
+from typing import Sequence, Callable, Any
 from typing_extensions import TypeVar
 
 import pybamm
@@ -33,7 +33,7 @@ class Function(pybamm.Symbol):
 
     def __init__(
         self,
-        function: Callable,
+        function: Callable[[Any, Any], Any],
         *children: pybamm.Symbol,
         name: str | None = None,
         derivative: str | None = "autograd",

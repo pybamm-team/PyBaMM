@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pybamm
 import numpy as np
 import logging
@@ -5,7 +7,6 @@ import warnings
 import numbers
 
 from typing import Union
-from typing import List
 
 from functools import lru_cache
 
@@ -273,9 +274,9 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: np.ndarray = None,
-        inputs: Union[dict, None] = None,
-        output_variables: Union[List[str], None] = None,
+        t: np.ndarray | None = None,
+        inputs: dict | None = None,
+        output_variables: list[str] | None = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -306,9 +307,9 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: np.ndarray = None,
-        inputs: Union[dict, None] = None,
-        output_variables: Union[List[str], None] = None,
+        t: np.ndarray | None = None,
+        inputs: dict | None = None,
+        output_variables: list[str] | None = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -506,7 +507,7 @@ class IDAKLUJax:
             for ix, y_outvar in enumerate(y_bar.T):
                 y_dot += jnp.dot(y_outvar, js[:, ix])
         logger.debug(f"_jax_vjp_impl [exit]: {type(y_dot)}, {y_dot}, {y_dot.shape}")
-        y_dot = np.array(y_dot)
+        y_dot = jnp.array(y_dot)
         return y_dot
 
     def _jax_vjp_impl_array_inputs(
