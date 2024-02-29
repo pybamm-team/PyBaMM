@@ -289,7 +289,7 @@ class DomainConcatenation(Concatenation):
             self._slices = copy.copy(copy_this._slices)
             self._size = copy.copy(copy_this._size)
             self._children_slices = copy.copy(copy_this._children_slices)
-            self.secondary_dimensions_npts: int = copy_this.secondary_dimensions_npts  # type: ignore[no-redef]
+            self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
     @classmethod
     def _from_json(cls, snippet: dict):

@@ -490,7 +490,7 @@ class IDAKLUJax:
         if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input
             logger.debug("scalar time")
-            y_dot = jnp.zeros_like(t)
+            y_dot: jax.Array | np.ndarray = jnp.zeros_like(t)
             js = self._jaxify_solve(t, invar, *inputs)
             if js.ndim == 0:
                 js = jnp.array([js])
@@ -507,7 +507,7 @@ class IDAKLUJax:
             for ix, y_outvar in enumerate(y_bar.T):
                 y_dot += jnp.dot(y_outvar, js[:, ix])
         logger.debug(f"_jax_vjp_impl [exit]: {type(y_dot)}, {y_dot}, {y_dot.shape}")
-        y_dot = jnp.array(y_dot)
+        y_dot = np.array(y_dot)
         return y_dot
 
     def _jax_vjp_impl_array_inputs(
