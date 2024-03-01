@@ -232,7 +232,7 @@ class TestSolution(TestCase):
 
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
-        solution.plot(["c", "2c"], testing=True)
+        solution.plot(["c", "2c"], show_plot=False)
 
     def test_save(self):
         with TemporaryDirectory() as dir_name:
