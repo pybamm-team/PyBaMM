@@ -602,7 +602,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
     def U(self, sto, T, lithiation=None):
-        """Dimensional open-circuit potential [V]"""
+        """
+        Dimensional open-circuit potential [V], calculated as
+        U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). See the documentation for
+        dUdT for more details.
+        """
         # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
         # will ensure that ocp goes to +- infinity if sto goes into that region
         # anyway
@@ -632,7 +636,14 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def dUdT(self, sto):
         """
-        Dimensional entropic change of the open-circuit potential [V.K-1]
+        Dimensional entropic change of the open-circuit potential [V.K-1].
+
+        Note: in the "classical" formulation, the open-circuit potential is defined
+        as U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). The user provides U_ref and
+        dUdT, and the model uses these to calculate U. dUdT is also used to calculate
+        the reversible heat generation term in the thermal model. However, in the
+        "MSMR" formulation, stoichiometry is explicitly defined as a function of U and
+        T, and dUdT is only used to calculate the reversible heat generation term.
         """
         domain, Domain = self.domain_Domain
         inputs = {

@@ -12,6 +12,10 @@ class MSMRDiffusion(BaseParticle):
     :footcite:t:`Verbrugge2017`, along with parameter values for a number of
     substitutional materials.
 
+    In this submodel, the stoichiometry depends on the potential in the particle and
+    the temperature, so dUdT is not used. See `:meth:`pybamm.LithiumIonParameters.dUdT`
+    for more explanation.
+
     Parameters
     ----------
     param : parameter class
@@ -123,8 +127,6 @@ class MSMRDiffusion(BaseParticle):
             U = pybamm.Integral(f_v_dist * U_distribution, R)
             if self.x_average is True:
                 U = pybamm.SecondaryBroadcast(U, [f"{domain} electrode"])
-
-        # Accessing the actual cell temperature requires more refactoring since
 
         # Standard potential variables
         variables.update(self._get_standard_potential_variables(U))
