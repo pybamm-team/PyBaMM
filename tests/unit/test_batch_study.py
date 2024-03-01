@@ -53,7 +53,7 @@ class TestBatchStudy(TestCase):
 
         # Tests for BatchStudy when permutations=False
         bs_false.solve()
-        bs_false.plot(testing=True)
+        bs_false.plot(show_plot=False)
         self.assertEqual(2, len(bs_false.sims))
         for num in range(len(bs_false.sims)):
             output_model = bs_false.sims[num].model.name
@@ -72,7 +72,7 @@ class TestBatchStudy(TestCase):
 
         # Tests for BatchStudy when permutations=True
         bs_true.solve()
-        bs_true.plot(testing=True)
+        bs_true.plot(show_plot=False)
         self.assertEqual(4, len(bs_true.sims))
         for num in range(len(bs_true.sims)):
             output_model = bs_true.sims[num].model.name
@@ -107,7 +107,7 @@ class TestBatchStudy(TestCase):
             bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
             # create a GIF after calling the plot method
-            bs.plot(testing=True)
+            bs.plot(show_plot=False)
             bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
 
