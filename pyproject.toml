@@ -185,7 +185,7 @@ extend-exclude = ["__init__.py"]
 [tool.ruff.lint]
 extend-select = [
     # "B",           # flake8-bugbear
-    # "I",           # isort
+    "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
     # "ICN",         # flake8-import-conventions
@@ -219,6 +219,7 @@ ignore = [
     "RUF002",      # Docstring contains ambiguous
     "UP007",       # For pyupgrade
 ]
+isort.required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["T20"]
