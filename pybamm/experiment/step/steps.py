@@ -308,7 +308,7 @@ class CustomStepExplicit(BaseStepExplicit):
 
     Create the step with a 2.5 V termination condition:
 
-    >>> step = pybamm.CustomStepExplicit(current_function, termination="2.5V")
+    >>> step = pybamm.step.CustomStepExplicit(current_function, termination="2.5V")
     """
 
     def __init__(self, current_value_function, **kwargs):
@@ -379,7 +379,7 @@ class CustomStepImplicit(BaseStepImplicit):
     Create the step with a duration of 1h. In this case we don't need to specify that
     the control is algebraic, as this is the default.
 
-    >>> step = pybamm.CustomStepImplicit(voltage_control, duration=3600)
+    >>> step = pybamm.step.CustomStepImplicit(voltage_control, duration=3600)
 
     Alternatively, control the current by a differential equation to achieve a
     target power:
@@ -395,7 +395,7 @@ class CustomStepImplicit(BaseStepImplicit):
     Create the step with a 2.5 V termination condition. Now we need to specify that
     the control is differential.
 
-    >>> step = pybamm.CustomStepImplicit(
+    >>> step = pybamm.step.CustomStepImplicit(
     ...     power_control, termination="2.5V", control="differential"
     ... )
     """
