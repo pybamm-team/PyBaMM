@@ -61,9 +61,7 @@ class Experiment:
         self.cycles = cycles
         self.cycle_lengths = [len(cycle) for cycle in cycles]
 
-        self.steps_unprocessed = self._set_next_start_time(
-            [cond for cycle in cycles for cond in cycle]
-        )
+        steps_unprocessed = [cond for cycle in cycles for cond in cycle]
 
         # Convert strings to pybamm.step.BaseStep objects
         # We only do this once per unique step, to avoid unnecessary conversions
@@ -72,10 +70,11 @@ class Experiment:
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
         processed_steps = self.process_steps(
-            self.steps_unprocessed, self.period, self.temperature
+            steps_unprocessed, self.period, self.temperature
         )
 
-        self.steps = [processed_steps[repr(step)] for step in self.steps_unprocessed]
+        self.steps = [processed_steps[repr(step)] for step in steps_unprocessed]
+        self.steps = self._set_next_start_time(self.steps)
 
         # Save the processed unique steps and the processed operating conditions
         # for every step
@@ -212,13 +211,6 @@ class Experiment:
         # Loop over the steps in reverse order, setting the end time of each step to the
         # start time of the next step
         for step in reversed(steps):
-            if isinstance(step, str):
-                step = pybamm.step.string(step)
-            if not isinstance(step, pybamm.step.BaseStep):
-                raise TypeError(
-                    "Operating conditions should be strings or _Step objects"
-                )
-
             step.next_start_time = next_start_time
             step.end_time = end_time
 

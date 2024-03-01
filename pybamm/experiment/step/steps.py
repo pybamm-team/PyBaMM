@@ -211,9 +211,7 @@ class Power(BaseStepImplicit):
         return {"Power function [W]": self.value}
 
     def get_submodel(self, model):
-        return pybamm.external_circuit.PowerFunctionControl(
-            model.param, model.options, control=self.control
-        )
+        return pybamm.external_circuit.PowerFunctionControl(model.param, model.options)
 
 
 def power(value, **kwargs):
@@ -245,7 +243,7 @@ class Resistance(BaseStepImplicit):
 
     def get_submodel(self, model):
         return pybamm.external_circuit.ResistanceFunctionControl(
-            model.param, model.options, control=self.control
+            model.param, model.options
         )
 
 

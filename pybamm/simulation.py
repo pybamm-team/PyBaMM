@@ -637,20 +637,14 @@ class Simulation:
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     step = self.experiment.steps[idx]
-
-                    # Hacky patch to allow correct processing of end_time and next_starting time
-                    # For efficiency purposes, step treats identical steps as the same object
-                    # regardless of the initial time. Should be refactored as part of #3176
-                    step_unproc = self.experiment.steps_unprocessed[idx]
-
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
-                    if getattr(step_unproc, "end_time", None):
+                    if step.end_time is not None:
                         dt = min(
                             step.duration,
                             (
-                                step_unproc.end_time
+                                step.end_time
                                 - (
                                     initial_start_time
                                     + timedelta(seconds=float(start_time))
@@ -703,9 +697,9 @@ class Simulation:
                     step_termination = step_solution.termination
 
                     # Add a padding rest step if necessary
-                    if getattr(step_unproc, "next_start_time", None) is not None:
+                    if step.next_start_time is not None:
                         rest_time = (
-                            step_unproc.next_start_time
+                            step.next_start_time
                             - (
                                 initial_start_time
                                 + timedelta(seconds=float(step_solution.t[-1]))

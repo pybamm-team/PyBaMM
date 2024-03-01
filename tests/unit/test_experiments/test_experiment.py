@@ -92,11 +92,11 @@ class TestExperiment(TestCase):
 
     def test_bad_strings(self):
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings or _Step objects"
+            TypeError, "Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment([1, 2, 3])
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings or _Step objects"
+            TypeError, "Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment([(1, 2, 3)])
 
