@@ -1,12 +1,15 @@
 #
 # Tests for the lead-acid LOQS model
 #
-from tests import TestCase
-import pybamm
-import tests
+from __future__ import annotations
 
 import unittest
+
 import numpy as np
+
+import pybamm
+import tests
+from tests import TestCase
 
 
 class TestLOQS(TestCase):

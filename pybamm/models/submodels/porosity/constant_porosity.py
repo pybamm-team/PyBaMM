@@ -1,6 +1,8 @@
 #
 # Class for constant porosity
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_porosity import BaseModel

@@ -1,7 +1,10 @@
 #
 # Single open-circuit potential, same for charge and discharge
 #
+from __future__ import annotations
+
 import pybamm
+
 from . import BaseOpenCircuitPotential
 
 

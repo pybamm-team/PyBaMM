@@ -1,10 +1,13 @@
-import pybamm
-import unittest
-from tests import get_mesh_for_testing
-from tests import TestCase
+from __future__ import annotations
+
 import sys
 import time
+import unittest
+
 import numpy as np
+
+import pybamm
+from tests import TestCase, get_mesh_for_testing
 
 if pybamm.have_jax():
     import jax

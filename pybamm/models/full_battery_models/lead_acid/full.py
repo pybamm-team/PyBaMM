@@ -1,7 +1,10 @@
 #
 # Lead-acid Full model
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_lead_acid_model import BaseModel
 
 

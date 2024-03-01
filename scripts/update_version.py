@@ -1,13 +1,14 @@
 """
 Automatically update the version number
 """
+from __future__ import annotations
 
 import json
 import os
 import re
 from datetime import date
-from dateutil.relativedelta import relativedelta
 
+from dateutil.relativedelta import relativedelta
 
 import pybamm
 

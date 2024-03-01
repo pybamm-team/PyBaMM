@@ -1,12 +1,15 @@
 # Tests for the Scipy Solver class
 #
-import pybamm
-from tests import TestCase
-import unittest
-import numpy as np
-from tests import get_mesh_for_testing, get_discretisation_for_testing
-import warnings
+from __future__ import annotations
+
 import sys
+import unittest
+import warnings
+
+import numpy as np
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestScipySolver(TestCase):

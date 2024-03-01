@@ -1,6 +1,8 @@
 #
 # Documentation utilities for actions on PyBaMM classes
 #
+from __future__ import annotations
+
 from inspect import getmro
 
 

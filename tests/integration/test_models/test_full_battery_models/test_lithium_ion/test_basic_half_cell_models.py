@@ -1,11 +1,14 @@
 #
 # Test basic half-cell model with different parameter values
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
+import unittest
 
 import numpy as np
-import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestBasicHalfCellModels(TestCase):

@@ -1,13 +1,16 @@
 #
 # Test for the Simplify class
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
 import casadi
 import numpy as np
-import pybamm
-import unittest
-from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 from scipy import special
+
+import pybamm
+from tests import TestCase, get_1p1d_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiConverter(TestCase):

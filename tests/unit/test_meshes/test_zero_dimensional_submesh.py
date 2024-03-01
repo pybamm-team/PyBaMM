@@ -1,5 +1,8 @@
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
 from tests import TestCase
 
 

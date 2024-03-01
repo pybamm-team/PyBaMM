@@ -2,12 +2,13 @@
 # Concatenation classes
 #
 from __future__ import annotations
+
 import copy
 from collections import defaultdict
+from typing import Sequence
 
 import numpy as np
 from scipy.sparse import issparse, vstack
-from typing import Sequence
 
 import pybamm
 from pybamm.util import have_optional_dependency

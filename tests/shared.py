@@ -1,8 +1,11 @@
 #
 # Shared methods and classes for testing
 #
-import pybamm
+from __future__ import annotations
+
 from scipy.sparse import eye
+
+import pybamm
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):

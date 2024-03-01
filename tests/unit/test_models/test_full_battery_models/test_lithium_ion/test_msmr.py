@@ -1,9 +1,12 @@
 #
 # Tests for the lithium-ion MSMR model
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestMSMR(TestCase):

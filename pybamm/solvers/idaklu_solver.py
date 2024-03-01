@@ -2,13 +2,16 @@
 # Solver class using sundials with the KLU sparse linear solver
 #
 # mypy: ignore-errors
-import casadi
-import pybamm
-import numpy as np
-import numbers
-import scipy.sparse as sparse
+from __future__ import annotations
 
 import importlib
+import numbers
+
+import casadi
+import numpy as np
+import scipy.sparse as sparse
+
+import pybamm
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:

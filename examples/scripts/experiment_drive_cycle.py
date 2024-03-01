@@ -1,9 +1,13 @@
 #
 # Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
 #
-import pybamm
-import pandas as pd
+from __future__ import annotations
+
 import os
+
+import pandas as pd
+
+import pybamm
 
 os.chdir(pybamm.__path__[0] + "/..")
 

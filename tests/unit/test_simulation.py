@@ -1,12 +1,16 @@
-import pybamm
-import numpy as np
-import pandas as pd
-from tests import TestCase
+from __future__ import annotations
+
 import os
 import sys
 import unittest
 import uuid
 from tempfile import TemporaryDirectory
+
+import numpy as np
+import pandas as pd
+
+import pybamm
+from tests import TestCase
 
 
 class TestSimulation(TestCase):

@@ -1,12 +1,14 @@
 """
 Tests for the batch_study.py
 """
+from __future__ import annotations
 
-from tests import TestCase
 import os
-import pybamm
 import unittest
 from tempfile import TemporaryDirectory
+
+import pybamm
+from tests import TestCase
 
 spm = pybamm.lithium_ion.SPM()
 spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})

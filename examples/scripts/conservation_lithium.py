@@ -1,9 +1,11 @@
 #
 # Check conservation of lithium
 #
+from __future__ import annotations
+
+import matplotlib.pyplot as plt
 
 import pybamm
-import matplotlib.pyplot as plt
 
 pybamm.set_logging_level("INFO")
 

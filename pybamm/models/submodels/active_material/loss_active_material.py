@@ -1,6 +1,8 @@
 #
 # Class for varying active material volume fraction, driven by stress
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_active_material import BaseModel

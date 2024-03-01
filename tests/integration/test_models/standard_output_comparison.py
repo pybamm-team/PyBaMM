@@ -1,8 +1,11 @@
 #
 # Tests comparing model outputs for standard variables
 #
-import pybamm
+from __future__ import annotations
+
 import numpy as np
+
+import pybamm
 
 
 class StandardOutputComparison:

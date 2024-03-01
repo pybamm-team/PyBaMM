@@ -1,9 +1,12 @@
 #
 # Full model of electrode employing Ohm's law
 #
+from __future__ import annotations
+
 import pybamm
-from .base_ohm import BaseModel
 from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
+
+from .base_ohm import BaseModel
 
 
 @copy_parameter_doc_from_parent

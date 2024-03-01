@@ -1,11 +1,13 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
-import casadi
-import pybamm
+from __future__ import annotations
 
-import scipy.integrate as it
+import casadi
 import numpy as np
+import scipy.integrate as it
+
+import pybamm
 
 
 class ScipySolver(pybamm.BaseSolver):

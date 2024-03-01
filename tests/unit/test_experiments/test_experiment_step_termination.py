@@ -1,8 +1,11 @@
 #
 # Test the experiment step termination classes
 #
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
 
 
 class TestExperimentStepTermination(unittest.TestCase):

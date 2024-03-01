@@ -1,6 +1,7 @@
 #
 # Linear kinetics
 #
+from __future__ import annotations
 
 from .base_kinetics import BaseKinetics
 

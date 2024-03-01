@@ -1,6 +1,7 @@
 # Sphinx extension to add an inheritance diagram in the docstring of a class built upon
 # the built-in sphinxext.inheritance_diagram extension. The inheritance diagram is
 # generated via graphviz and the fully qualified name of the class.
+from __future__ import annotations
 
 from inspect import getmro, isclass
 

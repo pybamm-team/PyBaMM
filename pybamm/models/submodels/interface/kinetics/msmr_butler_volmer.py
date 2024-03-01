@@ -1,8 +1,10 @@
 #
 # Bulter volmer class for the MSMR formulation
 #
+from __future__ import annotations
 
 import pybamm
+
 from .base_kinetics import BaseKinetics
 
 

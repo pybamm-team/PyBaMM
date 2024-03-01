@@ -1,11 +1,14 @@
 #
 # Tests for the surface formulation
 #
-from tests import TestCase
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import unittest
-from tests import StandardOutputComparison
+
+import numpy as np
+
+import pybamm
+from tests import StandardOutputComparison, TestCase
 
 
 class TestCompareOutputs(TestCase):

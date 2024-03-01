@@ -1,14 +1,18 @@
 #
 # Tests the citations class.
 #
-import pybamm
-import os
-import io
-import unittest
+from __future__ import annotations
+
 import contextlib
+import io
+import os
+import unittest
 import warnings
-from pybtex.database import Entry
 from tempfile import NamedTemporaryFile
+
+from pybtex.database import Entry
+
+import pybamm
 
 
 @contextlib.contextmanager

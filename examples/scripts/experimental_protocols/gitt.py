@@ -1,6 +1,8 @@
 #
 # GITT discharge
 #
+from __future__ import annotations
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

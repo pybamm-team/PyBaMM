@@ -1,11 +1,13 @@
 #
 # Method for plotting voltage components
 #
+from __future__ import annotations
+
 import numpy as np
 
-from pybamm.util import have_optional_dependency
 from pybamm.simulation import Simulation
 from pybamm.solvers.solution import Solution
+from pybamm.util import have_optional_dependency
 
 
 def plot_voltage_components(

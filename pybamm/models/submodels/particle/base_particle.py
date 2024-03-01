@@ -1,6 +1,8 @@
 #
 # Base class for particles
 #
+from __future__ import annotations
+
 import pybamm
 
 

@@ -3,10 +3,13 @@
 # Inspired by firedrake/PETSc citation workflow
 # https://firedrakeproject.org/citing.html
 #
-import pybamm
+from __future__ import annotations
+
 import os
 import warnings
 from sys import _getframe
+
+import pybamm
 from pybamm.util import have_optional_dependency
 
 

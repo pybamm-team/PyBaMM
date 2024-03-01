@@ -1,8 +1,11 @@
-import pybamm
-import numpy as np
-import matplotlib.pyplot as plt
+from __future__ import annotations
+
 import itertools
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 parameters = ["Marquis2019", "Ecker2015", "Ramadass2004", "Chen2020"]
 

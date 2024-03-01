@@ -1,12 +1,15 @@
 #
 # Tests for the InputParameter class
 #
-from tests import TestCase
-import numpy as np
-import pybamm
-import unittest
+from __future__ import annotations
 
+import unittest
 import unittest.mock as mock
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestInputParameter(TestCase):

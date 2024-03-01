@@ -1,10 +1,12 @@
 # This script is intended to be a stripped back version of the
 # 'docs/source/examples/notebooks/create-model.ipnb' so for more details please see
 # that notebook
+from __future__ import annotations
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 import pybamm
-import numpy as np
-import matplotlib.pyplot as plt
 
 # 1. Initialise model ------------------------------------------------------------------
 model = pybamm.BaseModel()

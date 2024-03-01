@@ -2,6 +2,8 @@
 # Loop through all combinations of models and parameters and print whether that
 # model can be parameterized by those parameters
 #
+from __future__ import annotations
+
 import pybamm
 
 all_options = pybamm.BatteryModelOptions({}).possible_options

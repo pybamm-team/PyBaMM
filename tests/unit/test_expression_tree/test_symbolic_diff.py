@@ -1,11 +1,15 @@
 #
 # Tests for the symbolic differentiation methods
 #
-from tests import TestCase
-import numpy as np
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
 from numpy import testing
+
+import pybamm
+from tests import TestCase
 
 
 class TestSymbolicDifferentiation(TestCase):

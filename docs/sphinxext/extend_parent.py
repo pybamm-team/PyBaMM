@@ -1,6 +1,7 @@
 # Sphinx extension to add a link to a base class in the docstring of a derived class
 # via the **Extends** directive. The base class is determined by the method resolution
 # order (MRO) of the derived class.
+from __future__ import annotations
 
 from inspect import getmro, isclass
 

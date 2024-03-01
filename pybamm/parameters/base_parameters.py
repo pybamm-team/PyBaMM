@@ -1,8 +1,11 @@
 #
 # Base parameters class
 #
-import pybamm
+from __future__ import annotations
+
 import warnings
+
+import pybamm
 
 
 class BaseParameters:

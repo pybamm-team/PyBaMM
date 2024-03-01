@@ -1,16 +1,20 @@
 #
 # Tests the utility functions.
 #
-from tests import TestCase
-import numpy as np
+from __future__ import annotations
+
 import os
 import sys
-import pybamm
 import tempfile
 import unittest
-from unittest.mock import patch
 from io import StringIO
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 anytree = sys.modules["anytree"]
 

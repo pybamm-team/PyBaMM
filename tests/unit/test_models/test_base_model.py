@@ -1,7 +1,8 @@
 #
 # Tests for the base model class
 #
-from tests import TestCase
+from __future__ import annotations
+
 import os
 import platform
 import subprocess  # nosec
@@ -12,6 +13,7 @@ import numpy as np
 from numpy import testing
 
 import pybamm
+from tests import TestCase
 
 
 class TestBaseModel(TestCase):

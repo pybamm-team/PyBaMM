@@ -1,12 +1,13 @@
 #
 # Finite Element discretisation class which uses scikit-fem
 #
-import pybamm
+from __future__ import annotations
 
-from scipy.sparse import csr_matrix, csc_matrix
-from scipy.sparse.linalg import inv
 import numpy as np
+from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse.linalg import inv
 
+import pybamm
 from pybamm.util import have_optional_dependency
 
 

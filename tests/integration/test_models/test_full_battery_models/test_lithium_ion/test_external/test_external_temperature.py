@@ -1,10 +1,14 @@
 #
 # Tests for inputting a temperature profile
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
 import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestInputLumpedTemperature(TestCase):

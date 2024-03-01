@@ -2,16 +2,19 @@
 # Variable class
 #
 from __future__ import annotations
-import numpy as np
+
 import numbers
+
+import numpy as np
+
 import pybamm
-from pybamm.util import have_optional_dependency
 from pybamm.type_definitions import (
-    DomainType,
     AuxiliaryDomainType,
     DomainsType,
+    DomainType,
     Numeric,
 )
+from pybamm.util import have_optional_dependency
 
 
 class VariableBase(pybamm.Symbol):

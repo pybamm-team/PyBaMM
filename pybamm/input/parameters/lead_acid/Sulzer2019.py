@@ -1,5 +1,8 @@
-import pybamm
+from __future__ import annotations
+
 import numpy as np
+
+import pybamm
 
 
 def lead_ocp_Bode1977(m):

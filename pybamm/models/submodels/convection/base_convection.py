@@ -1,6 +1,8 @@
 #
 # Base class for convection submodels
 #
+from __future__ import annotations
+
 import pybamm
 
 

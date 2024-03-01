@@ -2,12 +2,13 @@
 # IndependentVariable class
 #
 from __future__ import annotations
-import sympy
+
 import numpy as np
+import sympy
 
 import pybamm
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 from pybamm.util import have_optional_dependency
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 

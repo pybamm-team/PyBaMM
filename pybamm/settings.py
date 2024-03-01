@@ -1,6 +1,7 @@
 #
 # Settings class for PyBaMM
 #
+from __future__ import annotations
 
 
 class Settings:

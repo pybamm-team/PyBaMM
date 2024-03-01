@@ -1,6 +1,8 @@
 #
 # Compare lithium-ion battery models
 #
+from __future__ import annotations
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

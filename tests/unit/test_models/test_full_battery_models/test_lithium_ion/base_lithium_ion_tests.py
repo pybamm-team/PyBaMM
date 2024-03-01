@@ -1,6 +1,8 @@
 #
 # Base unit tests for the lithium-ion models
 #
+from __future__ import annotations
+
 import pybamm
 
 

@@ -3,11 +3,11 @@
 #
 from __future__ import annotations
 
+import copy
 import numbers
 import warnings
 from collections import OrderedDict
 
-import copy
 import casadi
 import numpy as np
 

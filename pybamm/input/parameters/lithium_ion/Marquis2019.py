@@ -1,5 +1,8 @@
-import pybamm
+from __future__ import annotations
+
 import numpy as np
+
+import pybamm
 
 
 def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):

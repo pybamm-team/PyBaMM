@@ -1,7 +1,8 @@
 #
 # Tests for the Binary Operator classes
 #
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 import unittest.mock as mock
 
@@ -10,6 +11,7 @@ from scipy.sparse import coo_matrix
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 EMPTY_DOMAINS = {
     "primary": [],

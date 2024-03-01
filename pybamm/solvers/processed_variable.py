@@ -1,11 +1,14 @@
 #
 # Processed Variable class
 #
+from __future__ import annotations
+
 import casadi
 import numpy as np
-import pybamm
-from scipy.integrate import cumulative_trapezoid
 import xarray as xr
+from scipy.integrate import cumulative_trapezoid
+
+import pybamm
 
 
 class ProcessedVariable:

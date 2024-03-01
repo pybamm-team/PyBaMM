@@ -1,7 +1,10 @@
 #
 # Method for plotting/comparing summary variables
 #
+from __future__ import annotations
+
 import numpy as np
+
 import pybamm
 from pybamm.util import have_optional_dependency
 

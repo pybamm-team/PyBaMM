@@ -1,18 +1,21 @@
 #
 # Tests for the KLU-Jax interface class
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
+import numpy as np
 from parameterized import parameterized
 
 import pybamm
-import numpy as np
-import unittest
+from tests import TestCase
 
 testcase = []
 if pybamm.have_idaklu() and pybamm.have_jax():
-    from jax.tree_util import tree_flatten
     import jax
     import jax.numpy as jnp
+    from jax.tree_util import tree_flatten
 
     inputs = {
         "a": 0.1,

@@ -1,9 +1,12 @@
 #
 # Method for creating a 1D plot of pybamm arrays
 #
+from __future__ import annotations
+
 import pybamm
-from .quick_plot import ax_min, ax_max
 from pybamm.util import have_optional_dependency
+
+from .quick_plot import ax_max, ax_min
 
 
 def plot(x, y, ax=None, show_plot=True, **kwargs):

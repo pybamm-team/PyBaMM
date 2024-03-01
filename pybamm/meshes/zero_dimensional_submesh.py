@@ -1,10 +1,13 @@
 #
 # Zero dimensional submesh
 #
-import pybamm
-from .meshes import SubMesh
+from __future__ import annotations
 
 import numpy as np
+
+import pybamm
+
+from .meshes import SubMesh
 
 
 class SubMesh0D(SubMesh):

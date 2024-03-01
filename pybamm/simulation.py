@@ -3,17 +3,18 @@
 #
 from __future__ import annotations
 
-import pickle
-import pybamm
-import numpy as np
 import hashlib
-import warnings
+import pickle
 import sys
-from functools import lru_cache
+import warnings
 from datetime import timedelta
-from pybamm.util import have_optional_dependency
+from functools import lru_cache
 
+import numpy as np
+
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+from pybamm.util import have_optional_dependency
 
 
 def is_notebook():

@@ -1,7 +1,10 @@
 #
 # Class for no mechanics
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_mechanics import BaseMechanics
 
 

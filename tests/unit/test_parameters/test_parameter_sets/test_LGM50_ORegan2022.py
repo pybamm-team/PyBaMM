@@ -1,9 +1,12 @@
 #
 # Tests for LG M50 parameter set loads
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestORegan2022(TestCase):

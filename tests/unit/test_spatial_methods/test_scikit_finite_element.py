@@ -1,11 +1,14 @@
 #
 # Test for the operator class
 #
-from tests import TestCase
-import pybamm
-from tests import get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
-import numpy as np
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase, get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
 
 
 class TestScikitFiniteElement(TestCase):

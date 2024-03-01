@@ -1,8 +1,9 @@
-import pybamm
+from __future__ import annotations
 
 import numpy as np
+from scipy.sparse import coo_matrix, csr_matrix, diags, eye, kron, lil_matrix, vstack
 
-from scipy.sparse import diags, eye, kron, csr_matrix, lil_matrix, coo_matrix, vstack
+import pybamm
 
 
 class SpectralVolume(pybamm.FiniteVolume):

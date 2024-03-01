@@ -2,6 +2,7 @@
 # Base unit tests for lithium-ion half-cell models
 # This is achieved by using the {"working electrdode": "positive"} option
 #
+from __future__ import annotations
 
 
 class BaseUnitTestLithiumIonHalfCell:

@@ -1,11 +1,13 @@
 #
 # Tests for the Scalar class
 #
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 import unittest.mock as mock
 
 import pybamm
+from tests import TestCase
 
 
 class TestScalar(TestCase):

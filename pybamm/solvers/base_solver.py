@@ -1,9 +1,10 @@
 #
 # Base solver class
 #
+from __future__ import annotations
+
 import copy
 import itertools
-from scipy.sparse import block_diag
 import multiprocessing as mp
 import numbers
 import sys
@@ -11,6 +12,7 @@ import warnings
 
 import casadi
 import numpy as np
+from scipy.sparse import block_diag
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside

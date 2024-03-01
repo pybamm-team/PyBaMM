@@ -1,7 +1,10 @@
 #
 # Base class for SEI models.
 #
+from __future__ import annotations
+
 import pybamm
+
 from ..base_interface import BaseInterface
 
 

@@ -1,18 +1,20 @@
 #
 # Test for the Symbol class
 #
-from tests import TestCase
+from __future__ import annotations
+
 import os
 import unittest
 import unittest.mock as mock
 from tempfile import TemporaryDirectory
 
 import numpy as np
-from scipy.sparse import csr_matrix, coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 
 class TestSymbol(TestCase):

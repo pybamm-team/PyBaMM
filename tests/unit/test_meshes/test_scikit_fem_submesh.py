@@ -1,10 +1,14 @@
 #
 # Test for the scikit-fem Finite Element Mesh class
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
 import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 def get_param():

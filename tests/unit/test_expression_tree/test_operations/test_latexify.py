@@ -1,13 +1,15 @@
 """
 Tests for the latexify.py
 """
-from tests import TestCase
+from __future__ import annotations
+
 import os
 import platform
 import unittest
 import uuid
 
 import pybamm
+from tests import TestCase
 
 
 class TestLatexify(TestCase):

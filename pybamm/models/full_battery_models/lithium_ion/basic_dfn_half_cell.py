@@ -1,7 +1,10 @@
 #
 # Basic Doyle-Fuller-Newman (DFN) Half Cell Model
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_lithium_ion_model import BaseModel
 
 

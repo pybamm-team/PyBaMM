@@ -1,16 +1,20 @@
 #
 # Tests for the Finite Volume Method
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
+import numpy as np
+from scipy.sparse import eye, kron
+
 import pybamm
 from tests import (
+    TestCase,
+    get_1p1d_mesh_for_testing,
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
-    get_1p1d_mesh_for_testing,
 )
-import numpy as np
-from scipy.sparse import kron, eye
-import unittest
 
 
 class TestFiniteVolume(TestCase):

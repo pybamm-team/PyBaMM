@@ -1,14 +1,15 @@
-from bpx import BPX, Function, InterpolatedTable
-from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
-import pybamm
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
-import numpy as np
-from pybamm import constants
-from pybamm import exp
-
-
 from functools import partial
+
+import numpy as np
+from bpx import BPX, Function, InterpolatedTable
+from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
+
+import pybamm
+from pybamm import constants, exp
 
 
 def _callable_func(var, fun):

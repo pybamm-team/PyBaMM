@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pybamm
 
 whole_cell = ["negative electrode", "separator", "positive electrode"]

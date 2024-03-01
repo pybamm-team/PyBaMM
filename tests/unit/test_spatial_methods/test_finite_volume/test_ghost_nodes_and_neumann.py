@@ -1,11 +1,14 @@
 #
 # Test for adding ghost nodes in finite volumes class
 #
-from tests import TestCase
-import pybamm
-from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
-import numpy as np
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase, get_mesh_for_testing, get_p2d_mesh_for_testing
 
 
 class TestGhostNodes(TestCase):

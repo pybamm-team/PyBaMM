@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pybamm
 
 model = pybamm.lithium_ion.SPM()

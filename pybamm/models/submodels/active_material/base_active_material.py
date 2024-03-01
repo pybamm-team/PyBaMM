@@ -1,6 +1,8 @@
 #
 # Base class for active material volume fraction
 #
+from __future__ import annotations
+
 import pybamm
 
 

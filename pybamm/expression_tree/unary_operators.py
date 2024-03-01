@@ -5,9 +5,10 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
+
 import pybamm
-from pybamm.util import have_optional_dependency
 from pybamm.type_definitions import DomainsType
+from pybamm.util import have_optional_dependency
 
 
 class UnaryOperator(pybamm.Symbol):

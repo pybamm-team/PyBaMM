@@ -1,8 +1,9 @@
 #
 # Tests for the Unary Operator classes
 #
+from __future__ import annotations
+
 import unittest
-from tests import TestCase
 import unittest.mock as mock
 
 import numpy as np
@@ -10,6 +11,7 @@ from scipy.sparse import diags
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 
 class TestUnaryOperators(TestCase):

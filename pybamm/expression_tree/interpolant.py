@@ -2,10 +2,11 @@
 # Interpolating class
 #
 from __future__ import annotations
-import numpy as np
-from scipy import interpolate
+
 from typing import Sequence
 
+import numpy as np
+from scipy import interpolate
 
 import pybamm
 

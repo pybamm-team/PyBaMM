@@ -1,7 +1,10 @@
 #
 # Class for no SEI
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_sei import BaseModel
 
 

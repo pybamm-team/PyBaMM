@@ -1,8 +1,10 @@
 #
 # Bulter volmer class
 #
+from __future__ import annotations
 
 import pybamm
+
 from .base_kinetics import BaseKinetics
 
 

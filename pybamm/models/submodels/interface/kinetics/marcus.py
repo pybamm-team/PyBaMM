@@ -1,9 +1,12 @@
 #
 # Marcus and Asymptotic Marcus-Hush-Chidsey classes
 #
+from __future__ import annotations
+
+import numpy as np
 
 import pybamm
-import numpy as np
+
 from .base_kinetics import BaseKinetics
 
 

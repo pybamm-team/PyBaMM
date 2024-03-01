@@ -2,6 +2,8 @@
 # Class summing up contributions to the main (e.g. intercalation) reaction
 # for cases with primary, secondary, ... reactions e.g. silicon-graphite
 #
+from __future__ import annotations
+
 import pybamm
 
 

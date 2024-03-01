@@ -1,9 +1,12 @@
 """
 Tests for the base_parameters.py
 """
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestBaseParameters(TestCase):

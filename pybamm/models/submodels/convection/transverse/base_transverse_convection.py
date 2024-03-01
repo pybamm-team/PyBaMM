@@ -1,7 +1,10 @@
 #
 # Base class for convection submodels in transverse directions
 #
+from __future__ import annotations
+
 import pybamm
+
 from ..base_convection import BaseModel
 
 

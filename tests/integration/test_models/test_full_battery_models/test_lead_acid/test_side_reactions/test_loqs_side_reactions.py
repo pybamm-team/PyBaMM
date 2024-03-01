@@ -1,10 +1,13 @@
 #
 # Tests for the lead-acid LOQS model
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
 import pybamm
 import tests
-import unittest
+from tests import TestCase
 
 
 class TestLeadAcidLOQSWithSideReactions(TestCase):

@@ -1,9 +1,11 @@
 #
 # Example showing how to solve the DFN with a varying ambient temperature
 #
+from __future__ import annotations
+
+import numpy as np
 
 import pybamm
-import numpy as np
 
 pybamm.set_logging_level("DEBUG")
 

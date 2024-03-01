@@ -4,8 +4,11 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
 from tests import TestCase
 
 

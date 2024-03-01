@@ -1,8 +1,12 @@
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import os
 import pickle
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())

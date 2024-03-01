@@ -1,12 +1,16 @@
 #
 # Tests lithium-ion parameters load and give expected values
 #
+from __future__ import annotations
+
 import os
-from tests import TestCase
-import pybamm
-from tempfile import TemporaryDirectory
 import unittest
+from tempfile import TemporaryDirectory
+
 import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestLithiumIonParameterValues(TestCase):

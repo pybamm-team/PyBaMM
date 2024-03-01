@@ -1,15 +1,19 @@
 #
 # Tests for integration using Finite Volume method
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
+import numpy as np
+
 import pybamm
 from tests import (
-    get_mesh_for_testing,
+    TestCase,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
+    get_mesh_for_testing,
 )
-import numpy as np
-import unittest
 
 
 class TestFiniteVolumeIntegration(TestCase):

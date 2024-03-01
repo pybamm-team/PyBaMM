@@ -1,7 +1,10 @@
 #
 # Class for reaction driven porosity changes as an ODE
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_porosity import BaseModel
 
 

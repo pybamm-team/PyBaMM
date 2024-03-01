@@ -1,10 +1,14 @@
 #
 # Class for quick plotting of variables from models
 #
+from __future__ import annotations
+
 import os
-import numpy as np
-import pybamm
 from collections import defaultdict
+
+import numpy as np
+
+import pybamm
 from pybamm.util import have_optional_dependency
 
 

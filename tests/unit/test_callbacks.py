@@ -1,11 +1,14 @@
 #
 # Tests the citations class.
 #
-from tests import TestCase
-import pybamm
-import unittest
+from __future__ import annotations
+
 import os
+import unittest
+
+import pybamm
 from pybamm import callbacks
+from tests import TestCase
 
 
 class DummyCallback(callbacks.Callback):

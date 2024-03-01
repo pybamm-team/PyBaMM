@@ -1,10 +1,11 @@
 #
 # Base battery model class
 #
+from __future__ import annotations
 
-import pybamm
 from functools import cached_property
 
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
 
 

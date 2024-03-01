@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import os
-import pybamm
 import unittest
-from tests import TestCase
-import numpy as np
 from tempfile import TemporaryDirectory
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestQuickPlot(TestCase):

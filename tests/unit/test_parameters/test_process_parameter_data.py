@@ -1,13 +1,15 @@
 #
 # Tests for the parameter processing functions
 #
-from tests import TestCase
+from __future__ import annotations
 
 import os
-import numpy as np
-import pybamm
-
 import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestProcessParameterData(TestCase):

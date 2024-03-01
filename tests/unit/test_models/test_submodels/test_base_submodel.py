@@ -1,10 +1,12 @@
 #
 # Test base submodel
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
 
 import pybamm
-import unittest
+from tests import TestCase
 
 
 class TestBaseSubModel(TestCase):

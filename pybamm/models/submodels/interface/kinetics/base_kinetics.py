@@ -1,7 +1,10 @@
 #
 # Base kinetics class
 #
+from __future__ import annotations
+
 import pybamm
+
 from ..base_interface import BaseInterface
 
 

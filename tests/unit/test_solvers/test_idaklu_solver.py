@@ -1,15 +1,16 @@
 #
 # Tests for the KLU Solver class
 #
-from tests import TestCase
-from contextlib import redirect_stdout
+from __future__ import annotations
+
 import io
 import unittest
+from contextlib import redirect_stdout
 
 import numpy as np
 
 import pybamm
-from tests import get_discretisation_for_testing
+from tests import TestCase, get_discretisation_for_testing
 
 
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")

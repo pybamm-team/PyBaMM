@@ -1,9 +1,12 @@
 #
 # Tests for the Thevenin equivalant circuit model
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestThevenin(TestCase):

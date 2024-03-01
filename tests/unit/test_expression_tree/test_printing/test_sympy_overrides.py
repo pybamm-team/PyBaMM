@@ -1,12 +1,14 @@
 """
 Tests for the sympy_overrides.py
 """
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 
 class TestCustomPrint(TestCase):

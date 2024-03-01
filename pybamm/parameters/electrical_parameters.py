@@ -1,7 +1,10 @@
 #
 # Standard electrical parameters
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_parameters import BaseParameters
 
 

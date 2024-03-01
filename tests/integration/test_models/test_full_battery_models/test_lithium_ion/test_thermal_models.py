@@ -2,9 +2,13 @@
 # Tests for the thermal lithium-ion models produce consistent
 # thermal response
 #
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
 from tests import TestCase
 
 

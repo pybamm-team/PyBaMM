@@ -4,9 +4,12 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
+from __future__ import annotations
+
 import argparse
-import importlib.util
+import difflib
 import importlib.metadata
+import importlib.util
 import numbers
 import os
 import pathlib
@@ -15,10 +18,10 @@ import subprocess
 import sys
 import timeit
 from platform import system
-import difflib
 from warnings import warn
 
 import numpy as np
+
 import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in

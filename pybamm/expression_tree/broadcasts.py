@@ -3,15 +3,16 @@
 #
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from scipy.sparse import csr_matrix
-from typing import cast
 
 import pybamm
 from pybamm.type_definitions import (
-    DomainType,
     AuxiliaryDomainType,
     DomainsType,
+    DomainType,
     Numeric,
 )
 

@@ -1,6 +1,8 @@
 #
 # Class for constant active material
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_active_material import BaseModel

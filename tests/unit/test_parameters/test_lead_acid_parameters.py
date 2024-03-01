@@ -1,12 +1,14 @@
 #
 # Test for the standard lead acid parameters
 #
+from __future__ import annotations
+
 import os
-from tests import TestCase
-import pybamm
-from tests import get_discretisation_for_testing
-from tempfile import TemporaryDirectory
 import unittest
+from tempfile import TemporaryDirectory
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing
 
 
 class TestStandardParametersLeadAcid(TestCase):

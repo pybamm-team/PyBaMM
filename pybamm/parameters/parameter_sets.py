@@ -1,7 +1,9 @@
-import sys
-import warnings
+from __future__ import annotations
+
 import importlib.metadata
+import sys
 import textwrap
+import warnings
 from collections.abc import Mapping
 from typing import Callable
 

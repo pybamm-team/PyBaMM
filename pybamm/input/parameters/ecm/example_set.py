@@ -1,5 +1,8 @@
-import pybamm
+from __future__ import annotations
+
 import os
+
+import pybamm
 
 # An example set of parameters for the equivalent circuit model
 

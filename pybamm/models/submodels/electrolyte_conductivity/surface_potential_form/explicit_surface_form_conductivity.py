@@ -1,7 +1,10 @@
 #
 # Class for explicit surface form potentials
 #
+from __future__ import annotations
+
 import pybamm
+
 from ..base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 

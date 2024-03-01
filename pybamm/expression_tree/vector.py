@@ -2,10 +2,11 @@
 # Vector class
 #
 from __future__ import annotations
+
 import numpy as np
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class Vector(pybamm.Array):

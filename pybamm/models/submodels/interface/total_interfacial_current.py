@@ -1,6 +1,8 @@
 #
 # Total interfacial current class, summing up contributions from all reactions
 #
+from __future__ import annotations
+
 import pybamm
 
 

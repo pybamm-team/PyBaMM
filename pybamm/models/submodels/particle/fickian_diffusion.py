@@ -1,7 +1,10 @@
 #
 # Class for particles with Fickian diffusion
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_particle import BaseParticle
 
 

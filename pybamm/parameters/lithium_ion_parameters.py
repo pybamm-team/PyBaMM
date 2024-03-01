@@ -1,7 +1,10 @@
 #
 # Standard parameters for lithium-ion battery models
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_parameters import BaseParameters, NullParameters
 
 

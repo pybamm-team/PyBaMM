@@ -1,6 +1,8 @@
 #
 # Class for one-dimensional (x-direction) thermal submodel
 #
+from __future__ import annotations
+
 import pybamm
 
 from ..base_thermal import BaseThermal

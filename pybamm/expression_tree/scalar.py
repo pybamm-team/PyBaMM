@@ -2,12 +2,14 @@
 # Scalar class
 #
 from __future__ import annotations
-import numpy as np
+
 from typing import Literal
 
+import numpy as np
+
 import pybamm
-from pybamm.util import have_optional_dependency
 from pybamm.type_definitions import Numeric
+from pybamm.util import have_optional_dependency
 
 
 class Scalar(pybamm.Symbol):

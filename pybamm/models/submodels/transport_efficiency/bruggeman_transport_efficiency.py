@@ -1,7 +1,10 @@
 #
 # Class for Bruggemantransport_efficiency
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_transport_efficiency import BaseModel
 
 

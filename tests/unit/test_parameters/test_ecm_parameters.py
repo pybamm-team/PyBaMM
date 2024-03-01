@@ -1,10 +1,12 @@
 #
 # Tests for the equivalent circuit parameters
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
 
+import pybamm
+from tests import TestCase
 
 values = {
     "Initial SoC": 0.5,

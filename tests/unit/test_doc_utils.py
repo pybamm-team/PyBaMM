@@ -2,12 +2,14 @@
 # Unit tests for doc_utils. These do not test how the actual documentation
 # is generated, but rather that the docstrings are correctly modified
 #
+from __future__ import annotations
+
+import unittest
+from inspect import getmro
 
 import pybamm
-import unittest
-from tests import TestCase
-from inspect import getmro
 from pybamm.doc_utils import copy_parameter_doc_from_parent, doc_extend_parent
+from tests import TestCase
 
 
 class TestDocUtils(TestCase):

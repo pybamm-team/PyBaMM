@@ -1,9 +1,12 @@
 #
 # Tests for O'Kane (2022) parameter set
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestOKane2022(TestCase):

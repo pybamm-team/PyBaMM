@@ -1,12 +1,15 @@
 #
 # Tests for the Function classes
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
 
 import unittest
 import unittest.mock as mock
+
 import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestInterpolant(TestCase):

@@ -1,6 +1,9 @@
+from __future__ import annotations
+
+import numpy as np
+
 import pybamm
 from benchmarks.benchmark_utils import set_random_seed
-import numpy as np
 
 
 def compute_discretisation(model, param):

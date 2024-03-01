@@ -1,12 +1,13 @@
 #
 # Tests for the Parameter class
 #
-from tests import TestCase
-import unittest
+from __future__ import annotations
 
+import unittest
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 
 class TestIndependentVariable(TestCase):

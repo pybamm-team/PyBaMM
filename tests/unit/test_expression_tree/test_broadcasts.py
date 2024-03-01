@@ -1,11 +1,14 @@
 #
 # Tests for the Broadcast class
 #
+from __future__ import annotations
+
 import unittest
-from tests import TestCase
+
 import numpy as np
 
 import pybamm
+from tests import TestCase
 
 
 class TestBroadcasts(TestCase):

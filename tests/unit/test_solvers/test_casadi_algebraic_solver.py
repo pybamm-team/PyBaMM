@@ -1,13 +1,17 @@
 #
 # Tests for the Casadi Algebraic Solver class
 #
-from tests import TestCase
-import casadi
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import casadi
 import numpy as np
 from scipy.optimize import least_squares
+
+import pybamm
 import tests
+from tests import TestCase
 
 
 class TestCasadiAlgebraicSolver(TestCase):

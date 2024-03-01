@@ -1,6 +1,8 @@
 #
 # Method for creating a dynamic plot
 #
+from __future__ import annotations
+
 import pybamm
 
 

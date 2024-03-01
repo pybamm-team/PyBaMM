@@ -1,6 +1,8 @@
 #
 # Base class for thermal effects
 #
+from __future__ import annotations
+
 import pybamm
 
 

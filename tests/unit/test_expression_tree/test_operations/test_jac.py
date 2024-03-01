@@ -1,13 +1,15 @@
 #
 # Tests for the jacobian methods
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
+import unittest
 
 import numpy as np
-import unittest
 from scipy.sparse import eye
-from tests import get_mesh_for_testing
+
+import pybamm
+from tests import TestCase, get_mesh_for_testing
 
 
 def test_multi_var_function(arg1, arg2):

@@ -1,6 +1,8 @@
 #
 # Class for two-dimensional thermal submodel for use in the "2+1D" pouch cell model
 #
+from __future__ import annotations
+
 import pybamm
 
 from ..base_thermal import BaseThermal

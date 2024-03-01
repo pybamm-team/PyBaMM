@@ -1,10 +1,12 @@
 #
 # Tests for the lithium-ion Newman-Tobias model
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
-from tests import BaseUnitTestLithiumIon
+
+import pybamm
+from tests import BaseUnitTestLithiumIon, TestCase
 
 
 class TestNewmanTobias(BaseUnitTestLithiumIon, TestCase):

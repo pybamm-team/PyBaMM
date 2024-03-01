@@ -1,8 +1,12 @@
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import sys
-from tests import TestCase
 import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")

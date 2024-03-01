@@ -1,6 +1,8 @@
 #
 # Compares the full and lumped thermal models for a single layer Li-ion cell
 #
+from __future__ import annotations
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

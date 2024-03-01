@@ -1,6 +1,8 @@
 #
 # Class for composite surface form electrolyte conductivity employing stefan-maxwell
 #
+from __future__ import annotations
+
 import pybamm
 
 from ..composite_conductivity import Composite

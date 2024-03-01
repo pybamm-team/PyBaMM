@@ -1,6 +1,10 @@
-import pybamm
+from __future__ import annotations
+
 import unittest
+
 import numpy as np
+
+import pybamm
 from tests import TestCase
 
 

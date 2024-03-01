@@ -1,7 +1,10 @@
 #
 # Example showing how to customize thermal boundary conditions in a pouch cell model
 #
+from __future__ import annotations
+
 import numpy as np
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

@@ -1,16 +1,19 @@
 #
 # Test for the operator class
 #
-from tests import TestCase
-import pybamm
-from tests import (
-    get_mesh_for_testing,
-    get_p2d_mesh_for_testing,
-    get_cylindrical_mesh_for_testing,
-)
+from __future__ import annotations
+
+import unittest
 
 import numpy as np
-import unittest
+
+import pybamm
+from tests import (
+    TestCase,
+    get_cylindrical_mesh_for_testing,
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
+)
 
 
 class TestFiniteVolumeConvergence(TestCase):

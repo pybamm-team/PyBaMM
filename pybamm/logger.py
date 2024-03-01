@@ -6,6 +6,8 @@
 # Implementation from stackoverflow
 # https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility
 #
+from __future__ import annotations
+
 import logging
 
 

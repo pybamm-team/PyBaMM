@@ -1,11 +1,14 @@
 #
 # Tests for the Algebraic Solver class
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
 import numpy as np
-from tests import get_discretisation_for_testing
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing
 
 
 class TestAlgebraicSolver(TestCase):

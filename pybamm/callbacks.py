@@ -5,9 +5,13 @@
 # Inspired by Keras callbacks
 # https://github.com/keras-team/keras/blob/master/keras/callbacks/callback.py
 #
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import inspect
+
+import numpy as np
+
+import pybamm
 
 
 def setup_callbacks(callbacks):

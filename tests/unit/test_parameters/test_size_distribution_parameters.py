@@ -2,9 +2,13 @@
 # Tests particle size distribution parameters are loaded into a parameter set
 # and give expected values
 #
-import pybamm
+from __future__ import annotations
+
 import unittest
+
 import numpy as np
+
+import pybamm
 from tests import TestCase
 
 

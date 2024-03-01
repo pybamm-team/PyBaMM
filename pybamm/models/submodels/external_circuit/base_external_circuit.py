@@ -1,6 +1,8 @@
 #
 # Base model for the external circuit
 #
+from __future__ import annotations
+
 import pybamm
 
 

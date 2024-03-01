@@ -1,6 +1,7 @@
 #
 # Lead acid base model class
 #
+from __future__ import annotations
 
 import pybamm
 

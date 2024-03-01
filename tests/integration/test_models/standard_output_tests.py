@@ -1,8 +1,11 @@
 #
 # Standard tests on the standard set of model outputs
 #
-import pybamm
+from __future__ import annotations
+
 import numpy as np
+
+import pybamm
 
 
 class StandardOutputTests:

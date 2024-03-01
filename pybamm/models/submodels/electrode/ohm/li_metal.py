@@ -1,7 +1,10 @@
 #
 # Subodels for a lithium metal electrode
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_ohm import BaseModel
 
 

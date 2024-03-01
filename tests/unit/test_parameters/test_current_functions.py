@@ -1,13 +1,17 @@
 #
 # Tests for current input functions
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import numbers
-import unittest
-import numpy as np
 import os
+import unittest
+
+import numpy as np
 import pandas as pd
+
+import pybamm
+from tests import TestCase
 
 
 class TestCurrentFunctions(TestCase):

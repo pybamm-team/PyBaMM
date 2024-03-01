@@ -1,9 +1,12 @@
 #
 # Tests each parameter set with the standard model associated with that parameter set
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestParameterValuesWithModel(TestCase):

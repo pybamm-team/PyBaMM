@@ -1,9 +1,12 @@
 #
 # Tests for Ai (2020) Enertech parameter set loads
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestRamadass2004(TestCase):

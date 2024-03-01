@@ -1,10 +1,14 @@
 #
 # Compare different discretisations in the particle
 #
+from __future__ import annotations
+
 import argparse
-import numpy as np
-import pybamm
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

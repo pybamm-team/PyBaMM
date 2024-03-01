@@ -1,15 +1,16 @@
 #
 # Tests for the Concatenation class and subclasses
 #
+from __future__ import annotations
+
 import unittest
 import unittest.mock as mock
-from tests import TestCase
 
 import numpy as np
 
 import pybamm
 from pybamm.util import have_optional_dependency
-from tests import get_discretisation_for_testing, get_mesh_for_testing
+from tests import TestCase, get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestConcatenations(TestCase):

@@ -1,12 +1,15 @@
 #
 # Tests for the Casadi Solver class
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
 import numpy as np
-from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestCasadiSolver(TestCase):

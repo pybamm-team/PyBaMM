@@ -1,7 +1,10 @@
 #
 # Class for SEI growth
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_sei import BaseModel
 
 

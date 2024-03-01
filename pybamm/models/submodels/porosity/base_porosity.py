@@ -1,6 +1,8 @@
 #
 # Base class for porosity
 #
+from __future__ import annotations
+
 import pybamm
 
 

@@ -1,11 +1,15 @@
 #
 # Tests for the Dummy Solver class
 #
-from tests import TestCase
-import pybamm
-import numpy as np
-import unittest
+from __future__ import annotations
+
 import sys
+import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestDummySolver(TestCase):

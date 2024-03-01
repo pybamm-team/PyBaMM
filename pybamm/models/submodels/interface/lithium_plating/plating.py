@@ -1,7 +1,10 @@
 #
 # Class for lithium plating
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_plating import BasePlating
 
 

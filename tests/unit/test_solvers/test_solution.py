@@ -1,16 +1,19 @@
 #
 # Tests for the Solution class
 #
-import os
-from tests import TestCase
+from __future__ import annotations
+
 import json
-import pybamm
+import os
 import unittest
+from tempfile import TemporaryDirectory
+
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
-from tests import get_discretisation_for_testing
-from tempfile import TemporaryDirectory
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing
 
 
 class TestSolution(TestCase):

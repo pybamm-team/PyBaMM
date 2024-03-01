@@ -1,13 +1,15 @@
 #
 # Tests for the Variable class
 #
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 
 import numpy as np
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 
 class TestVariable(TestCase):

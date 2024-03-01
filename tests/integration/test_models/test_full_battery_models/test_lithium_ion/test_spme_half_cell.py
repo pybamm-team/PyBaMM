@@ -1,10 +1,12 @@
 #
 # Tests for the half-cell lithium-ion SPMe model
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
-from tests import BaseIntegrationTestLithiumIonHalfCell
+
+import pybamm
+from tests import BaseIntegrationTestLithiumIonHalfCell, TestCase
 
 
 class TestSPMeHalfCell(BaseIntegrationTestLithiumIonHalfCell, TestCase):

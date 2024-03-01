@@ -2,6 +2,8 @@
 # Compare the DFN with particle size distributions (MP-DFN)
 # to the DFN with a single particle size, and the MPM
 #
+from __future__ import annotations
+
 import pybamm
 
 pybamm.set_logging_level("INFO")

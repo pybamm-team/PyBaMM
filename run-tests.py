@@ -5,13 +5,16 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
+from __future__ import annotations
+
+import argparse
 import os
 import shutil
-import pybamm
-import sys
-import argparse
-import unittest
 import subprocess
+import sys
+import unittest
+
+import pybamm
 
 
 def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):

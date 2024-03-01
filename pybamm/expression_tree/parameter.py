@@ -2,10 +2,11 @@
 # Parameter classes
 #
 from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:  # pragma: no cover
     import sympy

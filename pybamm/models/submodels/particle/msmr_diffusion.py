@@ -1,7 +1,10 @@
 #
 # Class for particles using the MSMR model
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_particle import BaseParticle
 
 

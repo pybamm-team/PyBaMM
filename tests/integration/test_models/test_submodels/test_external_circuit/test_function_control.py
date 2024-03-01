@@ -1,10 +1,14 @@
 #
 # Test function control submodel
 #
-from tests import TestCase
-import numpy as np
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestFunctionControl(TestCase):

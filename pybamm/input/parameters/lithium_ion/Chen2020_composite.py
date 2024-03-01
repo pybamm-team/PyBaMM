@@ -1,6 +1,10 @@
-import pybamm
+from __future__ import annotations
+
 import os
+
 import numpy as np
+
+import pybamm
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(

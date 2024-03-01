@@ -1,10 +1,14 @@
 #
 # Test the experiment steps
 #
-import pybamm
+from __future__ import annotations
+
 import unittest
-import numpy as np
 from datetime import datetime
+
+import numpy as np
+
+import pybamm
 from pybamm.experiment.step import _Step
 
 

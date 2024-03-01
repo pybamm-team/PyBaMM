@@ -1,7 +1,8 @@
 #
 # Tests for the Array class
 #
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 import unittest.mock as mock
 
@@ -9,6 +10,7 @@ import numpy as np
 import sympy
 
 import pybamm
+from tests import TestCase
 
 
 class TestArray(TestCase):

@@ -1,6 +1,8 @@
 #
 # Class for leading-order electrolyte diffusion employing stefan-maxwell
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_electrolyte_diffusion import BaseElectrolyteDiffusion

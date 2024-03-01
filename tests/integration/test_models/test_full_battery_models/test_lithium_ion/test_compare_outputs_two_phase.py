@@ -1,9 +1,13 @@
 #
 # Tests for the surface formulation
 #
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
 from tests import TestCase
 
 

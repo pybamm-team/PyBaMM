@@ -1,6 +1,8 @@
 #
 # Example for printing the parameters of a parameter set
 #
+from __future__ import annotations
+
 import pybamm
 
 parameters = pybamm.LithiumIonParameters()

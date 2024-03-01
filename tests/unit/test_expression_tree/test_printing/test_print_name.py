@@ -1,10 +1,12 @@
 """
 Tests for the print_name.py
 """
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 
 import pybamm
+from tests import TestCase
 
 
 class TestPrintName(TestCase):

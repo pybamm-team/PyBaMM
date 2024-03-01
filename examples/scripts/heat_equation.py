@@ -1,10 +1,12 @@
 #
 # Solve the transient heat equation with a spatially-dependent source term
 #
+from __future__ import annotations
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 import pybamm
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Numerical solution ----------------------------------------------------------
 

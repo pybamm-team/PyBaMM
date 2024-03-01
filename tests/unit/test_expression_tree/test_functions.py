@@ -1,7 +1,8 @@
 #
 # Tests for the Function classes
 #
-from tests import TestCase
+from __future__ import annotations
+
 import unittest
 import unittest.mock as mock
 
@@ -10,6 +11,7 @@ from scipy import special
 
 import pybamm
 from pybamm.util import have_optional_dependency
+from tests import TestCase
 
 
 def test_function(arg):

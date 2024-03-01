@@ -1,6 +1,8 @@
 #
 # Base class for electrolyte diffusion
 #
+from __future__ import annotations
+
 import pybamm
 
 

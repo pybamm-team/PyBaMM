@@ -1,7 +1,10 @@
 #
 # Different OCPs for charge and discharge, based on current
 #
+from __future__ import annotations
+
 import pybamm
+
 from . import BaseOpenCircuitPotential
 
 

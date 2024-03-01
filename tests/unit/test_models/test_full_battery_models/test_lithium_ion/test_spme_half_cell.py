@@ -2,10 +2,12 @@
 # Tests for the lithium-ion half-cell SPMe model
 # This is achieved by using the {"working electrode": "positive"} option
 #
-import pybamm
+from __future__ import annotations
+
 import unittest
-from tests import TestCase
-from tests import BaseUnitTestLithiumIonHalfCell
+
+import pybamm
+from tests import BaseUnitTestLithiumIonHalfCell, TestCase
 
 
 class TestSPMeHalfCell(BaseUnitTestLithiumIonHalfCell, TestCase):

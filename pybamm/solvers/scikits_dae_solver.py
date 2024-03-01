@@ -2,12 +2,15 @@
 # Solver class using Scipy's adaptive time stepper
 #
 # mypy: ignore-errors
-import casadi
-import pybamm
+from __future__ import annotations
 
-import numpy as np
 import importlib
+
+import casadi
+import numpy as np
 import scipy.sparse as sparse
+
+import pybamm
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:

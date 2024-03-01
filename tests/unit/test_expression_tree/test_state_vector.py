@@ -1,12 +1,15 @@
 #
 # Tests for the State Vector class
 #
-from tests import TestCase
-import pybamm
-import numpy as np
+from __future__ import annotations
 
 import unittest
 import unittest.mock as mock
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestStateVector(TestCase):

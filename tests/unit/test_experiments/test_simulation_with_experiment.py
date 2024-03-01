@@ -1,13 +1,17 @@
 #
 # Test setting up a simulation with an experiment
 #
-from tests import TestCase
-import casadi
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import os
 import unittest
 from datetime import datetime
+
+import casadi
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestSimulationExperiment(TestCase):

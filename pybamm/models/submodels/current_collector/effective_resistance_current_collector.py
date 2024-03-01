@@ -1,6 +1,8 @@
 #
 # Classes for calcuting the effective resistance of current collectors in a pouch cell
 #
+from __future__ import annotations
+
 import pybamm
 
 

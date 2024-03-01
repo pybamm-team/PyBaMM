@@ -1,10 +1,14 @@
 #
 # Test for the Finite Volume Mesh class
 #
-from tests import TestCase
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 def get_param():

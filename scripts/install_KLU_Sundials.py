@@ -9,19 +9,20 @@
 # repository = "https://github.com/pybamm-team/PyBaMM"
 # documentation = "https://docs.pybamm.org"
 # ///
+from __future__ import annotations
+
+import argparse
+import hashlib
 import os
+import platform
+import shutil
 import subprocess
 import tarfile
-import argparse
-import platform
-import hashlib
-import shutil
 import urllib.request
-from os.path import join, isfile
-from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import cpu_count
-
+from os.path import isfile, join
+from urllib.parse import urlparse
 
 SUITESPARSE_VERSION = "6.0.3"
 SUNDIALS_VERSION = "6.5.0"

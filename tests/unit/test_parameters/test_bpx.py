@@ -1,13 +1,15 @@
 #
 # Tests for the create_from_bpx function
 #
-from tests import TestCase
+from __future__ import annotations
 
+import copy
+import json
 import tempfile
 import unittest
-import json
+
 import pybamm
-import copy
+from tests import TestCase
 
 
 class TestBPX(TestCase):

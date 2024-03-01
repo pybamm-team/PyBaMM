@@ -1,6 +1,8 @@
 #
 # Class for isothermal submodel
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_thermal import BaseThermal

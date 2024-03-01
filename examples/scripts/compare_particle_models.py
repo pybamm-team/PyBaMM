@@ -1,6 +1,8 @@
 #
 # Compare models for diffusion within the electrode particles
 #
+from __future__ import annotations
+
 import pybamm
 
 # load models

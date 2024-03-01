@@ -1,5 +1,8 @@
-import pybamm
+from __future__ import annotations
+
 import numpy as np
+
+import pybamm
 
 
 def graphite_diffusivity_Ecker2015(sto, T):

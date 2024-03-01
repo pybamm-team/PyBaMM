@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pybamm as pb
 
 pb.set_logging_level("INFO")

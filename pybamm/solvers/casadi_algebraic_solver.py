@@ -1,9 +1,12 @@
 #
 # Casadi algebraic solver class
 #
+from __future__ import annotations
+
 import casadi
-import pybamm
 import numpy as np
+
+import pybamm
 
 
 class CasadiAlgebraicSolver(pybamm.BaseSolver):

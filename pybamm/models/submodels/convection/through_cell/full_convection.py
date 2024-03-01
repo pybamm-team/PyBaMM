@@ -1,7 +1,10 @@
 #
 # Submodel for pressure driven convection
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_through_cell_convection import BaseThroughCellModel
 
 

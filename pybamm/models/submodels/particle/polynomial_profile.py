@@ -1,6 +1,8 @@
 #
 # Class for many particles with polynomial concentration profile
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_particle import BaseParticle

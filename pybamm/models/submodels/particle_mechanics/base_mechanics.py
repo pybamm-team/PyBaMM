@@ -1,6 +1,8 @@
 #
 # Base class for particle cracking models.
 #
+from __future__ import annotations
+
 import pybamm
 
 

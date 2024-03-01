@@ -1,7 +1,10 @@
 #
 # Single Particle Model with Electrolyte (SPMe)
 #
+from __future__ import annotations
+
 import pybamm
+
 from .spm import SPM
 
 

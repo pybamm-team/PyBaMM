@@ -1,9 +1,13 @@
 #
 # Simulate drive cycle loaded from csv file
 #
-import pybamm
-import pandas as pd
+from __future__ import annotations
+
 import os
+
+import pandas as pd
+
+import pybamm
 
 os.chdir(pybamm.__path__[0] + "/..")
 

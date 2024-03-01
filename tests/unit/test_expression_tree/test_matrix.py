@@ -1,13 +1,16 @@
 #
 # Tests for the Matrix class
 #
-from tests import TestCase
-import pybamm
-import numpy as np
-from scipy.sparse import csr_matrix
+from __future__ import annotations
 
 import unittest
 import unittest.mock as mock
+
+import numpy as np
+from scipy.sparse import csr_matrix
+
+import pybamm
+from tests import TestCase
 
 
 class TestMatrix(TestCase):

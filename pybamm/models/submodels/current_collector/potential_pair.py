@@ -1,7 +1,10 @@
 #
 # Class for one- and two-dimensional potential pair current collector models
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_current_collector import BaseModel
 
 

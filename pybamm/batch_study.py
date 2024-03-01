@@ -1,8 +1,11 @@
 #
 # BatchStudy class
 #
-import pybamm
+from __future__ import annotations
+
 from itertools import product
+
+import pybamm
 
 
 class BatchStudy:

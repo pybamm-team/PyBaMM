@@ -1,8 +1,11 @@
 #
 # Dummy solver class, for empty models
 #
-import pybamm
+from __future__ import annotations
+
 import numpy as np
+
+import pybamm
 
 
 class DummySolver(pybamm.BaseSolver):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pybamm
 from benchmarks.benchmark_utils import set_random_seed
 

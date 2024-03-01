@@ -1,7 +1,10 @@
 #
 # Open-circuit potential from the Multi-Species Multi-Reaction framework
 #
+from __future__ import annotations
+
 import pybamm
+
 from . import BaseOpenCircuitPotential
 
 

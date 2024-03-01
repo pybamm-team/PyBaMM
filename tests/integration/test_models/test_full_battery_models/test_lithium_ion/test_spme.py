@@ -1,10 +1,12 @@
 #
 # Tests for the lithium-ion SPMe model
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
-from tests import BaseIntegrationTestLithiumIon
+
+import pybamm
+from tests import BaseIntegrationTestLithiumIon, TestCase
 
 
 class TestSPMe(BaseIntegrationTestLithiumIon, TestCase):

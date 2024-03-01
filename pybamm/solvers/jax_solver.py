@@ -1,8 +1,11 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
-import numpy as onp
+from __future__ import annotations
+
 import asyncio
+
+import numpy as onp
 
 import pybamm
 

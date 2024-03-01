@@ -1,9 +1,14 @@
 #
 # Private classes and functions for experiment steps
 #
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 from datetime import datetime
+
+import numpy as np
+
+import pybamm
+
 from .step_termination import _read_termination
 
 _examples = """

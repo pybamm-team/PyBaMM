@@ -1,11 +1,13 @@
-import os
-import tarfile
-from os.path import join, isfile
+from __future__ import annotations
+
 import argparse
-import sys
 import logging
+import os
 import subprocess
+import sys
+import tarfile
 from multiprocessing import cpu_count
+from os.path import isfile, join
 
 from pybamm.util import root_dir
 

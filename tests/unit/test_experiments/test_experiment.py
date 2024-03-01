@@ -1,10 +1,13 @@
 #
 # Test the base experiment class
 #
-from tests import TestCase
-from datetime import datetime
-import pybamm
+from __future__ import annotations
+
 import unittest
+from datetime import datetime
+
+import pybamm
+from tests import TestCase
 
 
 class TestExperiment(TestCase):

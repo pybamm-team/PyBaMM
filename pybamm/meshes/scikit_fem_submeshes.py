@@ -1,11 +1,14 @@
 #
 # scikit-fem meshes for use in PyBaMM
 #
-import pybamm
-from .meshes import SubMesh
+from __future__ import annotations
+
 import numpy as np
 
+import pybamm
 from pybamm.util import have_optional_dependency
+
+from .meshes import SubMesh
 
 
 class ScikitSubMesh2D(SubMesh):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pybamm
 
 from .ecm_model_options import NaturalNumberOption, OperatingModes

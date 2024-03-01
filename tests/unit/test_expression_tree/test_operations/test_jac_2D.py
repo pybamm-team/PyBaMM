@@ -1,13 +1,15 @@
 #
 # Tests for the jacobian methods for two-dimensional objects
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
+import unittest
 
 import numpy as np
-import unittest
 from scipy.sparse import eye
-from tests import get_1p1d_discretisation_for_testing
+
+import pybamm
+from tests import TestCase, get_1p1d_discretisation_for_testing
 
 
 def test_multi_var_function(arg1, arg2):

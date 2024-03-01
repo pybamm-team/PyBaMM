@@ -1,16 +1,17 @@
-import os
-import sys
+from __future__ import annotations
+
 import logging
+import os
 import subprocess
+import sys
 from multiprocessing import cpu_count
 from pathlib import Path
 from platform import system
+
 import wheel.bdist_wheel as orig
-
-from setuptools import setup, Extension
-from setuptools.command.install import install
+from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
-
+from setuptools.command.install import install
 
 default_lib_dir = (
     "" if system() == "Windows" else os.path.join(os.getenv("HOME"), ".local")

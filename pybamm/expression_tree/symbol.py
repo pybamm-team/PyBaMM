@@ -2,25 +2,27 @@
 # Base Symbol Class for the expression tree
 #
 from __future__ import annotations
+
 import numbers
+from functools import cached_property, lru_cache
+from typing import TYPE_CHECKING, Sequence, cast
 
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from functools import lru_cache, cached_property
-from typing import TYPE_CHECKING, Sequence, cast
 
 import pybamm
-from pybamm.util import have_optional_dependency
 from pybamm.expression_tree.printing.print_name import prettify_print_name
+from pybamm.util import have_optional_dependency
 
 if TYPE_CHECKING:  # pragma: no cover
     import casadi
+
     from pybamm.type_definitions import (
+        AuxiliaryDomainType,
         ChildSymbol,
         ChildValue,
-        DomainType,
-        AuxiliaryDomainType,
         DomainsType,
+        DomainType,
     )
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]

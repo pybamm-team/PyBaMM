@@ -1,16 +1,20 @@
 #
 # Test for the gradient and divergence in Finite Volumes
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
+import numpy as np
+
 import pybamm
 from tests import (
-    get_mesh_for_testing,
-    get_p2d_mesh_for_testing,
+    TestCase,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
 )
-import numpy as np
-import unittest
 
 
 class TestFiniteVolumeGradDiv(TestCase):

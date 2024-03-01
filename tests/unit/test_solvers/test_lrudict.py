@@ -1,9 +1,12 @@
 #
 # Tests for the LRUDict class
 #
+from __future__ import annotations
+
 import unittest
-from pybamm.solvers.lrudict import LRUDict
 from collections import OrderedDict
+
+from pybamm.solvers.lrudict import LRUDict
 
 
 class TestLRUDict(unittest.TestCase):

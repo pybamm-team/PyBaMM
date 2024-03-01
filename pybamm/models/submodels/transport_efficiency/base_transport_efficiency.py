@@ -1,6 +1,8 @@
 #
 # Base class for transport_efficiency
 #
+from __future__ import annotations
+
 import pybamm
 
 

@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import pybamm
-import numpy as np
+import importlib
+import importlib.util
 import logging
-import warnings
 import numbers
-
+import warnings
+from functools import lru_cache
 from typing import Union
 
-from functools import lru_cache
+import numpy as np
 
-import importlib.util
-import importlib
+import pybamm
 
 logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
@@ -28,9 +27,7 @@ if pybamm.have_jax():
     import jax
     from jax import lax
     from jax import numpy as jnp
-    from jax.interpreters import ad
-    from jax.interpreters import mlir
-    from jax.interpreters import batching
+    from jax.interpreters import ad, batching, mlir
     from jax.interpreters.mlir import custom_call
     from jax.lib import xla_client
     from jax.tree_util import tree_flatten

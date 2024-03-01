@@ -2,11 +2,12 @@
 # State Vector class
 #
 from __future__ import annotations
+
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
 
 import pybamm
-from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+from pybamm.type_definitions import AuxiliaryDomainType, DomainsType, DomainType
 
 
 class StateVectorBase(pybamm.Symbol):

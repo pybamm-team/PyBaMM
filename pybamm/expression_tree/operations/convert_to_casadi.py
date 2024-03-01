@@ -3,10 +3,11 @@
 #
 from __future__ import annotations
 
-import pybamm
 import casadi
 import numpy as np
 from scipy import special
+
+import pybamm
 
 
 class CasadiConverter:

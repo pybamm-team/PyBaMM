@@ -1,9 +1,12 @@
 #
 # Example to compare solving for all times against stepping individually
 #
-import pybamm
-import numpy as np
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
 
 pybamm.set_logging_level("INFO")
 

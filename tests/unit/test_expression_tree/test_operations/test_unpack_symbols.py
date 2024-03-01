@@ -1,9 +1,12 @@
 #
 # Tests for the symbol unpacker
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestSymbolUnpacker(TestCase):

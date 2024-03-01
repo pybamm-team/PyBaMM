@@ -1,7 +1,10 @@
 #
 # Class for full surface form electrolyte conductivity employing stefan-maxwell
 #
+from __future__ import annotations
+
 import pybamm
+
 from ..base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 

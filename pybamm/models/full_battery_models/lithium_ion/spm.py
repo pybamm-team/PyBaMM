@@ -1,7 +1,10 @@
 #
 # Single Particle Model (SPM)
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_lithium_ion_model import BaseModel
 
 

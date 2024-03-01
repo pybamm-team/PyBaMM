@@ -1,8 +1,10 @@
-import pybamm
+from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import itertools
 
+import matplotlib.pyplot as plt
+
+import pybamm
 
 parameters = [
     "Marquis2019",

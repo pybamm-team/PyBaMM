@@ -1,7 +1,10 @@
 #
 # External circuit with an arbitrary function
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_external_circuit import BaseModel
 
 

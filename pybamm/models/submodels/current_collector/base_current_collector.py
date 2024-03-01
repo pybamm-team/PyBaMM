@@ -1,6 +1,8 @@
 #
 # Base class for current collector submodels
 #
+from __future__ import annotations
+
 import pybamm
 
 

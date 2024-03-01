@@ -1,11 +1,14 @@
 #
 # Test for making copies
 #
-from tests import TestCase
-import numpy as np
-import pybamm
+from __future__ import annotations
+
 import unittest
-from tests import get_mesh_for_testing
+
+import numpy as np
+
+import pybamm
+from tests import TestCase, get_mesh_for_testing
 
 
 class TestCopy(TestCase):

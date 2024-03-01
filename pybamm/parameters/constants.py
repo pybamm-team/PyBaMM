@@ -1,7 +1,10 @@
 #
 # Standard constants
 #
+from __future__ import annotations
+
 from scipy import constants
+
 from pybamm import Scalar
 
 R = Scalar(constants.R)

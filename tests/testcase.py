@@ -1,10 +1,13 @@
 #
 # Custom TestCase class for pybamm
 #
-import unittest
+from __future__ import annotations
+
 import hashlib
+import unittest
 from functools import wraps
 from types import FunctionType
+
 import numpy as np
 
 

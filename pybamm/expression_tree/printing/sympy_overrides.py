@@ -1,6 +1,8 @@
 #
 # SymPy overrides
 #
+from __future__ import annotations
+
 import re
 
 from sympy.printing.latex import LatexPrinter

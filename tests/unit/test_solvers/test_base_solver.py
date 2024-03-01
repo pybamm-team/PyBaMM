@@ -1,13 +1,16 @@
 #
 # Tests for the Base Solver class
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
 import casadi
-import pybamm
 import numpy as np
 from scipy.sparse import csr_matrix
 
-import unittest
+import pybamm
+from tests import TestCase
 
 
 class TestBaseSolver(TestCase):

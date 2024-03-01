@@ -1,7 +1,10 @@
 #
 # Doyle-Fuller-Newman (DFN) Model
 #
+from __future__ import annotations
+
 import pybamm
+
 from ..lithium_ion.dfn import DFN as LithiumIonDFN
 
 

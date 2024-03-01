@@ -3,9 +3,11 @@
 #
 from __future__ import annotations
 
-from typing import Union, List, Dict
-from typing_extensions import TypeAlias
+from typing import Dict, List, Union
+
 import numpy as np
+from typing_extensions import TypeAlias
+
 import pybamm
 
 # numbers.Number should not be used for type hints

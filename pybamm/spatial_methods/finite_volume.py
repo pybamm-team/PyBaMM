@@ -1,20 +1,22 @@
 #
 # Finite Volume discretisation class
 #
-import pybamm
+from __future__ import annotations
 
-from scipy.sparse import (
-    diags,
-    spdiags,
-    eye,
-    kron,
-    csr_matrix,
-    vstack,
-    hstack,
-    lil_matrix,
-    coo_matrix,
-)
 import numpy as np
+from scipy.sparse import (
+    coo_matrix,
+    csr_matrix,
+    diags,
+    eye,
+    hstack,
+    kron,
+    lil_matrix,
+    spdiags,
+    vstack,
+)
+
+import pybamm
 
 
 class FiniteVolume(pybamm.SpatialMethod):

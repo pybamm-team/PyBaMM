@@ -1,7 +1,11 @@
-import pybamm
+from __future__ import annotations
+
 import os
 import pickle
+
 import scipy.interpolate as interp
+
+import pybamm
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())

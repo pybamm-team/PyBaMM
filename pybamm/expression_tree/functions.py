@@ -3,9 +3,10 @@
 #
 from __future__ import annotations
 
+from typing import Callable, Sequence
+
 import numpy as np
 from scipy import special
-from typing import Sequence, Callable
 from typing_extensions import TypeVar
 
 import pybamm

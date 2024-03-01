@@ -1,13 +1,16 @@
 #
 # Tests for the base battery model class
 #
-from tests import TestCase
-from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
-import pybamm
-import unittest
+from __future__ import annotations
+
 import io
-from contextlib import redirect_stdout
 import os
+import unittest
+from contextlib import redirect_stdout
+
+import pybamm
+from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
+from tests import TestCase
 
 OPTIONS_DICT = {
     "surface form": "differential",

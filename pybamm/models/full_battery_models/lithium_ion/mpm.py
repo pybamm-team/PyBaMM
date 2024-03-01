@@ -1,7 +1,10 @@
 #
 # Many-Particle Model (MPM)
 #
+from __future__ import annotations
+
 import pybamm
+
 from .spm import SPM
 
 

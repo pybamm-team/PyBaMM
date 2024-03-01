@@ -1,11 +1,15 @@
 #
 # Parameter values for a simulation
 #
-import numpy as np
-import pybamm
+from __future__ import annotations
+
 import numbers
-from pprint import pformat
 from collections import defaultdict
+from pprint import pformat
+
+import numpy as np
+
+import pybamm
 
 
 class ParameterValues:
@@ -93,8 +97,9 @@ class ParameterValues:
         if target_soc < 0 or target_soc > 1:
             raise ValueError("Target SOC should be between 0 and 1")
 
-        from bpx import parse_bpx_file, get_electrode_concentrations
+        from bpx import get_electrode_concentrations, parse_bpx_file
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
+
         from .bpx import _bpx_to_param_dict
 
         # parse bpx

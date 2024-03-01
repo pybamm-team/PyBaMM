@@ -1,9 +1,12 @@
 #
 # Tests for the lithium-ion MPM model
 #
-from tests import TestCase
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import pybamm
+from tests import TestCase
 
 
 class TestMPM(TestCase):

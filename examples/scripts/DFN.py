@@ -1,9 +1,11 @@
 #
 # Example showing how to load and solve the DFN
 #
+from __future__ import annotations
+
+import numpy as np
 
 import pybamm
-import numpy as np
 
 pybamm.set_logging_level("INFO")
 

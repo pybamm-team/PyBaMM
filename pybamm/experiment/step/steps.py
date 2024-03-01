@@ -1,7 +1,9 @@
 #
 # Public functions to create steps for use in an experiment.
 #
-from ._steps_util import _Step, _convert_electric, _examples
+from __future__ import annotations
+
+from ._steps_util import _convert_electric, _examples, _Step
 
 
 def string(string, **kwargs):

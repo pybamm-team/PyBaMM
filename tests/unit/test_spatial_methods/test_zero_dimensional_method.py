@@ -1,11 +1,14 @@
 #
 # Test for the base Spatial Method class
 #
-from tests import TestCase
-import numpy as np
-import pybamm
+from __future__ import annotations
+
 import unittest
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+
+import numpy as np
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestZeroDimensionalSpatialMethod(TestCase):

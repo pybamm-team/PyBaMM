@@ -1,7 +1,10 @@
 #
 # Newman Tobias Model
 #
+from __future__ import annotations
+
 import pybamm
+
 from .dfn import DFN
 
 

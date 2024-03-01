@@ -1,8 +1,12 @@
-import pybamm
+from __future__ import annotations
+
 import unittest
-import numpy as np
-from tests import TestCase
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import pybamm
+from tests import TestCase
 
 
 class TestPlotVoltageComponents(TestCase):

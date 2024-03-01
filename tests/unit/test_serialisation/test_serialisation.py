@@ -1,17 +1,20 @@
 #
 # Tests for the serialisation class
 #
-from tests import TestCase
+from __future__ import annotations
+
 import json
 import os
 import unittest
 import unittest.mock as mock
 from datetime import datetime
-import numpy as np
-import pybamm
 
+import numpy as np
 from numpy import testing
+
+import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
+from tests import TestCase
 
 
 def scalar_var_dict():

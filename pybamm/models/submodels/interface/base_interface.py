@@ -1,6 +1,7 @@
 #
 # Base interface class
 #
+from __future__ import annotations
 
 import pybamm
 

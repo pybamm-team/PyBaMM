@@ -1,7 +1,10 @@
 #
 # Class for uniform current collectors
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_current_collector import BaseModel
 
 

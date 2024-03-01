@@ -1,12 +1,14 @@
 #
 # Tests for the electrode-electrolyte interface equations
 #
-from tests import TestCase
-import pybamm
-from tests import get_discretisation_for_testing
+from __future__ import annotations
 
 import unittest
+
 import numpy as np
+
+import pybamm
+from tests import TestCase, get_discretisation_for_testing
 
 
 class TestButlerVolmer(TestCase):

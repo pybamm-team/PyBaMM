@@ -2,6 +2,7 @@
 # Helper function to unpack a symbol
 #
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Sequence
 
 if TYPE_CHECKING:  # pragma: no cover

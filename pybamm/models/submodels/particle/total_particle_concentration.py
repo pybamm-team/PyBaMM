@@ -1,7 +1,10 @@
 #
 # Class to calculate total particle concentrations
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_particle import BaseParticle
 
 

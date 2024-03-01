@@ -1,7 +1,10 @@
 #
 # Class for the leading-order electrolyte potential employing stefan-maxwell
 #
+from __future__ import annotations
+
 import pybamm
+
 from .base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 

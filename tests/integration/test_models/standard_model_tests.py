@@ -1,11 +1,14 @@
 #
 # Standard basic tests for any model
 #
-import pybamm
-import tests
+from __future__ import annotations
+
+import os
 
 import numpy as np
-import os
+
+import pybamm
+import tests
 
 
 class StandardModelTest:

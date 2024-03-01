@@ -1,6 +1,8 @@
 #
 # Base class for electrode submodels
 #
+from __future__ import annotations
+
 import pybamm
 
 

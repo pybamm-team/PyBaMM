@@ -1,6 +1,8 @@
 #
 # Class for full interface utilisation
 #
+from __future__ import annotations
+
 import pybamm
 
 from .base_utilisation import BaseModel

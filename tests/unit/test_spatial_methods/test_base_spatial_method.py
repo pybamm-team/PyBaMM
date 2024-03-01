@@ -1,13 +1,17 @@
 #
 # Test for the base Spatial Method class
 #
-from tests import TestCase
-import numpy as np
-import pybamm
+from __future__ import annotations
+
 import unittest
+
+import numpy as np
+
+import pybamm
 from tests import (
-    get_mesh_for_testing,
+    TestCase,
     get_1p1d_mesh_for_testing,
+    get_mesh_for_testing,
     get_size_distribution_mesh_for_testing,
 )
 

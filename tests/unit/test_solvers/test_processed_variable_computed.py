@@ -5,13 +5,16 @@
 #  by the idaklu solver, and does not possesses any capability to calculate
 #  values itself since it does not have access to the full state vector
 #
-from tests import TestCase
+from __future__ import annotations
+
+import unittest
+
 import casadi
+import numpy as np
+
 import pybamm
 import tests
-
-import numpy as np
-import unittest
+from tests import TestCase
 
 
 def to_casadi(var_pybamm, y, inputs=None):

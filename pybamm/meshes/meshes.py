@@ -1,8 +1,12 @@
 #
 # Native PyBaMM Meshes
 #
+from __future__ import annotations
+
 import numbers
+
 import numpy as np
+
 import pybamm
 
 
