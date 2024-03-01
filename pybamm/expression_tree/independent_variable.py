@@ -62,6 +62,10 @@ class IndependentVariable(pybamm.Symbol):
         else:
             return sympy.Symbol(self.name)
 
+    def create_copy(self, new_children=None):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        return self.__class__(self.name, domains=self.domains)
+
 
 class Time(IndependentVariable):
     """

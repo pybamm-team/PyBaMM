@@ -712,21 +712,10 @@ class ParameterValues:
             # Process again just to be sure
             return self.process_symbol(function_out)
 
-        elif isinstance(symbol, pybamm.BinaryOperator):
-            # process children
-            new_left = self.process_symbol(symbol.left)
-            new_right = self.process_symbol(symbol.right)
-            # make new symbol, ensure domain remains the same
-            new_symbol = symbol._binary_new_copy(new_left, new_right)
-            new_symbol.copy_domains(symbol)
-            return new_symbol
-
         # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
-            new_symbol = symbol._unary_new_copy(new_child)
-            # ensure domain remains the same
-            new_symbol.copy_domains(symbol)
+            new_symbol = symbol.create_copy(new_children=[new_child])
             # x_average can sometimes create a new symbol with electrode thickness
             # parameters, so we process again to make sure these parameters are set
             if isinstance(symbol, pybamm.XAverage) and not isinstance(
@@ -747,15 +736,14 @@ class ParameterValues:
                     new_symbol.position = new_symbol_position
             return new_symbol
 
-        # Functions
-        elif isinstance(symbol, pybamm.Function):
+        # Functions, Concatenations & BinaryOperators
+        elif (
+            isinstance(symbol, pybamm.Function)
+            or isinstance(symbol, pybamm.Concatenation)
+            or isinstance(symbol, pybamm.BinaryOperator)
+        ):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._function_new_copy(new_children)
-
-        # Concatenations
-        elif isinstance(symbol, pybamm.Concatenation):
-            new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._concatenation_new_copy(new_children)
+            return symbol.create_copy(new_children)
 
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):
