@@ -960,10 +960,9 @@ class Symbol:
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
         copy.deepcopy(), which is slow.
         """
-        raise NotImplementedError(
-            f"""method self.new_copy() not implemented
-            for symbol {self!s} of type {type(self)}"""
-        )
+        if new_children is None:
+            new_children = [child.create_copy() for child in self.children]
+        return self.__class__(self.name, new_children, domains=self.domains)
 
     def new_copy(self, new_children: list[Symbol] | None = None):
         """

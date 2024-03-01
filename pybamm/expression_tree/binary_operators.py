@@ -133,9 +133,7 @@ class BinaryOperator(pybamm.Symbol):
 
         # make new symbol, ensure domain(s) remain the same
         out = self._binary_new_copy(new_left, new_right)
-        out.copy_domains(
-            self
-        )  # FIXUP: This needs checking if random new children are supplied
+        out.copy_domains(self)
 
         return out
 
