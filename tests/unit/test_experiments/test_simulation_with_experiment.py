@@ -69,7 +69,8 @@ class TestSimulationExperiment(TestCase):
                     s("Discharge at C/20 for 1 hour", temperature="30.5oC"),
                     s("Charge at 1 A until 4.1 V", temperature="24oC"),
                     s("Hold at 4.1 V until C/2", temperature="24oC"),
-                    "Discharge at 2 W for 1 hour",
+                    "Discharge at 2 W for 10 minutes",
+                    "Discharge at 4 Ohm for 10 minutes",
                 )
             ],
             temperature="-14oC",
@@ -89,6 +90,9 @@ class TestSimulationExperiment(TestCase):
         )
         np.testing.assert_array_almost_equal(
             sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, decimal=5
         )
 
         np.testing.assert_array_equal(

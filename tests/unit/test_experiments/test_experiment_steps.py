@@ -271,6 +271,12 @@ class TestExperimentSteps(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Drive cycle must start at t=0"):
             pybamm.step.current(t)
 
+    def test_base_custom_steps(self):
+        with self.assertRaises(NotImplementedError):
+            pybamm.step.BaseStepExplicit(None).current_value(None)
+        with self.assertRaises(NotImplementedError):
+            pybamm.step.BaseStepImplicit(None).get_submodel(None)
+
     def test_custom_steps(self):
         def custom_step_constant(variables):
             return 1

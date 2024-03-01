@@ -202,9 +202,6 @@ class Experiment:
 
     @staticmethod
     def _set_next_start_time(steps):
-        if all(isinstance(i, str) for i in steps):
-            return steps
-
         end_time = None
         next_start_time = None
 

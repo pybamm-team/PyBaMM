@@ -233,10 +233,6 @@ class BaseStep:
     def __hash__(self):
         return hash(self.basic_repr())
 
-    @property
-    def unit(self):
-        return _type_to_units[self.type]
-
     def default_duration(self, value):
         """
         Default duration for the step is one day (24 hours) or the duration of the
