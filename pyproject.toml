@@ -250,6 +250,10 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
+    # ignore warnings generated while running tests
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning",
 ]
 
 # Logging configuration
