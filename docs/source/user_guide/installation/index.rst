@@ -67,6 +67,7 @@ Package                                                             Minimum supp
 `CasADi <https://web.casadi.org/docs/>`__                           3.6.3
 `Xarray <https://docs.xarray.dev/en/stable/>`__                     2022.6.0
 `Anytree <https://anytree.readthedocs.io/en/stable/>`__             2.8.0
+`SymPy <https://docs.sympy.org/latest/index.html>`__                1.9.3
 `typing-extensions <https://pypi.org/project/typing-extensions/>`__ 4.10.0
 =================================================================== ==========================
 
@@ -174,19 +175,6 @@ Dependency                                                  Minimum Version    p
 =========================================================== ================== ================== =========================================
 `pybtex <https://docs.pybtex.org/>`__                       0.24.0             cite               BibTeX-compatible bibliography processor.
 =========================================================== ================== ================== =========================================
-
-.. _install.latexify_dependencies:
-
-Latexify dependencies
-^^^^^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[latexify]"``
-
-=========================================================== ================== ================== =========================
-Dependency                                                  Minimum Version    pip extra          Notes
-=========================================================== ================== ================== =========================
-`sympy <https://docs.sympy.org/latest/index.html>`__        1.9.3              latexify           For symbolic mathematics.
-=========================================================== ================== ================== =========================
 
 .. _install.bpx_dependencies:
 

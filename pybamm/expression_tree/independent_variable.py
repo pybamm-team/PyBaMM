@@ -2,6 +2,7 @@
 # IndependentVariable class
 #
 from __future__ import annotations
+import sympy
 import numpy as np
 
 import pybamm
@@ -55,7 +56,7 @@ class IndependentVariable(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
-    def to_equation(self) -> "sympy.Symbol":  # noqa: F821, UP037
+    def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
         sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
