@@ -20,6 +20,7 @@
 
 - Renamed "testing" argument for plots to "show_plot" and flipped its meaning (show_plot=True is now the default and shows the plot) ([#3842](https://github.com/pybamm-team/PyBaMM/pull/3842))
 - Dropped support for BPX version 0.3.0 and below ([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
+- Integrated `[latexify]` module into the core PyBaMM package, deprecating the `pybamm[latexify]` version for installation.([#3848](https://github.com/pybamm-team/PyBaMM/pull/3848))
 
 # [v24.1](https://github.com/pybamm-team/PyBaMM/tree/v24.1) - 2024-01-31
 
