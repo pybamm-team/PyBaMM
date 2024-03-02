@@ -7,7 +7,6 @@ from scipy.sparse import csr_matrix, issparse
 from typing import TYPE_CHECKING
 
 import pybamm
-from pybamm.util import have_optional_dependency
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -157,7 +156,6 @@ class Array(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
-        sympy = have_optional_dependency("sympy")
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 
