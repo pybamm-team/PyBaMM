@@ -270,12 +270,12 @@ def run_tests(session):
                 "scikits.odes",
                 external=True,
             )
-            session.install("-e", ".[all,jax,odes,dev]", silent=False)
+            session.install("-e", ".[all,jax,odes]", silent=False)
     else:
         if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
+            session.install("-e", ".[all]", silent=False)
         else:
-            session.install("-e", ".[all,jax,dev]", silent=False)
+            session.install("-e", ".[all,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 

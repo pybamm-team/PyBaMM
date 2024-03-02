@@ -15,7 +15,7 @@ import pytest
 import unittest
 
 
-def run_code_tests(executable=False, folder: str = "unit"):
+def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
     """
     Runs tests, exits if they don't finish.
     Parameters
@@ -32,6 +32,10 @@ def run_code_tests(executable=False, folder: str = "unit"):
         tests = "tests/" + folder
         if folder == "unit":
             pybamm.settings.debug_mode = True
+    if interpreter == "python":
+        # Make sure to refer to the interpreter for the
+        # currently activated virtual environment
+        interpreter = sys.executable
     if executable is False:
         if tests == "tests/unit":
             ret = pytest.main(["-v", tests])
@@ -40,11 +44,11 @@ def run_code_tests(executable=False, folder: str = "unit"):
             result = unittest.TextTestRunner(verbosity=2).run(suite)
             ret = int(not result.wasSuccessful())
     else:
-        print(f"Running {folder} tests with executable {sys.executable}")
+        print(f"Running {folder} tests with executable {interpreter}")
         if tests == "tests/unit":
-            cmd = [sys.executable, "-m", "pytest", "-v", tests]
+            cmd = [interpreter, "-m", "pytest", "-v", tests]
         else:
-            cmd = [sys.executable, "-m", "unittest", "discover", "-v", tests]
+            cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
@@ -238,26 +242,34 @@ if __name__ == "__main__":
         action="store_true",
         help="Run quick checks (code tests, docs)",
     )
-
+    # Non-standard Python interpreter name for subprocesses
+    parser.add_argument(
+        "--interpreter",
+        nargs="?",
+        default="python",
+        metavar="python",
+        help="Give the name of the Python interpreter if it is not 'python'",
+    )
     # Parse!
     args = parser.parse_args()
 
     # Run tests
     has_run = False
     # Unit vs integration
+    interpreter = args.interpreter
     # Unit tests
     if args.integration:
         has_run = True
-        run_code_tests(True, "integration")
+        run_code_tests(True, "integration", interpreter)
     if args.unit:
         has_run = True
-        run_code_tests(True, "unit")
+        run_code_tests(True, "unit", interpreter)
     if args.all:
         has_run = True
-        run_code_tests(True, "all")
+        run_code_tests(True, "all", interpreter)
     if args.nosub:
         has_run = True
-        run_code_tests(folder="unit")
+        run_code_tests(folder="unit", interpreter=interpreter)
     # Doctests
     if args.doctest:
         has_run = True
@@ -274,11 +286,11 @@ if __name__ == "__main__":
     # Scripts tests
     elif args.scripts:
         has_run = True
-        run_scripts()
+        run_scripts(interpreter)
     # Combined test sets
     if args.quick:
         has_run = True
-        run_code_tests("all")
+        run_code_tests("all", interpreter=interpreter)
         run_doc_tests()
     # Help
     if not has_run:
