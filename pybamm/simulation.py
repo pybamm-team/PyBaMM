@@ -1,6 +1,8 @@
 #
 # Simulation class
 #
+from __future__ import annotations
+
 import pickle
 import pybamm
 import numpy as np
@@ -10,7 +12,6 @@ import sys
 from functools import lru_cache
 from datetime import timedelta
 from pybamm.util import have_optional_dependency
-from typing import Optional
 
 from pybamm.expression_tree.operations.serialise import Serialise
 
@@ -1167,7 +1168,7 @@ class Simulation:
 
     def save_model(
         self,
-        filename: Optional[str] = None,
+        filename: str | None = None,
         mesh: bool = False,
         variables: bool = False,
     ):
@@ -1214,7 +1215,7 @@ class Simulation:
         ax=None,
         show_legend=True,
         split_by_electrode=False,
-        testing=False,
+        show_plot=True,
         **kwargs_fill,
     ):
         """
@@ -1229,8 +1230,9 @@ class Simulation:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
-        testing : bool, optional
-            Whether to actually make the plot (turned off for unit tests).
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
         kwargs_fill
             Keyword arguments, passed to ax.fill_between.
 
@@ -1243,7 +1245,7 @@ class Simulation:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            testing=testing,
+            show_plot=show_plot,
             **kwargs_fill,
         )
 
