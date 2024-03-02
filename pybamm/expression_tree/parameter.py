@@ -5,10 +5,9 @@ from __future__ import annotations
 import sys
 
 import numpy as np
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-if TYPE_CHECKING:  # pragma: no cover
-    import sympy
+import sympy
 
 import pybamm
 

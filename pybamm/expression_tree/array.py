@@ -4,13 +4,10 @@
 from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
-from typing import TYPE_CHECKING
 
 import pybamm
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
-
-if TYPE_CHECKING:  # pragma: no cover
-    import sympy
+import sympy
 
 
 class Array(pybamm.Symbol):
