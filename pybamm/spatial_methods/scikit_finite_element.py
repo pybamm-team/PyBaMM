@@ -278,7 +278,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         except KeyError:
             raise pybamm.ModelError(
                 f"No boundary conditions provided for symbol `{symbol}``"
-            )
+            ) from None
 
         # adjust matrix for Dirichlet boundary conditions
         if neg_bc_type == "Dirichlet":

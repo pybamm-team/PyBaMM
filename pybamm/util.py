@@ -62,6 +62,7 @@ class FuzzyDict(dict):
                 warn(
                     f"The parameter '{key}' has been renamed to '{key.replace('electrode', 'particle')}'",
                     DeprecationWarning,
+                    stacklevel=2,
                 )
                 return super().__getitem__(key.replace("electrode", "particle"))
             if key in ["Negative electrode SOC", "Positive electrode SOC"]:
@@ -70,7 +71,7 @@ class FuzzyDict(dict):
                     f"Variable '{domain} electrode SOC' has been renamed to "
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
-                )
+                ) from None
             if "Measured open circuit voltage" in key:
                 raise KeyError(
                     "The variable that used to be called "
@@ -79,26 +80,28 @@ class FuzzyDict(dict):
                     "variable called 'Bulk open-circuit voltage [V]' which is the"
                     "open-circuit voltage evaluated at the average particle "
                     "concentrations."
-                )
+                ) from None
             if "Open-circuit voltage at 0% SOC [V]" in key:
                 raise KeyError(
                     "Parameter 'Open-circuit voltage at 0% SOC [V]' not found."
                     "In most cases this should be set to be equal to "
                     "'Lower voltage cut-off [V]'"
-                )
+                ) from None
             if "Open-circuit voltage at 100% SOC [V]" in key:
                 raise KeyError(
                     "Parameter 'Open-circuit voltage at 100% SOC [V]' not found."
                     "In most cases this should be set to be equal to "
                     "'Upper voltage cut-off [V]'"
-                )
+                ) from None
             best_matches = self.get_best_matches(key)
             for k in best_matches:
                 if key in k and k.endswith("]"):
                     raise KeyError(
                         f"'{key}' not found. Use the dimensional version '{k}' instead."
-                    )
-            raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
+                    ) from None
+            raise KeyError(
+                f"'{key}' not found. Best matches are {best_matches}"
+            ) from None
 
     def search(self, key, print_values=False):
         """
@@ -339,7 +342,7 @@ def install_jax(arguments=None):  # pragma: no cover
         "pybamm_install_jax is deprecated,"
         " use 'pip install pybamm[jax]' to install jax & jaxlib"
     )
-    warn(msg, DeprecationWarning)
+    warn(msg, DeprecationWarning, stacklevel=2)
     subprocess.check_call(
         [
             sys.executable,
@@ -373,4 +376,4 @@ def have_optional_dependency(module_name, attribute=None):
 
     except ModuleNotFoundError:
         # Raise an ModuleNotFoundError if the module or attribute is not available
-        raise ModuleNotFoundError(err_msg)
+        raise ModuleNotFoundError(err_msg) from None

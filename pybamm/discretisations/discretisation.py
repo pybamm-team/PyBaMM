@@ -280,7 +280,7 @@ class Discretisation:
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains
                 )
-                for i in range(sec_points):
+                for _i in range(sec_points):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
@@ -895,7 +895,7 @@ class Discretisation:
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
                     """.format(symbol.name)
-                )
+                ) from None
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
             return symbol.reference + symbol.scale * pybamm.StateVector(

@@ -110,7 +110,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         integration_time = 0
-        for idx, t in enumerate(t_eval):
+        for _idx, t in enumerate(t_eval):
             # Solve
             try:
                 timer.reset()

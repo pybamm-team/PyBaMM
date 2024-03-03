@@ -344,10 +344,11 @@ class IDAKLUJax:
         def __hash__(self):
             return hash(tuple(sorted(self.items())))
 
+    @staticmethod
     @lru_cache(maxsize=1)
-    def _cached_solve(self, model, t_hashable, *args, **kwargs):
+    def _cached_solve(solver, model, t_hashable, *args, **kwargs):
         """Cache the last solve for reuse"""
-        return self.solver.solve(model, t_hashable, *args, **kwargs)
+        return solver.solve(model, t_hashable, *args, **kwargs)
 
     def _jaxify_solve(self, t, invar, *inputs_values):
         """Solve the model using the IDAKLU solver
@@ -370,7 +371,8 @@ class IDAKLUJax:
         logger.debug(f"  invar: {invar}")
         logger.debug(f"  inputs: {dict(d)}")
         logger.debug(f"  calculate_sensitivities: {invar is not None}")
-        sim = self._cached_solve(
+        sim = IDAKLUJax._cached_solve(
+            self.solver,
             self.jax_model,
             tuple(self.jax_t_eval),
             inputs=self._hashabledict(d),
@@ -572,6 +574,7 @@ class IDAKLUJax:
                 "JAX expression has already been created. "
                 "Overwriting with new expression.",
                 UserWarning,
+                stacklevel=2,
             )
         self.jaxpr = self._jaxify(
             model,

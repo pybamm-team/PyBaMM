@@ -92,7 +92,7 @@ class ParameterSets(Mapping):
                     "Parameter sets should be called directly by their name ({0}), "
                     "instead of via pybamm.parameter_sets (pybamm.parameter_sets.{0})."
                 ).format(name)
-                warnings.warn(msg, DeprecationWarning)
+                warnings.warn(msg, DeprecationWarning, stacklevel=2)
                 return name
             raise error
 

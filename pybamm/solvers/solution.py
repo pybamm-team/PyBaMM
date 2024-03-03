@@ -301,7 +301,7 @@ class Solution:
             raise pybamm.SolverError(
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
-            )
+            ) from None
 
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
@@ -984,7 +984,7 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
-            )
+            ) from None
 
         cycle_summary_variables.update(esoh_sol)
 

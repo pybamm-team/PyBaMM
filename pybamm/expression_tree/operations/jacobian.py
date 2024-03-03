@@ -93,7 +93,7 @@ class Jacobian:
             except NotImplementedError:
                 raise NotImplementedError(
                     f"Cannot calculate Jacobian of symbol of type '{type(symbol)}'"
-                )
+                ) from None
 
         # Jacobian by default removes the domain(s)
         if self._clear_domain:

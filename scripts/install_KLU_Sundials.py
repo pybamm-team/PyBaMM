@@ -268,11 +268,11 @@ def parallel_download(urls, download_dir):
 try:
     subprocess.run(["make", "--version"])
 except OSError:
-    raise RuntimeError("Make must be installed.")
+    raise RuntimeError("Make must be installed.") from None
 try:
     subprocess.run(["cmake", "--version"])
 except OSError:
-    raise RuntimeError("CMake must be installed.")
+    raise RuntimeError("CMake must be installed.") from None
 
 # Build in parallel wherever possible
 os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())

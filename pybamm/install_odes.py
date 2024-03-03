@@ -49,7 +49,7 @@ def install_sundials(download_dir, install_dir):
     try:
         subprocess.run(["cmake", "--version"])
     except OSError:
-        raise RuntimeError("CMake must be installed to build SUNDIALS.")
+        raise RuntimeError("CMake must be installed to build SUNDIALS.") from None
 
     url = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
     logger.info("Downloading sundials")

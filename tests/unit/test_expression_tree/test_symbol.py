@@ -122,7 +122,7 @@ class TestSymbol(TestCase):
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
         # special cases
-        self.assertEqual(-(-a), a)
+        self.assertEqual(-(-a), a)  # noqa: B002
         self.assertEqual(-(a - b), b - a)
         self.assertEqual(abs(abs(a)), abs(a))
 

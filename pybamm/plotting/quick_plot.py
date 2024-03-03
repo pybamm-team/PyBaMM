@@ -227,7 +227,7 @@ class QuickPlot:
                 except TypeError:
                     raise TypeError(
                         "variable_limits must be 'fixed', 'tight', or a dict"
-                    )
+                    ) from None
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
