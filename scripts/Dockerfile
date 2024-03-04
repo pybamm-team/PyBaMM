@@ -1,12 +1,12 @@
-FROM continuumio/miniconda3:latest
-
+# FROM continuumio/miniconda3:latest
+FROM quay.io/pypa/manylinux2014_x86_64
 WORKDIR /
 
 # Install the necessary dependencies
-RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-essential cmake pandoc texlive-latex-extra dvipng
-RUN rm -rf /var/lib/apt/lists/*
-
+RUN yum update && yum upgrade
+RUN yum -y install openblas-devel gcc gcc-gfortran graphviz git cmake pandoc texlive dvipng python-devel
+# RUN rm -rf /var/lib/apt/lists/*
+RUN yum -y groupinstall "Development Tools"
 RUN useradd -m -s /bin/bash pybamm
 USER pybamm
 
@@ -17,53 +17,39 @@ RUN git clone https://github.com/pybamm-team/PyBaMM.git
 
 WORKDIR /home/pybamm/PyBaMM
 
+RUN mkdir /home/pybamm/.local
+RUN mkdir /home/pybamm/.local/lib
+
 ENV CMAKE_C_COMPILER=/usr/bin/gcc
 ENV CMAKE_CXX_COMPILER=/usr/bin/g++
 ENV CMAKE_MAKE_PROGRAM=/usr/bin/make
-ENV SUNDIALS_INST=/home/pybamm/.local
-ENV LD_LIBRARY_PATH=/home/pybamm/.local/lib
+ENV SUNDIALS_INST=/home/.local
+ENV LD_LIBRARY_PATH=/home/.local/lib
 
-RUN conda create -n pybamm python=3.11
-RUN conda init --all
-SHELL ["conda", "run", "-n", "pybamm", "/bin/bash", "-c"]
-RUN conda install -y pip
+#RUN conda create -n pybamm python=3.11
+#RUN conda init --all
+#SHELL ["conda", "run", "-n", "pybamm", "/bin/bash", "-c"]
+#RUN conda install -y pip
+# Migrating to venv and create a virtual environment for python 3.11
+USER root
 
-ARG IDAKLU
-ARG ODES
-ARG JAX
-ARG ALL
+ENV VIRTUAL_ENV=/home/pybamm/venv
+RUN python3.11 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN usermod -aG wheel pybamm 
 
-RUN pip install --upgrade --user pip setuptools wheel wget
+RUN pip install --upgrade setuptools wheel wget
 RUN pip install cmake
+RUN source /home/pybamm/venv/bin/activate
+#USER pybamm
+RUN python scripts/install_KLU_Sundials.py 
+USER root
+RUN rm -rf pybind11 
+RUN cd /home/pybamm/ && ls -a 
+RUN git clone https://github.com/pybind/pybind11.git
+RUN pip install -e ".[all,dev,docs,jax,odes]" # ODES is not installing, figure out the installation path and add it to the ENV
 
-RUN if [ "$IDAKLU" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
-    pip install --user -e ".[all,dev,docs]"; \
-    fi
-
-RUN if [ "$ODES" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    pip install --user -e ".[all,dev,docs,odes]"; \
-    fi
-
-RUN if [ "$JAX" = "true" ]; then \
-    pip install --user -e ".[all,dev,docs,jax]"; \
-    fi
-
-RUN if [ "$ALL" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
-    pip install --user -e ".[all,dev,docs,jax,odes]"; \
-    fi
-
-RUN if [ -z "$IDAKLU" ] \
-    && [ -z "$ODES" ] \
-    && [ -z "$JAX" ] \
-    && [ -z "$ALL" ]; then \
-    pip install --user -e ".[all,dev,docs]"; \
-    fi
+#USER pybamm
 
 ENTRYPOINT ["/bin/bash"]
+
