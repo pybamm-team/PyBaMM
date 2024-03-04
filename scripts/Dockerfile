@@ -16,22 +16,20 @@ WORKDIR /home/pybamm/
 RUN git clone https://github.com/pybamm-team/PyBaMM.git
 
 WORKDIR /home/pybamm/PyBaMM
-
+USER root
 RUN mkdir /home/pybamm/.local
-RUN mkdir /home/pybamm/.local/lib
 
 ENV CMAKE_C_COMPILER=/usr/bin/gcc
 ENV CMAKE_CXX_COMPILER=/usr/bin/g++
 ENV CMAKE_MAKE_PROGRAM=/usr/bin/make
-ENV SUNDIALS_INST=/home/.local
-ENV LD_LIBRARY_PATH=/home/.local/lib
+ENV SUNDIALS_INST=/root/.local 
+ENV LD_LIBRARY_PATH=/root/.local/lib64
 
 #RUN conda create -n pybamm python=3.11
 #RUN conda init --all
 #SHELL ["conda", "run", "-n", "pybamm", "/bin/bash", "-c"]
 #RUN conda install -y pip
 # Migrating to venv and create a virtual environment for python 3.11
-USER root
 
 ENV VIRTUAL_ENV=/home/pybamm/venv
 RUN python3.11 -m venv $VIRTUAL_ENV
@@ -41,13 +39,10 @@ RUN usermod -aG wheel pybamm
 RUN pip install --upgrade setuptools wheel wget
 RUN pip install cmake
 RUN source /home/pybamm/venv/bin/activate
-#USER pybamm
 RUN python scripts/install_KLU_Sundials.py 
-USER root
 RUN rm -rf pybind11 
-RUN cd /home/pybamm/ && ls -a 
 RUN git clone https://github.com/pybind/pybind11.git
-RUN pip install -e ".[all,dev,docs,jax,odes]" # ODES is not installing, figure out the installation path and add it to the ENV
+RUN pip install -e ".[all,dev,docs,jax,odes]" # ODES is not installing, installation path /root/.local in centos 
 
 #USER pybamm
 
