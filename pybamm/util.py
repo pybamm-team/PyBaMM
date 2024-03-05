@@ -352,6 +352,7 @@ def install_jax(arguments=None):  # pragma: no cover
     )
 
 
+# https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
 def import_optional_dependency(module_name, attribute=None):
     err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
     try:
