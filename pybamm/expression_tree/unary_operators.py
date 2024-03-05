@@ -7,7 +7,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse
 import sympy
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 from pybamm.type_definitions import DomainsType
 
 
@@ -450,7 +450,9 @@ class Gradient(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
+        sympy_Gradient = import_optional_dependency(
+            "sympy.vector.operators", "Gradient"
+        )
         return sympy_Gradient(child)
 
 
@@ -484,7 +486,7 @@ class Divergence(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy_Divergence = have_optional_dependency(
+        sympy_Divergence = import_optional_dependency(
             "sympy.vector.operators", "Divergence"
         )
         return sympy_Divergence(child)
