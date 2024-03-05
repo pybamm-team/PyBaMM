@@ -10,7 +10,7 @@ from scipy.sparse import issparse, vstack
 from typing import Sequence
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class Concatenation(pybamm.Symbol):
@@ -159,7 +159,7 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         self.concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:

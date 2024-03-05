@@ -9,7 +9,7 @@ import warnings
 
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 def get_rng_min_max_name(rng, min_or_max):
@@ -89,7 +89,7 @@ class Latexify:
         Returns a list of boundary condition equations with ranges in front of
         the equations.
         """
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         bcs_eqn_list = []
         bcs = self.model.boundary_conditions.get(var, None)
 
@@ -120,7 +120,7 @@ class Latexify:
 
     def _get_param_var(self, node):
         """Returns a list of parameters and a list of variables."""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         param_list = []
         var_list = []
         dfs_nodes = [node]
@@ -163,7 +163,7 @@ class Latexify:
         return param_list, var_list
 
     def latexify(self, output_variables=None):
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         # Voltage is the default output variable if it exists
         if output_variables is None:
             if "Voltage [V]" in self.model.variables:

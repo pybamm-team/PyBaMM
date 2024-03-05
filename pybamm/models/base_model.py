@@ -13,7 +13,7 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class BaseModel:
@@ -1185,7 +1185,7 @@ class BaseModel:
         This will return first five model equations
         >>> model.latexify(newline=False)[1:5]
         """
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         if sympy:
             from pybamm.expression_tree.operations.latexify import Latexify
 

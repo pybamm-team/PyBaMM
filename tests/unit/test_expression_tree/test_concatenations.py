@@ -8,7 +8,7 @@ from tests import TestCase
 import numpy as np
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
@@ -371,7 +371,7 @@ class TestConcatenations(TestCase):
         )
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
         func_symbol = sympy.Symbol(r"\begin{cases}a\\b\end{cases}")

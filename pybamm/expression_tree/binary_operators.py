@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix, issparse
 import functools
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 from typing import Callable, cast
 
@@ -180,7 +180,7 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -388,7 +388,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -737,7 +737,7 @@ class Minimum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         return sympy.Min(left, right)
 
 
@@ -782,7 +782,7 @@ class Maximum(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         return sympy.Max(left, right)
 
 

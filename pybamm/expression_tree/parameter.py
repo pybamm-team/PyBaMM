@@ -11,7 +11,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import sympy
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class Parameter(pybamm.Symbol):
@@ -48,7 +48,7 @@ class Parameter(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -244,7 +244,7 @@ class FunctionParameter(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
+        sympy = import_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
