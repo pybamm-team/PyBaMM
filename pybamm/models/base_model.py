@@ -13,7 +13,6 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-import sympy
 
 
 class BaseModel:
@@ -1364,8 +1363,7 @@ class BaseModel:
         This will return first five model equations
         >>> model.latexify(newline=False)[1:5]
         """
-        if sympy:
-            from pybamm.expression_tree.operations.latexify import Latexify
+        from pybamm.expression_tree.operations.latexify import Latexify
 
         return Latexify(self, filename, newline).latexify(
             output_variables=output_variables
