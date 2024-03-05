@@ -611,8 +611,9 @@ class BaseModel:
                             f"└─{'─' * max_param_name_length}─┴─{'─' * max_param_type_length}─┘",
                         ]
                     )
-
-                    print("\n".join(table) + "\n")
+                    table = "\n".join(table) + "\n"
+                    table.encode("utf-8")
+                    print(table)
 
         else:
             info = self.get_parameter_info()
@@ -643,7 +644,9 @@ class BaseModel:
                 ]
             )
 
-            print("\n".join(table) + "\n")
+            table = "\n".join(table) + "\n"
+            table.encode("utf-8")
+            print(table)
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
