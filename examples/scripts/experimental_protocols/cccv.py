@@ -8,16 +8,16 @@ pybamm.set_logging_level("NOTICE")
 experiment = pybamm.Experiment(
     [
         (
-            "Discharge at 1C for 1 minute",
-            "Rest for 1 minute",
-            # "Charge at 5 A until 4.2 V",
-            # "Hold at 4.2 V until 10 mA",
-            # "Rest for 1 hour",
+            "Discharge at 1C until 2.5 V",
+            "Rest for 1 hour",
+            "Charge at 5 A until 4.2 V",
+            "Hold at 4.2 V until 10 mA",
+            "Rest for 1 hour",
         ),
     ]
-    * 10
+    * 3
 )
-model = pybamm.lithium_ion.SPM()
+model = pybamm.lithium_ion.DFN({"SEI": "ec reaction limited"})
 parameter_values = pybamm.ParameterValues("Chen2020")
 
 sim = pybamm.Simulation(
