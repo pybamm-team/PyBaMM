@@ -6,7 +6,7 @@ import unittest
 
 
 import pybamm
-from pybamm.util import import_optional_dependency
+import sympy
 
 
 class TestIndependentVariable(TestCase):
@@ -64,7 +64,6 @@ class TestIndependentVariable(TestCase):
         self.assertTrue(x.evaluates_on_edges("primary"))
 
     def test_to_equation(self):
-        sympy = import_optional_dependency("sympy")
         # Test print_name
         func = pybamm.IndependentVariable("a")
         func.print_name = "test"

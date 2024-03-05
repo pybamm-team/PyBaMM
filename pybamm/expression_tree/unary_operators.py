@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
+import sympy
 import pybamm
 from pybamm.util import import_optional_dependency
 from pybamm.type_definitions import DomainsType
@@ -108,7 +109,6 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = import_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -674,7 +674,6 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy = import_optional_dependency("sympy")
         return sympy.Integral(child, sympy.Symbol("xn"))
 
 
@@ -998,7 +997,6 @@ class BoundaryValue(BoundaryOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        sympy = import_optional_dependency("sympy")
         if (
             self.child.domain[0] in ["negative particle", "positive particle"]
             and self.side == "right"

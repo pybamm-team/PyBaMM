@@ -9,7 +9,7 @@ import numpy as np
 from scipy import special
 
 import pybamm
-from pybamm.util import import_optional_dependency
+import sympy
 
 
 def test_function(arg):
@@ -121,7 +121,6 @@ class TestFunction(TestCase):
         self.assertEqual(fun.name, "function (cos)")
 
     def test_to_equation(self):
-        sympy = import_optional_dependency("sympy")
         a = pybamm.Symbol("a", domain="test")
 
         # Test print_name
