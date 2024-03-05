@@ -13,7 +13,6 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-import sympy
 
 
 class BaseModel:
