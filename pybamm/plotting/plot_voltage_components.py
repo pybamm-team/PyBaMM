@@ -3,7 +3,7 @@
 #
 import numpy as np
 
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 from pybamm.simulation import Simulation
 from pybamm.solvers.solution import Solution
 
@@ -42,7 +42,7 @@ def plot_voltage_components(
         solution = input_data.solution
     elif isinstance(input_data, Solution):
         solution = input_data
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
     kwargs_fill = {"alpha": 0.6, **kwargs_fill}
