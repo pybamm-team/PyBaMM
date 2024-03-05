@@ -36,6 +36,8 @@ def set_environment_variables(env_dict, session):
     for key, value in env_dict.items():
         session.env[key] = value
 
+    session.env["PYTHONIOENCODING"] = "utf-8"
+
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
