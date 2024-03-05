@@ -22,8 +22,8 @@ RUN mkdir /home/pybamm/.local
 ENV CMAKE_C_COMPILER=/usr/bin/gcc
 ENV CMAKE_CXX_COMPILER=/usr/bin/g++
 ENV CMAKE_MAKE_PROGRAM=/usr/bin/make
-ENV SUNDIALS_INST=/root/.local 
-ENV LD_LIBRARY_PATH=/root/.local/lib64
+ENV SUNDIALS_INST=/home/pybamm/.local
+ENV LD_LIBRARY_PATH=/home/pybamm/.local/lib
 
 #RUN conda create -n pybamm python=3.11
 #RUN conda init --all
@@ -39,7 +39,9 @@ RUN usermod -aG wheel pybamm
 RUN pip install --upgrade setuptools wheel wget
 RUN pip install cmake
 RUN source /home/pybamm/venv/bin/activate
+RUN python scripts/install_KLU_Sundials.py --install-dir /home/pybamm/.local
 RUN python scripts/install_KLU_Sundials.py 
+RUN mv /home/pybamm/.local/lib64 /home/pybamm/.local/lib
 RUN rm -rf pybind11 
 RUN git clone https://github.com/pybind/pybind11.git
 RUN pip install -e ".[all,dev,docs,jax,odes]" # ODES is not installing, installation path /root/.local in centos 
