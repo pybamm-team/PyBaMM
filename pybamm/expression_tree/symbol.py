@@ -5,6 +5,7 @@ from __future__ import annotations
 import numbers
 
 import numpy as np
+import sympy
 from scipy.sparse import csr_matrix, issparse
 from functools import cached_property
 from typing import TYPE_CHECKING, Sequence, cast
@@ -1058,7 +1059,6 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
-        sympy = have_optional_dependency("sympy")
         return sympy.Symbol(str(self.name))
 
     def to_json(self):

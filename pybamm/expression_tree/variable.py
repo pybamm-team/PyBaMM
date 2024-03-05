@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import numbers
 import pybamm
-from pybamm.util import have_optional_dependency
+import sympy
 from pybamm.type_definitions import (
     DomainType,
     AuxiliaryDomainType,
@@ -135,7 +135,6 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:

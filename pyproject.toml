@@ -41,6 +41,8 @@ dependencies = [
     "casadi>=3.6.3",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
+    "sympy>=1.12",
+    "typing-extensions>=4.10.0",
 ]
 
 [project.urls]
@@ -85,10 +87,6 @@ plot = [
 # For the Citations class
 cite = [
     "pybtex>=0.24.0",
-]
-# To generate LaTeX strings
-latexify = [
-    "sympy>=1.12",
 ]
 # Battery Parameter eXchange format
 bpx = [
