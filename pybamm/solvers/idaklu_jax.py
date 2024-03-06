@@ -344,11 +344,10 @@ class IDAKLUJax:
         def __hash__(self):
             return hash(tuple(sorted(self.items())))
 
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def _cached_solve(solver, model, t_hashable, *args, **kwargs):
+    @lru_cache(maxsize=1)  # noqa: B019
+    def _cached_solve(self, model, t_hashable, *args, **kwargs):
         """Cache the last solve for reuse"""
-        return solver.solve(model, t_hashable, *args, **kwargs)
+        return self.solve(model, t_hashable, *args, **kwargs)
 
     def _jaxify_solve(self, t, invar, *inputs_values):
         """Solve the model using the IDAKLU solver
