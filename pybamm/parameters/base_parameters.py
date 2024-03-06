@@ -34,14 +34,14 @@ class BaseParameters:
                             raise AttributeError(
                                 f"param.{name} does not exist. It has been renamed to "
                                 f"param.{domain}.{name_without_domain}"
-                            ) from None
+                            ) from e
                         elif hasattr(self_domain, "prim") and hasattr(
                             self_domain.prim, name_without_domain
                         ):
                             raise AttributeError(
                                 f"param.{name} does not exist. It has been renamed to "
                                 f"param.{domain}.prim.{name_without_domain}"
-                            ) from None
+                            ) from e
                         else:
                             raise e
                     else:

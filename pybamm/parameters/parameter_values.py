@@ -151,7 +151,7 @@ class ParameterValues:
                     "density for the lithium plating reaction in a porous negative "
                     "electrode. To avoid this error, change your parameter file to use "
                     "the new name."
-                ) from None
+                ) from err
             else:
                 raise err
 
@@ -251,7 +251,7 @@ class ParameterValues:
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
-                    ) from None
+                    ) from err
             # if no conflicts, update
             if isinstance(value, str):
                 if (

@@ -166,9 +166,9 @@ class Citations:
                 # Add to _papers_to_cite set
                 self._papers_to_cite.add(key)
                 return
-        except PybtexError:
+        except PybtexError as error:
             # Unable to parse / unknown key
-            raise KeyError(f"Not a bibtex citation or known citation: {key}") from None
+            raise KeyError(f"Not a bibtex citation or known citation: {key}") from error
 
     def _tag_citations(self):
         """Prints the citation tags for the citations that have been registered

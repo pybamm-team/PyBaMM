@@ -339,7 +339,7 @@ class BaseSolver:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, "
                     f"model should be discretised before solving ({e})"
-                ) from None
+                ) from e
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
@@ -686,7 +686,7 @@ class BaseSolver:
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
                 f"Could not find consistent states: {e.args[0]}"
-            ) from None
+            ) from e
         pybamm.logger.debug("Found consistent states")
 
         self.check_extrapolation(root_sol, model.events)

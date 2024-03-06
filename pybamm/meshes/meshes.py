@@ -102,7 +102,7 @@ class Mesh(dict):
                                         "geometry. Make sure that something like "
                                         "`param.process_geometry(geometry)` has been "
                                         "run."
-                                    ) from None
+                                    ) from error
                                 else:
                                     raise error
                         elif isinstance(sym, numbers.Number):

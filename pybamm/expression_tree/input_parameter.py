@@ -100,8 +100,8 @@ class InputParameter(pybamm.Symbol):
         try:
             input_eval = inputs[self.name]
         # raise more informative error if can't find name in dict
-        except KeyError:
-            raise KeyError(f"Input parameter '{self.name}' not found") from None
+        except KeyError as error:
+            raise KeyError(f"Input parameter '{self.name}' not found") from error
 
         if isinstance(input_eval, numbers.Number):
             input_size = 1

@@ -57,7 +57,7 @@ class FuzzyDict(dict):
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
-        except KeyError:
+        except KeyError as error:
             if "electrode diffusivity" in key:
                 warn(
                     f"The parameter '{key}' has been renamed to '{key.replace('electrode', 'particle')}'",
@@ -71,7 +71,7 @@ class FuzzyDict(dict):
                     f"Variable '{domain} electrode SOC' has been renamed to "
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
-                ) from None
+                ) from error
             if "Measured open circuit voltage" in key:
                 raise KeyError(
                     "The variable that used to be called "
@@ -80,28 +80,28 @@ class FuzzyDict(dict):
                     "variable called 'Bulk open-circuit voltage [V]' which is the"
                     "open-circuit voltage evaluated at the average particle "
                     "concentrations."
-                ) from None
+                ) from error
             if "Open-circuit voltage at 0% SOC [V]" in key:
                 raise KeyError(
                     "Parameter 'Open-circuit voltage at 0% SOC [V]' not found."
                     "In most cases this should be set to be equal to "
                     "'Lower voltage cut-off [V]'"
-                ) from None
+                ) from error
             if "Open-circuit voltage at 100% SOC [V]" in key:
                 raise KeyError(
                     "Parameter 'Open-circuit voltage at 100% SOC [V]' not found."
                     "In most cases this should be set to be equal to "
                     "'Upper voltage cut-off [V]'"
-                ) from None
+                ) from error
             best_matches = self.get_best_matches(key)
             for k in best_matches:
                 if key in k and k.endswith("]"):
                     raise KeyError(
                         f"'{key}' not found. Use the dimensional version '{k}' instead."
-                    ) from None
+                    ) from error
             raise KeyError(
                 f"'{key}' not found. Best matches are {best_matches}"
-            ) from None
+            ) from error
 
     def search(self, key, print_values=False):
         """
@@ -374,6 +374,6 @@ def have_optional_dependency(module_name, attribute=None):
             # Return the entire module if no attribute is specified
             return module
 
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as error:
         # Raise an ModuleNotFoundError if the module or attribute is not available
-        raise ModuleNotFoundError(err_msg) from None
+        raise ModuleNotFoundError(err_msg) from error

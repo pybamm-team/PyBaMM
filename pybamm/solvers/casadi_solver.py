@@ -287,7 +287,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                     + " Set `return_solution_if_failed_early=True` to "
                                     "return the solution object up to the point where "
                                     "failure occured."
-                                ) from None
+                                ) from error
                 if termination_due_to_small_dt:
                     break
                 # Check if the sign of an event changes, if so find an accurate
@@ -684,7 +684,7 @@ class CasadiSolver(pybamm.BaseSolver):
             except RuntimeError as error:
                 # If it doesn't work raise error
                 pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                raise pybamm.SolverError(error.args[0]) from None
+                raise pybamm.SolverError(error.args[0]) from error
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
             # Manually add initial conditions and concatenate
@@ -722,7 +722,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 except RuntimeError as error:
                     # If it doesn't work raise error
                     pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                    raise pybamm.SolverError(error.args[0]) from None
+                    raise pybamm.SolverError(error.args[0]) from error
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
                 z = casadi_sol["zf"]

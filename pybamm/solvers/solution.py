@@ -297,11 +297,11 @@ class Solution:
                 self._y = casadi.horzcat(*self.all_ys)
             else:
                 self._y = np.hstack(self.all_ys)
-        except ValueError:
+        except ValueError as error:
             raise pybamm.SolverError(
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
-            ) from None
+            ) from error
 
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
@@ -980,11 +980,11 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
 
         try:
             esoh_sol = esoh_solver.solve(inputs)
-        except pybamm.SolverError:  # pragma: no cover
+        except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
-            ) from None
+            ) from error
 
         cycle_summary_variables.update(esoh_sol)
 

@@ -881,7 +881,7 @@ class Symbol:
                 return None
             raise pybamm.ShapeError(
                 f"Cannot find shape (original error: {error})"
-            ) from None  # pragma: no cover
+            ) from error  # pragma: no cover
         return result
 
     def evaluates_to_number(self):
@@ -1046,9 +1046,7 @@ class Symbol:
         try:
             self.shape_for_testing
         except ValueError as e:
-            raise pybamm.ShapeError(
-                f"Cannot find shape (original error: {e})"
-            ) from None
+            raise pybamm.ShapeError(f"Cannot find shape (original error: {e})") from e
 
     @property
     def print_name(self):

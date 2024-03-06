@@ -888,14 +888,14 @@ class Discretisation:
             # model.check_well_posedness, but won't be if debug_mode is False
             try:
                 y_slices = self.y_slices[symbol]
-            except KeyError:
+            except KeyError as error:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
                     """.format(symbol.name)
-                ) from None
+                ) from error
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
             return symbol.reference + symbol.scale * pybamm.StateVector(

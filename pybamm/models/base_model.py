@@ -599,7 +599,7 @@ class BaseModel:
                                 )
                                 + "Check the selected "
                                 "submodels provide all of the required variables."
-                            ) from None
+                            ) from key
                         else:
                             # try setting coupled variables on next loop through
                             pybamm.logger.debug(
@@ -688,7 +688,7 @@ class BaseModel:
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
                         f"'{e.args[0]}' was not found."
-                    ) from None
+                    ) from e
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 0:
@@ -712,7 +712,7 @@ class BaseModel:
                             "model.initial_conditions must appear in the solution with "
                             "the same key as the variable name. In the solution "
                             f"provided, {e.args[0]}"
-                        ) from None
+                        ) from e
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:
@@ -1014,7 +1014,7 @@ class BaseModel:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, model should be "
                     f"discretised before exporting casadi functions ({e})"
-                ) from None
+                ) from e
 
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
