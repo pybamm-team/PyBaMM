@@ -11,7 +11,7 @@ import warnings
 import sys
 from functools import lru_cache
 from datetime import timedelta
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 from pybamm.expression_tree.operations.serialise import Serialise
 
@@ -699,7 +699,7 @@ class Simulation:
 
             # check if a user has tqdm installed
             if showprogress:
-                tqdm = have_optional_dependency("tqdm")
+                tqdm = import_optional_dependency("tqdm")
                 cycle_lengths = tqdm.tqdm(
                     self.experiment.cycle_lengths,
                     desc="Cycling",

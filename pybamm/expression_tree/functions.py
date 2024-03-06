@@ -10,7 +10,7 @@ from typing import Sequence, Callable
 from typing_extensions import TypeVar
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class Function(pybamm.Symbol):
@@ -98,7 +98,7 @@ class Function(pybamm.Symbol):
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.
         """
-        autograd = have_optional_dependency("autograd")
+        autograd = import_optional_dependency("autograd")
         # Store differentiated function, needed in case we want to convert to CasADi
         if self.derivative == "autograd":
             return Function(
