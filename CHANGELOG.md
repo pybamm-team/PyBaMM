@@ -18,7 +18,7 @@
 
 ## Optimizations
 
-- Changed xarray.DataArray initialization to be lazy, only gets called if interpolation is needed ([#3862](https://github.com/pybamm-team/PyBaMM/pull/3862))
+- Sped up initialization of a `ProcessedVariable` by making the internal `xarray.DataArray` initialization lazy (only gets created if interpolation is needed) ([#3862](https://github.com/pybamm-team/PyBaMM/pull/3862))
 
 ## Breaking changes
 
