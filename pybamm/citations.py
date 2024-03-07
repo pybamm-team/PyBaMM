@@ -73,7 +73,7 @@ class Citations:
         by passing a BibTeX citation to :meth:`register`.
         """
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
-        parse_file = have_optional_dependency("bibtexparser", "parse_file")
+        parse_file = import_optional_dependency("bibtexparser", "parse_file")
         bib_data = parse_file(citations_file)
         entries = bib_data.entries
         for entry in entries:
@@ -85,7 +85,7 @@ class Citations:
         """
 
         # Check input types are correct
-        Entry = have_optional_dependency("bibtexparser.model", "Entry")
+        Entry = import_optional_dependency("bibtexparser.model", "Entry")
         if not isinstance(key, str) or not isinstance(entry, Entry):
             raise TypeError()
 
@@ -153,7 +153,7 @@ class Citations:
 
         # Parse string as a bibtex citation, and check that a citation was found
         try:
-            parse_string = have_optional_dependency("bibtexparser", "parse_string")
+            parse_string = import_optional_dependency("bibtexparser", "parse_string")
             bib_data = parse_string(key)
             if not bib_data.entries:
                 raise Exception("no entries found")
@@ -239,7 +239,7 @@ class Citations:
                     f.write(self._string_formatting(entry))
 
     def _string_formatting(self, entry):
-        bibtexparser = have_optional_dependency("bibtexparser")
+        bibtexparser = import_optional_dependency("bibtexparser")
         if not isinstance(entry, bibtexparser.model.Entry):
             raise TypeError(
                 "Input for string formatting must be an instance of bibtexparser.model.Entry"

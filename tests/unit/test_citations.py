@@ -117,7 +117,7 @@ class TestCitations(unittest.TestCase):
     def test_string_formatting(self):
         """Test type validation of ``_string_formatting``"""
         with self.assertRaisesRegex(TypeError, "Input for string formatting"):
-            pybamm.citations._string_formatting("NotAEntry")
+            pybamm.citations._string_formatting("NotAnEntry")
 
     def test_andersson_2019(self):
         citations = pybamm.citations

@@ -119,7 +119,7 @@ class TestUtil(TestCase):
                 sym.visualise(test_name)
 
         sys.modules["bibtexparser"] = bibtexparser
-        pybamm.util.have_optional_dependency("bibtexparser")
+        pybamm.util.import_optional_dependency("bibtexparser")
         pybamm.print_citations()
 
 
