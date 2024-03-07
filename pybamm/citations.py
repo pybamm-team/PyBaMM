@@ -7,6 +7,7 @@ import pybamm
 import warnings
 import os
 from sys import _getframe
+from pybamm.util import import_optional_dependency
 
 
 class Citations:
