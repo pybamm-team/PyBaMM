@@ -3,7 +3,7 @@ WORKDIR /
 
 # Install the necessary dependencies
 RUN yum update && yum upgrade
-RUN yum -y install openblas-devel gcc gcc-gfortran graphviz git cmake pandoc texlive-* wget dvipng python-devel  
+RUN yum -y install openblas-devel gcc gcc-gfortran graphviz git cmake pandoc texlive-* wget dvipng python-devel
 RUN yum -y groupinstall "Development Tools"
 
 RUN useradd -m -s /bin/bash pybamm
@@ -40,10 +40,9 @@ python scripts/install_KLU_Sundials.py && \
 mv /home/pybamm/.local/lib64 /home/pybamm/.local/lib && \
 rm -rf pybind11 && \
 git clone https://github.com/pybind/pybind11.git && \
-pip install -e ".[all,dev,docs,jax,odes]"; 
+pip install -e ".[all,dev,docs,jax,odes]";
 
 USER pybamm
 RUN source /home/pybamm/venv/bin/activate
 
 ENTRYPOINT ["/bin/bash"]
-
