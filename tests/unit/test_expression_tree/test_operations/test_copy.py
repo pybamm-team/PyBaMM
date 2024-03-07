@@ -12,6 +12,7 @@ class TestCopy(TestCase):
     def test_symbol_new_copy(self):
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
+        c = pybamm.IndependentVariable("Variable_c")
         v_n = pybamm.Variable("v", "negative electrode")
         v_n_2D = pybamm.Variable(
             "v",
@@ -32,6 +33,7 @@ class TestCopy(TestCase):
             a**b,
             -a,
             abs(a),
+            c,
             pybamm.Function(np.sin, a),
             pybamm.FunctionParameter("function", {"a": a}),
             pybamm.grad(v_n),
@@ -196,6 +198,22 @@ class TestCopy(TestCase):
             pybamm.SparseStack(mat, mat).new_copy(new_children=[mat_b, mat_b]),
             pybamm.SparseStack(mat_b, mat_b),
         )
+
+    def test_binary_new_copy_new_children_error(self):
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+
+        with self.assertRaisesRegex(ValueError, "must have exactly two children"):
+            (a + b).new_copy(new_children=[a])
+
+    def test_unary_new_copy_new_children_error(self):
+        vec = pybamm.Vector([1, 2, 3, 4, 5])
+        vec_b = pybamm.Vector([6, 7, 8, 9, 10])
+
+        I = pybamm.Index(vec, 1)
+
+        with self.assertRaisesRegex(ValueError, "must have exactly one child"):
+            I.new_copy(new_children=[vec, vec_b])
 
 
 if __name__ == "__main__":

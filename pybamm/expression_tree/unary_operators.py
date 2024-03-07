@@ -64,7 +64,9 @@ class UnaryOperator(pybamm.Symbol):
             new_child = self.child.new_copy()
         else:
             if len(new_children) > 1:
-                raise ValueError("Can only have one child for a unary operator")
+                raise ValueError(
+                    f"Unary operator of type {type(self)} must have exactly one child."
+                )
             new_child = new_children[0]
         new_symbol = self._unary_new_copy(new_child)
         new_symbol.copy_domains(self)
