@@ -5,6 +5,7 @@ import pybamm
 import numpy as np
 from datetime import datetime
 from .step_termination import _read_termination
+import numbers
 
 _examples = """
 
@@ -343,7 +344,7 @@ _type_to_units = {
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
     # If the time is a number, assume it is in seconds
-    if isinstance(time_and_units, (int, float, np.int64)) or time_and_units is None:
+    if isinstance(time_and_units, numbers.Number) or time_and_units is None:
         return time_and_units
 
     # Split number and units
