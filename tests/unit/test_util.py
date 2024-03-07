@@ -48,7 +48,7 @@ class TestUtil(TestCase):
                 "SEI current": 3,
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
-                "Positive particle diffusivity [m2.s-1]": 6,
+                "Positive electrode diffusivity [m2.s-1]": 6,
             }
         )
         self.assertEqual(d["test"], 1)
