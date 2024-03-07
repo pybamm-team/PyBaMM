@@ -82,7 +82,7 @@ jobs:
       # create a pull request updating versions in develop
       - name: Create Pull Request
         id: version_pr
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           delete-branch: true
           branch-suffix: short-commit-hash

@@ -99,7 +99,7 @@ class TestUtil(TestCase):
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
 
-    def test_have_optional_dependency(self):
+    def test_import_optional_dependency(self):
         with self.assertRaisesRegex(
             ModuleNotFoundError, "Optional dependency bibtexparser is not available."
         ):

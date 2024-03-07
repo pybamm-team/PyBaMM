@@ -109,6 +109,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
 
     notebooks/solvers/dae-solver.ipynb
     notebooks/solvers/ode-solver.ipynb
+    notebooks/solvers/idaklu-jax-interface.ipynb
     notebooks/solvers/speed-up-solver.ipynb
 
 .. nbgallery::
