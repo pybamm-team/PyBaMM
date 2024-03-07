@@ -3,7 +3,7 @@
 #
 import pybamm
 from .quick_plot import ax_min, ax_max
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 def plot2D(x, y, z, ax=None, show_plot=True, **kwargs):
@@ -27,7 +27,7 @@ def plot2D(x, y, z, ax=None, show_plot=True, **kwargs):
         only display the plot after plt.show() has been called.
 
     """
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     if not isinstance(x, pybamm.Array):
         raise TypeError("x must be 'pybamm.Array'")
