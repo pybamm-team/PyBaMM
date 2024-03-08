@@ -649,7 +649,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 number_of_samples = sol.y.shape[0] // number_of_timesteps
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
-                for _vark, var in enumerate(self.output_variables):
+                for _, var in enumerate(self.output_variables):
                     # ExplicitTimeIntegral's are not computed as part of the solver and
                     # do not need to be converted
                     if isinstance(

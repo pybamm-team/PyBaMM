@@ -883,8 +883,8 @@ class BaseModel:
                 ]
             )
             all_vars_in_eqns.update(vars_in_eqns)
-        for _var, side_eqn in self.boundary_conditions.items():
-            for _side, (eqn, _typ) in side_eqn.items():
+        for _, side_eqn in self.boundary_conditions.items():
+            for _, (eqn, _) in side_eqn.items():
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 

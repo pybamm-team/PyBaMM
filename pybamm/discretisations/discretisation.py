@@ -280,7 +280,7 @@ class Discretisation:
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains
                 )
-                for _i in range(sec_points):
+                for _ in range(sec_points):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
