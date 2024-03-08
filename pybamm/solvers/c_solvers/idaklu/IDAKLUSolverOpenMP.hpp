@@ -2,10 +2,6 @@
 #define PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
 
 #include "IDAKLUSolver.hpp"
-#include <casadi/casadi.hpp>
-using Function = casadi::Function;
-
-#include "CasadiFunctions.hpp"
 #include "common.hpp"
 #include "Options.hpp"
 #include "Solution.hpp"
@@ -40,6 +36,7 @@ using Function = casadi::Function;
  *   19. Destroy objects
  *   20. (N/A) Finalize MPI
  */
+template <class CExpressionSet>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
@@ -63,7 +60,7 @@ public:
   int jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
-  std::unique_ptr<CasadiFunctions> functions;
+  std::unique_ptr<CExpressionSet> functions;
   realtype *res = nullptr;
   realtype *res_dvar_dy = nullptr;
   realtype *res_dvar_dp = nullptr;
@@ -86,7 +83,7 @@ public:
     int jac_times_cjmass_nnz,
     int jac_bandwidth_lower,
     int jac_bandwidth_upper,
-    std::unique_ptr<CasadiFunctions> functions,
+    std::unique_ptr<CExpressionSet> functions,
     const Options& options);
 
   /**

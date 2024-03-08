@@ -1,14 +1,8 @@
 #ifndef PYBAMM_IDAKLU_CASADI_SOLVER_HPP
 #define PYBAMM_IDAKLU_CASADI_SOLVER_HPP
 
-#include <casadi/casadi.hpp>
-using Function = casadi::Function;
-
-#include "CasadiFunctions.hpp"
 #include "common.hpp"
-#include "Options.hpp"
 #include "Solution.hpp"
-#include "sundials_legacy_wrapper.hpp"
 
 /**
  * Abstract base class for solutions that can use different solvers and vector

@@ -12,6 +12,7 @@
 #include "idaklu/IdakluJax.hpp"
 #include "idaklu/common.hpp"
 #include "idaklu/python.hpp"
+#include "idaklu/CasadiFunctions.hpp"
 
 Function generate_function(const std::string &data)
 {
@@ -59,7 +60,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
 
-  m.def("create_casadi_solver", &create_idaklu_solver,
+  m.def("create_casadi_solver", &create_idaklu_solver<CasadiFunctions>,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),
@@ -136,8 +137,8 @@ PYBIND11_MODULE(idaklu, m)
   py::class_<Function>(m, "Function");
 
   py::class_<Solution>(m, "solution")
-  .def_readwrite("t", &Solution::t)
-  .def_readwrite("y", &Solution::y)
-  .def_readwrite("yS", &Solution::yS)
-  .def_readwrite("flag", &Solution::flag);
+    .def_readwrite("t", &Solution::t)
+    .def_readwrite("y", &Solution::y)
+    .def_readwrite("yS", &Solution::yS)
+    .def_readwrite("flag", &Solution::flag);
 }

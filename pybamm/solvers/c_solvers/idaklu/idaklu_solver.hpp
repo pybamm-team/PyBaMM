@@ -1,6 +1,8 @@
 #ifndef PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
 #define PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
 
+#include "common.hpp"
+#include "CasadiFunctions.hpp"
 #include "IDAKLUSolver.hpp"
 
 /**
@@ -8,6 +10,7 @@
  * options_cpp.linear_solver.
  * @brief Create a concrete casadi solver given a linear solver
  */
+template <class CExpressionSet>
 IDAKLUSolver *create_idaklu_solver(
   int number_of_states,
   int number_of_parameters,

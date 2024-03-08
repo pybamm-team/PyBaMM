@@ -3,8 +3,10 @@
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
+#include "CasadiFunctions.hpp"
 
-IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
+template <class CExpressionSet>
+IDAKLUSolverOpenMP<CExpressionSet>::IDAKLUSolverOpenMP(
   np_array atol_np,
   double rel_tol,
   np_array rhs_alg_id,
@@ -13,7 +15,7 @@ IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   int jac_times_cjmass_nnz,
   int jac_bandwidth_lower,
   int jac_bandwidth_upper,
-  std::unique_ptr<CasadiFunctions> functions_arg,
+  std::unique_ptr<CExpressionSet> functions_arg,
   const Options &options
 ) :
   atol_np(atol_np),
@@ -77,7 +79,8 @@ IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   }
 }
 
-void IDAKLUSolverOpenMP::AllocateVectors() {
+template <class CExpression>
+void IDAKLUSolverOpenMP<CExpression>::AllocateVectors() {
   // Create vectors
   yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
@@ -85,7 +88,8 @@ void IDAKLUSolverOpenMP::AllocateVectors() {
   id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
 }
 
-void IDAKLUSolverOpenMP::SetMatrix() {
+template <class CExpression>
+void IDAKLUSolverOpenMP<CExpression>::SetMatrix() {
   // Create Matrix object
   if (options.jacobian == "sparse")
   {
@@ -124,7 +128,8 @@ void IDAKLUSolverOpenMP::SetMatrix() {
     throw std::invalid_argument("Unsupported matrix requested");
 }
 
-void IDAKLUSolverOpenMP::Initialize() {
+template <class CExpression>
+void IDAKLUSolverOpenMP<CExpression>::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
@@ -167,7 +172,8 @@ void IDAKLUSolverOpenMP::Initialize() {
   IDASetId(ida_mem, id);
 }
 
-IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP()
+template <class CExpression>
+IDAKLUSolverOpenMP<CExpression>::~IDAKLUSolverOpenMP()
 {
   // Free memory
   if (number_of_parameters > 0)
@@ -190,7 +196,8 @@ IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP()
   SUNContext_Free(&sunctx);
 }
 
-void IDAKLUSolverOpenMP::CalcVars(
+template <class CExpression>
+void IDAKLUSolverOpenMP<CExpression>::CalcVars(
     realtype *y_return,
     size_t length_of_return_vector,
     size_t t_i,
@@ -212,7 +219,8 @@ void IDAKLUSolverOpenMP::CalcVars(
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
 }
 
-void IDAKLUSolverOpenMP::CalcVarsSensitivities(
+template <class CExpression>
+void IDAKLUSolverOpenMP<CExpression>::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
     const std::vector<realtype*>& ySval,
@@ -247,7 +255,8 @@ void IDAKLUSolverOpenMP::CalcVarsSensitivities(
   }
 }
 
-Solution IDAKLUSolverOpenMP::solve(
+template <class CExpression>
+Solution IDAKLUSolverOpenMP<CExpression>::solve(
     np_array t_np,
     np_array y0_np,
     np_array yp0_np,

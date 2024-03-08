@@ -6,6 +6,7 @@
 #include <idas/idas.h>
 #include <memory>
 
+template <class CExpressionSet>
 IDAKLUSolver *create_idaklu_solver(
   int number_of_states,
   int number_of_parameters,
@@ -31,7 +32,7 @@ IDAKLUSolver *create_idaklu_solver(
   py::dict options
 ) {
   auto options_cpp = Options(options);
-  auto functions = std::make_unique<CasadiFunctions>(
+  auto functions = std::make_unique<CExpressionSet>(
     rhs_alg,
     jac_times_cjmass,
     jac_times_cjmass_nnz,
@@ -59,7 +60,7 @@ IDAKLUSolver *create_idaklu_solver(
   if (options_cpp.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
-    idakluSolver = new IDAKLUSolverOpenMP_Dense(
+    idakluSolver = new IDAKLUSolverOpenMP_Dense<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -75,7 +76,7 @@ IDAKLUSolver *create_idaklu_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
-    idakluSolver = new IDAKLUSolverOpenMP_KLU(
+    idakluSolver = new IDAKLUSolverOpenMP_KLU<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -91,7 +92,7 @@ IDAKLUSolver *create_idaklu_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");
-    idakluSolver = new IDAKLUSolverOpenMP_Band(
+    idakluSolver = new IDAKLUSolverOpenMP_Band<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -107,7 +108,7 @@ IDAKLUSolver *create_idaklu_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
-    idakluSolver = new IDAKLUSolverOpenMP_SPBCGS(
+    idakluSolver = new IDAKLUSolverOpenMP_SPBCGS<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -123,7 +124,7 @@ IDAKLUSolver *create_idaklu_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPFGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
-    idakluSolver = new IDAKLUSolverOpenMP_SPFGMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPFGMR<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -139,7 +140,7 @@ IDAKLUSolver *create_idaklu_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-    idakluSolver = new IDAKLUSolverOpenMP_SPGMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPGMR<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -155,7 +156,7 @@ IDAKLUSolver *create_idaklu_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPTFQMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-    idakluSolver = new IDAKLUSolverOpenMP_SPTFQMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPTFQMR<CExpressionSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
