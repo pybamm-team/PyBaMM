@@ -4,10 +4,10 @@
 #include <casadi/casadi.hpp>
 using Function = casadi::Function;
 
-#include "casadi_functions.hpp"
+#include "CasadiFunctions.hpp"
 #include "common.hpp"
-#include "options.hpp"
-#include "solution.hpp"
+#include "Options.hpp"
+#include "Solution.hpp"
 #include "sundials_legacy_wrapper.hpp"
 
 /**
@@ -15,19 +15,19 @@ using Function = casadi::Function;
  * implementations.
  * @brief An abstract base class for the Idaklu solver
  */
-class CasadiSolver
+class IDAKLUSolver
 {
 public:
 
   /**
    * @brief Default constructor
    */
-  CasadiSolver() = default;
+  IDAKLUSolver() = default;
 
   /**
    * @brief Default destructor
    */
-  ~CasadiSolver() = default;
+  ~IDAKLUSolver() = default;
 
   /**
    * @brief Abstract solver method that returns a Solution class

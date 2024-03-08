@@ -1,14 +1,14 @@
 #ifndef PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
 #define PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
 
-#include "CasadiSolver.hpp"
+#include "IDAKLUSolver.hpp"
 #include <casadi/casadi.hpp>
 using Function = casadi::Function;
 
-#include "casadi_functions.hpp"
+#include "CasadiFunctions.hpp"
 #include "common.hpp"
-#include "options.hpp"
-#include "solution.hpp"
+#include "Options.hpp"
+#include "Solution.hpp"
 #include "sundials_legacy_wrapper.hpp"
 
 /**
@@ -40,7 +40,7 @@ using Function = casadi::Function;
  *   19. Destroy objects
  *   20. (N/A) Finalize MPI
  */
-class CasadiSolverOpenMP : public CasadiSolver
+class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
   //     these members as unused even though they are important in child
@@ -77,7 +77,7 @@ public:
   /**
    * @brief Constructor
    */
-  CasadiSolverOpenMP(
+  IDAKLUSolverOpenMP(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -92,7 +92,7 @@ public:
   /**
    * @brief Destructor
    */
-  ~CasadiSolverOpenMP();
+  ~IDAKLUSolverOpenMP();
 
   /**
    * Evaluate casadi functions (including sensitivies) for each requested

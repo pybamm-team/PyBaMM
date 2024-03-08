@@ -8,8 +8,8 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
-#include "idaklu/casadi_solver.hpp"
-#include "idaklu/idaklu_jax.hpp"
+#include "idaklu/idaklu_solver.hpp"
+#include "idaklu/IdakluJax.hpp"
 #include "idaklu/common.hpp"
 #include "idaklu/python.hpp"
 
@@ -50,8 +50,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("number_of_sensitivity_parameters"),
     py::return_value_policy::take_ownership);
 
-  py::class_<CasadiSolver>(m, "CasadiSolver")
-  .def("solve", &CasadiSolver::solve,
+  py::class_<IDAKLUSolver>(m, "IDAKLUSolver")
+  .def("solve", &IDAKLUSolver::solve,
     "perform a solve",
     py::arg("t"),
     py::arg("y0"),
@@ -59,7 +59,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
 
-  m.def("create_casadi_solver", &create_casadi_solver,
+  m.def("create_casadi_solver", &create_idaklu_solver,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),

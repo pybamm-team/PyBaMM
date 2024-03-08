@@ -1,14 +1,14 @@
 #ifndef PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
 #define PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
 
-#include "CasadiSolver.hpp"
+#include "IDAKLUSolver.hpp"
 
 /**
  * Creates a concrete casadi solver given a linear solver, as specified in
  * options_cpp.linear_solver.
  * @brief Create a concrete casadi solver given a linear solver
  */
-CasadiSolver *create_casadi_solver(
+IDAKLUSolver *create_idaklu_solver(
   int number_of_states,
   int number_of_parameters,
   const Function &rhs_alg,

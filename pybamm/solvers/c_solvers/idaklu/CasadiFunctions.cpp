@@ -1,4 +1,4 @@
-#include "casadi_functions.hpp"
+#include "CasadiFunctions.hpp"
 
 CasadiFunction::CasadiFunction(const Function &f) : m_func(f)
 {

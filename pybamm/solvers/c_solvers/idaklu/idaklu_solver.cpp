@@ -1,12 +1,12 @@
-#include "casadi_solver.hpp"
-#include "CasadiSolver.hpp"
-#include "CasadiSolverOpenMP_solvers.hpp"
+#include "idaklu_solver.hpp"
+#include "IDAKLUSolver.hpp"
+#include "IDAKLUSolverOpenMP_solvers.hpp"
 #include "casadi_sundials_functions.hpp"
 #include "common.hpp"
 #include <idas/idas.h>
 #include <memory>
 
-CasadiSolver *create_casadi_solver(
+IDAKLUSolver *create_idaklu_solver(
   int number_of_states,
   int number_of_parameters,
   const Function &rhs_alg,
@@ -53,13 +53,13 @@ CasadiSolver *create_casadi_solver(
     options_cpp
   );
 
-  CasadiSolver *casadiSolver = nullptr;
+  IDAKLUSolver *idakluSolver = nullptr;
 
   // Instantiate solver class
   if (options_cpp.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
-    casadiSolver = new CasadiSolverOpenMP_Dense(
+    idakluSolver = new IDAKLUSolverOpenMP_Dense(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -75,7 +75,7 @@ CasadiSolver *create_casadi_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
-    casadiSolver = new CasadiSolverOpenMP_KLU(
+    idakluSolver = new IDAKLUSolverOpenMP_KLU(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -91,7 +91,7 @@ CasadiSolver *create_casadi_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");
-    casadiSolver = new CasadiSolverOpenMP_Band(
+    idakluSolver = new IDAKLUSolverOpenMP_Band(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -107,7 +107,7 @@ CasadiSolver *create_casadi_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
-    casadiSolver = new CasadiSolverOpenMP_SPBCGS(
+    idakluSolver = new IDAKLUSolverOpenMP_SPBCGS(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -123,7 +123,7 @@ CasadiSolver *create_casadi_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPFGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
-    casadiSolver = new CasadiSolverOpenMP_SPFGMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPFGMR(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -139,7 +139,7 @@ CasadiSolver *create_casadi_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-    casadiSolver = new CasadiSolverOpenMP_SPGMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPGMR(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -155,7 +155,7 @@ CasadiSolver *create_casadi_solver(
   else if (options_cpp.linear_solver == "SUNLinSol_SPTFQMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-    casadiSolver = new CasadiSolverOpenMP_SPTFQMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPTFQMR(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -169,9 +169,9 @@ CasadiSolver *create_casadi_solver(
      );
   }
 
-  if (casadiSolver == nullptr) {
+  if (idakluSolver == nullptr) {
     throw std::invalid_argument("Unsupported solver requested");
   }
 
-  return casadiSolver;
+  return idakluSolver;
 }

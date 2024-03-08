@@ -1,10 +1,10 @@
-#include "CasadiSolverOpenMP.hpp"
+#include "IDAKLUSolverOpenMP.hpp"
 #include "casadi_sundials_functions.hpp"
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
 
-CasadiSolverOpenMP::CasadiSolverOpenMP(
+IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   np_array atol_np,
   double rel_tol,
   np_array rhs_alg_id,
@@ -28,8 +28,8 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
   options(options)
 {
   // Construction code moved to Initialize() which is called from the
-  // (child) CasadiSolver_XXX class constructors.
-  DEBUG("CasadiSolverOpenMP::CasadiSolverOpenMP");
+  // (child) IDAKLUSolver_XXX class constructors.
+  DEBUG("IDAKLUSolverOpenMP::IDAKLUSolverOpenMP");
   auto atol = atol_np.unchecked<1>();
 
   // create SUNDIALS context object
@@ -77,7 +77,7 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
   }
 }
 
-void CasadiSolverOpenMP::AllocateVectors() {
+void IDAKLUSolverOpenMP::AllocateVectors() {
   // Create vectors
   yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
@@ -85,7 +85,7 @@ void CasadiSolverOpenMP::AllocateVectors() {
   id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
 }
 
-void CasadiSolverOpenMP::SetMatrix() {
+void IDAKLUSolverOpenMP::SetMatrix() {
   // Create Matrix object
   if (options.jacobian == "sparse")
   {
@@ -124,7 +124,7 @@ void CasadiSolverOpenMP::SetMatrix() {
     throw std::invalid_argument("Unsupported matrix requested");
 }
 
-void CasadiSolverOpenMP::Initialize() {
+void IDAKLUSolverOpenMP::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
@@ -167,7 +167,7 @@ void CasadiSolverOpenMP::Initialize() {
   IDASetId(ida_mem, id);
 }
 
-CasadiSolverOpenMP::~CasadiSolverOpenMP()
+IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP()
 {
   // Free memory
   if (number_of_parameters > 0)
@@ -190,7 +190,7 @@ CasadiSolverOpenMP::~CasadiSolverOpenMP()
   SUNContext_Free(&sunctx);
 }
 
-void CasadiSolverOpenMP::CalcVars(
+void IDAKLUSolverOpenMP::CalcVars(
     realtype *y_return,
     size_t length_of_return_vector,
     size_t t_i,
@@ -212,7 +212,7 @@ void CasadiSolverOpenMP::CalcVars(
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
 }
 
-void CasadiSolverOpenMP::CalcVarsSensitivities(
+void IDAKLUSolverOpenMP::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
     const std::vector<realtype*>& ySval,
@@ -247,14 +247,14 @@ void CasadiSolverOpenMP::CalcVarsSensitivities(
   }
 }
 
-Solution CasadiSolverOpenMP::solve(
+Solution IDAKLUSolverOpenMP::solve(
     np_array t_np,
     np_array y0_np,
     np_array yp0_np,
     np_array_dense inputs
 )
 {
-  DEBUG("CasadiSolver::solve");
+  DEBUG("IDAKLUSolver::solve");
 
   int number_of_timesteps = t_np.request().size;
   auto t = t_np.unchecked<1>();
