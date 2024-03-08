@@ -8,7 +8,7 @@ on:
     branches:
     - main
 
-  # Run everyday at 3 am UTC
+  # Run every day at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
 
