@@ -5,7 +5,7 @@ WORKDIR /
 # Install the necessary dependencies
 RUN apt-get update && apt-get -y upgrade
 RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-essential cmake pandoc texlive-latex-extra dvipng
-RUN rm -rf /var/lib/apt/lists/* 
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash pybamm
 USER pybamm
@@ -29,7 +29,7 @@ RUN python3.11 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN pip install --upgrade setuptools wheel wget && \
-pip install cmake 
+pip install cmake
 RUN #!/bin/bash && \
 source /home/pybamm/venv/bin/activate;
 
