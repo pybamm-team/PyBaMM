@@ -41,7 +41,6 @@ add_subdirectory(${PYBIND11_DIR})
 pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/CasadiFunctions.cpp
   pybamm/solvers/c_solvers/idaklu/CasadiFunctions.hpp
-  pybamm/solvers/c_solvers/idaklu/idaklu_solver.cpp
   pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp
   pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp
   pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp

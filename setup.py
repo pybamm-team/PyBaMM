@@ -293,7 +293,6 @@ idaklu_ext = Extension(
     sources=[
         "pybamm/solvers/c_solvers/idaklu/CasadiFunctions.cpp",
         "pybamm/solvers/c_solvers/idaklu/CasadiFunctions.hpp",
-        "pybamm/solvers/c_solvers/idaklu/idaklu_solver.cpp",
         "pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp",

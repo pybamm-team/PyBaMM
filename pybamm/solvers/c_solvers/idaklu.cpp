@@ -14,9 +14,9 @@
 #include "idaklu/python.hpp"
 #include "idaklu/CasadiFunctions.hpp"
 
-Function generate_function(const std::string &data)
+casadi::Function generate_function(const std::string &data)
 {
-  return Function::deserialize(data);
+  return casadi::Function::deserialize(data);
 }
 
 namespace py = pybind11;
@@ -134,7 +134,7 @@ PYBIND11_MODULE(idaklu, m)
     &Registrations
   );
 
-  py::class_<Function>(m, "Function");
+  py::class_<casadi::Function>(m, "Function");
 
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)

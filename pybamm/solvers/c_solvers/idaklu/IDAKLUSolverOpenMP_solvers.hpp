@@ -2,130 +2,115 @@
 #define PYBAMM_IDAKLU_CASADI_SOLVER_OPENMP_HPP
 
 #include "IDAKLUSolverOpenMP.hpp"
-#include "idaklu_solver.hpp"
 
 /**
  * @brief IDAKLUSolver Dense implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_Dense : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_Dense : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_Dense(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_Dense(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_Dense(Base::yy, Base::J, Base::sunctx);
-    Base::Initialize();
+    IDAKLUSolverOpenMP::LS = SUNLinSol_Dense(IDAKLUSolverOpenMP::yy, IDAKLUSolverOpenMP::J, IDAKLUSolverOpenMP::sunctx);
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
 /**
  * @brief IDAKLUSolver KLU implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_KLU : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_KLU : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_KLU(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_KLU(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_KLU(Base::yy, Base::J, Base::sunctx);
-    Base::Initialize();
+    IDAKLUSolverOpenMP::LS = SUNLinSol_KLU(IDAKLUSolverOpenMP::yy, IDAKLUSolverOpenMP::J, IDAKLUSolverOpenMP::sunctx);
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
 /**
  * @brief IDAKLUSolver Banded implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_Band : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_Band : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_Band(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_Band(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_Band(Base::yy, Base::J, Base::sunctx);
-    Base::Initialize();
+    IDAKLUSolverOpenMP::LS = SUNLinSol_Band(IDAKLUSolverOpenMP::yy, IDAKLUSolverOpenMP::J, IDAKLUSolverOpenMP::sunctx);
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
 /**
  * @brief IDAKLUSolver SPBCGS implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_SPBCGS : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_SPBCGS : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_SPBCGS(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_SPBCGS(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_SPBCGS(
-      Base::yy,
-      Base::precon_type,
-      Base::options.linsol_max_iterations,
-      Base::sunctx
+    IDAKLUSolverOpenMP::LS = SUNLinSol_SPBCGS(
+      IDAKLUSolverOpenMP::yy,
+      IDAKLUSolverOpenMP::precon_type,
+      IDAKLUSolverOpenMP::options.linsol_max_iterations,
+      IDAKLUSolverOpenMP::sunctx
     );
-    Base::Initialize();
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
 /**
  * @brief IDAKLUSolver SPFGMR implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_SPFGMR : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_SPFGMR : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_SPFGMR(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_SPFGMR(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_SPFGMR(
-      Base::yy,
-      Base::precon_type,
-      Base::options.linsol_max_iterations,
-      Base::sunctx
+    IDAKLUSolverOpenMP::LS = SUNLinSol_SPFGMR(
+      IDAKLUSolverOpenMP::yy,
+      IDAKLUSolverOpenMP::precon_type,
+      IDAKLUSolverOpenMP::options.linsol_max_iterations,
+      IDAKLUSolverOpenMP::sunctx
     );
-    Base::Initialize();
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
 /**
  * @brief IDAKLUSolver SPGMR implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_SPGMR : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_SPGMR : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_SPGMR(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_SPGMR(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_SPGMR(
-      Base::yy,
-      Base::precon_type,
-      Base::options.linsol_max_iterations,
-      Base::sunctx
+    IDAKLUSolverOpenMP::LS = SUNLinSol_SPGMR(
+      IDAKLUSolverOpenMP::yy,
+      IDAKLUSolverOpenMP::precon_type,
+      IDAKLUSolverOpenMP::options.linsol_max_iterations,
+      IDAKLUSolverOpenMP::sunctx
     );
-    Base::Initialize();
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
 /**
  * @brief IDAKLUSolver SPTFQMR implementation with OpenMP class
  */
-template <class CExpressionSet>
-class IDAKLUSolverOpenMP_SPTFQMR : public IDAKLUSolverOpenMP<CExpressionSet> {
-  using Base = IDAKLUSolverOpenMP<CExpressionSet>;
+class IDAKLUSolverOpenMP_SPTFQMR : public IDAKLUSolverOpenMP {
 public:
   template<typename ... Args>
-  IDAKLUSolverOpenMP_SPTFQMR(Args&& ... args) : Base(std::forward<Args>(args) ...)
+  IDAKLUSolverOpenMP_SPTFQMR(Args&& ... args) : IDAKLUSolverOpenMP(std::forward<Args>(args) ...)
   {
-    Base::LS = SUNLinSol_SPTFQMR(
-      Base::yy,
-      Base::precon_type,
-      Base::options.linsol_max_iterations,
-      Base::sunctx
+    IDAKLUSolverOpenMP::LS = SUNLinSol_SPTFQMR(
+      IDAKLUSolverOpenMP::yy,
+      IDAKLUSolverOpenMP::precon_type,
+      IDAKLUSolverOpenMP::options.linsol_max_iterations,
+      IDAKLUSolverOpenMP::sunctx
     );
-    Base::Initialize();
+    IDAKLUSolverOpenMP::Initialize();
   }
 };
 
