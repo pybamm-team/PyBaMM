@@ -24,7 +24,7 @@ public:
 /**
  * @brief Class for handling individual casadi functions
  */
-class CasadiFunction : public Expression
+class CasadiFunction : public Expression<casadi::Function>
 {
 public:
   /**
@@ -51,7 +51,7 @@ public:
 /**
  * @brief Class for handling casadi functions
  */
-class CasadiFunctions : public ExpressionSet<CasadiFunction>
+class CasadiFunctions : public ExpressionSet<CasadiFunction, casadi::Function>
 {
 public:
   /**
@@ -77,7 +77,7 @@ public:
     const std::vector<casadi::Function*>& dvar_dy_fcns,
     const std::vector<casadi::Function*>& dvar_dp_fcns,
     const Options& options
-  ) : ExpressionSet<CasadiFunction>(
+  ) : ExpressionSet<CasadiFunction, casadi::Function>(
     rhs_alg, jac_times_cjmass,
     jac_times_cjmass_nnz,
     jac_bandwidth_lower, jac_bandwidth_upper,
@@ -86,9 +86,6 @@ public:
     inputs_length, jac_action,
     mass_action, sens, events,
     n_s, n_e, n_p,
-    var_casadi_fcns,
-    dvar_dy_fcns,
-    dvar_dp_fcns,
     options)
   {
     // convert casadi::Function list to CasadiFunction list

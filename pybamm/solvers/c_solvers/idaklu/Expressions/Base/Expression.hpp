@@ -3,20 +3,18 @@
 
 #include "ExpressionTypes.hpp"
 #include "ExpressionSparsity.hpp"
-#include "../common.hpp"
-#include "../Options.hpp"
-#include <casadi/casadi.hpp>
-#include <casadi/core/sparsity.hpp>
+#include "../../common.hpp"
+#include "../../Options.hpp"
 #include <memory>
 #include <vector>
 
-class Expression
-{
+template <class T>
+class Expression {
 public:
   /**
    * @brief Constructor
    */
-  explicit Expression(const casadi::Function &f) : m_func(f) {}
+  explicit Expression(const T&f) : m_func(f) {}
 
   /**
    * @brief Evaluation operator
@@ -26,8 +24,9 @@ public:
   /**
    * @brief Evaluation operator given data vectors
    */
-  virtual void operator()(const std::vector<realtype*>& inputs,
-                  const std::vector<realtype*>& results) = 0;
+  virtual void operator()(
+    const std::vector<realtype*>& inputs,
+    const std::vector<realtype*>& results) = 0;
 
   /**
    * @brief Return the number of non-zero elements for the function output
@@ -44,8 +43,8 @@ public:
   std::vector<double *> m_res;
 
 //private:
-  const casadi::Function &m_func;
-  std::vector<casadi_int> m_iw;
+  const T &m_func;
+  std::vector<expr_int> m_iw;
   std::vector<double> m_w;
 };
 

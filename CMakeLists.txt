@@ -39,10 +39,11 @@ endif()
 add_subdirectory(${PYBIND11_DIR})
 # The sources list should mirror the list in setup.py
 pybind11_add_module(idaklu
-  pybamm/solvers/c_solvers/idaklu/Expressions/Expression.hpp
   pybamm/solvers/c_solvers/idaklu/Expressions/Expressions.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/ExpressionTypes.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/ExpressionSparsity.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/Expression.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSet.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSparsity.hpp
   pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
   pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
   pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp
