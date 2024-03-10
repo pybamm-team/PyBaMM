@@ -291,8 +291,12 @@ idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",
     # The sources list should mirror the list in CMakeLists.txt
     sources=[
-        "pybamm/solvers/c_solvers/idaklu/CasadiFunctions.cpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiFunctions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Expression.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Expressions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/ExpressionTypes.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/ExpressionSparsity.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp",
         "pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp",

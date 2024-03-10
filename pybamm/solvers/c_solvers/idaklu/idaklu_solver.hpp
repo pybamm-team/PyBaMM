@@ -1,7 +1,7 @@
 #ifndef PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
 #define PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
 
-#include "CasadiFunctions.hpp"
+#include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "IDAKLUSolverOpenMP_solvers.hpp"
 #include <idas/idas.h>
 #include <memory>

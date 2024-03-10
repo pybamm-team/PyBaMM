@@ -1,4 +1,5 @@
 #include "CasadiFunctions.hpp"
+#include <casadi/core/sparsity.hpp>
 
 CasadiFunction::CasadiFunction(const casadi::Function &f) : Expression(f)
 {
@@ -25,12 +26,17 @@ void CasadiFunction::operator()()
   m_func.release(mem);
 }
 
-casadi_int CasadiFunction::nnz_out() {
-  return m_func.nnz_out();
+expr_int CasadiFunction::nnz_out() {
+  return static_cast<expr_int>(m_func.nnz_out());
 }
 
-casadi::Sparsity CasadiFunction::sparsity_out(casadi_int ind) {
-  return m_func.sparsity_out(ind);
+ExpressionSparsity *CasadiFunction::sparsity_out(casadi_int ind) {
+  casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
+  CasadiSparsity *cs = new CasadiSparsity();
+  cs->_nnz = casadi_sparsity.nnz();
+  cs->_get_row = casadi_sparsity.get_row();
+  cs->_get_col = casadi_sparsity.get_col();
+  return cs;
 }
 
 void CasadiFunction::operator()(const std::vector<realtype*>& inputs,

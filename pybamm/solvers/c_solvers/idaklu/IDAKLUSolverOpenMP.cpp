@@ -3,7 +3,6 @@
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
-#include "CasadiFunctions.hpp"
 
 IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   np_array atol_np,
@@ -230,19 +229,19 @@ void IDAKLUSolverOpenMP::CalcVarsSensitivities(
     CasadiFunction dvar_dp = functions->dvar_dp_fcns[dvar_k];
     // Calculate dvar/dy
     dvar_dy({tret, yval, functions->inputs.data()}, {res_dvar_dy});
-    casadi::Sparsity spdy = dvar_dy.sparsity_out(0);
+    ExpressionSparsity *spdy = dvar_dy.sparsity_out(0);
     // Calculate dvar/dp and convert to dense array for indexing
     dvar_dp({tret, yval, functions->inputs.data()}, {res_dvar_dp});
-    casadi::Sparsity spdp = dvar_dp.sparsity_out(0);
+    ExpressionSparsity *spdp = dvar_dp.sparsity_out(0);
     for(int k=0; k<number_of_parameters; k++)
       dens_dvar_dp[k]=0;
-    for(int k=0; k<spdp.nnz(); k++)
-      dens_dvar_dp[spdp.get_row()[k]] = res_dvar_dp[k];
+    for(int k=0; k<spdp->nnz(); k++)
+      dens_dvar_dp[spdp->get_row()[k]] = res_dvar_dp[k];
     // Calculate sensitivities
     for(int paramk=0; paramk<number_of_parameters; paramk++) {
       yS_return[*ySk] = dens_dvar_dp[paramk];
       for(int spk=0; spk<dvar_dy.nnz_out(); spk++)
-        yS_return[*ySk] += res_dvar_dy[spk] * ySval[paramk][spdy.get_col()[spk]];
+        yS_return[*ySk] += res_dvar_dy[spk] * ySval[paramk][spdy->get_col()[spk]];
       (*ySk)++;
     }
   }

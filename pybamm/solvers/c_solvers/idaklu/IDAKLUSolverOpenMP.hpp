@@ -1,7 +1,7 @@
 #ifndef PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
 #define PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
 
-#include "CasadiFunctions.hpp"
+#include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
 #include "Options.hpp"

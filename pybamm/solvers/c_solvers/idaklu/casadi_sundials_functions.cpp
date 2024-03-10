@@ -1,5 +1,5 @@
 #include "casadi_sundials_functions.hpp"
-#include "CasadiFunctions.hpp"
+#include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
 #include <type_traits>
 

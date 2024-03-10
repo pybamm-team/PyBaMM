@@ -12,9 +12,10 @@
 #include "idaklu/IdakluJax.hpp"
 #include "idaklu/common.hpp"
 #include "idaklu/python.hpp"
-#include "idaklu/CasadiFunctions.hpp"
+#include "idaklu/Expressions/Casadi/CasadiFunctions.hpp"
 
-casadi::Function generate_function(const std::string &data)
+
+casadi::Function generate_casadi_function(const std::string &data)
 {
   return casadi::Function::deserialize(data);
 }
@@ -86,7 +87,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::return_value_policy::take_ownership);
 
-  m.def("generate_function", &generate_function,
+  m.def("generate_function", &generate_casadi_function,
     "Generate a casadi function",
     py::arg("string"),
     py::return_value_policy::take_ownership);
