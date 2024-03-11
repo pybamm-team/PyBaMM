@@ -255,9 +255,7 @@ def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
     if citations._citation_err_msg is not None:
         raise ImportError(
-            f"Citations could not be registered. If you are on Google Colab - "
-            "pybtex does not work with Google Colab due to a known bug - "
-            "https://bitbucket.org/pybtex-devs/pybtex/issues/148/. "
+            f"Citations could not be registered."
             "Please manually cite all the references."
             "\nError encountered -\n"
             f"{citations._citation_err_msg}"
