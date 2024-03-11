@@ -1,7 +1,13 @@
-#ifndef PYBAMM_IDAKLU_SUNDIALS_FUNCTIONS_HPP
-#define PYBAMM_IDAKLU_SUNDIALS_FUNCTIONS_HPP
+#ifndef PYBAMM_SUNDIALS_FUNCTIONS_HPP
+#define PYBAMM_SUNDIALS_FUNCTIONS_HPP
 
 #include "common.hpp"
+
+template<typename T>
+void axpy(int n, T alpha, const T* x, T* y) {
+  if (!x || !y) return;
+  for (int i=0; i<n; ++i) *y++ += alpha**x++;
+}
 
 int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data);
@@ -24,4 +30,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 
 int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
                            N_Vector yp, N_Vector gval, void *user_data);
-#endif // PYBAMM_IDAKLU_SUNDIALS_FUNCTIONS_HPP
+
+#include "sundials_functions.inl"
+
+#endif // PYBAMM_SUNDIALS_FUNCTIONS_HPP

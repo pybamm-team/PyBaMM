@@ -1,16 +1,16 @@
 #include "sundials_functions.hpp"
 #include "Expressions/Expressions.hpp"
-#include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
 #include <type_traits>
 
 #define NV_DATA NV_DATA_OMP  // Serial: NV_DATA_S
 
+template<class T>
 int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
 {
-  DEBUG("residual_casadi");
-  ExpressionSet<CasadiFunction> *p_python_functions =
-    static_cast<ExpressionSet<CasadiFunction> *>(user_data);
+  DEBUG("residual_eval");
+  ExpressionSet<T> *p_python_functions =
+    static_cast<ExpressionSet<T> *>(user_data);
 
   p_python_functions->rhs_alg->m_arg[0] = &tres;
   p_python_functions->rhs_alg->m_arg[1] = NV_DATA(yy);
@@ -25,11 +25,7 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
 
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
-  casadi::casadi_axpy(ns, -1., tmp, NV_DATA(rr));
-
-  //DEBUG_VECTOR(yy);
-  //DEBUG_VECTOR(yp);
-  //DEBUG_VECTOR(rr);
+  axpy(ns, -1., tmp, NV_DATA(rr));
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
@@ -64,13 +60,14 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
 // within user_data.
 //
 // The case where G is mathematically identical to F is allowed.
+template<class T>
 int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
                            N_Vector yp, N_Vector gval, void *user_data)
 {
   DEBUG("residual_eval_approx");
 
   // Just use true residual for now
-  int result = residual_eval(tt, yy, yp, gval, user_data);
+  int result = residual_eval<T>(tt, yy, yp, gval, user_data);
   return result;
 }
 
@@ -94,13 +91,14 @@ int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
 //     tmp2 are pointers to memory allocated for variables of type N Vector
 //     which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
+template<class T>
 int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, realtype cj, void *user_data,
                   N_Vector tmp1, N_Vector tmp2)
 {
   DEBUG("jtimes_eval");
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  T *p_python_functions =
+      static_cast<T *>(user_data);
 
   // Jv has ∂F/∂y v
   p_python_functions->jac_action->m_arg[0] = &tt;
@@ -119,7 +117,7 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   // AXPY: y <- a*x + y
   // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
-  casadi::casadi_axpy(ns, -cj, tmp, NV_DATA(Jv));
+  axpy(ns, -cj, tmp, NV_DATA(Jv));
 
   return 0;
 }
@@ -141,14 +139,15 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 //   tmp3 are pointers to memory allocated for variables of type N Vector which
 //   can
 //     be used by IDALsJacFn function as temporary storage or work space.
+template<class T>
 int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
                     N_Vector resvec, SUNMatrix JJ, void *user_data,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
 {
   DEBUG("jacobian_eval");
 
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  T *p_python_functions =
+      static_cast<T *>(user_data);
 
   // create pointer to jac data, column pointers, and row values
   realtype *jac_data;
@@ -252,11 +251,13 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   return (0);
 }
 
+template<class T>
 int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
                   void *user_data)
 {
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  DEBUG("events_eval");
+  T *p_python_functions =
+      static_cast<T*>(user_data);
 
   // args are t, y, put result in events_ptr
   p_python_functions->events->m_arg[0] = &t;
@@ -289,7 +290,7 @@ int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 // occurred (in which case idas will attempt to correct),
 // or a negative value if it failed unrecoverably (in which case the integration
 // is halted and IDA SRES FAIL is returned)
-//
+template<class T>
 int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector resval, N_Vector *yS, N_Vector *ypS,
                          N_Vector *resvalS, void *user_data, N_Vector tmp1,
@@ -297,8 +298,8 @@ int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
 {
 
   DEBUG("sensitivities_eval");
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  T *p_python_functions =
+      static_cast<T*>(user_data);
 
   const int np = p_python_functions->number_of_parameters;
 
@@ -325,7 +326,7 @@ int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
     (*p_python_functions->jac_action)();
 
     const int ns = p_python_functions->number_of_states;
-    casadi::casadi_axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
+    axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
     p_python_functions->mass_action->m_arg[0] = NV_DATA(ypS[i]);
@@ -334,7 +335,7 @@ int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
 
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
     // AXPY: y <- a*x + y
-    casadi::casadi_axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
+    axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
   }
 
   return 0;

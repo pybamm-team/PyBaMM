@@ -1,15 +1,14 @@
-#ifndef PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
-#define PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
+#ifndef PYBAMM_CREATE_IDAKLU_SOLVER_HPP
+#define PYBAMM_CREATE_IDAKLU_SOLVER_HPP
 
-#include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "IDAKLUSolverOpenMP_solvers.hpp"
 #include <idas/idas.h>
 #include <memory>
 
 /**
- * Creates a concrete casadi solver given a linear solver, as specified in
+ * Creates a concrete solver given a linear solver, as specified in
  * options_cpp.linear_solver.
- * @brief Create a concrete casadi solver given a linear solver
+ * @brief Create a concrete solver given a linear solver
  */
 template<class CExprSet>
 IDAKLUSolver *create_idaklu_solver(
@@ -182,4 +181,4 @@ IDAKLUSolver *create_idaklu_solver(
   return idakluSolver;
 }
 
-#endif // PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP
+#endif // PYBAMM_CREATE_IDAKLU_SOLVER_HPP

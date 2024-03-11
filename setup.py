@@ -305,7 +305,7 @@ idaklu_ext = Extension(
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.hpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.cpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.hpp",
-        "pybamm/solvers/c_solvers/idaklu/sundials_functions.cpp",
+        "pybamm/solvers/c_solvers/idaklu/sundials_functions.inl",
         "pybamm/solvers/c_solvers/idaklu/sundials_functions.hpp",
         "pybamm/solvers/c_solvers/idaklu/IdakluJax.cpp",
         "pybamm/solvers/c_solvers/idaklu/IdakluJax.hpp",

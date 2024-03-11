@@ -1,8 +1,5 @@
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
-#include <casadi/casadi.hpp>
-#include <casadi/core/function.hpp>
-#include <casadi/core/sparsity.hpp>
 
 template <class CExprSet>
 IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
@@ -29,7 +26,7 @@ IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
   options(options)
 {
   // Construction code moved to Initialize() which is called from the
-  // (child) IDAKLUSolver_XXX class constructors.
+  // (child) IDAKLUSolver_* class constructors.
   DEBUG("IDAKLUSolverOpenMP:IDAKLUSolverOpenMP");
   auto atol = atol_np.unchecked<1>();
 
@@ -60,14 +57,14 @@ IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
   SetMatrix();
 
   // initialise solver
-  IDAInit(ida_mem, residual_eval, 0, yy, yp);
+  IDAInit(ida_mem, residual_eval<CExprSet>, 0, yy, yp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // set events
-  IDARootInit(ida_mem, number_of_events, events_eval);
+  IDARootInit(ida_mem, number_of_events, events_eval<CExprSet>);
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
 
@@ -143,18 +140,18 @@ void IDAKLUSolverOpenMP<CExprSet>::Initialize() {
     IDABBDPrecInit(
       ida_mem, number_of_states, options.precon_half_bandwidth,
       options.precon_half_bandwidth, options.precon_half_bandwidth_keep,
-      options.precon_half_bandwidth_keep, 0.0, residual_eval_approx, NULL);
+      options.precon_half_bandwidth_keep, 0.0, residual_eval_approx<CExprSet>, NULL);
   }
 
   if (options.jacobian == "matrix-free")
-    IDASetJacTimes(ida_mem, NULL, jtimes_eval);
+    IDASetJacTimes(ida_mem, NULL, jtimes_eval<CExprSet>);
   else if (options.jacobian != "none")
-    IDASetJacFn(ida_mem, jacobian_eval);
+    IDASetJacFn(ida_mem, jacobian_eval<CExprSet>);
 
   if (number_of_parameters > 0)
   {
     IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
-                sensitivities_eval, yyS, ypS);
+                sensitivities_eval<CExprSet>, yyS, ypS);
     IDASensEEtolerances(ida_mem);
   }
 
