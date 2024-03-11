@@ -73,7 +73,7 @@ public:
     const int n_s,
     const int n_e,
     const int n_p,
-    const std::vector<casadi::Function*>& var_casadi_fcns,
+    const std::vector<casadi::Function*>& var_fcns,
     const std::vector<casadi::Function*>& dvar_dy_fcns,
     const std::vector<casadi::Function*>& dvar_dp_fcns,
     const Options& options
@@ -89,8 +89,8 @@ public:
     options)
   {
     // convert casadi::Function list to CasadiFunction list
-    for (auto& var : var_casadi_fcns) {
-      this->var_casadi_fcns.push_back(CasadiFunction(*var));
+    for (auto& var : var_fcns) {
+      this->var_fcns.push_back(CasadiFunction(*var));
     }
     for (auto& var : dvar_dy_fcns) {
       this->dvar_dy_fcns.push_back(CasadiFunction(*var));

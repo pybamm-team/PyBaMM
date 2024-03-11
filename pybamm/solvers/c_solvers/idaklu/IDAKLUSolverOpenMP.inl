@@ -1,10 +1,11 @@
-#include "IDAKLUSolverOpenMP.hpp"
-#include "casadi_sundials_functions.hpp"
+#include "Expressions/Expressions.hpp"
+#include "sundials_functions.hpp"
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
 
-IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
+template <class CExprSet, class CExpr>
+IDAKLUSolverOpenMP<CExprSet, CExpr>::IDAKLUSolverOpenMP(
   np_array atol_np,
   double rel_tol,
   np_array rhs_alg_id,
@@ -13,7 +14,7 @@ IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   int jac_times_cjmass_nnz,
   int jac_bandwidth_lower,
   int jac_bandwidth_upper,
-  std::unique_ptr<CasadiFunctions> functions_arg,
+  std::unique_ptr<CExprSet> functions_arg,
   const Options &options
 ) :
   atol_np(atol_np),
@@ -59,14 +60,14 @@ IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   SetMatrix();
 
   // initialise solver
-  IDAInit(ida_mem, residual_casadi, 0, yy, yp);
+  IDAInit(ida_mem, residual_eval, 0, yy, yp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // set events
-  IDARootInit(ida_mem, number_of_events, events_casadi);
+  IDARootInit(ida_mem, number_of_events, events_eval);
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
 
@@ -77,7 +78,8 @@ IDAKLUSolverOpenMP::IDAKLUSolverOpenMP(
   }
 }
 
-void IDAKLUSolverOpenMP::AllocateVectors() {
+template <class CExprSet, class CExpr>
+void IDAKLUSolverOpenMP<CExprSet, CExpr>::AllocateVectors() {
   // Create vectors
   yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
@@ -85,7 +87,8 @@ void IDAKLUSolverOpenMP::AllocateVectors() {
   id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
 }
 
-void IDAKLUSolverOpenMP::SetMatrix() {
+template <class CExprSet, class CExpr>
+void IDAKLUSolverOpenMP<CExprSet, CExpr>::SetMatrix() {
   // Create Matrix object
   if (options.jacobian == "sparse")
   {
@@ -94,7 +97,7 @@ void IDAKLUSolverOpenMP::SetMatrix() {
       number_of_states,
       number_of_states,
       jac_times_cjmass_nnz,
-      CSC_MAT,  // CSC is used by casadi; CSR requires a conversion step
+      CSC_MAT,
       sunctx
     );
   }
@@ -124,7 +127,8 @@ void IDAKLUSolverOpenMP::SetMatrix() {
     throw std::invalid_argument("Unsupported matrix requested");
 }
 
-void IDAKLUSolverOpenMP::Initialize() {
+template <class CExprSet, class CExpr>
+void IDAKLUSolverOpenMP<CExprSet, CExpr>::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
@@ -139,18 +143,18 @@ void IDAKLUSolverOpenMP::Initialize() {
     IDABBDPrecInit(
       ida_mem, number_of_states, options.precon_half_bandwidth,
       options.precon_half_bandwidth, options.precon_half_bandwidth_keep,
-      options.precon_half_bandwidth_keep, 0.0, residual_casadi_approx, NULL);
+      options.precon_half_bandwidth_keep, 0.0, residual_eval_approx, NULL);
   }
 
   if (options.jacobian == "matrix-free")
-    IDASetJacTimes(ida_mem, NULL, jtimes_casadi);
+    IDASetJacTimes(ida_mem, NULL, jtimes_eval);
   else if (options.jacobian != "none")
-    IDASetJacFn(ida_mem, jacobian_casadi);
+    IDASetJacFn(ida_mem, jacobian_eval);
 
   if (number_of_parameters > 0)
   {
     IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
-                sensitivities_casadi, yyS, ypS);
+                sensitivities_eval, yyS, ypS);
     IDASensEEtolerances(ida_mem);
   }
 
@@ -167,7 +171,8 @@ void IDAKLUSolverOpenMP::Initialize() {
   IDASetId(ida_mem, id);
 }
 
-IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP()
+template <class CExprSet, class CExpr>
+IDAKLUSolverOpenMP<CExprSet, CExpr>::~IDAKLUSolverOpenMP()
 {
   // Free memory
   if (number_of_parameters > 0)
@@ -190,7 +195,8 @@ IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP()
   SUNContext_Free(&sunctx);
 }
 
-void IDAKLUSolverOpenMP::CalcVars(
+template <class CExprSet, class CExpr>
+void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVars(
     realtype *y_return,
     size_t length_of_return_vector,
     size_t t_i,
@@ -200,9 +206,9 @@ void IDAKLUSolverOpenMP::CalcVars(
     realtype *yS_return,
     size_t *ySk
 ) {
-  // Evaluate casadi functions for each requested variable and store
+  // Evaluate functions for each requested variable and store
   size_t j = 0;
-  for (auto& var_fcn : functions->var_casadi_fcns) {
+  for (auto& var_fcn : functions->var_fcns) {
     var_fcn({tret, yval, functions->inputs.data()}, {res});
     // store in return vector
     for (size_t jj=0; jj<var_fcn.nnz_out(); jj++)
@@ -212,7 +218,8 @@ void IDAKLUSolverOpenMP::CalcVars(
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
 }
 
-void IDAKLUSolverOpenMP::CalcVarsSensitivities(
+template <class CExprSet, class CExpr>
+void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
     const std::vector<realtype*>& ySval,
@@ -225,8 +232,8 @@ void IDAKLUSolverOpenMP::CalcVarsSensitivities(
   realtype* dens_dvar_dp = new realtype[number_of_parameters];
   for (size_t dvar_k=0; dvar_k<functions->dvar_dy_fcns.size(); dvar_k++) {
     // Isolate functions
-    CasadiFunction dvar_dy = functions->dvar_dy_fcns[dvar_k];
-    CasadiFunction dvar_dp = functions->dvar_dp_fcns[dvar_k];
+    CExpr dvar_dy = functions->dvar_dy_fcns[dvar_k];
+    CExpr dvar_dp = functions->dvar_dp_fcns[dvar_k];
     // Calculate dvar/dy
     dvar_dy({tret, yval, functions->inputs.data()}, {res_dvar_dy});
     ExpressionSparsity *spdy = dvar_dy.sparsity_out(0);
@@ -247,7 +254,8 @@ void IDAKLUSolverOpenMP::CalcVarsSensitivities(
   }
 }
 
-Solution IDAKLUSolverOpenMP::solve(
+template <class CExprSet, class CExpr>
+Solution IDAKLUSolverOpenMP<CExprSet, CExpr>::solve(
     np_array t_np,
     np_array y0_np,
     np_array yp0_np,
@@ -315,9 +323,9 @@ Solution IDAKLUSolverOpenMP::solve(
   int length_of_return_vector = 0;
   size_t max_res_size = 0;  // maximum result size (for common result buffer)
   size_t max_res_dvar_dy = 0, max_res_dvar_dp = 0;
-  if (functions->var_casadi_fcns.size() > 0) {
+  if (functions->var_fcns.size() > 0) {
     // return only the requested variables list after computation
-    for (auto& var_fcn : functions->var_casadi_fcns) {
+    for (auto& var_fcn : functions->var_fcns) {
       max_res_size = std::max(max_res_size, size_t(var_fcn.nnz_out()));
       length_of_return_vector += var_fcn.nnz_out();
       for (auto& dvar_fcn : functions->dvar_dy_fcns)
@@ -366,8 +374,8 @@ Solution IDAKLUSolverOpenMP::solve(
   int t_i = 0;
   size_t ySk = 0;
   t_return[t_i] = t(t_i);
-  if (functions->var_casadi_fcns.size() > 0) {
-    // Evaluate casadi functions for each requested variable and store
+  if (functions->var_fcns.size() > 0) {
+    // Evaluate functions for each requested variable and store
     CalcVars(y_return, length_of_return_vector, t_i,
              &tret, yval, ySval, yS_return, &ySk);
   } else {
@@ -401,8 +409,8 @@ Solution IDAKLUSolverOpenMP::solve(
 
       // Evaluate and store results for the time step
       t_return[t_i] = tret;
-      if (functions->var_casadi_fcns.size() > 0) {
-        // Evaluate casadi functions for each requested variable and store
+      if (functions->var_fcns.size() > 0) {
+        // Evaluate functions for each requested variable and store
         // NOTE: Indexing of yS_return is (time:var:param)
         CalcVars(y_return, length_of_return_vector, t_i,
                  &tret, yval, ySval, yS_return, &ySk);
@@ -446,7 +454,7 @@ Solution IDAKLUSolverOpenMP::solve(
   // Note: Ordering of vector is differnet if computing variables vs returning
   // the complete state vector
   np_array yS_ret;
-  if (functions->var_casadi_fcns.size() > 0) {
+  if (functions->var_fcns.size() > 0) {
     yS_ret = np_array(
       std::vector<ptrdiff_t> {
         number_of_timesteps,

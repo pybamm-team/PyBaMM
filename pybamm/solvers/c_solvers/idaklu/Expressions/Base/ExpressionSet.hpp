@@ -66,7 +66,7 @@ public:
 
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
   //     these members as unused even though they are important
-  std::vector<T> var_casadi_fcns;  // cppcheck-suppress unusedStructMember
+  std::vector<T> var_fcns;  // cppcheck-suppress unusedStructMember
   std::vector<T> dvar_dy_fcns;  // cppcheck-suppress unusedStructMember
   std::vector<T> dvar_dp_fcns;  // cppcheck-suppress unusedStructMember
 

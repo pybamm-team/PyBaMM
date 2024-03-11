@@ -1,7 +1,6 @@
-#ifndef PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
-#define PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
+#ifndef PYBAMM_IDAKLU_SOLVEROPENMP_HPP
+#define PYBAMM_IDAKLU_SOLVEROPENMP_HPP
 
-#include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
 #include "Options.hpp"
@@ -37,6 +36,7 @@
  *   19. Destroy objects
  *   20. (N/A) Finalize MPI
  */
+template <class CExprSet, class CExpr>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
@@ -60,7 +60,7 @@ public:
   int jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
-  std::unique_ptr<CasadiFunctions> functions;
+  std::unique_ptr<CExprSet> functions;
   realtype *res = nullptr;
   realtype *res_dvar_dy = nullptr;
   realtype *res_dvar_dp = nullptr;
@@ -83,7 +83,7 @@ public:
     int jac_times_cjmass_nnz,
     int jac_bandwidth_lower,
     int jac_bandwidth_upper,
-    std::unique_ptr<CasadiFunctions> functions,
+    std::unique_ptr<CExprSet> functions,
     const Options& options);
 
   /**
@@ -92,9 +92,9 @@ public:
   ~IDAKLUSolverOpenMP();
 
   /**
-   * Evaluate casadi functions (including sensitivies) for each requested
+   * Evaluate functions (including sensitivies) for each requested
    * variable and store
-   * @brief Evaluate casadi functions
+   * @brief Evaluate functions
    */
   void CalcVars(
     realtype *y_return,
@@ -107,7 +107,7 @@ public:
     size_t *ySk);
 
   /**
-   * @brief Evaluate casadi functions for sensitivities
+   * @brief Evaluate functions for sensitivities
    */
   void CalcVarsSensitivities(
     realtype *tret,
@@ -141,4 +141,6 @@ public:
   void SetMatrix();
 };
 
-#endif // PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
+#include "IDAKLUSolverOpenMP.inl"
+
+#endif // PYBAMM_IDAKLU_SOLVEROPENMP_HPP

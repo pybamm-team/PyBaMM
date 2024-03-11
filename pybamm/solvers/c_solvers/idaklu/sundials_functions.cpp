@@ -1,11 +1,11 @@
-#include "casadi_sundials_functions.hpp"
+#include "sundials_functions.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
 #include <type_traits>
 
 #define NV_DATA NV_DATA_OMP  // Serial: NV_DATA_S
 
-int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
+int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
                     void *user_data)
 {
   DEBUG("residual_casadi");
@@ -64,13 +64,13 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 // within user_data.
 //
 // The case where G is mathematically identical to F is allowed.
-int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
+int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
                            N_Vector yp, N_Vector gval, void *user_data)
 {
-  DEBUG("residual_casadi_approx");
+  DEBUG("residual_eval_approx");
 
   // Just use true residual for now
-  int result = residual_casadi(tt, yy, yp, gval, user_data);
+  int result = residual_eval(tt, yy, yp, gval, user_data);
   return result;
 }
 
@@ -94,11 +94,11 @@ int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
 //     tmp2 are pointers to memory allocated for variables of type N Vector
 //     which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
-int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, realtype cj, void *user_data,
                   N_Vector tmp1, N_Vector tmp2)
 {
-  DEBUG("jtimes_casadi");
+  DEBUG("jtimes_eval");
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
@@ -141,11 +141,11 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 //   tmp3 are pointers to memory allocated for variables of type N Vector which
 //   can
 //     be used by IDALsJacFn function as temporary storage or work space.
-int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
+int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
                     N_Vector resvec, SUNMatrix JJ, void *user_data,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
 {
-  DEBUG("jacobian_casadi");
+  DEBUG("jacobian_eval");
 
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
@@ -232,7 +232,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       p_python_functions->jac_times_cjmass.m_res[0] = newjac.data();
       p_python_functions->jac_times_cjmass();
 
-      // convert (casadi's) CSC format to CSR
+      // convert CSC format to CSR
       csc_csr<
           std::remove_pointer_t<decltype(p_python_functions->jac_times_cjmass_rowvals.data())>,
           std::remove_pointer_t<decltype(jac_vals)>
@@ -253,7 +253,7 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   return (0);
 }
 
-int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
+int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
                   void *user_data)
 {
   CasadiFunctions *p_python_functions =
@@ -291,13 +291,13 @@ int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 // or a negative value if it failed unrecoverably (in which case the integration
 // is halted and IDA SRES FAIL is returned)
 //
-int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
+int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector resval, N_Vector *yS, N_Vector *ypS,
                          N_Vector *resvalS, void *user_data, N_Vector tmp1,
                          N_Vector tmp2, N_Vector tmp3)
 {
 
-  DEBUG("sensitivities_casadi");
+  DEBUG("sensitivities_eval");
   CasadiFunctions *p_python_functions =
       static_cast<CasadiFunctions *>(user_data);
 
