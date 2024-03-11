@@ -4,6 +4,7 @@
 #include "../../Options.hpp"
 #include "../Expressions.hpp"
 #include <casadi/casadi.hpp>
+#include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
 #include <memory>
 
@@ -24,7 +25,7 @@ public:
 /**
  * @brief Class for handling individual casadi functions
  */
-class CasadiFunction : public Expression<casadi::Function>
+class CasadiFunction : public Expression
 {
 public:
   /**
@@ -36,6 +37,8 @@ public:
 
   void operator()(const std::vector<realtype*>& inputs,
                   const std::vector<realtype*>& results) override;
+
+  casadi::Function m_func;
 
   /**
    * @brief Return the number of non-zero elements for the function output
@@ -51,7 +54,7 @@ public:
 /**
  * @brief Class for handling casadi functions
  */
-class CasadiFunctions : public ExpressionSet<CasadiFunction, casadi::Function>
+class CasadiFunctions : public ExpressionSet<CasadiFunction>
 {
 public:
   /**
@@ -77,16 +80,28 @@ public:
     const std::vector<casadi::Function*>& dvar_dy_fcns,
     const std::vector<casadi::Function*>& dvar_dp_fcns,
     const Options& options
-  ) : ExpressionSet<CasadiFunction, casadi::Function>(
-    rhs_alg, jac_times_cjmass,
-    jac_times_cjmass_nnz,
-    jac_bandwidth_lower, jac_bandwidth_upper,
-    jac_times_cjmass_rowvals_arg,
-    jac_times_cjmass_colptrs_arg,
-    inputs_length, jac_action,
-    mass_action, sens, events,
-    n_s, n_e, n_p,
-    options)
+  ) : 
+    rhs_alg_casadi(rhs_alg),
+    jac_times_cjmass_casadi(jac_times_cjmass),
+    jac_action_casadi(jac_action),
+    mass_action_casadi(mass_action),
+    sens_casadi(sens),
+    events_casadi(events),
+    ExpressionSet<CasadiFunction>(
+      static_cast<Expression*>(&rhs_alg_casadi),
+      static_cast<Expression*>(&jac_times_cjmass_casadi),
+      jac_times_cjmass_nnz,
+      jac_bandwidth_lower,
+      jac_bandwidth_upper,
+      jac_times_cjmass_rowvals_arg,
+      jac_times_cjmass_colptrs_arg,
+      inputs_length,
+      static_cast<Expression*>(&jac_action_casadi),
+      static_cast<Expression*>(&mass_action_casadi),
+      static_cast<Expression*>(&sens_casadi),
+      static_cast<Expression*>(&events_casadi),
+      n_s, n_e, n_p,
+      options)
   {
     // convert casadi::Function list to CasadiFunction list
     for (auto& var : var_fcns) {
@@ -116,6 +131,13 @@ public:
 
     inputs.resize(inputs_length);
   }
+
+  CasadiFunction rhs_alg_casadi;
+  CasadiFunction jac_times_cjmass_casadi;
+  CasadiFunction jac_action_casadi;
+  CasadiFunction mass_action_casadi;
+  CasadiFunction sens_casadi;
+  CasadiFunction events_casadi;
 
   realtype* get_tmp_state_vector() override {
     return tmp_state_vector.data();

@@ -8,13 +8,12 @@
 #include <memory>
 #include <vector>
 
-template <class T>
 class Expression {
 public:
   /**
    * @brief Constructor
    */
-  explicit Expression(const T&f) : m_func(f) {}
+  Expression() = default;
 
   /**
    * @brief Evaluation operator
@@ -43,7 +42,6 @@ public:
   std::vector<double *> m_res;
 
 //private:
-  const T &m_func;
   std::vector<expr_int> m_iw;
   std::vector<double> m_w;
 };

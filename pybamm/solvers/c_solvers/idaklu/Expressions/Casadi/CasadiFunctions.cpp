@@ -1,12 +1,13 @@
 #include "CasadiFunctions.hpp"
 #include <casadi/core/sparsity.hpp>
 
-CasadiFunction::CasadiFunction(const casadi::Function &f) : Expression(f)
+CasadiFunction::CasadiFunction(const casadi::Function &f) : Expression()
 {
   size_t sz_arg;
   size_t sz_res;
   size_t sz_iw;
   size_t sz_w;
+  m_func = f;
   m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
   //int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
   //std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = "

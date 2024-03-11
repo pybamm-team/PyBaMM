@@ -8,7 +8,7 @@
 #include "../../Options.hpp"
 #include <memory>
 
-template <class T, class TBase>
+template <class T>
 class ExpressionSet
 {
 public:
@@ -17,18 +17,18 @@ public:
    * @brief Constructor
    */
   ExpressionSet(
-    const TBase &rhs_alg,
-    const TBase &jac_times_cjmass,
+    Expression* rhs_alg,
+    Expression* jac_times_cjmass,
     const int jac_times_cjmass_nnz,
     const int jac_bandwidth_lower,
     const int jac_bandwidth_upper,
     const np_array_int &jac_times_cjmass_rowvals_arg,
     const np_array_int &jac_times_cjmass_colptrs_arg,
     const int inputs_length,
-    const TBase &jac_action,
-    const TBase &mass_action,
-    const TBase &sens,
-    const TBase &events,
+    Expression* jac_action,
+    Expression* mass_action,
+    Expression* sens,
+    Expression* events,
     const int n_s,
     const int n_e,
     const int n_p,
@@ -57,12 +57,12 @@ public:
   int jac_bandwidth_lower;
   int jac_bandwidth_upper;
 
-  T rhs_alg;
-  T sens;
-  T jac_times_cjmass;
-  T jac_action;
-  T mass_action;
-  T events;
+  Expression *rhs_alg = nullptr;
+  Expression *jac_times_cjmass = nullptr;
+  Expression *jac_action = nullptr;
+  Expression *mass_action = nullptr;
+  Expression *sens = nullptr;
+  Expression *events = nullptr;
 
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
   //     these members as unused even though they are important

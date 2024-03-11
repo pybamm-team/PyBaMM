@@ -1,27 +1,27 @@
 #include "sundials_functions.hpp"
+#include "Expressions/Expressions.hpp"
 #include "Expressions/Casadi/CasadiFunctions.hpp"
 #include "common.hpp"
 #include <type_traits>
 
 #define NV_DATA NV_DATA_OMP  // Serial: NV_DATA_S
 
-int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
-                    void *user_data)
+int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
 {
   DEBUG("residual_casadi");
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  ExpressionSet<CasadiFunction> *p_python_functions =
+    static_cast<ExpressionSet<CasadiFunction> *>(user_data);
 
-  p_python_functions->rhs_alg.m_arg[0] = &tres;
-  p_python_functions->rhs_alg.m_arg[1] = NV_DATA(yy);
-  p_python_functions->rhs_alg.m_arg[2] = p_python_functions->inputs.data();
-  p_python_functions->rhs_alg.m_res[0] = NV_DATA(rr);
-  p_python_functions->rhs_alg();
+  p_python_functions->rhs_alg->m_arg[0] = &tres;
+  p_python_functions->rhs_alg->m_arg[1] = NV_DATA(yy);
+  p_python_functions->rhs_alg->m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->rhs_alg->m_res[0] = NV_DATA(rr);
+  (*p_python_functions->rhs_alg)();
 
   realtype *tmp = p_python_functions->get_tmp_state_vector();
-  p_python_functions->mass_action.m_arg[0] = NV_DATA(yp);
-  p_python_functions->mass_action.m_res[0] = tmp;
-  p_python_functions->mass_action();
+  p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
+  p_python_functions->mass_action->m_res[0] = tmp;
+  (*p_python_functions->mass_action)();
 
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
@@ -103,18 +103,18 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
       static_cast<CasadiFunctions *>(user_data);
 
   // Jv has ∂F/∂y v
-  p_python_functions->jac_action.m_arg[0] = &tt;
-  p_python_functions->jac_action.m_arg[1] = NV_DATA(yy);
-  p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
-  p_python_functions->jac_action.m_arg[3] = NV_DATA(v);
-  p_python_functions->jac_action.m_res[0] = NV_DATA(Jv);
-  p_python_functions->jac_action();
+  p_python_functions->jac_action->m_arg[0] = &tt;
+  p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
+  p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->jac_action->m_arg[3] = NV_DATA(v);
+  p_python_functions->jac_action->m_res[0] = NV_DATA(Jv);
+  (*p_python_functions->jac_action)();
 
   // tmp has -∂F/∂y˙ v
   realtype *tmp = p_python_functions->get_tmp_state_vector();
-  p_python_functions->mass_action.m_arg[0] = NV_DATA(v);
-  p_python_functions->mass_action.m_res[0] = tmp;
-  p_python_functions->mass_action();
+  p_python_functions->mass_action->m_arg[0] = NV_DATA(v);
+  p_python_functions->mass_action->m_res[0] = tmp;
+  (*p_python_functions->mass_action)();
 
   // AXPY: y <- a*x + y
   // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
@@ -165,14 +165,13 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   }
 
   // args are t, y, cj, put result in jacobian data matrix
-  p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-  p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);
-  p_python_functions->jac_times_cjmass.m_arg[2] =
+  p_python_functions->jac_times_cjmass->m_arg[0] = &tt;
+  p_python_functions->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
+  p_python_functions->jac_times_cjmass->m_arg[2] =
       p_python_functions->inputs.data();
-  p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-  p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
-
-  p_python_functions->jac_times_cjmass();
+  p_python_functions->jac_times_cjmass->m_arg[3] = &cj;
+  p_python_functions->jac_times_cjmass->m_res[0] = jac_data;
+  (*p_python_functions->jac_times_cjmass)();
 
 
   if (p_python_functions->options.using_banded_matrix)
@@ -224,13 +223,13 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
 
       // args are t, y, cj, put result in jacobian data matrix
-      p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-      p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);
-      p_python_functions->jac_times_cjmass.m_arg[2] =
+      p_python_functions->jac_times_cjmass->m_arg[0] = &tt;
+      p_python_functions->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
+      p_python_functions->jac_times_cjmass->m_arg[2] =
         p_python_functions->inputs.data();
-      p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-      p_python_functions->jac_times_cjmass.m_res[0] = newjac.data();
-      p_python_functions->jac_times_cjmass();
+      p_python_functions->jac_times_cjmass->m_arg[3] = &cj;
+      p_python_functions->jac_times_cjmass->m_res[0] = newjac.data();
+      (*p_python_functions->jac_times_cjmass)();
 
       // convert CSC format to CSR
       csc_csr<
@@ -260,11 +259,11 @@ int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
       static_cast<CasadiFunctions *>(user_data);
 
   // args are t, y, put result in events_ptr
-  p_python_functions->events.m_arg[0] = &t;
-  p_python_functions->events.m_arg[1] = NV_DATA(yy);
-  p_python_functions->events.m_arg[2] = p_python_functions->inputs.data();
-  p_python_functions->events.m_res[0] = events_ptr;
-  p_python_functions->events();
+  p_python_functions->events->m_arg[0] = &t;
+  p_python_functions->events->m_arg[1] = NV_DATA(yy);
+  p_python_functions->events->m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->events->m_res[0] = events_ptr;
+  (*p_python_functions->events)();
 
   return (0);
 }
@@ -304,34 +303,34 @@ int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
   const int np = p_python_functions->number_of_parameters;
 
   // args are t, y put result in rr
-  p_python_functions->sens.m_arg[0] = &t;
-  p_python_functions->sens.m_arg[1] = NV_DATA(yy);
-  p_python_functions->sens.m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->sens->m_arg[0] = &t;
+  p_python_functions->sens->m_arg[1] = NV_DATA(yy);
+  p_python_functions->sens->m_arg[2] = p_python_functions->inputs.data();
   for (int i = 0; i < np; i++)
   {
-    p_python_functions->sens.m_res[i] = NV_DATA(resvalS[i]);
+    p_python_functions->sens->m_res[i] = NV_DATA(resvalS[i]);
   }
   // resvalsS now has (∂F/∂p i )
-  p_python_functions->sens();
+  (*p_python_functions->sens)();
 
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp
     realtype *tmp = p_python_functions->get_tmp_state_vector();
-    p_python_functions->jac_action.m_arg[0] = &t;
-    p_python_functions->jac_action.m_arg[1] = NV_DATA(yy);
-    p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
-    p_python_functions->jac_action.m_arg[3] = NV_DATA(yS[i]);
-    p_python_functions->jac_action.m_res[0] = tmp;
-    p_python_functions->jac_action();
+    p_python_functions->jac_action->m_arg[0] = &t;
+    p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
+    p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
+    p_python_functions->jac_action->m_arg[3] = NV_DATA(yS[i]);
+    p_python_functions->jac_action->m_res[0] = tmp;
+    (*p_python_functions->jac_action)();
 
     const int ns = p_python_functions->number_of_states;
     casadi::casadi_axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
-    p_python_functions->mass_action.m_arg[0] = NV_DATA(ypS[i]);
-    p_python_functions->mass_action.m_res[0] = tmp;
-    p_python_functions->mass_action();
+    p_python_functions->mass_action->m_arg[0] = NV_DATA(ypS[i]);
+    p_python_functions->mass_action->m_res[0] = tmp;
+    (*p_python_functions->mass_action)();
 
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
     // AXPY: y <- a*x + y
