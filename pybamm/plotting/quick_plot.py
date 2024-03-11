@@ -5,11 +5,10 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class LoopList(list):
-
     """A list which loops over itself when accessing an
     index so that it never runs out"""
 
@@ -47,7 +46,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
@@ -474,10 +473,10 @@ class QuickPlot:
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        plt = have_optional_dependency("matplotlib.pyplot")
-        gridspec = have_optional_dependency("matplotlib.gridspec")
-        cm = have_optional_dependency("matplotlib", "cm")
-        colors = have_optional_dependency("matplotlib", "colors")
+        plt = import_optional_dependency("matplotlib.pyplot")
+        gridspec = import_optional_dependency("matplotlib.gridspec")
+        cm = import_optional_dependency("matplotlib", "cm")
+        colors = import_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -649,7 +648,7 @@ class QuickPlot:
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
-    def dynamic_plot(self, testing=False, step=None):
+    def dynamic_plot(self, show_plot=True, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
 
@@ -658,8 +657,9 @@ class QuickPlot:
         step : float
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
             of the total time.
-        testing : bool
-            Whether to actually make the plot (turned off for unit tests)
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
 
         """
         if pybamm.is_notebook():  # pragma: no cover
@@ -674,8 +674,8 @@ class QuickPlot:
                 continuous_update=False,
             )
         else:
-            plt = have_optional_dependency("matplotlib.pyplot")
-            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
+            plt = import_optional_dependency("matplotlib.pyplot")
+            Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -692,7 +692,7 @@ class QuickPlot:
             )
             self.slider.on_changed(self.slider_update)
 
-            if not testing:  # pragma: no cover
+            if show_plot:  # pragma: no cover
                 plt.show()
 
     def slider_update(self, t):
@@ -779,8 +779,8 @@ class QuickPlot:
             Name of the generated GIF file.
 
         """
-        imageio = have_optional_dependency("imageio.v2")
-        plt = have_optional_dependency("matplotlib.pyplot")
+        imageio = import_optional_dependency("imageio.v2")
+        plt = import_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)

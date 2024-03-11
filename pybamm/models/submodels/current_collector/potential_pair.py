@@ -58,13 +58,12 @@ class BasePotentialPair(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        applied_current = self.param.current_with_time
         phi_s_cn = variables["Negative current collector potential [V]"]
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            i_boundary_cc: applied_current,
+            i_boundary_cc: pybamm.Scalar(0),
         }
 
 
