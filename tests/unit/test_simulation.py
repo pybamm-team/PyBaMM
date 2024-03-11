@@ -391,11 +391,15 @@ class TestSimulation(TestCase):
         # now solve and plot
         t_eval = np.linspace(0, 100, 5)
         sim.solve(t_eval=t_eval)
-        sim.plot(testing=True)
+        sim.plot(show_plot=False)
 
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
             sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+            with self.assertRaisesRegex(
+                ValueError, "The simulation has not been solved yet."
+            ):
+                sim.create_gif()
             sim.solve(t_eval=[0, 10])
 
             # Create a temporary file name
@@ -405,7 +409,7 @@ class TestSimulation(TestCase):
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
             # call the plot method before creating the GIF
-            sim.plot(testing=True)
+            sim.plot(show_plot=False)
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     def test_drive_cycle_interpolant(self):

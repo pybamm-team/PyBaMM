@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 import collections
 import operator as op
 from functools import partial

@@ -215,7 +215,8 @@
       "profile": "https://github.com/jonchapman1",
       "contributions": [
         "ideas",
-        "fundingFinding"
+        "fundingFinding",
+        "doc"
       ]
     },
     {
@@ -772,7 +773,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/99216956?v=4",
       "profile": "https://github.com/prady0t",
       "contributions": [
-        "infra"
+        "infra",
+        "code",
+        "test"
       ]
     },
     {
@@ -813,6 +816,24 @@
       "profile": "https://github.com/kawaMANMI",
       "contributions": [
         "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "Akhil-Sharma30",
+      "name": "AKHIL SHARMA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/68015525?v=4",
+      "profile": "http://akhilsharma.info",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "HarshvirSandhu",
+      "name": "Harshvir Sandhu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/75773763?v=4",
+      "profile": "https://github.com/HarshvirSandhu",
+      "contributions": [
         "code"
       ]
     }

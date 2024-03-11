@@ -1,21 +1,34 @@
 #
 # Base Symbol Class for the expression tree
 #
+from __future__ import annotations
 import numbers
 
 import numpy as np
+import sympy
 from scipy.sparse import csr_matrix, issparse
 from functools import lru_cache, cached_property
+from typing import TYPE_CHECKING, Sequence, cast
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
+if TYPE_CHECKING:  # pragma: no cover
+    import casadi
+    from pybamm.type_definitions import (
+        ChildSymbol,
+        ChildValue,
+        DomainType,
+        AuxiliaryDomainType,
+        DomainsType,
+    )
+
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
-EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
+EMPTY_DOMAINS: dict[str, list] = {k: [] for k in DOMAIN_LEVELS}
 
 
-def domain_size(domain):
+def domain_size(domain: list[str] | str):
     """
     Get the domain size.
 
@@ -43,7 +56,7 @@ def domain_size(domain):
     return size
 
 
-def create_object_of_size(size, typ="vector"):
+def create_object_of_size(size: int, typ="vector"):
     """Return object, consisting of NaNs, of the right shape."""
     if typ == "vector":
         return np.nan * np.ones((size, 1))
@@ -51,7 +64,7 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domains, typ="vector"):
+def evaluate_for_shape_using_domain(domains: dict[str, list[str] | str], typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
@@ -63,11 +76,11 @@ def evaluate_for_shape_using_domain(domains, typ="vector"):
     return create_object_of_size(_domain_sizes, typ)
 
 
-def is_constant(symbol):
+def is_constant(symbol: Symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
 
 
-def is_scalar_x(expr, x):
+def is_scalar_x(expr: Symbol, x: int):
     """
     Utility function to test if an expression evaluates to a constant scalar value
     """
@@ -78,28 +91,28 @@ def is_scalar_x(expr, x):
         return False
 
 
-def is_scalar_zero(expr):
+def is_scalar_zero(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     return is_scalar_x(expr, 0)
 
 
-def is_scalar_one(expr):
+def is_scalar_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant scalar one
     """
     return is_scalar_x(expr, 1)
 
 
-def is_scalar_minus_one(expr):
+def is_scalar_minus_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant scalar minus one
     """
     return is_scalar_x(expr, -1)
 
 
-def is_matrix_x(expr, x):
+def is_matrix_x(expr: Symbol, x: int):
     """
     Utility function to test if an expression evaluates to a constant matrix value
     """
@@ -122,28 +135,28 @@ def is_matrix_x(expr, x):
         return False
 
 
-def is_matrix_zero(expr):
+def is_matrix_zero(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant matrix zero
     """
     return is_matrix_x(expr, 0)
 
 
-def is_matrix_one(expr):
+def is_matrix_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant matrix one
     """
     return is_matrix_x(expr, 1)
 
 
-def is_matrix_minus_one(expr):
+def is_matrix_minus_one(expr: Symbol):
     """
     Utility function to test if an expression evaluates to a constant matrix minus one
     """
     return is_matrix_x(expr, -1)
 
 
-def simplify_if_constant(symbol):
+def simplify_if_constant(symbol: pybamm.Symbol):
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -156,7 +169,9 @@ def simplify_if_constant(symbol):
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                return pybamm.Scalar(result)
+                # type-narrow for Scalar
+                new_result = cast(float, result)
+                return pybamm.Scalar(new_result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
                     return pybamm.Vector(result, domains=symbol.domains)
@@ -200,11 +215,11 @@ class Symbol:
 
     def __init__(
         self,
-        name,
-        children=None,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
+        name: str,
+        children: Sequence[Symbol] | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
     ):
         super().__init__()
         self.name = name
@@ -213,13 +228,13 @@ class Symbol:
             children = []
 
         self._children = children
-        # Keep a separate "oprhans" attribute for backwards compatibility
+        # Keep a separate "orphans" attribute for backwards compatibility
         self._orphans = children
 
         # Set domains (and hence id)
         self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
-        self._saved_evaluates_on_edges = {}
+        self._saved_evaluates_on_edges: dict = {}
         self._print_name = None
 
         # Test shape on everything but nodes that contain the base Symbol class or
@@ -244,13 +259,9 @@ class Symbol:
             At minimum, should contain "name", "children" and "domains".
         """
 
-        instance = cls.__new__(cls)
-
-        instance.__init__(
+        return cls(
             snippet["name"], children=snippet["children"], domains=snippet["domains"]
         )
-
-        return instance
 
     @property
     def children(self):
@@ -268,37 +279,13 @@ class Symbol:
         return self._name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str):
         assert isinstance(value, str)
         self._name = value
 
     @property
     def domains(self):
         return self._domains
-
-    @property
-    def domain(self):
-        """
-        list of applicable domains.
-
-        Returns
-        -------
-            iterable of str
-        """
-        return self._domains["primary"]
-
-    @domain.setter
-    def domain(self, domain):
-        raise NotImplementedError(
-            "Cannot set domain directly, use domains={'primary': domain} instead"
-        )
-
-    @property
-    def auxiliary_domains(self):
-        """Returns auxiliary domains."""
-        raise NotImplementedError(
-            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
-        )
 
     @domains.setter
     def domains(self, domains):
@@ -346,6 +333,30 @@ class Symbol:
         self.set_id()
 
     @property
+    def domain(self):
+        """
+        list of applicable domains.
+
+        Returns
+        -------
+            iterable of str
+        """
+        return self._domains["primary"]
+
+    @domain.setter
+    def domain(self, domain):
+        raise NotImplementedError(
+            "Cannot set domain directly, use domains={'primary': domain} instead"
+        )
+
+    @property
+    def auxiliary_domains(self):
+        """Returns auxiliary domains."""
+        raise NotImplementedError(
+            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
+        )
+
+    @property
     def secondary_domain(self):
         """Helper function to get the secondary domain of a symbol."""
         return self._domains["secondary"]
@@ -360,7 +371,7 @@ class Symbol:
         """Helper function to get the quaternary domain of a symbol."""
         return self._domains["quaternary"]
 
-    def copy_domains(self, symbol):
+    def copy_domains(self, symbol: Symbol):
         """Copy the domains from a given symbol, bypassing checks."""
         if self._domains != symbol._domains:
             self._domains = symbol._domains
@@ -372,9 +383,9 @@ class Symbol:
             self._domains = EMPTY_DOMAINS
             self.set_id()
 
-    def get_children_domains(self, children):
+    def get_children_domains(self, children: Sequence[Symbol]):
         """Combine domains from children, at all levels."""
-        domains = {}
+        domains: dict = {}
         for child in children:
             for level in child.domains.keys():
                 if child.domains[level] == []:
@@ -393,7 +404,12 @@ class Symbol:
 
         return domains
 
-    def read_domain_or_domains(self, domain, auxiliary_domains, domains):
+    def read_domain_or_domains(
+        self,
+        domain: DomainType,
+        auxiliary_domains: AuxiliaryDomainType,
+        domains: DomainsType,
+    ):
         if domains is None:
             if isinstance(domain, str):
                 domain = [domain]
@@ -463,14 +479,14 @@ class Symbol:
         """
         Print out a visual representation of the tree (this node and its children)
         """
-        anytree = have_optional_dependency("anytree")
+        anytree = import_optional_dependency("anytree")
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
                 print(f"{pre}{node.name} = {node.value}")
             else:
                 print(f"{pre}{node.name}")
 
-    def visualise(self, filename):
+    def visualise(self, filename: str):
         """
         Produces a .png file of the tree (this node and its children) with the
         name filename
@@ -482,7 +498,7 @@ class Symbol:
             filename to output, must end in ".png"
         """
 
-        DotExporter = have_optional_dependency("anytree.exporter", "DotExporter")
+        DotExporter = import_optional_dependency("anytree.exporter", "DotExporter")
         # check that filename ends in .png.
         if filename[-4:] != ".png":
             raise ValueError("filename should end in .png")
@@ -497,12 +513,12 @@ class Symbol:
             # raise error but only through logger so that test passes
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
-    def relabel_tree(self, symbol, counter):
+    def relabel_tree(self, symbol: Symbol, counter: int):
         """
         Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
         """
-        anytree = have_optional_dependency("anytree")
+        anytree = import_optional_dependency("anytree")
         name = symbol.name
         if name == "div":
             name = "&nabla;&sdot;"
@@ -545,7 +561,7 @@ class Symbol:
         a
         b
         """
-        anytree = have_optional_dependency("anytree")
+        anytree = import_optional_dependency("anytree")
         return anytree.PreOrderIter(self)
 
     def __str__(self):
@@ -562,71 +578,71 @@ class Symbol:
             {k: v for k, v in self.domains.items() if v != []},
         )
 
-    def __add__(self, other):
+    def __add__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(self, other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
         return pybamm.add(other, self)
 
-    def __sub__(self, other):
+    def __sub__(self, other: ChildSymbol) -> pybamm.Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(self, other)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: ChildSymbol) -> pybamm.Subtraction:
         """return a :class:`Subtraction` object."""
         return pybamm.subtract(other, self)
 
-    def __mul__(self, other):
+    def __mul__(self, other: ChildSymbol) -> pybamm.Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(self, other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: ChildSymbol) -> pybamm.Multiplication:
         """return a :class:`Multiplication` object."""
         return pybamm.multiply(other, self)
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: ChildSymbol) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(self, other)
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self, other: ChildSymbol) -> pybamm.MatrixMultiplication:
         """return a :class:`MatrixMultiplication` object."""
         return pybamm.matmul(other, self)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: ChildSymbol) -> pybamm.Division:
         """return a :class:`Division` object."""
         return pybamm.divide(self, other)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: ChildSymbol) -> pybamm.Division:
         """return a :class:`Division` object."""
         return pybamm.divide(other, self)
 
-    def __pow__(self, other):
+    def __pow__(self, other: ChildSymbol) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
-    def __rpow__(self, other):
+    def __rpow__(self, other: Symbol) -> pybamm.Power:
         """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
-    def __lt__(self, other):
+    def __lt__(self, other: Symbol | float) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, False)
 
-    def __le__(self, other):
+    def __le__(self, other: Symbol) -> pybamm.EqualHeaviside:
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(self, other, True)
 
-    def __gt__(self, other):
+    def __gt__(self, other: Symbol) -> pybamm.NotEqualHeaviside:
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, False)
 
-    def __ge__(self, other):
+    def __ge__(self, other: Symbol) -> pybamm.EqualHeaviside:
         """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         return pybamm.expression_tree.binary_operators._heaviside(other, self, True)
 
-    def __neg__(self):
+    def __neg__(self) -> pybamm.Negate:
         """return a :class:`Negate` object."""
         if isinstance(self, pybamm.Negate):
             # Double negative is a positive
@@ -645,7 +661,7 @@ class Symbol:
         else:
             return pybamm.simplify_if_constant(pybamm.Negate(self))
 
-    def __abs__(self):
+    def __abs__(self) -> pybamm.AbsoluteValue:
         """return an :class:`AbsoluteValue` object, or a smooth approximation."""
         if isinstance(self, pybamm.AbsoluteValue):
             # No need to apply abs a second time
@@ -665,12 +681,21 @@ class Symbol:
                 out = pybamm.smooth_absolute_value(self, k)
             return pybamm.simplify_if_constant(out)
 
-    def __mod__(self, other):
+    def __mod__(self, other: Symbol) -> pybamm.Modulo:
         """return an :class:`Modulo` object."""
         return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
     def __bool__(self):
-        raise NotImplementedError("Boolean operator not defined for Symbols.")
+        raise NotImplementedError(
+            "Boolean operator not defined for Symbols. You might be seeing this message because you are trying to "
+            "specify an if statement based on the value of a symbol, e.g."
+            "\nif x < 0:\n"
+            "\ty = 1\n"
+            "else:\n"
+            "\ty = 2\n"
+            "In this case, use heaviside functions instead:"
+            "\ny = 1 * (x < 0) + 2 * (x >= 0)"
+        )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         """
@@ -679,7 +704,7 @@ class Symbol:
         """
         return getattr(pybamm, ufunc.__name__)(*inputs, **kwargs)
 
-    def diff(self, variable):
+    def diff(self, variable: Symbol):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
         differentiated, return `1` if differentiating with respect to yourself,
@@ -708,7 +733,12 @@ class Symbol:
         """
         raise NotImplementedError
 
-    def jac(self, variable, known_jacs=None, clear_domain=True):
+    def jac(
+        self,
+        variable: pybamm.Symbol,
+        known_jacs: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
+        clear_domain=True,
+    ):
         """
         Differentiate a symbol with respect to a (slice of) a StateVector
         or StateVectorDot.
@@ -729,7 +759,13 @@ class Symbol:
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """
         evaluate expression tree.
 
@@ -755,7 +791,13 @@ class Symbol:
             f"{self!s} of type {type(self)}"
         )
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ) -> ChildValue:
         """Evaluate expression tree (wrapper to allow using dict of known values).
 
         Parameters
@@ -807,7 +849,7 @@ class Symbol:
         # Default behaviour is False
         return False
 
-    def evaluate_ignoring_errors(self, t=0):
+    def evaluate_ignoring_errors(self, t: float | None = 0):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
         as a scalar or vector (e.g. Time, Parameter, Variable, StateVector), then None
@@ -860,7 +902,7 @@ class Symbol:
         return self.evaluates_to_number() and self.is_constant()
 
     @lru_cache
-    def evaluates_on_edges(self, dimension):
+    def evaluates_on_edges(self, dimension: str) -> bool:
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
@@ -886,7 +928,9 @@ class Symbol:
         # Default behaviour: return False
         return False
 
-    def has_symbol_of_classes(self, symbol_classes):
+    def has_symbol_of_classes(
+        self, symbol_classes: tuple[type[Symbol], ...] | type[Symbol]
+    ):
         """
         Returns True if equation has a term of the class(es) `symbol_class`.
 
@@ -897,7 +941,14 @@ class Symbol:
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
+    def to_casadi(
+        self,
+        t: casadi.MX | None = None,
+        y: casadi.MX | None = None,
+        y_dot: casadi.MX | None = None,
+        inputs: dict | None = None,
+        casadi_symbols: Symbol | None = None,
+    ):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.
@@ -1006,7 +1057,6 @@ class Symbol:
         self._print_name = prettify_print_name(name)
 
     def to_equation(self):
-        sympy = have_optional_dependency("sympy")
         return sympy.Symbol(str(self.name))
 
     def to_json(self):
