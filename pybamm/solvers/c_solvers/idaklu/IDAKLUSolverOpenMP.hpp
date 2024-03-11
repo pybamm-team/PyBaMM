@@ -36,7 +36,7 @@
  *   19. Destroy objects
  *   20. (N/A) Finalize MPI
  */
-template <class CExprSet, class CExpr>
+template <class CExprSet>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports

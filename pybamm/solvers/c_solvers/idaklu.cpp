@@ -61,7 +61,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
 
-  m.def("create_casadi_solver", &create_idaklu_solver<CasadiFunctions, CasadiFunction, casadi::Function>,
+  m.def("create_casadi_solver", &create_idaklu_solver<CasadiFunctions>,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),

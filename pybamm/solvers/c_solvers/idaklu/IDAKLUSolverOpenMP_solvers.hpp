@@ -6,10 +6,10 @@
 /**
  * @brief IDAKLUSolver Dense implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_Dense : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_Dense : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_Dense(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
@@ -21,10 +21,10 @@ public:
 /**
  * @brief IDAKLUSolver KLU implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_KLU : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_KLU : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_KLU(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
@@ -36,10 +36,10 @@ public:
 /**
  * @brief IDAKLUSolver Banded implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_Band : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_Band : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_Band(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
@@ -51,10 +51,10 @@ public:
 /**
  * @brief IDAKLUSolver SPBCGS implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_SPBCGS : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_SPBCGS : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_SPBCGS(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
@@ -71,10 +71,10 @@ public:
 /**
  * @brief IDAKLUSolver SPFGMR implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_SPFGMR : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_SPFGMR : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_SPFGMR(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
@@ -91,10 +91,10 @@ public:
 /**
  * @brief IDAKLUSolver SPGMR implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_SPGMR : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_SPGMR : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_SPGMR(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {
@@ -111,10 +111,10 @@ public:
 /**
  * @brief IDAKLUSolver SPTFQMR implementation with OpenMP class
  */
-template <class T, class U>
-class IDAKLUSolverOpenMP_SPTFQMR : public IDAKLUSolverOpenMP<T, U> {
+template <class T>
+class IDAKLUSolverOpenMP_SPTFQMR : public IDAKLUSolverOpenMP<T> {
 public:
-  using Base = IDAKLUSolverOpenMP<T, U>;
+  using Base = IDAKLUSolverOpenMP<T>;
   template<typename ... Args>
   IDAKLUSolverOpenMP_SPTFQMR(Args&& ... args) : Base(std::forward<Args>(args) ...)
   {

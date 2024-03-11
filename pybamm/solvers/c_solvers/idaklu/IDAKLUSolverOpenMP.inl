@@ -4,8 +4,8 @@
 #include <casadi/core/function.hpp>
 #include <casadi/core/sparsity.hpp>
 
-template <class CExprSet, class CExpr>
-IDAKLUSolverOpenMP<CExprSet, CExpr>::IDAKLUSolverOpenMP(
+template <class CExprSet>
+IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
   np_array atol_np,
   double rel_tol,
   np_array rhs_alg_id,
@@ -78,8 +78,8 @@ IDAKLUSolverOpenMP<CExprSet, CExpr>::IDAKLUSolverOpenMP(
   }
 }
 
-template <class CExprSet, class CExpr>
-void IDAKLUSolverOpenMP<CExprSet, CExpr>::AllocateVectors() {
+template <class CExprSet>
+void IDAKLUSolverOpenMP<CExprSet>::AllocateVectors() {
   // Create vectors
   yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
@@ -87,8 +87,8 @@ void IDAKLUSolverOpenMP<CExprSet, CExpr>::AllocateVectors() {
   id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
 }
 
-template <class CExprSet, class CExpr>
-void IDAKLUSolverOpenMP<CExprSet, CExpr>::SetMatrix() {
+template <class CExprSet>
+void IDAKLUSolverOpenMP<CExprSet>::SetMatrix() {
   // Create Matrix object
   if (options.jacobian == "sparse")
   {
@@ -127,8 +127,8 @@ void IDAKLUSolverOpenMP<CExprSet, CExpr>::SetMatrix() {
     throw std::invalid_argument("Unsupported matrix requested");
 }
 
-template <class CExprSet, class CExpr>
-void IDAKLUSolverOpenMP<CExprSet, CExpr>::Initialize() {
+template <class CExprSet>
+void IDAKLUSolverOpenMP<CExprSet>::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
@@ -171,8 +171,8 @@ void IDAKLUSolverOpenMP<CExprSet, CExpr>::Initialize() {
   IDASetId(ida_mem, id);
 }
 
-template <class CExprSet, class CExpr>
-IDAKLUSolverOpenMP<CExprSet, CExpr>::~IDAKLUSolverOpenMP()
+template <class CExprSet>
+IDAKLUSolverOpenMP<CExprSet>::~IDAKLUSolverOpenMP()
 {
   // Free memory
   if (number_of_parameters > 0)
@@ -195,8 +195,8 @@ IDAKLUSolverOpenMP<CExprSet, CExpr>::~IDAKLUSolverOpenMP()
   SUNContext_Free(&sunctx);
 }
 
-template <class CExprSet, class CExpr>
-void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVars(
+template <class CExprSet>
+void IDAKLUSolverOpenMP<CExprSet>::CalcVars(
     realtype *y_return,
     size_t length_of_return_vector,
     size_t t_i,
@@ -206,20 +206,21 @@ void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVars(
     realtype *yS_return,
     size_t *ySk
 ) {
+  DEBUG("IDAKLUSolver::CalcVars");
   // Evaluate functions for each requested variable and store
   size_t j = 0;
   for (auto& var_fcn : functions->var_fcns) {
-    var_fcn({tret, yval, functions->inputs.data()}, {res});
+    (*var_fcn)({tret, yval, functions->inputs.data()}, {res});
     // store in return vector
-    for (size_t jj=0; jj<var_fcn.nnz_out(); jj++)
+    for (size_t jj=0; jj<var_fcn->nnz_out(); jj++)
       y_return[t_i*length_of_return_vector + j++] = res[jj];
   }
   // calculate sensitivities
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
 }
 
-template <class CExprSet, class CExpr>
-void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVarsSensitivities(
+template <class CExprSet>
+void IDAKLUSolverOpenMP<CExprSet>::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
     const std::vector<realtype*>& ySval,
@@ -232,14 +233,14 @@ void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVarsSensitivities(
   realtype* dens_dvar_dp = new realtype[number_of_parameters];
   for (size_t dvar_k=0; dvar_k<functions->dvar_dy_fcns.size(); dvar_k++) {
     // Isolate functions
-    CExpr dvar_dy = functions->dvar_dy_fcns[dvar_k];
-    CExpr dvar_dp = functions->dvar_dp_fcns[dvar_k];
+    Expression* dvar_dy = functions->dvar_dy_fcns[dvar_k];
+    Expression* dvar_dp = functions->dvar_dp_fcns[dvar_k];
     // Calculate dvar/dy
-    dvar_dy({tret, yval, functions->inputs.data()}, {res_dvar_dy});
-    ExpressionSparsity *spdy = dvar_dy.sparsity_out(0);
+    (*dvar_dy)({tret, yval, functions->inputs.data()}, {res_dvar_dy});
+    ExpressionSparsity *spdy = dvar_dy->sparsity_out(0);
     // Calculate dvar/dp and convert to dense array for indexing
-    dvar_dp({tret, yval, functions->inputs.data()}, {res_dvar_dp});
-    ExpressionSparsity *spdp = dvar_dp.sparsity_out(0);
+    (*dvar_dp)({tret, yval, functions->inputs.data()}, {res_dvar_dp});
+    ExpressionSparsity *spdp = dvar_dp->sparsity_out(0);
     for(int k=0; k<number_of_parameters; k++)
       dens_dvar_dp[k]=0;
     for(int k=0; k<spdp->nnz(); k++)
@@ -247,15 +248,15 @@ void IDAKLUSolverOpenMP<CExprSet, CExpr>::CalcVarsSensitivities(
     // Calculate sensitivities
     for(int paramk=0; paramk<number_of_parameters; paramk++) {
       yS_return[*ySk] = dens_dvar_dp[paramk];
-      for(int spk=0; spk<dvar_dy.nnz_out(); spk++)
+      for(int spk=0; spk<dvar_dy->nnz_out(); spk++)
         yS_return[*ySk] += res_dvar_dy[spk] * ySval[paramk][spdy->get_col()[spk]];
       (*ySk)++;
     }
   }
 }
 
-template <class CExprSet, class CExpr>
-Solution IDAKLUSolverOpenMP<CExprSet, CExpr>::solve(
+template <class CExprSet>
+Solution IDAKLUSolverOpenMP<CExprSet>::solve(
     np_array t_np,
     np_array y0_np,
     np_array yp0_np,
@@ -326,12 +327,12 @@ Solution IDAKLUSolverOpenMP<CExprSet, CExpr>::solve(
   if (functions->var_fcns.size() > 0) {
     // return only the requested variables list after computation
     for (auto& var_fcn : functions->var_fcns) {
-      max_res_size = std::max(max_res_size, size_t(var_fcn.nnz_out()));
-      length_of_return_vector += var_fcn.nnz_out();
+      max_res_size = std::max(max_res_size, size_t(var_fcn->nnz_out()));
+      length_of_return_vector += var_fcn->nnz_out();
       for (auto& dvar_fcn : functions->dvar_dy_fcns)
-        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn.nnz_out()));
+        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn->nnz_out()));
       for (auto& dvar_fcn : functions->dvar_dp_fcns)
-        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn.nnz_out()));
+        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn->nnz_out()));
     }
   } else {
     // Return full y state-vector

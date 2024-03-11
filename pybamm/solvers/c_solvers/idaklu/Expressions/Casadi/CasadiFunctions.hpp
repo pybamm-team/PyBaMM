@@ -57,6 +57,9 @@ public:
 class CasadiFunctions : public ExpressionSet<CasadiFunction>
 {
 public:
+
+  typedef casadi::Function BaseFunctionType;
+
   /**
    * @brief Create a new CasadiFunctions object
    */
@@ -104,15 +107,21 @@ public:
       options)
   {
     // convert casadi::Function list to CasadiFunction list
-    for (auto& var : var_fcns) {
-      this->var_fcns.push_back(CasadiFunction(*var));
-    }
-    for (auto& var : dvar_dy_fcns) {
-      this->dvar_dy_fcns.push_back(CasadiFunction(*var));
-    }
-    for (auto& var : dvar_dp_fcns) {
-      this->dvar_dp_fcns.push_back(CasadiFunction(*var));
-    }
+    // NOTE: You must allocate ALL std::vector elements before taking references
+    for (auto& var : var_fcns)
+      var_fcns_casadi.push_back(CasadiFunction(*var));
+    for (int k = 0; k < var_fcns_casadi.size(); k++)
+      ExpressionSet<CasadiFunction>::var_fcns.push_back(&this->var_fcns_casadi[k]);
+
+    for (auto& var : dvar_dy_fcns)
+      dvar_dy_fcns_casadi.push_back(CasadiFunction(*var));
+    for (int k = 0; k < dvar_dy_fcns_casadi.size(); k++)
+      this->dvar_dy_fcns.push_back(&this->dvar_dy_fcns_casadi[k]);
+
+    for (auto& var : dvar_dp_fcns)
+      dvar_dp_fcns_casadi.push_back(CasadiFunction(*var));
+    for (int k = 0; k < dvar_dp_fcns_casadi.size(); k++)
+      this->dvar_dp_fcns.push_back(&this->dvar_dp_fcns_casadi[k]);
 
     // copy across numpy array values
     const int n_row_vals = jac_times_cjmass_rowvals_arg.request().size;
@@ -138,6 +147,10 @@ public:
   CasadiFunction mass_action_casadi;
   CasadiFunction sens_casadi;
   CasadiFunction events_casadi;
+
+  std::vector<CasadiFunction> var_fcns_casadi;
+  std::vector<CasadiFunction> dvar_dy_fcns_casadi;
+  std::vector<CasadiFunction> dvar_dp_fcns_casadi;
 
   realtype* get_tmp_state_vector() override {
     return tmp_state_vector.data();
