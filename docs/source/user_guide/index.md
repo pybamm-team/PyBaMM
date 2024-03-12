@@ -57,8 +57,6 @@ glob:
 ../examples/notebooks/getting_started/tutorial-7-model-options.ipynb
 ../examples/notebooks/getting_started/tutorial-8-solver-options.ipynb
 ../examples/notebooks/getting_started/tutorial-9-changing-the-mesh.ipynb
-../examples/notebooks/getting_started/tutorial-10-creating-a-model.ipynb
-../examples/notebooks/getting_started/tutorial-11-creating-a-submodel.ipynb
 ```
 
 ```{nbgallery}
