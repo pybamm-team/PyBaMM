@@ -570,13 +570,7 @@ class Symbol:
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return ("{!s}({}, {!s}, children={!s}, domains={!s})").format(
-            self.__class__.__name__,
-            hex(self.id),
-            self._name,
-            [str(child) for child in self.children],
-            {k: v for k, v in self.domains.items() if v != []},
-        )
+        return f"{self.__class__.__name__!s}({hex(self.id)}, {self._name!s}, children={[str(child) for child in self.children]!s}, domains={({k: v for k, v in self.domains.items() if v != []})!s})"
 
     def __add__(self, other: ChildSymbol) -> pybamm.Addition:
         """return an :class:`Addition` object."""
