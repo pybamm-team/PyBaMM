@@ -570,9 +570,9 @@ class ParameterValues:
                 if spatial_variable == "tabs":
                     for tab, position_info in spatial_limits.items():
                         for position_size, sym in position_info.items():
-                            geometry[domain]["tabs"][tab][
-                                position_size
-                            ] = process_and_check(sym)
+                            geometry[domain]["tabs"][tab][position_size] = (
+                                process_and_check(sym)
+                            )
                 else:
                     for lim, sym in spatial_limits.items():
                         geometry[domain][spatial_variable][lim] = process_and_check(sym)
