@@ -125,12 +125,12 @@ class ParameterValues:
             )
         else:
             c_n_init, c_p_init = get_electrode_concentrations(target_soc, bpx)
-            pybamm_dict[
-                "Initial concentration in negative electrode [mol.m-3]"
-            ] = c_n_init
-            pybamm_dict[
-                "Initial concentration in positive electrode [mol.m-3]"
-            ] = c_p_init
+            pybamm_dict["Initial concentration in negative electrode [mol.m-3]"] = (
+                c_n_init
+            )
+            pybamm_dict["Initial concentration in positive electrode [mol.m-3]"] = (
+                c_p_init
+            )
 
         return pybamm.ParameterValues(pybamm_dict)
 
@@ -570,9 +570,9 @@ class ParameterValues:
                 if spatial_variable == "tabs":
                     for tab, position_size in spatial_limits.items():
                         for position_size, sym in position_size.items():
-                            geometry[domain]["tabs"][tab][
-                                position_size
-                            ] = process_and_check(sym)
+                            geometry[domain]["tabs"][tab][position_size] = (
+                                process_and_check(sym)
+                            )
                 else:
                     for lim, sym in spatial_limits.items():
                         geometry[domain][spatial_variable][lim] = process_and_check(sym)

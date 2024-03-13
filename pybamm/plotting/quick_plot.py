@@ -116,9 +116,7 @@ class QuickPlot:
         else:
             if len(labels) != len(models):
                 raise ValueError(
-                    "labels '{}' have different length to models '{}'".format(
-                        labels, [model.name for model in models]
-                    )
+                    f"labels '{labels}' have different length to models '{[model.name for model in models]}'"
                 )
             self.labels = labels
 
@@ -297,12 +295,7 @@ class QuickPlot:
                 if variable.domain != domain:
                     raise ValueError(
                         "Mismatching variable domains. "
-                        "'{}' has domain '{}', but '{}' has domain '{}'".format(
-                            variable_tuple[0],
-                            domain,
-                            variable_tuple[idx],
-                            variable.domain,
-                        )
+                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
 

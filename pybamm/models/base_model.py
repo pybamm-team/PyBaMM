@@ -557,9 +557,7 @@ class BaseModel:
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
-                "Getting fundamental variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Getting fundamental variables for {submodel_name} submodel ({self.name})"
             )
             self.variables.update(submodel.get_fundamental_variables())
 
@@ -580,9 +578,7 @@ class BaseModel:
             for submodel_name, submodel in self.submodels.items():
                 if submodel_name in submodels:
                     pybamm.logger.debug(
-                        "Getting coupled variables for {} submodel ({})".format(
-                            submodel_name, self.name
-                        )
+                        f"Getting coupled variables for {submodel_name} submodel ({self.name})"
                     )
                     try:
                         self.variables.update(
@@ -593,9 +589,7 @@ class BaseModel:
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                "Missing variable for submodel '{}': {}.\n".format(
-                                    submodel_name, key
-                                )
+                                f"Missing variable for submodel '{submodel_name}': {key}.\n"
                                 + "Check the selected "
                                 "submodels provide all of the required variables."
                             )
@@ -621,9 +615,7 @@ class BaseModel:
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
@@ -967,9 +959,7 @@ class BaseModel:
 
         if not rhs_keys.isdisjoint(alg_keys):
             raise pybamm.ModelError(
-                "Multiple equations specified for variables {}".format(
-                    rhs_keys.intersection(alg_keys)
-                )
+                f"Multiple equations specified for variables {rhs_keys.intersection(alg_keys)}"
             )
 
     def info(self, symbol_name):
@@ -1341,9 +1331,7 @@ class EquationDict(dict):
                     variable_in_equation = next(iter(unpacker.unpack_symbol(eqn)))
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
-                        "but '{!r}' found in initial conditions for '{}'".format(
-                            variable_in_equation, var
-                        )
+                        f"but '{variable_in_equation!r}' found in initial conditions for '{var}'"
                     )
 
         return equations
@@ -1374,9 +1362,9 @@ class BoundaryConditionsDict(dict):
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
+                        f"""
+                        boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'
                         """
-                        boundary condition types must be Dirichlet or Neumann, not '{}'
-                        """.format(bc[1])
                     )
 
         return boundary_conditions
