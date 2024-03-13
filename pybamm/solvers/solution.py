@@ -710,9 +710,7 @@ class Solution:
             for name, var in data.items():
                 if var.ndim >= 2:
                     raise ValueError(
-                        "only 0D variables can be saved to csv, but '{}' is {}D".format(
-                            name, var.ndim - 1
-                        )
+                        f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)

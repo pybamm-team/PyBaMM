@@ -106,9 +106,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 y = np.concatenate([y0_diff, y_alg])
                 out = algebraic(t, y)
                 pybamm.logger.debug(
-                    "Evaluating algebraic equations at t={}, L2-norm is {}".format(
-                        t, np.linalg.norm(out)
-                    )
+                    f"Evaluating algebraic equations at t={t}, L2-norm is {np.linalg.norm(out)}"
                 )
                 return out
 

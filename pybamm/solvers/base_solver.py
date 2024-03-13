@@ -846,9 +846,9 @@ class BaseSolver:
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
                     self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-                self._model_set_up[model][
-                    "initial conditions"
-                ] = model.concatenated_initial_conditions
+                self._model_set_up[model]["initial conditions"] = (
+                    model.concatenated_initial_conditions
+                )
 
         set_up_time = timer.time()
         timer.reset()
@@ -894,10 +894,7 @@ class BaseSolver:
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.verbose(
-                "Calling solver for {} < t < {}".format(
-                    t_eval[start_index],
-                    t_eval[end_index - 1],
-                )
+                f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
             ninputs = len(model_inputs_list)
             if ninputs == 1:
@@ -974,24 +971,13 @@ class BaseSolver:
         if len(solutions) == 1:
             pybamm.logger.info(f"Finish solving {model.name} ({termination})")
             pybamm.logger.info(
-                (
-                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
-                    "Total time: {}"
-                ).format(
-                    solutions[0].set_up_time,
-                    solutions[0].solve_time,
-                    solutions[0].integration_time,
-                    solutions[0].total_time,
-                )
+                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time} (of which integration time: {solutions[0].integration_time}), "
+                f"Total time: {solutions[0].total_time}"
             )
         else:
             pybamm.logger.info(f"Finish solving {model.name} for all inputs")
             pybamm.logger.info(
-                ("Set-up time: {}, Solve time: {}, Total time: {}").format(
-                    solutions[0].set_up_time,
-                    solutions[0].solve_time,
-                    solutions[0].total_time,
-                )
+                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, Total time: {solutions[0].total_time}"
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
@@ -1250,15 +1236,8 @@ class BaseSolver:
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-            (
-                "Set-up time: {}, Step time: {} (of which integration time: {}), "
-                "Total time: {}"
-            ).format(
-                solution.set_up_time,
-                solution.solve_time,
-                solution.integration_time,
-                solution.total_time,
-            )
+            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time} (of which integration time: {solution.integration_time}), "
+            f"Total time: {solution.total_time}"
         )
 
         # Return solution
