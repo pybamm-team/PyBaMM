@@ -115,6 +115,10 @@ def run_integration(session):
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
+    # Temporary fix for Python 3.12 CI. TODO: remove after
+    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
+    # is fixed
+    session.install("setuptools", silent=False)
     session.install("-e", ".[all,docs]", silent=False)
     session.run("python", "run-tests.py", "--doctest")
 
