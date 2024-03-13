@@ -1,6 +1,8 @@
 #
 # Base model class
 #
+from __future__ import annotations
+
 import numbers
 import warnings
 from collections import OrderedDict
@@ -11,7 +13,6 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-from pybamm.util import have_optional_dependency
 
 
 class BaseModel:
@@ -130,10 +131,9 @@ class BaseModel:
         """
         Create a model instance from a serialised object.
         """
-        instance = cls.__new__(cls)
 
         # append the model name with _saved to differentiate
-        instance.__init__(name=properties["name"] + "_saved")
+        instance = cls(name=properties["name"] + "_saved")
 
         instance.options = properties["options"]
 
@@ -1184,9 +1184,7 @@ class BaseModel:
         This will return first five model equations
         >>> model.latexify(newline=False)[1:5]
         """
-        sympy = have_optional_dependency("sympy")
-        if sympy:
-            from pybamm.expression_tree.operations.latexify import Latexify
+        from pybamm.expression_tree.operations.latexify import Latexify
 
         return Latexify(self, filename, newline).latexify(
             output_variables=output_variables
@@ -1261,7 +1259,7 @@ class BaseModel:
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
 
 
-def load_model(filename, battery_model: BaseModel = None):
+def load_model(filename, battery_model: BaseModel | None = None):
     """
     Load in a saved model from a JSON file
 

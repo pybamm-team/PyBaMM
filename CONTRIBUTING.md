@@ -104,13 +104,13 @@ Only 'core pybamm' is installed by default. The others have to be specified expl
 
 PyBaMM utilizes optional dependencies to allow users to choose which additional libraries they want to use. Managing these optional dependencies and their imports is essential to provide flexibility to PyBaMM users.
 
-PyBaMM provides a utility function `have_optional_dependency`, to check for the availability of optional dependencies within methods. This function can be used to conditionally import optional dependencies only if they are available. Here's how to use it:
+PyBaMM provides a utility function `import_optional_dependency`, to check for the availability of optional dependencies within methods. This function can be used to conditionally import optional dependencies only if they are available. Here's how to use it:
 
 Optional dependencies should never be imported at the module level, but always inside methods. For example:
 
 ```
 def use_pybtex(x,y,z):
-    pybtex = have_optional_dependency("pybtex")
+    pybtex = import_optional_dependency("pybtex")
     ...
 ```
 
@@ -118,7 +118,7 @@ While importing a specific module instead of an entire package/library:
 
 ```python
 def use_parse_file(x, y, z):
-    parse_file = have_optional_dependency("pybtex.database", "parse_file")
+    parse_file = import_optional_dependency("pybtex.database", "parse_file")
     ...
 ```
 
@@ -143,7 +143,7 @@ class TestUtil(TestCase):
             pybamm.function_using_pybtex(x, y, z)
 
         # Test that the function works when pybtex is available
-        sys.modules["pybtex"] = pybamm.util.have_optional_dependency("pybtex")
+        sys.modules["pybtex"] = pybamm.util.import_optional_dependency("pybtex")
         pybamm.function_using_pybtex(x, y, z)
 ```
 

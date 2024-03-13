@@ -6,12 +6,11 @@ import unittest
 
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
-from pybamm.util import have_optional_dependency
+import sympy
 
 
 class TestCustomPrint(TestCase):
     def test_print_Derivative(self):
-        sympy = have_optional_dependency("sympy")
         # Test force_partial
         der1 = sympy.Derivative("y", "x")
         der1.force_partial = True
