@@ -58,7 +58,7 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError as error:
-            if "electrode diffusivity" in key:
+            if "particle diffusivity" in key:
                 warn(
                     f"The parameter '{key.replace('particle', 'electrode')}' "
                     f"has been renamed to '{key}'",

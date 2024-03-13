@@ -892,17 +892,8 @@ class Discretisation:
                     No key set for variable '{symbol.name}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
-<<<<<<< HEAD
-                    """.format(symbol.name)
-                ) from error
-=======
                     """
-<<<<<<< HEAD
-                )
->>>>>>> 58b705e96 (chore: update pre-commit hooks (#3890))
-=======
                 ) from error
->>>>>>> c8b39db3b (Resolve conflicts (B904, B028, B020))
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
             return symbol.reference + symbol.scale * pybamm.StateVector(
