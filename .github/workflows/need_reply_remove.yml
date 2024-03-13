@@ -11,6 +11,8 @@ jobs:
     if: |
       github.event.comment.author_association != 'OWNER' &&
       github.event.comment.author_association != 'COLLABORATOR' &&
+      github.repository_owner == 'pybamm-team' && 
+      !github.event.issue.pull_request
       github.repository_owner == 'pybamm-team'
     steps:
       - name: Remove needs-reply label
