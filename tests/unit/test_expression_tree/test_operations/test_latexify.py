@@ -1,6 +1,7 @@
 """
 Tests for the latexify.py
 """
+
 from tests import TestCase
 import os
 import platform

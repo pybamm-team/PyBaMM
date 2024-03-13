@@ -11,7 +11,6 @@ from pybamm.util import import_optional_dependency
 
 
 class Citations:
-
     """Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.

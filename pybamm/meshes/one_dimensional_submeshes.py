@@ -299,10 +299,10 @@ class UserSupplied1DSubMesh(SubMesh1D):
         # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
-                """User-suppled edges has should have length (npts + 1) but has length
-                {}.Number of points (npts) for domain {} is {}.""".format(
-                    len(edges), spatial_var.domain, npts
-                ).replace("\n                ", " ")
+                f"""User-suppled edges has should have length (npts + 1) but has length
+                {len(edges)}.Number of points (npts) for domain {spatial_var.domain} is {npts}.""".replace(
+                    "\n                ", " "
+                )
             )
 
         # check end points of edges agree with spatial_lims
@@ -360,9 +360,7 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         elif (npts + 1) != len(edges):
             raise pybamm.GeometryError(
                 "User-suppled edges should have length (npts + 1) but has len"
-                "gth {}. Number of points (npts) for domain {} is {}.".format(
-                    len(edges), spatial_var.domain, npts
-                )
+                f"gth {len(edges)}. Number of points (npts) for domain {spatial_var.domain} is {npts}."
             )
 
         # check end points of edges agree with spatial_lims
