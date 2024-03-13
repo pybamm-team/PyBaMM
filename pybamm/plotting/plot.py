@@ -3,10 +3,10 @@
 #
 import pybamm
 from .quick_plot import ax_min, ax_max
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
-def plot(x, y, ax=None, testing=False, **kwargs):
+def plot(x, y, ax=None, show_plot=True, **kwargs):
     """
     Generate a simple 1D plot. Calls `matplotlib.pyplot.plot` with keyword
     arguments 'kwargs'. For a list of 'kwargs' see the
@@ -20,13 +20,14 @@ def plot(x, y, ax=None, testing=False, **kwargs):
         The array to plot on the y axis
     ax : matplotlib Axis, optional
         The axis on which to put the plot. If None, a new figure and axis is created.
-    testing : bool, optional
-        Whether to actually make the plot (turned off for unit tests)
+    show_plot : bool, optional
+        Whether to show the plots. Default is True. Set to False if you want to
+        only display the plot after plt.show() has been called.
     kwargs
         Keyword arguments, passed to plt.plot
 
     """
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     if not isinstance(x, pybamm.Array):
         raise TypeError("x must be 'pybamm.Array'")
@@ -34,14 +35,14 @@ def plot(x, y, ax=None, testing=False, **kwargs):
         raise TypeError("y must be 'pybamm.Array'")
 
     if ax is not None:
-        testing = True
+        show_plot = False
     else:
         _, ax = plt.subplots()
 
     ax.plot(x.entries, y.entries, **kwargs)
     ax.set_ylim([ax_min(y.entries), ax_max(y.entries)])
 
-    if not testing:  # pragma: no cover
+    if show_plot:  # pragma: no cover
         plt.show()
 
     return ax

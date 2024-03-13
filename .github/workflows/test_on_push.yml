@@ -59,7 +59,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -116,6 +116,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
@@ -137,7 +138,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -172,13 +173,16 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3.1.5
+        uses: codecov/codecov-action@v4.1.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   run_integration_tests:
     needs: style
@@ -204,7 +208,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -261,6 +265,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
@@ -284,7 +289,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: graphviz pandoc
           execute_install_scripts: true
@@ -326,7 +331,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -361,6 +366,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
@@ -380,7 +386,7 @@ jobs:
 
       # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
@@ -415,6 +421,7 @@ jobs:
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12

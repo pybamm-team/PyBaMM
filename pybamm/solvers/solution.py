@@ -478,7 +478,15 @@ class Solution:
             for i, (model, ys, inputs, var_pybamm) in enumerate(
                 zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
             ):
-                if isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                if ys.size == 0 and var_pybamm.has_symbol_of_classes(
+                    pybamm.expression_tree.state_vector.StateVector
+                ):
+                    raise KeyError(
+                        f"Cannot process variable '{key}' as it was not part of the "
+                        "solve. Please re-run the solve with `output_variables` set to "
+                        "include this variable."
+                    )
+                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
                     cumtrapz_ic = var_pybamm.initial_condition
                     cumtrapz_ic = cumtrapz_ic.evaluate()
                     var_pybamm = var_pybamm.child
@@ -702,9 +710,7 @@ class Solution:
             for name, var in data.items():
                 if var.ndim >= 2:
                     raise ValueError(
-                        "only 0D variables can be saved to csv, but '{}' is {}D".format(
-                            name, var.ndim - 1
-                        )
+                        f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
@@ -806,7 +812,7 @@ class Solution:
         ax=None,
         show_legend=True,
         split_by_electrode=False,
-        testing=False,
+        show_plot=True,
         **kwargs_fill,
     ):
         """
@@ -821,8 +827,9 @@ class Solution:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
-        testing : bool, optional
-            Whether to actually make the plot (turned off for unit tests).
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
         kwargs_fill
             Keyword arguments, passed to ax.fill_between.
 
@@ -833,7 +840,7 @@ class Solution:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            testing=testing,
+            show_plot=show_plot,
             **kwargs_fill,
         )
 

@@ -342,12 +342,12 @@ class SpectralVolume(pybamm.FiniteVolume):
                 sub_matrix[i * d, i * (d + 1) : (i + 1) * (d + 1)] = (
                     f * sub_matrix_raw[i * (d + 1), i * (d + 1) : (i + 1) * (d + 1)]
                 )
-                sub_matrix[
-                    i * d + 1 : (i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)
-                ] = sub_matrix_raw[
-                    i * (d + 1) + 1 : (i + 1) * (d + 1) - 1,
-                    i * (d + 1) : (i + 1) * (d + 1),
-                ]
+                sub_matrix[i * d + 1 : (i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)] = (
+                    sub_matrix_raw[
+                        i * (d + 1) + 1 : (i + 1) * (d + 1) - 1,
+                        i * (d + 1) : (i + 1) * (d + 1),
+                    ]
+                )
                 sub_matrix[(i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)] = (
                     f * sub_matrix_raw[i * (d + 1) + d, i * (d + 1) : (i + 1) * (d + 1)]
                 )

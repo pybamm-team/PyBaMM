@@ -3,6 +3,7 @@ import warnings
 import importlib.metadata
 import textwrap
 from collections.abc import Mapping
+from typing import Callable
 
 
 class ParameterSets(Mapping):
@@ -56,7 +57,7 @@ class ParameterSets(Mapping):
     def __getitem__(self, key) -> dict:
         return self.__load_entry_point__(key)()
 
-    def __load_entry_point__(self, key) -> callable:
+    def __load_entry_point__(self, key) -> Callable:
         """Check that ``key`` is a registered ``pybamm_parameter_sets``,
         and return the entry point for the parameter set, loading it needed.
         """
@@ -88,9 +89,9 @@ class ParameterSets(Mapping):
             # parameter set as before when passed to `ParameterValues`
             if name in self:
                 msg = (
-                    "Parameter sets should be called directly by their name ({0}), "
-                    "instead of via pybamm.parameter_sets (pybamm.parameter_sets.{0})."
-                ).format(name)
+                    f"Parameter sets should be called directly by their name ({name}), "
+                    f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
+                )
                 warnings.warn(msg, DeprecationWarning)
                 return name
             raise error

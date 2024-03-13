@@ -196,7 +196,8 @@ class BatchStudy:
             Name of the generated GIF file.
 
         """
-
+        if not hasattr(self, "sims"):
+            raise ValueError("The simulations have not been solved yet.")
         if self.quick_plot is None:
             self.quick_plot = pybamm.QuickPlot(self.sims)
 
