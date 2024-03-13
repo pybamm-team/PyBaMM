@@ -886,7 +886,7 @@ class Discretisation:
             # model.check_well_posedness, but won't be if debug_mode is False
             try:
                 y_slices = self.y_slices[symbol]
-            except KeyError as error:
+            except KeyError:
                 raise pybamm.ModelError(
                     f"""
                     No key set for variable '{symbol.name}'. Make sure it is included in either
