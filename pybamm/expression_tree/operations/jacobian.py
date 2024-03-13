@@ -90,10 +90,10 @@ class Jacobian:
         else:
             try:
                 jac = symbol._jac(variable)
-            except NotImplementedError:
+            except NotImplementedError as error:
                 raise NotImplementedError(
                     f"Cannot calculate Jacobian of symbol of type '{type(symbol)}'"
-                )
+                ) from error
 
         # Jacobian by default removes the domain(s)
         if self._clear_domain:

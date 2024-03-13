@@ -76,7 +76,7 @@ class Latexify:
             rng_min = get_rng_min_max_name(rng, "min")
 
         # Take range maximum from the last domain
-        for var_name, rng in self.model.default_geometry[var.domain[-1]].items():
+        for _, rng in self.model.default_geometry[var.domain[-1]].items():
             rng_max = get_rng_min_max_name(rng, "max")
 
         geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
@@ -303,7 +303,8 @@ class Latexify:
                 # When equations are too huge, set output resolution to default
                 except RuntimeError:  # pragma: no cover
                     warnings.warn(
-                        "RuntimeError - Setting the output resolution to default"
+                        "RuntimeError - Setting the output resolution to default",
+                        stacklevel=2,
                     )
                     return sympy.preview(
                         eqn_new_line,
