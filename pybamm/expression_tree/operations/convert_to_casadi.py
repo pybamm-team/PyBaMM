@@ -215,8 +215,8 @@ class CasadiConverter:
 
         else:
             raise TypeError(
-                """
-                Cannot convert symbol of type '{}' to CasADi. Symbols must all be
+                f"""
+                Cannot convert symbol of type '{type(symbol)}' to CasADi. Symbols must all be
                 'linear algebra' at this stage.
-                """.format(type(symbol))
+                """
             )

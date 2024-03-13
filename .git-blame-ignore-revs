@@ -10,3 +10,5 @@ a63e49ece0f9336d1f5c2562f7459e555c6e6693
 ff6d81c01331c7d269303b4a8321d9881bdf98fa
 # migrated to ruff-format - https://github.com/pybamm-team/PyBaMM/pull/3655
 60ebd4148059a95428a496f4f55c1175ead362d3
+# implemented cleaner string formatting via f-strings - https://github.com/pybamm-team/PyBaMM/pull/3890
+f395819d1c874071b7e76e32ec4f0bbe42462b48
