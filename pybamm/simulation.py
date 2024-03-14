@@ -566,6 +566,7 @@ class Simulation:
                         to be the points in the data.
                         """,
                         pybamm.SolverWarning,
+                        stacklevel=2,
                     )
                     dt_data_min = np.min(np.diff(time_data))
                     dt_eval_max = np.max(np.diff(t_eval))
@@ -580,6 +581,7 @@ class Simulation:
                             points in the data.
                             """,
                             pybamm.SolverWarning,
+                            stacklevel=2,
                         )
 
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)

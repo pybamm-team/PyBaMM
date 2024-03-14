@@ -2,6 +2,6 @@ graft pybamm
 include CITATION.cff
 prune tests
 
-exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md CMakeLists.txt
+exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md CMakeLists.txt all_contributors.md
 
 global-exclude __pycache__ *.py[cod] .venv
