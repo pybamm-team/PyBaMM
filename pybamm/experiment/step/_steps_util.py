@@ -287,8 +287,8 @@ def _convert_electric(value_string):
     }
     try:
         typ = units_to_type[unit]
-    except KeyError:
+    except KeyError as error:
         raise ValueError(
             f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {_examples}"
-        )
+        ) from error
     return typ, value
