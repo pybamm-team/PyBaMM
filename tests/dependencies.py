@@ -8,11 +8,15 @@ import unittest
 
 class TestDependencies(TestCase):
     """
-    Test of dependencies for specific versions of PyBaMM
+    This class tests the dependencies required by PyBaMM for specific versions.
+
+    **Note:** This test module is **not run automatically** with other tests.
+    Its functions are intended to be tested manually on different PyBaMM versions.
     """
 
-    # Test that optional dependencies are not installed in the core version of PyBaMM
-    def test_optional_dependencies(self):
+    def test_core_optional_dependencies(self):
+        """Ensure optional dependencies are not installed in the core PyBaMM version."""
+
         pattern = re.compile(r"^([^>=;\[]+)\b.*$")
         json_deps = importlib.metadata.metadata("pybamm").json["requires_dist"]
 
@@ -27,6 +31,16 @@ class TestDependencies(TestCase):
             present_distribution_deps.update(set(distribution_pkgs))
 
         self.assertFalse(bool(optional_distribution_deps & present_distribution_deps))
+
+    def test_core_pybamm_import(self):
+        """Verify successful import of 'pybamm' without optional dependencies in the core PyBaMM version."""
+
+        try:
+            importlib.import_module("pybamm")
+        except ImportError as error:
+            self.fail(
+                f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
+            )
 
 
 if __name__ == "__main__":
