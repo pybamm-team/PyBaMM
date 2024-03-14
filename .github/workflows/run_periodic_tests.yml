@@ -237,7 +237,6 @@ jobs:
           python -m pip install wget cmake
           pybamm_install_odes
 
-  # Runs only on Ubuntu with Python 3.11
   run_optional_dependency_test:
     runs-on: ubuntu-latest
     steps:
