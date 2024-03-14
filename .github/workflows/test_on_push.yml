@@ -427,7 +427,7 @@ jobs:
       - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts
 
-  run_optional_dependency_test:
+  run_dependency_tests:
     runs-on: ubuntu-latest
     steps:
       - name: Check out PyBaMM repository

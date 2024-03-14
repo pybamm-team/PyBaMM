@@ -237,7 +237,7 @@ jobs:
           python -m pip install wget cmake
           pybamm_install_odes
 
-  run_optional_dependency_test:
+  run_dependency_tests:
     runs-on: ubuntu-latest
     steps:
       - name: Check out PyBaMM repository
