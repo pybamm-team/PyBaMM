@@ -151,7 +151,7 @@ class ParameterValues:
                     "density for the lithium plating reaction in a porous negative "
                     "electrode. To avoid this error, change your parameter file to use "
                     "the new name."
-                )
+                ) from err
             else:
                 raise err
 
@@ -251,7 +251,7 @@ class ParameterValues:
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
-                    )
+                    ) from err
             # if no conflicts, update
             if isinstance(value, str):
                 if (
@@ -542,7 +542,7 @@ class ParameterValues:
                         pass
                     # do raise error otherwise (e.g. can't process symbol)
                     else:
-                        raise KeyError(err)
+                        raise err
 
         return new_boundary_conditions
 
@@ -568,8 +568,8 @@ class ParameterValues:
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
                 if spatial_variable == "tabs":
-                    for tab, position_size in spatial_limits.items():
-                        for position_size, sym in position_size.items():
+                    for tab, position_info in spatial_limits.items():
+                        for position_size, sym in position_info.items():
                             geometry[domain]["tabs"][tab][position_size] = (
                                 process_and_check(sym)
                             )

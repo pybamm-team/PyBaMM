@@ -51,7 +51,7 @@ class BaseSolver:
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
-        output_variables=[],
+        output_variables=None,
     ):
         self.method = method
         self.rtol = rtol
@@ -59,7 +59,7 @@ class BaseSolver:
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
-        self.output_variables = output_variables
+        self.output_variables = [] if output_variables is None else output_variables
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -339,7 +339,7 @@ class BaseSolver:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, "
                     f"model should be discretised before solving ({e})"
-                )
+                ) from e
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
@@ -684,7 +684,9 @@ class BaseSolver:
         try:
             root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
-            raise pybamm.SolverError(f"Could not find consistent states: {e.args[0]}")
+            raise pybamm.SolverError(
+                f"Could not find consistent states: {e.args[0]}"
+            ) from e
         pybamm.logger.debug("Found consistent states")
 
         self.check_extrapolation(root_sol, model.events)
@@ -1354,6 +1356,7 @@ class BaseSolver:
                         f"While solving {name} extrapolation occurred "
                         f"for {extrap_events}",
                         pybamm.SolverWarning,
+                        stacklevel=2,
                     )
                     # Add the event dictionaryto the solution object
                     solution.extrap_events = extrap_events

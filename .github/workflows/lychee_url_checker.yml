@@ -47,6 +47,7 @@ jobs:
             --exclude-path ./scripts/update_version.py
             --exclude-path asv.conf.json
             --exclude-path docs/conf.py
+            --exclude-path all_contributors.md
             './**/*.rst'
             './**/*.md'
             './**/*.py'
