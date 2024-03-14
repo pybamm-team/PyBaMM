@@ -178,4 +178,6 @@ PyBaMM is fully open source. For more information about its license, see [LICENS
 
 ## ✨ Contributors
 
-[Click here to see a full list of our contributors profiles.](https://github.com/pybamm-team/PyBaMM/blob/develop/all_contributors.md)
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind are welcome!
+
+Click here to see [a full list](https://github.com/pybamm-team/PyBaMM/blob/develop/all_contributors.md) of our contributors' profiles.

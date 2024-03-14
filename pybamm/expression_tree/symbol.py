@@ -7,7 +7,7 @@ import numbers
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
-from functools import lru_cache, cached_property
+from functools import cached_property
 from typing import TYPE_CHECKING, Sequence, cast
 
 import pybamm
@@ -876,7 +876,7 @@ class Symbol:
                 return None
             raise pybamm.ShapeError(
                 f"Cannot find shape (original error: {error})"
-            )  # pragma: no cover
+            ) from error  # pragma: no cover
         return result
 
     def evaluates_to_number(self):
@@ -895,7 +895,6 @@ class Symbol:
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()
 
-    @lru_cache
     def evaluates_on_edges(self, dimension: str) -> bool:
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
@@ -914,9 +913,12 @@ class Symbol:
             Whether the symbol evaluates on edges (in the finite volume discretisation
             sense)
         """
-        eval_on_edges = self._evaluates_on_edges(dimension)
-        self._saved_evaluates_on_edges[dimension] = eval_on_edges
-        return eval_on_edges
+        if dimension not in self._saved_evaluates_on_edges:
+            self._saved_evaluates_on_edges[dimension] = self._evaluates_on_edges(
+                dimension
+            )
+
+        return self._saved_evaluates_on_edges[dimension]
 
     def _evaluates_on_edges(self, dimension):
         # Default behaviour: return False
@@ -1039,7 +1041,7 @@ class Symbol:
         try:
             self.shape_for_testing
         except ValueError as e:
-            raise pybamm.ShapeError(f"Cannot find shape (original error: {e})")
+            raise pybamm.ShapeError(f"Cannot find shape (original error: {e})") from e
 
     @property
     def print_name(self):
