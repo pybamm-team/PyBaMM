@@ -6,16 +6,15 @@ from tests import TestCase
 
 class TestDependencies(TestCase):
     """
-    This class tests the dependencies required by PyBaMM for specific versions.
+    This class tests the dependencies on different PyBaMM installations, that is with various sets of extra dependencies.
 
-    **Note:** This test module is **not run automatically** with other tests.
-    Its functions are intended to be tested manually on different PyBaMM installations that are installed with various sets of extra dependencies.
+    **Note:** This test module is **not run automatically** with other tests. Its functions are intended to be tested manually.
     """
 
     def test_core_optional_dependencies(self):
         """
-        Ensure optional dependencies are not installed in the core PyBaMM version.
-        It scan all dependencies for PyBaMM and checks that the ones listed as optional are not installed.
+        Ensure optional dependencies are not installed in the core PyBaMM installation (with just required dependencies installed).
+        It scan all dependencies for core PyBaMM and checks that the ones listed as optional are not installed.
         """
 
         pattern = re.compile(
@@ -37,11 +36,11 @@ class TestDependencies(TestCase):
         self.assertFalse(
             bool(optional_present_deps),
             f"Optional dependencies installed: {optional_present_deps}.\n"
-            "Please ensure that optional dependencies are not installed in the core version, or list them as required.",
+            "Please ensure that optional dependencies are not installed in the core PyBaMM installation, or list them as required.",
         )
 
     def test_core_pybamm_import(self):
-        """Verify successful import of 'pybamm' without optional dependencies in the core PyBaMM version."""
+        """Verify successful import of 'pybamm' in the core PyBaMM installation (with just required dependencies installed)."""
 
         try:
             importlib.import_module("pybamm")
