@@ -2,8 +2,6 @@ import importlib
 import re
 
 from tests import TestCase
-import sys
-import unittest
 
 
 class TestDependencies(TestCase):
@@ -51,11 +49,3 @@ class TestDependencies(TestCase):
             self.fail(
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()
