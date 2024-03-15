@@ -17,13 +17,15 @@ class TestDependencies(TestCase):
     def test_core_optional_dependencies(self):
         """Ensure optional dependencies are not installed in the core PyBaMM version."""
 
-        pattern = re.compile(r"^([^>=;\[]+)\b.*$")
+        pattern = re.compile(
+            r"(?!.*pybamm\b|.*docs\b|.*dev\b)^([^>=;\[]+)\b.*$"
+        )  # do not consider pybamm, [docs] and [dev] dependencies
         json_deps = importlib.metadata.metadata("pybamm").json["requires_dist"]
 
         optional_distribution_deps = {
-            pattern.match(dep_name).group(1)
+            m.group(1)
             for dep_name in json_deps
-            if "extra" in dep_name and "pybamm" not in dep_name
+            if (m := pattern.match(dep_name)) and "extra" in m.group(0)
         }
 
         present_distribution_deps = set()
