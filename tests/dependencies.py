@@ -11,11 +11,14 @@ class TestDependencies(TestCase):
     This class tests the dependencies required by PyBaMM for specific versions.
 
     **Note:** This test module is **not run automatically** with other tests.
-    Its functions are intended to be tested manually on different PyBaMM versions.
+    Its functions are intended to be tested manually on different PyBaMM installations that are installed with various sets of extra dependencies.
     """
 
     def test_core_optional_dependencies(self):
-        """Ensure optional dependencies are not installed in the core PyBaMM version."""
+        """
+        Ensure optional dependencies are not installed in the core PyBaMM version.
+        It scan all dependencies for PyBaMM and checks that the ones listed as optional are not installed.
+        """
 
         pattern = re.compile(
             r"(?!.*pybamm\b|.*docs\b|.*dev\b)^([^>=;\[]+)\b.*$"
