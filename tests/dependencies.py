@@ -25,17 +25,22 @@ class TestDependencies(TestCase):
         )  # do not consider pybamm, [docs] and [dev] dependencies
         json_deps = importlib.metadata.metadata("pybamm").json["requires_dist"]
 
-        optional_distribution_deps = {
+        optional_deps = {
             m.group(1)
             for dep_name in json_deps
             if (m := pattern.match(dep_name)) and "extra" in m.group(0)
         }
 
-        present_distribution_deps = set()
+        present_deps = set()
         for _, distribution_pkgs in importlib.metadata.packages_distributions().items():
-            present_distribution_deps.update(set(distribution_pkgs))
+            present_deps.update(set(distribution_pkgs))
 
-        self.assertFalse(bool(optional_distribution_deps & present_distribution_deps))
+        optional_present_deps = optional_deps & present_deps
+        self.assertFalse(
+            bool(optional_present_deps),
+            f"Optional dependencies installed: {optional_present_deps}.\n"
+            "Please ensure that optional dependencies are not installed in the core version, or list them as required.",
+        )
 
     def test_core_pybamm_import(self):
         """Verify successful import of 'pybamm' without optional dependencies in the core PyBaMM version."""
