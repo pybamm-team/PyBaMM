@@ -37,7 +37,7 @@ class TestDependencies(TestCase):
 
         try:
             importlib.import_module("pybamm")
-        except ImportError as error:
+        except ModuleNotFoundError as error:
             self.fail(
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
