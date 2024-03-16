@@ -75,7 +75,13 @@ for domain in ["negative", "positive"]:
     model.submodels[f"{domain} sei"] = pybamm.sei.NoSEI(
         model.param, domain, model.options
     )
+    model.submodels[f"{domain} sei thickness"] = pybamm.sei.SEIThickness(
+        model.param, domain, model.options
+    )
     model.submodels[f"{domain} sei on cracks"] = pybamm.sei.NoSEI(
+        model.param, domain, model.options, cracks=True
+    )
+    model.submodels[f"{domain} sei on cracks thickness"] = pybamm.sei.SEIThickness(
         model.param, domain, model.options, cracks=True
     )
     model.submodels[f"{domain} lithium plating"] = pybamm.lithium_plating.NoPlating(

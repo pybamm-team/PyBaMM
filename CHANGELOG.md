@@ -98,6 +98,8 @@
 - Fix to simulate c_rate steps with drive cycles ([#3186](https://github.com/pybamm-team/PyBaMM/pull/3186))
 - Always save last cycle in experiment, to fix issues with `starting_solution` and `last_state` ([#3177](https://github.com/pybamm-team/PyBaMM/pull/3177))
 - Fix simulations with `starting_solution` to work with `start_time` experiments ([#3177](https://github.com/pybamm-team/PyBaMM/pull/3177))
+- Fixed how `Loss of lithium due to loss of active material` variable is calculated ([#3171](https://github.com/pybamm-team/PyBaMM/pull/3171))
+- Rewritten SEI submodel so that concentration, not thickness, is the fundamental variable. This change ensures lithium is always conserved. ([#3171](https://github.com/pybamm-team/PyBaMM/pull/3171))
 - Fix SEI Example Notebook ([#3166](https://github.com/pybamm-team/PyBaMM/pull/3166))
 - Thevenin() model is now constructed with standard variables: `Time [s]`, `Time [min]`, `Time [h]` ([#3143](https://github.com/pybamm-team/PyBaMM/pull/3143))
 - Error generated when invalid parameter values are passed ([#3132](https://github.com/pybamm-team/PyBaMM/pull/3132))
