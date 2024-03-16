@@ -14,11 +14,11 @@ if pybamm.have_jax():
     import jax
 
 
-def test_function(arg):
+def function_test(arg):
     return arg + arg
 
 
-def test_function2(arg1, arg2):
+def function2_test(arg1, arg2):
     return arg1 + arg2
 
 
@@ -93,10 +93,10 @@ class TestEvaluate(TestCase):
         # test function
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        expr = pybamm.Function(test_function, a)
+        expr = pybamm.Function(function_test, a)
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
         self.assertEqual(next(iter(constant_symbols.keys())), expr.id)
-        self.assertEqual(next(iter(constant_symbols.values())), test_function)
+        self.assertEqual(next(iter(constant_symbols.values())), function_test)
         self.assertEqual(next(iter(variable_symbols.keys())), a.id)
         self.assertEqual(list(variable_symbols.keys())[1], expr.id)
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
@@ -306,12 +306,12 @@ class TestEvaluate(TestCase):
         self.assertEqual(result, 3)
 
         # test function(a*b)
-        expr = pybamm.Function(test_function, a * b)
+        expr = pybamm.Function(function_test, a * b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
-        expr = pybamm.Function(test_function2, a, b)
+        expr = pybamm.Function(function2_test, a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 5)
@@ -486,7 +486,7 @@ class TestEvaluate(TestCase):
         self.assertEqual(result, 3)
 
         # test function(a*b)
-        expr = pybamm.Function(test_function, a * b)
+        expr = pybamm.Function(function_test, a * b)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
