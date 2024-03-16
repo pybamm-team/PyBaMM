@@ -93,7 +93,7 @@ def get_initial_stoichiometry_half_cell(
         V_min = parameter_values.evaluate(param.voltage_low_cut)
         V_max = parameter_values.evaluate(param.voltage_high_cut)
 
-        if not V_min < V_init < V_max:
+        if not V_min <= V_init <= V_max:
             raise ValueError(
                 f"Initial voltage {V_init}V is outside the voltage limits "
                 f"({V_min}, {V_max})"

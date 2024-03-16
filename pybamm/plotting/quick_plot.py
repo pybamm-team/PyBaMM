@@ -9,7 +9,6 @@ from pybamm.util import have_optional_dependency
 
 
 class LoopList(list):
-
     """A list which loops over itself when accessing an
     index so that it never runs out"""
 
@@ -649,7 +648,7 @@ class QuickPlot:
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
-    def dynamic_plot(self, testing=False, step=None):
+    def dynamic_plot(self, show_plot=True, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
 
@@ -658,8 +657,9 @@ class QuickPlot:
         step : float
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
             of the total time.
-        testing : bool
-            Whether to actually make the plot (turned off for unit tests)
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
 
         """
         if pybamm.is_notebook():  # pragma: no cover
@@ -692,7 +692,7 @@ class QuickPlot:
             )
             self.slider.on_changed(self.slider_update)
 
-            if not testing:  # pragma: no cover
+            if show_plot:  # pragma: no cover
                 plt.show()
 
     def slider_update(self, t):

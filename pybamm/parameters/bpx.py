@@ -118,7 +118,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     }
 
     # Loop over each component of BPX and add to pybamm dictionary
-    pybamm_dict = {}
+    pybamm_dict: dict = {}
     pybamm_dict = _bpx_to_domain_param_dict(
         bpx.parameterisation.positive_electrode, pybamm_dict, positive_electrode
     )

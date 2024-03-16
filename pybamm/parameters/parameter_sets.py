@@ -3,6 +3,7 @@ import warnings
 import importlib.metadata
 import textwrap
 from collections.abc import Mapping
+from typing import Callable
 
 
 class ParameterSets(Mapping):
@@ -56,7 +57,7 @@ class ParameterSets(Mapping):
     def __getitem__(self, key) -> dict:
         return self.__load_entry_point__(key)()
 
-    def __load_entry_point__(self, key) -> callable:
+    def __load_entry_point__(self, key) -> Callable:
         """Check that ``key`` is a registered ``pybamm_parameter_sets``,
         and return the entry point for the parameter set, loading it needed.
         """

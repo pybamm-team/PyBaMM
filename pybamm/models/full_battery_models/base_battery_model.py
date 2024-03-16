@@ -809,10 +809,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         Create a model instance from a serialised object.
         """
-        instance = cls.__new__(cls)
 
         # append the model name with _saved to differentiate
-        instance.__init__(
+        instance = cls(
             options=properties["options"], name=properties["name"] + "_saved"
         )
 
