@@ -757,9 +757,7 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
     def __init__(self, child, integration_variable):
         super().__init__(child, integration_variable)
         # Overwrite the name
-        self.name = "{} integrated backward w.r.t {}".format(
-            child.name, self.integration_variable[0].name
-        )
+        self.name = f"{child.name} integrated backward w.r.t {self.integration_variable[0].name}"
         if isinstance(integration_variable, pybamm.SpatialVariable):
             self.name += f" on {self.integration_variable[0].domain}"
 

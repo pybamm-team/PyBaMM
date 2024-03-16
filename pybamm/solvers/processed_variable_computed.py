@@ -149,8 +149,10 @@ class ProcessedVariableComputed:
             .transpose()
         )
 
-    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=[]):
+    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=None):
         # initialise settings on first run
+        if axis_swaps is None:
+            axis_swaps = []
         if not self.unroll_params:
             self.unroll_params["n_dim1"] = n_dim1
             self.unroll_params["n_dim2"] = n_dim2

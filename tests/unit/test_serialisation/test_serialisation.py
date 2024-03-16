@@ -139,7 +139,7 @@ class TestSerialiseModels(TestCase):
         new_solver = pybamm.ScipySolver()
         new_solution = new_solver.solve(new_model, t)
 
-        for x, val in enumerate(solution.all_ys):
+        for x, _ in enumerate(solution.all_ys):
             np.testing.assert_array_almost_equal(
                 solution.all_ys[x], new_solution.all_ys[x]
             )
