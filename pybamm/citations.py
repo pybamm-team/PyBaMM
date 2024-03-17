@@ -11,7 +11,6 @@ from pybamm.util import import_optional_dependency
 
 
 class Citations:
-
     """Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
@@ -93,7 +92,7 @@ class Citations:
         # Warn if overwriting a previous citation
         new_citation = entry.to_string("bibtex")
         if key in self._all_citations and new_citation != self._all_citations[key]:
-            warnings.warn(f"Replacing citation for {key}")
+            warnings.warn(f"Replacing citation for {key}", stacklevel=2)
 
         # Add to database
         self._all_citations[key] = new_citation
@@ -166,9 +165,9 @@ class Citations:
                 # Add to _papers_to_cite set
                 self._papers_to_cite.add(key)
                 return
-        except PybtexError:
+        except PybtexError as error:
             # Unable to parse / unknown key
-            raise KeyError(f"Not a bibtex citation or known citation: {key}")
+            raise KeyError(f"Not a bibtex citation or known citation: {key}") from error
 
     def _tag_citations(self):
         """Prints the citation tags for the citations that have been registered
@@ -227,6 +226,7 @@ class Citations:
             warnings.warn(
                 message=f'\nCitation with key "{key}" is invalid. Please try again\n',
                 category=UserWarning,
+                stacklevel=2,
             )
             # delete the invalid citation from the set
             self._unknown_citations.remove(key)

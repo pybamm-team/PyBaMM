@@ -72,9 +72,9 @@ def install_suitesparse(download_dir):
             # INSTALL RPATH in order to ensure that the dynamic libraries are found
             # at runtime just once. Otherwise, delocate complains about multiple
             # references to the SuiteSparse_config dynamic library (auditwheel does not).
-            env[
-                "CMAKE_OPTIONS"
-            ] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+            env["CMAKE_OPTIONS"] = (
+                f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+            )
         subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
         subprocess.run(install_cmd, cwd=build_dir, check=True)
 
@@ -267,12 +267,12 @@ def parallel_download(urls, download_dir):
 # First check requirements: make and cmake
 try:
     subprocess.run(["make", "--version"])
-except OSError:
-    raise RuntimeError("Make must be installed.")
+except OSError as error:
+    raise RuntimeError("Make must be installed.") from error
 try:
     subprocess.run(["cmake", "--version"])
-except OSError:
-    raise RuntimeError("CMake must be installed.")
+except OSError as error:
+    raise RuntimeError("CMake must be installed.") from error
 
 # Build in parallel wherever possible
 os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())

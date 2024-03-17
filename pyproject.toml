@@ -130,7 +130,7 @@ odes = [
 all = [
     "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
-    "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]",
+    "pybamm[examples,plot,cite,bpx,tqdm,pandas]",
 ]
 
 [project.scripts]
@@ -182,7 +182,7 @@ extend-exclude = ["__init__.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    # "B",           # flake8-bugbear
+    "B",           # flake8-bugbear
     # "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions

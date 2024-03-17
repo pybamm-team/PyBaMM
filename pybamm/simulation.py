@@ -279,9 +279,9 @@ class Simulation:
             parameterised_model = new_parameter_values.process_model(
                 new_model, inplace=False
             )
-            self.experiment_unique_steps_to_model[
-                "Rest for padding"
-            ] = parameterised_model
+            self.experiment_unique_steps_to_model["Rest for padding"] = (
+                parameterised_model
+            )
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:
@@ -566,20 +566,22 @@ class Simulation:
                         to be the points in the data.
                         """,
                         pybamm.SolverWarning,
+                        stacklevel=2,
                     )
                     dt_data_min = np.min(np.diff(time_data))
                     dt_eval_max = np.max(np.diff(t_eval))
                     if dt_eval_max > dt_data_min + sys.float_info.epsilon:
                         warnings.warn(
-                            """
-                            The largest timestep in t_eval ({}) is larger than
-                            the smallest timestep in the data ({}). The returned
+                            f"""
+                            The largest timestep in t_eval ({dt_eval_max}) is larger than
+                            the smallest timestep in the data ({dt_data_min}). The returned
                             solution may not have the correct resolution to accurately
                             capture the input. Try refining t_eval. Alternatively,
                             passing t_eval = None automatically sets t_eval to be the
                             points in the data.
-                            """.format(dt_eval_max, dt_data_min),
+                            """,
                             pybamm.SolverWarning,
+                            stacklevel=2,
                         )
 
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)

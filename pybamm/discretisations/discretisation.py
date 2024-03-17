@@ -280,7 +280,7 @@ class Discretisation:
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains
                 )
-                for i in range(sec_points):
+                for _ in range(sec_points):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
@@ -458,9 +458,7 @@ class Discretisation:
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
                             "Boundary condition at r = 0 must be a homogeneous "
-                            "Neumann condition for {} coordinates".format(
-                                self.mesh[subdomain].coord_sys
-                            )
+                            f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
                         )
 
             # Handle any boundary conditions applied on the tabs
@@ -888,14 +886,14 @@ class Discretisation:
             # model.check_well_posedness, but won't be if debug_mode is False
             try:
                 y_slices = self.y_slices[symbol]
-            except KeyError:
+            except KeyError as error:
                 raise pybamm.ModelError(
-                    """
-                    No key set for variable '{}'. Make sure it is included in either
+                    f"""
+                    No key set for variable '{symbol.name}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(symbol.name)
-                )
+                    """
+                ) from error
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
             return symbol.reference + symbol.scale * pybamm.StateVector(
@@ -1033,20 +1031,14 @@ class Discretisation:
                 raise pybamm.ModelError(
                     "rhs and initial conditions must have the same shape after "
                     "discretisation but rhs.shape = "
-                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
-                        model.rhs[var].shape, model.initial_conditions[var].shape, var
-                    )
+                    f"{model.rhs[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
         for var in model.algebraic.keys():
             if model.algebraic[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
                     "algebraic and initial conditions must have the same shape after "
                     "discretisation but algebraic.shape = "
-                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
-                        model.algebraic[var].shape,
-                        model.initial_conditions[var].shape,
-                        var,
-                    )
+                    f"{model.algebraic[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
 
     def check_variables(self, model):
@@ -1080,9 +1072,7 @@ class Discretisation:
                     raise pybamm.ModelError(
                         "variable and its eqn must have the same shape after "
                         "discretisation but variable.shape = "
-                        "{} and rhs.shape = {} for variable '{}'. ".format(
-                            var.shape, model.rhs[rhs_var].shape, var
-                        )
+                        f"{var.shape} and rhs.shape = {model.rhs[rhs_var].shape} for variable '{var}'. "
                     )
 
     def is_variable_independent(self, var, all_vars_in_eqns):

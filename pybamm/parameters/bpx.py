@@ -94,7 +94,7 @@ def _get_phase_names(domain):
     Return a list of the phase names in a given domain
     """
     if isinstance(domain, (ElectrodeBlended, ElectrodeBlendedSPM)):
-        phases = len(getattr(domain, "particle").keys())
+        phases = len(domain.particle.keys())
     else:
         phases = 1
     if phases == 1:
@@ -157,9 +157,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
 
     # BPX is for single cell in series, user can change this later
     pybamm_dict["Number of cells connected in series to make a battery"] = 1
-    pybamm_dict[
-        "Number of electrodes connected in parallel to make a cell"
-    ] = pybamm_dict["Number of electrode pairs connected in parallel to make a cell"]
+    pybamm_dict["Number of electrodes connected in parallel to make a cell"] = (
+        pybamm_dict["Number of electrode pairs connected in parallel to make a cell"]
+    )
 
     # electrode area
     equal_len_width = math.sqrt(pybamm_dict["Electrode area [m2]"])
@@ -290,22 +290,22 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 phase_domain_pre_name + "entropic change coefficient [V.K-1]"
             ]
             if callable(dUdT):
-                pybamm_dict[
-                    phase_domain_pre_name + "OCP entropic change [V.K-1]"
-                ] = partial(_entropic_change, dUdT=dUdT)
+                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
+                    partial(_entropic_change, dUdT=dUdT)
+                )
             elif isinstance(dUdT, tuple):
-                pybamm_dict[
-                    phase_domain_pre_name + "OCP entropic change [V.K-1]"
-                ] = partial(
-                    _entropic_change,
-                    dUdT=partial(
-                        _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
-                    ),
+                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
+                    partial(
+                        _entropic_change,
+                        dUdT=partial(
+                            _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
+                        ),
+                    )
                 )
             else:
-                pybamm_dict[
-                    phase_domain_pre_name + "OCP entropic change [V.K-1]"
-                ] = partial(_entropic_change, dUdT=dUdT, constant=True)
+                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
+                    partial(_entropic_change, dUdT=dUdT, constant=True)
+                )
 
             # reaction rate
             c_max = pybamm_dict[
@@ -326,9 +326,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             # *sinh(),
             # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
             k = k_norm * F / (c_max * c_e**0.5)
-            pybamm_dict[
-                phase_domain_pre_name + "exchange-current density [A.m-2]"
-            ] = partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
+            pybamm_dict[phase_domain_pre_name + "exchange-current density [A.m-2]"] = (
+                partial(_exchange_current_density, k_ref=k, Ea=Ea_k)
+            )
 
             # diffusivity
             Ea_D = pybamm_dict.get(
@@ -468,7 +468,7 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
             isinstance(instance, (ElectrodeBlended, ElectrodeBlendedSPM))
             and name == "particle"
         ):
-            particle_instance = getattr(instance, "particle")
+            particle_instance = instance.particle
             # Loop over phases
             for i, phase_name in enumerate(particle_instance.keys()):
                 phase_instance = particle_instance[phase_name]

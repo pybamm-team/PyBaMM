@@ -8,7 +8,7 @@
 # - Publish website
 name: Benchmarks
 on:
-  # Everyday at 3 am UTC
+  # Every day at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
   # Make it possible to trigger the

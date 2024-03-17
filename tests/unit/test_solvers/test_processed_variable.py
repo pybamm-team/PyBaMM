@@ -28,9 +28,11 @@ def to_casadi(var_pybamm, y, inputs=None):
 
 
 def process_and_check_2D_variable(
-    var, first_spatial_var, second_spatial_var, disc=None, geometry_options={}
+    var, first_spatial_var, second_spatial_var, disc=None, geometry_options=None
 ):
     # first_spatial_var should be on the "smaller" domain, i.e "r" for an "r-x" variable
+    if geometry_options is None:
+        geometry_options = {}
     if disc is None:
         disc = tests.get_discretisation_for_testing()
     disc.set_variable_slices([var])

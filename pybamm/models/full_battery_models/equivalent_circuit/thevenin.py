@@ -89,17 +89,13 @@ class Thevenin(pybamm.BaseModel):
                 options[name] = opt
             else:
                 raise pybamm.OptionError(
-                    "Option '{}' not recognised. Best matches are {}".format(
-                        name, options.get_best_matches(name)
-                    )
+                    f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                 )
 
         for opt, value in options.items():
             if value not in possible_options[opt]:
                 raise pybamm.OptionError(
-                    "Option '{}' must be one of {}. Got '{}' instead.".format(
-                        opt, possible_options[opt], value
-                    )
+                    f"Option '{opt}' must be one of {possible_options[opt]}. Got '{value}' instead."
                 )
 
         self.options = options
@@ -148,9 +144,9 @@ class Thevenin(pybamm.BaseModel):
         self.submodels["external circuit"] = model
 
     def set_ocv_submodel(self):
-        self.submodels[
-            "Open-circuit voltage"
-        ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+        self.submodels["Open-circuit voltage"] = (
+            pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+        )
 
     def set_resistor_submodel(self):
         name = "Element-0 (Resistor)"
