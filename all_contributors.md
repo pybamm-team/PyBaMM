@@ -104,6 +104,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="http://akhilsharma.info"><img src="https://avatars.githubusercontent.com/u/68015525?v=4?s=100" width="100px;" alt="AKHIL SHARMA"/><br /><sub><b>AKHIL SHARMA</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Akhil-Sharma30" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/HarshvirSandhu"><img src="https://avatars.githubusercontent.com/u/75773763?v=4?s=100" width="100px;" alt="Harshvir Sandhu"/><br /><sub><b>Harshvir Sandhu</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=HarshvirSandhu" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/lorenzofavaro"><img src="https://avatars.githubusercontent.com/u/44714920?v=4?s=100" width="100px;" alt="Lorenzo"/><br /><sub><b>Lorenzo</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=lorenzofavaro" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=lorenzofavaro" title="Tests">⚠️</a></td>
+    </tr>
   </tbody>
 </table>
 
