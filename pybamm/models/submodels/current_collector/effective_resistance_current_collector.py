@@ -76,9 +76,7 @@ class BaseEffectiveResistance(pybamm.BaseModel):
                 options[name] = opt
             else:
                 raise pybamm.OptionError(
-                    "Option '{}' not recognised. Best matches are {}".format(
-                        name, options.get_best_matches(name)
-                    )
+                    f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                 )
 
         if options["dimensionality"] not in [1, 2]:

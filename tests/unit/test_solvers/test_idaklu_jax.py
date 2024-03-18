@@ -862,7 +862,7 @@ class TestIDAKLUJax(TestCase):
 
         # Check grad against actual
         sse_grad_actual = {}
-        for k, v in inputs_pred.items():
+        for k, _ in inputs_pred.items():
             sse_grad_actual[k] = 2 * np.sum(
                 (pred(t_eval) - data) * pred.sensitivities[k]
             )

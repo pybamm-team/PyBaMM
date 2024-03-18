@@ -45,24 +45,24 @@ class Full(BaseModel):
 
     def set_convection_submodel(self):
         if self.options["convection"] == "none":
-            self.submodels[
-                "transverse convection"
-            ] = pybamm.convection.transverse.NoConvection(self.param)
-            self.submodels[
-                "through-cell convection"
-            ] = pybamm.convection.through_cell.NoConvection(self.param)
+            self.submodels["transverse convection"] = (
+                pybamm.convection.transverse.NoConvection(self.param)
+            )
+            self.submodels["through-cell convection"] = (
+                pybamm.convection.through_cell.NoConvection(self.param)
+            )
         else:
             if self.options["convection"] == "uniform transverse":
-                self.submodels[
-                    "transverse convection"
-                ] = pybamm.convection.transverse.Uniform(self.param)
+                self.submodels["transverse convection"] = (
+                    pybamm.convection.transverse.Uniform(self.param)
+                )
             elif self.options["convection"] == "full transverse":
-                self.submodels[
-                    "transverse convection"
-                ] = pybamm.convection.transverse.Full(self.param)
-            self.submodels[
-                "through-cell convection"
-            ] = pybamm.convection.through_cell.Full(self.param)
+                self.submodels["transverse convection"] = (
+                    pybamm.convection.transverse.Full(self.param)
+                )
+            self.submodels["through-cell convection"] = (
+                pybamm.convection.through_cell.Full(self.param)
+            )
 
     def set_intercalation_kinetics_submodel(self):
         for domain in ["negative", "positive"]:
@@ -90,9 +90,9 @@ class Full(BaseModel):
         )
 
         if self.options["surface form"] == "false":
-            self.submodels[
-                "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Full(self.param)
+            self.submodels["electrolyte conductivity"] = (
+                pybamm.electrolyte_conductivity.Full(self.param)
+            )
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.FullDifferential
@@ -112,10 +112,14 @@ class Full(BaseModel):
             self.submodels["positive oxygen interface"] = pybamm.kinetics.ForwardTafel(
                 self.param, "positive", "lead-acid oxygen", self.options, "primary"
             )
-            self.submodels[
-                "negative oxygen interface"
-            ] = pybamm.kinetics.DiffusionLimited(
-                self.param, "negative", "lead-acid oxygen", self.options, order="full"
+            self.submodels["negative oxygen interface"] = (
+                pybamm.kinetics.DiffusionLimited(
+                    self.param,
+                    "negative",
+                    "lead-acid oxygen",
+                    self.options,
+                    order="full",
+                )
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(

@@ -110,7 +110,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         integration_time = 0
-        for idx, t in enumerate(t_eval):
+        for _, t in enumerate(t_eval):
             # Solve
             try:
                 timer.reset()
@@ -149,11 +149,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 )
             else:
                 raise pybamm.SolverError(
-                    """
+                    f"""
                     Could not find acceptable solution: solver terminated
-                    successfully, but maximum solution error ({})
-                    above tolerance ({})
-                    """.format(casadi.mmax(casadi.fabs(fun)), self.tol)
+                    successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))})
+                    above tolerance ({self.tol})
+                    """
                 )
 
         # Concatenate differential part

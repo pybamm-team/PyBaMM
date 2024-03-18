@@ -29,9 +29,9 @@ class Vector(pybamm.Array):
             entries = entries[:, np.newaxis]
         if entries.shape[1] != 1:
             raise ValueError(
+                f"""
+                Entries must have 1 dimension or be column vector, not have shape {entries.shape}
                 """
-                Entries must have 1 dimension or be column vector, not have shape {}
-                """.format(entries.shape)
             )
         if name is None:
             name = f"Column vector of length {entries.shape[0]!s}"

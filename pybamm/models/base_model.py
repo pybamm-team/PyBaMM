@@ -13,7 +13,6 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-from pybamm.util import have_optional_dependency
 
 
 class BaseModel:
@@ -558,9 +557,7 @@ class BaseModel:
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
-                "Getting fundamental variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Getting fundamental variables for {submodel_name} submodel ({self.name})"
             )
             self.variables.update(submodel.get_fundamental_variables())
 
@@ -581,9 +578,7 @@ class BaseModel:
             for submodel_name, submodel in self.submodels.items():
                 if submodel_name in submodels:
                     pybamm.logger.debug(
-                        "Getting coupled variables for {} submodel ({})".format(
-                            submodel_name, self.name
-                        )
+                        f"Getting coupled variables for {submodel_name} submodel ({self.name})"
                     )
                     try:
                         self.variables.update(
@@ -594,12 +589,10 @@ class BaseModel:
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                "Missing variable for submodel '{}': {}.\n".format(
-                                    submodel_name, key
-                                )
+                                f"Missing variable for submodel '{submodel_name}': {key}.\n"
                                 + "Check the selected "
                                 "submodels provide all of the required variables."
-                            )
+                            ) from key
                         else:
                             # try setting coupled variables on next loop through
                             pybamm.logger.debug(
@@ -622,9 +615,7 @@ class BaseModel:
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
@@ -688,7 +679,7 @@ class BaseModel:
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
                         f"'{e.args[0]}' was not found."
-                    )
+                    ) from e
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 0:
@@ -712,7 +703,7 @@ class BaseModel:
                             "model.initial_conditions must appear in the solution with "
                             "the same key as the variable name. In the solution "
                             f"provided, {e.args[0]}"
-                        )
+                        ) from e
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:
@@ -884,8 +875,8 @@ class BaseModel:
                 ]
             )
             all_vars_in_eqns.update(vars_in_eqns)
-        for var, side_eqn in self.boundary_conditions.items():
-            for side, (eqn, typ) in side_eqn.items():
+        for _, side_eqn in self.boundary_conditions.items():
+            for _, (eqn, _) in side_eqn.items():
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 
@@ -968,9 +959,7 @@ class BaseModel:
 
         if not rhs_keys.isdisjoint(alg_keys):
             raise pybamm.ModelError(
-                "Multiple equations specified for variables {}".format(
-                    rhs_keys.intersection(alg_keys)
-                )
+                f"Multiple equations specified for variables {rhs_keys.intersection(alg_keys)}"
             )
 
     def info(self, symbol_name):
@@ -1014,7 +1003,7 @@ class BaseModel:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, model should be "
                     f"discretised before exporting casadi functions ({e})"
-                )
+                ) from e
 
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
@@ -1185,9 +1174,7 @@ class BaseModel:
         This will return first five model equations
         >>> model.latexify(newline=False)[1:5]
         """
-        sympy = have_optional_dependency("sympy")
-        if sympy:
-            from pybamm.expression_tree.operations.latexify import Latexify
+        from pybamm.expression_tree.operations.latexify import Latexify
 
         return Latexify(self, filename, newline).latexify(
             output_variables=output_variables
@@ -1257,6 +1244,7 @@ class BaseModel:
                 Plotting may not be available.
                 """,
                 pybamm.ModelWarning,
+                stacklevel=2,
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
@@ -1344,9 +1332,7 @@ class EquationDict(dict):
                     variable_in_equation = next(iter(unpacker.unpack_symbol(eqn)))
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
-                        "but '{!r}' found in initial conditions for '{}'".format(
-                            variable_in_equation, var
-                        )
+                        f"but '{variable_in_equation!r}' found in initial conditions for '{var}'"
                     )
 
         return equations
@@ -1377,9 +1363,9 @@ class BoundaryConditionsDict(dict):
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
+                        f"""
+                        boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'
                         """
-                        boundary condition types must be Dirichlet or Neumann, not '{}'
-                        """.format(bc[1])
                     )
 
         return boundary_conditions
