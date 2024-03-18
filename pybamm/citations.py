@@ -38,14 +38,8 @@ class Citations:
         # Dict mapping citation tags for use when registering citations
         self._citation_tags = dict()
 
-        # store citation error
-        self._citation_err_msg = None
-
-        try:
-            self.read_citations()
-            self._reset()
-        except Exception as e:  # pragma: no cover
-            self._citation_err_msg = e
+        self.read_citations()
+        self._reset()
 
     def _reset(self):
         """Reset citations to default only (only for testing purposes)"""
@@ -122,23 +116,22 @@ class Citations:
             - The citation key for an entry in `pybamm/CITATIONS.bib` or
             - A BibTeX formatted citation
         """
-        if self._citation_err_msg is None:
-            # Check if citation is a known key
-            if key in self._all_citations:
-                self._papers_to_cite.add(key)
-                # Add citation tags for the key for verbose output, but
-                # don't if they already exist in _citation_tags dict
-                if key not in self._citation_tags:
-                    try:
-                        caller = Citations._caller_name()
-                        self._add_citation_tag(key, entry=caller)
-                        # Don't add citation tags if the citation is registered manually
-                    except KeyError:  # pragma: no cover
-                        pass
-            else:
-                # If citation is unknown, parse it later with pybtex
-                self._unknown_citations.add(key)
-                return
+        # Check if citation is a known key
+        if key in self._all_citations:
+            self._papers_to_cite.add(key)
+            # Add citation tags for the key for verbose output, but
+            # don't if they already exist in _citation_tags dict
+            if key not in self._citation_tags:
+                try:
+                    caller = Citations._caller_name()
+                    self._add_citation_tag(key, entry=caller)
+                    # Don't add citation tags if the citation is registered manually
+                except KeyError:  # pragma: no cover
+                    pass
+        else:
+            # If citation is unknown, parse it later with pybtex
+            self._unknown_citations.add(key)
+            return
 
     def _parse_citation(self, key):
         """
@@ -254,25 +247,15 @@ class Citations:
 
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
-    if citations._citation_err_msg is not None:
-        raise ImportError(
-            f"Citations could not be registered. If you are on Google Colab - "
-            "pybtex does not work with Google Colab due to a known bug - "
-            "https://bitbucket.org/pybtex-devs/pybtex/issues/148/. "
-            "Please manually cite all the references."
-            "\nError encountered -\n"
-            f"{citations._citation_err_msg}"
-        )
-    else:
-        if verbose:  # pragma: no cover
-            if filename is not None:  # pragma: no cover
-                raise Exception(
-                    "Verbose output is available only for the terminal and not for printing to files",
-                )
-            else:
-                citations.print(filename, output_format, verbose=True)
+    if verbose:  # pragma: no cover
+        if filename is not None:  # pragma: no cover
+            raise Exception(
+                "Verbose output is available only for the terminal and not for printing to files",
+            )
         else:
-            pybamm.citations.print(filename, output_format)
+            citations.print(filename, output_format, verbose=True)
+    else:
+        pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()
