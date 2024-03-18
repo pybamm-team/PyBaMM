@@ -113,8 +113,8 @@ dev = [
     "pytest>=6",
     "pytest-xdist",
     "nbmake",
-    # To access the metadata for python packages (in python < 3.10)
-    "importlib-metadata",
+    # To access the metadata for python packages
+    "importlib-metadata; python_version < '3.10'",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
