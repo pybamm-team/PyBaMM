@@ -293,7 +293,7 @@ def get_required_distribution_deps(package_name):
 
 
 def get_optional_distribution_deps(package_name):
-    pattern = re.compile(r"(?!.*pybamm\b|.*docs\b|.*dev\b)^([^<>=;\[]+)\b.*$")
+    pattern = re.compile(rf"(?!.*{package_name}\b|.*docs\b|.*dev\b)^([^<>=;\[]+)\b.*$")
     if json_deps := importlib_metadata.metadata(package_name).json.get("requires_dist"):
         return {
             m.group(1)
