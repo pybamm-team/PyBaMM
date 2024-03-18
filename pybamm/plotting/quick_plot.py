@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class LoopList(list):
@@ -46,7 +46,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
@@ -116,9 +116,7 @@ class QuickPlot:
         else:
             if len(labels) != len(models):
                 raise ValueError(
-                    "labels '{}' have different length to models '{}'".format(
-                        labels, [model.name for model in models]
-                    )
+                    f"labels '{labels}' have different length to models '{[model.name for model in models]}'"
                 )
             self.labels = labels
 
@@ -224,10 +222,10 @@ class QuickPlot:
                 except KeyError:
                     # if variable_tuple is not provided, default to "fixed"
                     self.variable_limits[variable_tuple] = "fixed"
-                except TypeError:
+                except TypeError as error:
                     raise TypeError(
                         "variable_limits must be 'fixed', 'tight', or a dict"
-                    )
+                    ) from error
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
@@ -297,12 +295,7 @@ class QuickPlot:
                 if variable.domain != domain:
                     raise ValueError(
                         "Mismatching variable domains. "
-                        "'{}' has domain '{}', but '{}' has domain '{}'".format(
-                            variable_tuple[0],
-                            domain,
-                            variable_tuple[idx],
-                            variable.domain,
-                        )
+                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
 
@@ -473,10 +466,10 @@ class QuickPlot:
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        plt = have_optional_dependency("matplotlib.pyplot")
-        gridspec = have_optional_dependency("matplotlib.gridspec")
-        cm = have_optional_dependency("matplotlib", "cm")
-        colors = have_optional_dependency("matplotlib", "colors")
+        plt = import_optional_dependency("matplotlib.pyplot")
+        gridspec = import_optional_dependency("matplotlib.gridspec")
+        cm = import_optional_dependency("matplotlib", "cm")
+        colors = import_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -674,8 +667,8 @@ class QuickPlot:
                 continuous_update=False,
             )
         else:
-            plt = have_optional_dependency("matplotlib.pyplot")
-            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
+            plt = import_optional_dependency("matplotlib.pyplot")
+            Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -779,8 +772,8 @@ class QuickPlot:
             Name of the generated GIF file.
 
         """
-        imageio = have_optional_dependency("imageio.v2")
-        plt = have_optional_dependency("matplotlib.pyplot")
+        imageio = import_optional_dependency("imageio.v2")
+        plt = import_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)

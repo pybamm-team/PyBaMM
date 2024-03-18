@@ -48,7 +48,7 @@ class TestUtil(TestCase):
                 "SEI current": 3,
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
-                "Positive particle diffusivity [m2.s-1]": 6,
+                "Positive electrode diffusivity [m2.s-1]": 6,
             }
         )
         self.assertEqual(d["test"], 1)
@@ -99,7 +99,7 @@ class TestUtil(TestCase):
         self.assertIsInstance(git_commit_info, str)
         self.assertEqual(git_commit_info[:2], "v2")
 
-    def test_have_optional_dependency(self):
+    def test_import_optional_dependency(self):
         with self.assertRaisesRegex(
             ModuleNotFoundError, "Optional dependency pybtex is not available."
         ):
@@ -119,7 +119,7 @@ class TestUtil(TestCase):
                 sym.visualise(test_name)
 
         sys.modules["pybtex"] = pybtex
-        pybamm.util.have_optional_dependency("pybtex")
+        pybamm.util.import_optional_dependency("pybtex")
         pybamm.print_citations()
 
 

@@ -125,7 +125,7 @@ class TestJaxSolver(TestCase):
             solve = solver.get_solve(model, t_eval)
 
             # create a dummy "model" where we calculate the sum of the time series
-            def solve_model(rate):
+            def solve_model(rate, solve=solve):
                 return jax.numpy.sum(solve({"rate": rate}))
 
             # check answers with finite difference
