@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:latest
+FROM python:3.11-slim-bullseye
 
 WORKDIR /
 
@@ -23,47 +23,20 @@ ENV CMAKE_MAKE_PROGRAM=/usr/bin/make
 ENV SUNDIALS_INST=/home/pybamm/.local
 ENV LD_LIBRARY_PATH=/home/pybamm/.local/lib
 
-RUN conda create -n pybamm python=3.11
-RUN conda init --all
-SHELL ["conda", "run", "-n", "pybamm", "/bin/bash", "-c"]
-RUN conda install -y pip
+# Migrating to venv and create a virtual environment for python 3.11
+ENV VIRTUAL_ENV=/home/pybamm/venv
+RUN python3.11 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-ARG IDAKLU
-ARG ODES
-ARG JAX
-ARG ALL
+RUN pip install --upgrade setuptools wheel wget && \
+pip install cmake
+RUN #!/bin/bash && \
+source /home/pybamm/venv/bin/activate;
 
-RUN pip install --upgrade --user pip setuptools wheel wget
-RUN pip install cmake
+RUN python scripts/install_KLU_Sundials.py && \
+rm -rf pybind11 && \
+git clone https://github.com/pybind/pybind11.git && \
+pip install -e ".[all,dev,docs,jax,odes]";
 
-RUN if [ "$IDAKLU" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
-    pip install --user -e ".[all,dev,docs]"; \
-    fi
-
-RUN if [ "$ODES" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    pip install --user -e ".[all,dev,docs,odes]"; \
-    fi
-
-RUN if [ "$JAX" = "true" ]; then \
-    pip install --user -e ".[all,dev,docs,jax]"; \
-    fi
-
-RUN if [ "$ALL" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
-    pip install --user -e ".[all,dev,docs,jax,odes]"; \
-    fi
-
-RUN if [ -z "$IDAKLU" ] \
-    && [ -z "$ODES" ] \
-    && [ -z "$JAX" ] \
-    && [ -z "$ALL" ]; then \
-    pip install --user -e ".[all,dev,docs]"; \
-    fi
 
 ENTRYPOINT ["/bin/bash"]
