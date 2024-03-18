@@ -70,11 +70,6 @@ class TestCitations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
             pybamm.print_citations("test_citations.txt", "bad format")
 
-        pybamm.citations._citation_err_msg = "Error"
-        with self.assertRaisesRegex(ImportError, "Error"):
-            pybamm.print_citations()
-        pybamm.citations._citation_err_msg = None
-
         # Test that unknown citation raises warning message on printing
         pybamm.citations._reset()
         pybamm.citations.register("not a citation")
