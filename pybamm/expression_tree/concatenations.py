@@ -337,7 +337,7 @@ class DomainConcatenation(Concatenation):
                 """Concatenation and children must have the same number of
                 points in secondary dimensions"""
             )
-        for i in range(second_pts):
+        for _ in range(second_pts):
             for dom in node.domain:
                 end += self.full_mesh[dom].npts
                 slices[dom].append(slice(start, end))

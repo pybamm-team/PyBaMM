@@ -222,10 +222,10 @@ class QuickPlot:
                 except KeyError:
                     # if variable_tuple is not provided, default to "fixed"
                     self.variable_limits[variable_tuple] = "fixed"
-                except TypeError:
+                except TypeError as error:
                     raise TypeError(
                         "variable_limits must be 'fixed', 'tight', or a dict"
-                    )
+                    ) from error
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()

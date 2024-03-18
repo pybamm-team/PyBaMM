@@ -592,7 +592,7 @@ class BaseModel:
                                 f"Missing variable for submodel '{submodel_name}': {key}.\n"
                                 + "Check the selected "
                                 "submodels provide all of the required variables."
-                            )
+                            ) from key
                         else:
                             # try setting coupled variables on next loop through
                             pybamm.logger.debug(
@@ -679,7 +679,7 @@ class BaseModel:
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
                         f"'{e.args[0]}' was not found."
-                    )
+                    ) from e
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 0:
@@ -703,7 +703,7 @@ class BaseModel:
                             "model.initial_conditions must appear in the solution with "
                             "the same key as the variable name. In the solution "
                             f"provided, {e.args[0]}"
-                        )
+                        ) from e
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:
@@ -875,8 +875,8 @@ class BaseModel:
                 ]
             )
             all_vars_in_eqns.update(vars_in_eqns)
-        for var, side_eqn in self.boundary_conditions.items():
-            for side, (eqn, typ) in side_eqn.items():
+        for _, side_eqn in self.boundary_conditions.items():
+            for _, (eqn, _) in side_eqn.items():
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 
@@ -1003,7 +1003,7 @@ class BaseModel:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, model should be "
                     f"discretised before exporting casadi functions ({e})"
-                )
+                ) from e
 
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
@@ -1244,6 +1244,7 @@ class BaseModel:
                 Plotting may not be available.
                 """,
                 pybamm.ModelWarning,
+                stacklevel=2,
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
