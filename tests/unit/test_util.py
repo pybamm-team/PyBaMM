@@ -154,7 +154,7 @@ class TestUtil(TestCase):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         required_distribution_deps = get_required_distribution_deps("pybamm")
 
-        # Get nested optional dependencies
+        # Get nested required dependencies
         for distribution_dep in list(required_distribution_deps):
             required_distribution_deps.update(
                 get_required_distribution_deps(distribution_dep)
