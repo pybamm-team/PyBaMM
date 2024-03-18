@@ -27,7 +27,7 @@ class Plating(BasePlating):
 
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
-        scale = (self.phase_param.c_Li_typ,)
+        scale = self.phase_param.c_Li_typ
         if self.x_average is True:
             c_plated_Li_av = pybamm.Variable(
                 f"X-averaged {domain} {self.phase_name}lithium plating concentration "
