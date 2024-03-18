@@ -22,6 +22,7 @@
 
 ## Breaking changes
 
+- Integrated the `[pandas]` extra into the core PyBaMM package, deprecating the `pybamm[pandas]` optional dependency. Pandas is now a required dependency and will be installed upon installing PyBaMM ([#3892](https://github.com/pybamm-team/PyBaMM/pull/3892))
 - Renamed "have_optional_dependency" to "import_optional_dependency" ([#3866](https://github.com/pybamm-team/PyBaMM/pull/3866))
 - Integrated the `[latexify]` extra into the core PyBaMM package, deprecating the `pybamm[latexify]` set of optional dependencies. SymPy is now a required dependency and will be installed upon installing PyBaMM ([#3848](https://github.com/pybamm-team/PyBaMM/pull/3848))
 - Renamed "testing" argument for plots to "show_plot" and flipped its meaning (show_plot=True is now the default and shows the plot) ([#3842](https://github.com/pybamm-team/PyBaMM/pull/3842))
