@@ -1,0 +1,26 @@
+name: Build Docker image with all arguments
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build_docker_image:
+    # This workflow is only of value to PyBaMM and would always be skipped in forks
+    if: github.repository_owner == 'pybamm-team'
+    runs-on: ubuntu-latest
+    name: Build Docker image with all arguments
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image with all arguments
+        run: docker buildx build --platform linux/arm64 -f scripts/Dockerfile -t pybamm:arm64 .
