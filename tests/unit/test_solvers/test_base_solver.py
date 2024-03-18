@@ -75,6 +75,22 @@ class TestBaseSolver(TestCase):
         ):
             solver.step(None, model, dt)
 
+        # Checking if array t_eval lies within range
+        dt = 2
+        t_eval = np.array([0, 1])
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Elements inside array t_eval must lie in the closed interval 0 to dt",
+        ):
+            solver.step(None, model, dt, t_eval=t_eval)
+
+        t_eval = np.array([1, dt])
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Elements inside array t_eval must lie in the closed interval 0 to dt",
+        ):
+            solver.step(None, model, dt, t_eval=t_eval)
+
     def test_solution_time_length_fail(self):
         model = pybamm.BaseModel()
         v = pybamm.Scalar(1)
