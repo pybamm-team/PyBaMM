@@ -836,6 +836,16 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "lorenzofavaro",
+      "name": "Lorenzo",
+      "avatar_url": "https://avatars.githubusercontent.com/u/44714920?v=4",
+      "profile": "https://github.com/lorenzofavaro",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
