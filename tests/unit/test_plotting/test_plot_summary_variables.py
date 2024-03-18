@@ -36,7 +36,7 @@ class TestPlotSummaryVariables(TestCase):
         )
         sol = sim.solve(initial_soc=1)
 
-        axes = pybamm.plot_summary_variables(sol, testing=True)
+        axes = pybamm.plot_summary_variables(sol, show_plot=False)
 
         axes = axes.flatten()
         self.assertEqual(len(axes), 9)
@@ -52,7 +52,7 @@ class TestPlotSummaryVariables(TestCase):
             np.testing.assert_array_equal(var, sol.summary_variables[output_var])
 
         axes = pybamm.plot_summary_variables(
-            [sol, sol], labels=["SPM", "SPM"], testing=True
+            [sol, sol], labels=["SPM", "SPM"], show_plot=False
         )
 
         axes = axes.flatten()

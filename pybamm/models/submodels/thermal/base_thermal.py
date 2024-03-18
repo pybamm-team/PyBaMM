@@ -117,7 +117,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
 
-        num_phases = int(getattr(self.options, "positive")["particle phases"])
+        num_phases = int(self.options.positive["particle phases"])
         phase_names = [""]
         if num_phases > 1:
             phase_names = ["primary ", "secondary "]
@@ -135,7 +135,7 @@ class BaseThermal(pybamm.BaseSubModel):
             dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
             Q_rev_p += a_j_p * T_p * dUdT_p
 
-        num_phases = int(getattr(self.options, "negative")["particle phases"])
+        num_phases = int(self.options.negative["particle phases"])
         phase_names = [""]
         if num_phases > 1:
             phase_names = ["primary", "secondary"]

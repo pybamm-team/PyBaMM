@@ -297,11 +297,11 @@ class Solution:
                 self._y = casadi.horzcat(*self.all_ys)
             else:
                 self._y = np.hstack(self.all_ys)
-        except ValueError:
+        except ValueError as error:
             raise pybamm.SolverError(
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
-            )
+            ) from error
 
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
@@ -710,9 +710,7 @@ class Solution:
             for name, var in data.items():
                 if var.ndim >= 2:
                     raise ValueError(
-                        "only 0D variables can be saved to csv, but '{}' is {}D".format(
-                            name, var.ndim - 1
-                        )
+                        f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
@@ -814,7 +812,7 @@ class Solution:
         ax=None,
         show_legend=True,
         split_by_electrode=False,
-        testing=False,
+        show_plot=True,
         **kwargs_fill,
     ):
         """
@@ -829,8 +827,9 @@ class Solution:
         split_by_electrode : bool, optional
             Whether to show the overpotentials for the negative and positive electrodes
             separately. Default is False.
-        testing : bool, optional
-            Whether to actually make the plot (turned off for unit tests).
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
         kwargs_fill
             Keyword arguments, passed to ax.fill_between.
 
@@ -841,7 +840,7 @@ class Solution:
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
-            testing=testing,
+            show_plot=show_plot,
             **kwargs_fill,
         )
 
@@ -979,11 +978,11 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
 
         try:
             esoh_sol = esoh_solver.solve(inputs)
-        except pybamm.SolverError:  # pragma: no cover
+        except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
-            )
+            ) from error
 
         cycle_summary_variables.update(esoh_sol)
 

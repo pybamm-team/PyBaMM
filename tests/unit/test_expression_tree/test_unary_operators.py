@@ -7,9 +7,11 @@ import unittest.mock as mock
 
 import numpy as np
 from scipy.sparse import diags
+import sympy
+from sympy.vector.operators import Divergence as sympy_Divergence
+from sympy.vector.operators import Gradient as sympy_Gradient
 
 import pybamm
-from pybamm.util import have_optional_dependency
 
 
 class TestUnaryOperators(TestCase):
@@ -678,12 +680,6 @@ class TestUnaryOperators(TestCase):
         self.assertFalse((2 * a).is_constant())
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
-        sympy_Divergence = have_optional_dependency(
-            "sympy.vector.operators", "Divergence"
-        )
-        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
-
         a = pybamm.Symbol("a", domain="negative particle")
         b = pybamm.Symbol("b", domain="current collector")
         c = pybamm.Symbol("c", domain="test")
