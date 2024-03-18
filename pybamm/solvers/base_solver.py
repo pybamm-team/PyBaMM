@@ -1090,7 +1090,8 @@ class BaseSolver:
         old_solution,
         model,
         dt,
-        npts=2,
+        t_eval=None,
+        npts=None,
         inputs=None,
         save=True,
     ):
@@ -1108,9 +1109,11 @@ class BaseSolver:
             initial_conditions
         dt : numeric type
             The timestep (in seconds) over which to step the solution
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
+        t_eval : list or numpy.ndarray, optional
+            An array of times at which to return the solution during the step
+            (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
+            By default, the solution is returned at t0 and t0 + dt.
+        npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
@@ -1149,10 +1152,28 @@ class BaseSolver:
                 f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
             )
 
+        # Raise deprecation warning for npts and convert it to t_eval
+        if npts is not None:
+            warnings.warn(
+                "The 'npts' parameter is deprecated, use 't_eval' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            t_eval = np.linspace(0, dt, npts)
+
+        if t_eval is not None:
+            # Checking if t_eval lies within range
+            if t_eval[0] != 0 or t_eval[-1] != dt:
+                raise pybamm.SolverError(
+                    "Elements inside array t_eval must lie in the closed interval 0 to dt"
+                )
+
+        else:
+            t_eval = np.array([0, dt])
+
         t_start = old_solution.t[-1]
+        t_eval = t_start + t_eval
         t_end = t_start + dt
-        # Calculate t_eval
-        t_eval = np.linspace(t_start, t_end, npts)
 
         if t_start == 0:
             t_start_shifted = t_start
