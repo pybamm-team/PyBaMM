@@ -43,6 +43,7 @@ dependencies = [
     "anytree>=2.8.0",
     "sympy>=1.12",
     "typing-extensions>=4.10.0",
+    "pandas>=1.5.0"
 ]
 
 [project.urls]
@@ -112,10 +113,8 @@ dev = [
     "pytest>=6",
     "pytest-xdist",
     "nbmake",
-]
-# Reading CSV files
-pandas = [
-    "pandas>=1.5.0",
+    # To access the metadata for python packages
+    "importlib-metadata; python_version < '3.10'",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
@@ -130,7 +129,7 @@ odes = [
 all = [
     "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
-    "pybamm[examples,plot,cite,bpx,tqdm,pandas]",
+    "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
 [project.scripts]
