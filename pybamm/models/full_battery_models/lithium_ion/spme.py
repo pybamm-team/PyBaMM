@@ -56,16 +56,16 @@ class SPMe(SPM):
             or self.options.electrode_types["negative"] == "planar"
         ):
             if self.options["electrolyte conductivity"] in ["default", "composite"]:
-                self.submodels[
-                    "electrolyte conductivity"
-                ] = pybamm.electrolyte_conductivity.Composite(
-                    self.param, options=self.options
+                self.submodels["electrolyte conductivity"] = (
+                    pybamm.electrolyte_conductivity.Composite(
+                        self.param, options=self.options
+                    )
                 )
             elif self.options["electrolyte conductivity"] == "integrated":
-                self.submodels[
-                    "electrolyte conductivity"
-                ] = pybamm.electrolyte_conductivity.Integrated(
-                    self.param, options=self.options
+                self.submodels["electrolyte conductivity"] = (
+                    pybamm.electrolyte_conductivity.Integrated(
+                        self.param, options=self.options
+                    )
                 )
         if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
@@ -76,6 +76,6 @@ class SPMe(SPM):
 
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "porous":
-                self.submodels[
-                    f"{domain} surface potential difference [V]"
-                ] = surf_model(self.param, domain, self.options)
+                self.submodels[f"{domain} surface potential difference [V]"] = (
+                    surf_model(self.param, domain, self.options)
+                )
