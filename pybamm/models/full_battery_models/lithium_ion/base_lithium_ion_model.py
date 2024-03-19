@@ -309,10 +309,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                         phase=phase,
                         x_average=self.x_average,
                     )
-                    self.submodels[
-                        f"{domain} {phase} total particle concentration"
-                    ] = pybamm.pe_degradation.TotalConcentration(
-                        self.param, domain, self.options, phase
+                    self.submodels[f"{domain} {phase} total particle concentration"] = (
+                        pybamm.pe_degradation.TotalConcentration(
+                            self.param, domain, self.options, phase
+                        )
                     )
 
     def set_sei_submodel(self):

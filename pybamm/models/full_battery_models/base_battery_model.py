@@ -901,7 +901,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["dimensionality"] == 2:
             base_var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
         if self.options["PE degradation"] == "phase transition":
-            phases = int(getattr(self.options, "positive")["particle phases"])
+            phases = int(self.options.positive["particle phases"])
             if phases == 1:
                 base_var_pts.update({"r_co": 20, "r_sh": 20})
             elif phases >= 2:
@@ -937,7 +937,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 2:
             base_submeshes["current collector"] = pybamm.ScikitUniform2DSubMesh
         if self.options["PE degradation"] == "phase transition":
-            phases = int(getattr(self.options, "positive")["particle phases"])
+            phases = int(self.options.positive["particle phases"])
             if phases == 1:
                 base_submeshes.update(
                     {
@@ -979,7 +979,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
         if self.options["PE degradation"] == "phase transition":
-            phases = int(getattr(self.options, "positive")["particle phases"])
+            phases = int(self.options.positive["particle phases"])
             if phases == 1:
                 base_spatial_methods.update(
                     {
