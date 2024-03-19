@@ -79,7 +79,7 @@ class Latexify:
         for var_name, rng in self.model.default_geometry[var.domain[-1]].items():
             rng_max = get_rng_min_max_name(rng, "max")
 
-        geo_latex = fr"\quad {rng_min} < {name} < {rng_max}"
+        geo_latex = rf"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)
 
         return geo
