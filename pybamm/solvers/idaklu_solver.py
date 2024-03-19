@@ -1,6 +1,7 @@
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
+# mypy: ignore-errors
 import casadi
 import pybamm
 import numpy as np
@@ -13,7 +14,8 @@ idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
     try:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
-        idaklu_spec.loader.exec_module(idaklu)
+        if idaklu_spec.loader:
+            idaklu_spec.loader.exec_module(idaklu)
     except ImportError:  # pragma: no cover
         idaklu_spec = None
 
@@ -87,7 +89,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=None,
-        output_variables=[],
+        output_variables=None,
         options=None,
     ):
         # set default options,
@@ -110,7 +112,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     options[key] = value
         self._options = options
 
-        self.output_variables = output_variables
+        self.output_variables = [] if output_variables is None else output_variables
 
         if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
@@ -647,7 +649,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 number_of_samples = sol.y.shape[0] // number_of_timesteps
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
-                for vark, var in enumerate(self.output_variables):
+                for _, var in enumerate(self.output_variables):
                     # ExplicitTimeIntegral's are not computed as part of the solver and
                     # do not need to be converted
                     if isinstance(
@@ -675,3 +677,37 @@ class IDAKLUSolver(pybamm.BaseSolver):
             return newsol
         else:
             raise pybamm.SolverError("idaklu solver failed")
+
+    def jaxify(
+        self,
+        model,
+        t_eval,
+        *,
+        output_variables=None,
+        calculate_sensitivities=True,
+    ):
+        """JAXify the solver object
+
+        Creates a JAX expression representing the IDAKLU-wrapped solver
+        object.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model to be solved
+        t_eval : numeric type, optional
+            The times at which to compute the solution. If None, the times in the model
+            are used.
+        output_variables : list of str, optional
+            The variables to be returned. If None, all variables in the model are used.
+        calculate_sensitivities : bool, optional
+            Whether to calculate sensitivities. Default is True.
+        """
+        obj = pybamm.IDAKLUJax(
+            self,  # IDAKLU solver instance
+            model,
+            t_eval,
+            output_variables=output_variables,
+            calculate_sensitivities=calculate_sensitivities,
+        )
+        return obj

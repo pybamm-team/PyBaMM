@@ -54,7 +54,7 @@ for ax, i, j in zip(
 
             time = 0
             runs = 20
-            for k in range(0, runs):
+            for _ in range(0, runs):
                 solution = sim.solve([0, 3500])
                 time += solution.solve_time.value
             time = time / runs

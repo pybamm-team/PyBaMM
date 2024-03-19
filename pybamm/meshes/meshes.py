@@ -85,8 +85,8 @@ class Mesh(dict):
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
                 if spatial_variable == "tabs":
-                    for tab, position_size in spatial_limits.items():
-                        for position_size, sym in position_size.items():
+                    for tab, position_info in spatial_limits.items():
+                        for position_size, sym in position_info.items():
                             if isinstance(sym, pybamm.Symbol):
                                 sym_eval = sym.evaluate()
                                 geometry[domain]["tabs"][tab][position_size] = sym_eval
@@ -102,7 +102,7 @@ class Mesh(dict):
                                         "geometry. Make sure that something like "
                                         "`param.process_geometry(geometry)` has been "
                                         "run."
-                                    )
+                                    ) from error
                                 else:
                                     raise error
                         elif isinstance(sym, numbers.Number):

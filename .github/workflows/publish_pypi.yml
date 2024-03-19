@@ -218,6 +218,12 @@ jobs:
     name: Upload package to PyPI
     needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybamm
+    permissions:
+      id-token: write
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -231,8 +237,6 @@ jobs:
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
           packages-dir: files/
 
       - name: Publish on TestPyPI
