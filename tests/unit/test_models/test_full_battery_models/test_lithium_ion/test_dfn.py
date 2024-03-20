@@ -35,6 +35,13 @@ class TestDFN(BaseUnitTestLithiumIon, TestCase):
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_plett_ocp_with_psd(self):
+        options = {
+            "open-circuit potential": "Plett",
+            "particle size": "distribution",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_external_circuit_explicit_power(self):
         options = {"operating mode": "explicit power"}
         self.check_well_posedness(options)
