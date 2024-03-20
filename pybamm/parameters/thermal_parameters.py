@@ -10,10 +10,13 @@ class ThermalParameters(BaseParameters):
     Standard thermal parameters
     """
 
-    def __init__(self):
+    def __init__(self, options=None):
+        self.options = options
+
         # Get geometric parameters
         self.geo = pybamm.geometric_parameters
 
+        # Set domain attribute
         self.n = DomainThermalParameters("negative", self)
         self.s = DomainThermalParameters("separator", self)
         self.p = DomainThermalParameters("positive", self)
@@ -31,14 +34,39 @@ class ThermalParameters(BaseParameters):
         for domain in self.domain_params.values():
             domain._set_parameters()
 
+       # for domain, params in self.domain_params.items():
+        #    #params._domain = domain  # Set _domain attribute
+        #    params._set_parameters()
+
         # Reference temperature
         self.T_ref = pybamm.Parameter("Reference temperature [K]")
 
         # Cooling coefficient
         self.h_total = pybamm.Parameter("Total heat transfer coefficient [W.m-2.K-1]")
 
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        x = pybamm.SpatialVariable(
+            "x",
+            domain=whole_cell,
+            auxiliary_domains={"secondary": "current collector"},
+            coord_sys="cartesian",
+        )
+
+
         # Initial temperature
-        self.T_init = pybamm.Parameter("Initial temperature [K]")
+        # self.T_init = pybamm.FunctionParameter(
+        #   f"{domain}Initial temperature in {domain} electrode [mol.m-3]",
+        #  {
+        #     "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
+        #        x, f"{domain} electrode"
+        #   ),
+        #   },
+        # )
+
+        self.T_init = pybamm.FunctionParameter(
+            "Initial temperature [K]",
+            {"Through-cell distance (x) [m]": x},
+        )
 
     def T_amb(self, y, z, t):
         """Ambient temperature [K]"""

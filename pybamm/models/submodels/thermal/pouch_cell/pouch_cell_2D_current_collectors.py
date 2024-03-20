@@ -128,4 +128,4 @@ class CurrentCollector2D(BaseThermal):
 
     def set_initial_conditions(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
-        self.initial_conditions = {T_av: self.param.T_init}
+        self.initial_conditions = {T_av: pybamm.x_average(self.param.T_init)}
