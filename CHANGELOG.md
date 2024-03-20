@@ -10,6 +10,7 @@
 
 ## Bug Fixes
 
+- `plot_voltage_components` now works even if the time does not start at 0 ([#3915](https://github.com/pybamm-team/PyBaMM/pull/3915))
 - Fixed bug where separator porosity was used in calculation instead of transport efficiency ([#3905](https://github.com/pybamm-team/PyBaMM/pull/3905))
 - Initial voltage can now match upper or lower cut-offs exactly ([#3842](https://github.com/pybamm-team/PyBaMM/pull/3842))
 - Fixed a bug where 1+1D and 2+1D models would not work with voltage or power controlled experiments([#3829](https://github.com/pybamm-team/PyBaMM/pull/3829))
