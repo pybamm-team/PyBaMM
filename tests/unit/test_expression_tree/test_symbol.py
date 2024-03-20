@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix, coo_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
-from pybamm.util import have_optional_dependency
+import sympy
 
 
 class TestSymbol(TestCase):
@@ -485,7 +485,6 @@ class TestSymbol(TestCase):
             (y1 + y2).test_shape()
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
         self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
     def test_numpy_array_ufunc(self):
