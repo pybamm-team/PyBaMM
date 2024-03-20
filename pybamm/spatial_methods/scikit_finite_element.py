@@ -275,10 +275,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         try:
             _, neg_bc_type = boundary_conditions[symbol]["negative tab"]
             _, pos_bc_type = boundary_conditions[symbol]["positive tab"]
-        except KeyError:
+        except KeyError as error:
             raise pybamm.ModelError(
                 f"No boundary conditions provided for symbol `{symbol}``"
-            )
+            ) from error
 
         # adjust matrix for Dirichlet boundary conditions
         if neg_bc_type == "Dirichlet":

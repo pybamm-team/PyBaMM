@@ -38,7 +38,7 @@ class ElectricalParameters(BaseParameters):
         )
         # Current as a function of time
         self.current_with_time = pybamm.FunctionParameter(
-            "Current function [A]", {"Time[s]": pybamm.t}
+            "Current function [A]", {"Time [s]": pybamm.t}
         )
         self.current_density_with_time = self.current_with_time / (
             self.n_electrodes_parallel * self.geo.A_cc
