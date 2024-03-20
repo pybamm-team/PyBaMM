@@ -14,8 +14,8 @@ To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
    .. code:: bash
 
-      sudo apt update \
-      sudo apt install python3
+      apt update \
+      apt install python3
 
 .. tab:: Fedora/CentOS
 
@@ -23,8 +23,8 @@ To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
    .. code:: bash
 
-      sudo dnf upgrade \
-      sudo dnf install python3
+      dnf upgrade \
+      dnf install python3
 
 .. tab:: Arch Linux
 
@@ -32,8 +32,8 @@ To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
   .. code:: bash
 
-      sudo pacman -Syu \
-      sudo pacman -S python
+      pacman -Syu \
+      pacman -S python
 
 .. tab:: macOS
 
@@ -95,7 +95,7 @@ library beforehand.
 
 .. tab:: macOS
 
-   In a terminal, run the following commands:
+   In a terminal, run the following command:
 
    .. code:: bash
 
@@ -129,7 +129,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      apt-get install libopenblas-dev \
+      apt-get install libopenblas-dev
       pybamm_install_odes
 
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
@@ -140,7 +140,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      dnf install openblas-devel \
+      dnf install openblas-devel
       pybamm_install_odes
 
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
@@ -151,7 +151,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      sudo pacman -S openblas \
+      pacman -S openblas
       pybamm_install_odes
 
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)

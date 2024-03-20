@@ -34,11 +34,11 @@ To install PyBaMM, you will need:
 
 You can install the above with
 
-.. tab:: Ubuntu/Debian
+.. tab:: Ubuntu/Debian/Linux Mint
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
 
 	Where ``X`` is the version sub-number.
 
@@ -46,7 +46,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		dnf install python3.X-devel openblas-devel gcc gcc-fortran graphviz
 
 	Where ``X`` is the version sub-number.
 
@@ -54,7 +54,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo pacman -S python openblas gcc gcc-fortran graphviz
+		pacman -S python openblas gcc gcc-fortran graphviz
 
 	To install specific python version, refer `Arch Wiki <https://wiki.archlinux.org/title/python>`_.
 
@@ -349,6 +349,6 @@ configured SUNDIALS, it might say:
    -- LAPACK requires BLAS
 
 If this is the case, on a Debian or Ubuntu system you can install
-OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
+OpenBLAS using ``apt-get install libopenblas-dev`` (or
 ``brew install openblas`` for Mac OS) and then re-install SUNDIALS using
 the instructions above.
