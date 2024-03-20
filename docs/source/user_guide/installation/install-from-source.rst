@@ -38,7 +38,7 @@ You can install the above with
 
 	.. code:: bash
 
-		apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
 
 	Where ``X`` is the version sub-number.
 
@@ -46,7 +46,7 @@ You can install the above with
 
 	.. code:: bash
 
-		dnf install python3.X-devel openblas-devel gcc gcc-fortran graphviz
+		sudo dnf install python3.X-devel openblas-devel gcc gcc-gfortran graphviz
 
 	Where ``X`` is the version sub-number.
 
@@ -56,7 +56,7 @@ You can install the above with
 
 		pacman -S python openblas gcc gcc-fortran graphviz
 
-	To install specific python version, refer `Arch Wiki <https://wiki.archlinux.org/title/python>`_.
+	To install a specific Python version, please refer to the `Arch Wiki <https://wiki.archlinux.org/title/python>`_.
 
 .. tab:: MacOS
 
@@ -349,6 +349,6 @@ configured SUNDIALS, it might say:
    -- LAPACK requires BLAS
 
 If this is the case, on a Debian or Ubuntu system you can install
-OpenBLAS using ``apt-get install libopenblas-dev`` (or
+OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
 ``brew install openblas`` for Mac OS) and then re-install SUNDIALS using
 the instructions above.
