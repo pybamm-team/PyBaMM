@@ -34,7 +34,7 @@ To install PyBaMM, you will need:
 
 You can install the above with
 
-.. tab:: Ubuntu
+.. tab:: Ubuntu/Debian
 
 	.. code:: bash
 
@@ -42,16 +42,33 @@ You can install the above with
 
 	Where ``X`` is the version sub-number.
 
-	.. note::
+.. tab:: Fedora/CentOS
 
-		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
-		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+	.. code:: bash
+
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+
+	Where ``X`` is the version sub-number.
+
+.. tab:: Arch Linux
+
+	.. code:: bash
+
+		sudo pacman -S python openblas gcc gcc-fortran graphviz
+
+	To install specific python version, refer `Arch Wiki <https://wiki.archlinux.org/title/python>`_.
 
 .. tab:: MacOS
 
 	.. code:: bash
 
 		brew install python openblas gcc gfortran graphviz libomp
+
+.. note::
+
+		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
+		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
 You can install it to your local user account (make sure you are not within a virtual environment) with
