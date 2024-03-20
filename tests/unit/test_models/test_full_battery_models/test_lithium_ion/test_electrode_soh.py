@@ -238,14 +238,18 @@ class TestElectrodeSOHHalfCell(TestCase):
 
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
         parameter_values = pybamm.ParameterValues("Xu2019")
+        Q_w = param.p.Q_init
+        #Q_w = parameter_values.evaluate(param.p.Q_init)
+        # Add Q_w to parameter values
+        parameter_values.update({"Total lithium in the working electrode [mol]": Q_w}, check_already_exists=False)
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         V_min = 3.5
         V_max = 4.2
-        Q_w = parameter_values.evaluate(param.p.Q_init)
+        #Q_w = parameter_values.evaluate(param.p.Q_init)
 
         # Solve the model and check outputs
-        sol = sim.solve([0], inputs={"Q_w": Q_w})
+        sol = sim.solve([0], inputs={})
         self.assertAlmostEqual(sol["Uw(x_100)"].data[0], V_max, places=5)
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
 

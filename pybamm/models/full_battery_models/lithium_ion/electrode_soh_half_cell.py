@@ -28,7 +28,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))
         x_0 = pybamm.Variable("x_0", bounds=(0, 1))
-        Q_w = pybamm.InputParameter("Q_w")
+        Q_w = pybamm.Parameter("Total lithium in the working electrode [mol]")
         T_ref = param.T_ref
         U_w = param.p.prim.U
         Q = Q_w * (x_100 - x_0)
@@ -64,6 +64,7 @@ def get_initial_stoichiometry_half_cell(
     param=None,
     known_value="cyclable lithium capacity",
     options=None,
+    inputs=None,
 ):
     """
     Calculate initial stoichiometry to start off the simulation at a particular
@@ -86,7 +87,7 @@ def get_initial_stoichiometry_half_cell(
         The initial stoichiometry that give the desired initial state of charge
     """
     param = pybamm.LithiumIonParameters(options)
-    x_0, x_100 = get_min_max_stoichiometries(parameter_values)
+    x_0, x_100 = get_min_max_stoichiometries(parameter_values, inputs=inputs)
 
     if isinstance(initial_value, str) and initial_value.endswith("V"):
         V_init = float(initial_value[:-1])
@@ -129,7 +130,7 @@ def get_initial_stoichiometry_half_cell(
     return x
 
 
-def get_min_max_stoichiometries(parameter_values, options=None):
+def get_min_max_stoichiometries(parameter_values, options=None, inputs=None):
     """
     Get the minimum and maximum stoichiometries from the parameter values
 
@@ -142,12 +143,17 @@ def get_min_max_stoichiometries(parameter_values, options=None):
         :class:`pybamm.BatteryModelOptions`.
         If None, the default is used: {"working electrode": "positive"}
     """
+    inputs = inputs or {}
     if options is None:
         options = {"working electrode": "positive"}
     esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell("ElectrodeSOH")
     param = pybamm.LithiumIonParameters(options)
+    #Use Q_w as a symbol rather than a value
+    Q_w = param.p.Q_init
+    #Q_w = parameter_values.evaluate(param.p.Q_init)
+    # Add Q_w to parameter values
+    parameter_values.update({"Total lithium in the working electrode [mol]": Q_w}, check_already_exists=False)
     esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
-    Q_w = parameter_values.evaluate(param.p.Q_init)
-    esoh_sol = esoh_sim.solve([0], inputs={"Q_w": Q_w})
+    esoh_sol = esoh_sim.solve([0], inputs=inputs)
     x_0, x_100 = esoh_sol["x_0"].data[0], esoh_sol["x_100"].data[0]
     return x_0, x_100

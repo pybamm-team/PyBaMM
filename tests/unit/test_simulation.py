@@ -204,6 +204,16 @@ class TestSimulation(TestCase):
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
 
+        # Test that initial soc works with a relevant input parameter
+        #model = pybamm.lithium_ion.DFN()
+        #param = model.default_parameter_values
+        #param["Positive electrode active material volume fraction"] = (
+        #    pybamm.InputParameter("eps_p")
+        #)
+        #sim = pybamm.Simulation(model, parameter_values=param)
+        #sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": 1e-10})
+        #self.assertEqual(sim._built_initial_soc, 0.8)
+
         # Test whether initial_soc works with half cell (solve)
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
@@ -230,6 +240,17 @@ class TestSimulation(TestCase):
         sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
         voltage = sol["Terminal voltage [V]"].entries
         self.assertAlmostEqual(voltage[0], ucv, places=5)
+
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
+        param = model.default_parameter_values
+        original_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
 
         # test with MSMR
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
