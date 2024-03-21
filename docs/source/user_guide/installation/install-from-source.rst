@@ -54,7 +54,7 @@ You can install the above with
 
 	.. code:: bash
 
-		pacman -S python openblas gcc gcc-fortran graphviz
+		sudo pacman -S python openblas gcc gcc-fortran graphviz
 
 	To install a specific Python version, please refer to the `Arch Wiki <https://wiki.archlinux.org/title/python>`_.
 
