@@ -8,9 +8,9 @@ Prerequisites
 
 To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
-.. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
+.. tab:: Debian-based distributions (Debian, Ubuntu)
 
-   To install Python 3 on Debian-based distributions (Debian, Ubuntu, Linux Mint), open a terminal and run
+   To install Python 3 on Debian-based distributions (Debian, Ubuntu), open a terminal and run
 
    .. code:: bash
 
@@ -123,13 +123,13 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
    The ``scikits.odes`` solver is not supported on Python 3.12 yet. Please refer to https://github.com/bmcage/odes/issues/162.
    There is support for Python 3.8, 3.9, 3.10, and 3.11.
 
-.. tab:: Debian/Ubuntu/Linux Mint
+.. tab:: Debian/Ubuntu
 
    In a terminal, run the following commands:
 
    .. code:: bash
 
-      apt-get install libopenblas-dev
+      apt-get install libopenblas-dev cmake
       pybamm_install_odes
 
    This will compile and install SUNDIALS for the system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
@@ -151,7 +151,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      sudo pacman -S openblas
+      sudo pacman -S openblas cmake
       pybamm_install_odes
 
    system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)

@@ -34,7 +34,7 @@ To install PyBaMM, you will need:
 
 You can install the above with
 
-.. tab:: Ubuntu/Debian/Linux Mint
+.. tab:: Ubuntu/Debian
 
 	.. code:: bash
 
