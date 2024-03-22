@@ -160,7 +160,7 @@ def run_scripts(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,dev]", silent=False)
     session.run("python", "run-tests.py", "--scripts")
 
 
@@ -258,7 +258,7 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    session.install("-e", ".[all,dev,docs]", silent=False)
+    session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:
