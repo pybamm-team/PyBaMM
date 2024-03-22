@@ -81,9 +81,7 @@ def run_coverage(session):
             session.install("-e", ".[all,dev]", silent=False)
         else:
             session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("coverage", "run", "run-tests.py", "--nosub")
-    session.run("coverage", "combine")
-    session.run("coverage", "xml")
+    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
 @nox.session(name="integration")
@@ -115,7 +113,7 @@ def run_integration(session):
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
     session.run("python", "run-tests.py", "--doctest")
 
 
@@ -260,7 +258,7 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:

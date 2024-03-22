@@ -106,7 +106,7 @@ dev = [
     # For running testing sessions
     "nox",
     # For coverage
-    "coverage[toml]",
+    "pytest-cov",
     # For test parameterization
     "parameterized>=0.9",
     # For testing Jupyter notebooks

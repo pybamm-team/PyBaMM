@@ -283,8 +283,8 @@ class TestEvaluate(TestCase):
         expr = a + b
         constant_str, variable_str = pybamm.to_python(expr)
         expected_str = (
-            "var_[0-9m]+ = y\[0:1\].*\\n"
-            "var_[0-9m]+ = y\[1:2\].*\\n"
+            "var_[0-9m]+ = y\\[0:1\].*\\n"
+            "var_[0-9m]+ = y\\[1:2\].*\\n"
             "var_[0-9m]+ = var_[0-9m]+ \+ var_[0-9m]+"
         )
 
