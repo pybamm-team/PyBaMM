@@ -355,13 +355,21 @@ class Simulation:
         elif options["working electrode"] == "positive":
             self._parameter_values = (
                 self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
-                    initial_soc, param=param, inplace=False, options=options, inputs=inputs
+                    initial_soc,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
                 )
             )
         else:
             self._parameter_values = (
                 self._unprocessed_parameter_values.set_initial_stoichiometries(
-                    initial_soc, param=param, inplace=False, options=options, inputs=inputs
+                    initial_soc,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
                 )
             )
 
@@ -587,7 +595,9 @@ class Simulation:
                             stacklevel=2,
                         )
 
-            self._solution = solver.solve(self.built_model, t_eval, inputs=inputs, **kwargs)
+            self._solution = solver.solve(
+                self.built_model, t_eval, inputs=inputs, **kwargs
+            )
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
@@ -621,6 +631,7 @@ class Simulation:
                     [starting_solution],
                     esoh_solver=esoh_solver,
                     save_this_cycle=True,
+                    inputs=user_inputs,
                 )
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
@@ -908,7 +919,10 @@ class Simulation:
                                 "due to exceeded bounds at initial conditions."
                             )
                     cycle_sol = pybamm.make_cycle_solution(
-                        steps, esoh_solver=esoh_solver, save_this_cycle=save_this_cycle
+                        steps,
+                        esoh_solver=esoh_solver,
+                        save_this_cycle=save_this_cycle,
+                        inputs=user_inputs,
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
                     all_cycle_solutions.append(cycle_solution)

@@ -380,7 +380,8 @@ class ElectrodeSOHSolver:
         # Calculate theoretical energy
         # TODO: energy calc for MSMR
         if self.options["open-circuit potential"] != "MSMR":
-            energy = self.theoretical_energy_integral(sol_dict)
+            energy_inputs = {**sol_dict, **inputs}
+            energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
@@ -604,12 +605,10 @@ class ElectrodeSOHSolver:
         else:
             # address numpy 1.25 deprecation warning: array should have ndim=0
             # before conversion
-            V_lower_bound = float(
-                self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
-            )
-            V_upper_bound = float(
-                self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
-            )
+            inputs.update({"x": x0_min, "y": y0_max}, check_already_exists=False)
+            V_lower_bound = float(self.OCV_function.evaluate(inputs=inputs).item())
+            inputs.update({"x": x100_max, "y": y100_min})
+            V_upper_bound = float(self.OCV_function.evaluate(inputs=inputs).item())
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
@@ -632,7 +631,7 @@ class ElectrodeSOHSolver:
                 )
             )
 
-    def get_initial_stoichiometries(self, initial_value, tol=1e-6):
+    def get_initial_stoichiometries(self, initial_value, tol=1e-6, inputs=None):
         """
         Calculate initial stoichiometries to start off the simulation at a particular
         state of charge, given voltage limits, open-circuit potentials, etc defined by
@@ -657,7 +656,7 @@ class ElectrodeSOHSolver:
         """
         parameter_values = self.parameter_values
         param = self.param
-        x_0, x_100, y_100, y_0 = self.get_min_max_stoichiometries()
+        x_0, x_100, y_100, y_0 = self.get_min_max_stoichiometries(inputs=inputs)
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
@@ -714,7 +713,7 @@ class ElectrodeSOHSolver:
 
         return x, y
 
-    def get_min_max_stoichiometries(self):
+    def get_min_max_stoichiometries(self, inputs=None):
         """
         Calculate min/max stoichiometries
         given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -724,18 +723,23 @@ class ElectrodeSOHSolver:
         x_0, x_100, y_100, y_0
             The min/max stoichiometries
         """
+        inputs = inputs or {}
         parameter_values = self.parameter_values
         param = self.param
 
-        Q_n = parameter_values.evaluate(param.n.Q_init)
-        Q_p = parameter_values.evaluate(param.p.Q_init)
+        Q_n = parameter_values.evaluate(param.n.Q_init, inputs=inputs)
+        Q_p = parameter_values.evaluate(param.p.Q_init, inputs=inputs)
 
         if self.known_value == "cyclable lithium capacity":
-            Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
-            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+            Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
+            inputs.update(
+                {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}, check_already_exists=False
+            )
         elif self.known_value == "cell capacity":
-            Q = parameter_values.evaluate(param.Q / param.n_electrodes_parallel)
-            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": Q}
+            Q = parameter_values.evaluate(
+                param.Q / param.n_electrodes_parallel, inputs=inputs
+            )
+            inputs.update({"Q_n": Q_n, "Q_p": Q_p, "Q": Q}, check_already_exists=False)
         # Solve the model and check outputs
         sol = self.solve(inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
@@ -814,7 +818,7 @@ class ElectrodeSOHSolver:
         param = self.param
         T = param.T_amb_av(0)
         Vs = self.parameter_values.evaluate(
-            param.p.prim.U(y_vals, T) - param.n.prim.U(x_vals, T)
+            param.p.prim.U(y_vals, T) - param.n.prim.U(x_vals, T), inputs=inputs
         ).flatten()
         # Calculate dQ
         Q = Q_p * (y_0 - y_100)
@@ -831,6 +835,7 @@ def get_initial_stoichiometries(
     known_value="cyclable lithium capacity",
     options=None,
     tol=1e-6,
+    inputs=None,
 ):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
@@ -866,7 +871,7 @@ def get_initial_stoichiometries(
         The initial stoichiometries that give the desired initial state of charge
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
-    return esoh_solver.get_initial_stoichiometries(initial_value, tol)
+    return esoh_solver.get_initial_stoichiometries(initial_value, tol, inputs=inputs)
 
 
 def get_min_max_stoichiometries(

@@ -148,11 +148,14 @@ def get_min_max_stoichiometries(parameter_values, options=None, inputs=None):
         options = {"working electrode": "positive"}
     esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell("ElectrodeSOH")
     param = pybamm.LithiumIonParameters(options)
-    #Use Q_w as a symbol rather than a value
+    # Use Q_w as a symbol rather than a value
     Q_w = param.p.Q_init
-    #Q_w = parameter_values.evaluate(param.p.Q_init)
+    # Q_w = parameter_values.evaluate(param.p.Q_init)
     # Add Q_w to parameter values
-    parameter_values.update({"Total lithium in the working electrode [mol]": Q_w}, check_already_exists=False)
+    parameter_values.update(
+        {"Total lithium in the working electrode [mol]": Q_w},
+        check_already_exists=False,
+    )
     esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
     esoh_sol = esoh_sim.solve([0], inputs=inputs)
     x_0, x_100 = esoh_sol["x_0"].data[0], esoh_sol["x_100"].data[0]

@@ -205,14 +205,41 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 0.5)
 
         # Test that initial soc works with a relevant input parameter
-        #model = pybamm.lithium_ion.DFN()
-        #param = model.default_parameter_values
-        #param["Positive electrode active material volume fraction"] = (
-        #    pybamm.InputParameter("eps_p")
-        #)
-        #sim = pybamm.Simulation(model, parameter_values=param)
-        #sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": 1e-10})
-        #self.assertEqual(sim._built_initial_soc, 0.8)
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        og_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": og_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+        model = pybamm.lithium_ion.DFN()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        def graphite_LGM50_ocp_Chen2020(sto):
+            a = pybamm.Parameter("a")
+            u_eq = a * (
+                1.9793 * pybamm.exp(-39.3631 * sto)
+                + 0.2482
+                - 0.0909 * pybamm.tanh(29.8538 * (sto - 0.1234))
+                - 0.04478 * pybamm.tanh(14.9159 * (sto - 0.2769))
+                - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
+            )
+            return u_eq
+
+        parameter_values.update(
+            {
+                "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1})
 
         # Test whether initial_soc works with half cell (solve)
         options = {"working electrode": "positive"}
