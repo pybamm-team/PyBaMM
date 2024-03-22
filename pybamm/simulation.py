@@ -789,7 +789,7 @@ class Simulation:
                             current_solution,
                             model,
                             dt,
-                            npts=npts,
+                            t_eval=np.linspace(0, dt, npts),
                             save=False,
                             **kwargs,
                         )
@@ -970,7 +970,7 @@ class Simulation:
             step_solution,
             model,
             rest_time,
-            npts=npts,
+            t_eval=np.linspace(0, rest_time, npts),
             save=False,
             **kwargs,
         )
@@ -978,7 +978,13 @@ class Simulation:
         return step_solution_with_rest
 
     def step(
-        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
+        self,
+        dt,
+        solver=None,
+        t_eval=None,
+        save=True,
+        starting_solution=None,
+        **kwargs,
     ):
         """
         A method to step the model forward one timestep. This method will
@@ -990,9 +996,10 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
+        t_eval : list or numpy.ndarray, optional
+            An array of times at which to return the solution during the step
+            (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
+            By default, the solution is returned at t0 and t0 + dt.
         save : bool
             Turn on to store the solution of all previous timesteps
         starting_solution : :class:`pybamm.Solution`
@@ -1012,7 +1019,12 @@ class Simulation:
             starting_solution = self._solution
 
         self._solution = solver.step(
-            starting_solution, self.built_model, dt, npts=npts, save=save, **kwargs
+            starting_solution,
+            self.built_model,
+            dt,
+            t_eval=t_eval,
+            save=save,
+            **kwargs,
         )
 
         return self.solution
