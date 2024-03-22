@@ -502,14 +502,14 @@ def get_parameter_values():
         "chemistry": "lithium_ion",
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
-        "Lithium plating kinetic rate constant [m.s-1]": 1e-09,
+        "Lithium plating kinetic rate constant [m.s-1]": 1e-10,
         "Exchange-current density for plating [A.m-2]"
         "": plating_exchange_current_density_OKane2020,
         "Exchange-current density for stripping [A.m-2]"
         "": stripping_exchange_current_density_OKane2020,
         "Initial plated lithium concentration [mol.m-3]": 0.0,
         "Typical plated lithium concentration [mol.m-3]": 1000.0,
-        "Lithium plating transfer coefficient": 0.65,
+        "Lithium plating transfer coefficient": 0.5,
         "Dead lithium decay constant [s-1]": 1e-06,
         "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
         # sei
