@@ -38,7 +38,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake
 
 	Where ``X`` is the version sub-number.
 
@@ -46,7 +46,7 @@ You can install the above with
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp
+		brew install python openblas gcc gfortran graphviz libomp cmake
 
 .. note::
 

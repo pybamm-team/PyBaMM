@@ -122,7 +122,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      brew install openblas gcc gfortran
+      brew install openblas gcc gfortran cmake
       pybamm_install_odes
 
 The ``pybamm_install_odes`` command, installed with PyBaMM, automatically downloads and installs the SUNDIALS library on your
