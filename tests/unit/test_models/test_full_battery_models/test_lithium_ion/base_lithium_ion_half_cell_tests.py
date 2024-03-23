@@ -79,6 +79,22 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"SEI": "ec reaction limited (asymmetric)"}
         self.check_well_posedness(options)
 
+    def test_well_posed_constant_double_sei_layer(self):
+        options = {"SEI": "constant", "double SEI layer": "true"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_reaction_limited_growth_double_sei_layer(self):
+        options = {"SEI": "reaction limited", "double SEI layer": "true"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_electron_migration_limited_growth_double_sei_layer(self):
+        options = {"SEI": "electron-migration limited", "double SEI layer": "true"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_ec_reaction_limited_growth_double_sei_layer(self):
+        options = {"SEI": "ec reaction limited", "double SEI layer": "true"}
+        self.check_well_posedness(options)
+
     def test_well_posed_lumped_thermal(self):
         options = {"thermal": "lumped"}
         self.check_well_posedness(options)
