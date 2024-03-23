@@ -95,6 +95,14 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"SEI": "ec reaction limited", "double SEI layer": "true"}
         self.check_well_posedness(options)
 
+    def test_well_posed_ec_reaction_limited_cracks_growth_double_sei_layer(self):
+        options = {
+            "SEI": "ec reaction limited",
+            "double SEI layer": "true",
+            "SEI on cracks": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_lumped_thermal(self):
         options = {"thermal": "lumped"}
         self.check_well_posedness(options)
