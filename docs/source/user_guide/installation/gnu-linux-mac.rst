@@ -111,7 +111,7 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      sudo apt-get install libopenblas-dev cmakeinstall
+      sudo apt-get install libopenblas-dev cmake
       pybamm_install_odes
 
    This will compile and install SUNDIALS for the system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
