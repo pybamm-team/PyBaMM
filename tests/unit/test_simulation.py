@@ -219,9 +219,11 @@ class TestSimulation(TestCase):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
         a = pybamm.Parameter("a")
+
         def ocv_with_parameter(sto):
             u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
             return a * u_eq
+
         parameter_values.update(
             {
                 "Positive electrode OCP [V]": ocv_with_parameter,
