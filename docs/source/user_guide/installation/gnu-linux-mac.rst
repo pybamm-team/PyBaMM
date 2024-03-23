@@ -14,26 +14,8 @@ To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
    .. code:: bash
 
-      sudo apt-get update \
+      sudo apt-get update
       sudo apt-get install python3
-
-.. tab:: Fedora/CentOS
-
-   On Fedora or CentOS, you can use DNF or Yum. For example
-
-   .. code:: bash
-
-      sudo dnf upgrade \
-      sudo dnf install python3
-
-.. tab:: Arch Linux
-
-  On Arch-based systems you can use the ``pacman`` package manager. For example
-
-  .. code:: bash
-
-      sudo pacman -Syu \
-      sudo pacman -S python
 
 .. tab:: macOS
 
@@ -129,32 +111,10 @@ Users can install `scikits.odes <https://github.com/bmcage/odes>`__ to utilize i
 
    .. code:: bash
 
-      sudo apt-get install libopenblas-dev cmake
+      sudo apt-get install libopenblas-dev cmakeinstall
       pybamm_install_odes
 
    This will compile and install SUNDIALS for the system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
-
-.. tab:: Fedora/CentOS
-
-   In a terminal, run the following commands:
-
-   .. code:: bash
-
-      sudo dnf install openblas-devel cmake
-      pybamm_install_odes
-
-   This will compile and install SUNDIALS for the system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
-
-.. tab:: Arch Linux
-
-   In a terminal, run the following commands:
-
-   .. code:: bash
-
-      sudo pacman -S openblas cmake
-      pybamm_install_odes
-
-   system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
 
 .. tab:: macOS
 

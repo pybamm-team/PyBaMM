@@ -42,22 +42,6 @@ You can install the above with
 
 	Where ``X`` is the version sub-number.
 
-.. tab:: Fedora/CentOS
-
-	.. code:: bash
-
-		sudo dnf install python3.X-devel openblas-devel gcc gcc-gfortran graphviz
-
-	Where ``X`` is the version sub-number.
-
-.. tab:: Arch Linux
-
-	.. code:: bash
-
-		sudo pacman -S python openblas gcc gcc-fortran graphviz
-
-	To install a specific Python version, please refer to the `Arch Wiki <https://wiki.archlinux.org/title/python>`_.
-
 .. tab:: MacOS
 
 	.. code:: bash
@@ -66,9 +50,9 @@ You can install the above with
 
 .. note::
 
-		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
-		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas``.
 
+    On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
 You can install it to your local user account (make sure you are not within a virtual environment) with
