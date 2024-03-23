@@ -215,23 +215,16 @@ class TestSimulation(TestCase):
         sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": og_eps_p})
         self.assertEqual(sim._built_initial_soc, 0.8)
 
-        model = pybamm.lithium_ion.DFN()
-        parameter_values = pybamm.ParameterValues("Chen2020")
-
-        def graphite_LGM50_ocp_Chen2020(sto):
-            a = pybamm.Parameter("a")
-            u_eq = a * (
-                1.9793 * pybamm.exp(-39.3631 * sto)
-                + 0.2482
-                - 0.0909 * pybamm.tanh(29.8538 * (sto - 0.1234))
-                - 0.04478 * pybamm.tanh(14.9159 * (sto - 0.2769))
-                - 0.0205 * pybamm.tanh(30.4444 * (sto - 0.6103))
-            )
-            return u_eq
-
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
         parameter_values.update(
             {
-                "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
+                "Positive electrode OCP [V]": ocv_with_parameter,
             }
         )
         parameter_values.update({"a": "[input]"}, check_already_exists=False)

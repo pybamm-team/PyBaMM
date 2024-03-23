@@ -978,12 +978,9 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
         Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
         Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
-
-        esoh_inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        user_inputs.update(esoh_inputs)
-
+        all_inputs = {**user_inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         try:
-            esoh_sol = esoh_solver.solve(inputs=user_inputs)
+            esoh_sol = esoh_solver.solve(inputs=all_inputs)
         except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "

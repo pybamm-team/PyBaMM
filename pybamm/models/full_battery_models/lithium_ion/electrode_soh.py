@@ -605,10 +605,10 @@ class ElectrodeSOHSolver:
         else:
             # address numpy 1.25 deprecation warning: array should have ndim=0
             # before conversion
-            inputs.update({"x": x0_min, "y": y0_max}, check_already_exists=False)
-            V_lower_bound = float(self.OCV_function.evaluate(inputs=inputs).item())
-            inputs.update({"x": x100_max, "y": y100_min})
-            V_upper_bound = float(self.OCV_function.evaluate(inputs=inputs).item())
+            all_inputs = {**inputs, "x": x0_min, "y": y0_max}
+            V_lower_bound = float(self.OCV_function.evaluate(inputs=all_inputs).item())
+            all_inputs.update({"x": x100_max, "y": y100_min})
+            V_upper_bound = float(self.OCV_function.evaluate(inputs=all_inputs).item())
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
@@ -732,16 +732,16 @@ class ElectrodeSOHSolver:
 
         if self.known_value == "cyclable lithium capacity":
             Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
-            inputs.update(
-                {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}, check_already_exists=False
-            )
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         elif self.known_value == "cell capacity":
             Q = parameter_values.evaluate(
                 param.Q / param.n_electrodes_parallel, inputs=inputs
             )
-            inputs.update({"Q_n": Q_n, "Q_p": Q_p, "Q": Q}, check_already_exists=False)
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
+        else:
+            all_inputs = inputs
         # Solve the model and check outputs
-        sol = self.solve(inputs)
+        sol = self.solve(all_inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
     def get_initial_ocps(self, initial_value, tol=1e-6):
