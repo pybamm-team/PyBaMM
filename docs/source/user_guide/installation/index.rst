@@ -30,7 +30,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
       .. code:: bash
 
-         brew install sundials && pip install pybamm
+         pip install pybamm
 
 
    .. tab:: conda
