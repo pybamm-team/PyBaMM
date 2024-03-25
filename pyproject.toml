@@ -41,6 +41,9 @@ dependencies = [
     "casadi>=3.6.3",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
+    "sympy>=1.12",
+    "typing-extensions>=4.10.0",
+    "pandas>=1.5.0"
 ]
 
 [project.urls]
@@ -86,10 +89,6 @@ plot = [
 cite = [
     "pybtex>=0.24.0",
 ]
-# To generate LaTeX strings
-latexify = [
-    "sympy>=1.12",
-]
 # Battery Parameter eXchange format
 bpx = [
     "bpx>=0.4.0",
@@ -108,14 +107,14 @@ dev = [
     "nox",
     # For coverage
     "coverage[toml]",
+    # For test parameterization
+    "parameterized>=0.9",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
     "nbmake",
-]
-# Reading CSV files
-pandas = [
-    "pandas>=1.5.0",
+    # To access the metadata for python packages
+    "importlib-metadata; python_version < '3.10'",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
@@ -130,7 +129,7 @@ odes = [
 all = [
     "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
-    "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]",
+    "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
 [project.scripts]
@@ -182,7 +181,7 @@ extend-exclude = ["__init__.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    # "B",           # flake8-bugbear
+    "B",           # flake8-bugbear
     # "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
@@ -266,3 +265,15 @@ concurrency = ["multiprocessing"]
 ignore = [
     "PP003"  # list wheel as a build-dep
 ]
+
+[tool.mypy]
+ignore_missing_imports = true
+allow_redefinition = true
+disable_error_code = ["call-overload", "operator"]
+
+[[tool.mypy.overrides]]
+module = [
+        "pybamm.models.base_model.*",
+        "pybamm.models.full_battery_models.base_battery_model.*"
+        ]
+disable_error_code = "attr-defined"

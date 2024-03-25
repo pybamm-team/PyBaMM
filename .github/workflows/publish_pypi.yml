@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-12]
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -114,7 +114,7 @@ jobs:
 
       # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install SuiteSparse and SUNDIALS on macOS
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: |
           brew install graphviz openblas libomp
           brew reinstall gcc
@@ -134,7 +134,7 @@ jobs:
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_BUILD_MACOS: >
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload wheels for macOS amd64
         uses: actions/upload-artifact@v4
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         with:
           name: macos_amd64_wheels
           path: ./wheelhouse/*.whl
@@ -218,6 +218,12 @@ jobs:
     name: Upload package to PyPI
     needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybamm
+    permissions:
+      id-token: write
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -231,8 +237,6 @@ jobs:
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
           packages-dir: files/
 
       - name: Publish on TestPyPI

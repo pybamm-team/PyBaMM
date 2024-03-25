@@ -289,15 +289,30 @@ def compile_KLU():
 
 idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",
+    # The sources list should mirror the list in CMakeLists.txt
     sources=[
-        "pybamm/solvers/c_solvers/idaklu.cpp"
-        "pybamm/solvers/c_solvers/idaklu.hpp"
-        "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
-        "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
-        "pybamm/solvers/c_solvers/idaklu_python.cpp"
-        "pybamm/solvers/c_solvers/idaklu_python.hpp"
-        "pybamm/solvers/c_solvers/solution.cpp"
-        "pybamm/solvers/c_solvers/solution.hpp"
+        "pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp",
+        "pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp",
+        "pybamm/solvers/c_solvers/idaklu/casadi_solver.hpp",
+        "pybamm/solvers/c_solvers/idaklu/CasadiSolver.cpp",
+        "pybamm/solvers/c_solvers/idaklu/CasadiSolver.hpp",
+        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.cpp",
+        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.hpp",
+        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.cpp",
+        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.hpp",
+        "pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp",
+        "pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/idaklu_jax.cpp",
+        "pybamm/solvers/c_solvers/idaklu/idaklu_jax.hpp",
+        "pybamm/solvers/c_solvers/idaklu/common.hpp",
+        "pybamm/solvers/c_solvers/idaklu/python.hpp",
+        "pybamm/solvers/c_solvers/idaklu/python.cpp",
+        "pybamm/solvers/c_solvers/idaklu/solution.cpp",
+        "pybamm/solvers/c_solvers/idaklu/solution.hpp",
+        "pybamm/solvers/c_solvers/idaklu/options.hpp",
+        "pybamm/solvers/c_solvers/idaklu/options.cpp",
+        "pybamm/solvers/c_solvers/idaklu.cpp",
     ],
 )
 ext_modules = [idaklu_ext] if compile_KLU() else []
