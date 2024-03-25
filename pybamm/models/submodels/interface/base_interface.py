@@ -38,6 +38,7 @@ class BaseInterface(pybamm.BaseSubModel):
         if reaction in [
             "lithium-ion main",
             "lithium metal plating",
+            "lithium plating",
             "SEI",
             "SEI on cracks",
         ]:

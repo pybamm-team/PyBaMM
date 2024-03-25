@@ -609,14 +609,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 and options["particle"] == "Fickian diffusion"
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
-                and options["lithium plating"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', "
-                    "'loss of active material', 'lithium plating'"
+                    "be 'none': 'particle mechanics', 'loss of active material'"
                 )
 
         # Check options are valid
