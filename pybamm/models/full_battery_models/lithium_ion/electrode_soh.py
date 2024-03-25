@@ -738,8 +738,6 @@ class ElectrodeSOHSolver:
                 param.Q / param.n_electrodes_parallel, inputs=inputs
             )
             all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
-        else:
-            all_inputs = inputs
         # Solve the model and check outputs
         sol = self.solve(all_inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]

@@ -263,6 +263,37 @@ class TestSimulation(TestCase):
         voltage = sol["Terminal voltage [V]"].entries
         self.assertAlmostEqual(voltage[0], ucv, places=5)
 
+        # test with MSMR
+        model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
+        param = pybamm.ParameterValues("MSMR_Example")
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.build(initial_soc=0.5)
+        self.assertEqual(sim._built_initial_soc, 0.5)
+
+    def test_solve_with_initial_soc_with_input_param_in_ocv(self):
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+    def test_esoh_with_input_param(self):
         # Test that initial soc works with a relevant input parameter
         model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
         param = model.default_parameter_values
@@ -273,13 +304,6 @@ class TestSimulation(TestCase):
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
         self.assertEqual(sim._built_initial_soc, 0.8)
-
-        # test with MSMR
-        model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
-        param = pybamm.ParameterValues("MSMR_Example")
-        sim = pybamm.Simulation(model, parameter_values=param)
-        sim.build(initial_soc=0.5)
-        self.assertEqual(sim._built_initial_soc, 0.5)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
