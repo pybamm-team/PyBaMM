@@ -999,6 +999,26 @@ class FiniteVolume(pybamm.SpatialMethod):
                 else:
                     raise NotImplementedError
 
+        elif isinstance(symbol, pybamm.BoundaryCellValue):
+            if symbol.side == "left":
+                sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts))
+                additive = pybamm.Scalar(0)
+
+            elif symbol.side == "right":
+                sub_matrix = csr_matrix(
+                    ([1], ([0], [prim_pts - 1])), shape=(1, prim_pts)
+                )
+                additive = pybamm.Scalar(0)
+
+        elif isinstance(symbol, pybamm.BoundaryCellLength):
+            if symbol.side == "left":
+                sub_matrix = csr_matrix((1, prim_pts))
+                additive = pybamm.Scalar(dx0)
+
+            elif symbol.side == "right":
+                sub_matrix = csr_matrix((1, prim_pts))
+                additive = pybamm.Scalar(dxN)
+
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
@@ -1310,6 +1330,14 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                 # Compute harmonic mean on internal edges
                 # Note: add small number to denominator to regularise D_eff
+                # Note from Mingzhao: the addition of a small number leads to issues
+                # of Floating Point Arithmetic, when D1 or D2 is orders of magnitudes
+                # larger or smaller than 1e-16. This happened in developing core-shell
+                # model and leads to failure of associative law of multiplication.
+                # Keep in mind D1 and D2 involve the length scale of the actual
+                # domain and the magnitude of 'array', so its value is unpredictable.
+                # The suggestion is to add 1e-16 to beta (if it helps regularise
+                # D_eff as intended), which only involves the domain scale ~micrometer 1e-6
                 D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
 
                 # Matrix to pad zeros at the beginning and end of the array where

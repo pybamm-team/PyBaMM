@@ -50,4 +50,15 @@ class TotalConcentration(BaseParticle):
                 "": pybamm.yz_average(c_s_vol_av * eps_s_av) * L * A,
             }
         )
+
+        if self.options["PE degradation"] == "phase transition":
+            c_bott = self.phase_param.c_bott
+            # volume-averaged cyclable lithium concentration
+            c_s_vol_av_cyc = pybamm.x_average(eps_s * (c_s_rav - c_bott)) / eps_s_av
+            variables.update(
+                {
+                    f"Total cyclable lithium in {phase} phase in {domain} electrode [mol]"
+                    "": pybamm.yz_average(c_s_vol_av_cyc * eps_s_av) * L * A,
+                }
+            )
         return variables

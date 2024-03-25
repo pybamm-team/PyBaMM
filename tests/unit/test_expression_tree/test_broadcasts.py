@@ -72,7 +72,7 @@ class TestBroadcasts(TestCase):
             pybamm.PrimaryBroadcast(a, "negative electrode")
         a = pybamm.Symbol("a", domain="negative particle")
         with self.assertRaisesRegex(
-            pybamm.DomainError, "Cannot do primary broadcast from particle domain"
+            pybamm.DomainError, "Cannot do primary broadcast from particle"
         ):
             pybamm.PrimaryBroadcast(a, "current collector")
 

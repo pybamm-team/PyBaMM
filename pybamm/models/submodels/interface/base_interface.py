@@ -380,6 +380,27 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_pe_shell_overpotential_variables(self, eta_shell):
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+
+        # Average, and broadcast if necessary
+        eta_shell_av = pybamm.x_average(eta_shell)
+        if eta_shell.domain == []:
+            eta_shell = pybamm.FullBroadcast(
+                eta_shell, f"{domain} electrode", "current collector"
+            )
+        elif eta_shell.domain == ["current collector"]:
+            eta_shell = pybamm.PrimaryBroadcast(eta_shell, f"{domain} electrode")
+
+        variables = {
+            f"{Domain} electrode {phase_name}shell layer overpotential [V]": eta_shell,
+            f"X-averaged {domain} electrode {phase_name}shell"
+            " layer overpotential [V]": eta_shell_av,
+        }
+
+        return variables
+
     def _get_standard_average_surface_potential_difference_variables(
         self, delta_phi_av
     ):

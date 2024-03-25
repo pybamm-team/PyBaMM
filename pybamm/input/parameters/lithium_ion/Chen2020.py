@@ -194,7 +194,7 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity
+        Solid conductivity
     """
 
     sigma_e = (

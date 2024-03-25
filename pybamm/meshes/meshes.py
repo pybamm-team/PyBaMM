@@ -140,9 +140,15 @@ class Mesh(dict):
         try:
             return super().__getitem__(domains)
         except KeyError:
-            value = self.combine_submeshes(*domains)
-            self[domains] = value
-            return value
+            if len(domains) == 1:
+                raise KeyError(
+                    f"'{domains[0]}' is not a valid key for the mesh. "
+                    "Check whether a corresponding geometry has been set up."
+                )
+            elif len(domains) >= 2:
+                value = self.combine_submeshes(*domains)
+                self[domains] = value
+                return value
 
     def __setitem__(self, domains, value):
         if isinstance(domains, str):

@@ -20,6 +20,8 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {
             "Discharge capacity [A.h]": Q_Ah,
             "Throughput capacity [A.h]": Qt_Ah,
+            # initial SoC is 0 as initial Q_Ah is set null
+            "Cell SoC": -Q_Ah / self.param.Q,
         }
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = pybamm.Variable("Discharge energy [W.h]")
