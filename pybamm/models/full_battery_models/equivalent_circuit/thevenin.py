@@ -120,7 +120,7 @@ class Thevenin(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
@@ -128,7 +128,7 @@ class Thevenin(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "CCCV":
             model = pybamm.external_circuit.CCCVFunctionControl(
@@ -139,7 +139,7 @@ class Thevenin(pybamm.BaseModel):
                 self.param,
                 self.options["operating mode"],
                 self.options,
-                control="differential without max",
+                control="differential",
             )
         self.submodels["external circuit"] = model
 
