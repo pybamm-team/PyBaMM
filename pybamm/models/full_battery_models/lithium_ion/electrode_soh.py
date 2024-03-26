@@ -124,7 +124,7 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         else:
             raise ValueError(
                 "Known value must be cell capacity or cyclable lithium capacity"
-                )
+            )
 
         # Define variables for 100% state of charge
         if "x_100" in solve_for:
@@ -296,7 +296,9 @@ class ElectrodeSOHSolver:
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters(options)
         if known_value not in ["cell capacity", "cyclable lithium capacity"]:
-            raise ValueError("Known value must be cell capacity or cyclable lithium capacity")
+            raise ValueError(
+                "Known value must be cell capacity or cyclable lithium capacity"
+            )
         self.known_value = known_value
         self.options = options or pybamm.BatteryModelOptions({})
 

@@ -364,22 +364,30 @@ class TestGetInitialSOC(TestCase):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 2, parameter_values_half_cell
             )
-        
-        with self.assertRaisesRegex(
-            ValueError, "Known value must be cell capacity or cyclable lithium capacity"
-        ):
-            pybamm.lithium_ion.ElectrodeSOHSolver(parameter_values, known_value="something else")
 
         with self.assertRaisesRegex(
             ValueError, "Known value must be cell capacity or cyclable lithium capacity"
         ):
-            param_MSMR = pybamm.lithium_ion.MSMR({"number of MSMR reactions": "3"}).param
-            pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOHMSMR(param=param_MSMR, known_value="something else")
-        
+            pybamm.lithium_ion.ElectrodeSOHSolver(
+                parameter_values, known_value="something else"
+            )
+
         with self.assertRaisesRegex(
             ValueError, "Known value must be cell capacity or cyclable lithium capacity"
         ):
-            pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOH(known_value="something else")
+            param_MSMR = pybamm.lithium_ion.MSMR(
+                {"number of MSMR reactions": "3"}
+            ).param
+            pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOHMSMR(
+                param=param_MSMR, known_value="something else"
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Known value must be cell capacity or cyclable lithium capacity"
+        ):
+            pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOH(
+                known_value="something else"
+            )
 
 
 class TestGetInitialOCP(TestCase):
