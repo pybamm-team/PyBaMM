@@ -70,7 +70,6 @@ class BaseSubModel(pybamm.BaseModel):
         super().__init__(name)
         self.domain = domain
         self.name = name
-
         self.external = external
 
         if options is None or type(options) == dict:  # noqa: E721
@@ -134,6 +133,23 @@ class BaseSubModel(pybamm.BaseModel):
     @property
     def domain_Domain(self):
         return self._domain, self._Domain
+
+    def get_parameter_info(self, by_submodel=False):
+        """
+        Extracts the parameter information and returns it as a dictionary.
+        To get a list of all parameter-like objects without extra information,
+        use :py:attr:`model.parameters`.
+
+        Returns
+        -------
+        NotImplementedError:
+            This method is not available for direct use on submodels since the submodel may contain coupled variables
+            that depend on other submodels, in which case some parameters may be missed.
+            It is recommended to use on the full model.
+        """
+        raise NotImplementedError(
+            "Cannot use get_parameter_info OR print_parameter_info directly on a submodel. Please use it on the full model."
+        )
 
     def get_fundamental_variables(self):
         """

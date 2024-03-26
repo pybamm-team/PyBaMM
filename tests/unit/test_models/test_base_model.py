@@ -6,6 +6,8 @@ import os
 import platform
 import subprocess  # nosec
 import unittest
+from io import StringIO
+import sys
 
 import casadi
 import numpy as np
@@ -159,6 +161,242 @@ class TestBaseModel(TestCase):
             "v+f+i": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t}) + i
         }
         model.print_parameter_info()
+
+    def test_get_parameter_info(self):
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.InputParameter("c")
+        d = pybamm.InputParameter("d")
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u * a}
+        model.algebraic = {v: v - b}
+        model.initial_conditions = {u: c, v: d}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.variables = {"v+f+i": v + f + i}
+        model.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+
+        parameter_info = model.get_parameter_info()
+        self.assertEqual(parameter_info["a"][1], "InputParameter")
+        self.assertEqual(parameter_info["b"][1], "InputParameter in ['test']")
+        self.assertIn("c", parameter_info)
+        self.assertIn("d", parameter_info)
+        self.assertIn("e", parameter_info)
+        self.assertIn("f", parameter_info)
+        self.assertEqual(parameter_info["g"][1], "Parameter")
+        self.assertIn("h", parameter_info)
+        self.assertIn("i", parameter_info)
+
+    def test_get_parameter_info_submodel(self):
+        submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
+
+        class SubModel1(pybamm.BaseSubModel):
+            def get_fundamental_variables(self):
+                u = pybamm.Variable("u")
+
+                variables = {"u": u}
+                return variables
+
+            def get_coupled_variables(self, variables):
+                x = pybamm.Parameter("x")
+                w = pybamm.InputParameter("w")
+                f = pybamm.InputParameter("f", "test")
+                variables.update({"w": w, "x": x, "f": f})
+                return variables
+
+            def set_rhs(self, variables):
+                a = pybamm.InputParameter("a")
+                u = variables["u"]
+                self.rhs = {u: -u * a}
+
+            def set_boundary_conditions(self, variables):
+                g = pybamm.Parameter("g")
+                u = variables["u"]
+                self.boundary_conditions = {
+                    u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+                }
+
+            def set_initial_conditions(self, variables):
+                c = pybamm.FunctionParameter("c", {})
+                u = variables["u"]
+                self.initial_conditions = {u: c}
+
+            def set_events(self, variables):
+                e = pybamm.InputParameter("e")
+                u = variables["u"]
+                self.events = [pybamm.Event("u=e", u - e)]
+
+        class SubModel2(pybamm.BaseSubModel):
+            def get_fundamental_variables(self):
+                v = pybamm.Variable("v")
+                i = pybamm.FunctionParameter("i", {})
+                variables = {"v": v, "i": i}
+                return variables
+
+            def set_rhs(self, variables):
+                b = pybamm.InputParameter("b", "test")
+                v = variables["v"]
+                self.rhs = {v: v - b}
+
+            def set_boundary_conditions(self, variables):
+                h = pybamm.Parameter("h")
+                v = variables["v"]
+                self.boundary_conditions = {
+                    v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+                }
+
+            def set_initial_conditions(self, variables):
+                d = pybamm.FunctionParameter("d", {})
+                v = variables["v"]
+                self.initial_conditions = {v: d}
+
+        sub1 = SubModel1(None)
+        sub2 = SubModel2(None)
+        model = pybamm.BaseModel()
+        model.submodels = {"sub1": sub1, "sub2": sub2}
+        model.build_model()
+
+        parameter_info = model.get_parameter_info(by_submodel=True)
+
+        expected_error_message = "Cannot use get_parameter_info"
+
+        with self.assertRaisesRegex(NotImplementedError, expected_error_message):
+            submodel.get_parameter_info(by_submodel=True)
+
+        with self.assertRaisesRegex(NotImplementedError, expected_error_message):
+            submodel.get_parameter_info(by_submodel=False)
+
+        self.assertIn("a", parameter_info["sub1"])
+        self.assertIn("b", parameter_info["sub2"])
+        self.assertEqual(parameter_info["sub1"]["a"][1], "InputParameter")
+        self.assertEqual(parameter_info["sub1"]["w"][1], "InputParameter")
+        self.assertEqual(parameter_info["sub1"]["e"][1], "InputParameter")
+        self.assertEqual(parameter_info["sub1"]["g"][1], "Parameter")
+        self.assertEqual(parameter_info["sub1"]["x"][1], "Parameter")
+        self.assertEqual(parameter_info["sub1"]["f"][1], "InputParameter in ['test']")
+        self.assertEqual(parameter_info["sub2"]["b"][1], "InputParameter in ['test']")
+        self.assertEqual(parameter_info["sub2"]["h"][1], "Parameter")
+        self.assertEqual(
+            parameter_info["sub1"]["c"][1],
+            "FunctionParameter with inputs(s) ''",
+        )
+        self.assertEqual(
+            parameter_info["sub2"]["d"][1],
+            "FunctionParameter with inputs(s) ''",
+        )
+        self.assertEqual(
+            parameter_info["sub2"]["i"][1],
+            "FunctionParameter with inputs(s) ''",
+        )
+
+    def test_print_parameter_info(self):
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.FunctionParameter("c", {})
+        d = pybamm.FunctionParameter("d", {})
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+
+        sub1 = pybamm.BaseSubModel(None)
+        sub1.rhs = {u: -u * a}
+        sub1.initial_conditions = {u: c}
+        sub1.variables = {"u": u}
+        sub1.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+        }
+        sub2 = pybamm.BaseSubModel(None)
+        sub2.algebraic = {v: v - b}
+        sub2.variables = {"v": v, "v+f+i": v + f + i}
+        sub2.initial_conditions = {v: d}
+        sub2.boundary_conditions = {
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+        sub3 = pybamm.BaseSubModel(None)
+        model.submodels = {"sub1": sub1, "sub2": sub2, "sub3": sub3}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.build_model()
+        captured_output = StringIO()
+        sys.stdout = captured_output
+
+        model.print_parameter_info()
+        sys.stdout = sys.__stdout__
+
+        result = captured_output.getvalue().strip()
+        self.assertIn("a", result)
+        self.assertIn("b", result)
+        self.assertIn("InputParameter", result)
+        self.assertIn("InputParameter in ['test']", result)
+        self.assertIn("Parameter", result)
+        self.assertIn("FunctionParameter with inputs(s) ''", result)
+
+    def test_print_parameter_info_submodel(self):
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b", "test")
+        c = pybamm.FunctionParameter("c", {})
+        d = pybamm.FunctionParameter("d", {})
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.Parameter("i")
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+
+        sub1 = pybamm.BaseSubModel(None)
+        sub1.rhs = {u: -u * a}
+        sub1.initial_conditions = {u: c}
+        sub1.variables = {"u": u}
+        sub1.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+        }
+        sub2 = pybamm.BaseSubModel(None)
+        sub2.algebraic = {v: v - b}
+        sub2.variables = {"v": v, "v+f+i": v + f + i}
+        sub2.initial_conditions = {v: d}
+        sub2.boundary_conditions = {
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
+        sub3 = pybamm.BaseSubModel(None)
+        model.submodels = {"sub1": sub1, "sub2": sub2, "sub3": sub3}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.build_model()
+        captured_output = StringIO()
+        sys.stdout = captured_output
+
+        model.print_parameter_info(by_submodel=True)
+        sys.stdout = sys.__stdout__
+
+        result = captured_output.getvalue().strip()
+        self.assertIn("'sub1' submodel parameters:", result)
+        self.assertIn("'sub2' submodel parameters:", result)
+        self.assertIn("Parameter", result)
+        self.assertIn("InputParameter", result)
+        self.assertIn("FunctionParameter with inputs(s) ''", result)
+        self.assertIn("InputParameter in ['test']", result)
+        self.assertIn("g", result)
+        self.assertIn("a", result)
+        self.assertIn("c", result)
+        self.assertIn("h", result)
+        self.assertIn("b", result)
+        self.assertIn("d", result)
 
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model

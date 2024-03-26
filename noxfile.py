@@ -18,6 +18,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PIP_NO_BINARY": "scikits.odes",
+    "PYTHONIOENCODING": "utf-8",
 }
 VENV_DIR = Path("./venv").resolve()
 
