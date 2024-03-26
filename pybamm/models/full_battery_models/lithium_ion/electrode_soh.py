@@ -121,6 +121,10 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             Q_Li = pybamm.InputParameter("Q_Li")
         elif known_value == "cell capacity":
             Q = pybamm.InputParameter("Q")
+        else:
+            raise ValueError(
+                "Known value must be cell capacity or cyclable lithium capacity"
+                )
 
         # Define variables for 100% state of charge
         if "x_100" in solve_for:
@@ -207,6 +211,10 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
             Q_Li = pybamm.InputParameter("Q_Li")
         elif known_value == "cell capacity":
             Q = pybamm.InputParameter("Q")
+        else:
+            raise ValueError(
+                "Known value must be cell capacity or cyclable lithium capacity"
+            )
 
         # Define variables for 0% state of charge
         # TODO: thermal effects (include dU/dT)
@@ -287,6 +295,8 @@ class ElectrodeSOHSolver:
     ):
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters(options)
+        if known_value not in ["cell capacity", "cyclable lithium capacity"]:
+            raise ValueError("Known value must be cell capacity or cyclable lithium capacity")
         self.known_value = known_value
         self.options = options or pybamm.BatteryModelOptions({})
 

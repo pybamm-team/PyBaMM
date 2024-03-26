@@ -62,9 +62,9 @@ def get_initial_stoichiometry_half_cell(
     initial_value,
     parameter_values,
     param=None,
-    known_value="cyclable lithium capacity",
     options=None,
     inputs=None,
+    **kwargs,
 ):
     """
     Calculate initial stoichiometry to start off the simulation at a particular
