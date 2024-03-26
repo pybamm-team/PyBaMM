@@ -65,10 +65,10 @@ class SPM(BaseModel):
                 self.submodels[f"{domain} interface"] = inverse_intercalation_kinetics(
                     self.param, domain, "lithium-ion main", self.options
                 )
-                self.submodels[
-                    f"{domain} interface current"
-                ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-                    self.param, domain, "lithium-ion main", self.options
+                self.submodels[f"{domain} interface current"] = (
+                    pybamm.kinetics.CurrentForInverseButlerVolmer(
+                        self.param, domain, "lithium-ion main", self.options
+                    )
                 )
             else:
                 intercalation_kinetics = self.get_intercalation_kinetics(domain)
@@ -79,10 +79,10 @@ class SPM(BaseModel):
                     )
                     self.submodels[f"{domain} {phase} interface"] = submod
                 if len(phases) > 1:
-                    self.submodels[
-                        f"total {domain} interface"
-                    ] = pybamm.kinetics.TotalMainKinetics(
-                        self.param, domain, "lithium-ion main", self.options
+                    self.submodels[f"total {domain} interface"] = (
+                        pybamm.kinetics.TotalMainKinetics(
+                            self.param, domain, "lithium-ion main", self.options
+                        )
                     )
 
     def set_particle_submodel(self):
@@ -109,24 +109,24 @@ class SPM(BaseModel):
                         self.param, domain, self.options, phase=phase, x_average=True
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
-                self.submodels[
-                    f"{domain} {phase} total particle concentration"
-                ] = pybamm.particle.TotalConcentration(
-                    self.param, domain, self.options, phase
+                self.submodels[f"{domain} {phase} total particle concentration"] = (
+                    pybamm.particle.TotalConcentration(
+                        self.param, domain, self.options, phase
+                    )
                 )
 
     def set_solid_submodel(self):
         for domain in ["negative", "positive"]:
             if self.options.electrode_types[domain] == "planar":
                 continue
-            self.submodels[
-                f"{domain} electrode potential"
-            ] = pybamm.electrode.ohm.LeadingOrder(self.param, domain, self.options)
+            self.submodels[f"{domain} electrode potential"] = (
+                pybamm.electrode.ohm.LeadingOrder(self.param, domain, self.options)
+            )
 
     def set_electrolyte_concentration_submodel(self):
-        self.submodels[
-            "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)
+        self.submodels["electrolyte diffusion"] = (
+            pybamm.electrolyte_diffusion.ConstantConcentration(self.param, self.options)
+        )
 
     def set_electrolyte_potential_submodel(self):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
@@ -142,10 +142,10 @@ class SPM(BaseModel):
             self.options["surface form"] == "false"
             or self.options.electrode_types["negative"] == "planar"
         ):
-            self.submodels[
-                "leading-order electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.LeadingOrder(
-                self.param, options=self.options
+            self.submodels["leading-order electrolyte conductivity"] = (
+                pybamm.electrolyte_conductivity.LeadingOrder(
+                    self.param, options=self.options
+                )
             )
         if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit

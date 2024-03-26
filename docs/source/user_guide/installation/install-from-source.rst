@@ -34,31 +34,34 @@ To install PyBaMM, you will need:
 
 You can install the above with
 
-.. tab:: Ubuntu
+.. tab:: Ubuntu/Debian
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake
 
 	Where ``X`` is the version sub-number.
-
-	.. note::
-
-		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
-		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 .. tab:: MacOS
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp
+		brew install python openblas gcc gfortran graphviz libomp cmake
+
+.. note::
+
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas``.
+
+    On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
-You can install it with
+You can install it to your local user account (make sure you are not within a virtual environment) with
 
 .. code:: bash
 
 	  python3.X -m pip install --user nox
+
+Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
 
 Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
@@ -158,7 +161,7 @@ It comes ready with PyBaMM and some useful development tools like `pre-commit <h
 
 You can now activate the environment with
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux and MacOS (bash)
 
 	.. code:: bash
 
@@ -189,7 +192,7 @@ tools for development and documentation:
 
 	  pip install -e .[all,dev,docs]
 
-If you are using ``zsh``, you would need to use different pattern matching:
+If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
 .. code:: bash
 

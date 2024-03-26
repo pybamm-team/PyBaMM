@@ -129,9 +129,7 @@ def get_initial_stoichiometry_half_cell(
     return x
 
 
-def get_min_max_stoichiometries(
-    parameter_values, options={"working electrode": "positive"}
-):
+def get_min_max_stoichiometries(parameter_values, options=None):
     """
     Get the minimum and maximum stoichiometries from the parameter values
 
@@ -139,7 +137,13 @@ def get_min_max_stoichiometries(
     ----------
     parameter_values : pybamm.ParameterValues
         The parameter values to use in the calculation
+    options : dict, optional
+        A dictionary of options to be passed to the parameters, see
+        :class:`pybamm.BatteryModelOptions`.
+        If None, the default is used: {"working electrode": "positive"}
     """
+    if options is None:
+        options = {"working electrode": "positive"}
     esoh_model = pybamm.lithium_ion.ElectrodeSOHHalfCell("ElectrodeSOH")
     param = pybamm.LithiumIonParameters(options)
     esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)

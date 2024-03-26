@@ -198,9 +198,9 @@ class Simulation:
         self.experiment_unique_steps_to_model = {}
         for step in self.experiment.unique_steps:
             parameterised_model = step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model[
-                step.basic_repr()
-            ] = parameterised_model
+            self.experiment_unique_steps_to_model[step.basic_repr()] = (
+                parameterised_model
+            )
 
         # Set up rest model if experiment has start times
         if self.experiment.initial_start_time:
@@ -210,9 +210,9 @@ class Simulation:
             # solve time
             parameter_values["Ambient temperature [K]"] = "[input]"
             parameterised_model = rest_step.process_model(self._model, parameter_values)
-            self.experiment_unique_steps_to_model[
-                "Rest for padding"
-            ] = parameterised_model
+            self.experiment_unique_steps_to_model["Rest for padding"] = (
+                parameterised_model
+            )
 
     def set_parameters(self):
         """
@@ -458,20 +458,22 @@ class Simulation:
                         to be the points in the data.
                         """,
                         pybamm.SolverWarning,
+                        stacklevel=2,
                     )
                     dt_data_min = np.min(np.diff(time_data))
                     dt_eval_max = np.max(np.diff(t_eval))
                     if dt_eval_max > dt_data_min + sys.float_info.epsilon:
                         warnings.warn(
-                            """
-                            The largest timestep in t_eval ({}) is larger than
-                            the smallest timestep in the data ({}). The returned
+                            f"""
+                            The largest timestep in t_eval ({dt_eval_max}) is larger than
+                            the smallest timestep in the data ({dt_data_min}). The returned
                             solution may not have the correct resolution to accurately
                             capture the input. Try refining t_eval. Alternatively,
                             passing t_eval = None automatically sets t_eval to be the
                             points in the data.
-                            """.format(dt_eval_max, dt_data_min),
+                            """,
                             pybamm.SolverWarning,
+                            stacklevel=2,
                         )
 
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)
@@ -672,7 +674,7 @@ class Simulation:
                             current_solution,
                             model,
                             dt,
-                            npts=npts,
+                            t_eval=np.linspace(0, dt, npts),
                             save=False,
                             **kwargs,
                         )
@@ -852,7 +854,7 @@ class Simulation:
             step_solution,
             model,
             rest_time,
-            npts=npts,
+            t_eval=np.linspace(0, rest_time, npts),
             save=False,
             **kwargs,
         )
@@ -860,7 +862,13 @@ class Simulation:
         return step_solution_with_rest
 
     def step(
-        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
+        self,
+        dt,
+        solver=None,
+        t_eval=None,
+        save=True,
+        starting_solution=None,
+        **kwargs,
     ):
         """
         A method to step the model forward one timestep. This method will
@@ -872,9 +880,10 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
+        t_eval : list or numpy.ndarray, optional
+            An array of times at which to return the solution during the step
+            (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
+            By default, the solution is returned at t0 and t0 + dt.
         save : bool
             Turn on to store the solution of all previous timesteps
         starting_solution : :class:`pybamm.Solution`
@@ -894,7 +903,12 @@ class Simulation:
             starting_solution = self._solution
 
         self._solution = solver.step(
-            starting_solution, self.built_model, dt, npts=npts, save=save, **kwargs
+            starting_solution,
+            self.built_model,
+            dt,
+            t_eval=t_eval,
+            save=save,
+            **kwargs,
         )
 
         return self.solution

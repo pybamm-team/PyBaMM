@@ -297,11 +297,11 @@ class Solution:
                 self._y = casadi.horzcat(*self.all_ys)
             else:
                 self._y = np.hstack(self.all_ys)
-        except ValueError:
+        except ValueError as error:
             raise pybamm.SolverError(
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
-            )
+            ) from error
 
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
@@ -710,9 +710,7 @@ class Solution:
             for name, var in data.items():
                 if var.ndim >= 2:
                     raise ValueError(
-                        "only 0D variables can be saved to csv, but '{}' is {}D".format(
-                            name, var.ndim - 1
-                        )
+                        f"only 0D variables can be saved to csv, but '{name}' is {var.ndim - 1}D"
                     )
             df = pd.DataFrame(data)
             return df.to_csv(filename, index=False)
@@ -980,11 +978,11 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
 
         try:
             esoh_sol = esoh_solver.solve(inputs)
-        except pybamm.SolverError:  # pragma: no cover
+        except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
-            )
+            ) from error
 
         cycle_summary_variables.update(esoh_sol)
 
