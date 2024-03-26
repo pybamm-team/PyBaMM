@@ -18,6 +18,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PIP_NO_BINARY": "scikits.odes",
+    "PYTHONIOENCODING": "utf-8",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -36,8 +37,6 @@ def set_environment_variables(env_dict, session):
     """
     for key, value in env_dict.items():
         session.env[key] = value
-
-    session.env["PYTHONIOENCODING"] = "utf-8"
 
 
 @nox.session(name="pybamm-requires")
