@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import interpolate
 from typing import Sequence
-
+import numbers
 
 import pybamm
 
@@ -102,8 +102,8 @@ class Interpolant(pybamm.Function):
                     "len(x1) should equal y=shape[0], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
-        # children should be a list not a symbol
-        if isinstance(children, pybamm.Symbol):
+        # children should be a list not a symbol or a number
+        if isinstance(children, (pybamm.Symbol, numbers.Number)):
             children = [children]
         # Either a single x is provided and there is one child
         # or x is a 2-tuple and there are two children
