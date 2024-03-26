@@ -862,7 +862,6 @@ class Simulation:
 
         return self.solution
 
-
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
         model = self.steps_to_built_models["Rest for padding"]
         solver = self.steps_to_built_models["Rest for padding"]
