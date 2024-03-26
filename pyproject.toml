@@ -121,7 +121,7 @@ jax = [
     "jax==0.4.20; python_version >= '3.9'",
     "jaxlib==0.4.20; python_version >= '3.9'",
 ]
-# Contains all optional dependencies, except for odes, jax, and dev dependencies
+# Contains all optional dependencies, except for jax and dev dependencies
 all = [
     "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
@@ -129,7 +129,6 @@ all = [
 ]
 
 [project.scripts]
-pybamm_install_odes = "pybamm.install_odes:main"
 pybamm_install_jax = "pybamm.util:install_jax"
 
 [project.entry-points."pybamm_parameter_sets"]
