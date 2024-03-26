@@ -121,10 +121,6 @@ jax = [
     "jax==0.4.20; python_version >= '3.9'",
     "jaxlib==0.4.20; python_version >= '3.9'",
 ]
-# For the scikits.odes solver
-odes = [
-    "scikits.odes"
-]
 # Contains all optional dependencies, except for odes, jax, and dev dependencies
 all = [
     "autograd>=1.6.2",
