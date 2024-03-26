@@ -5,13 +5,11 @@ import pybamm
 import unittest
 import numpy as np
 from datetime import datetime
-from pybamm.experiment.step import _Step
 
 
 class TestExperimentSteps(unittest.TestCase):
     def test_step(self):
-        step = pybamm.step._Step("current", 1, duration=3600)
-        self.assertEqual(step.type, "current")
+        step = pybamm.step.current(1, duration=3600)
         self.assertEqual(step.value, 1)
         self.assertEqual(step.duration, 3600)
         self.assertEqual(step.termination, [])
@@ -22,8 +20,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.end_time, None)
         self.assertEqual(step.next_start_time, None)
 
-        step = pybamm.step._Step(
-            "voltage",
+        step = pybamm.step.voltage(
             1,
             duration="1h",
             termination="2.5V",
@@ -32,7 +29,6 @@ class TestExperimentSteps(unittest.TestCase):
             tags="test",
             start_time=datetime(2020, 1, 1, 0, 0, 0),
         )
-        self.assertEqual(step.type, "voltage")
         self.assertEqual(step.value, 1)
         self.assertEqual(step.duration, 3600)
         self.assertEqual(step.termination, [pybamm.step.VoltageTermination(2.5)])
@@ -41,42 +37,36 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertEqual(step.tags, ["test"])
         self.assertEqual(step.start_time, datetime(2020, 1, 1, 0, 0, 0))
 
-        step = pybamm.step._Step("current", 1, temperature="298K")
+        step = pybamm.step.current(1, temperature="298K")
         self.assertEqual(step.temperature, 298)
 
         with self.assertRaisesRegex(ValueError, "temperature units"):
-            step = pybamm.step._Step("current", 1, temperature="298T")
+            step = pybamm.step.current(1, temperature="298T")
 
     def test_specific_steps(self):
         current = pybamm.step.current(1)
-        self.assertIsInstance(current, pybamm.step._Step)
-        self.assertEqual(current.type, "current")
+        self.assertIsInstance(current, pybamm.step.Current)
         self.assertEqual(current.value, 1)
         self.assertEqual(str(current), repr(current))
 
         c_rate = pybamm.step.c_rate(1)
-        self.assertIsInstance(c_rate, pybamm.step._Step)
-        self.assertEqual(c_rate.type, "C-rate")
+        self.assertIsInstance(c_rate, pybamm.step.CRate)
         self.assertEqual(c_rate.value, 1)
 
         voltage = pybamm.step.voltage(1)
-        self.assertIsInstance(voltage, pybamm.step._Step)
-        self.assertEqual(voltage.type, "voltage")
+        self.assertIsInstance(voltage, pybamm.step.Voltage)
         self.assertEqual(voltage.value, 1)
 
         rest = pybamm.step.rest()
-        self.assertIsInstance(rest, pybamm.step._Step)
-        self.assertEqual(rest.type, "current")
+        self.assertIsInstance(rest, pybamm.step.Current)
         self.assertEqual(rest.value, 0)
 
         power = pybamm.step.power(1)
-        self.assertIsInstance(power, pybamm.step._Step)
-        self.assertEqual(power.type, "power")
+        self.assertIsInstance(power, pybamm.step.Power)
         self.assertEqual(power.value, 1)
 
         resistance = pybamm.step.resistance(1)
-        self.assertIsInstance(resistance, pybamm.step._Step)
-        self.assertEqual(resistance.type, "resistance")
+        self.assertIsInstance(resistance, pybamm.step.Resistance)
         self.assertEqual(resistance.value, 1)
 
     def test_step_string(self):
@@ -98,80 +88,80 @@ class TestExperimentSteps(unittest.TestCase):
 
         expected_result = [
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": 1.0,
                 "duration": 1800.0,
                 "termination": [],
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": 0.05,
                 "duration": 3600.0,
                 "termination": [],
                 "period": 120,
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": -0.5,
                 "duration": 2700.0,
                 "termination": [],
             },
             {
                 "value": 1.0,
-                "type": "current",
+                "type": "Current",
                 "duration": 1800.0,
                 "termination": [],
             },
             {
                 "value": -0.2,
-                "type": "current",
+                "type": "Current",
                 "duration": 2700.0,
                 "termination": [],
             },
             {
                 "value": 1.0,
-                "type": "power",
+                "type": "Power",
                 "duration": 1800.0,
                 "termination": [],
             },
             {
                 "value": -0.2,
-                "type": "power",
+                "type": "Power",
                 "duration": 2700.0,
                 "termination": [],
             },
             {
                 "value": 0,
-                "type": "current",
+                "type": "Current",
                 "duration": 600.0,
                 "termination": [],
             },
             {
                 "value": 1,
-                "type": "voltage",
+                "type": "Voltage",
                 "duration": 20.0,
                 "termination": [],
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": -1,
-                "duration": None,
+                "duration": 86400,
                 "termination": [pybamm.step.VoltageTermination(4.1)],
             },
             {
                 "value": 4.1,
-                "type": "voltage",
-                "duration": None,
+                "type": "Voltage",
+                "duration": 86400,
                 "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
-                "type": "voltage",
-                "duration": None,
+                "type": "Voltage",
+                "duration": 86400,
                 "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": 1 / 3,
                 "duration": 7200.0,
                 "termination": [pybamm.step.VoltageTermination(2.5)],
@@ -199,7 +189,6 @@ class TestExperimentSteps(unittest.TestCase):
         # Create steps
         drive_cycle_step = pybamm.step.current(drive_cycle, temperature="-5oC")
         # Check drive cycle operating conditions
-        self.assertEqual(drive_cycle_step.type, "current")
         self.assertEqual(drive_cycle_step.duration, 9)
         self.assertEqual(drive_cycle_step.period, 1)
         self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
@@ -218,7 +207,6 @@ class TestExperimentSteps(unittest.TestCase):
             drive_cycle, duration=20, temperature="-5oC"
         )
         # Check drive cycle operating conditions
-        self.assertEqual(drive_cycle_step.type, "current")
         self.assertEqual(drive_cycle_step.duration, 20)
         self.assertEqual(drive_cycle_step.period, 1)
         self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
@@ -229,7 +217,6 @@ class TestExperimentSteps(unittest.TestCase):
             drive_cycle, duration=5, temperature="-5oC"
         )
         # Check drive cycle operating conditions
-        self.assertEqual(drive_cycle_step.type, "current")
         self.assertEqual(drive_cycle_step.duration, 5)
         self.assertEqual(drive_cycle_step.period, 1)
         self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
@@ -256,14 +243,14 @@ class TestExperimentSteps(unittest.TestCase):
 
     def test_start_times(self):
         # Test start_times
-        step = pybamm.step._Step(
-            "current", 1, duration=3600, start_time=datetime(2020, 1, 1, 0, 0, 0)
+        step = pybamm.step.current(
+            1, duration=3600, start_time=datetime(2020, 1, 1, 0, 0, 0)
         )
         self.assertEqual(step.start_time, datetime(2020, 1, 1, 0, 0, 0))
 
         # Test bad start_times
         with self.assertRaisesRegex(TypeError, "`start_time` should be"):
-            pybamm.step._Step("current", 1, duration=3600, start_time="bad start_time")
+            pybamm.step.current(1, duration=3600, start_time="bad start_time")
 
     def test_custom_termination(self):
         def neg_stoich_cutoff(variables):
@@ -282,7 +269,39 @@ class TestExperimentSteps(unittest.TestCase):
         t = np.array([[1, 1], [2, 2], [3, 3]])
 
         with self.assertRaisesRegex(ValueError, "Drive cycle must start at t=0"):
-            _Step("current", t)
+            pybamm.step.current(t)
+
+    def test_base_custom_steps(self):
+        with self.assertRaises(NotImplementedError):
+            pybamm.step.BaseStepExplicit(None).current_value(None)
+        with self.assertRaises(NotImplementedError):
+            pybamm.step.BaseStepImplicit(None).get_submodel(None)
+
+    def test_custom_steps(self):
+        def custom_step_constant(variables):
+            return 1
+
+        custom_constant = pybamm.step.CustomStepExplicit(custom_step_constant)
+
+        self.assertEqual(custom_constant.current_value_function({}), 1)
+
+        def custom_step_voltage(variables):
+            return variables["Voltage [V]"] - 4.1
+
+        custom_step_alg = pybamm.step.CustomStepImplicit(custom_step_voltage)
+
+        self.assertEqual(custom_step_alg.control, "algebraic")
+        self.assertAlmostEqual(
+            custom_step_alg.current_rhs_function({"Voltage [V]": 4.2}), 0.1
+        )
+
+        custom_step_diff = pybamm.step.CustomStepImplicit(
+            custom_step_voltage, control="differential"
+        )
+        self.assertEqual(custom_step_diff.control, "differential")
+
+        with self.assertRaisesRegex(ValueError, "control must be"):
+            pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")
 
 
 if __name__ == "__main__":
