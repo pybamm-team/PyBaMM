@@ -1,6 +1,3 @@
-#
-# CasADi Solver class
-#
 import casadi
 import pybamm
 import numpy as np
@@ -51,7 +48,7 @@ class CasadiSolver(pybamm.BaseSolver):
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
-        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        Please consult `CasADi documentation <https://web.casadi.org/python-api/#integrator>`_ for
         details. Some useful options:
 
         - "max_num_steps": Maximum number of integrator steps
@@ -59,7 +56,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
     extra_options_call : dict, optional
         Any options to pass to the CasADi integrator when calling the integrator.
-        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        Please consult `CasADi documentation <https://web.casadi.org/python-api/#integrator>`_ for
         details.
     return_solution_if_failed_early : bool, optional
         Whether to return a Solution object if the solver fails to reach the end of
