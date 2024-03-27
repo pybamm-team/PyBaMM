@@ -266,7 +266,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Doctests (ubuntu-latest / Python 3.12)
+    name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
       - name: Check out PyBaMM repository
@@ -291,7 +291,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.11
           cache: 'pip'
 
       - name: Install nox
