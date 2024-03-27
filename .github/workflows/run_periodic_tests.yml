@@ -150,7 +150,6 @@ jobs:
       - name: Install build-time dependencies & run unit tests for M-series macOS runner
         shell: bash
         env:
-          # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           NONINTERACTIVE: 1
         run: |
