@@ -18,7 +18,6 @@ WORKDIR /home/pybamm/PyBaMM
 ENV CMAKE_C_COMPILER=/usr/bin/gcc
 ENV CMAKE_CXX_COMPILER=/usr/bin/g++
 ENV CMAKE_MAKE_PROGRAM=/usr/bin/make
-ENV SUNDIALS_INST=/home/pybamm/.local
 ENV LD_LIBRARY_PATH=/home/pybamm/.local/lib
 
 RUN conda create -n pybamm python=3.11
