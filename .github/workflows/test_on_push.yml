@@ -52,7 +52,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
@@ -128,7 +127,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
@@ -198,7 +196,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
@@ -277,7 +274,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
@@ -318,7 +314,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
@@ -372,7 +367,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
