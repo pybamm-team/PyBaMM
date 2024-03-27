@@ -24,6 +24,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'diffusivity': 'single' (possible: ['single', 'current sigmoid'])
 'dimensionality': 0 (possible: [0, 1, 2])
+'double SEI layer': 'false' (possible: ['false', 'true'])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
@@ -199,6 +200,8 @@ class TestBaseBatteryModel(TestCase):
                     "thermal": "x-full",
                 }
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "double SEI layer"):
+            pybamm.BaseBatteryModel({"double SEI layer": "bad double SEI layer"})
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "convection"):
