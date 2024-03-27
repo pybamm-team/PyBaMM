@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added custom experiment steps ([#3835](https://github.com/pybamm-team/PyBaMM/pull/3835))
 - Added support for macOS arm64 (M-series) platforms. ([#3789](https://github.com/pybamm-team/PyBaMM/pull/3789))
 - Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
 - Modified `step` function to take an array of time `t_eval` as an argument and deprecated use of `npts`. ([#3627](https://github.com/pybamm-team/PyBaMM/pull/3627))
@@ -10,6 +11,7 @@
 
 ## Bug Fixes
 
+- Allow evaluation of an `Interpolant` object with a number ([#3932](https://github.com/pybamm-team/PyBaMM/pull/3932))
 - `plot_voltage_components` now works even if the time does not start at 0 ([#3915](https://github.com/pybamm-team/PyBaMM/pull/3915))
 - Fixed bug where separator porosity was used in calculation instead of transport efficiency ([#3905](https://github.com/pybamm-team/PyBaMM/pull/3905))
 - Initial voltage can now match upper or lower cut-offs exactly ([#3842](https://github.com/pybamm-team/PyBaMM/pull/3842))
