@@ -45,7 +45,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
 *  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver>`_.
 
