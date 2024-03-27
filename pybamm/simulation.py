@@ -864,7 +864,7 @@ class Simulation:
 
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
         model = self.steps_to_built_models["Rest for padding"]
-        solver = self.steps_to_built_models["Rest for padding"]
+        solver = self.steps_to_built_solvers["Rest for padding"]
 
         # Make sure we take at least 2 timesteps. The period is hardcoded to 10
         # minutes,the user can always override it by adding a rest step
