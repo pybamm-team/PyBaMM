@@ -17,7 +17,6 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
-    "PIP_NO_BINARY": "scikits.odes",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -63,19 +62,7 @@ def run_coverage(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
     if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -91,19 +78,7 @@ def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -124,19 +99,7 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)
@@ -178,35 +141,15 @@ def set_dev(session):
     # is fixed
     session.run(python, "-m", "pip", "install", "setuptools", external=True)
     if sys.platform == "linux":
-        if sys.version_info > (3, 12):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax,odes]",
-                external=True,
-            )
+        session.run(
+            python,
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            ".[all,dev,jax]",
+            external=True,
+        )
     else:
         if sys.version_info < (3, 9):
             session.run(
@@ -235,19 +178,7 @@ def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     else:
         if sys.version_info < (3, 9):
             session.install("-e", ".[all,dev]", silent=False)

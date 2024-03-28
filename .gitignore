@@ -107,9 +107,6 @@ KLU_module_deps
 # setup
 setup.log
 
-# odes setup
-scikits_odes_setup.log
-
 # test
 test.c
 test.json

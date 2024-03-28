@@ -128,9 +128,8 @@ conda install -c conda-forge pybamm
 
 ### Optional solvers
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
-- [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver).
 - [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver).
 
 ## 📖 Citing PyBaMM

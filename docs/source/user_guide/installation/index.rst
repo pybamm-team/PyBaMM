@@ -45,9 +45,8 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
-*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`_.
 *  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver>`_.
 
 Dependencies
@@ -203,23 +202,6 @@ Dependency                                                                Minimu
 `JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.20             jax                For the JAX solver
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
 ========================================================================= ================== ================== =======================
-
-.. _install.odes_dependencies:
-
-odes dependencies
-^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[odes]"``
-
-======================================================================================================================================= ================== ================== =============================
-Dependency                                                                                                                              Minimum Version    pip extra          Notes
-======================================================================================================================================= ================== ================== =============================
-`scikits.odes <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`__     \-                 odes               For scikits ODE & DAE solvers
-======================================================================================================================================= ================== ================== =============================
-
-.. note::
-
-   Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`_ .
 
 Full installation guide
 -----------------------

@@ -26,12 +26,6 @@ Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
             docker pull pybamm/pybamm:latest
 
-.. tab:: Scikits.odes solver
-
-      .. code:: bash
-
-            docker pull pybamm/pybamm:odes
-
 .. tab:: JAX solver
 
       .. code:: bash
@@ -143,17 +137,10 @@ Building Docker images with optional arguments
 When building the PyBaMM Docker images locally, you have the option to include specific solvers by using optional arguments. These solvers include:
 
 - ``IDAKLU``: For IDA solver provided by the SUNDIALS plus KLU.
-- ``ODES``: For scikits.odes solver for ODE & DAE problems.
 - ``JAX``: For Jax solver.
 - ``ALL``: For all the above solvers.
 
 To build the Docker images with optional arguments, you can follow these steps for each solver:
-
-.. tab:: Scikits.odes solver
-
-      .. code-block:: bash
-
-            docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
 
 .. tab:: JAX solver
 
