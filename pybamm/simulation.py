@@ -228,7 +228,7 @@ class Simulation:
         self._parameter_values.process_geometry(self._geometry)
         self._model = self._model_with_set_params
 
-    def set_initial_soc(self, initial_soc):
+    def set_initial_soc(self, initial_soc, inputs=None):
         if self._built_initial_soc != initial_soc:
             # reset
             self._model_with_set_params = None
@@ -247,20 +247,28 @@ class Simulation:
         elif options["working electrode"] == "positive":
             self._parameter_values = (
                 self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
-                    initial_soc, param=param, inplace=False, options=options
+                    initial_soc,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
                 )
             )
         else:
             self._parameter_values = (
                 self._unprocessed_parameter_values.set_initial_stoichiometries(
-                    initial_soc, param=param, inplace=False, options=options
+                    initial_soc,
+                    param=param,
+                    inplace=False,
+                    options=options,
+                    inputs=inputs,
                 )
             )
 
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 
-    def build(self, check_model=True, initial_soc=None):
+    def build(self, check_model=True, initial_soc=None, inputs=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
@@ -279,7 +287,7 @@ class Simulation:
             set.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc)
+            self.set_initial_soc(initial_soc, inputs=inputs)
 
         if self.built_model:
             return
@@ -296,13 +304,13 @@ class Simulation:
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
 
-    def build_for_experiment(self, check_model=True, initial_soc=None):
+    def build_for_experiment(self, check_model=True, initial_soc=None, inputs=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
         experiment, where there may be several models and solvers to build.
         """
         if initial_soc is not None:
-            self.set_initial_soc(initial_soc)
+            self.set_initial_soc(initial_soc, inputs)
 
         if self.steps_to_built_models:
             return
@@ -342,6 +350,7 @@ class Simulation:
         initial_soc=None,
         callbacks=None,
         showprogress=False,
+        inputs=None,
         **kwargs,
     ):
         """
@@ -404,8 +413,10 @@ class Simulation:
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
         logs = {}
 
+        inputs = inputs or {}
+
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            self.build(check_model=check_model, initial_soc=initial_soc)
+            self.build(check_model=check_model, initial_soc=initial_soc, inputs=inputs)
             if save_at_cycles is not None:
                 raise ValueError(
                     "'save_at_cycles' option can only be used if simulating an "
@@ -476,11 +487,15 @@ class Simulation:
                             stacklevel=2,
                         )
 
-            self._solution = solver.solve(self.built_model, t_eval, **kwargs)
+            self._solution = solver.solve(
+                self.built_model, t_eval, inputs=inputs, **kwargs
+            )
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
-            self.build_for_experiment(check_model=check_model, initial_soc=initial_soc)
+            self.build_for_experiment(
+                check_model=check_model, initial_soc=initial_soc, inputs=inputs
+            )
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
@@ -489,7 +504,7 @@ class Simulation:
             # inputs without having to build the simulation again
             self._solution = starting_solution
             # Step through all experimental conditions
-            user_inputs = kwargs.get("inputs", {})
+            user_inputs = inputs
             timer = pybamm.Timer()
 
             # Set up eSOH solver (for summary variables)
@@ -508,6 +523,7 @@ class Simulation:
                     [starting_solution],
                     esoh_solver=esoh_solver,
                     save_this_cycle=True,
+                    inputs=user_inputs,
                 )
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
@@ -565,7 +581,7 @@ class Simulation:
                         # logs["step operating conditions"] = "Initial rest for padding"
                         # callbacks.on_step_start(logs)
 
-                        kwargs["inputs"] = {
+                        inputs = {
                             **user_inputs,
                             "Ambient temperature [K]": (
                                 step.temperature
@@ -577,7 +593,7 @@ class Simulation:
                         step_solution = current_solution.cycles[-1].steps[-1]
 
                         step_solution_with_rest = self.run_padding_rest(
-                            kwargs, rest_time, step_solution
+                            kwargs, rest_time, step_solution, inputs
                         )
                         steps[-1] = step_solution + step_solution_with_rest
 
@@ -663,7 +679,7 @@ class Simulation:
                     logs["step operating conditions"] = step_str
                     callbacks.on_step_start(logs)
 
-                    kwargs["inputs"] = {
+                    inputs = {
                         **user_inputs,
                         "start time": start_time,
                     }
@@ -676,6 +692,7 @@ class Simulation:
                             dt,
                             t_eval=np.linspace(0, dt, npts),
                             save=False,
+                            inputs=inputs,
                             **kwargs,
                         )
                     except pybamm.SolverError as error:
@@ -712,7 +729,7 @@ class Simulation:
                             logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)
 
-                            kwargs["inputs"] = {
+                            inputs = {
                                 **user_inputs,
                                 "Ambient temperature [K]": (
                                     step.temperature
@@ -722,7 +739,7 @@ class Simulation:
                             }
 
                             step_solution_with_rest = self.run_padding_rest(
-                                kwargs, rest_time, step_solution
+                                kwargs, rest_time, step_solution, inputs=inputs
                             )
                             step_solution += step_solution_with_rest
 
@@ -786,7 +803,10 @@ class Simulation:
                                 "due to exceeded bounds at initial conditions."
                             )
                     cycle_sol = pybamm.make_cycle_solution(
-                        steps, esoh_solver=esoh_solver, save_this_cycle=save_this_cycle
+                        steps,
+                        esoh_solver=esoh_solver,
+                        save_this_cycle=save_this_cycle,
+                        inputs=user_inputs,
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
                     all_cycle_solutions.append(cycle_solution)
@@ -842,7 +862,7 @@ class Simulation:
 
         return self.solution
 
-    def run_padding_rest(self, kwargs, rest_time, step_solution):
+    def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
         model = self.steps_to_built_models["Rest for padding"]
         solver = self.steps_to_built_solvers["Rest for padding"]
 
@@ -856,6 +876,7 @@ class Simulation:
             rest_time,
             t_eval=np.linspace(0, rest_time, npts),
             save=False,
+            inputs=inputs,
             **kwargs,
         )
 
@@ -868,6 +889,7 @@ class Simulation:
         t_eval=None,
         save=True,
         starting_solution=None,
+        inputs=None,
         **kwargs,
     ):
         """
@@ -908,6 +930,7 @@ class Simulation:
             dt,
             t_eval=t_eval,
             save=save,
+            inputs=inputs,
             **kwargs,
         )
 
