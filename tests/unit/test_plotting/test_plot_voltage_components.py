@@ -4,7 +4,9 @@ import numpy as np
 from tests import TestCase
 import matplotlib.pyplot as plt
 from matplotlib import use
+
 use("Agg")
+
 
 class TestPlotVoltageComponents(TestCase):
     def test_plot_with_solution(self):

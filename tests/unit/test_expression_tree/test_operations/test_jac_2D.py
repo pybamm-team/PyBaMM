@@ -7,10 +7,10 @@ import pybamm
 import numpy as np
 import unittest
 from scipy.sparse import eye
-from tests import (get_1p1d_discretisation_for_testing,
-                   multi_var_function_test,
-                   )
-
+from tests import (
+    get_1p1d_discretisation_for_testing,
+    multi_var_function_test,
+)
 
 
 class TestJacobian(TestCase):
