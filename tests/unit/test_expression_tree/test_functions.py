@@ -10,18 +10,11 @@ from scipy import special
 
 import pybamm
 import sympy
-
-
-def test_function(arg):
-    return arg + arg
-
-
-def test_multi_var_function(arg1, arg2):
-    return arg1 + arg2
-
-
-def test_multi_var_function_cube(arg1, arg2):
-    return arg1 + arg2**3
+from tests import (
+    function_test,
+    multi_var_function_test,
+    multi_var_function_cube_test,
+)
 
 
 class TestFunction(TestCase):
@@ -31,16 +24,16 @@ class TestFunction(TestCase):
         self.assertIsInstance(log.children[0], pybamm.Scalar)
         self.assertEqual(log.evaluate(), np.log(10))
 
-        summ = pybamm.Function(test_multi_var_function, 1, 2)
+        summ = pybamm.Function(multi_var_function_test, 1, 2)
         self.assertIsInstance(summ.children[0], pybamm.Scalar)
         self.assertIsInstance(summ.children[1], pybamm.Scalar)
         self.assertEqual(summ.evaluate(), 3)
 
     def test_function_of_one_variable(self):
         a = pybamm.Symbol("a")
-        funca = pybamm.Function(test_function, a)
-        self.assertEqual(funca.name, "function (test_function)")
-        self.assertEqual(str(funca), "test_function(a)")
+        funca = pybamm.Function(function_test, a)
+        self.assertEqual(funca.name, "function (function_test)")
+        self.assertEqual(str(funca), "function_test(a)")
         self.assertEqual(funca.children[0].name, a.name)
 
         b = pybamm.Scalar(1)
@@ -61,7 +54,7 @@ class TestFunction(TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
         y = np.array([5])
-        func = pybamm.Function(test_function, a)
+        func = pybamm.Function(function_test, a)
         self.assertEqual(func.diff(a).evaluate(y=y), 2)
         self.assertEqual(func.diff(func).evaluate(), 1)
         func = pybamm.sin(a)
@@ -72,12 +65,12 @@ class TestFunction(TestCase):
         self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
 
         # multiple variables
-        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * a)
+        func = pybamm.Function(multi_var_function_test, 4 * a, 3 * a)
         self.assertEqual(func.diff(a).evaluate(y=y), 7)
-        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * b)
+        func = pybamm.Function(multi_var_function_test, 4 * a, 3 * b)
         self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
         self.assertEqual(func.diff(b).evaluate(y=np.array([5, 6])), 3)
-        func = pybamm.Function(test_multi_var_function_cube, 4 * a, 3 * b)
+        func = pybamm.Function(multi_var_function_cube_test, 4 * a, 3 * b)
         self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
         self.assertEqual(
             func.diff(b).evaluate(y=np.array([5, 6])), 3 * 3 * (3 * 6) ** 2
@@ -85,7 +78,7 @@ class TestFunction(TestCase):
 
         # exceptions
         func = pybamm.Function(
-            test_multi_var_function_cube, 4 * a, 3 * b, derivative="derivative"
+            multi_var_function_cube_test, 4 * a, 3 * b, derivative="derivative"
         )
         with self.assertRaises(ValueError):
             func.diff(a)
@@ -93,9 +86,9 @@ class TestFunction(TestCase):
     def test_function_of_multiple_variables(self):
         a = pybamm.Variable("a")
         b = pybamm.Parameter("b")
-        func = pybamm.Function(test_multi_var_function, a, b)
-        self.assertEqual(func.name, "function (test_multi_var_function)")
-        self.assertEqual(str(func), "test_multi_var_function(a, b)")
+        func = pybamm.Function(multi_var_function_test, a, b)
+        self.assertEqual(func.name, "function (multi_var_function_test)")
+        self.assertEqual(str(func), "multi_var_function_test(a, b)")
         self.assertEqual(func.children[0].name, a.name)
         self.assertEqual(func.children[1].name, b.name)
 
@@ -103,7 +96,7 @@ class TestFunction(TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
         y = np.array([5, 2])
-        func = pybamm.Function(test_multi_var_function, a, b)
+        func = pybamm.Function(multi_var_function_test, a, b)
 
         self.assertEqual(func.evaluate(y=y), 7)
         self.assertEqual(func.diff(a).evaluate(y=y), 1)
@@ -114,7 +107,7 @@ class TestFunction(TestCase):
         a = pybamm.Variable("a", domain="something")
         b = pybamm.Variable("b", domain="something else")
         with self.assertRaises(pybamm.DomainError):
-            pybamm.Function(test_multi_var_function, a, b)
+            pybamm.Function(multi_var_function_test, a, b)
 
     def test_function_unnamed(self):
         fun = pybamm.Function(np.cos, pybamm.t)
@@ -148,7 +141,7 @@ class TestFunction(TestCase):
 
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")
-        funca = pybamm.Function(test_function, a)
+        funca = pybamm.Function(function_test, a)
 
         with self.assertRaises(NotImplementedError):
             funca.to_json()

@@ -3,6 +3,9 @@ import unittest
 import numpy as np
 from tests import TestCase
 import matplotlib.pyplot as plt
+from matplotlib import use
+
+use("Agg")
 
 
 class TestPlot(TestCase):

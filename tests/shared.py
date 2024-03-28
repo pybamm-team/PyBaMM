@@ -254,6 +254,18 @@ def get_size_distribution_disc_for_testing(xpts=None, rpts=10, Rpts=10, zpts=15)
     )
 
 
+def function_test(arg):
+    return arg + arg
+
+
+def multi_var_function_test(arg1, arg2):
+    return arg1 + arg2
+
+
+def multi_var_function_cube_test(arg1, arg2):
+    return arg1 + arg2**3
+
+
 def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
     return get_discretisation_for_testing(
         mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts),

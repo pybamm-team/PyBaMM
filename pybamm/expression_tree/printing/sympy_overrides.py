@@ -14,7 +14,7 @@ class CustomPrint(LatexPrinter):
         eqn = super()._print_Derivative(expr)
         if getattr(expr, "force_partial", False) and "partial" not in eqn:
             var1, var2 = re.findall(r"^\\frac{(\w+)}{(\w+) .+", eqn)[0]
-            eqn = eqn.replace(var1, "\partial").replace(var2, "\partial")
+            eqn = eqn.replace(var1, r"\partial").replace(var2, r"\partial")
 
         return eqn
 
