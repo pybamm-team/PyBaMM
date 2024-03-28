@@ -38,6 +38,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-12, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        # We check coverage on Ubuntu with Python 3.12, so we skip unit tests for it here
+        exclude:
+          - os: ubuntu-latest
+            python-version: "3.12"
         # Include macOS M1 runners
         include:
           - os: macos-14
