@@ -8,10 +8,8 @@ import numpy as np
 import unittest
 from scipy.sparse import eye
 from tests import get_mesh_for_testing
+from tests import multi_var_function_test
 
-
-def multi_var_function_test(arg1, arg2):
-    return arg1 + arg2
 
 
 class TestJacobian(TestCase):

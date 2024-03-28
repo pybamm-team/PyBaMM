@@ -10,18 +10,16 @@ from scipy import special
 
 import pybamm
 import sympy
+from tests import (
+    function_test,
+    multi_var_function_test,
+    multi_var_function_cube_test,
+)
 
 
-def function_test(arg):
-    return arg + arg
 
 
-def multi_var_function_test(arg1, arg2):
-    return arg1 + arg2
 
-
-def multi_var_function_cube_test(arg1, arg2):
-    return arg1 + arg2**3
 
 
 class TestFunction(TestCase):

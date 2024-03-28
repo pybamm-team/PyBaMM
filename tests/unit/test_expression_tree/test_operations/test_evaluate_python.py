@@ -12,14 +12,10 @@ from collections import OrderedDict
 
 if pybamm.have_jax():
     import jax
-
-
-def function_test(arg):
-    return arg + arg
-
-
-def function2_test(arg1, arg2):
-    return arg1 + arg2
+from tests import (
+    function_test,
+    multi_var_function_test,
+)
 
 
 class TestEvaluate(TestCase):
@@ -311,7 +307,7 @@ class TestEvaluate(TestCase):
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
-        expr = pybamm.Function(function2_test, a, b)
+        expr = pybamm.Function(multi_var_function_test, a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 5)
