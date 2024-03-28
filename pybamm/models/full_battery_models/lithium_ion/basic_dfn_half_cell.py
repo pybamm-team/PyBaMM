@@ -221,8 +221,8 @@ class BasicDFNHalfCell(BaseModel):
         self.algebraic[phi_e] = param.L_x**2 * (pybamm.div(i_e) - a_j)
 
         # reference potential
-        L_Li = param.p.L
-        sigma_Li = param.p.sigma
+        L_Li = param.n.L
+        sigma_Li = param.n.sigma
         j_Li = param.j0_Li_metal(pybamm.boundary_value(c_e, "left"), c_w_max, T)
         eta_Li = 2 * RT_F * pybamm.arcsinh(i_cell / (2 * j_Li))
 
