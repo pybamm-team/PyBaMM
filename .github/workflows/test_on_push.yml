@@ -38,11 +38,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-12, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        # We check coverage on Ubuntu with Python 3.11, so we skip unit tests for it here
-        # TODO: check coverage with Python 3.12 when [odes] supports it
+        # We check coverage on Ubuntu with Python 3.12, so we skip unit tests for it here
         exclude:
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.12"
         # Include macOS M1 runners
         include:
           - os: macos-14
@@ -57,7 +56,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
@@ -76,7 +74,6 @@ jobs:
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
         env:
-          # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
           HOMEBREW_NO_COLOR: 1
@@ -123,20 +120,17 @@ jobs:
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s unit
 
-  # Runs only on Ubuntu with Python 3.11
-  # TODO: check coverage with Python 3.12 when [odes] supports it
   check_coverage:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Coverage tests (ubuntu-latest / Python 3.11)
+    name: Coverage tests (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
@@ -150,11 +144,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
 
       - name: Install nox
@@ -206,7 +200,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
@@ -225,7 +218,6 @@ jobs:
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
         env:
-          # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
           HOMEBREW_NO_COLOR: 1
@@ -272,8 +264,7 @@ jobs:
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-# Runs only on Ubuntu with Python 3.12. Skips IDAKLU module compilation
-# for speedups, which is already tested in other jobs.
+  # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     needs: style
     runs-on: ubuntu-latest
@@ -287,7 +278,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
@@ -301,7 +291,7 @@ jobs:
           sudo dot -c
           sudo apt-get install texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         id: setup-python
         uses: actions/setup-python@v5
         with:
@@ -311,13 +301,12 @@ jobs:
       - name: Install nox
         run: python -m pip install nox
 
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
+      - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
 
-      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
+      - name: Check if the documentation can be built for GNU/Linux
         run: python -m nox -s docs
 
-  # Runs only on Ubuntu with Python 3.12
   run_example_tests:
     needs: style
     runs-on: ubuntu-latest
@@ -329,7 +318,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
@@ -372,7 +360,6 @@ jobs:
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
-  # Runs only on Ubuntu with Python 3.12
   run_scripts_tests:
     needs: style
     runs-on: ubuntu-latest
@@ -384,7 +371,6 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
