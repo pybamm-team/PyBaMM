@@ -1,10 +1,3 @@
-#
-# Tests for the Processed Variable Computed class
-#
-# This class forms a container for variables (and sensitivities) calculted
-#  by the idaklu solver, and does not possesses any capability to calculate
-#  values itself since it does not have access to the full state vector
-#
 from tests import TestCase
 import casadi
 import pybamm

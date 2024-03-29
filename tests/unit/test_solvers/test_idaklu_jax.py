@@ -1,6 +1,3 @@
-#
-# Tests for the KLU-Jax interface class
-#
 from tests import TestCase
 from parameterized import parameterized
 

@@ -1,6 +1,3 @@
-#
-# Tests for the KLU Solver class
-#
 from tests import TestCase
 from contextlib import redirect_stdout
 import io

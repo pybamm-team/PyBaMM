@@ -1,6 +1,3 @@
-#
-# Tests for the Processed Variable class
-#
 from tests import TestCase
 import casadi
 import pybamm

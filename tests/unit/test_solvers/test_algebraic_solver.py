@@ -1,6 +1,3 @@
-#
-# Tests for the Algebraic Solver class
-#
 from tests import TestCase
 import pybamm
 import unittest

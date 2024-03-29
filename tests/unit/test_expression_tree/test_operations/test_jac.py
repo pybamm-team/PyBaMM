@@ -8,7 +8,10 @@ import numpy as np
 import unittest
 from scipy.sparse import eye
 from tests import get_mesh_for_testing
-from tests import multi_var_function_test
+
+
+def test_multi_var_function(arg1, arg2):
+    return arg1 + arg2
 
 
 class TestJacobian(TestCase):
@@ -214,7 +217,7 @@ class TestJacobian(TestCase):
         np.testing.assert_array_equal(0, dfunc_dy)
 
         # several children
-        func = pybamm.Function(multi_var_function_test, 2 * y, 3 * y)
+        func = pybamm.Function(test_multi_var_function, 2 * y, 3 * y)
         jacobian = np.diag(5 * np.ones(4))
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())

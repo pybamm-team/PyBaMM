@@ -1,5 +1,3 @@
-# Tests for the Scipy Solver class
-#
 import pybamm
 from tests import TestCase
 import unittest

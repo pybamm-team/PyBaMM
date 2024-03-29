@@ -106,7 +106,7 @@ dev = [
     # For running testing sessions
     "nox",
     # For coverage
-    "pytest-cov",
+    "coverage[toml]",
     # For test parameterization
     "parameterized>=0.9",
     # For testing Jupyter notebooks
@@ -244,10 +244,6 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
-    # ignore warnings generated while running tests
-    "ignore::DeprecationWarning",
-    "ignore::UserWarning",
-    "ignore::RuntimeWarning",
 ]
 
 # Logging configuration

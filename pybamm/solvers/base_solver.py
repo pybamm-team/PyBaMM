@@ -116,7 +116,7 @@ class BaseSolver:
         else:
             pybamm.logger.info("Start solver set-up")
 
-        self._check_and_prepare_model_inplace(model, inputs, ics_only)
+        self._check_and_prepare_model_inplace(model)
 
         # set default calculate sensitivities on model
         if not hasattr(model, "calculate_sensitivities"):
@@ -177,8 +177,6 @@ class BaseSolver:
             pybamm.logger.info("Finish solver set-up")
             return
 
-        # Process rhs, algebraic, residual and event expressions
-        # and wrap in callables
         rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
             model.concatenated_rhs, "RHS", vars_for_processing
         )
@@ -307,7 +305,7 @@ class BaseSolver:
             name = name.replace(string, replacement)
         return name
 
-    def _check_and_prepare_model_inplace(self, model, inputs, ics_only):
+    def _check_and_prepare_model_inplace(self, model):
         """
         Performs checks on the model and prepares it for solving.
         """
@@ -321,7 +319,7 @@ class BaseSolver:
             raise pybamm.SolverError(
                 """Cannot use algebraic solver to solve model with time derivatives"""
             )
-        # casadi solver won't allow solving algebraic model so we have to raise an
+        # casadi solver won't allow solving algebraic model, so we have to raise an
         # error here
         if isinstance(self, pybamm.CasadiSolver) and len(model.rhs) == 0:
             raise pybamm.SolverError(
@@ -357,7 +355,8 @@ class BaseSolver:
             )
             model.convert_to_format = "casadi"
 
-    def _get_vars_for_processing(self, model, inputs, calculate_sensitivities_explicit):
+    @staticmethod
+    def _get_vars_for_processing(model, inputs, calculate_sensitivities_explicit):
         vars_for_processing = {
             "model": model,
             "calculate_sensitivities_explicit": calculate_sensitivities_explicit,
@@ -412,8 +411,9 @@ class BaseSolver:
 
             return vars_for_processing
 
+    @staticmethod
     def _set_up_model_sensitivities_inplace(
-        self, model, inputs, calculate_sensitivities_explicit
+        model, inputs, calculate_sensitivities_explicit
     ):
         """
         Set up model attributes related to sensitivities.
@@ -423,7 +423,7 @@ class BaseSolver:
         if calculate_sensitivities_explicit:
             num_parameters = 0
             for name in model.calculate_sensitivities:
-                # if not a number, assume its a vector
+                # if not a number, assume it's a vector
                 if isinstance(inputs[name], numbers.Number):
                     num_parameters += 1
                 else:
@@ -498,40 +498,7 @@ class BaseSolver:
                 model.concatenated_rhs.pre_order(),
                 model.concatenated_algebraic.pre_order(),
             ):
-                if isinstance(symbol, _Heaviside):
-                    found_t = False
-                    if symbol.right == pybamm.t:
-                        expr = symbol.left
-                        found_t = True
-                    elif symbol.left == pybamm.t:
-                        expr = symbol.right
-                        found_t = True
-
-                    # Update the events if the heaviside function depended on t
-                    if found_t:
-                        model.events.append(
-                            pybamm.Event(
-                                str(symbol),
-                                expr,
-                                pybamm.EventType.DISCONTINUITY,
-                            )
-                        )
-                elif isinstance(symbol, pybamm.Modulo):
-                    if symbol.left == pybamm.t:
-                        expr = symbol.right
-                        if t_eval is None:
-                            N_events = 200
-                        else:
-                            N_events = t_eval[-1] // expr.value
-
-                        for i in np.arange(N_events):
-                            model.events.append(
-                                pybamm.Event(
-                                    str(symbol),
-                                    expr * pybamm.Scalar(i + 1),
-                                    pybamm.EventType.DISCONTINUITY,
-                                )
-                            )
+                self.adjust_discontinuity(model, symbol, t_eval)
 
         casadi_switch_events = []
         terminate_events = []
@@ -595,6 +562,46 @@ class BaseSolver:
             interpolant_extrapolation_events,
             discontinuity_events,
         )
+
+    @staticmethod
+    def adjust_discontinuity(model, symbol, t_eval):
+        if isinstance(symbol, _Heaviside):
+            found_t = False
+            expr = None
+            if symbol.right == pybamm.t:
+                expr = symbol.left
+                found_t = True
+            else:
+                if symbol.left == pybamm.t:
+                    expr = symbol.right
+                    found_t = True
+
+            # Update the events if the heaviside function depended on t
+            if found_t:
+                model.events.append(
+                    pybamm.Event(
+                        str(symbol),
+                        expr,
+                        pybamm.EventType.DISCONTINUITY,
+                    )
+                )
+        else:
+            if isinstance(symbol, pybamm.Modulo):
+                if symbol.left == pybamm.t:
+                    expr = symbol.right
+                    if t_eval is None:
+                        num_events = 200
+                    else:
+                        num_events = t_eval[-1] // expr.value
+
+                    for i in np.arange(num_events):
+                        model.events.append(
+                            pybamm.Event(
+                                str(symbol),
+                                expr * pybamm.Scalar(i + 1),
+                                pybamm.EventType.DISCONTINUITY,
+                            )
+                        )
 
     def _set_initial_conditions(self, model, time, inputs_dict, update_rhs):
         """
@@ -839,7 +846,7 @@ class BaseSolver:
             if ics_set_up != model.concatenated_initial_conditions:
                 if self.algebraic_solver is True:
                     # For an algebraic solver, we don't need to set up the initial
-                    # conditions function and we can just evaluate
+                    # conditions function, and we can just evaluate
                     # model.concatenated_initial_conditions
                     model.y0 = model.concatenated_initial_conditions.evaluate()
                 else:
@@ -971,13 +978,15 @@ class BaseSolver:
         if len(solutions) == 1:
             pybamm.logger.info(f"Finish solving {model.name} ({termination})")
             pybamm.logger.info(
-                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time} (of which integration time: {solutions[0].integration_time}), "
+                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time} "
+                f"(of which integration time: {solutions[0].integration_time}), "
                 f"Total time: {solutions[0].total_time}"
             )
         else:
             pybamm.logger.info(f"Finish solving {model.name} for all inputs")
             pybamm.logger.info(
-                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, Total time: {solutions[0].total_time}"
+                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, "
+                f"Total time: {solutions[0].total_time}"
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
@@ -998,8 +1007,9 @@ class BaseSolver:
         else:
             return solutions
 
-    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
-        if model.discontinuity_events_eval == []:
+    @staticmethod
+    def _get_discontinuity_start_end_indices(model, inputs, t_eval):
+        if not model.discontinuity_events_eval:
             pybamm.logger.verbose("No discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
@@ -1057,7 +1067,8 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
+    @staticmethod
+    def _check_events_with_initial_conditions(t_eval, model, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1257,7 +1268,8 @@ class BaseSolver:
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time} (of which integration time: {solution.integration_time}), "
+            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time} "
+            f"(of which integration time: {solution.integration_time}), "
             f"Total time: {solution.total_time}"
         )
 
@@ -1267,7 +1279,8 @@ class BaseSolver:
         else:
             return old_solution + solution
 
-    def get_termination_reason(self, solution, events):
+    @staticmethod
+    def get_termination_reason(solution, events):
         """
         Identify the cause for termination. In particular, if the solver terminated
         due to an event, (try to) pinpoint which event was responsible. If an event
@@ -1389,7 +1402,8 @@ class BaseSolver:
                         "outside these bounds."
                     )
 
-    def _set_up_model_inputs(self, model, inputs):
+    @staticmethod
+    def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
         inputs = inputs or {}
 
@@ -1541,7 +1555,7 @@ def process(
             # The formulation is as per Park, S., Kato, D., Gima, Z., Klein, R.,
             # & Moura, S. (2018).  Optimal experimental design for
             # parameterization of an electrochemical lithium-ion battery model.
-            # Journal of The Electrochemical Society, 165(7), A1309.". See #1100
+            # Journal of The Electrochemical Society, 165(7), A1309. See #1100
             # for details
             pS_casadi_stacked = vars_for_processing["pS_casadi_stacked"]
             y_diff = vars_for_processing["y_diff"]

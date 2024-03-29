@@ -1,6 +1,3 @@
-#
-# Tests for the Solution class
-#
 import os
 from tests import TestCase
 import json

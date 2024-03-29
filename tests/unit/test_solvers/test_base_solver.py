@@ -1,6 +1,3 @@
-#
-# Tests for the Base Solver class
-#
 from tests import TestCase
 import casadi
 import pybamm

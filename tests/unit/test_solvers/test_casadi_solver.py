@@ -1,6 +1,3 @@
-#
-# Tests for the Casadi Solver class
-#
 from tests import TestCase
 import pybamm
 import unittest

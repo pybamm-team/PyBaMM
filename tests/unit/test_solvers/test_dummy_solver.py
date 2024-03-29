@@ -1,6 +1,3 @@
-#
-# Tests for the Dummy Solver class
-#
 from tests import TestCase
 import pybamm
 import numpy as np
