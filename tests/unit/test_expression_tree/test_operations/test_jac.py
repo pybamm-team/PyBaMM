@@ -11,7 +11,6 @@ from tests import get_mesh_for_testing
 from tests import multi_var_function_test
 
 
-
 class TestJacobian(TestCase):
     def test_variable_is_statevector(self):
         a = pybamm.Symbol("a")

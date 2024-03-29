@@ -1135,7 +1135,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(
@@ -1147,7 +1147,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit resistance":
             model = pybamm.external_circuit.ExplicitResistanceControl(

@@ -17,11 +17,6 @@ from tests import (
 )
 
 
-
-
-
-
-
 class TestFunction(TestCase):
     def test_number_input(self):
         # with numbers
