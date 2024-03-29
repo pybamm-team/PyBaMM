@@ -155,7 +155,7 @@ def test_script(path, executable="python"):
 
     # Tell matplotlib not to produce any figures
     env = dict(os.environ)
-    env["MPLBACKEND"] = "Template"
+    env["MPLBACKEND"] = "Agg"
 
     # Run in subprocess
     cmd = [executable, path]
