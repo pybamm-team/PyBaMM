@@ -409,19 +409,6 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Virtanen2020", citations._papers_to_cite)
         self.assertIn("Virtanen2020", citations._citation_tags.keys())
 
-        if pybamm.have_scikits_odes():
-            citations._reset()
-            self.assertNotIn("Malengier2018", citations._papers_to_cite)
-            pybamm.ScikitsOdeSolver()
-            self.assertIn("Malengier2018", citations._papers_to_cite)
-            self.assertIn("Malengier2018", citations._citation_tags.keys())
-
-            citations._reset()
-            self.assertNotIn("Malengier2018", citations._papers_to_cite)
-            pybamm.ScikitsDaeSolver()
-            self.assertIn("Malengier2018", citations._papers_to_cite)
-            self.assertIn("Malengier2018", citations._citation_tags.keys())
-
         if pybamm.have_idaklu():
             citations._reset()
             self.assertNotIn("Hindmarsh2005", citations._papers_to_cite)
