@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        description: >
+          Deployment target. Can be "pypi" or "testpypi" or "anaconda". Default is "testpypi".
         default: "testpypi"
       debug_enabled:
         type: boolean
@@ -212,6 +213,34 @@ jobs:
           path: ./dist/*.tar.gz
           if-no-files-found: error
 
+  publish_anaconda:
+    # This job is only of value to PyBaMM and would always be skipped in forks
+    # It is meant to run on a schedule, when manually triggered, and does not
+    # run on releases.
+    if: >-
+      (github.repository == 'pybamm-team/PyBaMM') &&
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'anaconda') ||
+      (github.event_name == 'schedule')
+    name: Upload nightly wheels to Anaconda.org PyPI index
+    needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Move all package files to files/
+        run: |
+          mkdir files
+          mv windows_wheels/* linux_wheels/* macos_amd64_wheels/* macos_arm64_wheels/* files/
+
+      - name: Push to Anaconda PyPI index
+        uses: scientific-python/upload-nightly-action@b67d7fcc0396e1128a474d1ab2b48aa94680f9fc  # v0.5.0
+        with:
+          artifacts_path: files/
+          anaconda_nightly_upload_organization: # TODO: create
+          anaconda_nightly_upload_token: ${{ secrets.ANACONDA_ORG_UPLOAD_TOKEN }} # TODO: configure
+          anaconda_nightly_upload_labels: dev
+
   publish_pypi:
     # This job is only of value to PyBaMM and would always be skipped in forks
     if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
@@ -249,7 +278,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
-    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_sdist]
+    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_macos_arm64_wheels, build_sdist]
     name: Open an issue if build fails
     if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest
