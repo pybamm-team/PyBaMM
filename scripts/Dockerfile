@@ -7,6 +7,7 @@ RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-
 RUN rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash pybamm
+RUN usermod -ou 1000 -g 0 pybamm
 USER pybamm
 
 WORKDIR /home/pybamm/
