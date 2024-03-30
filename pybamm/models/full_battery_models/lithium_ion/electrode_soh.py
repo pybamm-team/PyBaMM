@@ -112,8 +112,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.ocp_soc_100_dimensional
-        V_min = param.ocp_soc_0_dimensional
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -579,12 +579,8 @@ class ElectrodeSOHSolver:
 
         # Parameterize the OCP functions
         if self.OCV_function is None:
-            self.V_max = self.parameter_values.evaluate(
-                self.param.ocp_soc_100_dimensional
-            )
-            self.V_min = self.parameter_values.evaluate(
-                self.param.ocp_soc_0_dimensional
-            )
+            self.V_max = self.parameter_values.evaluate(self.param.ocp_soc_100)
+            self.V_min = self.parameter_values.evaluate(self.param.ocp_soc_0)
             if self.options["open-circuit potential"] == "MSMR":
                 # will solve for potentials at the sto limits, so no need
                 # to store a function
@@ -672,8 +668,8 @@ class ElectrodeSOHSolver:
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.ocp_soc_0_dimensional)
-            V_max = parameter_values.evaluate(param.ocp_soc_100_dimensional)
+            V_min = parameter_values.evaluate(param.ocp_soc_0)
+            V_max = parameter_values.evaluate(param.ocp_soc_100)
 
             if not V_min <= V_init <= V_max:
                 raise ValueError(
