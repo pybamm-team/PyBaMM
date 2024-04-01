@@ -132,7 +132,7 @@ class Exponential1DSubMesh(SubMesh1D):
 
     .. math::
         x_{k} = (b-a) +
-        \\frac{\mathrm{e}^{\\alpha k / N} - 1}{\mathrm{e}^{\\alpha} - 1} + a,
+        \\frac{\\mathrm{e}^{\\alpha k / N} - 1}{\\mathrm{e}^{\\alpha} - 1} + a,
 
     for k = 1, ..., N, where N is the number of nodes.
 
@@ -140,7 +140,7 @@ class Exponential1DSubMesh(SubMesh1D):
 
     .. math::
         x_{k} = (b-a) +
-        \\frac{\mathrm{e}^{-\\alpha k / N} - 1}{\mathrm{e}^{-\\alpha} - 1} + a,
+        \\frac{\\mathrm{e}^{-\\alpha k / N} - 1}{\\mathrm{e}^{-\\alpha} - 1} + a,
 
     for k = 1, ..., N.
 
@@ -149,7 +149,7 @@ class Exponential1DSubMesh(SubMesh1D):
 
     .. math::
         x_{k} = (b/2-a) +
-        \\frac{\mathrm{e}^{\\alpha k / N} - 1}{\mathrm{e}^{\\alpha} - 1} + a,
+        \\frac{\\mathrm{e}^{\\alpha k / N} - 1}{\\mathrm{e}^{\\alpha} - 1} + a,
 
     for k = 1, ..., N. The grid spacing is then reflected to contruct the grid
     on the full interval [a,b].
@@ -289,14 +289,12 @@ class UserSupplied1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts, edges=None):
-        # raise error if no edges passed
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
-        # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
                 f"""User-suppled edges has should have length (npts + 1) but has length
