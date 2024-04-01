@@ -1,6 +1,3 @@
-#
-# A general spatial method class
-#
 import pybamm
 import numpy as np
 from scipy.sparse import eye, kron, coo_matrix, csr_matrix, vstack

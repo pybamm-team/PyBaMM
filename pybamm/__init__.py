@@ -1,10 +1,3 @@
-#
-# Root of the pybamm module.
-# Provides access to all shared functionality (models, solvers, etc.).
-#
-# The code in this file is adapted from Pints
-# (see https://github.com/pints-team/pints)
-#
 import sys
 import os
 
