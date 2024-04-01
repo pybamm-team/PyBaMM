@@ -46,7 +46,7 @@ You can install the above with
 
 	.. code:: bash
 
-		brew install python graphviz libomp cmake
+		brew install python openblas gcc gfortran graphviz libomp cmake
 
 .. note::
 
