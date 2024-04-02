@@ -82,7 +82,7 @@ jobs:
         # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
 
       - name: Install Windows system dependencies
@@ -174,7 +174,7 @@ jobs:
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -226,7 +226,7 @@ jobs:
         # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
 
       - name: Install Windows system dependencies
