@@ -23,27 +23,14 @@ class TestSimulationExperiment(TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        C = model.default_parameter_values["Nominal cell capacity [A.h]"]
 
         self.assertEqual(sim.experiment.args, experiment.args)
-        op_conds = sim.experiment.operating_conditions_steps
-        self.assertEqual(op_conds[0].value, C / 20)
-        self.assertEqual(op_conds[1].value, -1)
-        self.assertEqual(op_conds[2].value, 4.1)
-        self.assertEqual(op_conds[3].value, 2)
-
-        Crate = 1 / C
-        self.assertEqual(
-            [op.duration for op in op_conds],
-            [3600, 3 / Crate * 3600, 24 * 3600, 24 * 3600],
-        )
+        steps = sim.experiment.steps
 
         model_I = sim.experiment_unique_steps_to_model[
-            op_conds[1].basic_repr()
+            steps[1].basic_repr()
         ]  # CC charge
-        model_V = sim.experiment_unique_steps_to_model[
-            op_conds[2].basic_repr()
-        ]  # CV hold
+        model_V = sim.experiment_unique_steps_to_model[steps[2].basic_repr()]  # CV hold
         self.assertIn(
             "Current cut-off [A] [experiment]",
             [event.name for event in model_V.events],
@@ -62,9 +49,9 @@ class TestSimulationExperiment(TestCase):
 
         sim = pybamm.Simulation(model, experiment="Discharge at C/20 for 1 hour")
         sim.build_for_experiment()
-        self.assertEqual(len(sim.experiment.operating_conditions_steps), 1)
+        self.assertEqual(len(sim.experiment.steps), 1)
         self.assertEqual(
-            sim.experiment.operating_conditions_steps[0].description,
+            sim.experiment.steps[0].description,
             "Discharge at C/20 for 1 hour",
         )
         sim = pybamm.Simulation(
@@ -72,7 +59,7 @@ class TestSimulationExperiment(TestCase):
             experiment=["Discharge at C/20 for 1 hour", pybamm.step.rest(60)],
         )
         sim.build_for_experiment()
-        self.assertEqual(len(sim.experiment.operating_conditions_steps), 2)
+        self.assertEqual(len(sim.experiment.steps), 2)
 
     def test_run_experiment(self):
         s = pybamm.step.string
@@ -82,7 +69,8 @@ class TestSimulationExperiment(TestCase):
                     s("Discharge at C/20 for 1 hour", temperature="30.5oC"),
                     s("Charge at 1 A until 4.1 V", temperature="24oC"),
                     s("Hold at 4.1 V until C/2", temperature="24oC"),
-                    "Discharge at 2 W for 1 hour",
+                    "Discharge at 2 W for 10 minutes",
+                    "Discharge at 4 Ohm for 10 minutes",
                 )
             ],
             temperature="-14oC",
@@ -102,6 +90,9 @@ class TestSimulationExperiment(TestCase):
         )
         np.testing.assert_array_almost_equal(
             sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, decimal=5
         )
 
         np.testing.assert_array_equal(
@@ -220,7 +211,7 @@ class TestSimulationExperiment(TestCase):
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
         self.assertEqual(
-            sorted([repr(step) for step in experiment.operating_conditions_steps]),
+            sorted([step.basic_repr() for step in experiment.steps]),
             sorted(list(sim.experiment_unique_steps_to_model.keys())),
         )
 
@@ -776,13 +767,47 @@ class TestSimulationExperiment(TestCase):
         sim.solve(calc_esoh=False)
 
         # Check that there are 4 steps
-        self.assertEqual(len(experiment.operating_conditions_steps), 4)
+        self.assertEqual(len(experiment.steps), 4)
 
         # Check that there are only 2 unique steps
         self.assertEqual(len(sim.experiment.unique_steps), 2)
 
         # Check that there are only 3 built models (unique steps + padding rest)
-        self.assertEqual(len(sim.op_conds_to_built_models), 3)
+        self.assertEqual(len(sim.steps_to_built_models), 3)
+
+    def test_experiment_custom_steps(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # Explicit control
+        def custom_step_constant(variables):
+            return 1
+
+        custom_constant = pybamm.step.CustomStepExplicit(
+            custom_step_constant, duration=1, period=0.1
+        )
+
+        experiment = pybamm.Experiment([custom_constant])
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve()
+        np.testing.assert_array_equal(sol["Current [A]"].data, 1)
+
+        # Implicit control (algebraic)
+        def custom_step_voltage(variables):
+            return 100 * (variables["Voltage [V]"] - 4.2)
+
+        for control in ["differential"]:
+            with self.subTest(control=control):
+                custom_step_alg = pybamm.step.CustomStepImplicit(
+                    custom_step_voltage, control=control, duration=100, period=10
+                )
+
+                experiment = pybamm.Experiment([custom_step_alg])
+                sim = pybamm.Simulation(model, experiment=experiment)
+                sol = sim.solve()
+                # sol.plot()
+                np.testing.assert_array_almost_equal(
+                    sol["Voltage [V]"].data[2:], 4.2, decimal=3
+                )
 
     def test_experiment_custom_termination(self):
         def neg_stoich_cutoff(variables):

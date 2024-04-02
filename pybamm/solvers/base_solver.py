@@ -1,6 +1,3 @@
-#
-# Base solver class
-#
 import copy
 import itertools
 from scipy.sparse import block_diag
@@ -357,7 +354,8 @@ class BaseSolver:
             )
             model.convert_to_format = "casadi"
 
-    def _get_vars_for_processing(self, model, inputs, calculate_sensitivities_explicit):
+    @staticmethod
+    def _get_vars_for_processing(model, inputs, calculate_sensitivities_explicit):
         vars_for_processing = {
             "model": model,
             "calculate_sensitivities_explicit": calculate_sensitivities_explicit,
@@ -412,8 +410,9 @@ class BaseSolver:
 
             return vars_for_processing
 
+    @staticmethod
     def _set_up_model_sensitivities_inplace(
-        self, model, inputs, calculate_sensitivities_explicit
+        model, inputs, calculate_sensitivities_explicit
     ):
         """
         Set up model attributes related to sensitivities.
@@ -998,8 +997,9 @@ class BaseSolver:
         else:
             return solutions
 
-    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
-        if model.discontinuity_events_eval == []:
+    @staticmethod
+    def _get_discontinuity_start_end_indices(model, inputs, t_eval):
+        if not model.discontinuity_events_eval:
             pybamm.logger.verbose("No discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
@@ -1038,7 +1038,7 @@ class BaseSolver:
             )
 
         # insert time points around discontinuities in t_eval
-        # keep track of sub sections to integrate by storing start and end indices
+        # keep track of subsections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
         eps = sys.float_info.epsilon
@@ -1057,7 +1057,8 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
+    @staticmethod
+    def _check_events_with_initial_conditions(t_eval, model, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1267,7 +1268,8 @@ class BaseSolver:
         else:
             return old_solution + solution
 
-    def get_termination_reason(self, solution, events):
+    @staticmethod
+    def get_termination_reason(solution, events):
         """
         Identify the cause for termination. In particular, if the solver terminated
         due to an event, (try to) pinpoint which event was responsible. If an event
@@ -1379,7 +1381,7 @@ class BaseSolver:
                         pybamm.SolverWarning,
                         stacklevel=2,
                     )
-                    # Add the event dictionaryto the solution object
+                    # Add the event dictionary to the solution object
                     solution.extrap_events = extrap_events
                 elif self._on_extrapolation == "error":
                     raise pybamm.SolverError(
@@ -1389,7 +1391,8 @@ class BaseSolver:
                         "outside these bounds."
                     )
 
-    def _set_up_model_inputs(self, model, inputs):
+    @staticmethod
+    def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
         inputs = inputs or {}
 
@@ -1437,21 +1440,21 @@ def process(
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
             :class:`casadi.Function`
-        evaluator for the Jacobian $\frac{\partial f}{\partial y}$
+        evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxSensitivities` or
             :class:`casadi.Function`
         evaluator for the parameter sensitivities
-        $\frac{\partial f}{\partial p}$
+        $\frac{\\partial f}{\\partial p}$
         of the function given by `symbol`
 
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
             :class:`casadi.Function`
         evaluator for product of the Jacobian with a vector $v$,
-        i.e. $\frac{\partial f}{\partial y} * v$
+        i.e. $\\frac{\\partial f}{\\partial y} * v$
     """
 
     def report(string):

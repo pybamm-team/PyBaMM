@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-12]
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -114,9 +114,9 @@ jobs:
 
       # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install SuiteSparse and SUNDIALS on macOS
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
@@ -134,7 +134,7 @@ jobs:
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_BUILD_MACOS: >
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload wheels for macOS amd64
         uses: actions/upload-artifact@v4
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         with:
           name: macos_amd64_wheels
           path: ./wheelhouse/*.whl
@@ -173,7 +173,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py

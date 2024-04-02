@@ -1,10 +1,3 @@
-#
-# Root of the pybamm module.
-# Provides access to all shared functionality (models, solvers, etc.).
-#
-# The code in this file is adapted from Pints
-# (see https://github.com/pints-team/pints)
-#
 import sys
 import os
 
@@ -213,8 +206,6 @@ from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
-from .solvers.scikits_dae_solver import ScikitsDaeSolver
-from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
 from .solvers.jax_solver import JaxSolver

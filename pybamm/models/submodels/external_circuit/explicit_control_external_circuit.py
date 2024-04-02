@@ -8,9 +8,6 @@ from .base_external_circuit import BaseModel
 class ExplicitCurrentControl(BaseModel):
     """External circuit with current control."""
 
-    def __init__(self, param, options):
-        super().__init__(param, options)
-
     def get_fundamental_variables(self):
         # Current is given as a function of time
         i_cell = self.param.current_density_with_time
@@ -31,9 +28,6 @@ class ExplicitCurrentControl(BaseModel):
 
 class ExplicitPowerControl(BaseModel):
     """External circuit with current set explicitly to hit target power."""
-
-    def __init__(self, param, options):
-        super().__init__(param, options)
 
     def get_coupled_variables(self, variables):
         param = self.param
@@ -57,9 +51,6 @@ class ExplicitPowerControl(BaseModel):
 
 class ExplicitResistanceControl(BaseModel):
     """External circuit with current set explicitly to hit target resistance."""
-
-    def __init__(self, param, options):
-        super().__init__(param, options)
 
     def get_coupled_variables(self, variables):
         param = self.param
