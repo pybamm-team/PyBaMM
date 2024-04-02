@@ -455,6 +455,8 @@ class BaseModel:
                             var_symbol,
                             f"FunctionParameter with inputs(s) '{input_names}'",
                         )
+                    else:
+                        submodel_info[var_name] = (var_symbol, "Unknown Type")
 
                 parameters = self._find_symbols_by_submodel(
                     pybamm.Parameter, submodel_name
