@@ -173,7 +173,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
-          brew install graphviz libomp 
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py
