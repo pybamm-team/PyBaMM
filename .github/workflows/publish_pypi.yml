@@ -116,7 +116,7 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS on macOS
         if: matrix.os == 'macos-12'
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
@@ -173,7 +173,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py
