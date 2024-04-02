@@ -1,4 +1,4 @@
-name: Build and publish package to PyPI
+name: Build and publish package to PyPI, TestPyPI, or Anaconda
 on:
   release:
     types: [published]
