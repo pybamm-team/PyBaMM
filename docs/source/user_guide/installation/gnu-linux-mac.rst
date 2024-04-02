@@ -30,7 +30,7 @@ To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
    .. code:: bash
 
-      brew install python3
+      brew install python
 
 
 Install PyBaMM
