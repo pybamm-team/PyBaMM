@@ -82,7 +82,8 @@ jobs:
         # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp gcc
+          brew install graphviz libomp  
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -225,7 +226,8 @@ jobs:
         # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp gcc
+          brew install graphviz libomp  
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'

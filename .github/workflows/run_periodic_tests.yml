@@ -77,7 +77,8 @@ jobs:
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
         run: |
           brew analytics off
-          brew install graphviz libomp gcc
+          brew install graphviz libomp  
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
