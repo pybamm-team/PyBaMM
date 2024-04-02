@@ -46,4 +46,3 @@ Next, you can test that PyBaMM has been installed correctly by running the follo
 
 If you encounter any issues with the installation through this channel, please feel free to report them to us on
 the `GitHub issue tracker <https://github.com/pybamm-team/PyBaMM/issues/new>`_.
-
