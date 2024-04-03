@@ -95,10 +95,6 @@ Optional - JaxSolver
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
-.. note::
-
-   The Jax solver is only supported for Python versions 3.9 through 3.12.
-
 .. code:: bash
 
 	  pip install "pybamm[jax]"
