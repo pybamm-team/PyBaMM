@@ -3,10 +3,11 @@ FROM continuumio/miniconda3:latest
 WORKDIR /
 
 RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-essential cmake pandoc texlive-latex-extra dvipng
+RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-essential cmake pandoc texlive-latex-extra dvipng sudo
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/bash pybamm
+RUN useradd -m -s /bin/bash pybamm && echo "pybamm:pybamm" | chpasswd && adduser pybamm sudo
+RUN usermod -ou 1000 -g 0 pybamm
 USER pybamm
 
 WORKDIR /home/pybamm/
