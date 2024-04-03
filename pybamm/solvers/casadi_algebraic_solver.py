@@ -1,6 +1,3 @@
-#
-# Casadi algebraic solver class
-#
 import casadi
 import pybamm
 import numpy as np
@@ -19,7 +16,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         The tolerance for the solver (default is 1e-6).
     extra_options : dict, optional
         Any options to pass to the CasADi rootfinder.
-        Please consult `CasADi documentation <https://tinyurl.com/y7hrxm7d>`_ for
+        Please consult `CasADi documentation <https://web.casadi.org/python-api/#rootfinding>`_ for
         details.
 
     """

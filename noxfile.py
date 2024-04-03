@@ -17,7 +17,6 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
-    "PIP_NO_BINARY": "scikits.odes",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -62,60 +61,28 @@ def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("coverage", silent=False)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+    if sys.version_info < (3, 9):
+        session.install("-e", ".[all,dev]", silent=False)
     else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("coverage", "run", "run-tests.py", "--nosub")
-    session.run("coverage", "combine")
-    session.run("coverage", "xml")
+        session.install("-e", ".[all,dev,jax]", silent=False)
+    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
 @nox.session(name="integration")
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+    if sys.version_info < (3, 9):
+        session.install("-e", ".[all,dev]", silent=False)
     else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
 
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
     session.run("python", "run-tests.py", "--doctest")
 
 
@@ -123,25 +90,10 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+    if sys.version_info < (3, 9):
+        session.install("-e", ".[all,dev]", silent=False)
     else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -162,7 +114,7 @@ def run_scripts(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,dev]", silent=False)
     session.run("python", "run-tests.py", "--scripts")
 
 
@@ -177,82 +129,36 @@ def set_dev(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.run(python, "-m", "pip", "install", "setuptools", external=True)
-    if sys.platform == "linux":
-        if sys.version_info > (3, 12):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax,odes]",
-                external=True,
-            )
+    if sys.version_info < (3, 9):
+        session.run(
+            python,
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            ".[all,dev]",
+            external=True,
+        )
     else:
-        if sys.version_info < (3, 9):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev]",
-                external=True,
-            )
-        else:
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
+        session.run(
+            python,
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            ".[all,dev,jax]",
+            external=True,
+        )
 
 
 @nox.session(name="tests")
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
+    if sys.version_info < (3, 9):
+        session.install("-e", ".[all,dev]", silent=False)
     else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
+        session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 

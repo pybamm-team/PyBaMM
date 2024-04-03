@@ -5,6 +5,7 @@ import pybamm
 import numpy as np
 from datetime import datetime
 from .step_termination import _read_termination
+import numbers
 
 _examples = """
 
@@ -25,17 +26,15 @@ _examples = """
     """
 
 
-class _Step:
+class BaseStep:
     """
     Class representing one step in an experiment.
     All experiment steps are functions that return an instance of this class.
-    This class is not intended to be used directly.
+    This class is not intended to be used directly, but can be subtyped to create a
+    custom experiment step.
 
     Parameters
     ----------
-    typ : str
-        The type of step, can be "current", "voltage", "c_rate", "power",
-        or "resistance".
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
         2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
@@ -52,15 +51,16 @@ class _Step:
         the value should be a valid temperature string, e.g. "25 oC".
     tags : str or list, optional
         A string or list of strings indicating the tags associated with the step.
-    datetime : str or datetime, optional
-        A string or list of strings indicating the tags associated with the step.
+    start_time : str or datetime, optional
+        The start time of the step.
     description : str, optional
         A description of the step.
+    direction : str, optional
+        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
     """
 
     def __init__(
         self,
-        typ,
         value,
         duration=None,
         termination=None,
@@ -69,14 +69,29 @@ class _Step:
         tags=None,
         start_time=None,
         description=None,
+        direction=None,
     ):
-        self.type = typ
+        # Check if drive cycle
+        self.is_drive_cycle = isinstance(value, np.ndarray)
+        if self.is_drive_cycle:
+            if value.ndim != 2 or value.shape[1] != 2:
+                raise ValueError(
+                    "Drive cycle must be a 2-column array with time in the first column"
+                    " and current/C-rate/power/voltage/resistance in the second"
+                )
+            # Check that drive cycle starts at t=0
+            t = value[:, 0]
+            if t[0] != 0:
+                raise ValueError("Drive cycle must start at t=0")
+
+        # Set duration
+        if duration is None:
+            duration = self.default_duration(value)
+        self.duration = _convert_time_to_seconds(duration)
 
         # Record all the args for repr and hash
-        self.repr_args = f"{typ}, {value}"
-        self.hash_args = f"{typ}, {value}"
-        if duration:
-            self.repr_args += f", duration={duration}"
+        self.repr_args = f"{value}, duration={duration}"
+        self.hash_args = f"{value}"
         if termination:
             self.repr_args += f", termination={termination}"
             self.hash_args += f", termination={termination}"
@@ -91,38 +106,27 @@ class _Step:
             self.repr_args += f", start_time={start_time}"
         if description:
             self.repr_args += f", description={description}"
+        if direction:
+            self.repr_args += f", direction={direction}"
+            self.hash_args += f", direction={direction}"
 
-        # Check if drive cycle
-        self.is_drive_cycle = isinstance(value, np.ndarray)
+        # If drive cycle, repeat the drive cycle until the end of the experiment,
+        # and create an interpolant
         if self.is_drive_cycle:
-            if value.ndim != 2 or value.shape[1] != 2:
-                raise ValueError(
-                    "Drive cycle must be a 2-column array with time in the first column"
-                    " and current/C-rate/power/voltage/resistance in the second"
-                )
-            if duration is not None:
-                t_max = _convert_time_to_seconds(duration)
-                self.duration = _convert_time_to_seconds(duration)
-                if t_max > value[-1, 0]:
-                    # duration longer than drive cycle values so loop
-                    nloop = np.ceil(t_max / value[-1, 0]).astype(int)
-                    tstep = np.diff(value[:, 0])[0]
-                    t = []
-                    y = []
-                    for i in range(nloop):
-                        t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
-                        y.append(value[:, 1])
-                    t = np.asarray(t).flatten()
-                    y = np.asarray(y).flatten()
-                else:
-                    t, y = value[:, 0], value[:, 1]
+            t_max = self.duration
+            if t_max > value[-1, 0]:
+                # duration longer than drive cycle values so loop
+                nloop = np.ceil(t_max / value[-1, 0]).astype(int)
+                tstep = np.diff(value[:, 0])[0]
+                t = []
+                y = []
+                for i in range(nloop):
+                    t.append(value[:, 0] + ((value[-1, 0] + tstep) * i))
+                    y.append(value[:, 1])
+                t = np.asarray(t).flatten()
+                y = np.asarray(y).flatten()
             else:
                 t, y = value[:, 0], value[:, 1]
-                self.duration = t.max()
-
-            # Check that drive cycle starts at t=0
-            if t[0] > 0:
-                raise ValueError("Drive cycle must start at t=0")
 
             self.value = pybamm.Interpolant(
                 t,
@@ -133,7 +137,6 @@ class _Step:
             self.period = np.diff(t).min()
         else:
             self.value = value
-            self.duration = _convert_time_to_seconds(duration)
             self.period = _convert_time_to_seconds(period)
 
         self.description = description
@@ -164,6 +167,29 @@ class _Step:
         self.next_start_time = None
         self.end_time = None
 
+        self.direction = direction
+
+    def copy(self):
+        """
+        Return a copy of the step.
+
+        Returns
+        -------
+        :class:`pybamm.Step`
+            A copy of the step.
+        """
+        return self.__class__(
+            self.value,
+            duration=self.duration,
+            termination=self.termination,
+            period=self.period,
+            temperature=self.temperature,
+            tags=self.tags,
+            start_time=self.start_time,
+            description=self.description,
+            direction=self.direction,
+        )
+
     def __str__(self):
         if self.description is not None:
             return self.description
@@ -171,7 +197,7 @@ class _Step:
             return repr(self)
 
     def __repr__(self):
-        return f"_Step({self.repr_args})"
+        return f"Step({self.repr_args})"
 
     def basic_repr(self):
         """
@@ -179,7 +205,7 @@ class _Step:
         and temperature, which are the variables involved in processing the model. Also
         used for hashing.
         """
-        return f"_Step({self.hash_args})"
+        return f"Step({self.hash_args})"
 
     def to_dict(self):
         """
@@ -191,7 +217,7 @@ class _Step:
             A dictionary containing the step information.
         """
         return {
-            "type": self.type,
+            "type": self.__class__.__name__,
             "value": self.value,
             "duration": self.duration,
             "termination": self.termination,
@@ -203,14 +229,108 @@ class _Step:
         }
 
     def __eq__(self, other):
-        return isinstance(other, _Step) and self.hash_args == other.hash_args
+        return isinstance(other, BaseStep) and self.hash_args == other.hash_args
 
     def __hash__(self):
         return hash(self.basic_repr())
 
-    @property
-    def unit(self):
-        return _type_to_units[self.type]
+    def default_duration(self, value):
+        """
+        Default duration for the step is one day (24 hours) or the duration of the
+        drive cycle
+        """
+        if isinstance(value, np.ndarray):
+            t = value[:, 0]
+            return t[-1]
+        else:
+            return 24 * 3600  # 24 hours in seconds
+
+    def process_model(self, model, parameter_values):
+        new_model = model.new_copy()
+        new_parameter_values = parameter_values.copy()
+        new_model, new_parameter_values = self.set_up(new_model, new_parameter_values)
+        self.update_model_events(new_model)
+
+        # Update temperature
+        if self.temperature is not None:
+            new_parameter_values["Ambient temperature [K]"] = self.temperature
+
+        # Parameterise the model
+        parameterised_model = new_parameter_values.process_model(
+            new_model, inplace=False
+        )
+
+        return parameterised_model
+
+    def update_model_events(self, new_model):
+        for term in self.termination:
+            event = term.get_event(new_model.variables, self)
+            if event is not None:
+                new_model.events.append(event)
+
+        # Keep the min and max voltages as safeguards but add some tolerances
+        # so that they are not triggered before the voltage limits in the
+        # experiment
+        for i, event in enumerate(new_model.events):
+            if event.name in ["Minimum voltage [V]", "Maximum voltage [V]"]:
+                new_model.events[i] = pybamm.Event(
+                    event.name, event.expression + 1, event.event_type
+                )
+
+
+class BaseStepExplicit(BaseStep):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def current_value(self, variables):
+        raise NotImplementedError
+
+    def set_up(self, new_model, new_parameter_values):
+        new_parameter_values["Current function [A]"] = self.current_value(
+            new_model.variables
+        )
+        return new_model, new_parameter_values
+
+
+class BaseStepImplicit(BaseStep):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def get_parameter_values(self, variables):
+        return {}
+
+    def get_submodel(self, model):
+        raise NotImplementedError
+
+    def set_up(self, new_model, new_parameter_values):
+        # Create a new model where the current density is now a variable
+        # To do so, we replace all instances of the current density in the
+        # model with a current density variable, which is obtained from the
+        # FunctionControl submodel
+        # check which kind of external circuit model we need (differential
+        # or algebraic)
+        # Build the new submodel and update the model with it
+        submodel = self.get_submodel(new_model)
+        variables = new_model.variables
+        submodel.variables = submodel.get_fundamental_variables()
+        variables.update(submodel.variables)
+        submodel.variables.update(submodel.get_coupled_variables(variables))
+        variables.update(submodel.variables)
+        submodel.set_rhs(variables)
+        submodel.set_algebraic(variables)
+        submodel.set_initial_conditions(variables)
+        new_model.rhs.update(submodel.rhs)
+        new_model.algebraic.update(submodel.algebraic)
+        new_model.initial_conditions.update(submodel.initial_conditions)
+
+        # Set the "current function" to be the variable defined in the submodel
+        new_parameter_values["Current function [A]"] = submodel.variables["Current [A]"]
+        # Update any other parameters as necessary
+        new_parameter_values.update(
+            self.get_parameter_values(variables), check_already_exists=False
+        )
+
+        return new_model, new_parameter_values
 
 
 _type_to_units = {
@@ -224,7 +344,7 @@ _type_to_units = {
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
     # If the time is a number, assume it is in seconds
-    if isinstance(time_and_units, (int, float)) or time_and_units is None:
+    if isinstance(time_and_units, numbers.Number) or time_and_units is None:
         return time_and_units
 
     # Split number and units
