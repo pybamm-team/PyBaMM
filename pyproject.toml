@@ -36,7 +36,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.23.5",
-    "scipy>=1.9.3",
+    "scipy>=1.9.3,<1.13.0",
     "casadi>=3.6.3",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
