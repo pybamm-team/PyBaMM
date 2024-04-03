@@ -85,6 +85,13 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
 3. You can execute PyBaMM-related commands, run tests develop & contribute from the container.
 
+.. note::
+
+    The default user for the container is ``pybamm`` with ``pybamm`` as password. The user belongs to
+    ``sudoers`` and ``root`` group, so the sudo command can be issued to install additional packages to
+    the container.  After a clean install, ``sudo apt-get update`` should be executed to update the source
+    list. Additional packages can be installed using ``sudo apt-get install [package_name]``.
+
 Exiting the Docker container
 ----------------------------
 
