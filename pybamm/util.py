@@ -22,7 +22,7 @@ import numpy as np
 import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
-# in the extras dependencies in pyproject.toml, and therefore must be kept in sync.
+# the extras dependencies in pyproject.toml, and therefore must be kept in sync.
 JAX_VERSION = "0.4"
 JAXLIB_VERSION = "0.4"
 
