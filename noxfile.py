@@ -121,14 +121,14 @@ def set_dev(session):
     # is fixed
     session.run(python, "-m", "pip", "install", "setuptools", external=True)
     session.run(
-            python,
-            "-m",
-            "pip",
-            "install",
-            "-e",
-            ".[all,dev,jax]",
-            external=True,
-        )
+        python,
+        "-m",
+        "pip",
+        "install",
+        "-e",
+        ".[all,dev,jax]",
+        external=True,
+    )
 
 
 @nox.session(name="tests")
