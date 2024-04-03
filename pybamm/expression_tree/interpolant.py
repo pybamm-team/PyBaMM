@@ -4,7 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy import interpolate
-from typing import Sequence
+from collections.abc import Sequence
 import numbers
 
 import pybamm
