@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Get number of cores on Windows
         id: get_num_cores
@@ -107,7 +107,7 @@ jobs:
       - uses: actions/setup-python@v5
         name: Set up Python
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
