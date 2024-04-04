@@ -6,7 +6,8 @@ from __future__ import annotations
 import numpy as np
 from scipy import special
 import sympy
-from typing import Sequence, Callable
+from typing import Callable
+from collections.abc import Sequence
 from typing_extensions import TypeVar
 
 import pybamm

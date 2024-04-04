@@ -5,7 +5,6 @@ import warnings
 import numbers
 
 from typing import Union
-from typing import List
 
 from functools import lru_cache
 
@@ -275,7 +274,7 @@ class IDAKLUJax:
         self,
         t: np.ndarray = None,
         inputs: Union[dict, None] = None,
-        output_variables: Union[List[str], None] = None,
+        output_variables: Union[list[str], None] = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
@@ -308,7 +307,7 @@ class IDAKLUJax:
         self,
         t: np.ndarray = None,
         inputs: Union[dict, None] = None,
-        output_variables: Union[List[str], None] = None,
+        output_variables: Union[list[str], None] = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 

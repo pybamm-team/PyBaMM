@@ -25,7 +25,7 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.8, 3.9, 3.10, 3.11, and 3.12)
+- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
 - The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
