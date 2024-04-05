@@ -1117,9 +1117,8 @@ class BaseSolver:
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        save : bool
-            Turn on to store the solution of all previous timesteps
-
+        save : bool, optional
+            Save solution with all previous timesteps. Defaults to True.
         Raises
         ------
         :class:`pybamm.ModelError`
