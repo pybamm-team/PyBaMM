@@ -12,14 +12,10 @@ from collections import OrderedDict
 
 if pybamm.have_jax():
     import jax
-
-
-def test_function(arg):
-    return arg + arg
-
-
-def test_function2(arg1, arg2):
-    return arg1 + arg2
+from tests import (
+    function_test,
+    multi_var_function_test,
+)
 
 
 class TestEvaluate(TestCase):
@@ -45,9 +41,7 @@ class TestEvaluate(TestCase):
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
-        self.assertEqual(
-            list(variable_symbols.values())[2], "{} + {}".format(var_a, var_b)
-        )
+        self.assertEqual(list(variable_symbols.values())[2], f"{var_a} + {var_b}")
 
         # test identical subtree
         constant_symbols = OrderedDict()
@@ -65,14 +59,10 @@ class TestEvaluate(TestCase):
         # test values of variable_symbols
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
         self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
-        self.assertEqual(
-            list(variable_symbols.values())[2], "{} + {}".format(var_a, var_b)
-        )
+        self.assertEqual(list(variable_symbols.values())[2], f"{var_a} + {var_b}")
 
         var_child = pybamm.id_to_python_variable(expr.children[0].id)
-        self.assertEqual(
-            list(variable_symbols.values())[3], "{} + {}".format(var_child, var_b)
-        )
+        self.assertEqual(list(variable_symbols.values())[3], f"{var_child} + {var_b}")
 
         # test unary op
         constant_symbols = OrderedDict()
@@ -90,7 +80,7 @@ class TestEvaluate(TestCase):
         # test values of variable_symbols
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
         self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
-        self.assertEqual(list(variable_symbols.values())[2], "-{}".format(var_b))
+        self.assertEqual(list(variable_symbols.values())[2], f"-{var_b}")
         var_child = pybamm.id_to_python_variable(expr.children[1].id)
         self.assertEqual(
             list(variable_symbols.values())[3], f"np.maximum({var_a},{var_child})"
@@ -99,17 +89,15 @@ class TestEvaluate(TestCase):
         # test function
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        expr = pybamm.Function(test_function, a)
+        expr = pybamm.Function(function_test, a)
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
         self.assertEqual(next(iter(constant_symbols.keys())), expr.id)
-        self.assertEqual(next(iter(constant_symbols.values())), test_function)
+        self.assertEqual(next(iter(constant_symbols.values())), function_test)
         self.assertEqual(next(iter(variable_symbols.keys())), a.id)
         self.assertEqual(list(variable_symbols.keys())[1], expr.id)
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
         var_funct = pybamm.id_to_python_variable(expr.id, True)
-        self.assertEqual(
-            list(variable_symbols.values())[1], "{}({})".format(var_funct, var_a)
-        )
+        self.assertEqual(list(variable_symbols.values())[1], f"{var_funct}({var_a})")
 
         # test matrix
         constant_symbols = OrderedDict()
@@ -144,7 +132,7 @@ class TestEvaluate(TestCase):
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
         self.assertEqual(
             list(variable_symbols.values())[2],
-            "np.concatenate(({},{}))".format(var_a, var_b),
+            f"np.concatenate(({var_a},{var_b}))",
         )
 
         # test domain concatentate
@@ -158,7 +146,7 @@ class TestEvaluate(TestCase):
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
         self.assertEqual(
             list(variable_symbols.values())[2],
-            "np.concatenate(({},{}))".format(var_a, var_b),
+            f"np.concatenate(({var_a},{var_b}))",
         )
 
         # test that Concatentation throws
@@ -203,7 +191,7 @@ class TestEvaluate(TestCase):
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(
             list(variable_symbols.values())[2],
-            "np.concatenate(({}[0:{}],{}[0:{}]))".format(var_a, a_pts, var_b, b_pts),
+            f"np.concatenate(({var_a}[0:{a_pts}],{var_b}[0:{b_pts}]))",
         )
 
         evaluator = pybamm.EvaluatorPython(expr)
@@ -237,14 +225,14 @@ class TestEvaluate(TestCase):
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
-        b0_str = "{}[0:{}]".format(var_b, b0_pts)
-        a0_str = "{}[0:{}]".format(var_a, a0_pts)
-        b1_str = "{}[{}:{}]".format(var_b, b0_pts, b0_pts + b1_pts)
+        b0_str = f"{var_b}[0:{b0_pts}]"
+        a0_str = f"{var_a}[0:{a0_pts}]"
+        b1_str = f"{var_b}[{b0_pts}:{b0_pts + b1_pts}]"
 
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(
             list(variable_symbols.values())[2],
-            "np.concatenate(({},{},{}))".format(a0_str, b0_str, b1_str),
+            f"np.concatenate(({a0_str},{b0_str},{b1_str}))",
         )
 
         evaluator = pybamm.EvaluatorPython(expr)
@@ -291,9 +279,9 @@ class TestEvaluate(TestCase):
         expr = a + b
         constant_str, variable_str = pybamm.to_python(expr)
         expected_str = (
-            "var_[0-9m]+ = y\[0:1\].*\\n"
-            "var_[0-9m]+ = y\[1:2\].*\\n"
-            "var_[0-9m]+ = var_[0-9m]+ \+ var_[0-9m]+"
+            r"var_[0-9m]+ = y\[0:1\].*\n"
+            r"var_[0-9m]+ = y\[1:2\].*\n"
+            r"var_[0-9m]+ = var_[0-9m]+ \+ var_[0-9m]+"
         )
 
         self.assertRegex(variable_str, expected_str)
@@ -314,12 +302,12 @@ class TestEvaluate(TestCase):
         self.assertEqual(result, 3)
 
         # test function(a*b)
-        expr = pybamm.Function(test_function, a * b)
+        expr = pybamm.Function(function_test, a * b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
-        expr = pybamm.Function(test_function2, a, b)
+        expr = pybamm.Function(multi_var_function_test, a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 5)
@@ -494,7 +482,7 @@ class TestEvaluate(TestCase):
         self.assertEqual(result, 3)
 
         # test function(a*b)
-        expr = pybamm.Function(test_function, a * b)
+        expr = pybamm.Function(function_test, a * b)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
@@ -503,7 +491,7 @@ class TestEvaluate(TestCase):
         expr = pybamm.exp(a * b)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, np.exp(6))
+        np.testing.assert_array_almost_equal(result, np.exp(6), decimal=15)
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)

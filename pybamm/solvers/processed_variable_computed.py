@@ -8,7 +8,7 @@ from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 
 
-class ProcessedVariableComputed(object):
+class ProcessedVariableComputed:
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -106,7 +106,7 @@ class ProcessedVariableComputed(object):
                     else:
                         # Raise error for 3D variable
                         raise NotImplementedError(
-                            "Shape not recognized for {} ".format(base_variables[0])
+                            f"Shape not recognized for {base_variables[0]} "
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 
@@ -149,8 +149,10 @@ class ProcessedVariableComputed(object):
             .transpose()
         )
 
-    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=[]):
+    def unroll_2D(self, realdata=None, n_dim1=None, n_dim2=None, axis_swaps=None):
         # initialise settings on first run
+        if axis_swaps is None:
+            axis_swaps = []
         if not self.unroll_params:
             self.unroll_params["n_dim1"] = n_dim1
             self.unroll_params["n_dim2"] = n_dim2

@@ -37,9 +37,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def silicon_ocp_lithiation_Mark2016(sto):
@@ -167,9 +165,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     E_r = 35000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
@@ -238,9 +234,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     E_r = 17800
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def electrolyte_diffusivity_Nyman2008(c_e, T):
@@ -400,7 +394,7 @@ def get_parameter_values():
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Primary: Maximum concentration in negative electrode [mol.m-3]": 28700.0,
         "Primary: Initial concentration in negative electrode [mol.m-3]": 27700.0,
-        "Primary: Negative electrode diffusivity [m2.s-1]": 5.5e-14,
+        "Primary: Negative particle diffusivity [m2.s-1]": 5.5e-14,
         "Primary: Negative electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
         "Negative electrode porosity": 0.25,
         "Primary: Negative electrode active material volume fraction": 0.735,
@@ -417,7 +411,7 @@ def get_parameter_values():
         "Primary: Negative electrode OCP entropic change [V.K-1]": 0.0,
         "Secondary: Maximum concentration in negative electrode [mol.m-3]": 278000.0,
         "Secondary: Initial concentration in negative electrode [mol.m-3]": 276610.0,
-        "Secondary: Negative electrode diffusivity [m2.s-1]": 1.67e-14,
+        "Secondary: Negative particle diffusivity [m2.s-1]": 1.67e-14,
         "Secondary: Negative electrode lithiation OCP [V]"
         "": silicon_ocp_lithiation_Mark2016,
         "Secondary: Negative electrode delithiation OCP [V]"
@@ -431,7 +425,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
-        "Positive electrode diffusivity [m2.s-1]": 4e-15,
+        "Positive particle diffusivity [m2.s-1]": 4e-15,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
         "Positive electrode active material volume fraction": 0.665,

@@ -5,7 +5,7 @@ import pybamm
 from .meshes import SubMesh
 import numpy as np
 
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class ScikitSubMesh2D(SubMesh):
@@ -27,7 +27,7 @@ class ScikitSubMesh2D(SubMesh):
     """
 
     def __init__(self, edges, coord_sys, tabs):
-        skfem = have_optional_dependency("skfem")
+        skfem = import_optional_dependency("skfem")
         self.edges = edges
         self.nodes = dict.fromkeys(["y", "z"])
         for var in self.nodes.keys():
@@ -79,7 +79,7 @@ class ScikitSubMesh2D(SubMesh):
         # check that two variables have been passed in
         if len(lims) != 2:
             raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
+                f"lims should contain exactly two variables, not {len(lims)}"
             )
 
         # get spatial variables
@@ -92,10 +92,8 @@ class ScikitSubMesh2D(SubMesh):
         # check coordinate system agrees
         if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
             raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
+                f"""spatial variables should have the same coordinate system,
+                but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"""
             )
         return spatial_vars, tabs
 
@@ -181,7 +179,7 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 edges[var.name] = np.linspace(
@@ -240,7 +238,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
-                "At present, side can only be 'top', but is set to {}".format(side)
+                f"At present, side can only be 'top', but is set to {side}"
             )
 
         spatial_vars, tabs = self.read_lims(lims)
@@ -251,7 +249,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             elif var.name == "y":
                 edges[var.name] = np.linspace(
@@ -305,7 +303,7 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
             if var.name not in ["y", "z"]:
                 raise pybamm.DomainError(
-                    "spatial variable must be y or z not {}".format(var.name)
+                    f"spatial variable must be y or z not {var.name}"
                 )
             else:
                 # Create N Chebyshev nodes in the interval (a,b)
@@ -362,11 +360,9 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
             # check that npts equals number of user-supplied edges
             if npts[var.name] != len(edges[var.name]):
                 raise pybamm.GeometryError(
-                    """User-suppled edges has should have length npts but has length {}.
-                     Number of points (npts) for variable {} in
-                     domain {} is {}.""".format(
-                        len(edges[var.name]), var.name, var.domain, npts[var.name]
-                    )
+                    f"""User-suppled edges has should have length npts but has length {len(edges[var.name])}.
+                     Number of points (npts) for variable {var.name} in
+                     domain {var.domain} is {npts[var.name]}."""
                 )
 
             # check end points of edges agree with spatial_lims

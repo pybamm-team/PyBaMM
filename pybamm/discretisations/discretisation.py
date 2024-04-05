@@ -19,7 +19,7 @@ def has_bc_of_form(symbol, side, bcs, form):
         return False
 
 
-class Discretisation(object):
+class Discretisation:
     """The discretisation class, with methods to process a model and replace
     Spatial Operators with Matrices and Variables with StateVectors
 
@@ -54,9 +54,7 @@ class Discretisation(object):
                     if not isinstance(mesh[domain], pybamm.SubMesh0D):
                         raise pybamm.DiscretisationError(
                             "Zero-dimensional spatial method for the "
-                            "{} domain requires a zero-dimensional submesh".format(
-                                domain
-                            )
+                            f"{domain} domain requires a zero-dimensional submesh"
                         )
 
         self._bcs = {}
@@ -74,7 +72,7 @@ class Discretisation(object):
     @y_slices.setter
     def y_slices(self, value):
         if not isinstance(value, dict):
-            raise TypeError("""y_slices should be dict, not {}""".format(type(value)))
+            raise TypeError(f"y_slices should be dict, not {type(value)}")
 
         self._y_slices = value
 
@@ -144,7 +142,7 @@ class Discretisation(object):
                 "to discretise it more times (e.g. for convergence studies)."
             )
 
-        pybamm.logger.info("Start discretising {}".format(model.name))
+        pybamm.logger.info(f"Start discretising {model.name}")
 
         # Make sure model isn't empty
         if (
@@ -169,21 +167,17 @@ class Discretisation(object):
                 if var.domain != []:
                     raise pybamm.DiscretisationError(
                         "Spatial method has not been given "
-                        "for variable {} with domain {}".format(var.name, var.domain)
+                        f"for variable {var.name} with domain {var.domain}"
                     )
 
         # Set the y split for variables
-        pybamm.logger.verbose("Set variable slices for {}".format(model.name))
+        pybamm.logger.verbose(f"Set variable slices for {model.name}")
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        pybamm.logger.verbose(
-            "Discretise boundary conditions for {}".format(model.name)
-        )
+        pybamm.logger.verbose(f"Discretise boundary conditions for {model.name}")
         self._bcs = self.process_boundary_conditions(model)
-        pybamm.logger.verbose(
-            "Set internal boundary conditions for {}".format(model.name)
-        )
+        pybamm.logger.verbose(f"Set internal boundary conditions for {model.name}")
         self.set_internal_boundary_conditions(model)
 
         # set up inplace vs not inplace
@@ -202,7 +196,7 @@ class Discretisation(object):
 
         model_disc.bcs = self.bcs
 
-        pybamm.logger.verbose("Discretise initial conditions for {}".format(model.name))
+        pybamm.logger.verbose(f"Discretise initial conditions for {model.name}")
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
         model_disc.concatenated_initial_conditions = concat_ics
@@ -210,11 +204,11 @@ class Discretisation(object):
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
-        pybamm.logger.verbose("Discretise variables for {}".format(model.name))
+        pybamm.logger.verbose(f"Discretise variables for {model.name}")
         model_disc.variables = self.process_dict(model.variables)
 
         # Process parabolic and elliptic equations
-        pybamm.logger.verbose("Discretise model equations for {}".format(model.name))
+        pybamm.logger.verbose(f"Discretise model equations for {model.name}")
         rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
         model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
         model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
@@ -226,9 +220,9 @@ class Discretisation(object):
 
         # Process events
         processed_events = []
-        pybamm.logger.verbose("Discretise events for {}".format(model.name))
+        pybamm.logger.verbose(f"Discretise events for {model.name}")
         for event in model.events:
-            pybamm.logger.debug("Discretise event '{}'".format(event.name))
+            pybamm.logger.debug(f"Discretise event '{event.name}'")
             processed_event = pybamm.Event(
                 event.name, self.process_symbol(event.expression), event.event_type
             )
@@ -236,21 +230,21 @@ class Discretisation(object):
         model_disc.events = processed_events
 
         # Create mass matrix
-        pybamm.logger.verbose("Create mass matrix for {}".format(model.name))
+        pybamm.logger.verbose(f"Create mass matrix for {model.name}")
         model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
             model_disc
         )
 
         # Save geometry
-        pybamm.logger.verbose("Save geometry for {}".format(model.name))
+        pybamm.logger.verbose(f"Save geometry for {model.name}")
         model_disc._geometry = getattr(self.mesh, "_geometry", None)
 
         # Check that resulting model makes sense
         if check_model:
-            pybamm.logger.verbose("Performing model checks for {}".format(model.name))
+            pybamm.logger.verbose(f"Performing model checks for {model.name}")
             self.check_model(model_disc)
 
-        pybamm.logger.info("Finish discretising {}".format(model.name))
+        pybamm.logger.info(f"Finish discretising {model.name}")
 
         # Record that the model has been discretised
         model_disc.is_discretised = True
@@ -286,7 +280,7 @@ class Discretisation(object):
                 sec_points = spatial_method._get_auxiliary_domain_repeats(
                     variable.domains
                 )
-                for i in range(sec_points):
+                for _ in range(sec_points):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
@@ -354,9 +348,7 @@ class Discretisation(object):
 
         def boundary_gradient(left_symbol, right_symbol):
             pybamm.logger.debug(
-                "Calculate boundary gradient ({} and {})".format(
-                    left_symbol, right_symbol
-                )
+                f"Calculate boundary gradient ({left_symbol} and {right_symbol})"
             )
             left_domain = left_symbol.domain[0]
             right_domain = right_symbol.domain[0]
@@ -466,9 +458,7 @@ class Discretisation(object):
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
                             "Boundary condition at r = 0 must be a homogeneous "
-                            "Neumann condition for {} coordinates".format(
-                                self.mesh[subdomain].coord_sys
-                            )
+                            f"Neumann condition for {self.mesh[subdomain].coord_sys} coordinates"
                         )
 
             # Handle any boundary conditions applied on the tabs
@@ -478,7 +468,7 @@ class Discretisation(object):
             # Process boundary conditions
             for side, bc in bcs.items():
                 eqn, typ = bc
-                pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
+                pybamm.logger.debug(f"Discretise {key} ({side} bc)")
                 processed_eqn = self.process_symbol(eqn)
                 processed_bcs[key][side] = (processed_eqn, typ)
 
@@ -513,10 +503,8 @@ class Discretisation(object):
 
         if domain != "current collector":
             raise pybamm.ModelError(
-                """Boundary conditions can only be applied on the tabs in the domain
-            'current collector', but {} has domain {}""".format(
-                    symbol, domain
-                )
+                f"""Boundary conditions can only be applied on the tabs in the domain
+            'current collector', but {symbol} has domain {domain}"""
             )
         # Replace keys with "left" and "right" as appropriate for 1D meshes
         if isinstance(mesh, pybamm.SubMesh1D):
@@ -694,7 +682,7 @@ class Discretisation(object):
                 else:
                     eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
-            pybamm.logger.debug("Discretise {!r}".format(eqn_key))
+            pybamm.logger.debug(f"Discretise {eqn_key!r}")
             processed_eqn = self.process_symbol(eqn)
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
@@ -898,16 +886,14 @@ class Discretisation(object):
             # model.check_well_posedness, but won't be if debug_mode is False
             try:
                 y_slices = self.y_slices[symbol]
-            except KeyError:
+            except KeyError as error:
                 raise pybamm.ModelError(
-                    """
-                    No key set for variable '{}'. Make sure it is included in either
+                    f"""
+                    No key set for variable '{symbol.name}'. Make sure it is included in either
                     model.rhs or model.algebraic in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        symbol.name
-                    )
-                )
+                    """
+                ) from error
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
             return symbol.reference + symbol.scale * pybamm.StateVector(
@@ -1001,7 +987,7 @@ class Discretisation(object):
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "
-                    "provided for {} ".format(given_variable_names)
+                    f"provided for {given_variable_names} "
                 )
 
         equations = list(var_eqn_dict.values())
@@ -1024,7 +1010,7 @@ class Discretisation(object):
             if not isinstance(ic_eval, np.ndarray):
                 raise pybamm.ModelError(
                     "initial conditions must be numpy array after discretisation but "
-                    "they are {} for variable '{}'.".format(type(ic_eval), var)
+                    f"they are {type(ic_eval)} for variable '{var}'."
                 )
 
             # Check that the initial condition is within the bounds
@@ -1035,7 +1021,7 @@ class Discretisation(object):
             ):
                 raise pybamm.ModelError(
                     "initial condition is outside of variable bounds "
-                    "{} for variable '{}'.".format(bounds, var)
+                    f"{bounds} for variable '{var}'."
                 )
 
         # Check initial conditions and model equations have the same shape
@@ -1045,20 +1031,14 @@ class Discretisation(object):
                 raise pybamm.ModelError(
                     "rhs and initial conditions must have the same shape after "
                     "discretisation but rhs.shape = "
-                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
-                        model.rhs[var].shape, model.initial_conditions[var].shape, var
-                    )
+                    f"{model.rhs[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
         for var in model.algebraic.keys():
             if model.algebraic[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
                     "algebraic and initial conditions must have the same shape after "
                     "discretisation but algebraic.shape = "
-                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
-                        model.algebraic[var].shape,
-                        model.initial_conditions[var].shape,
-                        var,
-                    )
+                    f"{model.algebraic[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
 
     def check_variables(self, model):
@@ -1092,9 +1072,7 @@ class Discretisation(object):
                     raise pybamm.ModelError(
                         "variable and its eqn must have the same shape after "
                         "discretisation but variable.shape = "
-                        "{} and rhs.shape = {} for variable '{}'. ".format(
-                            var.shape, model.rhs[rhs_var].shape, var
-                        )
+                        f"{var.shape} and rhs.shape = {model.rhs[rhs_var].shape} for variable '{var}'. "
                     )
 
     def is_variable_independent(self, var, all_vars_in_eqns):
@@ -1135,7 +1113,7 @@ class Discretisation(object):
             )
             if this_var_is_independent:
                 if len(model.rhs) != 1:
-                    pybamm.logger.info("removing variable {} from rhs".format(var))
+                    pybamm.logger.info(f"removing variable {var} from rhs")
                     my_initial_condition = model.initial_conditions[var]
                     model.variables[var.name] = pybamm.ExplicitTimeIntegral(
                         model.rhs[var], my_initial_condition

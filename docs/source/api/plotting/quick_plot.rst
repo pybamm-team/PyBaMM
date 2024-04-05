@@ -7,3 +7,6 @@ Quick Plot
   :members:
 
 .. autofunction:: pybamm.dynamic_plot
+
+.. autoclass:: pybamm.QuickPlotAxes
+  :members:

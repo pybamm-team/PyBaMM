@@ -87,7 +87,7 @@ class TestIDAKLUSolver(TestCase):
 
             # Check invalid atol type raises an error
             with self.assertRaises(pybamm.SolverError):
-                solver._check_atol_type({'key': 'value'}, [])
+                solver._check_atol_type({"key": "value"}, [])
 
             # enforce events that won't be triggered
             model.events = [pybamm.Event("an event", var + 1)]
@@ -550,25 +550,27 @@ class TestIDAKLUSolver(TestCase):
         # Construct a model and solve for all vairables, then test
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
-
-        # construct model
-        model = pybamm.lithium_ion.DFN()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
         input_parameters = {}  # Sensitivities dictionary
-        param.update({key: "[input]" for key in input_parameters})
-        param.process_model(model)
-        param.process_geometry(geometry)
-        var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
         t_eval = np.linspace(0, 3600, 100)
 
+        # construct model
+        def construct_model():
+            model = pybamm.lithium_ion.DFN()
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.update({key: "[input]" for key in input_parameters})
+            param.process_model(model)
+            param.process_geometry(geometry)
+            var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
+            mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            return model
+
         options = {
-            'linear_solver': 'SUNLinSol_KLU',
-            'jacobian': 'sparse',
-            'num_threads': 4,
+            "linear_solver": "SUNLinSol_KLU",
+            "jacobian": "sparse",
+            "num_threads": 4,
         }
 
         # Use a selection of variables of different types
@@ -585,13 +587,32 @@ class TestIDAKLUSolver(TestCase):
             "Throughput capacity [A.h]",  # ExplicitTimeIntegral
         ]
 
+        # vars that are not in the output_variables list, but are still accessible as
+        # they are either model parameters, or do not require access to the state vector
+        model_vars = [
+            "Time [s]",
+            "C-rate",
+            "Ambient temperature [K]",
+            "Porosity",
+        ]
+
+        # A list of variables that are not in the model and cannot be computed
+        inaccessible_vars = [
+            "Terminal voltage [V]",
+            "Negative particle surface stoichiometry",
+            "Electrode current density [A.m-2]",
+            "Power [W]",
+            "Resistance [Ohm]",
+        ]
+
         # Use the full model as comparison (tested separately)
         solver_all = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
         )
         sol_all = solver_all.solve(
-            model,
+            construct_model(),
             t_eval,
             inputs=input_parameters,
             calculate_sensitivities=True,
@@ -599,19 +620,25 @@ class TestIDAKLUSolver(TestCase):
 
         # Solve for a subset of variables and compare results
         solver = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
             output_variables=output_variables,
         )
         sol = solver.solve(
-            model,
+            construct_model(),
             t_eval,
             inputs=input_parameters,
         )
 
         # Compare output to sol_all
-        for varname in output_variables:
+        for varname in [*output_variables, *model_vars]:
             self.assertTrue(np.allclose(sol[varname].data, sol_all[varname].data))
+
+        # Check that the missing variables are not available in the solution
+        for varname in inaccessible_vars:
+            with self.assertRaises(KeyError):
+                sol[varname].data
 
         # Mock a 1D current collector and initialise (none in the model)
         sol["x_s [m]"].domain = ["current collector"]
@@ -640,9 +667,9 @@ class TestIDAKLUSolver(TestCase):
         t_eval = np.linspace(0, 3600, 100)
 
         options = {
-            'linear_solver': 'SUNLinSol_KLU',
-            'jacobian': 'sparse',
-            'num_threads': 4,
+            "linear_solver": "SUNLinSol_KLU",
+            "jacobian": "sparse",
+            "num_threads": 4,
         }
 
         # Use a selection of variables of different types
@@ -656,7 +683,8 @@ class TestIDAKLUSolver(TestCase):
 
         # Use the full model as comparison (tested separately)
         solver_all = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
         )
         sol_all = solver_all.solve(
@@ -668,7 +696,8 @@ class TestIDAKLUSolver(TestCase):
 
         # Solve for a subset of variables and compare results
         solver = pybamm.IDAKLUSolver(
-            atol=1e-8, rtol=1e-8,
+            atol=1e-8,
+            rtol=1e-8,
             options=options,
             output_variables=output_variables,
         )

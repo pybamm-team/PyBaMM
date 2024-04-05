@@ -1,6 +1,8 @@
 #
 # Base model class
 #
+from __future__ import annotations
+
 import numbers
 import warnings
 from collections import OrderedDict
@@ -11,7 +13,6 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.operations.serialise import Serialise
-from pybamm.util import have_optional_dependency
 
 
 class BaseModel:
@@ -102,6 +103,7 @@ class BaseModel:
         self._algebraic = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
+        self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
         self._events = []
         self._concatenated_rhs = None
@@ -130,10 +132,9 @@ class BaseModel:
         """
         Create a model instance from a serialised object.
         """
-        instance = cls.__new__(cls)
 
         # append the model name with _saved to differentiate
-        instance.__init__(name=properties["name"] + "_saved")
+        instance = cls(name=properties["name"] + "_saved")
 
         instance.options = properties["options"]
 
@@ -421,30 +422,232 @@ class BaseModel:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
 
-    def print_parameter_info(self):
-        self._parameter_info = ""
-        parameters = self._find_symbols(pybamm.Parameter)
-        for param in parameters:
-            self._parameter_info += f"{param.name} (Parameter)\n"
-        input_parameters = self._find_symbols(pybamm.InputParameter)
-        for input_param in input_parameters:
-            if input_param.domain == []:
-                self._parameter_info += f"{input_param.name} (InputParameter)\n"
-            else:
-                self._parameter_info += (
-                    f"{input_param.name} (InputParameter in {input_param.domain})\n"
+    def get_parameter_info(self, by_submodel=False):
+        """
+        Extracts the parameter information and returns it as a dictionary.
+        To get a list of all parameter-like objects without extra information,
+        use :py:attr:`model.parameters`.
+
+        Parameters
+        ----------
+        by_submodel : bool, optional
+            Whether to return the parameter info sub-model wise or not (default False)
+        """
+        parameter_info = {}
+
+        if by_submodel:
+            for submodel_name, submodel_vars in self._variables_by_submodel.items():
+                submodel_info = {}
+                for var_name, var_symbol in submodel_vars.items():
+                    if isinstance(var_symbol, pybamm.Parameter):
+                        submodel_info[var_name] = (var_symbol, "Parameter")
+                    elif isinstance(var_symbol, pybamm.InputParameter):
+                        if not var_symbol.domain:
+                            submodel_info[var_name] = (var_symbol, "InputParameter")
+                        else:
+                            submodel_info[var_name] = (
+                                var_symbol,
+                                f"InputParameter in {var_symbol.domain}",
+                            )
+                    elif isinstance(var_symbol, pybamm.FunctionParameter):
+                        input_names = "', '".join(var_symbol.input_names)
+                        submodel_info[var_name] = (
+                            var_symbol,
+                            f"FunctionParameter with inputs(s) '{input_names}'",
+                        )
+                    else:
+                        submodel_info[var_name] = (var_symbol, "Unknown Type")
+
+                parameters = self._find_symbols_by_submodel(
+                    pybamm.Parameter, submodel_name
                 )
-        function_parameters = self._find_symbols(pybamm.FunctionParameter)
-        for func_param in function_parameters:
-            # don't double count function parameters
-            if func_param.name not in self._parameter_info:
-                input_names = "'" + "', '".join(func_param.input_names) + "'"
-                self._parameter_info += (
-                    f"{func_param.name} (FunctionParameter "
-                    f"with input(s) {input_names})\n"
+                for param in parameters:
+                    submodel_info[param.name] = (param, "Parameter")
+
+                input_parameters = self._find_symbols_by_submodel(
+                    pybamm.InputParameter, submodel_name
+                )
+                for input_param in input_parameters:
+                    if not input_param.domain:
+                        submodel_info[input_param.name] = (
+                            input_param,
+                            "InputParameter",
+                        )
+                    else:
+                        submodel_info[input_param.name] = (
+                            input_param,
+                            f"InputParameter in {input_param.domain}",
+                        )
+
+                function_parameters = self._find_symbols_by_submodel(
+                    pybamm.FunctionParameter, submodel_name
+                )
+                for func_param in function_parameters:
+                    if func_param.name not in parameter_info:
+                        input_names = "', '".join(func_param.input_names)
+                        submodel_info[func_param.name] = (
+                            func_param,
+                            f"FunctionParameter with inputs(s) '{input_names}'",
+                        )
+
+                parameter_info[submodel_name] = submodel_info
+
+        else:
+            parameters = self._find_symbols(pybamm.Parameter)
+            for param in parameters:
+                parameter_info[param.name] = (param, "Parameter")
+
+            input_parameters = self._find_symbols(pybamm.InputParameter)
+            for input_param in input_parameters:
+                if not input_param.domain:
+                    parameter_info[input_param.name] = (input_param, "InputParameter")
+                else:
+                    parameter_info[input_param.name] = (
+                        input_param,
+                        f"InputParameter in {input_param.domain}",
+                    )
+
+            function_parameters = self._find_symbols(pybamm.FunctionParameter)
+            for func_param in function_parameters:
+                if func_param.name not in parameter_info:
+                    input_names = "', '".join(func_param.input_names)
+                    parameter_info[func_param.name] = (
+                        func_param,
+                        f"FunctionParameter with inputs(s) '{input_names}'",
+                    )
+
+        return parameter_info
+
+    def _calculate_max_lengths(self, parameter_dict):
+        """
+        Calculate the maximum length of parameters and parameter type in a dictionary
+
+        Parameters
+        ----------
+        parameter_dict : dict
+            The dict from which maximum lengths are calculated
+        """
+        max_name_length = max(
+            len(getattr(parameter, "name", str(parameter)))
+            for parameter, _ in parameter_dict.values()
+        )
+        max_type_length = max(
+            len(parameter_type) for _, parameter_type in parameter_dict.values()
+        )
+
+        return max_name_length, max_type_length
+
+    def _format_table_row(
+        self, param_name, param_type, max_name_length, max_type_length
+    ):
+        """
+        Format the parameter information in a formatted table
+
+        Parameters
+        ----------
+        param_name : str
+            The name of the parameter
+        param_type : str
+            The type of the parameter
+        max_name_length : int
+            The maximum length of the parameter in the dictionary
+        max_type_length : int
+            The maximum length of the parameter type in the dictionary
+        """
+        param_name_lines = [
+            param_name[i : i + max_name_length]
+            for i in range(0, len(param_name), max_name_length)
+        ]
+        param_type_lines = [
+            param_type[i : i + max_type_length]
+            for i in range(0, len(param_type), max_type_length)
+        ]
+        max_lines = max(len(param_name_lines), len(param_type_lines))
+
+        return [
+            f"│ {param_name_lines[i]:<{max_name_length}} │ {param_type_lines[i]:<{max_type_length}} │"
+            for i in range(max_lines)
+        ]
+
+    def print_parameter_info(self, by_submodel=False):
+        """
+        Print parameter information in a formatted table from a dictionary of parameters
+
+        Parameters
+        ----------
+        by_submodel : bool, optional
+            Whether to print the parameter info sub-model wise or not (default False)
+        """
+
+        if by_submodel:
+            parameter_info = self.get_parameter_info(by_submodel=True)
+            for submodel_name, submodel_vars in parameter_info.items():
+                if not submodel_vars:
+                    print(f"'{submodel_name}' submodel parameters: \nNo parameters\n")
+                else:
+                    print(f"'{submodel_name}' submodel parameters:")
+                    (
+                        max_param_name_length,
+                        max_param_type_length,
+                    ) = self._calculate_max_lengths(submodel_vars)
+
+                    table = [
+                        f"┌─{'─' * max_param_name_length}─┬─{'─' * max_param_type_length}─┐",
+                        f"│ {'Parameter':<{max_param_name_length}} │ {'Type of parameter':<{max_param_type_length}} │",
+                        f"├─{'─' * max_param_name_length}─┼─{'─' * max_param_type_length}─┤",
+                    ]
+
+                    for param, param_type in submodel_vars.values():
+                        param_name = getattr(param, "name", str(param))
+                        table.extend(
+                            self._format_table_row(
+                                param_name,
+                                param_type,
+                                max_param_name_length,
+                                max_param_type_length,
+                            )
+                        )
+                    table.extend(
+                        [
+                            f"└─{'─' * max_param_name_length}─┴─{'─' * max_param_type_length}─┘",
+                        ]
+                    )
+                    table = "\n".join(table) + "\n"
+                    table.encode("utf-8")
+                    print(table)
+
+        else:
+            info = self.get_parameter_info()
+            max_param_name_length, max_param_type_length = self._calculate_max_lengths(
+                info
+            )
+
+            table = [
+                f"┌─{'─' * max_param_name_length}─┬─{'─' * max_param_type_length}─┐",
+                f"│ {'Parameter':<{max_param_name_length}} │ {'Type of parameter':<{max_param_type_length}} │",
+                f"├─{'─' * max_param_name_length}─┼─{'─' * max_param_type_length}─┤",
+            ]
+
+            for param, param_type in info.values():
+                param_name = getattr(param, "name", str(param))
+                table.extend(
+                    self._format_table_row(
+                        param_name,
+                        param_type,
+                        max_param_name_length,
+                        max_param_type_length,
+                    )
                 )
 
-        print(self._parameter_info)
+            table.extend(
+                [
+                    f"└─{'─' * max_param_name_length}─┴─{'─' * max_param_type_length}─┘",
+                ]
+            )
+
+            table = "\n".join(table) + "\n"
+            table.encode("utf-8")
+            print(table)
 
     def _find_symbols(self, typ):
         """Find all the instances of `typ` in the model"""
@@ -460,6 +663,23 @@ class BaseModel:
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
+        )
+        return list(all_input_parameters)
+
+    def _find_symbols_by_submodel(self, typ, submodel):
+        """Find all the instances of `typ` in the submodel"""
+        unpacker = pybamm.SymbolUnpacker(typ)
+        all_input_parameters = unpacker.unpack_list_of_symbols(
+            list(self.submodels[submodel].rhs.values())
+            + list(self.submodels[submodel].algebraic.values())
+            + list(self.submodels[submodel].initial_conditions.values())
+            + [
+                x[side][0]
+                for x in self.submodels[submodel].boundary_conditions.values()
+                for side in x.keys()
+            ]
+            + list(self._variables_by_submodel[submodel].values())
+            + [event.expression for event in self.submodels[submodel].events]
         )
         return list(all_input_parameters)
 
@@ -502,13 +722,16 @@ class BaseModel:
 
     def build_fundamental(self):
         # Get the fundamental variables
+        self._variables_by_submodel = {submodel: {} for submodel in self.submodels}
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
-                "Getting fundamental variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Getting fundamental variables for {submodel_name} submodel ({self.name})"
             )
-            self.variables.update(submodel.get_fundamental_variables())
+            submodel_fundamental_variables = submodel.get_fundamental_variables()
+            self._variables_by_submodel[submodel_name].update(
+                submodel_fundamental_variables
+            )
+            self.variables.update(submodel_fundamental_variables)
 
         self._built_fundamental = True
 
@@ -527,31 +750,34 @@ class BaseModel:
             for submodel_name, submodel in self.submodels.items():
                 if submodel_name in submodels:
                     pybamm.logger.debug(
-                        "Getting coupled variables for {} submodel ({})".format(
-                            submodel_name, self.name
-                        )
+                        f"Getting coupled variables for {submodel_name} submodel ({self.name})"
                     )
                     try:
-                        self.variables.update(
-                            submodel.get_coupled_variables(self.variables)
+                        model_var_copy = self.variables.copy()
+                        updated_variables = submodel.get_coupled_variables(
+                            self.variables
                         )
+                        self._variables_by_submodel[submodel_name].update(
+                            {
+                                key: updated_variables[key]
+                                for key in updated_variables
+                                if key not in model_var_copy
+                            }
+                        )
+                        self.variables.update(updated_variables)
                         submodels.remove(submodel_name)
                     except KeyError as key:
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                "Missing variable for submodel '{}': {}.\n".format(
-                                    submodel_name, key
-                                )
+                                f"Missing variable for submodel '{submodel_name}': {key}.\n"
                                 + "Check the selected "
                                 "submodels provide all of the required variables."
-                            )
+                            ) from key
                         else:
                             # try setting coupled variables on next loop through
                             pybamm.logger.debug(
-                                "Can't find {}, trying other submodels first".format(
-                                    key
-                                )
+                                f"Can't find {key}, trying other submodels first"
                             )
         # Convert variables back into FuzzyDict
         self.variables = pybamm.FuzzyDict(self._variables)
@@ -560,41 +786,33 @@ class BaseModel:
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.verbose(
-                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+                f"Setting rhs for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_rhs(self.variables)
             pybamm.logger.verbose(
-                "Setting algebraic for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting algebraic for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
             pybamm.logger.verbose(
-                "Setting initial conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.verbose(
-                "Updating {} submodel ({})".format(submodel_name, self.name)
-            )
+            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
 
     def build_model(self):
         self._build_model()
         self._built = True
-        pybamm.logger.info("Finish building {}".format(self.name))
+        pybamm.logger.info(f"Finish building {self.name}")
 
     def _build_model(self):
         # Check if already built
@@ -604,7 +822,7 @@ class BaseModel:
                 `model.update` instead."""
             )
 
-        pybamm.logger.info("Start building {}".format(self.name))
+        pybamm.logger.info(f"Start building {self.name}")
 
         if self._built_fundamental is False:
             self.build_fundamental()
@@ -642,7 +860,7 @@ class BaseModel:
                         "model.initial_conditions must appear in the solution with "
                         "the same key as the variable name. In the solution provided, "
                         f"'{e.args[0]}' was not found."
-                    )
+                    ) from e
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 0:
@@ -666,7 +884,7 @@ class BaseModel:
                             "model.initial_conditions must appear in the solution with "
                             "the same key as the variable name. In the solution "
                             f"provided, {e.args[0]}"
-                        )
+                        ) from e
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:
@@ -739,7 +957,7 @@ class BaseModel:
         if len(ids1.intersection(ids2)) != 0:
             variables = ids1.intersection(ids2)
             raise pybamm.ModelError(
-                "Submodel incompatible: duplicate variables '{}'".format(variables)
+                f"Submodel incompatible: duplicate variables '{variables}'"
             )
         dict1.update(dict2)
 
@@ -777,12 +995,12 @@ class BaseModel:
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
                         "time derivative of variable found "
-                        "({}) in rhs equation {}".format(node, key)
+                        f"({node}) in rhs equation {key}"
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
                         "time derivative of state vector found "
-                        "({}) in rhs equation {}".format(node, key)
+                        f"({node}) in rhs equation {key}"
                     )
 
         # Check that no variable time derivatives exist in the algebraic equations
@@ -790,13 +1008,13 @@ class BaseModel:
             for node in eq.pre_order():
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in algebraic"
-                        "equation {}".format(node, key)
+                        f"time derivative of variable found ({node}) in algebraic"
+                        f"equation {key}"
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
-                        "time derivative of state vector found ({}) in algebraic"
-                        "equation {}".format(node, key)
+                        f"time derivative of state vector found ({node}) in algebraic"
+                        f"equation {key}"
                     )
 
     def check_well_determined(self, post_discretisation):
@@ -838,8 +1056,8 @@ class BaseModel:
                 ]
             )
             all_vars_in_eqns.update(vars_in_eqns)
-        for var, side_eqn in self.boundary_conditions.items():
-            for side, (eqn, typ) in side_eqn.items():
+        for _, side_eqn in self.boundary_conditions.items():
+            for _, (eqn, _) in side_eqn.items():
                 vars_in_eqns = unpacker.unpack_symbol(eqn)
                 all_vars_in_eqns.update(vars_in_eqns)
 
@@ -886,7 +1104,7 @@ class BaseModel:
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
                 raise pybamm.ModelError(
-                    """no initial condition given for variable '{}'""".format(var)
+                    f"""no initial condition given for variable '{var}'"""
                 )
 
     def check_variables(self):
@@ -908,13 +1126,11 @@ class BaseModel:
         for var in all_vars:
             if var not in vars_in_keys:
                 raise pybamm.ModelError(
-                    """
-                    No key set for variable '{}'. Make sure it is included in either
+                    f"""
+                    No key set for variable '{var}'. Make sure it is included in either
                     model.rhs or model.algebraic, in an unmodified form
                     (e.g. not Broadcasted)
-                    """.format(
-                        var
-                    )
+                    """
                 )
 
     def check_no_repeated_keys(self):
@@ -924,9 +1140,7 @@ class BaseModel:
 
         if not rhs_keys.isdisjoint(alg_keys):
             raise pybamm.ModelError(
-                "Multiple equations specified for variables {}".format(
-                    rhs_keys.intersection(alg_keys)
-                )
+                f"Multiple equations specified for variables {rhs_keys.intersection(alg_keys)}"
             )
 
     def info(self, symbol_name):
@@ -969,8 +1183,8 @@ class BaseModel:
             except pybamm.DiscretisationError as e:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, model should be "
-                    "discretised before exporting casadi functions ({})".format(e)
-                )
+                    f"discretised before exporting casadi functions ({e})"
+                ) from e
 
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
@@ -1141,9 +1355,7 @@ class BaseModel:
         This will return first five model equations
         >>> model.latexify(newline=False)[1:5]
         """
-        sympy = have_optional_dependency("sympy")
-        if sympy:
-            from pybamm.expression_tree.operations.latexify import Latexify
+        from pybamm.expression_tree.operations.latexify import Latexify
 
         return Latexify(self, filename, newline).latexify(
             output_variables=output_variables
@@ -1213,12 +1425,13 @@ class BaseModel:
                 Plotting may not be available.
                 """,
                 pybamm.ModelWarning,
+                stacklevel=2,
             )
 
         Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)
 
 
-def load_model(filename, battery_model: BaseModel = None):
+def load_model(filename, battery_model: BaseModel | None = None):
     """
     Load in a saved model from a JSON file
 
@@ -1286,9 +1499,7 @@ class EquationDict(dict):
                 equations[var] = eqn
             if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
                 raise pybamm.DomainError(
-                    "variable and equation in '{}' must have the same domain".format(
-                        self.name
-                    )
+                    f"variable and equation in '{self.name}' must have the same domain"
                 )
 
         # For initial conditions, check that the equation doesn't contain any
@@ -1302,9 +1513,7 @@ class EquationDict(dict):
                     variable_in_equation = next(iter(unpacker.unpack_symbol(eqn)))
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
-                        "but '{!r}' found in initial conditions for '{}'".format(
-                            variable_in_equation, var
-                        )
+                        f"but '{variable_in_equation!r}' found in initial conditions for '{var}'"
                     )
 
         return equations
@@ -1335,11 +1544,9 @@ class BoundaryConditionsDict(dict):
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
+                        f"""
+                        boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'
                         """
-                        boundary condition types must be Dirichlet or Neumann, not '{}'
-                        """.format(
-                            bc[1]
-                        )
                     )
 
         return boundary_conditions

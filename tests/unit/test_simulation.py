@@ -204,18 +204,50 @@ class TestSimulation(TestCase):
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
 
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        og_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": og_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1})
+
         # Test whether initial_soc works with half cell (solve)
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model)
-        sim.solve([0,1], initial_soc = 0.9)
+        sim.solve([0, 1], initial_soc=0.9)
         self.assertEqual(sim._built_initial_soc, 0.9)
 
         # Test whether initial_soc works with half cell (build)
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model)
-        sim.build(initial_soc = 0.9)
+        sim.build(initial_soc=0.9)
         self.assertEqual(sim._built_initial_soc, 0.9)
 
         # Test whether initial_soc works with half cell when it is a voltage
@@ -227,7 +259,7 @@ class TestSimulation(TestCase):
         options = {"working electrode": "positive"}
         parameter_values["Current function [A]"] = 0.0
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
-        sol = sim.solve([0,1], initial_soc = "{} V".format(ucv))
+        sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
         voltage = sol["Terminal voltage [V]"].entries
         self.assertAlmostEqual(voltage[0], ucv, places=5)
 
@@ -237,6 +269,41 @@ class TestSimulation(TestCase):
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
+
+    def test_solve_with_initial_soc_with_input_param_in_ocv(self):
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+    def test_esoh_with_input_param(self):
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
+        param = model.default_parameter_values
+        original_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
@@ -302,11 +369,9 @@ class TestSimulation(TestCase):
             sim = pybamm.Simulation(model)
             sim.solve([0, 600])
             with self.assertRaisesRegex(
-                    NotImplementedError,
-                    "Cannot save simulation if model format is python"
+                NotImplementedError, "Cannot save simulation if model format is python"
             ):
                 sim.save(test_name)
-
 
     def test_load_param(self):
         # Test load_sim for parameters imports
@@ -393,11 +458,15 @@ class TestSimulation(TestCase):
         # now solve and plot
         t_eval = np.linspace(0, 100, 5)
         sim.solve(t_eval=t_eval)
-        sim.plot(testing=True)
+        sim.plot(show_plot=False)
 
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
             sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+            with self.assertRaisesRegex(
+                ValueError, "The simulation has not been solved yet."
+            ):
+                sim.create_gif()
             sim.solve(t_eval=[0, 10])
 
             # Create a temporary file name
@@ -407,7 +476,7 @@ class TestSimulation(TestCase):
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
             # call the plot method before creating the GIF
-            sim.plot(testing=True)
+            sim.plot(show_plot=False)
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     def test_drive_cycle_interpolant(self):

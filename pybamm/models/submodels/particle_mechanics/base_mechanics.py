@@ -50,7 +50,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         )
         eps_s = variables[f"{Domain} electrode active material volume fraction"]
 
-        #use a tangential approximation for omega
+        # use a tangential approximation for omega
         sto = variables[f"{Domain} particle concentration"]
         Omega = pybamm.r_average(domain_param.Omega(sto, T))
         R0 = domain_param.prim.R

@@ -74,9 +74,7 @@ class Mesh(dict):
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
-                                "Points not given for a variable in domain '{}'".format(
-                                    domain
-                                )
+                                f"Points not given for a variable in domain '{domain}'"
                             )
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
@@ -87,8 +85,8 @@ class Mesh(dict):
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
                 if spatial_variable == "tabs":
-                    for tab, position_size in spatial_limits.items():
-                        for position_size, sym in position_size.items():
+                    for tab, position_info in spatial_limits.items():
+                        for position_size, sym in position_info.items():
                             if isinstance(sym, pybamm.Symbol):
                                 sym_eval = sym.evaluate()
                                 geometry[domain]["tabs"][tab][position_size] = sym_eval
@@ -104,7 +102,7 @@ class Mesh(dict):
                                         "geometry. Make sure that something like "
                                         "`param.process_geometry(geometry)` has been "
                                         "run."
-                                    )
+                                    ) from error
                                 else:
                                     raise error
                         elif isinstance(sym, numbers.Number):
@@ -272,4 +270,4 @@ class MeshGenerator:
         return self.submesh_type(lims, npts, **self.submesh_params)
 
     def __repr__(self):
-        return "Generator for {}".format(self.submesh_type.__name__)
+        return f"Generator for {self.submesh_type.__name__}"

@@ -350,6 +350,44 @@ class BaseUnitTestLithiumIon:
         options = {"operating mode": external_circuit_function}
         self.check_well_posedness(options)
 
+    def test_well_posed_external_circuit_function_1plus1D(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Voltage [V]"]
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "operating mode": external_circuit_function,
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_function_2plus1D(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Voltage [V]"]
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "operating mode": external_circuit_function,
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_particle_phases(self):
         options = {"particle phases": "2"}
         self.check_well_posedness(options)

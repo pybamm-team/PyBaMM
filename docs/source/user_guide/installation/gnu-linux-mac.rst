@@ -1,4 +1,4 @@
-GNU-Linux & MacOS
+GNU/Linux & macOS
 =================
 
 .. contents::
@@ -6,24 +6,16 @@ GNU-Linux & MacOS
 Prerequisites
 -------------
 
-To use PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
+To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
 
-.. tab:: Debian-based distributions (Debian, Ubuntu, Linux Mint)
+.. tab:: Debian-based distributions (Debian, Ubuntu)
 
-   To install Python 3 on Debian-based distributions (Debian, Ubuntu, Linux Mint), open a terminal and run
-
-   .. code:: bash
-
-      sudo apt update
-      sudo apt install python3
-
-.. tab:: Fedora/CentOS
-
-   On Fedora or CentOS, you can use DNF or Yum. For example
+   To install Python 3 on Debian-based distributions (Debian, Ubuntu), open a terminal and run
 
    .. code:: bash
 
-      sudo dnf install python3
+      sudo apt-get update
+      sudo apt-get install python3
 
 .. tab:: macOS
 
@@ -38,7 +30,8 @@ To use PyBaMM, you must have Python 3.8, 3.9, 3.10, or 3.11 installed.
 
    .. code:: bash
 
-      brew install python3
+      brew install python
+
 
 Install PyBaMM
 --------------
@@ -50,7 +43,7 @@ User install
 
 We recommend to install PyBaMM within a virtual environment, in order
 not to alter any distribution Python files.
-First, make sure you are using Python 3.8, 3.9, 3.10, or 3.11.
+First, make sure you are using Python 3.8, 3.9, 3.10, 3.11, or 3.12.
 To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash
@@ -84,11 +77,10 @@ library beforehand.
 
 .. tab:: macOS
 
-   In a terminal, run the following commands:
+   In a terminal, run the following command:
 
    .. code:: bash
 
-      brew install sundials
       pip install pybamm
 
 PyBaMM’s required dependencies (such as ``numpy``, ``casadi``, etc) will be
@@ -97,43 +89,11 @@ installed automatically when you install PyBaMM using ``pip``.
 For an introduction to virtual environments, see
 (https://realpython.com/python-virtual-environments-a-primer/).
 
-.. _scikits.odes-label:
-
-Optional - scikits.odes solver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Users can install `scikits.odes <https://github.com/bmcage/odes>`__ in
-order to use the wrapped SUNDIALS ODE and DAE
-`solvers <https://docs.pybamm.org/en/latest/source/api/solvers/scikits_solvers.html>`__.
-Currently, only GNU/Linux and macOS are supported.
-
-.. tab:: GNU/Linux
-
-   In a terminal, run the following commands:
-
-   .. code:: bash
-
-	   apt install libopenblas-dev
-	   pybamm_install_odes
-
-   The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
-   system (under ``~/.local``), before installing ``scikits.odes``. (Alternatively, one can install SUNDIALS without this script and run ``pip install pybamm[odes]`` to install ``pybamm`` with ``scikits.odes``.)
-
-.. tab:: macOS
-
-   In a terminal, run the following command:
-
-   .. code:: bash
-
-	  pip install scikits.odes
-
-   Assuming that SUNDIALS was installed as described :ref:`above<user-install-label>`.
 
 Optional - JaxSolver
 ~~~~~~~~~~~~~~~~~~~~
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
-Currently, only GNU/Linux and macOS are supported.
 
 .. code:: bash
 

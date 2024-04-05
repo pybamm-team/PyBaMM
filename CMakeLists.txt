@@ -37,6 +37,7 @@ if(NOT PYBIND11_DIR)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
+# The sources list should mirror the list in setup.py
 pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
@@ -50,6 +51,8 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp
+  pybamm/solvers/c_solvers/idaklu/idaklu_jax.cpp
+  pybamm/solvers/c_solvers/idaklu/idaklu_jax.hpp
   pybamm/solvers/c_solvers/idaklu/common.hpp
   pybamm/solvers/c_solvers/idaklu/python.hpp
   pybamm/solvers/c_solvers/idaklu/python.cpp
@@ -64,25 +67,33 @@ if (NOT DEFINED USE_PYTHON_CASADI)
   set(USE_PYTHON_CASADI TRUE)
 endif()
 
+# Use importlib to find the casadi path without importing it. This is useful
+# to find the path for the build-time dependency, not the run-time dependency.
 execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
-    "import casadi as _; print(_.__path__[0])"
+    "import importlib.util; print(next(iter(importlib.util.find_spec('casadi').submodule_search_locations)))"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
-  message("Found python casadi path: ${CASADI_DIR}")
+  message("Found Python casadi path: ${CASADI_DIR}")
 endif()
 
 if(${USE_PYTHON_CASADI})
-  message("Trying to link against python casadi package")
-  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+  message("Trying to link against Python casadi package")
+  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED NO_DEFAULT_PATH)
 else()
-  message("Trying to link against any casadi package apart from the python one")
+  message("Trying to link against any casadi package apart from the Python one")
   set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
   find_package(casadi CONFIG REQUIRED)
 endif()
+
+set_target_properties(
+  idaklu PROPERTIES
+  INSTALL_RPATH "${CASADI_DIR}"
+  INSTALL_RPATH_USE_LINK_PATH TRUE
+)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials

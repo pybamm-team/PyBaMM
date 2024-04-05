@@ -54,7 +54,7 @@ for ax, i, j in zip(
 
             time = 0
             runs = 20
-            for k in range(0, runs):
+            for _ in range(0, runs):
                 solution = sim.solve([0, 3500])
                 time += solution.solve_time.value
             time = time / runs
@@ -84,7 +84,7 @@ plt.savefig(
 
 content = f"## Solve Time vs Number of states\n<img src='./benchmark_images/time_vs_no_of_states_{pybamm.__version__}.png'>\n"
 
-with open("./benchmarks/release_work_precision_sets.md", "r") as original:
+with open("./benchmarks/release_work_precision_sets.md") as original:
     data = original.read()
 with open("./benchmarks/release_work_precision_sets.md", "w") as modified:
     modified.write(f"{content}\n{data}")

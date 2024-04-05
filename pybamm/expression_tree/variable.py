@@ -1,11 +1,17 @@
 #
 # Variable class
 #
-
+from __future__ import annotations
 import numpy as np
 import numbers
 import pybamm
-from pybamm.util import have_optional_dependency
+import sympy
+from pybamm.type_definitions import (
+    DomainType,
+    AuxiliaryDomainType,
+    DomainsType,
+    Numeric,
+)
 
 
 class VariableBase(pybamm.Symbol):
@@ -49,14 +55,14 @@ class VariableBase(pybamm.Symbol):
 
     def __init__(
         self,
-        name,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        bounds=None,
-        print_name=None,
-        scale=1,
-        reference=0,
+        name: str,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
+        bounds: tuple[pybamm.Symbol] | None = None,
+        print_name: str | None = None,
+        scale: float | pybamm.Symbol | None = 1,
+        reference: float | pybamm.Symbol | None = 0,
     ):
         if isinstance(scale, numbers.Number):
             scale = pybamm.Scalar(scale)
@@ -82,7 +88,7 @@ class VariableBase(pybamm.Symbol):
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values):
+    def bounds(self, values: tuple[Numeric, Numeric]):
         if values is None:
             values = (-np.inf, np.inf)
         else:
@@ -103,7 +109,13 @@ class VariableBase(pybamm.Symbol):
 
     def set_id(self):
         self._id = hash(
-            (self.__class__, self.name, self.scale, self.reference, *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]))
+            (
+                self.__class__,
+                self.name,
+                self.scale,
+                self.reference,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []]),
+            )
         )
 
     def create_copy(self):
@@ -123,7 +135,6 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -177,7 +188,7 @@ class Variable(VariableBase):
         Default is 0.
     """
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Symbol):
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:
@@ -231,7 +242,7 @@ class VariableDot(VariableBase):
         Default is 0.
     """
 
-    def get_variable(self):
+    def get_variable(self) -> pybamm.Variable:
         """
         return a :class:`.Variable` corresponding to this VariableDot
 
@@ -240,7 +251,7 @@ class VariableDot(VariableBase):
         """
         return Variable(self.name[:-1], domains=self.domains, scale=self.scale)
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Symbol) -> pybamm.Scalar:
         if variable == self:
             return pybamm.Scalar(1)
         elif variable == pybamm.t:

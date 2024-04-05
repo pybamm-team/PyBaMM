@@ -84,7 +84,7 @@ class TestQuickPlot(TestCase):
         self.assertNotEqual(quick_plot.axis_limits[("a",)], new_axis)
 
         # check dynamic plot loads
-        quick_plot.dynamic_plot(testing=True)
+        quick_plot.dynamic_plot(show_plot=False)
 
         quick_plot.slider_update(0.01)
 
@@ -117,7 +117,7 @@ class TestQuickPlot(TestCase):
         self.assertNotEqual(quick_plot.axis_limits[var_key], new_axis)
 
         # check dynamic plot loads
-        quick_plot.dynamic_plot(testing=True)
+        quick_plot.dynamic_plot(show_plot=False)
 
         quick_plot.slider_update(0.01)
 
@@ -181,20 +181,20 @@ class TestQuickPlot(TestCase):
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
+        self.assertEqual(quick_plot.spatial_unit, r"$\mu$m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="m")
         self.assertEqual(quick_plot.spatial_unit, "m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="mm")
         self.assertEqual(quick_plot.spatial_unit, "mm")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="um")
-        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
+        self.assertEqual(quick_plot.spatial_unit, r"$\mu$m")
         with self.assertRaisesRegex(ValueError, "spatial unit"):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
         # Test 2D variables
         quick_plot = pybamm.QuickPlot(solution, ["2D variable"])
         quick_plot.plot(0)
-        quick_plot.dynamic_plot(testing=True)
+        quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(0.01)
 
         with self.assertRaisesRegex(NotImplementedError, "Cannot plot 2D variables"):
@@ -294,8 +294,9 @@ class TestQuickPlot(TestCase):
         with TemporaryDirectory() as dir_name:
             test_stub = os.path.join(dir_name, "spm_sim_test")
             test_file = f"{test_stub}.gif"
-            quick_plot.create_gif(number_of_images=3, duration=3,
-                                  output_filename=test_file)
+            quick_plot.create_gif(
+                number_of_images=3, duration=3, output_filename=test_file
+            )
             assert not os.path.exists(f"{test_stub}*.png")
             assert os.path.exists(test_file)
         pybamm.close_plots()
@@ -439,7 +440,7 @@ class TestQuickPlot(TestCase):
                 "Voltage [V]",
             ],
         )
-        quick_plot.dynamic_plot(testing=True)
+        quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(1)
 
         # check 2D (y,z space) variables update properly for different time units
@@ -503,9 +504,18 @@ class TestQuickPlot(TestCase):
         quick_plot = pybamm.QuickPlot(
             solutions=[sol1, sol2], output_variables=output_variables
         )
-        quick_plot.dynamic_plot(testing=True)
+        quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(1)
         pybamm.close_plots()
+
+
+class TestQuickPlotAxes(unittest.TestCase):
+    def test_quick_plot_axes(self):
+        axes = pybamm.QuickPlotAxes()
+        axes.add(("test 1", "test 2"), 1)
+        self.assertEqual(axes[0], 1)
+        self.assertEqual(axes.by_variable("test 1"), 1)
+        self.assertEqual(axes.by_variable("test 2"), 1)
 
 
 if __name__ == "__main__":

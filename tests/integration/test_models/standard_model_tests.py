@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 
-class StandardModelTest(object):
+class StandardModelTest:
     """Basic processing test for the models."""
 
     def __init__(
@@ -170,7 +170,7 @@ class StandardModelTest(object):
 
         new_solution = new_solver.solve(new_model, t_eval)
 
-        for x, val in enumerate(self.solution.all_ys):
+        for x, _ in enumerate(self.solution.all_ys):
             np.testing.assert_array_almost_equal(
                 new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
             )
@@ -195,7 +195,7 @@ class StandardModelTest(object):
             self.test_outputs()
 
 
-class OptimisationsTest(object):
+class OptimisationsTest:
     """Test that the optimised models give the same result as the original model."""
 
     def __init__(self, model, parameter_values=None, disc=None):

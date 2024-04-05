@@ -9,7 +9,7 @@ import numpy as np
 from scipy.sparse import coo_matrix
 
 import pybamm
-from pybamm.util import have_optional_dependency
+import sympy
 
 EMPTY_DOMAINS = {
     "primary": [],
@@ -104,9 +104,7 @@ class TestBinaryOperators(TestCase):
         self.assertEqual((a**b).diff(b).evaluate(y=y), 5**3 * np.log(5))
         self.assertEqual((a**b).diff(a).evaluate(y=y), 3 * 5**2)
         self.assertEqual((a**b).diff(a**b).evaluate(), 1)
-        self.assertEqual(
-            (a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4
-        )
+        self.assertEqual((a**a).diff(a).evaluate(y=y), 5**5 * np.log(5) + 5 * 5**4)
         self.assertEqual((a**a).diff(b).evaluate(y=y), 0)
 
         # addition
@@ -412,8 +410,8 @@ class TestBinaryOperators(TestCase):
         )
 
         # Test that smooth min/max are used when the setting is changed
-        pybamm.settings.min_smoothing = 10
-        pybamm.settings.max_smoothing = 10
+        pybamm.settings.min_max_mode = "soft"
+        pybamm.settings.min_max_smoothing = 10
 
         self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.softminus(a, b, 10)))
         self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.softplus(a, b, 10)))
@@ -425,8 +423,46 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(str(pybamm.maximum(a, b)), str(b))
 
         # Change setting back for other tests
-        pybamm.settings.min_smoothing = "exact"
-        pybamm.settings.max_smoothing = "exact"
+        pybamm.settings.set_smoothing_parameters("exact")
+
+    def test_smooth_minus_plus(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+
+        minimum = pybamm.smooth_min(a, b, 3000)
+        self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
+        self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
+
+        maximum = pybamm.smooth_max(a, b, 3000)
+        self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
+        self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
+
+        minimum = pybamm.smooth_min(a, b, 1)
+        self.assertEqual(
+            str(minimum),
+            "0.5 * (1.0 + y[0:1] - sqrt(1.0 + (1.0 - y[0:1]) ** 2.0))",
+        )
+        maximum = pybamm.smooth_max(a, b, 1)
+        self.assertEqual(
+            str(maximum),
+            "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])",
+        )
+
+        # Test that smooth min/max are used when the setting is changed
+        pybamm.settings.min_max_mode = "smooth"
+
+        pybamm.settings.min_max_smoothing = 1
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.smooth_min(a, b, 1)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.smooth_max(a, b, 1)))
+
+        pybamm.settings.min_max_smoothing = 3000
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual(str(pybamm.minimum(a, b)), str(a))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(b))
+
+        # Change setting back for other tests
+        pybamm.settings.set_smoothing_parameters("exact")
 
     def test_binary_simplifications(self):
         a = pybamm.Scalar(0)
@@ -754,7 +790,6 @@ class TestBinaryOperators(TestCase):
         self.assertEqual(pybamm.inner(a3, a3).evaluate(), 9)
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
         # Test print_name
         pybamm.Addition.print_name = "test"
         self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))
