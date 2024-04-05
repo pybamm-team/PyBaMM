@@ -536,8 +536,10 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
         # if self.options['open-circuit potential'] == 'Plett':
-        self.K = pybamm.Parameter(f'{pref}{Domain} particle hysteresis decay rate')
-        self.K_x = pybamm.Parameter(f'{pref}{Domain} particle hysteresis switching factor')
+        self.K = pybamm.Parameter(f"{pref}{Domain} particle hysteresis decay rate")
+        self.K_x = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis switching factor"
+        )
         self.h_init = pybamm.Scalar(0)
 
         if self.options["open-circuit potential"] != "MSMR":
@@ -649,11 +651,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         """Capacity change as a function of stoichiometry"""
         c_max = self.c_max
         epsilon_s_av = self.epsilon_s_av
-        V_electrode = self.main_param.A_cc*self.domain_param.L
+        V_electrode = self.main_param.A_cc * self.domain_param.L
         Li_max = c_max * V_electrode * epsilon_s_av
         Q_max = Li_max * self.main_param.F / 3600
         return Q_max * sto
-
 
     def dUdT(self, sto):
         """

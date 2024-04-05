@@ -75,11 +75,12 @@ class TestMPM(TestCase):
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode OCP [V]"
-                "": parameter_values["Negative electrode OCP [V]"],
+                "Negative electrode OCP [V]" "": parameter_values[
+                    "Negative electrode OCP [V]"
+                ],
                 "Negative particle hysteresis decay rate": 1,
-                "Negative particle hysteresis switching factor":1,
-                "Negative electrode OCP hysteresis [V]":lambda sto: 1,
+                "Negative particle hysteresis switching factor": 1,
+                "Negative electrode OCP hysteresis [V]": lambda sto: 1,
             },
             check_already_exists=False,
         )
