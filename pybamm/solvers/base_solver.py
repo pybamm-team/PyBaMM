@@ -710,16 +710,16 @@ class BaseSolver:
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions. All calls to solve must pass in the same model or
             an error is raised
-        t_eval : numeric type
-            The times (in seconds) at which to compute the solution
+        t_eval : None, list or ndarray, optional
+            The times (in seconds) at which to compute the solution. Defaults to None.
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivities : list of str or bool
-            If true, solver calculates sensitivities of all input parameters.
+        calculate_sensitivities : list of str or bool, optional
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
 
@@ -1117,9 +1117,8 @@ class BaseSolver:
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        save : bool
-            Turn on to store the solution of all previous timesteps
-
+        save : bool, optional
+            Save solution with all previous timesteps. Defaults to True.
         Raises
         ------
         :class:`pybamm.ModelError`
