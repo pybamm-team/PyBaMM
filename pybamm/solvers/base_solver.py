@@ -912,7 +912,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.Pool(processes=nproc) as p:
+                    with mp.get_context("fork").Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
