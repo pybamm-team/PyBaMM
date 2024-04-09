@@ -73,7 +73,7 @@ class Citations:
             bib_data = parse_file(citations_file, bib_format="bibtex")
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
-        except ModuleNotFoundError: # pragma: no cover
+        except ModuleNotFoundError:  # pragma: no cover
             pybamm.logger.warning(
                 "Citations could not be read because the 'pybtex' library is not installed. "
                 "Install 'pybamm[cite]' to enable citation reading."
@@ -97,7 +97,7 @@ class Citations:
 
             # Add to database
             self._all_citations[key] = new_citation
-        except ModuleNotFoundError: # pragma: no cover
+        except ModuleNotFoundError:  # pragma: no cover
             pybamm.logger.warning(
                 f"Could not add citation for '{key}' because the 'pybtex' library is not installed. "
                 "Install 'pybamm[cite]' to enable adding citations."
@@ -176,7 +176,7 @@ class Citations:
                 raise KeyError(
                     f"Not a bibtex citation or known citation: {key}"
                 ) from error
-        except ModuleNotFoundError: # pragma: no cover
+        except ModuleNotFoundError:  # pragma: no cover
             pybamm.logger.warning(
                 f"Could not parse citation for '{key}' because the 'pybtex' library is not installed. "
                 "Install 'pybamm[cite]' to enable citation parsing."
@@ -264,7 +264,7 @@ class Citations:
             else:
                 with open(filename, "w") as f:
                     f.write(citations)
-        except ModuleNotFoundError: # pragma: no cover
+        except ModuleNotFoundError:  # pragma: no cover
             pybamm.logger.warning(
                 "Could not print citations because the 'pybtex' library is not installed. "
                 "Please, install 'pybamm[cite]' to print citations."
