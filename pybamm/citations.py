@@ -179,7 +179,7 @@ class Citations:
         except ModuleNotFoundError:
             pybamm.logger.warning(
                 f"Could not parse citation for '{key}' because the 'pybtex' library is not installed. "
-                "Install 'pybtex' to enable citation parsing."
+                "Install 'pybamm[cite]' to enable citation parsing."
             )
 
     def _tag_citations(self):
