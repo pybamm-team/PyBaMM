@@ -267,7 +267,7 @@ class Citations:
         except ModuleNotFoundError:
             pybamm.logger.warning(
                 "Could not print citations because the 'pybtex' library is not installed. "
-                "Please, install 'pybtex' to print citations."
+                "Please, install 'pybamm[cite]' to print citations."
             )
 
 
