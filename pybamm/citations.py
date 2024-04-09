@@ -100,7 +100,7 @@ class Citations:
         except ModuleNotFoundError:
             pybamm.logger.warning(
                 f"Could not add citation for '{key}' because the 'pybtex' library is not installed. "
-                "Install 'pybtex' to enable adding citations."
+                "Install 'pybamm[cite]' to enable adding citations."
             )
 
     def _add_citation_tag(self, key, entry):
