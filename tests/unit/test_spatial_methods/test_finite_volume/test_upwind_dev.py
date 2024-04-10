@@ -7,7 +7,7 @@ u = pybamm.Variable("u", domain="domain")
 u_an = x + (pybamm.t - x) * ((x - pybamm.t) > 0)
 v = pybamm.PrimaryBroadcastToEdges(1, ["domain"])
 # rhs = - pybamm.div(pybamm.upwind(u) * v) + 1
-rhs = - pybamm.div(pybamm.upwind(u) * v)
+rhs = -pybamm.div(pybamm.upwind(u) * v)
 # rhs = - pybamm.div(u * v) + 1
 model.boundary_conditions = {
     u: {
