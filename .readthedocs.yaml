@@ -33,8 +33,7 @@ build:
     # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
       - git fetch --unshallow
-    # Altered PDF build and upload job, attributed to
-    # https://stackoverflow.com/a/76992101/14001839
+    # Altered PDF build and upload job
     # This also runs on PR builds, but does not upload the PDF
     post_build:
       - mkdir --parents $READTHEDOCS_OUTPUT/pdf/

@@ -59,7 +59,6 @@ class Citations:
         Returns the qualified name of classes that call :meth:`register` internally.
         Gets cached in order to reduce the number of calls.
         """
-        # Attributed to https://stackoverflow.com/a/53490973
         caller_name = _getframe().f_back.f_back.f_locals["self"].__class__.__qualname__
         return caller_name
 
