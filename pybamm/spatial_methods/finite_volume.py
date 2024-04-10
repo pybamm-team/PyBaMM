@@ -1396,7 +1396,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             Direction in which to apply the operator (upwind or downwind)
         """
         submesh = self.mesh[symbol.domain]
-        n = submesh.npts
 
         if symbol not in bcs:
             raise pybamm.ModelError(
