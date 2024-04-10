@@ -5,12 +5,17 @@ import multiprocessing as mp
 import numbers
 import sys
 import warnings
+import platform
 
 import casadi
 import numpy as np
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+
+# Set context for parallel processing depending on the platform
+if platform.system() == "Darwin" or platform.system() == "Linux":
+    mp.set_start_method("fork")
 
 
 class BaseSolver:
@@ -912,7 +917,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.get_context("fork").Pool(processes=nproc) as p:
+                    with mp.Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
