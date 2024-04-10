@@ -1400,8 +1400,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         if symbol not in bcs:
             raise pybamm.ModelError(
-                "Boundary conditions must be provided for "
-                f"{direction}ing '{symbol}'"
+                "Boundary conditions must be provided for " f"{direction}ing '{symbol}'"
             )
 
         if direction == "upwind":
@@ -1415,7 +1414,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 f"{direction}ing '{symbol}'"
             )
 
-        # Extract only the relevant boundary condition as the system might have both    
+        # Extract only the relevant boundary condition as the system might have both
         bc_subset = {bc_side: bcs[symbol][bc_side]}
         symbol_out, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
         return symbol_out

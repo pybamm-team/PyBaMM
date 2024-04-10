@@ -37,7 +37,7 @@ model_disc = disc.process_model(model, inplace=False)
 
 # print(model_disc.rhs[u].children[1].children[0].entries.toarray())
 solver = pybamm.CasadiSolver()
-solution =solver.solve(model_disc, [0, 10])
+solution = solver.solve(model_disc, [0, 10])
 
-plot = pybamm.QuickPlot(solution,[["u", "analytical"]])
+plot = pybamm.QuickPlot(solution, [["u", "analytical"]])
 plot.dynamic_plot()

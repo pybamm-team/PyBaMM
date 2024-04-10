@@ -25,7 +25,7 @@ class UnaryOperator(pybamm.Symbol):
     child : :class:`Symbol`
         child node
     domains : dict
-        A dictionary equivalent to {'primary': domain, auxiliary_domains}. 
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}.
     """
 
     def __init__(
@@ -401,7 +401,7 @@ class SpatialOperator(UnaryOperator):
     child : :class:`Symbol`
         child node
     domains : dict
-        A dictionary equivalent to {'primary': domain, auxiliary_domains}. 
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}.
     """
 
     def __init__(
@@ -1159,7 +1159,7 @@ class Downwind(UpwindDownwind):
     def __init__(self, child):
         super().__init__("downwind", child)
 
-        
+
 class NotConstant(UnaryOperator):
     """Special class to wrap a symbol that should not be treated as a constant."""
 
