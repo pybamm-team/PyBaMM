@@ -1412,7 +1412,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 f"{direction}ing '{symbol}'"
             )
 
-        # Extract only the relevant boundary condition as the system might have both
+        # Extract only the relevant boundary condition as the model might have both
         bc_subset = {bc_side: bcs[symbol][bc_side]}
         symbol_out, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
         return symbol_out
