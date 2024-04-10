@@ -464,7 +464,8 @@ class QuickPlot:
         ----------
         t : float
             Dimensional time (in 'time_units') at which to plot.
-        dynamic : bool
+        dynamic : bool, optional
+            If True, creates a dynamic plot with a slider.
 
         """
 
