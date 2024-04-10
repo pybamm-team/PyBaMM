@@ -31,7 +31,7 @@ To install PyBaMM, you will need:
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
 - ``graphviz`` (optional), if you wish to build the documentation locally.
-- ``pandoc`` to run the example Jupyter notebooks.
+- ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
 
 You can install the above with
 
