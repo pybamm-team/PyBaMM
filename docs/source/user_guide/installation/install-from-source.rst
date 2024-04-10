@@ -25,7 +25,7 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.8, 3.9, 3.10, and 3.11)
+- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
 - The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
@@ -34,31 +34,34 @@ To install PyBaMM, you will need:
 
 You can install the above with
 
-.. tab:: Ubuntu
+.. tab:: Ubuntu/Debian
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake
 
 	Where ``X`` is the version sub-number.
-
-	.. note::
-
-		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
-		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 .. tab:: MacOS
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp
+		brew install python openblas gcc gfortran graphviz libomp cmake
+
+.. note::
+
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas``.
+
+    On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
-You can install it with
+You can install it to your local user account (make sure you are not within a virtual environment) with
 
 .. code:: bash
 
 	  python3.X -m pip install --user nox
+
+Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
 
 Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
@@ -81,6 +84,24 @@ If you are running windows, you can simply skip this section and jump to :ref:`p
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
 Both libraries are installed in ``~/.local``.
 
+For users requiring more control over the installation process, the ``pybamm-requires`` session supports additional command-line arguments:
+
+- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
+
+  Example:
+
+  .. code:: bash
+
+      nox -s pybamm-requires -- --install-dir [custom_directory_path]
+
+- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
+
+  Example:
+
+  .. code:: bash
+
+      nox -s pybamm-requires -- --force
+
 Manual install of build time requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -98,6 +119,25 @@ PyBaMM ships with a Python script that automates points 2. and 3. You can run it
 
 	  python scripts/install_KLU_Sundials.py
 
+This script supports optional arguments for custom installations:
+
+- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
+  By default, they are installed in ``~/.local``.
+
+  Example:
+
+  .. code:: bash
+
+      python scripts/install_KLU_Sundials.py --install-dir [custom_directory_path]
+
+- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
+
+  Example:
+
+  .. code:: bash
+
+      python scripts/install_KLU_Sundials.py --force
+
 .. _pybamm-install:
 
 Installing PyBaMM
@@ -105,8 +145,8 @@ Installing PyBaMM
 
 You should now have everything ready to build and install PyBaMM successfully.
 
-Using Nox (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~
+Using ``Nox`` (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
@@ -121,7 +161,7 @@ It comes ready with PyBaMM and some useful development tools like `pre-commit <h
 
 You can now activate the environment with
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux and MacOS (bash)
 
 	.. code:: bash
 
@@ -152,7 +192,7 @@ tools for development and documentation:
 
 	  pip install -e .[all,dev,docs]
 
-If you are using ``zsh``, you would need to use different pattern matching:
+If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
 .. code:: bash
 
@@ -167,7 +207,7 @@ Running the tests
 Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-You can use Nox to run the unit tests and example notebooks in isolated virtual environments.
+You can use ``Nox`` to run the unit tests and example notebooks in isolated virtual environments.
 
 The default command
 
@@ -175,7 +215,7 @@ The default command
 
 	nox
 
-will run pre-commit, install ``Linux`` dependencies, and run the unit tests.
+will run pre-commit, install ``Linux`` and ``macOS`` dependencies, and run the unit tests.
 This can take several minutes.
 
 To just run the unit tests, use
@@ -261,9 +301,9 @@ Here are some additional useful commands you can run with ``Nox``:
 - ``nox -s docs --non-interactive``: Builds the documentation without serving it locally (using ``sphinx-build`` instead of ``sphinx-autobuild``).
 
 Troubleshooting
-===============
+---------------
 
-**Problem:** I’ve made edits to source files in PyBaMM, but these are
+**Problem:** I have made edits to source files in PyBaMM, but these are
 not being used when I run my Python script.
 
 **Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
@@ -281,11 +321,11 @@ sure each command was successful.
 One possibility is that you have not set your ``LD_LIBRARY_PATH`` to
 point to the sundials library, type ``echo $LD_LIBRARY_PATH`` and make
 sure one of the directories printed out corresponds to where the
-sundials libraries are located.
+SUNDIALS libraries are located.
 
 Another common reason is that you forget to install a BLAS library such
-as OpenBLAS before installing sundials. Check the cmake output when you
-configured Sundials, it might say:
+as OpenBLAS before installing SUNDIALS. Check the cmake output when you
+configured SUNDIALS, it might say:
 
 ::
 
@@ -294,5 +334,5 @@ configured Sundials, it might say:
 
 If this is the case, on a Debian or Ubuntu system you can install
 OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
-``brew install openblas`` for Mac OS) and then re-install sundials using
+``brew install openblas`` for Mac OS) and then re-install SUNDIALS using
 the instructions above.

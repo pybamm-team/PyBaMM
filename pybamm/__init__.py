@@ -1,10 +1,3 @@
-#
-# Root of the pybamm module.
-# Provides access to all shared functionality (models, solvers, etc.).
-#
-# The code in this file is adapted from Pints
-# (see https://github.com/pints-team/pints)
-#
 import sys
 import os
 
@@ -47,13 +40,14 @@ from .util import (
     get_parameters_filepath,
     have_jax,
     install_jax,
-    have_optional_dependency,
+    import_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
+
 #
 # Classes for the Expression Tree
 #
@@ -163,7 +157,6 @@ from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
 from .parameters.parameter_sets import parameter_sets
-from .parameters_cli import add_parameter, remove_parameter, edit_parameter
 
 #
 # Mesh and Discretisation classes
@@ -189,6 +182,11 @@ from .meshes.scikit_fem_submeshes import (
 )
 
 #
+# Serialisation
+#
+from .models.base_model import load_model
+
+#
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
@@ -208,13 +206,12 @@ from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
-from .solvers.scikits_dae_solver import ScikitsDaeSolver
-from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
+from .solvers.idaklu_jax import IDAKLUJax
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #
@@ -222,12 +219,13 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .experiment.experiment import Experiment
 from . import experiment
+from .experiment import step
 
 
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components

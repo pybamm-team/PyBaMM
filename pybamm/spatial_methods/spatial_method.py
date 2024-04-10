@@ -1,6 +1,3 @@
-#
-# A general spatial method class
-#
 import pybamm
 import numpy as np
 from scipy.sparse import eye, kron, coo_matrix, csr_matrix, vstack
@@ -13,11 +10,6 @@ class SpatialMethod:
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a divergence operator.
-
-    Parameters
-    ----------
-    mesh : :class: `pybamm.Mesh`
-        Contains all the submeshes for discretisation
     """
 
     def __init__(self, options=None):
@@ -331,7 +323,7 @@ class SpatialMethod:
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
-        Returns the boundary value or flux using the approriate expression for the
+        Returns the boundary value or flux using the appropriate expression for the
         spatial method. To do this, we create a sparse vector 'bv_vector' that extracts
         either the first (for side="left") or last (for side="right") point from
         'discretised_child'.
@@ -376,6 +368,26 @@ class SpatialMethod:
         # boundary value removes domain
         out.clear_domains()
         return out
+
+    def evaluate_at(self, symbol, discretised_child, position):
+        """
+        Returns the symbol evaluated at a given position in space.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The boundary value or flux symbol
+        discretised_child : :class:`pybamm.StateVector`
+            The discretised variable from which to calculate the boundary value
+        position : :class:`pybamm.Scalar`
+            The point in one-dimensional space at which to evaluate the symbol.
+
+        Returns
+        -------
+        :class:`pybamm.MatrixMultiplication`
+            The variable representing the value at the given point.
+        """
+        raise NotImplementedError
 
     def mass_matrix(self, symbol, boundary_conditions):
         """

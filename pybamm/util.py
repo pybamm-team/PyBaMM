@@ -6,6 +6,7 @@
 #
 import argparse
 import importlib.util
+import importlib.metadata
 import numbers
 import os
 import pathlib
@@ -18,11 +19,10 @@ import difflib
 from warnings import warn
 
 import numpy as np
-import importlib.metadata
-
 import pybamm
 
-# versions of jax and jaxlib compatible with PyBaMM
+# Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
+# the extras dependencies in pyproject.toml, and therefore must be kept in sync.
 JAX_VERSION = "0.4"
 JAXLIB_VERSION = "0.4"
 
@@ -57,14 +57,22 @@ class FuzzyDict(dict):
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
-        except KeyError:
+        except KeyError as error:
+            if "particle diffusivity" in key:
+                warn(
+                    f"The parameter '{key.replace('particle', 'electrode')}' "
+                    f"has been renamed to '{key}'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                return super().__getitem__(key.replace("particle", "electrode"))
             if key in ["Negative electrode SOC", "Positive electrode SOC"]:
                 domain = key.split(" ")[0]
                 raise KeyError(
                     f"Variable '{domain} electrode SOC' has been renamed to "
                     f"'{domain} electrode stoichiometry' to avoid confusion "
                     "with cell SOC"
-                )
+                ) from error
             if "Measured open circuit voltage" in key:
                 raise KeyError(
                     "The variable that used to be called "
@@ -73,26 +81,28 @@ class FuzzyDict(dict):
                     "variable called 'Bulk open-circuit voltage [V]' which is the"
                     "open-circuit voltage evaluated at the average particle "
                     "concentrations."
-                )
+                ) from error
             if "Open-circuit voltage at 0% SOC [V]" in key:
                 raise KeyError(
                     "Parameter 'Open-circuit voltage at 0% SOC [V]' not found."
                     "In most cases this should be set to be equal to "
                     "'Lower voltage cut-off [V]'"
-                )
+                ) from error
             if "Open-circuit voltage at 100% SOC [V]" in key:
                 raise KeyError(
                     "Parameter 'Open-circuit voltage at 100% SOC [V]' not found."
                     "In most cases this should be set to be equal to "
                     "'Upper voltage cut-off [V]'"
-                )
+                ) from error
             best_matches = self.get_best_matches(key)
             for k in best_matches:
                 if key in k and k.endswith("]"):
                     raise KeyError(
                         f"'{key}' not found. Use the dimensional version '{k}' instead."
-                    )
-            raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
+                    ) from error
+            raise KeyError(
+                f"'{key}' not found. Best matches are {best_matches}"
+            ) from error
 
     def search(self, key, print_values=False):
         """
@@ -122,16 +132,16 @@ class FuzzyDict(dict):
             )
         elif print_values:
             # Else print results, including dict items
-            print("\n".join("{}\t{}".format(k, v) for k, v in results.items()))
+            print("\n".join(f"{k}\t{v}" for k, v in results.items()))
         else:
             # Just print keys
-            print("\n".join("{}".format(k) for k in results.keys()))
+            print("\n".join(f"{k}" for k in results.keys()))
 
     def copy(self):
         return FuzzyDict(super().copy())
 
 
-class Timer(object):
+class Timer:
     """
     Provides accurate timing.
 
@@ -171,13 +181,13 @@ class TimerTime:
         """
         time = self.value
         if time < 1e-6:
-            return "{:.3f} ns".format(time * 1e9)
+            return f"{time * 1e9:.3f} ns"
         if time < 1e-3:
-            return "{:.3f} us".format(time * 1e6)
+            return f"{time * 1e6:.3f} us"
         if time < 1:
-            return "{:.3f} ms".format(time * 1e3)
+            return f"{time * 1e3:.3f} ms"
         elif time < 60:
-            return "{:.3f} s".format(time)
+            return f"{time:.3f} s"
         output = []
         time = int(round(time))
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
@@ -271,10 +281,9 @@ def have_jax():
 
 def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
-    return (
-        importlib.metadata.distribution("jax").version.startswith(JAX_VERSION)
-        and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
-    )
+    return importlib.metadata.distribution("jax").version.startswith(
+        JAX_VERSION
+    ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
 
 
 def is_constant_and_can_evaluate(symbol):
@@ -334,7 +343,7 @@ def install_jax(arguments=None):  # pragma: no cover
         "pybamm_install_jax is deprecated,"
         " use 'pip install pybamm[jax]' to install jax & jaxlib"
     )
-    warn(msg, DeprecationWarning)
+    warn(msg, DeprecationWarning, stacklevel=2)
     subprocess.check_call(
         [
             sys.executable,
@@ -346,25 +355,23 @@ def install_jax(arguments=None):  # pragma: no cover
         ]
     )
 
+
 # https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
-def have_optional_dependency(module_name, attribute=None):
+def import_optional_dependency(module_name, attribute=None):
     err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
     try:
-        # Attempt to import the specified module
         module = importlib.import_module(module_name)
-
         if attribute:
-            # If an attribute is specified, check if it's available
             if hasattr(module, attribute):
                 imported_attribute = getattr(module, attribute)
-                return imported_attribute  # Return the imported attribute
+                # Return the imported attribute
+                return imported_attribute
             else:
-                # Raise an ModuleNotFoundError if the attribute is not available
-                raise ModuleNotFoundError(err_msg)      # pragma: no cover
+                raise ModuleNotFoundError(err_msg)  # pragma: no cover
         else:
             # Return the entire module if no attribute is specified
             return module
 
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as error:
         # Raise an ModuleNotFoundError if the module or attribute is not available
-        raise ModuleNotFoundError(err_msg)
+        raise ModuleNotFoundError(err_msg) from error

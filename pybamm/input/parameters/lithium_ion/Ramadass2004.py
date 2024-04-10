@@ -89,9 +89,7 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     E_r = 37480
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_entropic_change_Moura2016(sto, c_s_max):
@@ -227,9 +225,7 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     E_r = 39570
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def lico2_entropic_change_Moura2016(sto, c_s_max):
@@ -412,7 +408,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 30555.0,
-        "Negative electrode diffusivity [m2.s-1]"
+        "Negative particle diffusivity [m2.s-1]"
         "": graphite_mcmb2528_diffusivity_Dualfoil1998,
         "Negative electrode OCP [V]": graphite_ocp_Ramadass2004,
         "Negative electrode porosity": 0.485,
@@ -432,7 +428,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in positive electrode [mol.m-3]": 51555.0,
-        "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Ramadass2004,
+        "Positive particle diffusivity [m2.s-1]": lico2_diffusivity_Ramadass2004,
         "Positive electrode OCP [V]": lico2_ocp_Ramadass2004,
         "Positive electrode porosity": 0.385,
         "Positive electrode active material volume fraction": 0.59,

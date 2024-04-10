@@ -20,8 +20,6 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/getting_started/tutorial-7-model-options.ipynb
     notebooks/getting_started/tutorial-8-solver-options.ipynb
     notebooks/getting_started/tutorial-9-changing-the-mesh.ipynb
-    notebooks/getting_started/tutorial-10-creating-a-model.ipynb
-    notebooks/getting_started/tutorial-11-creating-a-submodel.ipynb
 
 .. nbgallery::
     :caption: Creating Models
@@ -33,6 +31,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/creating_models/4-comparing-full-and-reduced-order-models.ipynb
     notebooks/creating_models/5-half-cell-model.ipynb
     notebooks/creating_models/6-a-simple-SEI-model.ipynb
+    notebooks/creating_models/7-creating-a-submodel.ipynb
 
 .. nbgallery::
     :caption: Expression Tree
@@ -63,7 +62,9 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
     notebooks/models/rate-capability.ipynb
+    notebooks/models/saving_models.ipynb
     notebooks/models/SEI-on-cracks.ipynb
+    notebooks/models/simulate-3E-cell.ipynb
     notebooks/models/simulating-ORegan-2022-parameter-set.ipynb
     notebooks/models/SPM.ipynb
     notebooks/models/SPMe.ipynb
@@ -84,6 +85,17 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/parameterization/parameterization.ipynb
 
 .. nbgallery::
+    :caption: Simulations and Experiments
+    :glob:
+
+    notebooks/simulations_and_experiments/callbacks.ipynb
+    notebooks/simulations_and_experiments/custom-experiments.ipynb
+    notebooks/simulations_and_experiments/experiments-start-time.ipynb
+    notebooks/simulations_and_experiments/rpt-experiment.ipynb
+    notebooks/simulations_and_experiments/simulating-long-experiments.ipynb
+    notebooks/simulations_and_experiments/simulation-class.ipynb
+
+.. nbgallery::
     :caption: Plotting
     :glob:
 
@@ -96,6 +108,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
 
     notebooks/solvers/dae-solver.ipynb
     notebooks/solvers/ode-solver.ipynb
+    notebooks/solvers/idaklu-jax-interface.ipynb
     notebooks/solvers/speed-up-solver.ipynb
 
 .. nbgallery::
@@ -109,11 +122,6 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     :glob:
 
     notebooks/batch_study.ipynb
-    notebooks/callbacks.ipynb
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
-    notebooks/rpt-experiment.ipynb
-    notebooks/simulating-long-experiments.ipynb
-    notebooks/simulation-class.ipynb
     notebooks/solution-data-and-processed-variables.ipynb
-    notebooks/experiments-start-time.ipynb

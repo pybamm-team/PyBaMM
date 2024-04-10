@@ -78,7 +78,7 @@ class BaseModel(BaseElectrolyteConductivity):
             else:
                 phi_e_n = variables["Negative electrolyte potential [V]"]
                 phi_e_n_s = pybamm.boundary_value(phi_e_n, "right")
-            tor_s = variables["Separator porosity"]
+            tor_s = variables["Separator electrolyte transport efficiency"]
             T = variables["Separator temperature [K]"]
 
             chiRT_over_Fc_e_s = param.chiRT_over_Fc(c_e_s, T)
@@ -224,7 +224,7 @@ class FullAlgebraic(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-    """  # noqa: E501
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
@@ -258,7 +258,7 @@ class FullDifferential(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-    """  # noqa: E501
+    """
 
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)

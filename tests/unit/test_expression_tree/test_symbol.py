@@ -4,6 +4,7 @@
 from tests import TestCase
 import os
 import unittest
+import unittest.mock as mock
 from tempfile import TemporaryDirectory
 
 import numpy as np
@@ -11,7 +12,7 @@ from scipy.sparse import csr_matrix, coo_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
-from pybamm.util import have_optional_dependency
+import sympy
 
 
 class TestSymbol(TestCase):
@@ -121,7 +122,7 @@ class TestSymbol(TestCase):
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
         # special cases
-        self.assertEqual(-(-a), a)
+        self.assertEqual(-(-a), a)  # noqa: B002
         self.assertEqual(-(a - b), b - a)
         self.assertEqual(abs(abs(a)), abs(a))
 
@@ -484,12 +485,33 @@ class TestSymbol(TestCase):
             (y1 + y2).test_shape()
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
         self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
     def test_numpy_array_ufunc(self):
         x = pybamm.Symbol("x")
         self.assertEqual(np.exp(x), pybamm.exp(x))
+
+    def test_to_from_json(self):
+        symc1 = pybamm.Symbol("child1", domain=["domain_1"])
+        symc2 = pybamm.Symbol("child2", domain=["domain_2"])
+        symp = pybamm.Symbol("parent", domain=["domain_3"], children=[symc1, symc2])
+
+        json_dict = {
+            "name": "parent",
+            "id": mock.ANY,
+            "domains": {
+                "primary": ["domain_3"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+        }
+
+        self.assertEqual(symp.to_json(), json_dict)
+
+        json_dict["children"] = [symc1, symc2]
+
+        self.assertEqual(pybamm.Symbol._from_json(json_dict), symp)
 
 
 class TestIsZero(TestCase):

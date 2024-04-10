@@ -10,8 +10,9 @@ import shutil
 import pybamm
 import sys
 import argparse
-import unittest
 import subprocess
+import pytest
+import unittest
 
 
 def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
@@ -36,12 +37,18 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         # currently activated virtual environment
         interpreter = sys.executable
     if executable is False:
-        suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-        result = unittest.TextTestRunner(verbosity=2).run(suite)
-        ret = int(not result.wasSuccessful())
+        if tests == "tests/unit":
+            ret = pytest.main(["-v", tests])
+        else:
+            suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
+            result = unittest.TextTestRunner(verbosity=2).run(suite)
+            ret = int(not result.wasSuccessful())
     else:
-        print("Running {} tests with executable '{}'".format(folder, interpreter))
-        cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
+        print(f"Running {folder} tests with executable {interpreter}")
+        if tests == "tests/unit":
+            cmd = [interpreter, "-m", "pytest", "-v", tests]
+        else:
+            cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
@@ -64,36 +71,31 @@ def run_doc_tests():
     used).
     """
     print("Checking if docs can be built.")
-    p = subprocess.Popen(
-        [
-            "sphinx-build",
-            "-j",
-            "auto",
-            "-b",
-            "doctest",
-            "docs",
-            "docs/build/html",
-            "-W",
-            "--keep-going",
-        ]
-    )
     try:
-        ret = p.wait()
-    except KeyboardInterrupt:
+        subprocess.run(
+            [
+                "sphinx-build",
+                "-j",
+                "auto",
+                "-b",
+                "doctest",
+                "docs",
+                "docs/build/html",
+                "-W",
+                "--keep-going",
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"FAILED with exit code {e.returncode}")
+        sys.exit(e.returncode)
+    finally:
+        # Regardless of whether the doctests pass or fail, attempt to remove the built files.
+        print("Deleting built files.")
         try:
-            p.terminate()
-        except OSError:
-            pass
-        p.wait()
-        print("")
-        sys.exit(1)
-    if ret != 0:
-        print("FAILED")
-        sys.exit(ret)
-    # delete the entire docs/source/build folder + files since it currently
-    # causes problems with nbsphinx in further docs or doctest builds
-    print("Deleting built files.")
-    shutil.rmtree("docs/build")
+            shutil.rmtree("docs/build/html/.doctrees/")
+        except Exception as e:
+            print(f"Error deleting built files: {e}")
 
 
 def run_scripts(executable="python"):
@@ -153,10 +155,10 @@ def test_script(path, executable="python"):
 
     # Tell matplotlib not to produce any figures
     env = dict(os.environ)
-    env["MPLBACKEND"] = "Template"
+    env["MPLBACKEND"] = "Agg"
 
     # Run in subprocess
-    cmd = [executable] + [path]
+    cmd = [executable, path]
     try:
         p = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
@@ -178,7 +180,7 @@ def test_script(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok ({})".format(b.time()))
+    print(f"ok ({b.time()})")
     return True
 
 
@@ -214,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--examples",
         action="store_true",
-        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",  # noqa: E501
+        help="Test all Jupyter notebooks in `docs/source/examples/` (deprecated, use nox or pytest instead).",
     )
     parser.add_argument(
         "--debook",
@@ -248,7 +250,6 @@ if __name__ == "__main__":
         metavar="python",
         help="Give the name of the Python interpreter if it is not 'python'",
     )
-
     # Parse!
     args = parser.parse_args()
 

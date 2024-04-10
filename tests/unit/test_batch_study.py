@@ -1,6 +1,7 @@
 """
 Tests for the batch_study.py
 """
+
 from tests import TestCase
 import os
 import pybamm
@@ -52,7 +53,7 @@ class TestBatchStudy(TestCase):
 
         # Tests for BatchStudy when permutations=False
         bs_false.solve()
-        bs_false.plot(testing=True)
+        bs_false.plot(show_plot=False)
         self.assertEqual(2, len(bs_false.sims))
         for num in range(len(bs_false.sims)):
             output_model = bs_false.sims[num].model.name
@@ -63,16 +64,15 @@ class TestBatchStudy(TestCase):
             solvers_list = [solver.name for solver in bs_false.solvers.values()]
             self.assertIn(output_solver, solvers_list)
 
-            output_experiment = bs_false.sims[num].experiment.operating_conditions_steps
+            output_experiment = bs_false.sims[num].experiment.steps
             experiments_list = [
-                experiment.operating_conditions_steps
-                for experiment in bs_false.experiments.values()
+                experiment.steps for experiment in bs_false.experiments.values()
             ]
             self.assertIn(output_experiment, experiments_list)
 
         # Tests for BatchStudy when permutations=True
         bs_true.solve()
-        bs_true.plot(testing=True)
+        bs_true.plot(show_plot=False)
         self.assertEqual(4, len(bs_true.sims))
         for num in range(len(bs_true.sims)):
             output_model = bs_true.sims[num].model.name
@@ -83,16 +83,21 @@ class TestBatchStudy(TestCase):
             solvers_list = [solver.name for solver in bs_true.solvers.values()]
             self.assertIn(output_solver, solvers_list)
 
-            output_experiment = bs_true.sims[num].experiment.operating_conditions_steps
+            output_experiment = bs_true.sims[num].experiment.steps
             experiments_list = [
-                experiment.operating_conditions_steps
-                for experiment in bs_true.experiments.values()
+                experiment.steps for experiment in bs_true.experiments.values()
             ]
             self.assertIn(output_experiment, experiments_list)
 
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
             bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
+            with self.assertRaisesRegex(
+                ValueError, "The simulations have not been solved yet."
+            ):
+                pybamm.BatchStudy(
+                    models={"SPM": spm, "SPM uniform": spm_uniform}
+                ).create_gif()
             bs.solve([0, 10])
 
             # Create a temporary file name
@@ -102,7 +107,7 @@ class TestBatchStudy(TestCase):
             bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
             # create a GIF after calling the plot method
-            bs.plot(testing=True)
+            bs.plot(show_plot=False)
             bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
 

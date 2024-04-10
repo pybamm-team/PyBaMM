@@ -318,10 +318,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
                 if len(phases) > 1:
-                    self.submodels[
-                        f"{domain} total sei on cracks"
-                    ] = pybamm.sei.TotalSEI(
-                        self.param, domain, self.options, cracks=True
+                    self.submodels[f"{domain} total sei on cracks"] = (
+                        pybamm.sei.TotalSEI(
+                            self.param, domain, self.options, cracks=True
+                        )
                     )
 
     def set_lithium_plating_submodel(self):
@@ -332,17 +332,17 @@ class BaseModel(pybamm.BaseBatteryModel):
                 domain = domain.split()[0].lower()
                 lithium_plating_opt = getattr(self.options, domain)["lithium plating"]
                 if lithium_plating_opt == "none":
-                    self.submodels[
-                        f"{domain} lithium plating"
-                    ] = pybamm.lithium_plating.NoPlating(
-                        self.param, domain, self.options
+                    self.submodels[f"{domain} lithium plating"] = (
+                        pybamm.lithium_plating.NoPlating(
+                            self.param, domain, self.options
+                        )
                     )
                 else:
                     x_average = self.options["x-average side reactions"] == "true"
-                    self.submodels[
-                        f"{domain} lithium plating"
-                    ] = pybamm.lithium_plating.Plating(
-                        self.param, domain, x_average, self.options
+                    self.submodels[f"{domain} lithium plating"] = (
+                        pybamm.lithium_plating.Plating(
+                            self.param, domain, x_average, self.options
+                        )
                     )
 
     def set_total_interface_submodel(self):
@@ -356,26 +356,26 @@ class BaseModel(pybamm.BaseBatteryModel):
                 domain = domain.split()[0].lower()
                 crack = getattr(self.options, domain)["particle mechanics"]
                 if crack == "none":
-                    self.submodels[
-                        f"{domain} particle mechanics"
-                    ] = pybamm.particle_mechanics.NoMechanics(
-                        self.param, domain, options=self.options, phase="primary"
+                    self.submodels[f"{domain} particle mechanics"] = (
+                        pybamm.particle_mechanics.NoMechanics(
+                            self.param, domain, options=self.options, phase="primary"
+                        )
                     )
                 elif crack == "swelling only":
-                    self.submodels[
-                        f"{domain} particle mechanics"
-                    ] = pybamm.particle_mechanics.SwellingOnly(
-                        self.param, domain, options=self.options, phase="primary"
+                    self.submodels[f"{domain} particle mechanics"] = (
+                        pybamm.particle_mechanics.SwellingOnly(
+                            self.param, domain, options=self.options, phase="primary"
+                        )
                     )
                 elif crack == "swelling and cracking":
-                    self.submodels[
-                        f"{domain} particle mechanics"
-                    ] = pybamm.particle_mechanics.CrackPropagation(
-                        self.param,
-                        domain,
-                        self.x_average,
-                        options=self.options,
-                        phase="primary",
+                    self.submodels[f"{domain} particle mechanics"] = (
+                        pybamm.particle_mechanics.CrackPropagation(
+                            self.param,
+                            domain,
+                            self.x_average,
+                            options=self.options,
+                            phase="primary",
+                        )
                     )
 
     def set_active_material_submodel(self):
@@ -396,9 +396,9 @@ class BaseModel(pybamm.BaseBatteryModel):
 
                 # Submodel for the total active material, summing up each phase
                 if len(phases) > 1:
-                    self.submodels[
-                        f"{domain} total active material"
-                    ] = pybamm.active_material.Total(self.param, domain, self.options)
+                    self.submodels[f"{domain} total active material"] = (
+                        pybamm.active_material.Total(self.param, domain, self.options)
+                    )
 
     def set_porosity_submodel(self):
         if (
@@ -427,38 +427,90 @@ class BaseModel(pybamm.BaseBatteryModel):
                 and self.options["surface form"] == "false"
             ):
                 # only symmetric Butler-Volmer can be inverted
-                self.submodels[
-                    f"{domain} electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalExplicit(
-                    self.param, domain, self.options
+                self.submodels[f"{domain} electrode potential"] = (
+                    pybamm.electrode.ohm.LithiumMetalExplicit(
+                        self.param, domain, self.options
+                    )
                 )
-                self.submodels[
-                    f"{domain} electrode interface"
-                ] = pybamm.kinetics.InverseButlerVolmer(
-                    self.param, domain, "lithium metal plating", self.options
+                self.submodels[f"{domain} electrode interface"] = (
+                    pybamm.kinetics.InverseButlerVolmer(
+                        self.param, domain, "lithium metal plating", self.options
+                    )
                 )  # assuming symmetric reaction for now so we can take the inverse
-                self.submodels[
-                    f"{domain} electrode interface current"
-                ] = pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
-                    self.param, domain, "lithium metal plating", self.options
+                self.submodels[f"{domain} electrode interface current"] = (
+                    pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
+                        self.param, domain, "lithium metal plating", self.options
+                    )
                 )
             else:
-                self.submodels[
-                    f"{domain} electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
-                    self.param, domain, self.options
+                self.submodels[f"{domain} electrode potential"] = (
+                    pybamm.electrode.ohm.LithiumMetalSurfaceForm(
+                        self.param, domain, self.options
+                    )
                 )
                 neg_intercalation_kinetics = self.get_intercalation_kinetics(domain)
-                self.submodels[
-                    f"{domain} electrode interface"
-                ] = neg_intercalation_kinetics(
-                    self.param, domain, "lithium metal plating", self.options, "primary"
+                self.submodels[f"{domain} electrode interface"] = (
+                    neg_intercalation_kinetics(
+                        self.param,
+                        domain,
+                        "lithium metal plating",
+                        self.options,
+                        "primary",
+                    )
                 )
 
     def set_convection_submodel(self):
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
+        self.submodels["transverse convection"] = (
+            pybamm.convection.transverse.NoConvection(self.param, self.options)
+        )
+        self.submodels["through-cell convection"] = (
+            pybamm.convection.through_cell.NoConvection(self.param, self.options)
+        )
+
+    def insert_reference_electrode(self, position=None):
+        """
+        Insert a reference electrode to measure the electrolyte potential at a given
+        position in space. Adds model variables for the electrolyte potential at the
+        reference electrode and for the potential difference between the electrode
+        potentials measured at the electrode/current collector interface and the
+        reference electrode. Only implemented for 1D models (i.e. where the
+        'dimensionality' option is 0).
+
+        Parameters
+        ----------
+        position : :class:`pybamm.Symbol`, optional
+            The position in space at which to measure the electrolyte potential. If
+            None, defaults to the mid-point of the separator.
+        """
+        if self.options["dimensionality"] != 0:
+            raise NotImplementedError(
+                "Reference electrode can only be inserted for models where "
+                "'dimensionality' is 0. For other models, please add a reference "
+                "electrode manually."
+            )
+
+        param = self.param
+        if position is None:
+            position = param.n.L + param.s.L / 2
+
+        phi_e_ref = pybamm.EvaluateAt(
+            self.variables["Electrolyte potential [V]"], position
+        )
+        phi_p = pybamm.boundary_value(
+            self.variables["Positive electrode potential [V]"], "right"
+        )
+        variables = {
+            "Positive electrode 3E potential [V]": phi_p - phi_e_ref,
+            "Reference electrode potential [V]": phi_e_ref,
+        }
+
+        if self.options["working electrode"] == "both":
+            phi_n = pybamm.boundary_value(
+                self.variables["Negative electrode potential [V]"], "left"
+            )
+            variables.update(
+                {
+                    "Negative electrode 3E potential [V]": phi_n - phi_e_ref,
+                }
+            )
+        self.variables.update(variables)

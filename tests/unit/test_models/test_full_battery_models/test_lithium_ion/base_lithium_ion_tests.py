@@ -350,6 +350,44 @@ class BaseUnitTestLithiumIon:
         options = {"operating mode": external_circuit_function}
         self.check_well_posedness(options)
 
+    def test_well_posed_external_circuit_function_1plus1D(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Voltage [V]"]
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "operating mode": external_circuit_function,
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_function_2plus1D(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Voltage [V]"]
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "operating mode": external_circuit_function,
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_particle_phases(self):
         options = {"particle phases": "2"}
         self.check_well_posedness(options)
@@ -388,4 +426,23 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_psd(self):
         options = {"particle size": "distribution", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_kinetic_hysteresis(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "exchange-current density": (
+                ("current sigmoid", "single"),
+                "current sigmoid",
+            ),
+            "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_diffusion_hysteresis(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "diffusivity": (("current sigmoid", "current sigmoid"), "current sigmoid"),
+            "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
         self.check_well_posedness(options)

@@ -4,7 +4,8 @@
 
 import pybamm
 from functools import cached_property
-import warnings
+
+from pybamm.expression_tree.operations.serialise import Serialise
 
 
 def represents_positive_integer(s):
@@ -434,9 +435,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     )
                 else:
                     raise pybamm.OptionError(
-                        "Option '{}' not recognised. Best matches are {}".format(
-                            name, options.get_best_matches(name)
-                        )
+                        f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
         # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
@@ -603,7 +602,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
-        if options["particle phases"] != "1":
+        if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
@@ -629,28 +628,26 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 value = (value,)
             else:
                 if not (
-                    (
-                        option
-                        in [
-                            "diffusivity",
-                            "exchange-current density",
-                            "intercalation kinetics",
-                            "interface utilisation",
-                            "lithium plating",
-                            "loss of active material",
-                            "number of MSMR reactions",
-                            "open-circuit potential",
-                            "particle",
-                            "particle mechanics",
-                            "particle phases",
-                            "particle size",
-                            "SEI",
-                            "SEI on cracks",
-                            "stress-induced diffusion",
-                        ]
-                        and isinstance(value, tuple)
-                        and len(value) == 2
-                    )
+                    option
+                    in [
+                        "diffusivity",
+                        "exchange-current density",
+                        "intercalation kinetics",
+                        "interface utilisation",
+                        "lithium plating",
+                        "loss of active material",
+                        "number of MSMR reactions",
+                        "open-circuit potential",
+                        "particle",
+                        "particle mechanics",
+                        "particle phases",
+                        "particle size",
+                        "SEI",
+                        "SEI on cracks",
+                        "stress-induced diffusion",
+                    ]
+                    and isinstance(value, tuple)
+                    and len(value) == 2
                 ):
                     # more possible options that can take 2-tuples to be added
                     # as they come
@@ -683,24 +680,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             f"Possible values are {self.possible_options[option]}"
                         )
 
-        # Issue a warning to let users know that the 'lumped' thermal option (or
-        # equivalently 'x-lumped' with 0D current collectors) now uses the total heat
-        # transfer coefficient, surface area for cooling, and cell volume parameters,
-        # regardless of the 'cell geometry option' chosen.
-        thermal_option = options["thermal"]
-        dimensionality_option = options["dimensionality"]
-        if thermal_option == "lumped" or (
-            thermal_option == "x-lumped" and dimensionality_option == 0
-        ):
-            message = (
-                f"The '{thermal_option}' thermal option with "
-                f"'dimensionality' {dimensionality_option} now uses the parameters "
-                "'Cell cooling surface area [m2]', 'Cell volume [m3]' and "
-                "'Total heat transfer coefficient [W.m-2.K-1]' to compute the cell "
-                "cooling term, regardless of the value of the the 'cell geometry' "
-                "option. Please update your parameters accordingly."
-            )
-            warnings.warn(message, pybamm.OptionWarning, stacklevel=2)
         super().__init__(options.items())
 
     @property
@@ -823,6 +802,59 @@ class BaseBatteryModel(pybamm.BaseModel):
         super().__init__(name)
         self.options = options
 
+    @classmethod
+    def deserialise(cls, properties: dict):
+        """
+        Create a model instance from a serialised object.
+        """
+
+        # append the model name with _saved to differentiate
+        instance = cls(
+            options=properties["options"], name=properties["name"] + "_saved"
+        )
+
+        # Initialise model with stored variables that have already been discretised
+        instance._concatenated_rhs = properties["concatenated_rhs"]
+        instance._concatenated_algebraic = properties["concatenated_algebraic"]
+        instance._concatenated_initial_conditions = properties[
+            "concatenated_initial_conditions"
+        ]
+
+        instance.len_rhs = instance.concatenated_rhs.size
+        instance.len_alg = instance.concatenated_algebraic.size
+        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
+
+        instance.bounds = properties["bounds"]
+        instance.events = properties["events"]
+        instance.mass_matrix = properties["mass_matrix"]
+        instance.mass_matrix_inv = properties["mass_matrix_inv"]
+
+        # add optional properties not required for model to solve
+        if properties["variables"]:
+            instance._variables = pybamm.FuzzyDict(properties["variables"])
+
+            # assign meshes to each variable
+            for var in instance._variables.values():
+                if var.domain != []:
+                    var.mesh = properties["mesh"][var.domain]
+                else:
+                    var.mesh = None
+
+                if var.domains["secondary"] != []:
+                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
+                else:
+                    var.secondary_mesh = None
+
+            instance._geometry = pybamm.Geometry(properties["geometry"])
+        else:
+            # Delete the default variables which have not been discretised
+            instance._variables = pybamm.FuzzyDict({})
+
+        # Model has already been discretised
+        instance.is_discretised = True
+
+        return instance
+
     @property
     def default_geometry(self):
         return pybamm.battery_geometry(options=self.options)
@@ -888,9 +920,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods[
-                "current collector"
-            ] = pybamm.ZeroDimensionalSpatialMethod()
+            base_spatial_methods["current collector"] = (
+                pybamm.ZeroDimensionalSpatialMethod()
+            )
         elif self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
@@ -965,10 +997,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             and options["hydrolysis"] == "true"
         ):
             raise pybamm.OptionError(
-                """must use surface formulation to solve {!s} with hydrolysis
-                    """.format(
-                    self
-                )
+                f"must use surface formulation to solve {self!s} with hydrolysis"
             )
 
         self._options = options
@@ -997,34 +1026,26 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.verbose(
-                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
+                f"Setting rhs for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_rhs(self.variables)
             pybamm.logger.verbose(
-                "Setting algebraic for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting algebraic for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
             pybamm.logger.verbose(
-                "Setting initial conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.verbose(
-                "Updating {} submodel ({})".format(submodel_name, self.name)
-            )
+            pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
 
@@ -1033,18 +1054,18 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._build_model()
 
         # Set battery specific variables
-        pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
+        pybamm.logger.debug(f"Setting voltage variables ({self.name})")
         self.set_voltage_variables()
 
-        pybamm.logger.debug("Setting SoC variables ({})".format(self.name))
+        pybamm.logger.debug(f"Setting SoC variables ({self.name})")
         self.set_soc_variables()
 
-        pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
+        pybamm.logger.debug(f"Setting degradation variables ({self.name})")
         self.set_degradation_variables()
         self.set_summary_variables()
 
         self._built = True
-        pybamm.logger.info("Finish building {}".format(self.name))
+        pybamm.logger.info(f"Finish building {self.name}")
 
     @property
     def summary_variables(self):
@@ -1114,7 +1135,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(
@@ -1126,7 +1147,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit resistance":
             model = pybamm.external_circuit.ExplicitResistanceControl(
@@ -1143,14 +1164,14 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["external circuit"] = model
 
     def set_transport_efficiency_submodels(self):
-        self.submodels[
-            "electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(
-            self.param, "Electrolyte", self.options
+        self.submodels["electrolyte transport efficiency"] = (
+            pybamm.transport_efficiency.Bruggeman(
+                self.param, "Electrolyte", self.options
+            )
         )
-        self.submodels[
-            "electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
+        self.submodels["electrode transport efficiency"] = (
+            pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
+        )
 
     def set_thermal_submodel(self):
         if self.options["thermal"] == "isothermal":
@@ -1409,3 +1430,20 @@ class BaseBatteryModel(pybamm.BaseModel):
         This function is overriden by the base battery models
         """
         pass
+
+    def save_model(self, filename=None, mesh=None, variables=None):
+        """
+        Write out a discretised model to a JSON file
+
+        Parameters
+        ----------
+        filename: str, optional
+        The desired name of the JSON file. If no name is provided, one will be created
+        based on the model name, and the current datetime.
+        """
+        if variables and not mesh:
+            raise ValueError(
+                "Serialisation: Please provide the mesh if variables are required"
+            )
+
+        Serialise().save_model(self, filename=filename, mesh=mesh, variables=variables)

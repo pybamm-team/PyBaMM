@@ -3,12 +3,13 @@ Install from source (Docker)
 
 .. contents::
 
-This page describes the build and installation of PyBaMM from the source code, available on GitHub. Note that this is **not the recommended approach for most users** and should be reserved to people wanting to participate in the development of PyBaMM, or people who really need to use bleeding-edge feature(s) not yet available in the latest released version. If you do not fall in the two previous categories, you would be better off installing PyBaMM using pip or conda.
+This page describes the build and installation of PyBaMM using a Dockerfile, available on GitHub. Note that this is **not the recommended approach for most users** and should be reserved to people wanting to participate in the development of PyBaMM, or people who really need to use bleeding-edge feature(s) not yet available in the latest released version. If you do not fall in the two previous categories, you would be better off installing PyBaMM using ``pip`` or ``conda``.
 
 Prerequisites
 -------------
+
 Before you begin, make sure you have Docker installed on your system. You can download and install Docker from the official `Docker website <https://www.docker.com/get-started/>`_.
-Ensure Docker installation by running :
+Ensure Docker installation by running:
 
 .. code:: bash
 
@@ -16,6 +17,7 @@ Ensure Docker installation by running :
 
 Pulling the Docker image
 ------------------------
+
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
 .. tab:: No optional solver
@@ -23,12 +25,6 @@ Use the following command to pull the PyBaMM Docker image from Docker Hub:
       .. code:: bash
 
             docker pull pybamm/pybamm:latest
-
-.. tab:: Scikits.odes solver
-
-      .. code:: bash
-
-            docker pull pybamm/pybamm:odes
 
 .. tab:: JAX solver
 
@@ -89,6 +85,13 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
 3. You can execute PyBaMM-related commands, run tests develop & contribute from the container.
 
+.. note::
+
+    The default user for the container is ``pybamm`` with ``pybamm`` as password. The user belongs to
+    ``sudoers`` and ``root`` group, so the sudo command can be issued to install additional packages to
+    the container.  After a clean install, ``sudo apt-get update`` should be executed to update the source
+    list. Additional packages can be installed using ``sudo apt-get install [package_name]``.
+
 Exiting the Docker container
 ----------------------------
 
@@ -135,23 +138,16 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 
       conda activate pybamm
 
-Building Docker images with optional args
------------------------------------------
+Building Docker images with optional arguments
+----------------------------------------------
 
 When building the PyBaMM Docker images locally, you have the option to include specific solvers by using optional arguments. These solvers include:
 
 - ``IDAKLU``: For IDA solver provided by the SUNDIALS plus KLU.
-- ``ODES``: For scikits.odes solver for ODE & DAE problems.
 - ``JAX``: For Jax solver.
 - ``ALL``: For all the above solvers.
 
 To build the Docker images with optional arguments, you can follow these steps for each solver:
-
-.. tab:: Scikits.odes solver
-
-      .. code-block:: bash
-
-            docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
 
 .. tab:: JAX solver
 
@@ -190,7 +186,7 @@ If you want to exit the Docker container's shell, you can simply type:
       exit
 
 
-Using Git Inside a Running Docker Container
+Using Git inside a running Docker container
 -------------------------------------------
 
 .. note::
@@ -215,7 +211,7 @@ Using Git Inside a Running Docker Container
 
       git fetch --all
 
-Using Visual Studio Code Inside a Running Docker Container
+Using Visual Studio Code inside a running Docker container
 ----------------------------------------------------------
 
 You can easily use Visual Studio Code inside a running Docker container by attaching it directly. This provides a seamless development environment within the container. Here's how:

@@ -36,6 +36,8 @@ class TestSpatialMethod(TestCase):
             spatial_method.delta_function(None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.internal_neumann_condition(None, None, None, None)
+        with self.assertRaises(NotImplementedError):
+            spatial_method.evaluate_at(None, None, None)
 
     def test_get_auxiliary_domain_repeats(self):
         # Test the method to read number of repeats from auxiliary domains

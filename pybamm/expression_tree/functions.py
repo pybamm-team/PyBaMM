@@ -1,13 +1,18 @@
 #
 # Function classes and methods
 #
-import numbers
+from __future__ import annotations
 
 import numpy as np
 from scipy import special
+import sympy
+from typing import Callable
+from collections.abc import Sequence
+from typing_extensions import TypeVar
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
+
 
 class Function(pybamm.Symbol):
     """
@@ -30,25 +35,25 @@ class Function(pybamm.Symbol):
 
     def __init__(
         self,
-        function,
-        *children,
-        name=None,
-        derivative="autograd",
-        differentiated_function=None,
+        function: Callable,
+        *children: pybamm.Symbol,
+        name: str | None = None,
+        derivative: str | None = "autograd",
+        differentiated_function: Callable | None = None,
     ):
         # Turn numbers into scalars
         children = list(children)
         for idx, child in enumerate(children):
-            if isinstance(child, numbers.Number):
+            if isinstance(child, (float, int, np.number)):
                 children[idx] = pybamm.Scalar(child)
 
         if name is not None:
             self.name = name
         else:
             try:
-                name = "function ({})".format(function.__name__)
+                name = f"function ({function.__name__})"
             except AttributeError:
-                name = "function ({})".format(function.__class__)
+                name = f"function ({function.__class__})"
         domains = self.get_children_domains(children)
 
         self.function = function
@@ -59,19 +64,19 @@ class Function(pybamm.Symbol):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        out = "{}(".format(self.name[10:-1])
+        out = f"{self.name[10:-1]}("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 
-    def diff(self, variable):
+    def diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol.diff()`."""
         if variable == self:
             return pybamm.Scalar(1)
         else:
             children = self.orphans
-            partial_derivatives = [None] * len(children)
+            partial_derivatives: list[None | pybamm.Symbol] = [None] * len(children)
             for i, child in enumerate(self.children):
                 # if variable appears in the function, differentiate
                 # function, and apply chain rule
@@ -85,16 +90,16 @@ class Function(pybamm.Symbol):
 
             derivative = sum(partial_derivatives)
             if derivative == 0:
-                derivative = pybamm.Scalar(0)
+                return pybamm.Scalar(0)
 
             return derivative
 
-    def _function_diff(self, children, idx):
+    def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
         """
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.
         """
-        autograd = have_optional_dependency("autograd")
+        autograd = import_optional_dependency("autograd")
         # Store differentiated function, needed in case we want to convert to CasADi
         if self.derivative == "autograd":
             return Function(
@@ -113,7 +118,7 @@ class Function(pybamm.Symbol):
             else:
                 # keep using "derivative" as derivative
                 return pybamm.Function(
-                    self.function.derivative(),
+                    self.function.derivative(),  # type: ignore[attr-defined]
                     *children,
                     derivative="derivative",
                     differentiated_function=self.function,
@@ -140,14 +145,20 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         evaluated_children = [
             child.evaluate(t, y, y_dot, inputs) for child in self.children
         ]
         return self._function_evaluate(evaluated_children)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return any(child.evaluates_on_edges(dimension) for child in self.children)
 
@@ -171,7 +182,7 @@ class Function(pybamm.Symbol):
         children_copy = [child.new_copy() for child in self.children]
         return self._function_new_copy(children_copy)
 
-    def _function_new_copy(self, children):
+    def _function_new_copy(self, children: list) -> Function:
         """
         Returns a new copy of the function.
 
@@ -201,7 +212,6 @@ class Function(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -211,21 +221,16 @@ class Function(pybamm.Symbol):
                 eq_list.append(eq)
             return self._sympy_operator(*eq_list)
 
-
-def simplified_function(func_class, child):
-    """
-    Simplifications implemented before applying the function.
-    Currently only implemented for one-child functions.
-    """
-    if isinstance(child, pybamm.Broadcast):
-        # Move the function inside the broadcast
-        # Apply recursively
-        func_child_not_broad = pybamm.simplify_if_constant(
-            simplified_function(func_class, child.orphans[0])
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.Function: Serialisation is only implemented for discretised models."
         )
-        return child._unary_new_copy(func_child_not_broad)
-    else:
-        return pybamm.simplify_if_constant(func_class(child))
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.Function: Please use a discretised model when reading in from JSON."
+        )
 
 
 class SpecificFunction(Function):
@@ -241,8 +246,29 @@ class SpecificFunction(Function):
         The child to apply the function to
     """
 
-    def __init__(self, function, child):
+    def __init__(self, function: Callable, child: pybamm.Symbol):
         super().__init__(function, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """
+        Reconstructs a SpecificFunction instance during deserialisation of a JSON file.
+
+        Parameters
+        ----------
+        function : method
+            Function to be applied to child
+        snippet: dict
+            Contains the child to apply the function to
+        """
+
+        instance = cls.__new__(cls)
+
+        super(SpecificFunction, instance).__init__(
+            snippet["function"], snippet["children"][0]
+        )
+
+        return instance
 
     def _function_new_copy(self, children):
         """See :meth:`pybamm.Function._function_new_copy()`"""
@@ -250,10 +276,41 @@ class SpecificFunction(Function):
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
-        sympy = have_optional_dependency("sympy")
         class_name = self.__class__.__name__.lower()
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)
+
+    def to_json(self):
+        """
+        Method to serialise a SpecificFunction object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "function": self.function.__name__,
+        }
+
+        return json_dict
+
+
+SF = TypeVar("SF", bound=SpecificFunction)
+
+
+def simplified_function(func_class: type[SF], child: pybamm.Symbol):
+    """
+    Simplifications implemented before applying the function.
+    Currently only implemented for one-child functions.
+    """
+    if isinstance(child, pybamm.Broadcast):
+        # Move the function inside the broadcast
+        # Apply recursively
+        func_child_not_broad = pybamm.simplify_if_constant(
+            simplified_function(func_class, child.orphans[0])
+        )
+        return child._unary_new_copy(func_child_not_broad)
+    else:
+        return pybamm.simplify_if_constant(func_class(child))  # type: ignore[call-arg, arg-type]
 
 
 class Arcsinh(SpecificFunction):
@@ -262,17 +319,23 @@ class Arcsinh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.arcsinh, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.arcsinh
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return 1 / sqrt(children[0] ** 2 + 1)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
         return sympy.asinh(child)
 
 
-def arcsinh(child):
+def arcsinh(child: pybamm.Symbol):
     """Returns arcsinh function of child."""
     return simplified_function(Arcsinh, child)
 
@@ -283,17 +346,23 @@ class Arctan(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.arctan, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.arctan
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
         return sympy.atan(child)
 
 
-def arctan(child):
+def arctan(child: pybamm.Symbol):
     """Returns hyperbolic tan function of child."""
     return simplified_function(Arctan, child)
 
@@ -304,12 +373,19 @@ class Cos(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.cos, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.cos
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return -sin(children[0])
 
 
-def cos(child):
+def cos(child: pybamm.Symbol):
     """Returns cosine function of child."""
     return simplified_function(Cos, child)
 
@@ -320,12 +396,19 @@ class Cosh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.cosh, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.cosh
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return sinh(children[0])
 
 
-def cosh(child):
+def cosh(child: pybamm.Symbol):
     """Returns hyperbolic cosine function of child."""
     return simplified_function(Cosh, child)
 
@@ -336,17 +419,24 @@ class Erf(SpecificFunction):
     def __init__(self, child):
         super().__init__(special.erf, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = special.erf
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return 2 / np.sqrt(np.pi) * exp(-children[0] ** 2)
+        return 2 / np.sqrt(np.pi) * exp(-(children[0] ** 2))
 
 
-def erf(child):
+def erf(child: pybamm.Symbol):
     """Returns error function of child."""
     return simplified_function(Erf, child)
 
 
-def erfc(child):
+def erfc(child: pybamm.Symbol):
     """Returns complementary error function of child."""
     return 1 - simplified_function(Erf, child)
 
@@ -357,12 +447,19 @@ class Exp(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.exp, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.exp
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return exp(children[0])
 
 
-def exp(child):
+def exp(child: pybamm.Symbol):
     """Returns exponential function of child."""
     return simplified_function(Exp, child)
 
@@ -372,6 +469,13 @@ class Log(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.log, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.log
+        instance = super()._from_json(snippet)
+        return instance
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -392,7 +496,7 @@ def log(child, base="e"):
         return log_child / np.log(base)
 
 
-def log10(child):
+def log10(child: pybamm.Symbol):
     """Returns logarithmic function of child, with base 10."""
     return log(child, base=10)
 
@@ -403,13 +507,20 @@ class Max(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.max, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.max
+        instance = super()._from_json(snippet)
+        return instance
+
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         # Max will always return a scalar
         return np.nan * np.ones((1, 1))
 
 
-def max(child):
+def max(child: pybamm.Symbol):
     """
     Returns max function of child. Not to be confused with :meth:`pybamm.maximum`, which
     returns the larger of two objects.
@@ -423,13 +534,20 @@ class Min(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.min, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.min
+        instance = super()._from_json(snippet)
+        return instance
+
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         # Min will always return a scalar
         return np.nan * np.ones((1, 1))
 
 
-def min(child):
+def min(child: pybamm.Symbol):
     """
     Returns min function of child. Not to be confused with :meth:`pybamm.minimum`, which
     returns the smaller of two objects.
@@ -437,7 +555,7 @@ def min(child):
     return pybamm.simplify_if_constant(Min(child))
 
 
-def sech(child):
+def sech(child: pybamm.Symbol):
     """Returns hyperbolic sec function of child."""
     return 1 / simplified_function(Cosh, child)
 
@@ -448,12 +566,19 @@ class Sin(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.sin, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.sin
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cos(children[0])
 
 
-def sin(child):
+def sin(child: pybamm.Symbol):
     """Returns sine function of child."""
     return simplified_function(Sin, child)
 
@@ -464,12 +589,19 @@ class Sinh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.sinh, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.sinh
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return cosh(children[0])
 
 
-def sinh(child):
+def sinh(child: pybamm.Symbol):
     """Returns hyperbolic sine function of child."""
     return simplified_function(Sinh, child)
 
@@ -479,6 +611,13 @@ class Sqrt(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.sqrt, child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.sqrt
+        instance = super()._from_json(snippet)
+        return instance
 
     def _function_evaluate(self, evaluated_children):
         # don't raise RuntimeWarning for NaNs
@@ -490,7 +629,7 @@ class Sqrt(SpecificFunction):
         return 1 / (2 * sqrt(children[0]))
 
 
-def sqrt(child):
+def sqrt(child: pybamm.Symbol):
     """Returns square root function of child."""
     return simplified_function(Sqrt, child)
 
@@ -501,11 +640,18 @@ class Tanh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.tanh, child)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.SpecificFunction._from_json()`."""
+        snippet["function"] = np.tanh
+        instance = super()._from_json(snippet)
+        return instance
+
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return sech(children[0]) ** 2
 
 
-def tanh(child):
+def tanh(child: pybamm.Symbol):
     """Returns hyperbolic tan function of child."""
     return simplified_function(Tanh, child)

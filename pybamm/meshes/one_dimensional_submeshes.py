@@ -34,7 +34,7 @@ class SubMesh1D(SubMesh):
         self.internal_boundaries = []
 
         # Add tab locations in terms of "left" and "right"
-        if tabs:
+        if tabs and "negative tab" not in tabs.keys():
             self.tabs = {}
             l_z = self.edges[-1]
 
@@ -52,6 +52,9 @@ class SubMesh1D(SubMesh):
                         f"{tab} tab located at {tab_location}, "
                         f"but must be at either 0 or {l_z}"
                     )
+        elif tabs:
+            # tabs have already been calculated by a serialised model
+            self.tabs = tabs
 
     def read_lims(self, lims):
         # Separate limits and tabs
@@ -69,6 +72,17 @@ class SubMesh1D(SubMesh):
             spatial_var = getattr(pybamm.standard_spatial_vars, spatial_var)
 
         return spatial_var, spatial_lims, tabs
+
+    def to_json(self):
+        json_dict = {
+            "edges": self.edges.tolist(),
+            "coord_sys": self.coord_sys,
+        }
+
+        if hasattr(self, "tabs"):
+            json_dict["tabs"] = self.tabs
+
+        return json_dict
 
 
 class Uniform1DSubMesh(SubMesh1D):
@@ -95,6 +109,18 @@ class Uniform1DSubMesh(SubMesh1D):
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        instance = cls.__new__(cls)
+
+        tabs = snippet["tabs"] if "tabs" in snippet.keys() else None
+
+        super(Uniform1DSubMesh, instance).__init__(
+            np.array(snippet["edges"]), snippet["coord_sys"], tabs=tabs
+        )
+
+        return instance
+
 
 class Exponential1DSubMesh(SubMesh1D):
     """
@@ -106,7 +132,7 @@ class Exponential1DSubMesh(SubMesh1D):
 
     .. math::
         x_{k} = (b-a) +
-        \\frac{\mathrm{e}^{\\alpha k / N} - 1}{\mathrm{e}^{\\alpha} - 1} + a,
+        \\frac{\\mathrm{e}^{\\alpha k / N} - 1}{\\mathrm{e}^{\\alpha} - 1} + a,
 
     for k = 1, ..., N, where N is the number of nodes.
 
@@ -114,7 +140,7 @@ class Exponential1DSubMesh(SubMesh1D):
 
     .. math::
         x_{k} = (b-a) +
-        \\frac{\mathrm{e}^{-\\alpha k / N} - 1}{\mathrm{e}^{-\\alpha} - 1} + a,
+        \\frac{\\mathrm{e}^{-\\alpha k / N} - 1}{\\mathrm{e}^{-\\alpha} - 1} + a,
 
     for k = 1, ..., N.
 
@@ -123,7 +149,7 @@ class Exponential1DSubMesh(SubMesh1D):
 
     .. math::
         x_{k} = (b/2-a) +
-        \\frac{\mathrm{e}^{\\alpha k / N} - 1}{\mathrm{e}^{\\alpha} - 1} + a,
+        \\frac{\\mathrm{e}^{\\alpha k / N} - 1}{\\mathrm{e}^{\\alpha} - 1} + a,
 
     for k = 1, ..., N. The grid spacing is then reflected to contruct the grid
     on the full interval [a,b].
@@ -263,20 +289,16 @@ class UserSupplied1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, lims, npts, edges=None):
-        # raise error if no edges passed
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
-        # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
-                """User-suppled edges has should have length (npts + 1) but has length
-                {}.Number of points (npts) for domain {} is {}.""".format(
-                    len(edges), spatial_var.domain, npts
-                ).replace(
+                f"""User-suppled edges has should have length (npts + 1) but has length
+                {len(edges)}.Number of points (npts) for domain {spatial_var.domain} is {npts}.""".replace(
                     "\n                ", " "
                 )
             )
@@ -336,9 +358,7 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         elif (npts + 1) != len(edges):
             raise pybamm.GeometryError(
                 "User-suppled edges should have length (npts + 1) but has len"
-                "gth {}. Number of points (npts) for domain {} is {}.".format(
-                    len(edges), spatial_var.domain, npts
-                )
+                f"gth {len(edges)}. Number of points (npts) for domain {spatial_var.domain} is {npts}."
             )
 
         # check end points of edges agree with spatial_lims

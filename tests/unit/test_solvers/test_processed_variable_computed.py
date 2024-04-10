@@ -32,9 +32,11 @@ def to_casadi(var_pybamm, y, inputs=None):
 
 
 def process_and_check_2D_variable(
-    var, first_spatial_var, second_spatial_var, disc=None, geometry_options={}
+    var, first_spatial_var, second_spatial_var, disc=None, geometry_options=None
 ):
     # first_spatial_var should be on the "smaller" domain, i.e "r" for an "r-x" variable
+    if geometry_options is None:
+        geometry_options = {}
     if disc is None:
         disc = tests.get_discretisation_for_testing()
     disc.set_variable_slices([var])
@@ -169,11 +171,15 @@ class TestProcessedVariableComputed(TestCase):
         np.testing.assert_array_equal(processed_var.unroll(), y_sol)
 
         # Check no error when data dimension is transposed vs node/edge
-        processed_var.mesh.nodes, processed_var.mesh.edges = \
-            processed_var.mesh.edges, processed_var.mesh.nodes
+        processed_var.mesh.nodes, processed_var.mesh.edges = (
+            processed_var.mesh.edges,
+            processed_var.mesh.nodes,
+        )
         processed_var.initialise_1D()
-        processed_var.mesh.nodes, processed_var.mesh.edges = \
-            processed_var.mesh.edges, processed_var.mesh.nodes
+        processed_var.mesh.nodes, processed_var.mesh.edges = (
+            processed_var.mesh.edges,
+            processed_var.mesh.nodes,
+        )
 
         # Check that there are no errors with domain-specific attributes
         #  (see ProcessedVariableComputed.initialise_1D() for details)
@@ -207,7 +213,7 @@ class TestProcessedVariableComputed(TestCase):
             pybamm.BaseModel(),
             {},
             np.linspace(0, 1, 1),
-            np.zeros((var_pts[x])),
+            np.zeros(var_pts[x]),
             "test",
         )
 

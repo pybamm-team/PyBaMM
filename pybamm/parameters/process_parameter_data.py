@@ -35,7 +35,7 @@ def process_1D_data(name, path=None):
     """
     filename, name = _process_name(name, path, ".csv")
 
-    data = np.genfromtxt(filename, delimiter=',', skip_header=1)
+    data = np.genfromtxt(filename, delimiter=",", skip_header=1)
     x = data[:, 0]
     y = data[:, 1]
 
@@ -49,7 +49,7 @@ def process_2D_data(name, path=None):
     """
     filename, name = _process_name(name, path, ".json")
 
-    with open(filename, "r") as jsonfile:
+    with open(filename) as jsonfile:
         json_data = json.load(jsonfile)
     data = json_data["data"]
     data[0] = [np.array(el) for el in data[0]]
@@ -88,7 +88,7 @@ def process_2D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    data = np.genfromtxt(filename, delimiter=',',skip_header=1)
+    data = np.genfromtxt(filename, delimiter=",", skip_header=1)
 
     x1 = np.unique(data[:, 0])
     x2 = np.unique(data[:, 1])
@@ -135,7 +135,7 @@ def process_3D_data_csv(name, path=None):
 
     filename, name = _process_name(name, path, ".csv")
 
-    data = np.genfromtxt(filename, delimiter=',',skip_header=1)
+    data = np.genfromtxt(filename, delimiter=",", skip_header=1)
 
     x1 = np.unique(data[:, 0])
     x2 = np.unique(data[:, 1])

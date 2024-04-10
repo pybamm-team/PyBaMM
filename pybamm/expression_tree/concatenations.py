@@ -1,14 +1,16 @@
 #
 # Concatenation classes
 #
+from __future__ import annotations
 import copy
 from collections import defaultdict
 
 import numpy as np
+import sympy
 from scipy.sparse import issparse, vstack
+from collections.abc import Sequence
 
 import pybamm
-from pybamm.util import have_optional_dependency
 
 
 class Concatenation(pybamm.Symbol):
@@ -21,7 +23,13 @@ class Concatenation(pybamm.Symbol):
         The symbols to concatenate
     """
 
-    def __init__(self, *children, name=None, check_domain=True, concat_fun=None):
+    def __init__(
+        self,
+        *children: pybamm.Symbol,
+        name: str | None = None,
+        check_domain=True,
+        concat_fun=None,
+    ):
         # The second condition checks whether this is the base Concatenation class
         # or a subclass of Concatenation
         # (ConcatenationVariable, NumpyConcatenation, ...)
@@ -43,15 +51,28 @@ class Concatenation(pybamm.Symbol):
 
         super().__init__(name, children, domains=domains)
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Creates a new Concatenation instance from a json object"""
+        instance = cls.__new__(cls)
+
+        instance.concatenation_function = snippet["concat_fun"]
+
+        super(Concatenation, instance).__init__(
+            snippet["name"], tuple(snippet["children"]), domains=snippet["domains"]
+        )
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         out = self.name + "("
         for child in self.children:
-            out += "{!s}, ".format(child)
+            out += f"{child!s}, "
         out = out[:-2] + ")"
         return out
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         children_diffs = [child.diff(variable) for child in self.children]
         if len(children_diffs) == 1:
@@ -61,16 +82,16 @@ class Concatenation(pybamm.Symbol):
 
         return diff
 
-    def get_children_domains(self, children):
+    def get_children_domains(self, children: Sequence[pybamm.Symbol]):
         # combine domains from children
-        domain = []
+        domain: list = []
         for child in children:
             if not isinstance(child, pybamm.Symbol):
-                raise TypeError("{} is not a pybamm symbol".format(child))
+                raise TypeError(f"{child} is not a pybamm symbol")
             child_domain = child.domain
             if child_domain == []:
                 raise pybamm.DomainError(
-                    "Cannot concatenate child '{}' with empty domain".format(child)
+                    f"Cannot concatenate child '{child}' with empty domain"
                 )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain
@@ -90,19 +111,22 @@ class Concatenation(pybamm.Symbol):
 
         return domains
 
-    def _concatenation_evaluate(self, children_eval):
+    def _concatenation_evaluate(self, children_eval: list[np.ndarray]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         if len(children_eval) == 0:
             return np.array([])
         else:
             return self.concatenation_function(children_eval)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        children = self.children
-        children_eval = [None] * len(children)
-        for idx, child in enumerate(children):
-            children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
+        children_eval = [child.evaluate(t, y, y_dot, inputs) for child in self.children]
         return self._concatenation_evaluate(children_eval)
 
     def create_copy(self):
@@ -135,7 +159,6 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
-        sympy = have_optional_dependency("sympy")
         self.concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
@@ -169,7 +192,7 @@ class NumpyConcatenation(Concatenation):
         The equations to concatenate
     """
 
-    def __init__(self, *children):
+    def __init__(self, *children: pybamm.Symbol):
         children = list(children)
         # Turn objects that evaluate to scalars to objects that evaluate to vectors,
         # so that we can concatenate them
@@ -180,8 +203,19 @@ class NumpyConcatenation(Concatenation):
             *children,
             name="numpy_concatenation",
             check_domain=False,
-            concat_fun=np.concatenate
+            concat_fun=np.concatenate,
         )
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.Concatenation._from_json()`."""
+
+        snippet["name"] = "numpy_concatenation"
+        snippet["concat_fun"] = np.concatenate
+
+        instance = super()._from_json(snippet)
+
+        return instance
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
@@ -210,7 +244,7 @@ class DomainConcatenation(Concatenation):
     children : iterable of :class:`pybamm.Symbol`
         The symbols to concatenate
 
-    full_mesh : :class:`pybamm.BaseMesh`
+    full_mesh : :class:`pybamm.Mesh`
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
 
@@ -219,7 +253,12 @@ class DomainConcatenation(Concatenation):
         from `copy_this`. `mesh` is not used in this case
     """
 
-    def __init__(self, children, full_mesh, copy_this=None):
+    def __init__(
+        self,
+        children: Sequence[pybamm.Symbol],
+        full_mesh: pybamm.Mesh,
+        copy_this: pybamm.DomainConcatenation | None = None,
+    ):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
         children = list(children)
@@ -251,7 +290,32 @@ class DomainConcatenation(Concatenation):
             self._children_slices = copy.copy(copy_this._children_slices)
             self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
-    def _get_auxiliary_domain_repeats(self, auxiliary_domains):
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.Concatenation._from_json()`."""
+
+        snippet["name"] = "domain_concatenation"
+        snippet["concat_fun"] = None
+
+        instance = super()._from_json(snippet)
+
+        def repack_defaultDict(slices):
+            slices = defaultdict(list, slices)
+            for domain, sls in slices.items():
+                sls = [slice(s["start"], s["stop"], s["step"]) for s in sls]
+                slices[domain] = sls
+            return slices
+
+        instance._size = snippet["size"]
+        instance._slices = repack_defaultDict(snippet["slices"])
+        instance._children_slices = [
+            repack_defaultDict(s) for s in snippet["children_slices"]
+        ]
+        instance.secondary_dimensions_npts = snippet["secondary_dimensions_npts"]
+
+        return instance
+
+    def _get_auxiliary_domain_repeats(self, auxiliary_domains: dict) -> int:
         """Helper method to read the 'auxiliary_domain' meshes."""
         mesh_pts = 1
         for level, dom in auxiliary_domains.items():
@@ -263,7 +327,7 @@ class DomainConcatenation(Concatenation):
     def full_mesh(self):
         return self._full_mesh
 
-    def create_slices(self, node):
+    def create_slices(self, node: pybamm.Symbol) -> defaultdict:
         slices = defaultdict(list)
         start = 0
         end = 0
@@ -273,14 +337,14 @@ class DomainConcatenation(Concatenation):
                 """Concatenation and children must have the same number of
                 points in secondary dimensions"""
             )
-        for i in range(second_pts):
+        for _ in range(second_pts):
             for dom in node.domain:
                 end += self.full_mesh[dom].npts
                 slices[dom].append(slice(start, end))
                 start = end
         return slices
 
-    def _concatenation_evaluate(self, children_eval):
+    def _concatenation_evaluate(self, children_eval: list[np.ndarray]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         # preallocate vector
         vector = np.empty((self._size, 1))
@@ -309,12 +373,38 @@ class DomainConcatenation(Concatenation):
                 jacs.append(pybamm.Index(child_jac, child_slice[i]))
         return SparseStack(*jacs)
 
-    def _concatenation_new_copy(self, children):
+    def _concatenation_new_copy(self, children: list[pybamm.Symbol]):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_symbol = simplified_domain_concatenation(
             children, self.full_mesh, copy_this=self
         )
         return new_symbol
+
+    def to_json(self):
+        """
+        Method to serialise a DomainConcatenation object into JSON.
+        """
+
+        def unpack_defaultDict(slices):
+            slices = dict(slices)
+            for domain, sls in slices.items():
+                sls = [{"start": s.start, "stop": s.stop, "step": s.step} for s in sls]
+                slices[domain] = sls
+            return slices
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "domains": self.domains,
+            "slices": unpack_defaultDict(self._slices),
+            "size": self._size,
+            "children_slices": [
+                unpack_defaultDict(child_slice) for child_slice in self._children_slices
+            ],
+            "secondary_dimensions_npts": self.secondary_dimensions_npts,
+        }
+
+        return json_dict
 
 
 class SparseStack(Concatenation):
@@ -341,7 +431,7 @@ class SparseStack(Concatenation):
             *children,
             name="sparse_stack",
             check_domain=False,
-            concat_fun=concatenation_function
+            concat_fun=concatenation_function,
         )
 
     def _concatenation_new_copy(self, children):
@@ -390,13 +480,13 @@ class ConcatenationVariable(Concatenation):
         self.print_name = print_name
 
 
-def substrings(s):
+def substrings(s: str):
     for i in range(len(s)):
         for j in range(i, len(s)):
             yield s[i : j + 1]
 
 
-def intersect(s1, s2):
+def intersect(s1: str, s2: str):
     # find all the common strings between two strings
     all_intersects = set(substrings(s1)) & set(substrings(s2))
     # intersect is the longest such intercept
@@ -462,24 +552,29 @@ def numpy_concatenation(*children):
     return simplified_numpy_concatenation(*children)
 
 
-def simplified_domain_concatenation(children, mesh, copy_this=None):
+def simplified_domain_concatenation(
+    children: list[pybamm.Symbol],
+    mesh: pybamm.Mesh,
+    copy_this: DomainConcatenation | None = None,
+):
     """Perform simplifications on a domain concatenation."""
     # Create the DomainConcatenation to read domain and child domain
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
     # The sum of the evalation arrays of the StateVectors must be exactly 1
     if all(isinstance(child, pybamm.StateVector) for child in children):
-        longest_eval_array = len(children[-1]._evaluation_array)
+        sv_children: list[pybamm.StateVector] = children  # type: ignore[assignment]
+        longest_eval_array = len(sv_children[-1]._evaluation_array)
         eval_arrays = {}
-        for child in children:
+        for child in sv_children:
             eval_arrays[child] = np.concatenate(
                 [
                     child.evaluation_array,
                     np.zeros(longest_eval_array - len(child.evaluation_array)),
                 ]
             )
-        first_start = children[0].y_slices[0].start
-        last_stop = children[-1].y_slices[-1].stop
+        first_start = sv_children[0].y_slices[0].start
+        last_stop = sv_children[-1].y_slices[-1].stop
         if all(
             sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
         ):
@@ -490,7 +585,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
     return pybamm.simplify_if_constant(concat)
 
 
-def domain_concatenation(children, mesh):
+def domain_concatenation(children: list[pybamm.Symbol], mesh: pybamm.Mesh):
     """Helper function to create domain concatenations."""
     # TODO: add option to turn off simplifications
     return simplified_domain_concatenation(children, mesh)

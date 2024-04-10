@@ -21,14 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
 
       - name: Check style
         run: |
           python -m pip install pre-commit
-          pre-commit run ruff
+          pre-commit run -a
 
   run_unit_tests:
     needs: style
@@ -36,21 +36,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-        # We check coverage on Ubuntu with Python 3.11, so we skip unit tests for it here
+        os: [ubuntu-latest, macos-12, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        # We check coverage on Ubuntu with Python 3.12, so we skip unit tests for it here
         exclude:
           - os: ubuntu-latest
+            python-version: "3.12"
+        # Include macOS M1 runners
+        include:
+          - os: macos-14
+            python-version: "3.10"
+          - os: macos-14
             python-version: "3.11"
+          - os: macos-14
+            python-version: "3.12"
     name: Unit tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -65,18 +72,18 @@ jobs:
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
         env:
-          # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew update
-          brew install graphviz openblas
+          brew install graphviz libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -84,20 +91,17 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
+        uses: actions/cache@v4
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
@@ -106,31 +110,29 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s pybamm-requires
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
+        if: matrix.os != 'windows-latest'
+        run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: pipx run nox -s unit
+        run: python -m nox -s unit
 
-  # Runs only on Ubuntu with Python 3.11
   check_coverage:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Coverage tests (ubuntu-latest / Python 3.11)
+    name: Coverage tests (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -142,21 +144,18 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools nox
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             # Repository files
@@ -165,17 +164,19 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: pipx run nox -s pybamm-requires
+        timeout-minutes: 10
+        run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
-        run: pipx run nox -s coverage
+        run: python -m nox -s coverage
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v4.2.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   run_integration_tests:
     needs: style
@@ -183,17 +184,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [ubuntu-latest, macos-12, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        # Include macOS M1 runners
+        include:
+          - os: macos-14
+            python-version: "3.10"
+          - os: macos-14
+            python-version: "3.11"
+          - os: macos-14
+            python-version: "3.12"
     name: Integration tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -208,18 +216,18 @@ jobs:
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
         env:
-          # Homebrew environment variables
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
           HOMEBREW_NO_COLOR: 1
           # Speed up CI
           NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew update
-          brew install graphviz openblas
+          brew install graphviz libomp
+          brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
@@ -227,20 +235,17 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
-        if: matrix.os == 'ubuntu-latest'
+      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
+        uses: actions/cache@v4
+        if: matrix.os != 'windows-latest'
         with:
           path: |
             # Repository files
@@ -249,18 +254,17 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: pipx run nox -s pybamm-requires
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
+        if: matrix.os != 'windows-latest'
+        run: python -m nox -s pybamm-requires
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: pipx run nox -s integration
+        run: python -m nox -s integration
 
-# Runs only on Ubuntu with Python 3.11. Skips IDAKLU module compilation
-# for speedups, which is already tested in other jobs.
+  # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     needs: style
     runs-on: ubuntu-latest
@@ -271,55 +275,51 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
-
-      # Install and cache apt packages
-      - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
         with:
-          packages: gfortran gcc graphviz pandoc
+          fetch-depth: 0
+
+      - name: Install Linux system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        with:
+          packages: graphviz pandoc
           execute_install_scripts: true
 
       # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
+      - name: Install TeXLive for Linux
         run: |
           sudo apt-get update
           sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
-      - name: Install docs dependencies and run doctests for GNU/Linux with Python 3.11
-        run: pipx run nox -s doctests
+      - name: Install docs dependencies and run doctests for GNU/Linux
+        run: python -m nox -s doctests
 
-      - name: Check if the documentation can be built for GNU/Linux with Python 3.11
-        run: pipx run nox -s docs
+      - name: Check if the documentation can be built for GNU/Linux
+        run: python -m nox -s docs
 
-  # Runs only on Ubuntu with Python 3.11
   run_example_tests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Example notebooks (ubuntu-latest / Python 3.11)
+    name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -331,21 +331,18 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             # Repository files
@@ -354,30 +351,28 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: pipx run nox -s pybamm-requires
+        timeout-minutes: 10
+        run: python -m nox -s pybamm-requires
 
-      - name: Install dev dependencies and run example tests for GNU/Linux with Python 3.11
-        run: pipx run nox -s examples
+      - name: Run example notebooks tests for GNU/Linux with Python 3.12
+        run: python -m nox -s examples
 
-  # Runs only on Ubuntu with Python 3.11
   run_scripts_tests:
     needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Example scripts (ubuntu-latest / Python 3.11)
+    name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # Install and cache apt packages
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
@@ -389,21 +384,18 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.12
           cache: 'pip'
-          cache-dependency-path: setup.py
 
-      - name: Install PyBaMM dependencies
-        run: |
-          pip install --upgrade pip wheel setuptools
-          pip install -e .[all,docs]
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             # Repository files
@@ -412,11 +404,11 @@ jobs:
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ env.HOME }}/.local/lib/
             ${{ env.HOME }}/.local/include/
-            ${{ env.HOME }}/.local/examples/
-          key: nox-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py') }}
+          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        run: pipx run nox -s pybamm-requires
+        timeout-minutes: 10
+        run: python -m nox -s pybamm-requires
 
-      - name: Install dev dependencies and run example scripts tests for GNU/Linux with Python 3.11
-        run: pipx run nox -s scripts
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
+        run: python -m nox -s scripts

@@ -5,11 +5,10 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class LoopList(list):
-
     """A list which loops over itself when accessing an
     index so that it never runs out"""
 
@@ -47,12 +46,12 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
 
-class QuickPlot(object):
+class QuickPlot:
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
     outputs can be easily assessed.
@@ -117,9 +116,7 @@ class QuickPlot(object):
         else:
             if len(labels) != len(models):
                 raise ValueError(
-                    "labels '{}' have different length to models '{}'".format(
-                        labels, [model.name for model in models]
-                    )
+                    f"labels '{labels}' have different length to models '{[model.name for model in models]}'"
                 )
             self.labels = labels
 
@@ -141,6 +138,10 @@ class QuickPlot(object):
                     f"No default output variables provided for {models[0].name}"
                 )
 
+        # check variables have been provided after any serialisation
+        if any(len(m.variables) == 0 for m in models):
+            raise AttributeError("No variables to plot")
+
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
         )
@@ -159,9 +160,9 @@ class QuickPlot(object):
             self.spatial_unit = "mm"
         elif spatial_unit == "um":  # micrometers
             self.spatial_factor = 1e6
-            self.spatial_unit = "$\mu$m"
+            self.spatial_unit = r"$\mu$m"
         else:
-            raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
+            raise ValueError(f"spatial unit '{spatial_unit}' not recognized")
 
         # Time parameters
         self.ts_seconds = [solution.t for solution in solutions]
@@ -187,7 +188,7 @@ class QuickPlot(object):
             time_scaling_factor = 3600
             self.time_unit = "h"
         else:
-            raise ValueError("time unit '{}' not recognized".format(time_unit))
+            raise ValueError(f"time unit '{time_unit}' not recognized")
         self.time_scaling_factor = time_scaling_factor
         self.min_t = min_t / time_scaling_factor
         self.max_t = max_t / time_scaling_factor
@@ -221,10 +222,10 @@ class QuickPlot(object):
                 except KeyError:
                     # if variable_tuple is not provided, default to "fixed"
                     self.variable_limits[variable_tuple] = "fixed"
-                except TypeError:
+                except TypeError as error:
                     raise TypeError(
                         "variable_limits must be 'fixed', 'tight', or a dict"
-                    )
+                    ) from error
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
@@ -279,7 +280,7 @@ class QuickPlot(object):
                     sol = solution[var]
                     # Check variable isn't all-nan
                     if np.all(np.isnan(sol.entries)):
-                        raise ValueError("All-NaN variable '{}' provided".format(var))
+                        raise ValueError(f"All-NaN variable '{var}' provided")
                     # If ok, add to the list of solutions
                     else:
                         variables[i].append(sol)
@@ -294,12 +295,7 @@ class QuickPlot(object):
                 if variable.domain != domain:
                     raise ValueError(
                         "Mismatching variable domains. "
-                        "'{}' has domain '{}', but '{}' has domain '{}'".format(
-                            variable_tuple[0],
-                            domain,
-                            variable_tuple[idx],
-                            variable.domain,
-                        )
+                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
 
@@ -320,7 +316,7 @@ class QuickPlot(object):
                 if len(variables) > 1:
                     raise NotImplementedError(
                         "Cannot plot 2D variables when comparing multiple solutions, "
-                        "but '{}' is 2D".format(variable_tuple[0])
+                        f"but '{variable_tuple[0]}' is 2D"
                     )
                 # But do allow if just a single solution
                 else:
@@ -383,7 +379,7 @@ class QuickPlot(object):
                 domain = variable.domains["secondary"][0]
 
         if domain == "current collector":
-            domain += " {}".format(spatial_var_name)
+            domain += f" {spatial_var_name}"
 
         return spatial_var_name, spatial_var_value
 
@@ -470,10 +466,10 @@ class QuickPlot(object):
             Dimensional time (in 'time_units') at which to plot.
         """
 
-        plt = have_optional_dependency("matplotlib.pyplot")
-        gridspec = have_optional_dependency("matplotlib.gridspec")
-        cm = have_optional_dependency("matplotlib", "cm")
-        colors = have_optional_dependency("matplotlib", "colors")
+        plt = import_optional_dependency("matplotlib.pyplot")
+        gridspec = import_optional_dependency("matplotlib.gridspec")
+        cm = import_optional_dependency("matplotlib", "cm")
+        colors = import_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -482,14 +478,14 @@ class QuickPlot(object):
         self.plots = {}
         self.time_lines = {}
         self.colorbars = {}
-        self.axes = []
+        self.axes = QuickPlotAxes()
 
         # initialize empty handles, to be created only if the appropriate plots are made
         solution_handles = []
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             ax = self.fig.add_subplot(self.gridspec[k])
-            self.axes.append(ax)
+            self.axes.add(key, ax)
             x_min, x_max, y_min, y_max = self.axis_limits[key]
             ax.set_xlim(x_min, x_max)
             if y_min is not None and y_max is not None:
@@ -500,7 +496,7 @@ class QuickPlot(object):
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel("Time [{}]".format(self.time_unit))
+                ax.set_xlabel(f"Time [{self.time_unit}]")
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -534,9 +530,9 @@ class QuickPlot(object):
                 # 1D plot: plot as a function of x at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
-                spatial_var_name = list(spatial_vars.keys())[0]
+                spatial_var_name = next(iter(spatial_vars.keys()))
                 ax.set_xlabel(
-                    "{} [{}]".format(spatial_var_name, self.spatial_unit),
+                    f"{spatial_var_name} [{self.spatial_unit}]",
                 )
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
@@ -568,18 +564,18 @@ class QuickPlot(object):
                 # different order based on whether the domains are x-r, x-z or y-z, etc
                 if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
-                    y_name = list(spatial_vars.keys())[0][0]
+                    y_name = next(iter(spatial_vars.keys()))[0]
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
-                    x_name = list(spatial_vars.keys())[0][0]
+                    x_name = next(iter(spatial_vars.keys()))[0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
                     var = variable(t_in_seconds, **spatial_vars, warn=False).T
-                ax.set_xlabel("{} [{}]".format(x_name, self.spatial_unit))
-                ax.set_ylabel("{} [{}]".format(y_name, self.spatial_unit))
+                ax.set_xlabel(f"{x_name} [{self.spatial_unit}]")
+                ax.set_ylabel(f"{y_name} [{self.spatial_unit}]")
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
@@ -645,7 +641,7 @@ class QuickPlot(object):
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
-    def dynamic_plot(self, testing=False, step=None):
+    def dynamic_plot(self, show_plot=True, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
 
@@ -654,8 +650,9 @@ class QuickPlot(object):
         step : float
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
             of the total time.
-        testing : bool
-            Whether to actually make the plot (turned off for unit tests)
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
 
         """
         if pybamm.is_notebook():  # pragma: no cover
@@ -670,8 +667,8 @@ class QuickPlot(object):
                 continuous_update=False,
             )
         else:
-            plt = have_optional_dependency("matplotlib.pyplot")
-            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
+            plt = import_optional_dependency("matplotlib.pyplot")
+            Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -680,7 +677,7 @@ class QuickPlot(object):
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
                 ax_slider,
-                "Time [{}]".format(self.time_unit),
+                f"Time [{self.time_unit}]",
                 self.min_t,
                 self.max_t,
                 valinit=self.min_t,
@@ -688,7 +685,7 @@ class QuickPlot(object):
             )
             self.slider.on_changed(self.slider_update)
 
-            if not testing:  # pragma: no cover
+            if show_plot:  # pragma: no cover
                 plt.show()
 
     def slider_update(self, t):
@@ -775,8 +772,8 @@ class QuickPlot(object):
             Name of the generated GIF file.
 
         """
-        imageio = have_optional_dependency("imageio.v2")
-        plt = have_optional_dependency("matplotlib.pyplot")
+        imageio = import_optional_dependency("imageio.v2")
+        plt = import_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
@@ -799,3 +796,40 @@ class QuickPlot(object):
         # remove the generated images
         for image in images:
             os.remove(image)
+
+
+class QuickPlotAxes:
+    """
+    Class to store axes for the QuickPlot
+    """
+
+    def __init__(self):
+        self._by_variable = {}
+        self._axes = []
+
+    def add(self, keys, axis):
+        """
+        Add axis
+
+        Parameters
+        ----------
+        keys : iter
+            Iterable of keys of variables being plotted on the axis
+        axis : matplotlib Axis object
+            The axis object
+        """
+        self._axes.append(axis)
+        for k in keys:
+            self._by_variable[k] = axis
+
+    def __getitem__(self, index):
+        """
+        Get axis by index
+        """
+        return self._axes[index]
+
+    def by_variable(self, key):
+        """
+        Get axis by variable name
+        """
+        return self._by_variable[key]

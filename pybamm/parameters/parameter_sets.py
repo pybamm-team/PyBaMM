@@ -3,6 +3,7 @@ import warnings
 import importlib.metadata
 import textwrap
 from collections.abc import Mapping
+from typing import Callable
 
 
 class ParameterSets(Mapping):
@@ -16,7 +17,6 @@ class ParameterSets(Mapping):
 
     .. doctest::
 
-        >>> import pybamm
         >>> list(pybamm.parameter_sets)
         ['Ai2020', 'Chen2020', ...]
 
@@ -24,7 +24,6 @@ class ParameterSets(Mapping):
 
     .. doctest::
 
-        >>> import pybamm
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
         <BLANKLINE>
         Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
@@ -44,7 +43,7 @@ class ParameterSets(Mapping):
     @staticmethod
     def get_entries(group_name):
         # Wrapper for the importlib version logic
-        if sys.version_info < (3, 10): # pragma: no cover
+        if sys.version_info < (3, 10):  # pragma: no cover
             return importlib.metadata.entry_points()[group_name]
         else:
             return importlib.metadata.entry_points(group=group_name)
@@ -52,13 +51,13 @@ class ParameterSets(Mapping):
     def __new__(cls):
         """Ensure only one instance of ParameterSets exists"""
         if not hasattr(cls, "instance"):
-            cls.instance = super(ParameterSets, cls).__new__(cls)
+            cls.instance = super().__new__(cls)
         return cls.instance
 
     def __getitem__(self, key) -> dict:
         return self.__load_entry_point__(key)()
 
-    def __load_entry_point__(self, key) -> callable:
+    def __load_entry_point__(self, key) -> Callable:
         """Check that ``key`` is a registered ``pybamm_parameter_sets``,
         and return the entry point for the parameter set, loading it needed.
         """
@@ -90,10 +89,10 @@ class ParameterSets(Mapping):
             # parameter set as before when passed to `ParameterValues`
             if name in self:
                 msg = (
-                    "Parameter sets should be called directly by their name ({0}), "
-                    "instead of via pybamm.parameter_sets (pybamm.parameter_sets.{0})."
-                ).format(name)
-                warnings.warn(msg, DeprecationWarning)
+                    f"Parameter sets should be called directly by their name ({name}), "
+                    f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
+                )
+                warnings.warn(msg, DeprecationWarning, stacklevel=2)
                 return name
             raise error
 
