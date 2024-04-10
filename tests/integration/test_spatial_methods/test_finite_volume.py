@@ -338,6 +338,7 @@ class TestFiniteVolumeLaplacian(TestCase):
             solution["u"].entries, 2 - 2 / solution["r"].entries, decimal=5
         )
 
+
 def solve_advection_equation(direction="upwind"):
     model = pybamm.BaseModel()
     x = pybamm.SpatialVariable("x", domain="domain", coord_sys="cartesian")
@@ -346,12 +347,12 @@ def solve_advection_equation(direction="upwind"):
         bc_side = "left"
         u_an = x + (pybamm.t - x) * ((x - pybamm.t) > 0)
         v = pybamm.PrimaryBroadcastToEdges(1, ["domain"])
-        rhs = - pybamm.div(pybamm.upwind(u) * v) + 1
+        rhs = -pybamm.div(pybamm.upwind(u) * v) + 1
     elif direction == "downwind":
         bc_side = "right"
-        u_an = (1- x) + (pybamm.t - (1- x)) * (((1 - x) - pybamm.t) > 0)
-        v = pybamm.PrimaryBroadcastToEdges(-1, ["domain"])      
-        rhs = - pybamm.div(pybamm.downwind(u) * v) + 1  
+        u_an = (1 - x) + (pybamm.t - (1 - x)) * (((1 - x) - pybamm.t) > 0)
+        v = pybamm.PrimaryBroadcastToEdges(-1, ["domain"])
+        rhs = -pybamm.div(pybamm.downwind(u) * v) + 1
 
     model.boundary_conditions = {
         u: {
@@ -370,6 +371,7 @@ def solve_advection_equation(direction="upwind"):
     disc.process_model(model)
     solver = pybamm.CasadiSolver()
     return solver.solve(model, [0, 1])
+
 
 class TestUpwindDownwind(TestCase):
     def test_upwind(self):
