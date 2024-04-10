@@ -6,7 +6,7 @@ x = pybamm.SpatialVariable("x", domain="domain", coord_sys="cartesian")
 u = pybamm.Variable("u", domain="domain")
 u_an = x + (pybamm.t - x) * ((x - pybamm.t) > 0)
 v = pybamm.PrimaryBroadcastToEdges(1, ["domain"])
-rhs = - pybamm.div(pybamm.upwind(u) * v) + 1
+rhs = -pybamm.div(pybamm.upwind(u) * v) + 1
 # rhs = - pybamm.div(u * v) + 1
 model.boundary_conditions = {
     u: {
@@ -36,7 +36,7 @@ model_disc = disc.process_model(model, inplace=False)
 
 print(model_disc.rhs[u].children[1].children[0].entries.toarray())
 solver = pybamm.CasadiSolver()
-solution =solver.solve(model_disc, [0, 10])
+solution = solver.solve(model_disc, [0, 10])
 
-plot = pybamm.QuickPlot(solution,[["u", "analytical"]])
+plot = pybamm.QuickPlot(solution, [["u", "analytical"]])
 plot.dynamic_plot()
