@@ -26,35 +26,12 @@ RUN conda init --all
 SHELL ["conda", "run", "-n", "pybamm", "/bin/bash", "-c"]
 RUN conda install -y pip
 
-ARG IDAKLU
-ARG JAX
-ARG ALL
-
 RUN pip install --upgrade --user pip setuptools wheel wget
 RUN pip install cmake
 
-RUN if [ "$IDAKLU" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
+RUN python scripts/install_KLU_Sundials.py && \
     rm -rf pybind11 && \
     git clone https://github.com/pybind/pybind11.git && \
-    pip install --user -e ".[all,dev,docs]"; \
-    fi
-
-RUN if [ "$JAX" = "true" ]; then \
-    pip install --user -e ".[all,dev,docs,jax]"; \
-    fi
-
-RUN if [ "$ALL" = "true" ]; then \
-    python scripts/install_KLU_Sundials.py && \
-    rm -rf pybind11 && \
-    git clone https://github.com/pybind/pybind11.git && \
-    pip install --user -e ".[all,dev,docs,jax]"; \
-    fi
-
-RUN if [ -z "$IDAKLU" ] \
-    && [ -z "$JAX" ] \
-    && [ -z "$ALL" ]; then \
-    pip install --user -e ".[all,dev,docs]"; \
-    fi
+    pip install --user -e ".[all,dev,docs,jax]";
 
 ENTRYPOINT ["/bin/bash"]
