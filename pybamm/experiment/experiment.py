@@ -20,9 +20,9 @@ class Experiment:
     ----------
     operating_conditions : list[str]
         List of strings representing the operating conditions.
-    period : string, optional
+    period : str, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
-        overwritten by individual operating conditions.
+        overwritten by individual operating conditions. e.g. 30 minute, 1 hour.
     temperature: float, optional
         The ambient air temperature in degrees Celsius at which to run the experiment.
         Default is None whereby the ambient temperature is taken from the parameter set.
