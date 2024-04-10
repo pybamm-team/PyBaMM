@@ -408,7 +408,6 @@ class TestFiniteVolume(TestCase):
         self.assertEqual(disc_downwind.size, nodes.size + 1)
 
         y_test = 2 * np.ones_like(nodes)
-        print(disc_upwind.evaluate(y=y_test))
         np.testing.assert_array_equal(
             disc_upwind.evaluate(y=y_test),
             np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
