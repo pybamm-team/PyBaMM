@@ -10,12 +10,8 @@ jobs:
   build_docker_images:
     # This workflow is only of value to PyBaMM and would always be skipped in forks
     if: github.repository_owner == 'pybamm-team'
-    name: Image (${{ matrix.build-args }})
+    name: Image
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        build-args: ["No solvers", "JAX", "IDAKLU", "ALL"]
-      fail-fast: true
 
     steps:
       - name: Checkout
@@ -33,22 +29,11 @@ jobs:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create tags for Docker images based on build-time arguments
+      - name: Create latest tag for Docker image
         id: tags
-        run: |
-          if [ "${{ matrix.build-args }}" = "No solvers" ]; then
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "JAX" ]; then
-            echo "tag=jax" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "ODES" ]; then
-            echo "tag=odes" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "IDAKLU" ]; then
-            echo "tag=idaklu" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.build-args }}" = "ALL" ]; then
-            echo "tag=all" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "tag=latest" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push Docker image to Docker Hub (${{ matrix.build-args }})
+      - name: Build and push Docker image to Docker Hub
         uses: docker/build-push-action@v5
         with:
           context: .
