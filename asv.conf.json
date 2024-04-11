@@ -25,10 +25,12 @@
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
     "/bin/rm -rf pybind11",
-    "/usr/bin/git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git",
-    "python setup.py build",
-    "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+    "/usr/bin/git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git",
+    "python -m pip install build",
+    "python -m build --wheel -o {build_cache_dir} {build_dir}"
   ],
+  "build_cache_dir": ".asv/cache",
+  "build_dir": ".asv/build",
 
   // List of branches to benchmark. If not provided, defaults to "master"
   // (for git) or "default" (for mercurial).
