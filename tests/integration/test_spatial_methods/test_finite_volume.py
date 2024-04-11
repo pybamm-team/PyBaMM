@@ -339,24 +339,25 @@ class TestFiniteVolumeLaplacian(TestCase):
         )
 
 
-def solve_advection_equation(direction="upwind"):
+def solve_advection_equation(direction="upwind", source=1, bc=0):
     model = pybamm.BaseModel()
     x = pybamm.SpatialVariable("x", domain="domain", coord_sys="cartesian")
     u = pybamm.Variable("u", domain="domain")
     if direction == "upwind":
         bc_side = "left"
-        u_an = x + (pybamm.t - x) * ((x - pybamm.t) > 0)
+        y = x
         v = pybamm.PrimaryBroadcastToEdges(1, ["domain"])
-        rhs = -pybamm.div(pybamm.upwind(u) * v) + 1
+        rhs = -pybamm.div(pybamm.upwind(u) * v) + source
     elif direction == "downwind":
         bc_side = "right"
-        u_an = (1 - x) + (pybamm.t - (1 - x)) * (((1 - x) - pybamm.t) > 0)
+        y = 1 - x
         v = pybamm.PrimaryBroadcastToEdges(-1, ["domain"])
-        rhs = -pybamm.div(pybamm.downwind(u) * v) + 1
-
+        rhs = -pybamm.div(pybamm.downwind(u) * v) + source
+    
+    u_an = (bc + source * y) - (bc + source * (y - pybamm.t)) * ((y - pybamm.t) > 0)
     model.boundary_conditions = {
         u: {
-            bc_side: (pybamm.Scalar(0), "Dirichlet"),
+            bc_side: (pybamm.Scalar(bc), "Dirichlet"),
         }
     }
     model.rhs = {u: rhs}
@@ -364,7 +365,7 @@ def solve_advection_equation(direction="upwind"):
     model.variables = {"u": u, "x": x, "analytical": u_an}
     geometry = {"domain": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
     submesh_types = {"domain": pybamm.Uniform1DSubMesh}
-    var_pts = {x: 1000}
+    var_pts = {x: 2000}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
     spatial_methods = {"domain": pybamm.FiniteVolume()}
     disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -380,8 +381,19 @@ class TestUpwindDownwind(TestCase):
             solution["u"].entries, solution["analytical"].entries, decimal=2
         )
 
+        solution = solve_advection_equation("upwind", 0, 1)
+        np.testing.assert_array_almost_equal(
+            solution["u"].entries, solution["analytical"].entries, decimal=2
+        )
+
     def test_downwind(self):
         solution = solve_advection_equation("downwind")
+        np.testing.assert_array_almost_equal(
+            solution["u"].entries, solution["analytical"].entries, decimal=2
+        )
+
+        solution = solve_advection_equation("downwind", 0, 1)
+        error = np.linalg.norm(solution["u"].entries - solution["analytical"].entries) / np.linalg.norm(solution["analytical"].entries)
         np.testing.assert_array_almost_equal(
             solution["u"].entries, solution["analytical"].entries, decimal=2
         )
