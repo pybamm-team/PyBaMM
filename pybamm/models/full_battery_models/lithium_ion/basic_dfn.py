@@ -34,6 +34,7 @@ class BasicDFN(BaseModel):
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
+
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
@@ -240,21 +241,39 @@ class BasicDFN(BaseModel):
         # (Some) variables
         ######################
         voltage = pybamm.boundary_value(phi_s_p, "right")
+        num_cells = pybamm.Parameter(
+            "Number of cells connected in series to make a battery"
+        )
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
+            "Negative particle concentration [mol.m-3]": c_s_n,
             "Negative particle surface concentration [mol.m-3]": c_s_surf_n,
             "Electrolyte concentration [mol.m-3]": c_e,
+            "Negative electrolyte concentration [mol.m-3]": c_e_n,
+            "Separator electrolyte concentration [mol.m-3]": c_e_s,
+            "Positive electrolyte concentration [mol.m-3]": c_e_p,
+            "Positive particle concentration [mol.m-3]": c_s_p,
             "Positive particle surface concentration [mol.m-3]": c_s_surf_p,
             "Current [A]": I,
+            "Current variable [A]": I,  # for compatibility with pybamm.Experiment
             "Negative electrode potential [V]": phi_s_n,
             "Electrolyte potential [V]": phi_e,
+            "Negative electrolyte potential [V]": phi_e_n,
+            "Separator electrolyte potential [V]": phi_e_s,
+            "Positive electrolyte potential [V]": phi_e_p,
             "Positive electrode potential [V]": phi_s_p,
             "Voltage [V]": voltage,
+            "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
+            "Discharge capacity [A.h]": Q,
         }
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event("Minimum voltage [V]", voltage - param.voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - voltage),
         ]
+        # Summary variables is a list of variables that can be accessed and plotted
+        # per-cycle when running experiments. Typically used to track degradation
+        # variables (e.g LAM, LLI, capacity fade, etc.)
+        self.summary_variables = ["Time [s]", "Voltage [V]"]

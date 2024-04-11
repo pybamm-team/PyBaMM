@@ -974,6 +974,8 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
         esoh_solver is not None
         and isinstance(model, pybamm.lithium_ion.BaseModel)
         and model.options.electrode_types["negative"] == "porous"
+        and "Negative electrode capacity [A.h]" in model.variables
+        and "Positive electrode capacity [A.h]" in model.variables
     ):
         Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
