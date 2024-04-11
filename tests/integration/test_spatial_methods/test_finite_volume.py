@@ -353,7 +353,7 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
         y = 1 - x
         v = pybamm.PrimaryBroadcastToEdges(-1, ["domain"])
         rhs = -pybamm.div(pybamm.downwind(u) * v) + source
-    
+
     u_an = (bc + source * y) - (bc + source * (y - pybamm.t)) * ((y - pybamm.t) > 0)
     model.boundary_conditions = {
         u: {
