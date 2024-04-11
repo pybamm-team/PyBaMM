@@ -2,6 +2,7 @@
 
 ## Features
 
+- "Basic" models are now compatible with experiments ([#3995](https://github.com/pybamm-team/PyBaMM/pull/3995))
 - Updates multiprocess `Pool` in `BaseSolver.solve()` to be constructed with context `fork`. Adds small example for multiprocess inputs. ([#3974](https://github.com/pybamm-team/PyBaMM/pull/3974))
 - Added custom experiment steps ([#3835](https://github.com/pybamm-team/PyBaMM/pull/3835))
 - Added support for macOS arm64 (M-series) platforms. ([#3789](https://github.com/pybamm-team/PyBaMM/pull/3789))

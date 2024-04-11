@@ -158,7 +158,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
         # Lithium lost to side reactions
-        # Different way of measuring LLI but should give same value
+        # Different way of LLI but should give same value
         n_Li_lost_neg_sei = self.variables["Loss of lithium to negative SEI [mol]"]
         n_Li_lost_pos_sei = self.variables["Loss of lithium to positive SEI [mol]"]
         n_Li_lost_reactions = n_Li_lost_neg_sei + n_Li_lost_pos_sei

@@ -407,3 +407,7 @@ class BasicDFNComposite(BaseModel):
         # per-cycle when running experiments. Typically used to track degradation
         # variables (e.g LAM, LLI, capacity fade, etc.)
         self.summary_variables = ["Time [s]", "Voltage [V]"]
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues("Chen2020_composite")
