@@ -277,6 +277,7 @@ def have_jax():
     Returns
     -------
     bool
+        True if jax and jaxlib are installed with the correct versions, False if otherwise
 
     """
     return (
@@ -293,7 +294,7 @@ def is_jax_compatible():
     Returns
     -------
     bool
-
+        True if jax and jaxlib are compatible with PyBaMM, False if otherwise
     """
     return importlib.metadata.distribution("jax").version.startswith(
         JAX_VERSION
