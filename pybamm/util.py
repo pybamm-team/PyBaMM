@@ -18,7 +18,6 @@ from platform import system
 import difflib
 from warnings import warn
 
-import numpy as np
 import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
@@ -242,16 +241,6 @@ class TimerTime:
 
     def __eq__(self, other):
         return self.value == other.value
-
-
-def rmse(x, y):
-    """
-    Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
-    """
-    # Check lengths
-    if len(x) != len(y):
-        raise ValueError("Vectors must have the same length")
-    return np.sqrt(np.nanmean((x - y) ** 2))
 
 
 def load(filename):
