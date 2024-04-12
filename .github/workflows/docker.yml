@@ -29,16 +29,12 @@ jobs:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create latest tag for Docker image
-        id: tags
-        run: echo "tag=latest" >> "$GITHUB_OUTPUT"
-
       - name: Build and push Docker image to Docker Hub
         uses: docker/build-push-action@v5
         with:
           context: .
           file: scripts/Dockerfile
-          tags: pybamm/pybamm:${{ steps.tags.outputs.tag }}
+          tags: pybamm/pybamm:latest
           push: true
           platforms: linux/amd64, linux/arm64
 
