@@ -66,12 +66,7 @@ class BaseSolver:
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
-
-        # Set context for parallel processing depending on the platform
-        if platform.system() == "Darwin" or platform.system() == "Linux":
-            self._mp_context = "fork"
-        else:
-            self._mp_context = "spawn"
+        self._mp_context = self.get_platform_context(platform.system())
 
     @property
     def root_method(self):
@@ -1396,6 +1391,12 @@ class BaseSolver:
                         "You may need to provide additional interpolation points "
                         "outside these bounds."
                     )
+
+    def get_platform_context(self, system_type: str):
+        # Set context for parallel processing depending on the platform
+        if system_type.lower() in ["linux", "darwin"]:
+            return "fork"
+        return "spawn"
 
     @staticmethod
     def _set_up_model_inputs(model, inputs):
