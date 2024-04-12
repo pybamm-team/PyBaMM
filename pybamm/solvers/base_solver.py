@@ -13,10 +13,6 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 
-# Set context for parallel processing depending on the platform
-if platform.system() == "Darwin" or platform.system() == "Linux":
-    mp.set_start_method("fork")
-
 
 class BaseSolver:
     """Solve a discretised model.
@@ -70,6 +66,12 @@ class BaseSolver:
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
+
+        # Set context for parallel processing depending on the platform
+        if platform.system() == "Darwin" or platform.system() == "Linux":
+            self._mp_context = "fork"
+        else:
+            self._mp_context = "spawn"
 
     @property
     def root_method(self):
@@ -917,7 +919,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.Pool(processes=nproc) as p:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
