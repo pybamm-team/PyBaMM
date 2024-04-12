@@ -52,6 +52,8 @@ class TestGhostNodes(TestCase):
         bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
+        with self.assertRaisesRegex(ValueError, "No boundary conditions"):
+            sp_meth.add_ghost_nodes(var, discretised_symbol, {})
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             sp_meth.add_neumann_values(var, discretised_symbol, bcs, var.domain)
 
