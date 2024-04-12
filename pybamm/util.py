@@ -247,6 +247,18 @@ class TimerTime:
 def rmse(x, y):
     """
     Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
+
+    Parameters
+    ----------
+    x : :class:`numpy.array`
+        First vector
+    y : :class:`numpy.array`
+        Second vector
+
+    Returns
+    -------
+    :class:`numpy.float64`
+        Root-mean-square-error between x and y
     """
     # Check lengths
     if len(x) != len(y):
