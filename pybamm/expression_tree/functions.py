@@ -655,3 +655,13 @@ class Tanh(SpecificFunction):
 def tanh(child: pybamm.Symbol):
     """Returns hyperbolic tan function of child."""
     return simplified_function(Tanh, child)
+
+
+def normal_pdf(x, mu, sigma):
+    """Returns the normal probability distribution function at x."""
+    return 1 / (np.sqrt(2 * np.pi) * sigma) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+
+
+def normal_cdf(x, mu, sigma):
+    """Returns the normal cumulative distribution function at x."""
+    return 0.5 * (1 + special.erf((x - mu) / (sigma * np.sqrt(2))))
