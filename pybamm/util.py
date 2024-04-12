@@ -271,7 +271,14 @@ def get_parameters_filepath(path):
 
 
 def have_jax():
-    """Check if jax and jaxlib are installed with the correct versions"""
+    """
+    Check if jax and jaxlib are installed with the correct versions
+
+    Returns
+    -------
+    bool
+
+    """
     return (
         (importlib.util.find_spec("jax") is not None)
         and (importlib.util.find_spec("jaxlib") is not None)
@@ -280,7 +287,14 @@ def have_jax():
 
 
 def is_jax_compatible():
-    """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
+    """
+    Check if the available version of jax and jaxlib are compatible with PyBaMM
+
+    Returns
+    -------
+    bool
+
+    """
     return importlib.metadata.distribution("jax").version.startswith(
         JAX_VERSION
     ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)
