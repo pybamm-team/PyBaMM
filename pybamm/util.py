@@ -278,7 +278,7 @@ def have_jax():
 
 def is_jax_compatible():
     """
-    Check if the available version of jax and jaxlib are compatible with PyBaMM
+    Check if the available versions of jax and jaxlib are compatible with PyBaMM
 
     Returns
     -------
