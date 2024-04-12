@@ -613,8 +613,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        lbc_value, lbc_type = bcs["left"]
-        rbc_value, rbc_type = bcs["right"]
+        # Catch if no boundary conditions are defined
+        if "left" not in bcs.keys() and "right" not in bcs.keys():
+            raise ValueError(f"No boundary conditions have been provided for {symbol}")
+
+        # Allow to only pass one boundary condition (for upwind/downwind)
+        lbc_value, lbc_type = bcs.get("left", (None, None))
+        rbc_value, rbc_type = bcs.get("right", (None, None))
 
         # Add ghost node(s) to domain where necessary and count number of
         # Dirichlet boundary conditions
@@ -637,7 +642,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 left_ghost_constant = 2 * lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
-        elif lbc_type == "Neumann":
+        elif lbc_type in ["Neumann", None]:
             lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
@@ -656,7 +661,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
-        elif rbc_type == "Neumann":
+        elif rbc_type in ["Neumann", None]:
             rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
@@ -1390,8 +1395,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         direction : str
             Direction in which to apply the operator (upwind or downwind)
         """
-        submesh = self.mesh[symbol.domain]
-        n = submesh.npts
 
         if symbol not in bcs:
             raise pybamm.ModelError(
@@ -1399,36 +1402,17 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
         if direction == "upwind":
-            bc, typ = bcs[symbol]["left"]
-            if typ != "Dirichlet":
-                raise pybamm.ModelError(
-                    "Dirichlet boundary conditions must be provided for "
-                    f"upwinding '{symbol}'"
-                )
-
-            concat_bc = pybamm.NumpyConcatenation(bc, discretised_symbol)
-
-            upwind_mat = vstack(
-                [
-                    csr_matrix(([1], ([0], [0])), shape=(1, n + 1)),
-                    diags([-0.5, 1.5], [0, 1], shape=(n, n + 1)),
-                ]
-            )
-            symbol_out = pybamm.Matrix(upwind_mat) @ concat_bc
+            bc_side = "left"
         elif direction == "downwind":
-            bc, typ = bcs[symbol]["right"]
-            if typ != "Dirichlet":
-                raise pybamm.ModelError(
-                    "Dirichlet boundary conditions must be provided for "
-                    f"downwinding '{symbol}'"
-                )
+            bc_side = "right"
 
-            concat_bc = pybamm.NumpyConcatenation(discretised_symbol, bc)
-            downwind_mat = vstack(
-                [
-                    diags([1.5, -0.5], [0, 1], shape=(n, n + 1)),
-                    csr_matrix(([1], ([0], [n])), shape=(1, n + 1)),
-                ]
+        if bcs[symbol][bc_side][1] != "Dirichlet":
+            raise pybamm.ModelError(
+                "Dirichlet boundary conditions must be provided for "
+                f"{direction}ing '{symbol}'"
             )
-            symbol_out = pybamm.Matrix(downwind_mat) @ concat_bc
+
+        # Extract only the relevant boundary condition as the model might have both
+        bc_subset = {bc_side: bcs[symbol][bc_side]}
+        symbol_out, _ = self.add_ghost_nodes(symbol, discretised_symbol, bc_subset)
         return symbol_out
