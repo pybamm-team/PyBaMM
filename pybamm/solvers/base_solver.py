@@ -5,6 +5,7 @@ import multiprocessing as mp
 import numbers
 import sys
 import warnings
+import platform
 
 import casadi
 import numpy as np
@@ -65,6 +66,7 @@ class BaseSolver:
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
+        self._mp_context = self.get_platform_context(platform.system())
 
     @property
     def root_method(self):
@@ -912,7 +914,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.Pool(processes=nproc) as p:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
@@ -1389,6 +1391,12 @@ class BaseSolver:
                         "You may need to provide additional interpolation points "
                         "outside these bounds."
                     )
+
+    def get_platform_context(self, system_type: str):
+        # Set context for parallel processing depending on the platform
+        if system_type.lower() in ["linux", "darwin"]:
+            return "fork"
+        return "spawn"
 
     @staticmethod
     def _set_up_model_inputs(model, inputs):
