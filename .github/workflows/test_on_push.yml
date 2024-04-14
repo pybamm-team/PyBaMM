@@ -174,7 +174,7 @@ jobs:
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.1.1
+        uses: codecov/codecov-action@v4.2.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 

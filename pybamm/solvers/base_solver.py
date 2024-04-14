@@ -5,6 +5,7 @@ import multiprocessing as mp
 import numbers
 import sys
 import warnings
+import platform
 
 import casadi
 import numpy as np
@@ -65,6 +66,7 @@ class BaseSolver:
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
+        self._mp_context = self.get_platform_context(platform.system())
 
     @property
     def root_method(self):
@@ -710,16 +712,16 @@ class BaseSolver:
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions. All calls to solve must pass in the same model or
             an error is raised
-        t_eval : numeric type
-            The times (in seconds) at which to compute the solution
+        t_eval : None, list or ndarray, optional
+            The times (in seconds) at which to compute the solution. Defaults to None.
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivities : list of str or bool
-            If true, solver calculates sensitivities of all input parameters.
+        calculate_sensitivities : list of str or bool, optional
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
 
@@ -912,7 +914,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.Pool(processes=nproc) as p:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
@@ -1117,9 +1119,8 @@ class BaseSolver:
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        save : bool
-            Turn on to store the solution of all previous timesteps
-
+        save : bool, optional
+            Save solution with all previous timesteps. Defaults to True.
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1390,6 +1391,12 @@ class BaseSolver:
                         "You may need to provide additional interpolation points "
                         "outside these bounds."
                     )
+
+    def get_platform_context(self, system_type: str):
+        # Set context for parallel processing depending on the platform
+        if system_type.lower() in ["linux", "darwin"]:
+            return "fork"
+        return "spawn"
 
     @staticmethod
     def _set_up_model_inputs(model, inputs):

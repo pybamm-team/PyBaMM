@@ -2,15 +2,19 @@
 
 ## Features
 
+- Added functions for normal probability density function (`pybamm.normal_pdf`) and cumulative distribution function (`pybamm.normal_cdf`) ([#3999](https://github.com/pybamm-team/PyBaMM/pull/3999))
+- Updates multiprocess `Pool` in `BaseSolver.solve()` to be constructed with context `fork`. Adds small example for multiprocess inputs. ([#3974](https://github.com/pybamm-team/PyBaMM/pull/3974))
 - Added custom experiment steps ([#3835](https://github.com/pybamm-team/PyBaMM/pull/3835))
 - Added support for macOS arm64 (M-series) platforms. ([#3789](https://github.com/pybamm-team/PyBaMM/pull/3789))
 - Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
 - Modified `step` function to take an array of time `t_eval` as an argument and deprecated use of `npts`. ([#3627](https://github.com/pybamm-team/PyBaMM/pull/3627))
 - Renamed "electrode diffusivity" to "particle diffusivity" as a non-breaking change with a deprecation warning ([#3624](https://github.com/pybamm-team/PyBaMM/pull/3624))
 - Add support for BPX version 0.4.0 which allows for blended electrodes and user-defined parameters in BPX([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
+- Added `by_submodel` feature in `print_parameter_info` method to allow users to print parameters and types of submodels in a tabular and readable format ([#3628](https://github.com/pybamm-team/PyBaMM/pull/3628))
 
 ## Bug Fixes
 
+- Fix bug with upwind and downwind schemes producing the wrong discretised system ([#3979](https://github.com/pybamm-team/PyBaMM/pull/3979))
 - Allow evaluation of an `Interpolant` object with a number ([#3932](https://github.com/pybamm-team/PyBaMM/pull/3932))
 - `plot_voltage_components` now works even if the time does not start at 0 ([#3915](https://github.com/pybamm-team/PyBaMM/pull/3915))
 - Fixed bug where separator porosity was used in calculation instead of transport efficiency ([#3905](https://github.com/pybamm-team/PyBaMM/pull/3905))
