@@ -464,6 +464,9 @@ class QuickPlot:
         ----------
         t : float
             Dimensional time (in 'time_units') at which to plot.
+        dynamic : bool, optional
+            If True, creates a dynamic plot with a slider.
+
         """
 
         plt = import_optional_dependency("matplotlib.pyplot")
@@ -647,7 +650,7 @@ class QuickPlot:
 
         Parameters
         ----------
-        step : float
+        step : float, optional
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
             of the total time.
         show_plot : bool, optional
@@ -764,11 +767,11 @@ class QuickPlot:
 
         Parameters
         ----------
-        number_of_images : int (optional)
+        number_of_images : int, optional
             Number of images/plots to be compiled for a GIF.
-        duration : float (optional)
+        duration : float, optional
             Duration of visibility of a single image/plot in the created GIF.
-        output_filename : str (optional)
+        output_filename : str, optional
             Name of the generated GIF file.
 
         """
