@@ -23,7 +23,7 @@ Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
 .. code:: bash
 
-    docker pull pybamm/pybamm:latest
+    docker pull pybamm/pybamm
 
 
 Running the Docker container
@@ -36,7 +36,7 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
 .. code:: bash
 
-    docker run -it pybamm/pybamm:latest
+    docker run -it pybamm/pybamm
 
 
 2. You will now be inside the Docker container's shell. You can use PyBaMM and its dependencies as if you were in a virtual environment.
