@@ -77,3 +77,7 @@ Functions
   :members:
 
 .. autofunction:: pybamm.tanh
+
+.. autofunction:: pybamm.normal_pdf
+
+.. autofunction:: pybamm.normal_cdf
