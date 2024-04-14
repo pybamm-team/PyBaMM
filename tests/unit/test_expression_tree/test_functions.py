@@ -496,6 +496,49 @@ class TestSpecificFunctions(TestCase):
         )
 
 
+class TestNonObjectFunctions(TestCase):
+    def test_normal_pdf(self):
+        x = pybamm.InputParameter("x")
+        mu = pybamm.InputParameter("mu")
+        sigma = pybamm.InputParameter("sigma")
+        fun = pybamm.normal_pdf(x, mu, sigma)
+        self.assertEqual(
+            fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}), 1 / np.sqrt(2 * np.pi)
+        )
+        self.assertEqual(
+            fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}),
+            1 / np.sqrt(2 * np.pi) / 10,
+        )
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}), 0)
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}), 0)
+        self.assertGreater(
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2}),
+        )
+        self.assertGreater(
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2}),
+        )
+
+    def test_normal_cdf(self):
+        x = pybamm.InputParameter("x")
+        mu = pybamm.InputParameter("mu")
+        sigma = pybamm.InputParameter("sigma")
+        fun = pybamm.normal_cdf(x, mu, sigma)
+        self.assertEqual(fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}), 0.5)
+        self.assertEqual(fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}), 0.5)
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}), 1)
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}), 0)
+        self.assertGreater(
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2}),
+        )
+        self.assertLess(
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2}),
+        )
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
