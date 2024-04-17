@@ -309,7 +309,3 @@ class BasicDFNHalfCell(BaseModel):
             "Battery voltage [V]": voltage * num_cells,
             "Instantaneous power [W.m-2]": i_cell * voltage,
         }
-        # Summary variables is a list of variables that can be accessed and plotted
-        # per-cycle when running experiments. Typically used to track degradation
-        # variables (e.g LAM, LLI, capacity fade, etc.)
-        self.summary_variables = ["Time [s]", "Voltage [V]"]

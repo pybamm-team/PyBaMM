@@ -934,33 +934,11 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
-    # Measured capacity variables
-    if "Discharge capacity [A.h]" in model.variables:
-        Q = cycle_solution["Discharge capacity [A.h]"].data
-        min_Q, max_Q = np.min(Q), np.max(Q)
-
-        cycle_summary_variables.update(
-            {
-                "Minimum measured discharge capacity [A.h]": min_Q,
-                "Maximum measured discharge capacity [A.h]": max_Q,
-                "Measured capacity [A.h]": max_Q - min_Q,
-            }
-        )
-
-    # Voltage variables
-    if "Battery voltage [V]" in model.variables:
-        V = cycle_solution["Battery voltage [V]"].data
-        min_V, max_V = np.min(V), np.max(V)
-
-        cycle_summary_variables.update(
-            {"Minimum voltage [V]": min_V, "Maximum voltage [V]": max_V}
-        )
-
-    # Degradation variables
-    degradation_variables = model.summary_variables
+    # Summary variables
+    summary_variables = model.summary_variables
     first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
-    for var in degradation_variables:
+    for var in summary_variables:
         data_first = first_state[var].data
         data_last = last_state[var].data
         cycle_summary_variables[var] = data_last[0]

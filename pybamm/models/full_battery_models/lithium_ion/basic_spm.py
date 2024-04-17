@@ -181,7 +181,3 @@ class BasicSPM(BaseModel):
             pybamm.Event("Minimum voltage [V]", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - V),
         ]
-        # Summary variables is a list of variables that can be accessed and plotted
-        # per-cycle when running experiments. Typically used to track degradation
-        # variables (e.g LAM, LLI, capacity fade, etc.)
-        self.summary_variables = ["Time [s]", "Voltage [V]"]
