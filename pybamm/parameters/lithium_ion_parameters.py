@@ -662,8 +662,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
-    # def dQdU(self,sto)
-
     def X_j(self, index):
         "Available host sites indexed by reaction j"
         domain = self.domain

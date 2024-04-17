@@ -97,17 +97,19 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             h_x_av = pybamm.x_average(h)
             # check if psd
             if domain_options["particle size"] == "distribution":
-                if f"{domain} electrode" in sto_surf.domains["primary"]:
-                    ocp_surf = ocp_surf_eq + H * h
-                elif f"{domain} particle size" in sto_surf.domains["primary"]:
+                # should always be true
+                if f"{domain} particle size" in sto_surf.domains["primary"]:
                     # check if MPM Model
                     if "current collector" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H_x_av * h_x_av
                     # must be DFN with PSD model
-                    else:
+                    elif f'{domain} electrode' in sto_surf.domains['secondary']:
                         ocp_surf = ocp_surf_eq + H * h
+                    else:
+                        raise ValueError('Model type not implementted with open-circuit potential as "Plett"')
                 else:
-                    ocp_surf = ocp_surf_eq + H_x_av * h_x_av
+                    raise ValueError('Model type not implementted with open-circuit potential as "Plett"')
+            # must not be a psd
             else:
                 ocp_surf = ocp_surf_eq + H * h
             H_s_av = pybamm.size_average(H_x_av)
@@ -124,8 +126,6 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
 
         current = self.param.current_with_time
         current = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
-        # current = current.orphans[0]
-        # current = current.SecondaryBroadcast(current,f'{domain} electrode')
         Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
         dQdU = variables[
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
@@ -134,7 +134,6 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         K = self.phase_param.K
         K_x = self.phase_param.K_x
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        # h_x_av = variables[f'X-averaged {domain} electrode {phase_name}hysteresis state']
 
         dhdt = (
             K * (current / (Q_cell * (dQdU**K_x))) * (1 - pybamm.sign(current) * h)
@@ -145,6 +144,4 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        # h_av = variables[f'{Domain} electrode {phase_name}hysteresis state distribution']
-        # self.initial_conditions[h_av] = pybamm.Scalar(0)
         self.initial_conditions[h] = pybamm.Scalar(0)
