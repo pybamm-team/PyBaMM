@@ -23,7 +23,7 @@ class ProcessedVariable:
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variable_casadis : list of :class:`casadi.Function`source venv/bin/activate
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
@@ -33,7 +33,7 @@ class ProcessedVariable:
         Default is True.
     """
 
-    """"
+    """
         Attributes
     ----------
     entries : numpy.ndarray
