@@ -647,15 +647,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         return h_ref
 
-    def Q(self, sto):
-        """Capacity change as a function of stoichiometry"""
-        c_max = self.c_max
-        epsilon_s_av = self.epsilon_s_av
-        V_electrode = self.main_param.A_cc * self.domain_param.L
-        Li_max = c_max * V_electrode * epsilon_s_av
-        Q_max = Li_max * self.main_param.F / 3600
-        return Q_max * sto
-
     def dUdT(self, sto):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]

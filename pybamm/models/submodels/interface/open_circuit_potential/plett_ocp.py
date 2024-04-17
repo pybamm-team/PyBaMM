@@ -25,6 +25,14 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
         phase = self.phase
 
+        # get dQ, change in capacity with respect to stoichiometry
+        c_max = self.phase_param.c_max
+        epsilon_s_av = self.phase_param.epsilon_s_av
+        V_electrode = self.param.A_cc * self.domain_param.L
+        Li_max = c_max * V_electrode * epsilon_s_av
+        Q_max = Li_max * self.param.F / 3600
+        dQ = Q_max
+
         if self.reaction == "lithium-ion main":
             T = variables[f"{Domain} electrode temperature [K]"]
             h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
@@ -77,7 +85,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
-            dQ = self.phase_param.Q(sto_surf).diff(sto_surf)
+            # dQ = self.phase_param.Q(sto_surf).diff(sto_surf)
             dQdU = dQ / dU
             variables[
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
@@ -85,18 +93,9 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             variables[
                 f"{Domain} electrode {phase_name}hysteresis state distribution"
             ] = h
-            # H = H.orphans[0]
-            # H = pybamm.SecondaryBroadcast(H,f'{domain} electrode')
-            # H = pybamm.TertiaryBroadcast(H,f'current collector')
-            # h = pybamm.SecondaryBroadcast(h,f'current collector')
-            # ocp_surf_eq = pybamm.SecondaryBroadcast(ocp_surf_eq,[f'{domain} electrode'])
-            # ocp_bulk_eq = pybamm.PrimaryBroadcast(ocp_bulk_eq,[f'{domain} electrode'])
-            # ocp_bulk_eq = pybamm.PrimaryBroadcast(ocp_bulk_eq, [f'{domain} particle size'])
-            #! why is ocp surf not in electrode domain? why no x dimension?
-            # H = pybamm.PrimaryBroadcast(H.orphans[0],[f'current collector'])
-            # h = pybamm.PrimaryBroadcast(h,[f'{domain} electrode'])
             H_x_av = pybamm.x_average(H)
             h_x_av = pybamm.x_average(h)
+            # check if psd
             if domain_options["particle size"] == "distribution":
                 if f"{domain} electrode" in sto_surf.domains["primary"]:
                     ocp_surf = ocp_surf_eq + H * h
