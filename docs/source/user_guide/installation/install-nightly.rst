@@ -22,20 +22,12 @@ the `official website <https://www.python.org/downloads/>`_ or from your package
 Install command
 ---------------
 
-.. danger::
-
-    Please be careful and prefer to use the ``--index-url`` flag instead of ``--extra-index-url``, since through the
-    latter it is possible to execute a "dependency confusion" supply chain exploit by maliciously uploading a package
-    with the same name as that of a popular package to the PyPI index. This is a known security vulnerability, and
-    the Python Packaging Authority instead recommends using the ``--index-url`` flag to limit the risk of this attack
-    vector.
-
 Next, you can install the nightly wheels using ``pip``. To do this, it is needed to specify the nightly index URL
 through command-line flags, as showcased in the command below:
 
 .. code-block:: bash
 
-    pip install pybamm --pre --index-url # TODO: add index URL from CI job
+    pip install pybamm --pre --extra-index-url # TODO: add index URL from CI job
 
 Next, you can test that PyBaMM has been installed correctly by running the following command:
 
