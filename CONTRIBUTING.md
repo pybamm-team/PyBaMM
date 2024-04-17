@@ -90,8 +90,12 @@ Class names are CamelCase, and start with an upper case letter, for example `MyO
 While it's a bad idea for developers to "reinvent the wheel", it's important for users to get a _reasonably sized download and an easy install_. In addition, external libraries can sometimes cease to be supported, and when they contain bugs it might take a while before fixes become available as automatic downloads to PyBaMM users.
 For these reasons, all dependencies in PyBaMM should be thought about carefully, and discussed on GitHub.
 
-Direct inclusion of code from other packages is possible, as long as their 
-license permits it and is compatible with ours, but again should be considered carefully and discussed in the group. Snippets from blogs can often be included without attribution, but if they solve a particularly nasty problem (or are very hard to read) it's often a good idea to attribute (and document) them, by making a comment with a link in the source code.
+Direct inclusion of code from other packages is possible, as long as their
+license permits it and is compatible with ours, but again should be
+considered carefully and discussed in the group. Snippets from blogs and
+stackoverflow can often be included without attribution, but if they solve a
+particularly nasty problem (or are very hard to read) it's often a good idea to
+attribute (and document) them, by making a comment with a link in the source code.
 
 ### Separating dependencies
 

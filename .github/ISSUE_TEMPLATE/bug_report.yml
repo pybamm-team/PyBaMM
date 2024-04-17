@@ -34,7 +34,7 @@ body:
     id: reproduce
     attributes:
       label: Steps to Reproduce
-      description: Tell us how to reproduce this behaviour. Ideally, this should take the form of a minimum workable example.
+      description: Tell us how to reproduce this behaviour. Ideally, this should include a code block which produces the error.
     validations:
       required: true
   - type: textarea
