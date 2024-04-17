@@ -101,7 +101,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
                     ocp_surf = ocp_surf_eq + H * h
                 elif f"{domain} particle size" in sto_surf.domains["primary"]:
                     # check if MPM Model
-                    if 'current collector' in sto_surf.domains["secondary"]:
+                    if "current collector" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H_x_av * h_x_av
                     # must be DFN with PSD model
                     else:
