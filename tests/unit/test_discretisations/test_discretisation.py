@@ -1236,7 +1236,7 @@ class TestDiscretise(TestCase):
             c: pybamm.Scalar(1),
         }
         model.events = [pybamm.Event("a=1", a - 1)]
-        disc = pybamm.Discretisation()
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
         disc.process_model(model)
         self.assertEqual(len(model.rhs), 3)
 
