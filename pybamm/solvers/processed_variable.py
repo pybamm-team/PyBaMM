@@ -33,6 +33,16 @@ class ProcessedVariable:
         Default is True.
     """
 
+    """"
+        Attributes
+    ----------
+    entries : numpy.ndarray
+        Stores the values of the base variable evaluated at specific time or spatial points.
+        These values are used for interpolation when the `ProcessedVariable` is evaluated
+        at new points. This allows the `ProcessedVariable` to be flexibly evaluated at
+        arbitrary time and spatial points within its defined domain.
+    """
+
     def __init__(
         self,
         base_variables,
