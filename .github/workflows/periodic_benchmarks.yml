@@ -52,8 +52,10 @@ jobs:
         with:
           name: asv_periodic_results
           path: results
+          if-no-files-found: error
 
   publish-results:
+    if: github.repository == 'pybamm-team/PyBaMM'
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
@@ -72,18 +74,17 @@ jobs:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
 
-      - name: Download results artifact
+      - name: Download results artifact(s)
         uses: actions/download-artifact@v4
         with:
-          name: asv_periodic_results
-          path: new_results
+          path: results
+          merge-multiple: true
 
       - name: Copy new results and push to pybamm-bench repo
         env:
           PUSH_BENCH_EMAIL: ${{ secrets.PUSH_BENCH_EMAIL }}
           PUSH_BENCH_NAME: ${{ secrets.PUSH_BENCH_NAME }}
         run: |
-          cp -vr new_results/* results
           git config --global user.email "$PUSH_BENCH_EMAIL"
           git config --global user.name "$PUSH_BENCH_NAME"
           git add results
