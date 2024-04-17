@@ -55,6 +55,7 @@ jobs:
           if-no-files-found: error
 
   publish-results:
+    if: github.repository == 'pybamm-team/PyBaMM'
     name: Push and publish results
     needs: benchmarks
     runs-on: ubuntu-latest
