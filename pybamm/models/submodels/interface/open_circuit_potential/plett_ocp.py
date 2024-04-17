@@ -103,12 +103,16 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
                     if "current collector" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H_x_av * h_x_av
                     # must be DFN with PSD model
-                    elif f'{domain} electrode' in sto_surf.domains['secondary']:
+                    elif f"{domain} electrode" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H * h
                     else:
-                        raise ValueError('Model type not implementted with open-circuit potential as "Plett"')
+                        raise ValueError(
+                            'Model type not implementted with open-circuit potential as "Plett"'
+                        )
                 else:
-                    raise ValueError('Model type not implementted with open-circuit potential as "Plett"')
+                    raise ValueError(
+                        'Model type not implementted with open-circuit potential as "Plett"'
+                    )
             # must not be a psd
             else:
                 ocp_surf = ocp_surf_eq + H * h
