@@ -18,7 +18,6 @@ from platform import system
 import difflib
 from warnings import warn
 
-import numpy as np
 import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
@@ -244,16 +243,6 @@ class TimerTime:
         return self.value == other.value
 
 
-def rmse(x, y):
-    """
-    Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
-    """
-    # Check lengths
-    if len(x) != len(y):
-        raise ValueError("Vectors must have the same length")
-    return np.sqrt(np.nanmean((x - y) ** 2))
-
-
 def load(filename):
     """Load a saved object"""
     with open(filename, "rb") as f:
@@ -271,7 +260,15 @@ def get_parameters_filepath(path):
 
 
 def have_jax():
-    """Check if jax and jaxlib are installed with the correct versions"""
+    """
+    Check if jax and jaxlib are installed with the correct versions
+
+    Returns
+    -------
+    bool
+        True if jax and jaxlib are installed with the correct versions, False if otherwise
+
+    """
     return (
         (importlib.util.find_spec("jax") is not None)
         and (importlib.util.find_spec("jaxlib") is not None)
@@ -280,7 +277,14 @@ def have_jax():
 
 
 def is_jax_compatible():
-    """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
+    """
+    Check if the available versions of jax and jaxlib are compatible with PyBaMM
+
+    Returns
+    -------
+    bool
+        True if jax and jaxlib are compatible with PyBaMM, False if otherwise
+    """
     return importlib.metadata.distribution("jax").version.startswith(
         JAX_VERSION
     ) and importlib.metadata.distribution("jaxlib").version.startswith(JAXLIB_VERSION)

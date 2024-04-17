@@ -20,7 +20,7 @@ class Experiment:
     ----------
     operating_conditions : list[str]
         List of strings representing the operating conditions.
-    period : string, optional
+    period : str, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
     temperature: float, optional
@@ -57,7 +57,6 @@ class Experiment:
             if not isinstance(cycle, tuple):
                 cycle = (cycle,)
             cycles.append(cycle)
-
         self.cycles = cycles
         self.cycle_lengths = [len(cycle) for cycle in cycles]
 
