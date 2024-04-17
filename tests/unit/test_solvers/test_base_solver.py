@@ -348,6 +348,12 @@ class TestBaseSolver(TestCase):
         with self.assertRaisesRegex(RuntimeError, "already been initialised"):
             solver.solve(model2, t_eval=[0, 1])
 
+    def test_multiprocess_context(self):
+        solver = pybamm.BaseSolver()
+        assert solver.get_platform_context("Win") == "spawn"
+        assert solver.get_platform_context("Linux") == "fork"
+        assert solver.get_platform_context("Darwin") == "fork"
+
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):

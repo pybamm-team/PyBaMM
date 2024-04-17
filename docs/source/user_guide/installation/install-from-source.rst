@@ -31,6 +31,7 @@ To install PyBaMM, you will need:
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
 - ``graphviz`` (optional), if you wish to build the documentation locally.
+- ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
 
 You can install the above with
 
@@ -38,7 +39,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake pandoc
 
 	Where ``X`` is the version sub-number.
 
@@ -46,11 +47,11 @@ You can install the above with
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp cmake
+		brew install python openblas gcc gfortran graphviz libomp cmake pandoc
 
 .. note::
 
-    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas``.
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc``.
 
     On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
