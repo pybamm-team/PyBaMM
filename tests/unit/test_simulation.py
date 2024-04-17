@@ -69,8 +69,10 @@ class TestSimulation(TestCase):
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         # test solve without check
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sol = sim.solve(t_eval=[0, 600], check_model=False)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), discretisation_kwargs={"check_model": False}
+        )
+        sol = sim.solve(t_eval=[0, 600])
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             # skip test for scalar variables (e.g. discharge capacity)

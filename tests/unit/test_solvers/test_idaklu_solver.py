@@ -160,7 +160,7 @@ class TestIDAKLUSolver(TestCase):
             model.initial_conditions = {u1: 0, u2: 0, u3: 0, v: 1}
 
             disc = pybamm.Discretisation()
-            disc.process_model(model, remove_independent_variables_from_rhs=False)
+            disc.process_model(model)
 
             solver = pybamm.IDAKLUSolver(root_method=root_method)
 
