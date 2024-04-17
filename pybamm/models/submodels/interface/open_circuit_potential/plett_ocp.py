@@ -98,8 +98,15 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             H_x_av = pybamm.x_average(H)
             h_x_av = pybamm.x_average(h)
             if domain_options["particle size"] == "distribution":
-                if sto_surf.domains["primary"] == f"{domain} electrode":
+                if f"{domain} electrode" in sto_surf.domains["primary"]:
                     ocp_surf = ocp_surf_eq + H * h
+                elif f"{domain} particle size" in sto_surf.domains["primary"]:
+                    # check if MPM Model
+                    if 'current collector' in sto_surf.domains["secondary"]:
+                        ocp_surf = ocp_surf_eq + H_x_av * h_x_av
+                    # must be DFN with PSD model
+                    else:
+                        ocp_surf = ocp_surf_eq + H * h
                 else:
                     ocp_surf = ocp_surf_eq + H_x_av * h_x_av
             else:
