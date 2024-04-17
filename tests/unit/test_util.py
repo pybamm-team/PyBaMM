@@ -1,9 +1,5 @@
-#
-# Tests the utility functions.
-#
 import importlib
 from tests import TestCase
-import numpy as np
 import os
 import sys
 import pybamm
@@ -23,17 +19,6 @@ class TestUtil(TestCase):
     """
     Test the functionality in util.py
     """
-
-    def test_rmse(self):
-        self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
-        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)
-        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.ones(5)), 1)
-
-        x = np.array([1, 2, 3, 4, 5])
-        self.assertEqual(pybamm.rmse(x, x), 0)
-
-        with self.assertRaisesRegex(ValueError, "same length"):
-            pybamm.rmse(np.ones(5), np.zeros(3))
 
     def test_is_constant_and_can_evaluate(self):
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
@@ -108,7 +93,7 @@ class TestUtil(TestCase):
             "pybamm", optional_distribution_deps=optional_distribution_deps
         )
 
-        # Save optional dependencies, then set to None
+        # Save optional dependencies, then make them not importable
         modules = {}
         for import_pkg in present_optional_import_deps:
             modules[import_pkg] = sys.modules.get(import_pkg)
@@ -132,23 +117,31 @@ class TestUtil(TestCase):
             "pybamm", optional_distribution_deps=optional_distribution_deps
         )
 
-        # Save optional dependencies, then set to None
+        # Save optional dependencies and their sub-modules, then make them not importable
         modules = {}
-        for import_pkg in present_optional_import_deps:
-            modules[import_pkg] = sys.modules.get(import_pkg)
-            sys.modules[import_pkg] = None
+        for module_name, module in sys.modules.items():
+            base_module_name = module_name.split(".")[0]
+            if base_module_name in present_optional_import_deps:
+                modules[module_name] = module
+                sys.modules[module_name] = None
+
+        # Unload pybamm and its sub-modules
+        for module_name in list(sys.modules.keys()):
+            base_module_name = module_name.split(".")[0]
+            if base_module_name == "pybamm":
+                sys.modules.pop(module_name)
 
         # Test pybamm is still importable
         try:
-            importlib.reload(importlib.import_module("pybamm"))
+            importlib.import_module("pybamm")
         except ModuleNotFoundError as error:
             self.fail(
                 f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
             )
-
-        # Restore optional dependencies
-        for import_pkg in present_optional_import_deps:
-            sys.modules[import_pkg] = modules[import_pkg]
+        finally:
+            # Restore optional dependencies and their sub-modules
+            for module_name, module in modules.items():
+                sys.modules[module_name] = module
 
     def test_optional_dependencies(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
@@ -165,7 +158,8 @@ class TestUtil(TestCase):
         self.assertFalse(
             bool(optional_present_deps),
             f"Optional dependencies installed: {optional_present_deps}.\n"
-            "Please ensure that optional dependencies are not present in the core PyBaMM installation, or list them as required.",
+            "Please ensure that optional dependencies are not present in the core PyBaMM installation, "
+            "or list them as required.",
         )
 
 
