@@ -6,7 +6,6 @@ from . import BaseOpenCircuitPotential
 
 
 class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
-
     def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options=options, phase=phase)
         pybamm.citations.register("Wycisk2022")
