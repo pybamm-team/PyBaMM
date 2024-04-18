@@ -113,33 +113,32 @@ class BinaryOperator(pybamm.Symbol):
             right_str = f"{self.right!s}"
         return f"{left_str} {self.name} {right_str}"
 
-    def create_copy(
-        self, new_children: list[pybamm.Symbol, pybamm.Symbol] | None = None
-    ):
+    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
-        # process children
-        if new_children is None:
-            new_left = self.left.new_copy()
-            new_right = self.right.new_copy()
-        else:
-            if len(new_children) != 2:
-                raise ValueError(
-                    f"Symbol of type {type(self)} must have exactly two children."
-                )
-            new_left, new_right = new_children
+        if new_children and len(new_children) != 2:
+            raise ValueError(
+                f"Symbol of type {type(self)} must have exactly two children."
+            )
+        children = self._children_for_copying(new_children)
 
-        # make new symbol, ensure domain(s) remain the same
-        out = self._binary_new_copy(new_left, new_right)
+        # # creates a new instance using the overloaded binary operator, rather than just
+        # # calling the constructor
+        # out = self._binary_new_copy(children[0], children[1])
+        out = self.__class__(children[0], children[1])
         out.copy_domains(self)
 
         return out
 
     def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
         """
-        Default behaviour for new_copy.
-        This copies the behaviour of `_binary_evaluate`, but since `left` and `right`
-        are symbols creates a new symbol instead of returning a value.
+        Performs the overloaded binary operation on the two symbols `left` and `right`,
+        to create a binary class instance after performing appropriate simplifying
+        checks.
+
+        Default behaviour for _binary_new_copy copies the behaviour of `_binary_evaluate`,
+        but since `left` and `right` are symbols this creates a new symbol instead of
+        returning a value.
         """
         return self._binary_evaluate(left, right)
 
@@ -149,10 +148,15 @@ class BinaryOperator(pybamm.Symbol):
         y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
         inputs: dict | str | None = None,
+        evaluate_children: bool = True,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        left = self.left.evaluate(t, y, y_dot, inputs)
-        right = self.right.evaluate(t, y, y_dot, inputs)
+        if evaluate_children:
+            left = self.left.evaluate(t, y, y_dot, inputs)
+            right = self.right.evaluate(t, y, y_dot, inputs)
+        else:
+            left = self.left
+            right = self.right
         return self._binary_evaluate(left, right)
 
     def _evaluate_for_shape(self):
@@ -843,13 +847,11 @@ def _simplified_binary_broadcast_concatenation(
         left, pybamm.ConcatenationVariable
     ):
         if right.evaluates_to_constant_number():
-            return left._concatenation_new_copy(
-                [operator(child, right) for child in left.orphans]
-            )
+            return left.new_copy([operator(child, right) for child in left.orphans])
         elif isinstance(right, pybamm.Concatenation) and not isinstance(
             right, pybamm.ConcatenationVariable
         ):
-            return left._concatenation_new_copy(
+            return left.new_copy(
                 [
                     operator(left_child, right_child)
                     for left_child, right_child in zip(left.orphans, right.orphans)
@@ -859,9 +861,7 @@ def _simplified_binary_broadcast_concatenation(
         right, pybamm.ConcatenationVariable
     ):
         if left.evaluates_to_constant_number():
-            return right._concatenation_new_copy(
-                [operator(left, child) for child in right.orphans]
-            )
+            return right.new_copy([operator(left, child) for child in right.orphans])
     return None
 
 

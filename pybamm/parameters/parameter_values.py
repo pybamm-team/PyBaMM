@@ -712,6 +712,10 @@ class ParameterValues:
             # Process again just to be sure
             return self.process_symbol(function_out)
 
+        elif isinstance(symbol, pybamm.BinaryOperator):
+            new_children = [self.process_symbol(child) for child in symbol.children]
+            return symbol._binary_new_copy(new_children[0], new_children[1])
+
         # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
@@ -736,11 +740,9 @@ class ParameterValues:
                     new_symbol.position = new_symbol_position
             return new_symbol
 
-        # Functions, Concatenations & BinaryOperators
-        elif (
-            isinstance(symbol, pybamm.Function)
-            or isinstance(symbol, pybamm.Concatenation)
-            or isinstance(symbol, pybamm.BinaryOperator)
+        # Functions & Concatenations
+        elif isinstance(symbol, pybamm.Function) or isinstance(
+            symbol, pybamm.Concatenation
         ):
             new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol.create_copy(new_children)

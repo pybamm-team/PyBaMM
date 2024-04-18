@@ -20,8 +20,9 @@ class _BaseAverage(pybamm.Integral):
         self,
         child: pybamm.Symbol,
         name: str,
-        integration_variable: list[pybamm.IndependentVariable]
-        | pybamm.IndependentVariable,
+        integration_variable: (
+            list[pybamm.IndependentVariable] | pybamm.IndependentVariable
+        ),
     ) -> None:
         super().__init__(child, integration_variable)
         self.name = name
@@ -39,7 +40,12 @@ class XAverage(_BaseAverage):
         super().__init__(child, "x-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`x_average` to perform checks before
+        creating an XAverage object.
+        """
         return x_average(child)
 
 
@@ -51,7 +57,12 @@ class YZAverage(_BaseAverage):
         super().__init__(child, "yz-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`yz_average` to perform checks before
+        creating an YZAverage object.
+        """
         return yz_average(child)
 
 
@@ -63,7 +74,12 @@ class ZAverage(_BaseAverage):
         super().__init__(child, "z-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`z_average` to perform checks before
+        creating an ZAverage object.
+        """
         return z_average(child)
 
 
@@ -75,7 +91,12 @@ class RAverage(_BaseAverage):
         super().__init__(child, "r-average", integration_variable)
 
     def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`r_average` to perform checks before
+        creating an RAverage object.
+        """
         return r_average(child)
 
 
@@ -87,7 +108,12 @@ class SizeAverage(_BaseAverage):
         self.f_a_dist = f_a_dist
 
     def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`size_average` to perform checks before
+        creating an SizeAverage object.
+        """
         return size_average(child, f_a_dist=self.f_a_dist)
 
 

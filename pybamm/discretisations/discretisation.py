@@ -874,7 +874,7 @@ class Discretisation:
 
         elif isinstance(symbol, pybamm.Function):
             disc_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._function_new_copy(disc_children)
+            return symbol.new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.VariableDot):
             # Add symbol's reference and multiply by the symbol's scale

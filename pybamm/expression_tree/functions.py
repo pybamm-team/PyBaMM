@@ -151,11 +151,15 @@ class Function(pybamm.Symbol):
         y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
         inputs: dict | str | None = None,
+        evaluate_children: bool = True,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        evaluated_children = [
-            child.evaluate(t, y, y_dot, inputs) for child in self.children
-        ]
+        if evaluate_children:
+            evaluated_children = [
+                child.evaluate(t, y, y_dot, inputs) for child in self.children
+            ]
+        else:
+            evaluated_children = self.children
         return self._function_evaluate(evaluated_children)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:
@@ -179,9 +183,8 @@ class Function(pybamm.Symbol):
 
     def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        if new_children is None:
-            new_children = [child.new_copy() for child in self.children]
-        return self._function_new_copy(new_children)
+        children = self._children_for_copying(new_children)
+        return self._function_new_copy(children)
 
     def _function_new_copy(self, children: list) -> Function:
         """

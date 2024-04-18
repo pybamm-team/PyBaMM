@@ -79,6 +79,8 @@ class Scalar(pybamm.Symbol):
 
     def create_copy(self, new_children=None):
         """See :meth:`pybamm.Symbol.new_copy()`."""
+        if new_children is not None:
+            raise ValueError("Cannot create a copy of a scalar with new children")
         return Scalar(self.value, self.name)
 
     def is_constant(self) -> Literal[True]:
