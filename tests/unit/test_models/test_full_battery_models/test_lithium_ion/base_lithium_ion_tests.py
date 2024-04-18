@@ -406,8 +406,8 @@ class BaseUnitTestLithiumIon:
         options = {"open-circuit potential": "current sigmoid"}
         self.check_well_posedness(options)
 
-    def test_well_posed_plett_ocp(self):
-        options = {"open-circuit potential": "Plett"}
+    def test_well_posed_dchs_ocp(self):
+        options = {"open-circuit potential": "DCHS"}
         self.check_well_posedness(options)
 
     def test_well_posed_msmr(self):

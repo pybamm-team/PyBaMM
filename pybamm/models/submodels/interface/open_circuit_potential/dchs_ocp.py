@@ -5,7 +5,7 @@ import pybamm
 from . import BaseOpenCircuitPotential
 
 
-class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
+class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
@@ -111,11 +111,11 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
                         ocp_surf = ocp_surf_eq + H * h
                     else:
                         raise ValueError(
-                            'Model type not implementted with open-circuit potential as "Plett"'
+                            'Model type not implementted with open-circuit potential as "DCHS"'
                         )
                 else:
                     raise ValueError(
-                        'Model type not implementted with open-circuit potential as "Plett"'
+                        'Model type not implementted with open-circuit potential as "DCHS"'
                     )
             # must not be a psd
             else:
