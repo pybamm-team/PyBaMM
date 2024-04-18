@@ -68,7 +68,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             # V_electrode = self.param.A_cc * self.domain_param.L
             # Li_max = c_max * V_electrode * epsilon_s_av
             # Q_max = Li_max * self.param.F / 3600
-            # dQ = Q_max * sto_bulk
+            # dQ = Q_max
 
             c_scale = self.phase_param.c_max
             variables[f"Total lithium in {phase} phase in {domain} electrode [mol]"] = (
@@ -85,6 +85,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
+            # dQ = variables[f"{Domain} electrode {phase_name}capacity [A.h]"]
             dQ = self.phase_param.Q(sto_surf).diff(sto_surf)
             dQdU = dQ / dU
             variables[
