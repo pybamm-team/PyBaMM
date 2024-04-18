@@ -1127,6 +1127,7 @@ class Discretisation:
                     # in variables twice under different names
                     for key in model.variables:
                         if model.variables[key] == var:
+                            print("here")
                             model.variables[key] = model.variables[var.name]
                     del model.rhs[var]
                     del model.initial_conditions[var]
