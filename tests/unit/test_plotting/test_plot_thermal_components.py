@@ -26,6 +26,13 @@ class TestPlotThermalComponents(TestCase):
             self.assertEqual(ax_out[0], ax[0])
             self.assertEqual(ax_out[1], ax[1])
 
+    def test_not_implemented(self):
+        model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
+        sim = pybamm.Simulation(model)
+        sol = sim.solve([0, 3600])
+        with self.assertRaises(NotImplementedError):
+            pybamm.plot_thermal_components(sol)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

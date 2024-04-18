@@ -46,6 +46,20 @@ class Lumped(BaseThermal):
 
     def get_coupled_variables(self, variables):
         variables.update(self._get_standard_coupled_variables(variables))
+
+        # Newton cooling, accounting for surface area to volume ratio
+        T_vol_av = variables["Volume-averaged cell temperature [K]"]
+        T_amb = variables["Volume-averaged ambient temperature [K]"]
+        V = variables["Cell thermal volume [m3]"]
+        Q_cool_W = -self.param.h_total * (T_vol_av - T_amb) * self.param.A_cooling
+        Q_cool_vol_av = Q_cool_W / V
+        variables.update(
+            {
+                # Lumped cooling
+                "Lumped total cooling [W.m-3]": Q_cool_vol_av,
+                "Lumped total cooling [W]": Q_cool_W,
+            }
+        )
         return variables
 
     def set_rhs(self, variables):

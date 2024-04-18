@@ -218,13 +218,8 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_vol_av = Q_rev_W / V
         Q_vol_av = Q_W / V
 
-        # Newton cooling, accounting for surface area to volume ratio
-        T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        T_amb = variables["Volume-averaged ambient temperature [K]"]
-        Q_cool_W = -self.param.h_total * (T_vol_av - T_amb) * self.param.A_cooling
-        Q_cool_vol_av = Q_cool_W / V
-
         # Effective heat capacity
+        T_vol_av = variables["Volume-averaged cell temperature [K]"]
         rho_c_p_eff_av = param.rho_c_p_eff(T_vol_av)
 
         variables.update(
@@ -258,9 +253,6 @@ class BaseThermal(pybamm.BaseSubModel):
                 # Current collector
                 "Negative current collector Ohmic heating [W.m-3]": Q_ohm_s_cn,
                 "Positive current collector Ohmic heating [W.m-3]": Q_ohm_s_cp,
-                # Lumped cooling
-                "Lumped total cooling [W.m-3]": Q_cool_vol_av,
-                "Lumped total cooling [W]": Q_cool_W,
                 # Effective heat capacity
                 "Volume-averaged effective heat capacity [J.K-1.m-3]": rho_c_p_eff_av,
                 "Cell thermal volume [m3]": V,

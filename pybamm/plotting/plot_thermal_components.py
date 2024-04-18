@@ -64,9 +64,15 @@ def plot_thermal_components(
         "Irreversible electrochemical heating",
         "Reversible heating",
     ]
-    heats_volumetric = {
-        name: solution[name + " [W]"].entries / volume for name in heating_sources
-    }
+    try:
+        heats_volumetric = {
+            name: solution[name + " [W]"].entries / volume for name in heating_sources
+        }
+    except KeyError as err:
+        raise NotImplementedError(
+            "plot_thermal_components is only implemented for lumped models"
+        ) from err
+
     dTs = {
         name: cumulative_trapezoid(heat / rho_c_p_eff_av, time_s, initial=0)
         for name, heat in heats_volumetric.items()
