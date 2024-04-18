@@ -25,13 +25,6 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
         phase = self.phase
 
-        # get dQ, change in capacity with respect to stoichiometry
-        c_max = self.phase_param.c_max
-        epsilon_s_av = self.phase_param.epsilon_s_av
-        V_electrode = self.param.A_cc * self.domain_param.L
-        Li_max = c_max * V_electrode * epsilon_s_av
-        Q_max = Li_max * self.param.F / 3600
-        dQ = Q_max
 
         if self.reaction == "lithium-ion main":
             T = variables[f"{Domain} electrode temperature [K]"]
@@ -70,6 +63,14 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             T_bulk = pybamm.xyz_average(pybamm.size_average(T))
             ocp_bulk_eq = self.phase_param.U(sto_bulk, T_bulk)
 
+            # # get dQ, change in capacity with respect to stoichiometry
+            # c_max = self.phase_param.c_max
+            # epsilon_s_av = self.phase_param.epsilon_s_av
+            # V_electrode = self.param.A_cc * self.domain_param.L
+            # Li_max = c_max * V_electrode * epsilon_s_av
+            # Q_max = Li_max * self.param.F / 3600
+            # dQ = Q_max * sto_bulk
+
             c_scale = self.phase_param.c_max
             variables[f"Total lithium in {phase} phase in {domain} electrode [mol]"] = (
                 sto_bulk * c_scale
@@ -85,7 +86,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
-            # dQ = self.phase_param.Q(sto_surf).diff(sto_surf)
+            dQ = self.phase_param.Q(sto_surf).diff(sto_surf)
             dQdU = dQ / dU
             variables[
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
@@ -95,6 +96,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
             ] = h
             H_x_av = pybamm.x_average(H)
             h_x_av = pybamm.x_average(h)
+            variables[f'X-averaged {domain} electrode {phase_name}hysteresis state'] = h_x_av
             # check if psd
             if domain_options["particle size"] == "distribution":
                 # should always be true
@@ -129,7 +131,7 @@ class PlettOpenCircuitPotential(BaseOpenCircuitPotential):
         phase_name = self.phase_name
 
         current = self.param.current_with_time
-        current = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
+        current = variables[f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"]
         Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
         dQdU = variables[
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
