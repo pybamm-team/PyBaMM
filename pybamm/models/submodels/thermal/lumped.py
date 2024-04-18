@@ -51,18 +51,12 @@ class Lumped(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
-        T_amb = variables["Volume-averaged ambient temperature [K]"]
+        Q_cool_vol_av = variables["Lumped total cooling [W.m-3]"]
+        rho_c_p_eff_av = variables[
+            "Volume-averaged effective heat capacity [J.K-1.m-3]"
+        ]
 
-        # Newton cooling, accounting for surface area to volume ratio
-        cell_surface_area = self.param.A_cooling
-        cell_volume = self.param.V_cell
-        Q_cool_vol_av = (
-            -self.param.h_total * (T_vol_av - T_amb) * cell_surface_area / cell_volume
-        )
-
-        self.rhs = {
-            T_vol_av: (Q_vol_av + Q_cool_vol_av) / self.param.rho_c_p_eff(T_vol_av)
-        }
+        self.rhs = {T_vol_av: (Q_vol_av + Q_cool_vol_av) / rho_c_p_eff_av}
 
     def set_initial_conditions(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
