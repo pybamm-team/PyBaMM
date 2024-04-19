@@ -50,6 +50,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/compare-particle-diffusion-models.ipynb
     notebooks/models/composite_particle.ipynb
     notebooks/models/coupled-degradation.ipynb
+    notebooks/models/DCHS.ipynb
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
