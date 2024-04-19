@@ -103,14 +103,6 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
                     # must be DFN with PSD model
                     elif f"{domain} electrode" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H * h
-                    else:
-                        raise ValueError(
-                            'Model type not implementted with open-circuit potential as "DCHS"'
-                        )
-                else:
-                    raise ValueError(
-                        'Model type not implementted with open-circuit potential as "DCHS"'
-                    )
             # must not be a psd
             else:
                 ocp_surf = ocp_surf_eq + H * h
@@ -134,7 +126,7 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
         ]
         # check if composite or not
-        if phase_name != "":
+        if phase_name != '':
             Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
         else:
             Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
