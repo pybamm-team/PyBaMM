@@ -120,7 +120,6 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
     def set_rhs(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        phase = self.phase
 
         current = variables[
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
