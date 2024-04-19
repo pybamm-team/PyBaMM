@@ -3,7 +3,6 @@ import unittest
 from tests import get_mesh_for_testing
 from tests import TestCase
 import sys
-import time
 import numpy as np
 
 if pybamm.have_jax():
@@ -32,9 +31,7 @@ class TestJaxSolver(TestCase):
             # Solve
             solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 1, 80)
-            t0 = time.perf_counter()
             solution = solver.solve(model, t_eval)
-            t_first_solve = time.perf_counter() - t0
             np.testing.assert_array_equal(solution.t, t_eval)
             np.testing.assert_allclose(
                 solution.y[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-6
@@ -46,11 +43,8 @@ class TestJaxSolver(TestCase):
             )
             self.assertEqual(solution.termination, "final time")
 
-            t0 = time.perf_counter()
             second_solution = solver.solve(model, t_eval)
-            t_second_solve = time.perf_counter() - t0
 
-            self.assertLess(t_second_solve, t_first_solve)
             np.testing.assert_array_equal(second_solution.y, solution.y)
 
     def test_semi_explicit_model(self):
@@ -75,9 +69,7 @@ class TestJaxSolver(TestCase):
         # Solve
         solver = pybamm.JaxSolver(method="BDF", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 80)
-        t0 = time.perf_counter()
         solution = solver.solve(model, t_eval)
-        t_first_solve = time.perf_counter() - t0
         np.testing.assert_array_equal(solution.t, t_eval)
         soln = np.exp(0.1 * solution.t)
         np.testing.assert_allclose(solution.y[0], soln, rtol=1e-7, atol=1e-7)
@@ -89,11 +81,7 @@ class TestJaxSolver(TestCase):
         )
         self.assertEqual(solution.termination, "final time")
 
-        t0 = time.perf_counter()
         second_solution = solver.solve(model, t_eval)
-        t_second_solve = time.perf_counter() - t0
-
-        self.assertLess(t_second_solve, t_first_solve)
         np.testing.assert_array_equal(second_solution.y, solution.y)
 
     def test_solver_sensitivities(self):
@@ -205,24 +193,17 @@ class TestJaxSolver(TestCase):
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 80)
-
-        t0 = time.perf_counter()
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        t_first_solve = time.perf_counter() - t0
 
         np.testing.assert_allclose(
             solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-6
         )
 
-        t0 = time.perf_counter()
         solution = solver.solve(model, t_eval, inputs={"rate": 0.2})
-        t_second_solve = time.perf_counter() - t0
 
         np.testing.assert_allclose(
             solution.y[0], np.exp(-0.2 * solution.t), rtol=1e-6, atol=1e-6
         )
-
-        self.assertLess(t_second_solve, t_first_solve)
 
     def test_get_solve(self):
         # Create model

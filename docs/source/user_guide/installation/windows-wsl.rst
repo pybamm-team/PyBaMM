@@ -37,7 +37,7 @@ Get PyBaMM's Source Code
 5. Follow the Installation Steps
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Follow the `installation instructions for PyBaMM on Linux <gnu-linux-mac.html>`__.
+Follow the `installation instructions for PyBaMM on Linux <install-from-source.html>`__.
 
 Using Visual Studio Code with the WSL
 ---------------------------------------

@@ -76,8 +76,8 @@ class LithiumIonParameters(BaseParameters):
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut
         self.voltage_high_cut = self.elec.voltage_high_cut
-        self.ocp_soc_0_dimensional = self.elec.ocp_soc_0_dimensional
-        self.ocp_soc_100_dimensional = self.elec.ocp_soc_100_dimensional
+        self.ocp_soc_0 = self.elec.ocp_soc_0
+        self.ocp_soc_100 = self.elec.ocp_soc_100
 
         # Domain parameters
         for domain in self.domain_params.values():

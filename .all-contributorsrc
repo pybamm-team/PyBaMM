@@ -844,7 +844,17 @@
       "profile": "https://github.com/lorenzofavaro",
       "contributions": [
         "code",
-        "test"
+        "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "AndyLiuElysia",
+      "name": "AndyLiuElysia",
+      "avatar_url": "https://avatars.githubusercontent.com/u/143705453?v=4",
+      "profile": "https://github.com/AndyLiuElysia",
+      "contributions": [
+        "doc"
       ]
     }
   ],

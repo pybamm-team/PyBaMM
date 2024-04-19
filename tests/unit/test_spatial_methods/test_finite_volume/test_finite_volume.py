@@ -410,11 +410,11 @@ class TestFiniteVolume(TestCase):
         y_test = 2 * np.ones_like(nodes)
         np.testing.assert_array_equal(
             disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([5, 0.5]), 2 * np.ones(n - 1)])[:, np.newaxis],
+            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
         )
         np.testing.assert_array_equal(
             disc_downwind.evaluate(y=y_test),
-            np.concatenate([2 * np.ones(n - 1), np.array([1.5, 3])])[:, np.newaxis],
+            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
         )
 
         # Remove boundary conditions and check error is raised

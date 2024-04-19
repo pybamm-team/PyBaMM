@@ -5,13 +5,13 @@ import numpy as np
 
 def compute_discretisation(model, param):
     var_pts = {
-        pybamm.standard_spatial_vars.x_n: 20,
-        pybamm.standard_spatial_vars.x_s: 20,
-        pybamm.standard_spatial_vars.x_p: 20,
-        pybamm.standard_spatial_vars.r_n: 30,
-        pybamm.standard_spatial_vars.r_p: 30,
-        pybamm.standard_spatial_vars.y: 10,
-        pybamm.standard_spatial_vars.z: 10,
+        "x_n": 20,
+        "x_s": 20,
+        "x_p": 20,
+        "r_n": 30,
+        "r_p": 30,
+        "y": 10,
+        "z": 10,
     }
     geometry = model.default_geometry
     param.process_geometry(geometry)

@@ -1103,6 +1103,7 @@ class Discretisation:
             # only check children of variables, this will skip the variable itself
             # and catch any other cases
             + [child for var in model.variables.values() for child in var.children]
+            + [event.expression for event in model.events]
         )
         all_vars_in_eqns = unpacker.unpack_list_of_symbols(eqns_to_check)
         all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
