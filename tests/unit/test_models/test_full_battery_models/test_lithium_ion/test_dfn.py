@@ -44,8 +44,8 @@ class TestDFN(BaseUnitTestLithiumIon, TestCase):
 
     def test_well_posed_dchs_ocp_with_composite(self):
         options = {
-            "open-circuit potential": (("DCHS",'single'),'single'),
-            "particle phases": ('2','1'),
+            "open-circuit potential": (("DCHS", "single"), "single"),
+            "particle phases": ("2", "1"),
         }
         self.check_well_posedness(options)
 
