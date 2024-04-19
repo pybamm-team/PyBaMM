@@ -126,7 +126,7 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
         ]
         # check if composite or not
-        if phase_name != '':
+        if phase_name != "":
             Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
         else:
             Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
