@@ -73,6 +73,8 @@ class Isothermal(BaseThermal):
                 "Total heating [W]",
                 "Negative current collector Ohmic heating [W.m-3]",
                 "Positive current collector Ohmic heating [W.m-3]",
+                "Lumped total cooling [W.m-3]",
+                "Lumped total cooling [W]",
             ]:
                 # All variables are zero
                 variables.update({var: zero})

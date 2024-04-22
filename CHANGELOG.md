@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added `plot_thermal_components` to plot the contributions to the total heat generation in a battery ([#4021](https://github.com/pybamm-team/PyBaMM/pull/4021))
 - Added functions for normal probability density function (`pybamm.normal_pdf`) and cumulative distribution function (`pybamm.normal_cdf`) ([#3999](https://github.com/pybamm-team/PyBaMM/pull/3999))
 - Updates multiprocess `Pool` in `BaseSolver.solve()` to be constructed with context `fork`. Adds small example for multiprocess inputs. ([#3974](https://github.com/pybamm-team/PyBaMM/pull/3974))
 - Added custom experiment steps ([#3835](https://github.com/pybamm-team/PyBaMM/pull/3835))
@@ -14,6 +15,7 @@
 
 ## Bug Fixes
 
+- Set the `remove_independent_variables_from_rhs` to `False` by default, and moved the option from `Discretisation.process_model` to `Discretisation.__init__`. This fixes a bug related to the discharge capacity, but may make the simulation slower in some cases. To set the option to `True`, use `Simulation(..., discretisation_kwargs={"remove_independent_variables_from_rhs": True})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
 - Fixed a bug where independent variables were removed from models even if they appeared in events ([#4019](https://github.com/pybamm-team/PyBaMM/pull/4019))
 - Fix bug with upwind and downwind schemes producing the wrong discretised system ([#3979](https://github.com/pybamm-team/PyBaMM/pull/3979))
 - Allow evaluation of an `Interpolant` object with a number ([#3932](https://github.com/pybamm-team/PyBaMM/pull/3932))
@@ -33,6 +35,7 @@
 
 ## Breaking changes
 
+- Removed `check_model` argument from `Simulation.solve`. To change the `check_model` option, use `Simulation(..., discretisation_kwargs={"check_model": False})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
 - Removed multiple Docker images. Here on, a single Docker image tagged `pybamm/pybamm:latest` will be provided with both solvers (`IDAKLU` and `JAX`) pre-installed. ([#3992](https://github.com/pybamm-team/PyBaMM/pull/3992))
 - Removed support for Python 3.8 ([#3961](https://github.com/pybamm-team/PyBaMM/pull/3961))
 - Renamed "ocp_soc_0_dimensional" to "ocp_soc_0" and "ocp_soc_100_dimensional" to "ocp_soc_100" ([#3942](https://github.com/pybamm-team/PyBaMM/pull/3942))
