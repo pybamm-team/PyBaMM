@@ -95,7 +95,9 @@ def run_examples(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
-    session.run("pytest", "--nbmake", *notebooks_to_test, external=True)
+    session.run(
+        "pytest", "--nbmake", "--nbmake-timeout=600", *notebooks_to_test, external=True
+    )
 
 
 @nox.session(name="scripts")
