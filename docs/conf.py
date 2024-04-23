@@ -384,10 +384,9 @@ if os.environ.get("READTHEDOCS_VERSION") == "latest":
             You are viewing this notebook on the latest version of the documentation,
             where these notebooks may not be compatible with the stable release of
             PyBaMM since they can contain features that are not yet released.
-            It is recommended to switch to a stable version of the documentation
-            to access these notebooks, or you may consider
+            We recommend viewing these notebooks from the stable version of the documentation. To install the latest version of PyBaMM that is compatible with the latest notebooks, 
             <a href="https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html\#full-installation-guide
-            ">building PyBaMM from sources</a>.
+            ">build PyBaMM from source</a>.
         </p>
     </div>
 
