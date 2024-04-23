@@ -371,6 +371,28 @@ env.doc2path(env.docname, base=None) %}
 
 """
 
+if os.environ.get("READTHEDOCS_VERSION") == "latest":
+    # append another admonition to warn about unreleased features
+    # note: this needs to be appended with a newline and correct dedentation
+    nbsphinx_prolog += r"""
+
+    <div class="admonition attention">
+        <p class="admonition-title">
+            Attention
+        </p>
+        <p>
+            You are viewing this notebook on the latest version of the documentation,
+            where these notebooks may not be compatible with the stable release of
+            PyBaMM since they can contain features that are not yet released.
+            It is recommended to switch to a stable version of the documentation
+            to access these notebooks, or you may consider
+            <a href="https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html\#full-installation-guide
+            ">building PyBaMM from sources</a>.
+        </p>
+    </div>
+
+"""
+
 # -- sphinxext/inheritance_diagram.py options --------------------------------
 
 graphviz_output_format = "svg"
