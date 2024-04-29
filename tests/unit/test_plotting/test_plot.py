@@ -3,16 +3,19 @@ import unittest
 import numpy as np
 from tests import TestCase
 import matplotlib.pyplot as plt
+from matplotlib import use
+
+use("Agg")
 
 
 class TestPlot(TestCase):
     def test_plot(self):
         x = pybamm.Array(np.array([0, 3, 10]))
         y = pybamm.Array(np.array([6, 16, 78]))
-        pybamm.plot(x, y, testing=True)
+        pybamm.plot(x, y, show_plot=False)
 
         _, ax = plt.subplots()
-        ax_out = pybamm.plot(x, y, ax=ax, testing=True)
+        ax_out = pybamm.plot(x, y, ax=ax, show_plot=False)
         self.assertEqual(ax_out, ax)
 
     def test_plot_fail(self):
@@ -28,13 +31,13 @@ class TestPlot(TestCase):
         X, Y = pybamm.meshgrid(x, y)
 
         # plot with array directly
-        pybamm.plot2D(x, y, Y, testing=True)
+        pybamm.plot2D(x, y, Y, show_plot=False)
 
         # plot with meshgrid
-        pybamm.plot2D(X, Y, Y, testing=True)
+        pybamm.plot2D(X, Y, Y, show_plot=False)
 
         _, ax = plt.subplots()
-        ax_out = pybamm.plot2D(X, Y, Y, ax=ax, testing=True)
+        ax_out = pybamm.plot2D(X, Y, Y, ax=ax, show_plot=False)
         self.assertEqual(ax_out, ax)
 
     def test_plot2D_fail(self):

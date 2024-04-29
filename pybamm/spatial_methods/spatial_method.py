@@ -1,6 +1,3 @@
-#
-# A general spatial method class
-#
 import pybamm
 import numpy as np
 from scipy.sparse import eye, kron, coo_matrix, csr_matrix, vstack
@@ -13,11 +10,6 @@ class SpatialMethod:
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a divergence operator.
-
-    Parameters
-    ----------
-    mesh : :class: `pybamm.Mesh`
-        Contains all the submeshes for discretisation
     """
 
     def __init__(self, options=None):

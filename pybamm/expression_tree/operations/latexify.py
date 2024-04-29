@@ -1,13 +1,15 @@
 #
 # Latexify class
 #
+from __future__ import annotations
+
 import copy
 import re
 import warnings
 
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
-from pybamm.util import have_optional_dependency
+import sympy
 
 
 def get_rng_min_max_name(rng, min_or_max):
@@ -48,7 +50,7 @@ class Latexify:
     >>> model.latexify(newline=False)[1:5]
     """
 
-    def __init__(self, model, filename=None, newline=True):
+    def __init__(self, model, filename: str | None = None, newline: bool = True):
         self.model = model
         self.filename = filename
         self.newline = newline
@@ -74,10 +76,10 @@ class Latexify:
             rng_min = get_rng_min_max_name(rng, "min")
 
         # Take range maximum from the last domain
-        for var_name, rng in self.model.default_geometry[var.domain[-1]].items():
+        for _, rng in self.model.default_geometry[var.domain[-1]].items():
             rng_max = get_rng_min_max_name(rng, "max")
 
-        geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
+        geo_latex = rf"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)
 
         return geo
@@ -87,7 +89,6 @@ class Latexify:
         Returns a list of boundary condition equations with ranges in front of
         the equations.
         """
-        sympy = have_optional_dependency("sympy")
         bcs_eqn_list = []
         bcs = self.model.boundary_conditions.get(var, None)
 
@@ -118,7 +119,6 @@ class Latexify:
 
     def _get_param_var(self, node):
         """Returns a list of parameters and a list of variables."""
-        sympy = have_optional_dependency("sympy")
         param_list = []
         var_list = []
         dfs_nodes = [node]
@@ -161,7 +161,6 @@ class Latexify:
         return param_list, var_list
 
     def latexify(self, output_variables=None):
-        sympy = have_optional_dependency("sympy")
         # Voltage is the default output variable if it exists
         if output_variables is None:
             if "Voltage [V]" in self.model.variables:
@@ -304,7 +303,8 @@ class Latexify:
                 # When equations are too huge, set output resolution to default
                 except RuntimeError:  # pragma: no cover
                     warnings.warn(
-                        "RuntimeError - Setting the output resolution to default"
+                        "RuntimeError - Setting the output resolution to default",
+                        stacklevel=2,
                     )
                     return sympy.preview(
                         eqn_new_line,

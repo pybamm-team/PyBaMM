@@ -1,9 +1,11 @@
 #
 # Interpolating class
 #
+from __future__ import annotations
 import numpy as np
 from scipy import interpolate
-import warnings
+from collections.abc import Sequence
+import numbers
 
 import pybamm
 
@@ -41,22 +43,14 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x,
-        y,
-        children,
-        name=None,
-        interpolator="linear",
-        extrapolate=True,
-        entries_string=None,
+        x: np.ndarray | Sequence[np.ndarray],
+        y: np.ndarray,
+        children: Sequence[pybamm.Symbol] | pybamm.Time,
+        name: str | None = None,
+        interpolator: str | None = "linear",
+        extrapolate: bool = True,
+        entries_string: str | None = None,
     ):
-        # "cubic spline" has been renamed to "cubic"
-        if interpolator == "cubic spline":
-            interpolator = "cubic"
-            warnings.warn(
-                "The 'cubic spline' interpolator has been renamed to 'cubic'.",
-                DeprecationWarning,
-            )
-
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
             raise ValueError(f"interpolator '{interpolator}' not recognised")
@@ -101,15 +95,15 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x = [x]
+                x: list[np.ndarray] = [x]  # type: ignore[no-redef]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
                     "len(x1) should equal y=shape[0], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
-        # children should be a list not a symbol
-        if isinstance(children, pybamm.Symbol):
+        # children should be a list not a symbol or a number
+        if isinstance(children, (pybamm.Symbol, numbers.Number)):
             children = [children]
         # Either a single x is provided and there is one child
         # or x is a 2-tuple and there are two children
@@ -127,14 +121,14 @@ class Interpolant(pybamm.Function):
             self.dimension = 1
             if interpolator == "linear":
                 if extrapolate is False:
-                    fill_value = np.nan
+                    fill_value_1: float | str = np.nan
                 elif extrapolate is True:
-                    fill_value = "extrapolate"
+                    fill_value_1 = "extrapolate"
                 interpolating_function = interpolate.interp1d(
                     x1,
                     y.T,
                     bounds_error=False,
-                    fill_value=fill_value,
+                    fill_value=fill_value_1,
                 )
             elif interpolator == "cubic":
                 interpolating_function = interpolate.CubicSpline(
@@ -205,23 +199,20 @@ class Interpolant(pybamm.Function):
     @classmethod
     def _from_json(cls, snippet: dict):
         """Create an Interpolant object from JSON data"""
-        instance = cls.__new__(cls)
+
+        x1 = []
 
         if len(snippet["x"]) == 1:
-            x = [np.array(x) for x in snippet["x"]]
-        else:
-            x = tuple(np.array(x) for x in snippet["x"])
+            x1 = [np.array(x) for x in snippet["x"]]
 
-        instance.__init__(
-            x,
+        return cls(
+            x1 if x1 else tuple(np.array(x) for x in snippet["x"]),
             np.array(snippet["y"]),
             snippet["children"],
             name=snippet["name"],
             interpolator=snippet["interpolator"],
             extrapolate=snippet["extrapolate"],
         )
-
-        return instance
 
     @property
     def entries_string(self):

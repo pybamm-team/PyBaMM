@@ -8,7 +8,7 @@ Solvers
   scipy_solver
   jax_solver
   idaklu_solver
-  scikits_solvers
+  idaklu_jax
   casadi_solver
   algebraic_solvers
   solution

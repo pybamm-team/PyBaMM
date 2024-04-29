@@ -171,7 +171,7 @@ class TestBPX(TestCase):
                 self.assertEqual(p_vals[0], p_vals[1])
 
             for electrode in ["Negative", "Positive"]:
-                D = param[f"{electrode} electrode diffusivity [m2.s-1]"]
+                D = param[f"{electrode} particle diffusivity [m2.s-1]"]
                 dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
                 check_constant_output(D)
                 check_constant_output(dUdT)
@@ -227,7 +227,7 @@ class TestBPX(TestCase):
             D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
             self.assertIsInstance(D, pybamm.Interpolant)
             for electrode in ["Negative", "Positive"]:
-                D = param[f"{electrode} electrode diffusivity [m2.s-1]"](c, 298.15)
+                D = param[f"{electrode} particle diffusivity [m2.s-1]"](c, 298.15)
                 self.assertIsInstance(D, pybamm.Interpolant)
                 OCP = param[f"{electrode} electrode OCP [V]"](c)
                 self.assertIsInstance(OCP, pybamm.Interpolant)
@@ -281,8 +281,8 @@ class TestBPX(TestCase):
         param_keys = [
             "Electrolyte conductivity [S.m-1]",
             "Electrolyte diffusivity [m2.s-1]",
-            "Negative electrode diffusivity [m2.s-1]",
-            "Positive electrode diffusivity [m2.s-1]",
+            "Negative particle diffusivity [m2.s-1]",
+            "Positive particle diffusivity [m2.s-1]",
             "Positive electrode exchange-current density [A.m-2]",
             "Negative electrode exchange-current density [A.m-2]",
         ]
@@ -290,14 +290,173 @@ class TestBPX(TestCase):
         Ea_keys = [
             "Electrolyte conductivity activation energy [J.mol-1]",
             "Electrolyte diffusivity activation energy [J.mol-1]",
-            "Negative electrode diffusivity activation energy [J.mol-1]",
-            "Positive electrode diffusivity activation energy [J.mol-1]",
+            "Negative particle diffusivity activation energy [J.mol-1]",
+            "Positive particle diffusivity activation energy [J.mol-1]",
             "Positive electrode reaction rate constant activation energy [J.mol-1]",
             "Negative electrode reaction rate constant activation energy [J.mol-1]",
         ]
 
         for param_key, Ea_key in zip(param_keys, Ea_keys):
             arrhenius_assertion(pv, param_key, Ea_key)
+
+    def test_bpx_blended(self):
+        bpx_obj = copy.copy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = {
+            "Thickness [m]": 5.23e-05,
+            "Conductivity [S.m-1]": 0.789,
+            "Porosity": 0.277493,
+            "Transport efficiency": 0.1462,
+            "Particle": {
+                "Large Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 8e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Small Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 1e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 496883,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+            },
+        }
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
+            # initial concentration must be set manually for blended models (for now)
+            pv.update(
+                {
+                    "Initial concentration in negative electrode [mol.m-3]": 22000,
+                    "Primary: Initial concentration in positive electrode [mol.m-3]": 19404,
+                    "Secondary: Initial concentration in positive electrode [mol.m-3]": 19404,
+                },
+                check_already_exists=False,
+            )
+            model = pybamm.lithium_ion.SPM({"particle phases": ("1", "2")})
+            experiment = pybamm.Experiment(
+                [
+                    "Discharge at C/5 for 1 hour",
+                ]
+            )
+            sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
+            sim.solve(calc_esoh=False)
+
+    def test_bpx_blended_error(self):
+        bpx_obj = copy.copy(self.base)
+        bpx_obj["Parameterisation"]["Positive electrode"] = {
+            "Thickness [m]": 5.23e-05,
+            "Conductivity [S.m-1]": 0.789,
+            "Porosity": 0.277493,
+            "Transport efficiency": 0.1462,
+            "Particle": {
+                "Large Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 8e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Medium Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 4e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+                "Small Particles": {
+                    "Diffusivity [m2.s-1]": 3.2e-14,
+                    "Particle radius [m]": 1e-06,
+                    "OCP [V]": "-3.04420906 * x + 10.04892207 - 0.65637536 * tanh(-4.02134095 * (x - 0.80063948)) + 4.24678547 * tanh(12.17805062 * (x - 7.57659337)) - 0.3757068 * tanh(59.33067782 * (x - 0.99784492))",
+                    "Entropic change coefficient [V.K-1]": -1e-4,
+                    "Surface area per unit volume [m-1]": 186331,
+                    "Reaction rate constant [mol.m-2.s-1]": 2.305e-05,
+                    "Minimum stoichiometry": 0.42424,
+                    "Maximum stoichiometry": 0.96210,
+                    "Maximum concentration [mol.m-3]": 46200,
+                    "Diffusivity activation energy [J.mol-1]": 15000,
+                    "Reaction rate constant activation energy [J.mol-1]": 3500,
+                },
+            },
+        }
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            with self.assertRaisesRegex(NotImplementedError, "PyBaMM does not support"):
+                pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+    def test_bpx_user_defined(self):
+        bpx_obj = copy.copy(self.base)
+        data = {"x": [0, 1], "y": [0, 1]}
+        bpx_obj["Parameterisation"]["User-defined"] = {
+            "User-defined scalar parameter": 1.0,
+            "User-defined parameter data": data,
+            "User-defined parameter data function": "x**2",
+        }
+
+        filename = "tmp.json"
+        with tempfile.NamedTemporaryFile(
+            suffix=filename, delete=False, mode="w"
+        ) as tmp:
+            # write to a tempory file so we can
+            # get the source later on using inspect.getsource
+            # (as long as the file still exists)
+            json.dump(bpx_obj, tmp)
+            tmp.flush()
+
+            param = pybamm.ParameterValues.create_from_bpx(tmp.name)
+
+            self.assertEqual(param["User-defined scalar parameter"], 1.0)
+            var = pybamm.Variable("var")
+            self.assertIsInstance(
+                param["User-defined parameter data"](var), pybamm.Interpolant
+            )
+            self.assertIsInstance(
+                param["User-defined parameter data function"](var), pybamm.Power
+            )
 
 
 if __name__ == "__main__":

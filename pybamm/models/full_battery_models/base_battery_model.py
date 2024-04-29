@@ -445,9 +445,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     )
                 else:
                     raise pybamm.OptionError(
-                        "Option '{}' not recognised. Best matches are {}".format(
-                            name, options.get_best_matches(name)
-                        )
+                        f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
         # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
@@ -819,10 +817,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         Create a model instance from a serialised object.
         """
-        instance = cls.__new__(cls)
 
         # append the model name with _saved to differentiate
-        instance.__init__(
+        instance = cls(
             options=properties["options"], name=properties["name"] + "_saved"
         )
 
@@ -933,9 +930,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods[
-                "current collector"
-            ] = pybamm.ZeroDimensionalSpatialMethod()
+            base_spatial_methods["current collector"] = (
+                pybamm.ZeroDimensionalSpatialMethod()
+            )
         elif self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
@@ -1049,9 +1046,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
@@ -1150,7 +1145,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(
@@ -1162,7 +1157,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit resistance":
             model = pybamm.external_circuit.ExplicitResistanceControl(

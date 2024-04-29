@@ -89,17 +89,13 @@ class Thevenin(pybamm.BaseModel):
                 options[name] = opt
             else:
                 raise pybamm.OptionError(
-                    "Option '{}' not recognised. Best matches are {}".format(
-                        name, options.get_best_matches(name)
-                    )
+                    f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                 )
 
         for opt, value in options.items():
             if value not in possible_options[opt]:
                 raise pybamm.OptionError(
-                    "Option '{}' must be one of {}. Got '{}' instead.".format(
-                        opt, possible_options[opt], value
-                    )
+                    f"Option '{opt}' must be one of {possible_options[opt]}. Got '{value}' instead."
                 )
 
         self.options = options
@@ -124,7 +120,7 @@ class Thevenin(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
@@ -132,7 +128,7 @@ class Thevenin(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "CCCV":
             model = pybamm.external_circuit.CCCVFunctionControl(
@@ -143,14 +139,14 @@ class Thevenin(pybamm.BaseModel):
                 self.param,
                 self.options["operating mode"],
                 self.options,
-                control="differential without max",
+                control="differential",
             )
         self.submodels["external circuit"] = model
 
     def set_ocv_submodel(self):
-        self.submodels[
-            "Open-circuit voltage"
-        ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+        self.submodels["Open-circuit voltage"] = (
+            pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+        )
 
     def set_resistor_submodel(self):
         name = "Element-0 (Resistor)"

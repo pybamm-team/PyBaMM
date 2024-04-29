@@ -104,13 +104,13 @@ Only 'core pybamm' is installed by default. The others have to be specified expl
 
 PyBaMM utilizes optional dependencies to allow users to choose which additional libraries they want to use. Managing these optional dependencies and their imports is essential to provide flexibility to PyBaMM users.
 
-PyBaMM provides a utility function `have_optional_dependency`, to check for the availability of optional dependencies within methods. This function can be used to conditionally import optional dependencies only if they are available. Here's how to use it:
+PyBaMM provides a utility function `import_optional_dependency`, to check for the availability of optional dependencies within methods. This function can be used to conditionally import optional dependencies only if they are available. Here's how to use it:
 
 Optional dependencies should never be imported at the module level, but always inside methods. For example:
 
 ```
 def use_pybtex(x,y,z):
-    pybtex = have_optional_dependency("pybtex")
+    pybtex = import_optional_dependency("pybtex")
     ...
 ```
 
@@ -118,7 +118,7 @@ While importing a specific module instead of an entire package/library:
 
 ```python
 def use_parse_file(x, y, z):
-    parse_file = have_optional_dependency("pybtex.database", "parse_file")
+    parse_file = import_optional_dependency("pybtex.database", "parse_file")
     ...
 ```
 
@@ -126,26 +126,18 @@ This allows people to (1) use PyBaMM without importing optional dependencies by 
 
 **Writing Tests for Optional Dependencies**
 
-Whenever a new optional dependency is added for optional functionality, it is recommended to write a corresponding unit test in `test_util.py`. This ensures that an error is raised upon the absence of said dependency. Here's an example:
+Below, we list the currently available test functions to provide an overview. If you find it useful to add new test cases please do so within `tests/unit/test_util.py`.
 
-```python
-from tests import TestCase
-import pybamm
+Currently, there are three functions to test what concerns optional dependencies:
+- `test_import_optional_dependency`
+- `test_pybamm_import`
+- `test_optional_dependencies`
 
+The `test_import_optional_dependency` function extracts the optional dependencies installed in the setup environment, makes them unimportable (by setting them to `None` among the `sys.modules`), and tests that the `pybamm.util.import_optional_dependency` function throws a `ModuleNotFoundError` exception when their import is attempted.
 
-class TestUtil(TestCase):
-    def test_optional_dependency(self):
-        # Test that an error is raised when pybtex is not available
-        with self.assertRaisesRegex(
-            ModuleNotFoundError, "Optional dependency pybtex is not available"
-        ):
-            sys.modules["pybtex"] = None
-            pybamm.function_using_pybtex(x, y, z)
+The `test_pybamm_import` function extracts the optional dependencies installed in the setup environment and makes them unimportable (by setting them to `None` among the `sys.modules`), unloads `pybamm` and its sub-modules, and finally tests that `pybamm` can be imported successfully. In fact, it is essential that the `pybamm` package is importable with only the mandatory dependencies.
 
-        # Test that the function works when pybtex is available
-        sys.modules["pybtex"] = pybamm.util.have_optional_dependency("pybtex")
-        pybamm.function_using_pybtex(x, y, z)
-```
+The `test_optional_dependencies` function extracts `pybamm` mandatory distribution packages and verifies that they are not present in the optional distribution packages list in `pyproject.toml`. This test is crucial for ensuring the consistency of the released package information and potential updates to dependencies during development.
 
 ## Testing
 
