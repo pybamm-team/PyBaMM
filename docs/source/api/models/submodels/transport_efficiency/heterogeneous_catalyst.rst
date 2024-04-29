@@ -5,4 +5,3 @@ Heterogeneous Catalyst Transport Efficiency Model
   :members:
 
 .. footbibliography::
-
