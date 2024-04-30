@@ -42,8 +42,8 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
                 ):
                     sto_surf = sto_surf.orphans[0]
                     T = T.orphans[0]
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
-                h = pybamm.PrimaryBroadcast(h, [f"{domain} particle size"])
+                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
+                h = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
             else:
                 sto_surf = variables[
                     f"{Domain} {phase_name}particle surface stoichiometry"
@@ -103,6 +103,8 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
                     # must be DFN with PSD model
                     elif f"{domain} electrode" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H * h
+                elif f"{domain} {phase_name}particle size" in sto_surf.domains["primary"]:
+                    ocp_surf = ocp_surf_eq + H * h
             # must not be a psd
             else:
                 ocp_surf = ocp_surf_eq + H * h
