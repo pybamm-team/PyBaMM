@@ -103,7 +103,9 @@ class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
                     # must be DFN with PSD model
                     elif f"{domain} electrode" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H * h
-                elif f"{domain} {phase_name}particle size" in sto_surf.domains["primary"]:
+                elif (
+                    f"{domain} {phase_name}particle size" in sto_surf.domains["primary"]
+                ):
                     ocp_surf = ocp_surf_eq + H * h
             # must not be a psd
             else:
