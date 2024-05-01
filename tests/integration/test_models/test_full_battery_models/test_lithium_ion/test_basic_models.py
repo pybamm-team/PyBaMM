@@ -23,12 +23,12 @@ class BaseBasicModelTest:
 
 class TestBasicSPM(BaseBasicModelTest, TestCase):
     def setUp(self):
-        self.model = pybamm.lithium_ion.SPM()
+        self.model = pybamm.lithium_ion.BasicSPM()
 
 
 class TestBasicDFN(BaseBasicModelTest, TestCase):
     def setUp(self):
-        self.model = pybamm.lithium_ion.DFN()
+        self.model = pybamm.lithium_ion.BasicDFN()
 
 
 class TestBasicDFNComposite(BaseBasicModelTest, TestCase):

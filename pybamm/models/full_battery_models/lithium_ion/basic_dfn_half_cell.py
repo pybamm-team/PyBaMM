@@ -284,6 +284,7 @@ class BasicDFNHalfCell(BaseModel):
         # visualising the solution of the model
         self.variables = {
             "Time [s]": pybamm.t,
+            "Discharge capacity [A.h]": Q,
             "Positive particle surface concentration [mol.m-3]": c_s_surf_w,
             "X-averaged positive particle surface concentration "
             "[mol.m-3]": c_s_surf_w_av,
