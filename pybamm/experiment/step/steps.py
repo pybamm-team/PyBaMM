@@ -179,7 +179,7 @@ class Voltage(BaseStepImplicit):
 
     def get_submodel(self, model):
         return pybamm.external_circuit.VoltageFunctionControl(
-            model.param, model.options
+            model.param, model.options, add_discharge_capacity=False
         )
 
 
@@ -211,7 +211,9 @@ class Power(BaseStepImplicit):
         return {"Power function [W]": self.value}
 
     def get_submodel(self, model):
-        return pybamm.external_circuit.PowerFunctionControl(model.param, model.options)
+        return pybamm.external_circuit.PowerFunctionControl(
+            model.param, model.options, add_discharge_capacity=False
+        )
 
 
 def power(value, **kwargs):
@@ -243,7 +245,7 @@ class Resistance(BaseStepImplicit):
 
     def get_submodel(self, model):
         return pybamm.external_circuit.ResistanceFunctionControl(
-            model.param, model.options
+            model.param, model.options, add_discharge_capacity=False
         )
 
 
@@ -410,7 +412,11 @@ class CustomStepImplicit(BaseStepImplicit):
 
     def get_submodel(self, model):
         return pybamm.external_circuit.FunctionControl(
-            model.param, self.current_rhs_function, model.options, control=self.control
+            model.param,
+            self.current_rhs_function,
+            model.options,
+            control=self.control,
+            add_discharge_capacity=False,
         )
 
     def copy(self):

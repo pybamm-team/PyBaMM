@@ -21,7 +21,8 @@ class ExplicitCurrentControl(BaseModel):
         }
 
         # Add discharge capacity variable
-        variables.update(super().get_fundamental_variables())
+        if self.add_discharge_capacity:
+            variables.update(super().get_fundamental_variables())
 
         return variables
 
