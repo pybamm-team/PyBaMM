@@ -14,8 +14,9 @@ from functools import cached_property
 
 class NumpyEncoder(json.JSONEncoder):
     """
-    Numpy serialiser helper class that converts numpy arrays to a list
-    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    Numpy serialiser helper class that converts numpy arrays to a list.
+    Numpy arrays cannot be directly converted to JSON, so the arrays are
+    converted to python list objects before encoding.
     """
 
     def default(self, obj):
