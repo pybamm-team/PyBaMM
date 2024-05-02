@@ -118,7 +118,7 @@ class TestMPM(TestCase):
 
     def test_dchs_ocp(self):
         options = {
-            "open-circuit potential": "DCHS",
+            "open-circuit potential": "Wycisk",
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()

@@ -69,7 +69,7 @@ class TestMPM(TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_dchs_ocp(self):
-        options = {"open-circuit potential": ("DCHS", "single")}
+        options = {"open-circuit potential": ("Wycisk", "single")}
         model = pybamm.lithium_ion.MPM(options)
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)

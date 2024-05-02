@@ -407,7 +407,7 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_dchs_ocp(self):
-        options = {"open-circuit potential": "DCHS"}
+        options = {"open-circuit potential": "Wycisk"}
         self.check_well_posedness(options)
 
     def test_well_posed_msmr(self):

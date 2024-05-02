@@ -5,7 +5,7 @@ import pybamm
 from . import BaseOpenCircuitPotential
 
 
-class DCHSOpenCircuitPotential(BaseOpenCircuitPotential):
+class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
