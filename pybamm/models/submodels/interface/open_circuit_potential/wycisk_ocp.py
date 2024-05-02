@@ -77,7 +77,7 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
                 ocp_bulk_eq
             )
 
-            H = self.phase_param.H(sto_surf)
+            H = self.phase_param.hysteresis(sto_surf)
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
@@ -138,8 +138,8 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
         ]
         dQdU = dQdU.orphans[0]
-        K = self.phase_param.K
-        K_x = self.phase_param.K_x
+        K = self.phase_param.hysteresis_decay
+        K_x = self.phase_param.hysteresis_switch
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         dhdt = (

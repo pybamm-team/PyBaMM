@@ -536,8 +536,10 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
         # if self.options['open-circuit potential'] == 'Plett':
-        self.K = pybamm.Parameter(f"{pref}{Domain} particle hysteresis decay rate")
-        self.K_x = pybamm.Parameter(
+        self.hysteresis_decay = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis decay rate"
+        )
+        self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"
         )
         self.h_init = pybamm.Scalar(0)
@@ -636,15 +638,22 @@ class ParticleLithiumIonParameters(BaseParameters):
             out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
         return out
 
-    def H(self, sto):
+    def hysteresis(self, sto):
         """Dimensional hysteresis [V]"""
         Domain = self.domain.capitalize()
         # tol = pybamm.settings.tolerances["U__c_s"]
         # sto = pybamm.maximum(pybamm.minimum(sto,1-tol),tol)
         inputs = {f"{self.phase_prefactor}{Domain} particle stoichiometry": sto}
-        h_ref = pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode OCP hysteresis [V]", inputs
+        lith_ref = pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode lithiation OCP [V]", inputs
         )
+        delith_ref = pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} electrode delithiation OCP [V]", inputs
+        )
+        h_ref = abs(delith_ref - lith_ref) / 2
+        # h_ref = pybamm.FunctionParameter(
+        #     f"{self.phase_prefactor}{Domain} electrode OCP hysteresis [V]", inputs
+        # )
         return h_ref
 
     def Q(self, sto):
