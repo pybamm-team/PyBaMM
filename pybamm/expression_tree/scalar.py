@@ -46,6 +46,10 @@ class Scalar(pybamm.Symbol):
     @property
     def value(self):
         """The value returned by the node when evaluated."""
+        if pybamm.demote_expressions_to_32bit:
+            import jax
+
+            return jax.numpy.float32(self._value)
         return self._value
 
     # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion

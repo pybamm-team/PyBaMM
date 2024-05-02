@@ -17,6 +17,8 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PIP_NO_BINARY": "scikits.odes",
+    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
+    "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "ON"),
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -39,7 +41,11 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
+    """Download, compile, and install the build-time requirements for Linux and macOS.
+
+    Supports --install-dir for custom installation paths and --force to force
+    installation.
+    """
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("cmake", silent=False)
@@ -52,6 +58,30 @@ def run_pybamm_requires(session):
                 "pybind11/",
                 external=True,
             )
+        if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
+            "./iree"
+        ):
+            session.run(
+                "git",
+                "clone",
+                "--depth=1",
+                "--recurse-submodules",
+                "--shallow-submodules",
+                "--branch=candidate-20240311.828",
+                "https://github.com/openxla/iree",
+                "iree/",
+                external=True,
+            )
+            session.chdir("iree")
+            session.run(
+                "git",
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+                external=True,
+            )
+            session.chdir("..")
     else:
         session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 

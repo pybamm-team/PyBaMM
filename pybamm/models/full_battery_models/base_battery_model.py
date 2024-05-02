@@ -922,9 +922,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods[
-                "current collector"
-            ] = pybamm.ZeroDimensionalSpatialMethod()
+            base_spatial_methods["current collector"] = (
+                pybamm.ZeroDimensionalSpatialMethod()
+            )
         elif self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
@@ -1168,14 +1168,14 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["external circuit"] = model
 
     def set_transport_efficiency_submodels(self):
-        self.submodels[
-            "electrolyte transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(
-            self.param, "Electrolyte", self.options
+        self.submodels["electrolyte transport efficiency"] = (
+            pybamm.transport_efficiency.Bruggeman(
+                self.param, "Electrolyte", self.options
+            )
         )
-        self.submodels[
-            "electrode transport efficiency"
-        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
+        self.submodels["electrode transport efficiency"] = (
+            pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
+        )
 
     def set_thermal_submodel(self):
         if self.options["thermal"] == "isothermal":

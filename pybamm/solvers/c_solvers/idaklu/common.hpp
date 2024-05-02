@@ -1,6 +1,8 @@
 #ifndef PYBAMM_IDAKLU_COMMON_HPP
 #define PYBAMM_IDAKLU_COMMON_HPP
 
+#include <iostream>
+
 #include <idas/idas.h>                 /* prototypes for IDAS fcts., consts.    */
 #include <idas/idas_bbdpre.h>         /* access to IDABBDPRE preconditioner          */
 

@@ -279,9 +279,9 @@ class Simulation:
             parameterised_model = new_parameter_values.process_model(
                 new_model, inplace=False
             )
-            self.experiment_unique_steps_to_model[
-                "Rest for padding"
-            ] = parameterised_model
+            self.experiment_unique_steps_to_model["Rest for padding"] = (
+                parameterised_model
+            )
 
     def update_new_model_events(self, new_model, op):
         for term in op.termination:

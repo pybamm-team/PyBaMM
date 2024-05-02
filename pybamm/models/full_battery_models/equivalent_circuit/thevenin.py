@@ -148,9 +148,9 @@ class Thevenin(pybamm.BaseModel):
         self.submodels["external circuit"] = model
 
     def set_ocv_submodel(self):
-        self.submodels[
-            "Open-circuit voltage"
-        ] = pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+        self.submodels["Open-circuit voltage"] = (
+            pybamm.equivalent_circuit_elements.OCVElement(self.param, self.options)
+        )
 
     def set_resistor_submodel(self):
         name = "Element-0 (Resistor)"

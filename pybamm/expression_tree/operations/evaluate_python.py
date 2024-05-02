@@ -600,6 +600,63 @@ class EvaluatorJax:
             static_argnums=self._static_argnums,
         )
 
+    def _demote_constants(self):
+        """Demote 64-bit constants (f64, i64) to 32-bit (f32, i32)"""
+        if not pybamm.demote_expressions_to_32bit:
+            return
+        self._constants = EvaluatorJax._demote_64_to_32(self._constants)
+
+    @classmethod
+    def _demote_64_to_32(cls, c):
+        """Demote 64-bit operations (f64, i64) to 32-bit (f32, i32)"""
+        if not pybamm.demote_expressions_to_32bit:
+            return c
+        if isinstance(c, float):
+            c = np.float32(c)
+        if isinstance(c, int):
+            c = np.int32(c)
+        if isinstance(c, np.float64):
+            c = c.astype(np.float32)
+        if isinstance(c, np.int64):
+            c = c.astype(np.int32)
+        if isinstance(c, np.ndarray):
+            if c.dtype == np.float64:
+                c = c.astype(np.float32)
+            if c.dtype == np.int64:
+                c = c.astype(np.int32)
+            c = jax.numpy.array(c)
+        if isinstance(c, jax.numpy.ndarray):
+            if c.dtype == jax.numpy.float64:
+                c = c.astype(jax.numpy.float32)
+            if c.dtype == jax.numpy.int64:
+                c = c.astype(jax.numpy.int32)
+        if isinstance(
+            c, pybamm.expression_tree.operations.evaluate_python.JaxCooMatrix
+        ):
+            if c.data.dtype == np.float64:
+                c.data = c.data.astype(np.float32)
+            if c.data.dtype == jax.numpy.float64:
+                c.data = c.data.astype(jax.numpy.float32)
+            if c.row.dtype == np.int64:
+                c.row = c.row.astype(np.int32)
+            if c.row.dtype == jax.numpy.int64:
+                c.row = c.row.astype(jax.numpy.int32)
+            if c.col.dtype == np.int64:
+                c.col = c.col.astype(np.int32)
+            if c.col.dtype == jax.numpy.int64:
+                c.col = c.col.astype(jax.numpy.int32)
+        if isinstance(c, pybamm.Symbol):
+            c.children = (EvaluatorJax._demote_64_to_32(child) for child in c.children)
+        return c
+
+    @property
+    def _constants(self):
+        return tuple(map(EvaluatorJax._demote_64_to_32, self.__constants))
+
+    @_constants.setter
+    def _constants(self, value):
+        self.__constants = value
+
     def get_jacobian(self):
         n = len(self._arg_list)
 

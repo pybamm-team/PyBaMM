@@ -1,17 +1,15 @@
-#ifndef PYBAMM_IDAKLU_CASADI_FUNCTIONS_HPP
-#define PYBAMM_IDAKLU_CASADI_FUNCTIONS_HPP
+#ifndef PYBAMM_IDAKLU_IREE_FUNCTIONS_HPP
+#define PYBAMM_IDAKLU_IREE_FUNCTIONS_HPP
 
 #include "../../Options.hpp"
 #include "../Expressions.hpp"
-#include <casadi/casadi.hpp>
-#include <casadi/core/function.hpp>
-#include <casadi/core/sparsity.hpp>
 #include <memory>
+#include "iree_jit.hpp"
 
-class CasadiSparsity : public ExpressionSparsity
+class IREESparsity : public ExpressionSparsity
 {
 public:
-  CasadiSparsity() = default;
+  IREESparsity() = default;
 
   expr_int nnz() override { return _nnz; }
   std::vector<expr_int> get_row() override { return _get_row; }
@@ -23,18 +21,23 @@ public:
 };
 
 /**
- * @brief Class for handling individual casadi functions
+ * @brief Class for handling individual iree functions
  */
-class CasadiFunction : public Expression
+class IREEFunction : public Expression
 {
 public:
 
-  typedef casadi::Function BaseFunctionType;
+  typedef std::string BaseFunctionType;
+  std::unique_ptr<IREESession> session;
+  std::vector<float> result;
+  std::vector<std::vector<int>> input_shape;
+  std::vector<std::vector<int>> output_shape;
+  std::vector<std::vector<float>> input_data;
   
   /**
    * @brief Constructor
    */
-  explicit CasadiFunction(const BaseFunctionType &f);
+  explicit IREEFunction(const BaseFunctionType &f);
   
   void operator()() override;
 
@@ -42,6 +45,7 @@ public:
                   const std::vector<realtype*>& results) override;
 
   BaseFunctionType m_func;
+  std::string module_name;
 
   /**
    * @brief Return the number of non-zero elements for the function output
@@ -55,18 +59,33 @@ public:
 };
 
 /**
- * @brief Class for handling casadi functions
+ * @brief Class for handling iree functions
  */
-class CasadiFunctions : public ExpressionSet<CasadiFunction>
+class IREEFunctions : public ExpressionSet<IREEFunction>
 {
 public:
+  std::unique_ptr<IREECompiler> iree_compiler;
 
-  typedef CasadiFunction::BaseFunctionType BaseFunctionType;  // expose typedef in class
+  typedef IREEFunction::BaseFunctionType BaseFunctionType;  // expose typedef in class
+
+  int iree_init_status;
+  int iree_init() {
+    // Initialise IREE
+    std::cout << "IREEFunctions: Initialising IREECompiler" << std::endl;
+    iree_compiler = std::make_unique<IREECompiler>("local-sync");  // local-sync | metal
+
+    int iree_argc = 2;
+    const char* iree_argv[2] = {"iree", "--iree-hal-target-backends=llvm-cpu"};
+    iree_compiler->init(iree_argc, iree_argv);
+    std::cout << "IREEFunctions: Initialised IREECompiler" << std::endl;
+    return 0;
+  }
+
 
   /**
-   * @brief Create a new CasadiFunctions object
+   * @brief Create a new IREEFunctions object
    */
-  CasadiFunctions(
+  IREEFunctions(
     const BaseFunctionType &rhs_alg,
     const BaseFunctionType &jac_times_cjmass,
     const int jac_times_cjmass_nnz,
@@ -87,44 +106,45 @@ public:
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
     const Options& options
   ) : 
-    rhs_alg_casadi(rhs_alg),
-    jac_times_cjmass_casadi(jac_times_cjmass),
-    jac_action_casadi(jac_action),
-    mass_action_casadi(mass_action),
-    sens_casadi(sens),
-    events_casadi(events),
-    ExpressionSet<CasadiFunction>(
-      static_cast<Expression*>(&rhs_alg_casadi),
-      static_cast<Expression*>(&jac_times_cjmass_casadi),
+    iree_init_status(iree_init()),
+    rhs_alg_iree(rhs_alg),
+    jac_times_cjmass_iree(jac_times_cjmass),
+    jac_action_iree(jac_action),
+    mass_action_iree(mass_action),
+    sens_iree(sens),
+    events_iree(events),
+    ExpressionSet<IREEFunction>(
+      static_cast<Expression*>(&rhs_alg_iree),
+      static_cast<Expression*>(&jac_times_cjmass_iree),
       jac_times_cjmass_nnz,
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       jac_times_cjmass_rowvals_arg,
       jac_times_cjmass_colptrs_arg,
       inputs_length,
-      static_cast<Expression*>(&jac_action_casadi),
-      static_cast<Expression*>(&mass_action_casadi),
-      static_cast<Expression*>(&sens_casadi),
-      static_cast<Expression*>(&events_casadi),
+      static_cast<Expression*>(&jac_action_iree),
+      static_cast<Expression*>(&mass_action_iree),
+      static_cast<Expression*>(&sens_iree),
+      static_cast<Expression*>(&events_iree),
       n_s, n_e, n_p,
       options)
   {
-    // convert BaseFunctionType list to CasadiFunction list
+    // convert BaseFunctionType list to IREEFunction list
     // NOTE: You must allocate ALL std::vector elements before taking references
     for (auto& var : var_fcns)
-      var_fcns_casadi.push_back(CasadiFunction(*var));
-    for (int k = 0; k < var_fcns_casadi.size(); k++)
-      ExpressionSet::var_fcns.push_back(&this->var_fcns_casadi[k]);
+      var_fcns_iree.push_back(IREEFunction(*var));
+    for (int k = 0; k < var_fcns_iree.size(); k++)
+      ExpressionSet::var_fcns.push_back(&this->var_fcns_iree[k]);
 
     for (auto& var : dvar_dy_fcns)
-      dvar_dy_fcns_casadi.push_back(CasadiFunction(*var));
-    for (int k = 0; k < dvar_dy_fcns_casadi.size(); k++)
-      this->dvar_dy_fcns.push_back(&this->dvar_dy_fcns_casadi[k]);
+      dvar_dy_fcns_iree.push_back(IREEFunction(*var));
+    for (int k = 0; k < dvar_dy_fcns_iree.size(); k++)
+      this->dvar_dy_fcns.push_back(&this->dvar_dy_fcns_iree[k]);
 
     for (auto& var : dvar_dp_fcns)
-      dvar_dp_fcns_casadi.push_back(CasadiFunction(*var));
-    for (int k = 0; k < dvar_dp_fcns_casadi.size(); k++)
-      this->dvar_dp_fcns.push_back(&this->dvar_dp_fcns_casadi[k]);
+      dvar_dp_fcns_iree.push_back(IREEFunction(*var));
+    for (int k = 0; k < dvar_dp_fcns_iree.size(); k++)
+      this->dvar_dp_fcns.push_back(&this->dvar_dp_fcns_iree[k]);
 
     // copy across numpy array values
     const int n_row_vals = jac_times_cjmass_rowvals_arg.request().size;
@@ -144,16 +164,16 @@ public:
     inputs.resize(inputs_length);
   }
 
-  CasadiFunction rhs_alg_casadi;
-  CasadiFunction jac_times_cjmass_casadi;
-  CasadiFunction jac_action_casadi;
-  CasadiFunction mass_action_casadi;
-  CasadiFunction sens_casadi;
-  CasadiFunction events_casadi;
+  IREEFunction rhs_alg_iree;
+  IREEFunction jac_times_cjmass_iree;
+  IREEFunction jac_action_iree;
+  IREEFunction mass_action_iree;
+  IREEFunction sens_iree;
+  IREEFunction events_iree;
 
-  std::vector<CasadiFunction> var_fcns_casadi;
-  std::vector<CasadiFunction> dvar_dy_fcns_casadi;
-  std::vector<CasadiFunction> dvar_dp_fcns_casadi;
+  std::vector<IREEFunction> var_fcns_iree;
+  std::vector<IREEFunction> dvar_dy_fcns_iree;
+  std::vector<IREEFunction> dvar_dp_fcns_iree;
 
   realtype* get_tmp_state_vector() override {
     return tmp_state_vector.data();
@@ -161,6 +181,11 @@ public:
   realtype* get_tmp_sparse_jacobian_data() override {
     return tmp_sparse_jacobian_data.data();
   }
+
+  ~IREEFunctions() {
+    // cleanup IREE
+    iree_compiler->cleanup();
+  }
 };
 
-#endif // PYBAMM_IDAKLU_CASADI_FUNCTIONS_HPP
+#endif // PYBAMM_IDAKLU_IREE_FUNCTIONS_HPP

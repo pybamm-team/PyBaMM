@@ -22,6 +22,8 @@ from pybamm.version import __version__
 FLOAT_FORMAT = "{: .17e}"
 # Absolute path to the PyBaMM repo
 script_path = os.path.abspath(__file__)
+# Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
+demote_expressions_to_32bit = False
 
 from .util import root_dir
 

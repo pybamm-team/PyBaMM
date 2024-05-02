@@ -9,6 +9,10 @@ import numbers
 import scipy.sparse as sparse
 
 import importlib
+import warnings
+
+if pybamm.have_jax():
+    import jax
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
@@ -357,10 +361,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ],
             )
         else:
+            if pybamm.have_jax():
+                array = jax.numpy.array
+            else:
+                array = np.array
 
             def rootfn(t, y, inputs):
                 new_inputs = inputs_to_dict(inputs)
-                return_root = np.array(
+                return_root = array(
                     [event(t, y, new_inputs) for event in model.terminate_events_eval]
                 ).reshape(-1)
 
@@ -438,24 +446,138 @@ class IDAKLUSolver(pybamm.BaseSolver):
         rtol = self.rtol
         atol = self._check_atol_type(atol, y0.size)
 
-        if model.convert_to_format == "casadi":
-            rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
-            jac_times_cjmass = idaklu.generate_function(jac_times_cjmass.serialize())
-            jac_rhs_algebraic_action = idaklu.generate_function(
-                jac_rhs_algebraic_action.serialize()
-            )
-            rootfn = idaklu.generate_function(rootfn.serialize())
-            mass_action = idaklu.generate_function(mass_action.serialize())
-            sensfn = idaklu.generate_function(sensfn.serialize())
+        if model.convert_to_format == "casadi" or model.convert_to_format == "jax":
+            if model.convert_to_format == "casadi":
+                # Serialize casadi functions
+                idaklu_solver_fcn = idaklu.create_casadi_solver
+                rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
+                jac_times_cjmass = idaklu.generate_function(
+                    jac_times_cjmass.serialize()
+                )
+                jac_rhs_algebraic_action = idaklu.generate_function(
+                    jac_rhs_algebraic_action.serialize()
+                )
+                rootfn = idaklu.generate_function(rootfn.serialize())
+                mass_action = idaklu.generate_function(mass_action.serialize())
+                sensfn = idaklu.generate_function(sensfn.serialize())
+            else:
+                # Convert Jax functions to MLIR (also, demote to single precision)
+                idaklu_solver_fcn = idaklu.create_iree_solver
+                pybamm.demote_expressions_to_32bit = True
+                warnings.warn("Demoting expressions to 32-bit for MLIR conversion")
+
+                # input arguments (used for lowering)
+                t_eval = self._demote_64_to_32(np.array([0.0], dtype=np.float32))
+                y0 = self._demote_64_to_32(model.y0)
+                inputs = self._demote_64_to_32(inputs)
+                cj = self._demote_64_to_32(np.array([1.0], dtype=np.float32))  # array
+                mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
+
+                # rhs_algebraic
+                rhs_algebraic_demoted = model.rhs_algebraic_eval
+                rhs_algebraic_demoted._demote_constants()
+
+                def fcn_rhs_algebraic(t, y, inputs):
+                    # function wraps an expression tree (and names MLIR module)
+                    return rhs_algebraic_demoted(t, y, inputs)
+                rhs_algebraic = jax.jit(fcn_rhs_algebraic).lower(
+                    t=t_eval, y=y0, inputs=inputs
+                ).as_text()
+                self._check_mlir_conversion("rhs_algebraic", rhs_algebraic)
+
+                # jac_times_cjmass
+                jac_rhs_algebraic_demoted = rhs_algebraic_demoted.get_jacobian()
+
+                def fcn_jac_times_cjmass(t, y, p, cj):
+                    return jac_rhs_algebraic_demoted(t, y, p) - cj * mass_matrix_demoted
+                jac_times_cjmass = (
+                    jax.jit(fcn_jac_times_cjmass)
+                    .lower(t=t_eval, y=y0, p=inputs_to_dict(inputs), cj=cj)
+                    .as_text()
+                )
+                self._check_mlir_conversion("jac_times_cjmass", jac_times_cjmass)
+
+                breakpoint()
+
+                # jac_times_cjmass  ############################ SPECIALISED TO INSTANCE ###
+                jac_bw_lower, jac_bw_upper = 747, 746
+                jac_times_cjmass_colptrs = np.array([], dtype=np.int32)
+                jac_times_cjmass_rowvals = np.array([], dtype=np.int32)
+                jac_times_cjmass_nnz = 4688
+
+                # # jac_rhs_algebraic_action
+                # def fcn_jac_rhs_algebraic_action(t, y, v, inputs):
+                #     if y is not None and y.ndim == 1:
+                #         y = y.reshape(1, -1)
+                #     if v is not None and v.ndim == 1:
+                #         v = v.reshape(1, -1)
+
+                #     def bind_t_and_inputs(the_y):
+                #         return rhs_algebraic_demoted(t, the_y, inputs)
+
+                #     return jax.jvp(bind_t_and_inputs, (y,), (v,))[1]
+
+                # jac_rhs_algebraic_action = (
+                #     jax.jit(fcn_jac_rhs_algebraic_action)
+                #     .lower(
+                #         t=t_eval,
+                #         y=model.y0,
+                #         v=np.zeros_like(model.y0),
+                #         inputs=inputs,
+                #     )
+                #     .as_text()
+                # )
+                # warnings.warn("jac_rhs_algebraic_action not implemented")
+                # self._check_mlir_conversion(
+                #     "jac_rhs_algebraic_action", jac_rhs_algebraic_action
+                # )
+
+                # Mass action
+                def fcn_mass_action(v):
+                    return mass_matrix_demoted @ v
+
+                mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
+                mass_action = (
+                    jax.jit(mass_action_demoted)
+                    .lower(v=self._demote_64_to_32(np.zeros(model.len_rhs_and_alg)))
+                    .as_text()
+                )
+                warnings.warn("mass_action not implemented")
+                self._check_mlir_conversion("mass_action", mass_action)
+
+                # # sensfn
+                # sensfn = ""  # could be empty; custom fcn above
+                # warnings.warn("sensfn not implemented")
+                # self._check_mlir_conversion("sensfn", sensfn)
+
+                # # rootfn
+                # rootfn = (
+                #     jax.jit(rootfn)
+                #     .lower(t=t_eval, y=model.y0, inputs=inputs)
+                #     .as_text()
+                # )
+                # self._check_mlir_conversion("rootfn", rootfn)
+
+                # output_variables
+                self.var_idaklu_fcns = []
+                self.dvar_dy_idaklu_fcns = []
+                self.dvar_dp_idaklu_fcns = []
+
+                jac_rhs_algebraic_action = ""
+                sensfn = ""
+                rootfn = ""
+
+                pybamm.demote_expressions_to_32bit = False
 
             self._setup = {
-                "jac_bandwidth_upper": jac_bw_upper,
-                "jac_bandwidth_lower": jac_bw_lower,
+                "solver_function": idaklu_solver_fcn,
+                "jac_bandwidth_upper": jac_bw_upper,  # impl (int)
+                "jac_bandwidth_lower": jac_bw_lower,  # impl (int)
                 "rhs_algebraic": rhs_algebraic,
                 "jac_times_cjmass": jac_times_cjmass,
-                "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,
-                "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,
-                "jac_times_cjmass_nnz": jac_times_cjmass_nnz,
+                "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,  # impl (array)
+                "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,  # impl (array)
+                "jac_times_cjmass_nnz": jac_times_cjmass_nnz,  # impl (int)
                 "jac_rhs_algebraic_action": jac_rhs_algebraic_action,
                 "mass_action": mass_action,
                 "sensfn": sensfn,
@@ -466,12 +588,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
                 "output_variables": self.output_variables,
                 "var_casadi_fcns": self.computed_var_fcns,
-                "var_idaklu_fcns": self.var_idaklu_fcns,
-                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
-                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
+                "var_idaklu_fcns": self.var_idaklu_fcns,  # impl
+                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,  # impl
+                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,  # impl
             }
 
-            solver = idaklu.create_casadi_solver(
+            solver = self._setup["solver_function"](
                 number_of_states=len(y0),
                 number_of_parameters=self._setup["number_of_sensitivity_parameters"],
                 rhs_alg=self._setup["rhs_algebraic"],
@@ -511,6 +633,31 @@ class IDAKLUSolver(pybamm.BaseSolver):
             }
 
         return base_set_up_return
+
+    def _check_mlir_conversion(self, name, mlir: str):
+        if mlir.count("f64") > 0:
+            with open(f"logs/{name}.mlir", "w") as f:
+                f.write(mlir)
+            warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})")
+        if mlir.count("i64") > 0:
+            warnings.warn(f"i64 found in {name} (x{mlir.count('i64')})")
+
+    def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
+        return pybamm.EvaluatorJax._demote_64_to_32(x)
+
+    def _jax_evaluator_to_mlir(
+        self, evaluator: pybamm.EvaluatorJax, t_eval: np.ndarray, y0: np.ndarray
+    ):
+        """Convert JAX expression to MLIR"""
+        if pybamm.demote_expressions_to_32bit:
+            t_eval = t_eval.astype(jax.numpy.float32)
+            y0 = y0.astype(jax.numpy.float32)
+        mlir = evaluator._jit_evaluate.lower(
+            *evaluator._constants,  # getter converts based on denote_expressions_to_32bit
+            t=t_eval,
+            y=y0,
+        ).as_text()
+        return mlir
 
     def _integrate(self, model, t_eval, inputs_dict=None):
         """
@@ -569,34 +716,34 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = self._check_atol_type(atol, y0.size)
 
         timer = pybamm.Timer()
-        if model.convert_to_format == "casadi":
-            sol = self._setup["solver"].solve(
-                t_eval,
-                y0full,
-                ydot0full,
-                inputs,
-            )
-        else:
-            sol = idaklu.solve_python(
-                t_eval,
-                y0,
-                ydot0,
-                self._setup["resfn"],
-                self._setup["jac_class"].jac_res,
-                self._setup["sensfn"],
-                self._setup["jac_class"].get_jac_data,
-                self._setup["jac_class"].get_jac_row_vals,
-                self._setup["jac_class"].get_jac_col_ptrs,
-                self._setup["jac_class"].nnz,
-                self._setup["rootfn"],
-                self._setup["num_of_events"],
-                self._setup["use_jac"],
-                self._setup["ids"],
-                atol,
-                rtol,
-                inputs,
-                self._setup["number_of_sensitivity_parameters"],
-            )
+        # if model.convert_to_format == "casadi":
+        sol = self._setup["solver"].solve(
+            t_eval,
+            y0full,
+            ydot0full,
+            inputs,
+        )
+        # else:
+        #    sol = idaklu.solve_python(
+        #        t_eval,
+        #        y0,
+        #        ydot0,
+        #        self._setup["resfn"],
+        #        self._setup["jac_class"].jac_res,
+        #        self._setup["sensfn"],
+        #        self._setup["jac_class"].get_jac_data,
+        #        self._setup["jac_class"].get_jac_row_vals,
+        #        self._setup["jac_class"].get_jac_col_ptrs,
+        #        self._setup["jac_class"].nnz,
+        #        self._setup["rootfn"],
+        #        self._setup["num_of_events"],
+        #        self._setup["use_jac"],
+        #        self._setup["ids"],
+        #        atol,
+        #        rtol,
+        #        inputs,
+        #        self._setup["number_of_sensitivity_parameters"],
+        #    )
         integration_time = timer.time()
 
         number_of_sensitivity_parameters = self._setup[
@@ -712,3 +859,4 @@ class IDAKLUSolver(pybamm.BaseSolver):
             calculate_sensitivities=calculate_sensitivities,
         )
         return obj
+

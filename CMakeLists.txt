@@ -35,17 +35,45 @@ add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
-
 add_subdirectory(${PYBIND11_DIR})
-# The sources list should mirror the list in setup.py
-pybind11_add_module(idaklu
-  pybamm/solvers/c_solvers/idaklu/Expressions/Expressions.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/Base/Expression.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSet.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSparsity.hpp
+
+# Check IREE build flag
+if(NOT DEFINED PYBAMM_IDAKLU_EXPR_IREE)
+  set(PYBAMM_IDAKLU_EXPR_IREE OFF)
+endif()
+message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
+
+# Casadi PyBaMM source files
+set(IDAKLU_EXPR_CASADI_SOURCE_FILES
   pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
   pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
+)
+
+# IREE (MLIR expression evaluation) PyBaMM source files
+set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
+set(IREE_COMPILER_PATH "")
+if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+  # Find the IREE python module path for compiler linkage
+  execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}" -c
+    "import iree.compiler as _; print(_.__path__[0])"
+    OUTPUT_VARIABLE IREE_COMPILER_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(IREE_COMPILER "${IREE_COMPILER_PATH}/_mlir_libs/libIREECompiler.dylib")
+  # Source file list
+  set(IDAKLU_EXPR_IREE_SOURCE_FILES
+    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp
+    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp
+    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp
+    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp
+  )
+endif()
+
+# The complete (all dependencies) sources list should be mirrored in setup.py
+pybind11_add_module(idaklu
+  # pybind11 interface
+  pybamm/solvers/c_solvers/idaklu.cpp
+  # IDAKLU solver (SUNDIALS)
   pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp
   pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp
   pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp
@@ -64,7 +92,15 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/Solution.hpp
   pybamm/solvers/c_solvers/idaklu/Options.hpp
   pybamm/solvers/c_solvers/idaklu/Options.cpp
-  pybamm/solvers/c_solvers/idaklu.cpp
+  # IDAKLU expressions / function evaluation [abstract]
+  pybamm/solvers/c_solvers/idaklu/Expressions/Expressions.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/Expression.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSet.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp
+  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSparsity.hpp
+  # IDAKLU expressions - concrete implementations
+  ${IDAKLU_EXPR_CASADI_SOURCE_FILES}
+  ${IDAKLU_EXPR_IREE_SOURCE_FILES}
 )
 
 if (NOT DEFINED USE_PYTHON_CASADI)
@@ -117,3 +153,16 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+
+# IREE (MLIR compiler and runtime library) build settings
+if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+  set(IREE_BUILD_COMPILER ON)
+  set(IREE_BUILD_TESTS OFF)
+  set(IREE_BUILD_SAMPLES OFF)
+  add_subdirectory(iree EXCLUDE_FROM_ALL)
+  set(IREE_COMPILER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/iree/compiler")
+  target_include_directories(idaklu SYSTEM PRIVATE "${IREE_COMPILER_ROOT}/bindings/c/iree/compiler")
+  target_compile_options(idaklu PRIVATE ${IREE_DEFAULT_COPTS})
+  target_link_libraries(idaklu PRIVATE iree_compiler_bindings_c_loader)
+  target_link_libraries(idaklu PRIVATE iree_runtime_runtime)
+endif()

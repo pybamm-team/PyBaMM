@@ -13,6 +13,9 @@
 #include "idaklu/common.hpp"
 #include "idaklu/python.hpp"
 #include "idaklu/Expressions/Casadi/CasadiFunctions.hpp"
+#include "idaklu/Expressions/IREE/IREEFunctions.hpp"
+
+#include "idaklu/Expressions/IREE/iree_jit.hpp"  // for test_iree
 
 
 casadi::Function generate_casadi_function(const std::string &data)
@@ -60,8 +63,39 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("yp0"),
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
+  
+  /*m.def("test_iree", &test_iree,
+    "Test the IREE JIT",
+    py::arg("mlir_code"),
+    py::return_value_policy::take_ownership);*/
 
   m.def("create_casadi_solver", &create_idaklu_solver<CasadiFunctions>,
+    "Create a casadi idaklu solver object",
+    py::arg("number_of_states"),
+    py::arg("number_of_parameters"),
+    py::arg("rhs_alg"),
+    py::arg("jac_times_cjmass"),
+    py::arg("jac_times_cjmass_colptrs"),
+    py::arg("jac_times_cjmass_rowvals"),
+    py::arg("jac_times_cjmass_nnz"),
+    py::arg("jac_bandwidth_lower"),
+    py::arg("jac_bandwidth_upper"),
+    py::arg("jac_action"),
+    py::arg("mass_action"),
+    py::arg("sens"),
+    py::arg("events"),
+    py::arg("number_of_events"),
+    py::arg("rhs_alg_id"),
+    py::arg("atol"),
+    py::arg("rtol"),
+    py::arg("inputs"),
+    py::arg("var_casadi_fcns"),
+    py::arg("dvar_dy_fcns"),
+    py::arg("dvar_dp_fcns"),
+    py::arg("options"),
+    py::return_value_policy::take_ownership);
+  
+  m.def("create_iree_solver", &create_idaklu_solver<IREEFunctions>,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),

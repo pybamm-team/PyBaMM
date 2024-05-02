@@ -18,14 +18,20 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
   p_python_functions->rhs_alg->m_res[0] = NV_DATA(rr);
   (*p_python_functions->rhs_alg)();
 
+  std::cout << "rhs_alg run." << std::endl;
+
   realtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
   p_python_functions->mass_action->m_res[0] = tmp;
   (*p_python_functions->mass_action)();
+  
+  std::cout << "mass_action run." << std::endl;
 
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
   axpy(ns, -1., tmp, NV_DATA(rr));
+
+  std::cout << "axpy run." << std::endl;
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
@@ -163,6 +169,8 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
     jac_data = SUNDenseMatrix_Data(JJ);
   }
 
+  DEBUG("running jac_times_cjmass");
+
   // args are t, y, cj, put result in jacobian data matrix
   p_python_functions->jac_times_cjmass->m_arg[0] = &tt;
   p_python_functions->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
@@ -171,6 +179,8 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass->m_arg[3] = &cj;
   p_python_functions->jac_times_cjmass->m_res[0] = jac_data;
   (*p_python_functions->jac_times_cjmass)();
+  
+  DEBUG("done jac_times_cjmass");
 
 
   if (p_python_functions->options.using_banded_matrix)
@@ -217,18 +227,10 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
         jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
       }
     } else if (SUNSparseMatrix_SparseType(JJ) == CSR_MAT) {
-      std::vector<realtype> newjac(SUNSparseMatrix_NNZ(JJ));
+      // make a copy so that we can overwrite jac_data as CSR
+      std::vector<realtype> newjac(&jac_data[0], &jac_data[SUNSparseMatrix_NNZ(JJ)]);
       sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
-
-      // args are t, y, cj, put result in jacobian data matrix
-      p_python_functions->jac_times_cjmass->m_arg[0] = &tt;
-      p_python_functions->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
-      p_python_functions->jac_times_cjmass->m_arg[2] =
-        p_python_functions->inputs.data();
-      p_python_functions->jac_times_cjmass->m_arg[3] = &cj;
-      p_python_functions->jac_times_cjmass->m_res[0] = newjac.data();
-      (*p_python_functions->jac_times_cjmass)();
 
       // convert CSC format to CSR
       csc_csr<
