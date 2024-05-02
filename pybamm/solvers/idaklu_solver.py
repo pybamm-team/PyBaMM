@@ -7,12 +7,14 @@ import pybamm
 import numpy as np
 import numbers
 import scipy.sparse as sparse
+from scipy.linalg import bandwidth
 
 import importlib
 import warnings
 
 if pybamm.have_jax():
     import jax
+    from jax.experimental import sparse as jax_sparse
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
@@ -490,20 +492,25 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 def fcn_jac_times_cjmass(t, y, p, cj):
                     return jac_rhs_algebraic_demoted(t, y, p) - cj * mass_matrix_demoted
+                sparse_eval = sparse.csc_matrix(fcn_jac_times_cjmass(t_eval, y0, inputs, cj))
+                jac_times_cjmass_nnz = sparse_eval.nnz
+                jac_times_cjmass_colptrs = sparse_eval.indptr
+                jac_times_cjmass_rowvals = sparse_eval.indices
+                jac_bw_lower = bandwidth(sparse_eval.todense())[0]  ### CHECK THESE
+                jac_bw_upper = jac_bw_lower - 1                     ### <- ESPECIALLY THIS ONE
+                coo = sparse_eval.tocoo()  # convert to COOrdinate format for indexing
+
+                def fcn_jac_times_cjmass_sparse(t, y, p, cj):
+                    return (
+                        fcn_jac_times_cjmass(t, y, p, cj)[coo.row, coo.col]
+                    )
                 jac_times_cjmass = (
-                    jax.jit(fcn_jac_times_cjmass)
+                    jax.jit(fcn_jac_times_cjmass_sparse)
                     .lower(t=t_eval, y=y0, p=inputs_to_dict(inputs), cj=cj)
                     .as_text()
                 )
                 self._check_mlir_conversion("jac_times_cjmass", jac_times_cjmass)
 
-                breakpoint()
-
-                # jac_times_cjmass  ############################ SPECIALISED TO INSTANCE ###
-                jac_bw_lower, jac_bw_upper = 747, 746
-                jac_times_cjmass_colptrs = np.array([], dtype=np.int32)
-                jac_times_cjmass_rowvals = np.array([], dtype=np.int32)
-                jac_times_cjmass_nnz = 4688
 
                 # # jac_rhs_algebraic_action
                 # def fcn_jac_rhs_algebraic_action(t, y, v, inputs):
@@ -542,7 +549,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     .lower(v=self._demote_64_to_32(np.zeros(model.len_rhs_and_alg)))
                     .as_text()
                 )
-                warnings.warn("mass_action not implemented")
                 self._check_mlir_conversion("mass_action", mass_action)
 
                 # # sensfn
@@ -716,34 +722,34 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = self._check_atol_type(atol, y0.size)
 
         timer = pybamm.Timer()
-        # if model.convert_to_format == "casadi":
-        sol = self._setup["solver"].solve(
-            t_eval,
-            y0full,
-            ydot0full,
-            inputs,
-        )
-        # else:
-        #    sol = idaklu.solve_python(
-        #        t_eval,
-        #        y0,
-        #        ydot0,
-        #        self._setup["resfn"],
-        #        self._setup["jac_class"].jac_res,
-        #        self._setup["sensfn"],
-        #        self._setup["jac_class"].get_jac_data,
-        #        self._setup["jac_class"].get_jac_row_vals,
-        #        self._setup["jac_class"].get_jac_col_ptrs,
-        #        self._setup["jac_class"].nnz,
-        #        self._setup["rootfn"],
-        #        self._setup["num_of_events"],
-        #        self._setup["use_jac"],
-        #        self._setup["ids"],
-        #        atol,
-        #        rtol,
-        #        inputs,
-        #        self._setup["number_of_sensitivity_parameters"],
-        #    )
+        if model.convert_to_format == "casadi" or model.convert_to_format == "jax":
+            sol = self._setup["solver"].solve(
+                t_eval,
+                y0full,
+                ydot0full,
+                inputs,
+            )
+        else:
+           sol = idaklu.solve_python(
+               t_eval,
+               y0,
+               ydot0,
+               self._setup["resfn"],
+               self._setup["jac_class"].jac_res,
+               self._setup["sensfn"],
+               self._setup["jac_class"].get_jac_data,
+               self._setup["jac_class"].get_jac_row_vals,
+               self._setup["jac_class"].get_jac_col_ptrs,
+               self._setup["jac_class"].nnz,
+               self._setup["rootfn"],
+               self._setup["num_of_events"],
+               self._setup["use_jac"],
+               self._setup["ids"],
+               atol,
+               rtol,
+               inputs,
+               self._setup["number_of_sensitivity_parameters"],
+           )
         integration_time = timer.time()
 
         number_of_sensitivity_parameters = self._setup[

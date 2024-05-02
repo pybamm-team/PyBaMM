@@ -46,6 +46,7 @@ public:
 
   BaseFunctionType m_func;
   std::string module_name;
+  std::string function_name;
 
   /**
    * @brief Return the number of non-zero elements for the function output

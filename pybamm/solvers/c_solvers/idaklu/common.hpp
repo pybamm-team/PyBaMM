@@ -76,7 +76,7 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
 
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
-#define DEBUG_VECTORn(vector)
+#define DEBUG_VECTORn(vector, N)
 #define DEBUG_v(v, N)
 #define DEBUG(x)
 #define DEBUG_n(x)

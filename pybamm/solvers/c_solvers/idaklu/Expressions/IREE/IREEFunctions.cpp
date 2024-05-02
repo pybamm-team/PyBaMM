@@ -8,12 +8,7 @@
 
 IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
 {
-  std::cout << "IreeFunction constructor" << std::endl;
-
-  //size_t sz_arg;
-  size_t sz_res;
-  size_t sz_iw;
-  size_t sz_w;
+  DEBUG("IreeFunction constructor");
   m_func = f;
 
   // Parse IREE (MLIR) function string
@@ -32,7 +27,9 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
     throw std::runtime_error("Could not find module name in module");
   }
   module_name = module_name_match[1].str();
-  std::cout << "Module name: " << module_name << std::endl;
+
+  // Assign function name
+  function_name = module_name + ".main";
 
   // Isolate 'main' function call signature
   std::regex main_func("public @main\\((.*?)\\) -> \\((.*?)\\)");
@@ -45,7 +42,9 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   }
   std::string main_sig_inputs = match[1].str();
   std::string main_sig_outputs = match[2].str();
-  std::cout << "Main function signature: " << main_sig_inputs << " -> " << main_sig_outputs << std::endl;
+  DEBUG(
+    "Main function signature: " << main_sig_inputs << " -> " << main_sig_outputs << '\n'
+  );
 
   // Parse input sizes
   std::regex input_size("tensor<(.*?)>");
@@ -71,10 +70,11 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
 
   // Parse output sizes
   std::regex output_size("tensor<(.*?)>");
-  for(std::sregex_iterator i = std::sregex_iterator(main_sig_outputs.begin(), main_sig_outputs.end(), output_size);
-      i != std::sregex_iterator();
-      ++i)
-  {
+  for(
+    std::sregex_iterator i = std::sregex_iterator(main_sig_outputs.begin(), main_sig_outputs.end(), output_size);
+    i != std::sregex_iterator();
+    ++i
+  ) {
     std::smatch matchi = *i;
     std::string match_str = matchi.str();
     std::string shape_str = match_str.substr(7, match_str.size() - 8);  // Remove 'tensor<>' from string
@@ -91,32 +91,24 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
     output_shape.push_back(shape);
   }
 
-  std::cout << "Compiling module: '" << module_name << "'" << std::endl;
+  DEBUG("Compiling module: '" << module_name << "'");
   const char* device_uri = "local-sync";
   session = std::make_unique<IREESession>(device_uri, f);
-  std::cout << " compile complete." << std::endl;
+  DEBUG("compile complete.");
 
   m_arg.resize(input_shape.size(), nullptr);
   m_res.resize(output_shape.size(), nullptr);
 
   input_data.resize(input_shape.size());
-
-
-  /*m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
-  //int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
-  //std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = "
-  //  << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz <<
-  //  std::endl;
-  m_arg.resize(sz_arg, nullptr);
-  m_res.resize(sz_res, nullptr);
-  m_iw.resize(sz_iw, 0);
-  m_w.resize(sz_w, 0);*/
+  for(int j=0; j<input_shape.size(); j++) {
+    input_data[j].resize(input_shape[j][0]);  // assumes 1D input
+  }
 }
 
 // only call this once m_arg and m_res have been set appropriately
 void IREEFunction::operator()()
 {
-  std::cout << "IreeFunction operator()" << std::endl;
+  DEBUG("IreeFunction operator(): " << module_name);
 
   // ***********************************************************************************
   // Specialise to each function call (should not be necessary, but inputs are not being
@@ -135,70 +127,54 @@ void IREEFunction::operator()()
 
   // rhs_algebraic
   if (module_name == "jit_fcn_rhs_algebraic") {
+    std::cerr << "Identified rhs_algebraic function --- reassigning input arguments..." << std::endl;
     int m_arg_from = 1;
     int m_arg_to = 0;
     for(int k=0; k<input_shape[m_arg_to][0]; k++) {
-      input_data[m_arg_to].push_back(static_cast<float>(m_arg[m_arg_from][k]));
+      input_data[m_arg_to][k] = static_cast<float>(m_arg[m_arg_from][k]);
     }
-    std::cout << std::endl;
   } else {
     // Default: copy m_arg to input_data
     for (int j=0; j<input_shape.size(); j++) {
       for (int k=0; k<input_shape[j][0]; k++) {
-        input_data[j].push_back(static_cast<float>(m_arg[j][k]));
+        input_data[j][k] = static_cast<float>(m_arg[j][k]);
       }
     }
-
-    std::cerr << "Module name: " << module_name << std::endl;
-    std::cerr << "Copying input data..." << std::endl;
   }
-
-  std::cout << "Input data arguments: " << input_data.size() << std::endl;
-  for (int j=0; j<input_data.size(); j++) {
-    std::cout << "  data shape [" << j << "]: " << input_data[j].size() << std::endl;
-  }
-
 
   // Call the 'main' function of the module
-  std::string function_name = module_name + ".main";
-  auto status = session->iree_runtime_exec(function_name.c_str(), input_shape, input_data, result);
-  if (iree_status_is_ok(status)) {
-    std::cout << "Execution succeeded" << std::endl;
-  } else {
-    std::cout << "Execution failed" << std::endl;
-    iree_status_fprint(stderr, status);
-    std::cout << "MLIR: " << m_func.substr(0,1000) << std::endl;
-    throw std::runtime_error("Execution failed");
+  const int RETRIES = 5;
+  for (int k=0; k < RETRIES; k++) {
+    auto status = session->iree_runtime_exec(function_name, input_shape, input_data, result);
+    if (iree_status_is_ok(status)) {
+      break;
+    } else if (k == RETRIES-1) {
+      std::cerr << "Execution failed" << std::endl;
+      iree_status_fprint(stderr, status);
+      std::cerr << "MLIR: " << m_func.substr(0,1000) << std::endl;
+      throw std::runtime_error("Execution failed");
+    } else {
+      std::cerr << "Execution failed (attempt " << k << "), retrying..." << std::endl;
+      iree_status_fprint(stderr, status);
+    }
   }
-  
-  std::cout << "Output data arguments: " << output_shape.size() << std::endl;
-  for (int j=0; j<output_shape.size(); j++) {
-    std::cout << "  data shape[" << j << "]: " << output_shape[j].size() << std::endl;
-  }
-
-  // Print result
-  std::cout << "Evaluation result for " << module_name << " [" << result.size() << "] (10 samples): ";
-  for (size_t i = 0; i < 10; i++)
-    std::cout << result[i] << " ";
-  std::cout << std::endl;
 
   // Copy result to output
-  std::cout << "Copying result to m_res (size: " << result.size() << ")" << std::endl;
   for(size_t k=0; k<result.size(); k++) {
     m_res[0][k] = result[k];
   }
-
-  std::cout << "done." << std::endl;
 }
 
 expr_int IREEFunction::nnz_out() {
   std::cout << "IreeFunction nnz_out" << std::endl;
+  throw std::runtime_error("IreeFunction nnz_out not implemented");
   /*return static_cast<expr_int>(m_func.nnz_out());*/
   return static_cast<expr_int>(0);
 }
 
 ExpressionSparsity *IREEFunction::sparsity_out(expr_int ind) {
   std::cout << "IreeFunction sparsity_out" << std::endl;
+  throw std::runtime_error("IreeFunction sparsity_out not implemented");
   /*iree::Sparsity iree_sparsity = m_func.sparsity_out(ind);
   IreeSparsity *cs = new IreeSparsity();
   cs->_nnz = iree_sparsity.nnz();
@@ -212,6 +188,7 @@ void IREEFunction::operator()(const std::vector<realtype*>& inputs,
                                 const std::vector<realtype*>& results)
 {
   std::cout << "IreeFunction operator() with inputs and results" << std::endl;
+  throw std::runtime_error("IreeFunction operator() with inputs and results not implemented");
   // Set-up input arguments, provide result vector, then execute function
   // Example call: fcn({in1, in2, in3}, {out1})
   for(size_t k=0; k<inputs.size(); k++)
