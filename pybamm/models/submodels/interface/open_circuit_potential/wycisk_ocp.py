@@ -101,12 +101,12 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
                     if "current collector" in sto_surf.domains["secondary"]:
                         ocp_surf = ocp_surf_eq + H_x_av * h_x_av
                     # must be DFN with PSD model
-                    elif f"{domain} electrode" in sto_surf.domains["secondary"]:
+                    elif (
+                        f"{domain} electrode" in sto_surf.domains["secondary"]
+                        or f"{domain} {phase_name}particle size"
+                        in sto_surf.domains["primary"]
+                    ):
                         ocp_surf = ocp_surf_eq + H * h
-                elif (
-                    f"{domain} {phase_name}particle size" in sto_surf.domains["primary"]
-                ):
-                    ocp_surf = ocp_surf_eq + H * h
             # must not be a psd
             else:
                 ocp_surf = ocp_surf_eq + H * h
