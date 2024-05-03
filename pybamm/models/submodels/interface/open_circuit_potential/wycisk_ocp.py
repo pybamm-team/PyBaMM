@@ -7,10 +7,11 @@ from . import BaseOpenCircuitPotential
 
 class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
     """
-    Class for open-circuit potential with hysteresis based on the approach outlined by Wycisk :footcite:t:'Wycisk2022'. 
+    Class for open-circuit potential with hysteresis based on the approach outlined by Wycisk :footcite:t:'Wycisk2022'.
     This approach employs a differential capacity hysteresis state variable. The decay and switching of the hysteresis state
     is tunable via two additional parameters. The hysteresis state is updated based on the current and the differential capacity.
     """
+
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
