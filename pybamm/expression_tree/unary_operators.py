@@ -24,6 +24,8 @@ class UnaryOperator(pybamm.Symbol):
         name of the node
     child : :class:`Symbol`
         child node
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}.
     """
 
     def __init__(
@@ -398,6 +400,8 @@ class SpatialOperator(UnaryOperator):
         name of the node
     child : :class:`Symbol`
         child node
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}.
     """
 
     def __init__(

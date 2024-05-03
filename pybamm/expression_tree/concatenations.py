@@ -8,7 +8,7 @@ from collections import defaultdict
 import numpy as np
 import sympy
 from scipy.sparse import issparse, vstack
-from typing import Sequence
+from collections.abc import Sequence
 
 import pybamm
 

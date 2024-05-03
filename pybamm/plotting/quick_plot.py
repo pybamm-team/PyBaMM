@@ -160,7 +160,7 @@ class QuickPlot:
             self.spatial_unit = "mm"
         elif spatial_unit == "um":  # micrometers
             self.spatial_factor = 1e6
-            self.spatial_unit = "$\mu$m"
+            self.spatial_unit = r"$\mu$m"
         else:
             raise ValueError(f"spatial unit '{spatial_unit}' not recognized")
 
@@ -466,6 +466,7 @@ class QuickPlot:
             Dimensional time (in 'time_units') at which to plot.
         dynamic : bool, optional
             Determine whether to allocate space for a slider at the bottom of the plot when generating a dynamic plot.
+            If True, creates a dynamic plot with a slider.
         """
 
         plt = import_optional_dependency("matplotlib.pyplot")

@@ -609,14 +609,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 and options["particle"] == "Fickian diffusion"
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
-                and options["lithium plating"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', "
-                    "'loss of active material', 'lithium plating'"
+                    "be 'none': 'particle mechanics', 'loss of active material'"
                 )
 
         # Check options are valid
@@ -1135,7 +1133,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(
@@ -1147,7 +1145,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit resistance":
             model = pybamm.external_circuit.ExplicitResistanceControl(

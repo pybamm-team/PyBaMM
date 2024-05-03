@@ -8,7 +8,8 @@ import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
 from functools import cached_property
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Sequence
 
 import pybamm
 from pybamm.util import import_optional_dependency

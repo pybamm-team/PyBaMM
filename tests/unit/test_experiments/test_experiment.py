@@ -17,11 +17,11 @@ class TestExperiment(TestCase):
             ]
         )
         self.assertEqual(
-            [step.to_dict() for step in experiment.operating_conditions_steps],
+            [step.to_dict() for step in experiment.steps],
             [
                 {
                     "value": 0.05,
-                    "type": "C-rate",
+                    "type": "CRate",
                     "duration": 1800.0,
                     "period": 60.0,
                     "temperature": None,
@@ -32,7 +32,7 @@ class TestExperiment(TestCase):
                 },
                 {
                     "value": -0.2,
-                    "type": "C-rate",
+                    "type": "CRate",
                     "duration": 2700.0,
                     "period": 60.0,
                     "temperature": None,
@@ -43,7 +43,7 @@ class TestExperiment(TestCase):
                 },
                 {
                     "value": 0.05,
-                    "type": "C-rate",
+                    "type": "CRate",
                     "duration": 1800.0,
                     "period": 60.0,
                     "temperature": None,
@@ -54,7 +54,7 @@ class TestExperiment(TestCase):
                 },
                 {
                     "value": -0.2,
-                    "type": "C-rate",
+                    "type": "CRate",
                     "duration": 2700.0,
                     "period": 60.0,
                     "temperature": None,
@@ -92,11 +92,11 @@ class TestExperiment(TestCase):
 
     def test_bad_strings(self):
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings or _Step objects"
+            TypeError, "Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment([1, 2, 3])
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings or _Step objects"
+            TypeError, "Operating conditions must be a Step object or string."
         ):
             pybamm.Experiment([(1, 2, 3)])
 
@@ -186,22 +186,22 @@ class TestExperiment(TestCase):
             )
 
     def test_set_next_start_time(self):
-        raw_op = [
-            pybamm.step._Step(
-                "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 8, 0)
+        raw_steps = [
+            pybamm.step.Current(
+                1, duration=3600, start_time=datetime(2023, 1, 1, 8, 0)
             ),
-            pybamm.step._Step("voltage", 2.5, duration=3600, start_time=None),
-            pybamm.step._Step(
-                "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 12, 0)
+            pybamm.step.Voltage(2.5, duration=3600, start_time=None),
+            pybamm.step.Current(
+                1, duration=3600, start_time=datetime(2023, 1, 1, 12, 0)
             ),
-            pybamm.step._Step("current", 1, duration=3600, start_time=None),
-            pybamm.step._Step("voltage", 2.5, duration=3600, start_time=None),
-            pybamm.step._Step(
-                "current", 1, duration=3600, start_time=datetime(2023, 1, 1, 15, 0)
+            pybamm.step.Current(1, duration=3600, start_time=None),
+            pybamm.step.Voltage(2.5, duration=3600, start_time=None),
+            pybamm.step.Current(
+                1, duration=3600, start_time=datetime(2023, 1, 1, 15, 0)
             ),
         ]
-        experiment = pybamm.Experiment(raw_op)
-        processed_op = experiment._set_next_start_time(raw_op)
+        experiment = pybamm.Experiment(raw_steps)
+        processed_steps = experiment._set_next_start_time(raw_steps)
 
         expected_next = [
             None,
@@ -222,10 +222,10 @@ class TestExperiment(TestCase):
         ]
 
         # Test method directly
-        for next, end, op in zip(expected_next, expected_end, processed_op):
+        for next, end, steps in zip(expected_next, expected_end, processed_steps):
             # useful form for debugging
-            self.assertEqual(op.next_start_time, next)
-            self.assertEqual(op.end_time, end)
+            self.assertEqual(steps.next_start_time, next)
+            self.assertEqual(steps.end_time, end)
 
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well

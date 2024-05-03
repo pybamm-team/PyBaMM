@@ -1,7 +1,14 @@
 #
 # Public functions to create steps for use in an experiment.
 #
-from ._steps_util import _Step, _convert_electric, _examples
+import numpy as np
+import pybamm
+from .base_step import (
+    BaseStepExplicit,
+    BaseStepImplicit,
+    _convert_electric,
+    _examples,
+)
 
 
 def string(string, **kwargs):
@@ -20,12 +27,11 @@ def string(string, **kwargs):
         "3 minutes" or "1 hour". The stopping conditions should be
         a circuit state, e.g. "1 A", "C/50" or "3 V".
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
+        Any other keyword arguments are passed to the step class
 
     Returns
     -------
-    :class:`pybamm.step._Step`
+    :class:`pybamm.step.BaseStep`
         A step parsed from the string.
     """
     if not isinstance(string, str):
@@ -74,7 +80,7 @@ def string(string, **kwargs):
 
     # read remaining instruction
     if string.startswith("Rest"):
-        typ = "current"
+        step_class = Current
         value = 0
     elif string.startswith("Run"):
         raise ValueError(
@@ -102,8 +108,16 @@ def string(string, **kwargs):
         # Make current positive for discharge and negative for charge
         value *= sign
 
-    return _Step(
-        typ,
+        # Use the appropriate step class
+        step_class = {
+            "current": Current,
+            "voltage": Voltage,
+            "power": Power,
+            "C-rate": CRate,
+            "resistance": Resistance,
+        }[typ]
+
+    return step_class(
         value,
         duration=duration,
         termination=termination,
@@ -112,109 +126,132 @@ def string(string, **kwargs):
     )
 
 
+class Current(BaseStepExplicit):
+    """
+    Current-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
+    Current is positive for discharge and negative for charge.
+    """
+
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
+        super().__init__(value, **kwargs)
+
+    def current_value(self, variables):
+        return self.value
+
+
 def current(value, **kwargs):
     """
-    Create a current-controlled step.
-    Current is positive for discharge and negative for charge.
-
-    Parameters
-    ----------
-    value : float
-        The current value in A. It can be a number or a 2-column array (for drive cycles).
-    **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A current-controlled step.
+    Current-controlled step, see :class:`pybamm.step.Current`.
     """
-    return _Step("current", value, **kwargs)
+    return Current(value, **kwargs)
+
+
+class CRate(BaseStepExplicit):
+    """
+    C-rate-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
+    C-rate is positive for discharge and negative for charge.
+    """
+
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
+        super().__init__(value, **kwargs)
+
+    def current_value(self, variables):
+        return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
 
 
 def c_rate(value, **kwargs):
     """
-    Create a C-rate controlled step.
-    C-rate is positive for discharge and negative for charge.
-
-    Parameters
-    ----------
-    value : float
-        The C-rate value. It can be a number or a 2-column array (for drive cycles).
-    **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A C-rate controlled step.
+    C-rate-controlled step, see :class:`pybamm.step.CRate`.
     """
-    return _Step("C-rate", value, **kwargs)
+    return CRate(value, **kwargs)
 
 
-def voltage(value, **kwargs):
+class Voltage(BaseStepImplicit):
     """
-    Create a voltage-controlled step.
+    Voltage-controlled step, see :class:`pybamm.step.BaseStep` for arguments.
     Voltage should always be positive.
-
-    Parameters
-    ----------
-    value : float
-        The voltage value in V. It can be a number or a 2-column array (for drive cycles).
-    **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A voltage-controlled step.
     """
-    return _Step("voltage", value, **kwargs)
+
+    def get_parameter_values(self, variables):
+        return {"Voltage function [V]": self.value}
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.VoltageFunctionControl(
+            model.param, model.options
+        )
 
 
-def power(value, **kwargs):
+def voltage(*args, **kwargs):
     """
-    Create a power-controlled step.
+    Voltage-controlled step, see :class:`pybamm.step.Voltage`.
+    """
+    return Voltage(*args, **kwargs)
+
+
+class Power(BaseStepImplicit):
+    """
+    Power-controlled step.
     Power is positive for discharge and negative for charge.
 
     Parameters
     ----------
     value : float
-        The power value in W. It can be a number or a 2-column array (for drive cycles).
+        The value of the power function [W].
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A power-controlled step.
+        Any other keyword arguments are passed to the step class
     """
-    return _Step("power", value, **kwargs)
+
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
+        super().__init__(value, **kwargs)
+
+    def get_parameter_values(self, variables):
+        return {"Power function [W]": self.value}
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.PowerFunctionControl(model.param, model.options)
 
 
-def resistance(value, **kwargs):
+def power(value, **kwargs):
     """
-    Create a resistance-controlled step.
+    Power-controlled step, see :class:`pybamm.step.Power`.
+    """
+    return Power(value, **kwargs)
+
+
+class Resistance(BaseStepImplicit):
+    """
+    Resistance-controlled step.
     Resistance is positive for discharge and negative for charge.
 
     Parameters
     ----------
     value : float
-        The resistance value in Ohm. It can be a number or a 2-column array (for drive cycles).
+        The value of the power function [W].
     **kwargs
-        Any other keyword arguments are passed to the :class:`pybamm.step._Step`
-        class.
-
-    Returns
-    -------
-    :class:`pybamm.step._Step`
-        A resistance-controlled step.
+        Any other keyword arguments are passed to the step class
     """
-    return _Step("resistance", value, **kwargs)
+
+    def __init__(self, value, **kwargs):
+        kwargs["direction"] = value_based_charge_or_discharge(value)
+        super().__init__(value, **kwargs)
+
+    def get_parameter_values(self, variables):
+        return {"Resistance function [Ohm]": self.value}
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.ResistanceFunctionControl(
+            model.param, model.options
+        )
+
+
+def resistance(value, **kwargs):
+    """
+    Resistance-controlled step, see :class:`pybamm.step.Resistance`.
+    """
+    return Resistance(value, **kwargs)
 
 
 def rest(duration=None, **kwargs):
@@ -222,4 +259,182 @@ def rest(duration=None, **kwargs):
     Create a rest step, equivalent to a constant current step with value 0
     (see :meth:`pybamm.step.current`).
     """
-    return current(0, duration=duration, **kwargs)
+    return Current(0, duration=duration, **kwargs)
+
+
+class CustomStepExplicit(BaseStepExplicit):
+    """
+    Custom step class where the current value is explicitly given as a function of
+    other variables. When using this class, the user must be careful not to create
+    an expression that depends on the current itself, as this will lead to a
+    circular dependency. For example, in some models, the voltage is an explicit
+    function of the current, so the user should not create a step that depends on
+    the voltage. An expression that works for one model may not work for another.
+
+    Parameters
+    ----------
+    current_value_function : callable
+        A function that takes in a dictionary of variables and returns the current
+        value.
+    duration : float, optional
+        The duration of the step in seconds.
+    termination : str or list, optional
+        A string or list of strings indicating the condition(s) that will terminate the
+        step. If a list, the step will terminate when any of the conditions are met.
+    period : float or string, optional
+        The period of the step. If a float, the value is in seconds. If a string, the
+        value should be a valid time string, e.g. "1 hour".
+    temperature : float or string, optional
+        The temperature of the step. If a float, the value is in Kelvin. If a string,
+        the value should be a valid temperature string, e.g. "25 oC".
+    tags : str or list, optional
+        A string or list of strings indicating the tags associated with the step.
+    start_time : str or datetime, optional
+        The start time of the step.
+    description : str, optional
+        A description of the step.
+    direction : str, optional
+        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
+
+    Examples
+    --------
+    Control the current to always be equal to a target power divided by voltage
+    (this is one way to implement a power control step):
+
+    >>> def current_function(variables):
+    ...     P = 4
+    ...     V = variables["Voltage [V]"]
+    ...     return P / V
+
+    Create the step with a 2.5 V termination condition:
+
+    >>> step = pybamm.step.CustomStepExplicit(current_function, termination="2.5V")
+    """
+
+    def __init__(self, current_value_function, **kwargs):
+        super().__init__(None, **kwargs)
+        self.current_value_function = current_value_function
+        self.kwargs = kwargs
+
+    def current_value(self, variables):
+        return self.current_value_function(variables)
+
+    def copy(self):
+        return CustomStepExplicit(self.current_value_function, **self.kwargs)
+
+
+class CustomStepImplicit(BaseStepImplicit):
+    """
+    Custom step, see :class:`pybamm.step.BaseStep` for arguments.
+
+    Parameters
+    ----------
+    current_rhs_function : callable
+        A function that takes in a dictionary of variables and returns the equation
+        controlling the current.
+
+    control : str, optional
+        Whether the control is algebraic or differential. Default is algebraic, in
+        which case the equation is
+
+        .. math::
+            0 = f(\\text{{variables}})
+
+        where :math:`f` is the current_rhs_function.
+
+        If control is "differential", the equation is
+
+        .. math::
+            \\frac{dI}{dt} = f(\\text{{variables}})
+
+    duration : float, optional
+        The duration of the step in seconds.
+    termination : str or list, optional
+        A string or list of strings indicating the condition(s) that will terminate the
+        step. If a list, the step will terminate when any of the conditions are met.
+    period : float or string, optional
+        The period of the step. If a float, the value is in seconds. If a string, the
+        value should be a valid time string, e.g. "1 hour".
+    temperature : float or string, optional
+        The temperature of the step. If a float, the value is in Kelvin. If a string,
+        the value should be a valid temperature string, e.g. "25 oC".
+    tags : str or list, optional
+        A string or list of strings indicating the tags associated with the step.
+    start_time : str or datetime, optional
+        The start time of the step.
+    description : str, optional
+        A description of the step.
+    direction : str, optional
+        The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
+
+    Examples
+    --------
+    Control the current so that the voltage is constant (without using the built-in
+    voltage control):
+
+    >>> def voltage_control(variables):
+    ...     V = variables["Voltage [V]"]
+    ...     return V - 4.2
+
+    Create the step with a duration of 1h. In this case we don't need to specify that
+    the control is algebraic, as this is the default.
+
+    >>> step = pybamm.step.CustomStepImplicit(voltage_control, duration=3600)
+
+    Alternatively, control the current by a differential equation to achieve a
+    target power:
+
+    >>> def power_control(variables):
+    ...     V = variables["Voltage [V]"]
+    ...     # Large time constant to avoid large overshoot. The user should be careful
+    ...     # to choose a time constant that is appropriate for the model being used,
+    ...     # as well as choosing the appropriate sign for the time constant.
+    ...     K_V = 100
+    ...     return K_V * (V - 4.2)
+
+    Create the step with a 2.5 V termination condition. Now we need to specify that
+    the control is differential.
+
+    >>> step = pybamm.step.CustomStepImplicit(
+    ...     power_control, termination="2.5V", control="differential"
+    ... )
+    """
+
+    def __init__(self, current_rhs_function, control="algebraic", **kwargs):
+        super().__init__(None, **kwargs)
+        self.current_rhs_function = current_rhs_function
+        if control not in ["algebraic", "differential"]:
+            raise ValueError("control must be either 'algebraic' or 'differential'")
+        self.control = control
+        self.kwargs = kwargs
+
+    def get_submodel(self, model):
+        return pybamm.external_circuit.FunctionControl(
+            model.param, self.current_rhs_function, model.options, control=self.control
+        )
+
+    def copy(self):
+        return CustomStepImplicit(
+            self.current_rhs_function, self.control, **self.kwargs
+        )
+
+
+def value_based_charge_or_discharge(step_value):
+    """
+    Determine whether the step is a charge or discharge step based on the value of the
+    step
+    """
+    if isinstance(step_value, np.ndarray):
+        init_curr = step_value[0, 1]
+    elif isinstance(step_value, pybamm.Symbol):
+        inpt = {"start time": 0}
+        init_curr = step_value.evaluate(t=0, inputs=inpt).flatten()[0]
+    else:
+        init_curr = step_value
+    sign = np.sign(init_curr)
+    if sign == 0:
+        return "Rest"
+    elif sign > 0:
+        return "Discharge"
+    else:
+        return "Charge"

@@ -1,6 +1,3 @@
-#
-# Base solver class
-#
 import copy
 import itertools
 from scipy.sparse import block_diag
@@ -8,6 +5,7 @@ import multiprocessing as mp
 import numbers
 import sys
 import warnings
+import platform
 
 import casadi
 import numpy as np
@@ -68,6 +66,7 @@ class BaseSolver:
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
+        self._mp_context = self.get_platform_context(platform.system())
 
     @property
     def root_method(self):
@@ -357,7 +356,8 @@ class BaseSolver:
             )
             model.convert_to_format = "casadi"
 
-    def _get_vars_for_processing(self, model, inputs, calculate_sensitivities_explicit):
+    @staticmethod
+    def _get_vars_for_processing(model, inputs, calculate_sensitivities_explicit):
         vars_for_processing = {
             "model": model,
             "calculate_sensitivities_explicit": calculate_sensitivities_explicit,
@@ -412,8 +412,9 @@ class BaseSolver:
 
             return vars_for_processing
 
+    @staticmethod
     def _set_up_model_sensitivities_inplace(
-        self, model, inputs, calculate_sensitivities_explicit
+        model, inputs, calculate_sensitivities_explicit
     ):
         """
         Set up model attributes related to sensitivities.
@@ -711,16 +712,16 @@ class BaseSolver:
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions. All calls to solve must pass in the same model or
             an error is raised
-        t_eval : numeric type
-            The times (in seconds) at which to compute the solution
+        t_eval : None, list or ndarray, optional
+            The times (in seconds) at which to compute the solution. Defaults to None.
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivities : list of str or bool
-            If true, solver calculates sensitivities of all input parameters.
+        calculate_sensitivities : list of str or bool, optional
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
 
@@ -826,7 +827,7 @@ class BaseSolver:
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Thefore only `model_inputs[0]`
+            # not depend on input parameters. Therefore, only `model_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, model_inputs_list[0], t_eval)
@@ -913,7 +914,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.Pool(processes=nproc) as p:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
@@ -998,8 +999,9 @@ class BaseSolver:
         else:
             return solutions
 
-    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
-        if model.discontinuity_events_eval == []:
+    @staticmethod
+    def _get_discontinuity_start_end_indices(model, inputs, t_eval):
+        if not model.discontinuity_events_eval:
             pybamm.logger.verbose("No discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
@@ -1038,7 +1040,7 @@ class BaseSolver:
             )
 
         # insert time points around discontinuities in t_eval
-        # keep track of sub sections to integrate by storing start and end indices
+        # keep track of subsections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
         eps = sys.float_info.epsilon
@@ -1057,7 +1059,8 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
+    @staticmethod
+    def _check_events_with_initial_conditions(t_eval, model, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1116,9 +1119,8 @@ class BaseSolver:
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        save : bool
-            Turn on to store the solution of all previous timesteps
-
+        save : bool, optional
+            Save solution with all previous timesteps. Defaults to True.
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1267,7 +1269,8 @@ class BaseSolver:
         else:
             return old_solution + solution
 
-    def get_termination_reason(self, solution, events):
+    @staticmethod
+    def get_termination_reason(solution, events):
         """
         Identify the cause for termination. In particular, if the solver terminated
         due to an event, (try to) pinpoint which event was responsible. If an event
@@ -1379,7 +1382,7 @@ class BaseSolver:
                         pybamm.SolverWarning,
                         stacklevel=2,
                     )
-                    # Add the event dictionaryto the solution object
+                    # Add the event dictionary to the solution object
                     solution.extrap_events = extrap_events
                 elif self._on_extrapolation == "error":
                     raise pybamm.SolverError(
@@ -1389,7 +1392,14 @@ class BaseSolver:
                         "outside these bounds."
                     )
 
-    def _set_up_model_inputs(self, model, inputs):
+    def get_platform_context(self, system_type: str):
+        # Set context for parallel processing depending on the platform
+        if system_type.lower() in ["linux", "darwin"]:
+            return "fork"
+        return "spawn"
+
+    @staticmethod
+    def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
         inputs = inputs or {}
 
@@ -1437,21 +1447,21 @@ def process(
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
             :class:`casadi.Function`
-        evaluator for the Jacobian $\frac{\partial f}{\partial y}$
+        evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxSensitivities` or
             :class:`casadi.Function`
         evaluator for the parameter sensitivities
-        $\frac{\partial f}{\partial p}$
+        $\frac{\\partial f}{\\partial p}$
         of the function given by `symbol`
 
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
             :class:`casadi.Function`
         evaluator for product of the Jacobian with a vector $v$,
-        i.e. $\frac{\partial f}{\partial y} * v$
+        i.e. $\\frac{\\partial f}{\\partial y} * v$
     """
 
     def report(string):

@@ -14,8 +14,9 @@ from functools import cached_property
 
 class NumpyEncoder(json.JSONEncoder):
     """
-    Numpy serialiser helper class that converts numpy arrays to a list
-    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    Numpy serialiser helper class that converts numpy arrays to a list.
+    Numpy arrays cannot be directly converted to JSON, so the arrays are
+    converted to python list objects before encoding.
     """
 
     def default(self, obj):
@@ -867,7 +868,9 @@ class EmptySolution:
         return EmptySolution(termination=self.termination, t=self.t)
 
 
-def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
+def make_cycle_solution(
+    step_solutions, esoh_solver=None, save_this_cycle=True, inputs=None
+):
     """
     Function to create a Solution for an entire cycle, and associated summary variables
 
@@ -913,7 +916,9 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = _get_cycle_summary_variables(cycle_solution, esoh_solver)
+    cycle_summary_variables = _get_cycle_summary_variables(
+        cycle_solution, esoh_solver, user_inputs=inputs
+    )
 
     cycle_first_state = cycle_solution.first_state
 
@@ -925,7 +930,8 @@ def make_cycle_solution(step_solutions, esoh_solver=None, save_this_cycle=True):
     return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
-def _get_cycle_summary_variables(cycle_solution, esoh_solver):
+def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
+    user_inputs = user_inputs or {}
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
@@ -973,11 +979,9 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver):
         Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
         Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
-
-        inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-
+        all_inputs = {**user_inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         try:
-            esoh_sol = esoh_solver.solve(inputs)
+            esoh_sol = esoh_solver.solve(inputs=all_inputs)
         except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "

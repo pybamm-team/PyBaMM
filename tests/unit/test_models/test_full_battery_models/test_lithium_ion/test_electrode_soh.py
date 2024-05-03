@@ -235,15 +235,12 @@ class TestElectrodeSOHMSMR(TestCase):
 class TestElectrodeSOHHalfCell(TestCase):
     def test_known_solution(self):
         model = pybamm.lithium_ion.ElectrodeSOHHalfCell()
-
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
         parameter_values = pybamm.ParameterValues("Xu2019")
+        Q_w = parameter_values.evaluate(param.p.Q_init)
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
-
         V_min = 3.5
         V_max = 4.2
-        Q_w = parameter_values.evaluate(param.p.Q_init)
-
         # Solve the model and check outputs
         sol = sim.solve([0], inputs={"Q_w": Q_w})
         self.assertAlmostEqual(sol["Uw(x_100)"].data[0], V_max, places=5)
@@ -366,6 +363,30 @@ class TestGetInitialSOC(TestCase):
         ):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 2, parameter_values_half_cell
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Known value must be cell capacity or cyclable lithium capacity"
+        ):
+            pybamm.lithium_ion.ElectrodeSOHSolver(
+                parameter_values, known_value="something else"
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Known value must be cell capacity or cyclable lithium capacity"
+        ):
+            param_MSMR = pybamm.lithium_ion.MSMR(
+                {"number of MSMR reactions": "3"}
+            ).param
+            pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOHMSMR(
+                param=param_MSMR, known_value="something else"
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "Known value must be cell capacity or cyclable lithium capacity"
+        ):
+            pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOH(
+                known_value="something else"
             )
 
 
