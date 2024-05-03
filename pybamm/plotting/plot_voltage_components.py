@@ -34,9 +34,7 @@ def plot_voltage_components(
         Whether to show the plots. Default is True. Set to False if you want to
         only display the plot after plt.show() has been called.
     kwargs_fill
-        Keyword arguments, passed to ax.fill_between, see https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.fill_between.html for
-        complete documentation
-
+        Keyword arguments: func:`matplotlib.axes.Axes.fill_between`
     """
     # Check if the input is a Simulation and extract Solution
     if isinstance(input_data, Simulation):
