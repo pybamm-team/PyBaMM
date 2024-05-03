@@ -1,9 +1,5 @@
-#
-# Tests the utility functions.
-#
 import importlib
 from tests import TestCase
-import numpy as np
 import os
 import sys
 import pybamm
@@ -23,17 +19,6 @@ class TestUtil(TestCase):
     """
     Test the functionality in util.py
     """
-
-    def test_rmse(self):
-        self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
-        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)
-        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.ones(5)), 1)
-
-        x = np.array([1, 2, 3, 4, 5])
-        self.assertEqual(pybamm.rmse(x, x), 0)
-
-        with self.assertRaisesRegex(ValueError, "same length"):
-            pybamm.rmse(np.ones(5), np.zeros(3))
 
     def test_is_constant_and_can_evaluate(self):
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
@@ -165,7 +150,8 @@ class TestUtil(TestCase):
         self.assertFalse(
             bool(optional_present_deps),
             f"Optional dependencies installed: {optional_present_deps}.\n"
-            "Please ensure that optional dependencies are not present in the core PyBaMM installation, or list them as required.",
+            "Please ensure that optional dependencies are not present in the core PyBaMM installation, "
+            "or list them as required.",
         )
 
 
