@@ -742,6 +742,15 @@ class BaseSolver:
         """
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
 
+        # Recreates inputs with updated name if depreciated "electrode diffusivity" name is used
+        if isinstance(inputs, dict):
+            inputs = {
+                name.replace("electrode", "particle")
+                if "electrode diffusivity" in name
+                else name: value
+                for name, value in inputs.items()
+            }
+
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
             if calculate_sensitivities:

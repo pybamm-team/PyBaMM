@@ -241,6 +241,8 @@ class ParameterValues:
                 raise ValueError(
                     f"parameter '{name}' already defined with value '{self[name]}'"
                 )
+            if "electrode diffusivity" in name:
+                name = name.replace("electrode", "particle")
             # check parameter already exists (for updating parameters)
             if check_already_exists is True:
                 try:
