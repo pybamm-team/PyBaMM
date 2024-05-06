@@ -828,6 +828,13 @@ class Simulation:
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()
+
+                # Add minimum voltage to summary variable logs if there is a voltage stop
+                # See PR #3995
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -838,7 +845,6 @@ class Simulation:
                         break
 
                 if voltage_stop is not None:
-                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
                     if min_voltage <= voltage_stop[0]:
                         break
 

@@ -30,6 +30,7 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):
+        options = {"working electrode": "positive"}
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
