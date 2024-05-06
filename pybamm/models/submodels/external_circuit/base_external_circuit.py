@@ -7,9 +7,8 @@ import pybamm
 class BaseModel(pybamm.BaseSubModel):
     """Model to represent the behaviour of the external circuit."""
 
-    def __init__(self, param, options, add_discharge_capacity=True):
+    def __init__(self, param, options):
         super().__init__(param, options=options)
-        self.add_discharge_capacity = add_discharge_capacity
 
     def get_fundamental_variables(self):
         Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
@@ -42,11 +41,10 @@ class BaseModel(pybamm.BaseSubModel):
         return variables
 
     def set_initial_conditions(self, variables):
-        if self.add_discharge_capacity:
-            Q_Ah = variables["Discharge capacity [A.h]"]
-            Qt_Ah = variables["Throughput capacity [A.h]"]
-            self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
-            self.initial_conditions[Qt_Ah] = pybamm.Scalar(0)
+        Q_Ah = variables["Discharge capacity [A.h]"]
+        Qt_Ah = variables["Throughput capacity [A.h]"]
+        self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
+        self.initial_conditions[Qt_Ah] = pybamm.Scalar(0)
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = variables["Discharge energy [W.h]"]
             Qt_Wh = variables["Throughput energy [W.h]"]
@@ -54,13 +52,12 @@ class BaseModel(pybamm.BaseSubModel):
             self.initial_conditions[Qt_Wh] = pybamm.Scalar(0)
 
     def set_rhs(self, variables):
-        if self.add_discharge_capacity:
-            # ODEs for discharge capacity and throughput capacity
-            Q_Ah = variables["Discharge capacity [A.h]"]
-            Qt_Ah = variables["Throughput capacity [A.h]"]
-            I = variables["Current [A]"]
-            self.rhs[Q_Ah] = I / 3600  # Returns to zero after a complete cycle
-            self.rhs[Qt_Ah] = abs(I) / 3600  # Increases with each cycle
+        # ODEs for discharge capacity and throughput capacity
+        Q_Ah = variables["Discharge capacity [A.h]"]
+        Qt_Ah = variables["Throughput capacity [A.h]"]
+        I = variables["Current [A]"]
+        self.rhs[Q_Ah] = I / 3600  # Returns to zero after a complete cycle
+        self.rhs[Qt_Ah] = abs(I) / 3600  # Increases with each cycle
         if self.options["calculate discharge energy"] == "true":
             Q_Wh = variables["Discharge energy [W.h]"]
             Qt_Wh = variables["Throughput energy [W.h]"]

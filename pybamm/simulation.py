@@ -554,6 +554,9 @@ class Simulation:
             all_first_states = starting_solution_first_states
             current_solution = starting_solution or pybamm.EmptySolution()
 
+            voltage_stop = self.experiment.termination.get("voltage")
+            logs["stopping conditions"] = {"voltage": voltage_stop}
+
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
@@ -822,7 +825,7 @@ class Simulation:
                             capacity_stop = value / 100 * capacity_start
                     else:
                         capacity_stop = None
-                    logs["stopping conditions"] = {"capacity": capacity_stop}
+                    logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()
                 callbacks.on_cycle_end(logs)
@@ -832,6 +835,11 @@ class Simulation:
                 if capacity_stop is not None:
                     capacity_now = cycle_sum_vars["Capacity [A.h]"]
                     if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
+                        break
+
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    if min_voltage <= voltage_stop[0]:
                         break
 
                 # Break if the experiment is infeasible (or errored)

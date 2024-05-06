@@ -167,14 +167,12 @@ class Experiment:
                         "'80%', '4Ah', or '4A.h'"
                     )
             elif term.endswith("V"):
-                raise ValueError(
-                    "Voltage termination at the experiment-level is no longer supported. "
-                    "Please set voltage termination conditions at the step level."
-                )
+                end_discharge_V = term.split("V")[0]
+                termination_dict["voltage"] = (float(end_discharge_V), "V")
             else:
                 raise ValueError(
-                    "Only capacity can be provided as an experiment-level termination reason, "
-                    "e.g. '80% capacity' or '4 Ah capacity'"
+                    "Only capacity or voltage can be provided as a termination reason, "
+                    "e.g. '80% capacity', '4 Ah capacity', or '2.5 V'"
                 )
         return termination_dict
 

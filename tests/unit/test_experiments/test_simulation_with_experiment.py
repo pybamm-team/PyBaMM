@@ -330,6 +330,25 @@ class TestSimulationExperiment(TestCase):
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve(showprogress=True)
 
+    def test_run_experiment_termination_voltage(self):
+        # with percent
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
+            ]
+            * 5,
+            termination="4V",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        # Test with calc_esoh=False here
+        sol = sim.solve(calc_esoh=False)
+        # Only two cycles should be completed, only 2nd cycle should go below 4V
+        np.testing.assert_array_less(4, np.min(sol.cycles[0]["Voltage [V]"].data))
+        np.testing.assert_array_less(np.min(sol.cycles[1]["Voltage [V]"].data), 4)
+        self.assertEqual(len(sol.cycles), 2)
+
     def test_save_at_cycles(self):
         experiment = pybamm.Experiment(
             [

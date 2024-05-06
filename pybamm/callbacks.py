@@ -1,10 +1,3 @@
-#
-# Base class for callbacks and some useful callbacks for pybamm
-# Callbacks are used to perform actions (e.g. logging, saving)
-# at certain points in the simulation
-# Inspired by Keras callbacks
-# https://github.com/keras-team/keras/blob/master/keras/callbacks/callback.py
-#
 import pybamm
 import numpy as np
 import inspect
@@ -99,8 +92,7 @@ class CallbackList(Callback):
 
     This is done without having to redefine the method each time by using the
     `callback_loop_decorator` decorator, which is applied to every method that starts
-    with `on_`, using the `inspect` module. See
-    https://stackoverflow.com/questions/1367514/how-to-decorate-a-method-inside-a-class.
+    with `on_`, using the `inspect` module.
 
     If better control over how the callbacks are called is required, it might be better
     to be more explicit with the for loop.
@@ -199,6 +191,20 @@ class LoggingCallback(Callback):
                 self.logger.notice(
                     f"Stopping experiment since capacity ({cap_now:.3f} Ah) "
                     f"is below stopping capacity ({cap_stop:.3f} Ah)."
+                )
+
+        voltage_stop = logs["stopping conditions"]["voltage"]
+        if voltage_stop is not None:
+            min_voltage = logs["summary variables"]["Minimum voltage [V]"]
+            if min_voltage > voltage_stop[0]:
+                self.logger.notice(
+                    f"Minimum voltage is now {min_voltage:.3f} V "
+                    f"(will stop at {voltage_stop[0]:.3f} V)"
+                )
+            else:
+                self.logger.notice(
+                    f"Stopping experiment since minimum voltage ({min_voltage:.3f} V) "
+                    f"is below stopping voltage ({voltage_stop[0]:.3f} V)."
                 )
 
     def on_experiment_end(self, logs):

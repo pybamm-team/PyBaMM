@@ -23,15 +23,8 @@ class FunctionControl(BaseModel):
         or 'differential'.
     """
 
-    def __init__(
-        self,
-        param,
-        external_circuit_function,
-        options,
-        control="algebraic",
-        add_discharge_capacity=True,
-    ):
-        super().__init__(param, options, add_discharge_capacity=add_discharge_capacity)
+    def __init__(self, param, external_circuit_function, options, control="algebraic"):
+        super().__init__(param, options)
         self.external_circuit_function = external_circuit_function
         self.control = control
 
@@ -58,8 +51,7 @@ class FunctionControl(BaseModel):
         }
 
         # Add discharge capacity variable
-        if self.add_discharge_capacity:
-            variables.update(super().get_fundamental_variables())
+        variables.update(super().get_fundamental_variables())
 
         return variables
 
@@ -92,14 +84,8 @@ class VoltageFunctionControl(FunctionControl):
     External circuit with voltage control, implemented as an extra algebraic equation.
     """
 
-    def __init__(self, param, options, add_discharge_capacity=True):
-        super().__init__(
-            param,
-            self.constant_voltage,
-            options,
-            control="algebraic",
-            add_discharge_capacity=add_discharge_capacity,
-        )
+    def __init__(self, param, options):
+        super().__init__(param, self.constant_voltage, options, control="algebraic")
 
     def constant_voltage(self, variables):
         V = variables["Voltage [V]"]
@@ -111,16 +97,8 @@ class VoltageFunctionControl(FunctionControl):
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
-    def __init__(
-        self, param, options, control="algebraic", add_discharge_capacity=True
-    ):
-        super().__init__(
-            param,
-            self.constant_power,
-            options,
-            control=control,
-            add_discharge_capacity=add_discharge_capacity,
-        )
+    def __init__(self, param, options, control="algebraic"):
+        super().__init__(param, self.constant_power, options, control=control)
 
     def constant_power(self, variables):
         I = variables["Current [A]"]
@@ -140,16 +118,8 @@ class PowerFunctionControl(FunctionControl):
 class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
-    def __init__(
-        self, param, options, control="algebraic", add_discharge_capacity=True
-    ):
-        super().__init__(
-            param,
-            self.constant_resistance,
-            options,
-            control=control,
-            add_discharge_capacity=add_discharge_capacity,
-        )
+    def __init__(self, param, options, control="algebraic"):
+        super().__init__(param, self.constant_resistance, options, control=control)
 
     def constant_resistance(self, variables):
         I = variables["Current [A]"]
@@ -175,14 +145,8 @@ class CCCVFunctionControl(FunctionControl):
 
     """
 
-    def __init__(self, param, options, add_discharge_capacity=True):
-        super().__init__(
-            param,
-            self.cccv,
-            options,
-            control="differential with max",
-            add_discharge_capacity=add_discharge_capacity,
-        )
+    def __init__(self, param, options):
+        super().__init__(param, self.cccv, options, control="differential with max")
         pybamm.citations.register("Mohtat2021")
 
     def cccv(self, variables):
