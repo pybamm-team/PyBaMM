@@ -26,12 +26,26 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             f"{Domain} electrode {phase_name}hysteresis state": h,
         }
 
+    def Q(self, sto, epsilon_s_av):
+        """Capacity change as a function of stoichiometry"""
+        c_max = self.phase_param.c_max
+        # epsilon_s_av = self.epsilon_s_av
+        epsilon_s_av = pybamm.yz_average(epsilon_s_av)
+        V_electrode = self.phase_param.main_param.A_cc * self.domain_param.L
+        Li_max = c_max * V_electrode * epsilon_s_av
+        Q_max = Li_max * self.phase_param.main_param.F / 3600
+        return Q_max * sto
+
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         phase = self.phase
 
         if self.reaction == "lithium-ion main":
+            # define custom hysteresis function
+            # hysteresis = pybamm.FunctionParameter(f'{Domain} {phase_name}particle hysteresis [V]')
+            # sto = variables[f'{Domain} {phase_name} particle stoichiometry']
+
             T = variables[f"{Domain} electrode temperature [K]"]
             h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
@@ -83,11 +97,34 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
                 ocp_bulk_eq
             )
 
-            H = self.phase_param.hysteresis(sto_surf)
+            inputs = {f"{Domain} {phase_name}particle stoichiometry": sto_surf}
+            lith_ref = pybamm.FunctionParameter(
+                f"{self.phase_param.phase_prefactor}{Domain} electrode lithiation OCP [V]",
+                inputs,
+            )
+            delith_ref = pybamm.FunctionParameter(
+                f"{self.phase_param.phase_prefactor}{Domain} electrode delithiation OCP [V]",
+                inputs,
+            )
+            H = abs(delith_ref - lith_ref) / 2
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
+            # determine dQ/dU
+            def Q(sto, epsilon_s_av):
+                """Capacity change as a function of stoichiometry and active material volume fraction"""
+                c_max = self.phase_param.c_max
+                # epsilon_s_av = self.epsilon_s_av
+                epsilon_s_av = pybamm.yz_average(epsilon_s_av)
+                V_electrode = self.phase_param.main_param.A_cc * self.domain_param.L
+                Li_max = c_max * V_electrode * epsilon_s_av
+                Q_max = Li_max * self.phase_param.main_param.F / 3600
+                return Q_max * sto
+
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
-            dQ = self.phase_param.Q(sto_surf).diff(sto_surf)
+            epsilon_s_av = variables[
+                f"X-averaged {domain} electrode {phase_name}active material volume fraction"
+            ]
+            dQ = Q(sto_surf, epsilon_s_av).diff(sto_surf)
             dQdU = dQ / dU
             variables[
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
