@@ -169,7 +169,8 @@ If you'd like to help us develop PyBaMM by adding new methods, writing documenta
 
 ## 📫 Get in touch
 
-For any questions, comments, suggestions or bug reports, please see the [contact page](https://www.pybamm.org/contact).
+For any questions, comments, suggestions or bug reports, please see the
+[contact page](https://www.pybamm.org/community).
 
 ## 📃 License
 
