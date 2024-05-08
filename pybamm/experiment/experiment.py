@@ -173,11 +173,11 @@ class Experiment:
                 end_time_s = term.split("s")[0]
                 termination_dict["time"] = (float(end_time_s), "s")
             elif term.endswith("min"):
-                end_time_s = term.split("min")[0] * 60
-                termination_dict["time"] = (float(end_time_s), "s")
+                end_time_s = term.split("min")[0]
+                termination_dict["time"] = (float(end_time_s) * 60, "s")
             elif term.endswith("h"):
-                end_time_s = term.split("h")[0] * 3600
-                termination_dict["time"] = (float(end_time_s), "s")
+                end_time_s = term.split("h")[0]
+                termination_dict["time"] = (float(end_time_s) * 3600, "s")
             else:
                 raise ValueError(
                     "Only capacity or voltage can be provided as a termination reason, "
