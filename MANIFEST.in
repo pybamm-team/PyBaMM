@@ -1,5 +1,5 @@
 graft pybamm
-include CITATION.cff
+include CITATION.cff pybamm/input/comsol_results/*.json
 prune tests
 
 exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md CMakeLists.txt all_contributors.md
