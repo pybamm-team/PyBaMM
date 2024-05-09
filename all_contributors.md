@@ -107,6 +107,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/lorenzofavaro"><img src="https://avatars.githubusercontent.com/u/44714920?v=4?s=100" width="100px;" alt="Lorenzo"/><br /><sub><b>Lorenzo</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=lorenzofavaro" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=lorenzofavaro" title="Tests">⚠️</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=lorenzofavaro" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/AndyLiuElysia"><img src="https://avatars.githubusercontent.com/u/143705453?v=4?s=100" width="100px;" alt="AndyLiuElysia"/><br /><sub><b>AndyLiuElysia</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=AndyLiuElysia" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Hongmeiqi"><img src="https://avatars.githubusercontent.com/u/143798726?v=4?s=100" width="100px;" alt="Hongmeiqi"/><br /><sub><b>Hongmeiqi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Hongmeiqi" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
