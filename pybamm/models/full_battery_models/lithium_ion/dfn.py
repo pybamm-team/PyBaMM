@@ -121,3 +121,6 @@ class DFN(BaseModel):
             self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, self.options
             )
+
+    def set_summary_variables(self):
+        self.set_default_summary_variables()
