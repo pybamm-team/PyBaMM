@@ -985,10 +985,12 @@ class Symbol:
         Optionally gives the copied symbol new children.
 
         If `perform_simplifications` = True, some classes (e.g. `BinaryOperator`,
-        `UnaryOperator`, `Concatenation`) will perform simplifications and checks
+        `UnaryOperator`, `Concatenation`) will perform simplifications and error checks
         based on the new children before copying the symbol. This may result in a
-        different symbol being returned than the one copied. This behaviour can be
-        turned off if the symbol is required to remain unchanged.
+        different symbol being returned than the one copied.
+
+        Turning off this behaviour to ensure the symbol remains unchanged is
+        discouraged.
         """
         obj = self.create_copy(new_children, perform_simplifications)
         obj._print_name = self.print_name
