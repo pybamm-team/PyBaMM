@@ -181,10 +181,26 @@ class Function(pybamm.Symbol):
     def _function_evaluate(self, evaluated_children):
         return self.function(*evaluated_children)
 
-    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         children = self._children_for_copying(new_children)
-        return self._function_new_copy(children)
+
+        if not perform_simplifications:
+            return pybamm.Function(
+                self.function,
+                *children,
+                name=self.name,
+                derivative=self.derivative,
+                differentiated_function=self.differentiated_function,
+            )
+        else:
+            # performs additional simplifications, rather than just calling the
+            # constructor
+            return self._function_new_copy(children)
 
     def _function_new_copy(self, children: list) -> Function:
         """

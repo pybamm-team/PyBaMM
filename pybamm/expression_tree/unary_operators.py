@@ -60,7 +60,11 @@ class UnaryOperator(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return f"{self.name}({self.child!s})"
 
-    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         if new_children and len(new_children) > 1:
             raise ValueError(
@@ -68,7 +72,11 @@ class UnaryOperator(pybamm.Symbol):
             )
         child = self._children_for_copying(new_children)[0]
 
-        new_symbol = self._unary_new_copy(child)
+        # This won't quite work correctly, sometimes _unary_new_copy is just becasue the class takes different arguments
+        if not perform_simplifications:
+            new_symbol = self.__class__(child)
+        else:
+            new_symbol = self._unary_new_copy(child)
         new_symbol.copy_domains(self)
         return new_symbol
 

@@ -217,13 +217,23 @@ class TestCopy(TestCase):
         ):
             (a + b).new_copy(new_children=[a, b])
 
-        self.assertEqual(pybamm.Addition(a, b).new_copy(), pybamm.Addition(a, b))
+        self.assertEqual(pybamm.Addition(a, b).new_copy(), pybamm.Scalar(7))
+        self.assertEqual(
+            pybamm.Addition(a, b).new_copy(perform_simplifications=False),
+            pybamm.Addition(a, b),
+        )
 
         c = pybamm.Scalar(4)
         d = pybamm.Scalar(8)
 
         self.assertEqual(
-            pybamm.Addition(a, b).new_copy(new_children=[c, d]), pybamm.Addition(c, d)
+            pybamm.Addition(a, b).new_copy(new_children=[c, d]), pybamm.Scalar(12)
+        )
+        self.assertEqual(
+            pybamm.Addition(a, b).new_copy(
+                new_children=[c, d], perform_simplifications=False
+            ),
+            pybamm.Addition(c, d),
         )
 
     def test_new_copy_new_children_unary_error(self):

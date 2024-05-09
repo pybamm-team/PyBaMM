@@ -960,21 +960,37 @@ class Symbol:
             children = [child.create_copy() for child in self.children]
         return children
 
-    def create_copy(self, new_children: list[pybamm.Symbol] | None = None):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
         copy.deepcopy(), which is slow.
+
+        If new_children are provided, they are used instead of the existing children.
         """
         children = self._children_for_copying(new_children)
         return self.__class__(self.name, children, domains=self.domains)
 
-    def new_copy(self, new_children: list[Symbol] | None = None):
+    def new_copy(
+        self,
+        new_children: list[Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """
         Returns `create_copy` with added attributes
 
         Optionally gives the copied symbol new children.
+
+        If `perform_simplifications` = True, some classes (e.g. `BinaryOperator`,
+        `UnaryOperator`, `Concatenation`) will perform simplifications and checks
+        based on the new children before copying the symbol. This may result in a
+        different symbol being returned than the one copied. This behaviour can be
+        turned off if the symbol is required to remain unchanged.
         """
-        obj = self.create_copy(new_children)
+        obj = self.create_copy(new_children, perform_simplifications)
         obj._print_name = self.print_name
         return obj
 
