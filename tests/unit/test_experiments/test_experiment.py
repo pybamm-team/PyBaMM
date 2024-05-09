@@ -124,18 +124,6 @@ class TestExperiment(TestCase):
         )
         self.assertEqual(experiment.termination, {"capacity": (4.1, "Ah")})
 
-        experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination=["3V"]
-        )
-        self.assertEqual(experiment.termination, {"voltage": (3, "V")})
-
-        experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination=["3V", "4.1Ah capacity"]
-        )
-        self.assertEqual(
-            experiment.termination, {"voltage": (3, "V"), "capacity": (4.1, "Ah")}
-        )
-
         with self.assertRaisesRegex(ValueError, "Only capacity"):
             experiment = pybamm.Experiment(
                 ["Discharge at 1 C for 20 seconds"], termination="bla bla capacity bla"

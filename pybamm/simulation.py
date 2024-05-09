@@ -85,12 +85,6 @@ class Simulation:
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
 
-        if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
-            if experiment is not None:
-                raise NotImplementedError(
-                    "BasicDFNHalfCell is not compatible with experiment simulations."
-                )
-
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")
@@ -834,6 +828,13 @@ class Simulation:
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()
+
+                # Add minimum voltage to summary variable logs if there is a voltage stop
+                # See PR #3995
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -844,7 +845,6 @@ class Simulation:
                         break
 
                 if voltage_stop is not None:
-                    min_voltage = cycle_sum_vars["Minimum voltage [V]"]
                     if min_voltage <= voltage_stop[0]:
                         break
 

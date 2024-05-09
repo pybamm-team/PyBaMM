@@ -181,7 +181,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-    def set_summary_variables(self):
+    def set_default_summary_variables(self):
         """
         Sets the default summary variables.
         """
