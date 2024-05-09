@@ -338,6 +338,17 @@ class TestCopy(TestCase):
                 new_children=[a, b], perform_simplifications=False
             )
 
+    def test_function_new_copy_no_simplification(self):
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+
+        self.assertEqual(
+            pybamm.Function(np.sin, a).new_copy(
+                new_children=[b], perform_simplifications=False
+            ),
+            pybamm.Function(np.sin, b),
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
