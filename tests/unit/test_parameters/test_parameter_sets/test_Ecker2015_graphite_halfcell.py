@@ -13,6 +13,13 @@ class TestEcker2015_graphite_halfcell(TestCase):
         T = pybamm.Scalar(298.15)
 
         fun_test = {
+            # Lithium plating
+            "Exchange-current density for plating [A.m-2]": ([1e3, 1e4, T], 9.6485e-3),
+            "Exchange-current density for stripping [A.m-2]": (
+                [1e3, 1e4, T],
+                9.6485e-2,
+            ),
+            "Dead lithium decay rate [s-1]": ([1e-8], 5e-7),
             # Positive electrode
             "Positive particle diffusivity [m2.s-1]": ([sto, T], 1.219e-14),
             "Positive electrode exchange-current density [A.m-2]": (

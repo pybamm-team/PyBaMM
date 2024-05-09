@@ -827,7 +827,7 @@ class BaseSolver:
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Thefore only `model_inputs[0]`
+            # not depend on input parameters. Therefore, only `model_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, model_inputs_list[0], t_eval)
