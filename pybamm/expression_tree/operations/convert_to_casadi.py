@@ -174,8 +174,8 @@ class CasadiConverter:
                         return casadi.MX.interpn_linear(
                             symbol.x,
                             symbol.y.ravel(order="F"),
-                            casadi.hcat(converted_children).T,
-                        ).T
+                            converted_children,
+                        )
                     else:
                         LUT = casadi.interpolant(
                             "LUT", solver, symbol.x, symbol.y.ravel(order="F")
