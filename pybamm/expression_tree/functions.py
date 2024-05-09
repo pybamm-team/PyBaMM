@@ -151,15 +151,11 @@ class Function(pybamm.Symbol):
         y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
         inputs: dict | str | None = None,
-        evaluate_children: bool = True,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        if evaluate_children:
-            evaluated_children = [
-                child.evaluate(t, y, y_dot, inputs) for child in self.children
-            ]
-        else:
-            evaluated_children = self.children
+        evaluated_children = [
+            child.evaluate(t, y, y_dot, inputs) for child in self.children
+        ]
         return self._function_evaluate(evaluated_children)
 
     def _evaluates_on_edges(self, dimension: str) -> bool:

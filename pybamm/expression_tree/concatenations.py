@@ -124,15 +124,9 @@ class Concatenation(pybamm.Symbol):
         y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
         inputs: dict | str | None = None,
-        evaluate_children: bool = True,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        if evaluate_children:
-            children_eval = [
-                child.evaluate(t, y, y_dot, inputs) for child in self.children
-            ]
-        else:
-            children_eval = self.children
+        children_eval = [child.evaluate(t, y, y_dot, inputs) for child in self.children]
         return self._concatenation_evaluate(children_eval)
 
     def create_copy(
@@ -252,7 +246,10 @@ class NumpyConcatenation(Concatenation):
         if perform_simplifications:
             return numpy_concatenation(*children)
         else:
-            return NumpyConcatenation(*children)
+            raise NotImplementedError(
+                f"{self.__class__.__name__} should always be copied using "
+                "simplification checks"
+            )
 
 
 class DomainConcatenation(Concatenation):

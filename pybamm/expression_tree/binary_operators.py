@@ -155,15 +155,10 @@ class BinaryOperator(pybamm.Symbol):
         y: np.ndarray | None = None,
         y_dot: np.ndarray | None = None,
         inputs: dict | str | None = None,
-        evaluate_children: bool = True,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        if evaluate_children:
-            left = self.left.evaluate(t, y, y_dot, inputs)
-            right = self.right.evaluate(t, y, y_dot, inputs)
-        else:
-            left = self.left
-            right = self.right
+        left = self.left.evaluate(t, y, y_dot, inputs)
+        right = self.right.evaluate(t, y, y_dot, inputs)
         return self._binary_evaluate(left, right)
 
     def _evaluate_for_shape(self):

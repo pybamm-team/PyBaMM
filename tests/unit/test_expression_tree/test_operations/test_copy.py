@@ -245,6 +245,99 @@ class TestCopy(TestCase):
         with self.assertRaisesRegex(ValueError, "must have exactly one child"):
             I.new_copy(new_children=[vec, vec_b])
 
+    def test_unary_new_copy_no_simplification(self):
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+
+        for symbol_a, symbol_b in zip(
+            [
+                pybamm.Negate(a),
+                pybamm.AbsoluteValue(a),
+                pybamm.sign(a),
+                # boundaryvalue
+            ],
+            [
+                pybamm.Negate(b),
+                pybamm.AbsoluteValue(b),
+                pybamm.Sign(b),
+            ],
+        ):
+            self.assertEqual(
+                symbol_a.new_copy(new_children=[b], perform_simplifications=False),
+                symbol_b,
+            )
+
+        v_n = pybamm.Variable("v", "negative electrode")
+        w_n = pybamm.Variable("w", "negative electrode")
+
+        self.assertEqual(
+            pybamm.grad(v_n).new_copy(
+                new_children=[w_n], perform_simplifications=False
+            ),
+            pybamm.Gradient(w_n),
+        )
+
+        self.assertEqual(
+            pybamm.div(pybamm.grad(v_n)).new_copy(
+                new_children=[pybamm.grad(w_n)], perform_simplifications=False
+            ),
+            pybamm.Divergence(pybamm.grad(w_n)),
+        )
+
+    def test_unary_new_copy_no_simplification_errors(self):
+        a_v = pybamm.Variable("a", domain=["negative electrode"])
+        c = pybamm.Variable("a", domain=["current collector"])
+        d = pybamm.Symbol("d", domain=["negative particle size"])
+
+        for average, var in zip(
+            [
+                pybamm.XAverage,
+                pybamm.RAverage,
+                pybamm.ZAverage,
+                pybamm.YZAverage,
+                pybamm.size_average,
+            ],
+            [a_v, a_v, c, c, d],
+        ):
+            with self.assertRaisesRegex(
+                NotImplementedError,
+                "should always be copied using simplification checks",
+            ):
+                average(var).create_copy(
+                    new_children=[var], perform_simplifications=False
+                )
+
+    def test_concatenation_new_copy_no_simplification(self):
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        v_n = pybamm.Variable("v", "negative electrode")
+        v_s = pybamm.Variable("v", "separator")
+        mesh = get_mesh_for_testing()
+
+        for symbol_n, symbol_s in zip(
+            [
+                pybamm.concatenation(v_n, v_s),
+                pybamm.DomainConcatenation([v_n, v_s], mesh),
+            ],
+            [
+                pybamm.ConcatenationVariable(v_s, v_n),
+                pybamm.DomainConcatenation([v_s, v_n], mesh),
+            ],
+        ):
+            self.assertEqual(
+                symbol_n.new_copy(
+                    new_children=[v_s, v_n], perform_simplifications=False
+                ),
+                symbol_s,
+            )
+
+        with self.assertRaisesRegex(
+            NotImplementedError, "should always be copied using simplification checks"
+        ):
+            pybamm.NumpyConcatenation(a, b, v_s).new_copy(
+                new_children=[a, b], perform_simplifications=False
+            )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
