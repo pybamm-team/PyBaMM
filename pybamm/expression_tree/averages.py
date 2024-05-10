@@ -51,10 +51,7 @@ class XAverage(_BaseAverage):
         if perform_simplifications:
             return x_average(child)
         else:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} should always be copied using "
-                "simplification checks"
-            )
+            return XAverage(child)
 
 
 class YZAverage(_BaseAverage):
@@ -76,10 +73,7 @@ class YZAverage(_BaseAverage):
         if perform_simplifications:
             return yz_average(child)
         else:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} should always be copied using "
-                "simplification checks"
-            )
+            return YZAverage(child)
 
 
 class ZAverage(_BaseAverage):
@@ -101,10 +95,7 @@ class ZAverage(_BaseAverage):
         if perform_simplifications:
             return z_average(child)
         else:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} should always be copied using "
-                "simplification checks"
-            )
+            return ZAverage(child)
 
 
 class RAverage(_BaseAverage):
@@ -126,10 +117,7 @@ class RAverage(_BaseAverage):
         if perform_simplifications:
             return r_average(child)
         else:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} should always be copied using "
-                "simplification checks"
-            )
+            return RAverage(child)
 
 
 class SizeAverage(_BaseAverage):
@@ -151,10 +139,7 @@ class SizeAverage(_BaseAverage):
         if perform_simplifications:
             return size_average(child, f_a_dist=self.f_a_dist)
         else:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} should always be copied using "
-                "simplification checks"
-            )
+            return SizeAverage(child, f_a_dist=self.f_a_dist)
 
 
 def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:

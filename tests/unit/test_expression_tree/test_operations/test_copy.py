@@ -293,10 +293,9 @@ class TestCopy(TestCase):
             pybamm.Divergence(pybamm.grad(w_n)),
         )
 
-    def test_unary_create_copy_no_simplification_errors(self):
+    def test_unary_create_copy_no_simplification_averages(self):
         a_v = pybamm.Variable("a", domain=["negative electrode"])
         c = pybamm.Variable("a", domain=["current collector"])
-        d = pybamm.Symbol("d", domain=["negative particle size"])
 
         for average, var in zip(
             [
@@ -304,17 +303,27 @@ class TestCopy(TestCase):
                 pybamm.RAverage,
                 pybamm.ZAverage,
                 pybamm.YZAverage,
-                pybamm.size_average,
             ],
-            [a_v, a_v, c, c, d],
+            [a_v, a_v, c, c],
         ):
-            with self.assertRaisesRegex(
-                NotImplementedError,
-                "should always be copied using simplification checks",
-            ):
+            self.assertEqual(
                 average(var).create_copy(
                     new_children=[var], perform_simplifications=False
-                )
+                ),
+                average(var),
+            )
+
+        d = pybamm.Symbol("d", domain=["negative particle size"])
+        R = pybamm.SpatialVariable("R", ["negative particle size"])
+        geo = pybamm.geometric_parameters
+        f_a_dist = geo.n.prim.f_a_dist(R)
+
+        s_a = pybamm.SizeAverage(d, f_a_dist=f_a_dist)
+
+        self.assertEqual(
+            s_a.create_copy(new_children=[d], perform_simplifications=False),
+            pybamm.SizeAverage(d, f_a_dist=f_a_dist),
+        )
 
     def test_concatenation_create_copy_no_simplification(self):
         a = pybamm.Parameter("a")
