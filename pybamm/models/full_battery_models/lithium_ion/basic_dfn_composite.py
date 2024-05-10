@@ -341,26 +341,14 @@ class BasicDFNComposite(BaseModel):
         ocp_av_p = pybamm.x_average(ocp_p)
         a_j_n_p1_av = pybamm.x_average(a_j_n_p1)
         a_j_n_p2_av = pybamm.x_average(a_j_n_p2)
+        num_cells = pybamm.Parameter(
+            "Number of cells connected in series to make a battery"
+        )
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
             "Negative primary particle concentration [mol.m-3]": c_s_n_p1,
             "Negative secondary particle concentration [mol.m-3]": c_s_n_p2,
-            "Negative electrode potential [V]": phi_s_n,
-            "Electrolyte potential [V]": phi_e,
-            "Positive electrode potential [V]": phi_s_p,
-            "Current [A]": I,
-            "Discharge capacity [A.h]": Q,
-            "Time [s]": pybamm.t,
-            "Voltage [V]": voltage,
-            "Negative electrode primary open-circuit potential [V]": ocp_n_p1,
-            "Negative electrode secondary open-circuit potential [V]": ocp_n_p2,
-            "X-averaged negative electrode primary open-circuit potential "
-            "[V]": ocp_av_n_p1,
-            "X-averaged negative electrode secondary open-circuit potential "
-            "[V]": ocp_av_n_p2,
-            "Positive electrode open-circuit potential [V]": ocp_p,
-            "X-averaged positive electrode open-circuit potential [V]": ocp_av_p,
             "R-averaged negative primary particle concentration "
             "[mol.m-3]": c_s_rav_n_p1,
             "R-averaged negative secondary particle concentration "
@@ -369,7 +357,32 @@ class BasicDFNComposite(BaseModel):
             "[mol.m-3]": c_s_xrav_n_p1,
             "Average negative secondary particle concentration "
             "[mol.m-3]": c_s_xrav_n_p2,
+            "Positive particle concentration [mol.m-3]": c_s_p,
             "Average positive particle concentration [mol.m-3]": c_s_xrav_p,
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "Negative electrolyte concentration [mol.m-3]": c_e_n,
+            "Separator electrolyte concentration [mol.m-3]": c_e_s,
+            "Positive electrolyte concentration [mol.m-3]": c_e_p,
+            "Negative electrode potential [V]": phi_s_n,
+            "Positive electrode potential [V]": phi_s_p,
+            "Electrolyte potential [V]": phi_e,
+            "Negative electrolyte potential [V]": phi_e_n,
+            "Separator electrolyte potential [V]": phi_e_s,
+            "Positive electrolyte potential [V]": phi_e_p,
+            "Current [A]": I,
+            "Current variable [A]": I,  # for compatibility with pybamm.Experiment
+            "Discharge capacity [A.h]": Q,
+            "Time [s]": pybamm.t,
+            "Voltage [V]": voltage,
+            "Battery voltage [V]": voltage * num_cells,
+            "Negative electrode primary open-circuit potential [V]": ocp_n_p1,
+            "Negative electrode secondary open-circuit potential [V]": ocp_n_p2,
+            "X-averaged negative electrode primary open-circuit potential "
+            "[V]": ocp_av_n_p1,
+            "X-averaged negative electrode secondary open-circuit potential "
+            "[V]": ocp_av_n_p2,
+            "Positive electrode open-circuit potential [V]": ocp_p,
+            "X-averaged positive electrode open-circuit potential [V]": ocp_av_p,
             "Negative electrode primary interfacial current density [A.m-2]": j_n_p1,
             "Negative electrode secondary interfacial current density [A.m-2]": j_n_p2,
             "X-averaged negative electrode primary interfacial current density "
@@ -385,7 +398,12 @@ class BasicDFNComposite(BaseModel):
             "X-averaged negative electrode secondary volumetric "
             "interfacial current density [A.m-3]": a_j_n_p2_av,
         }
+        # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event("Minimum voltage [V]", voltage - param.voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - voltage),
         ]
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues("Chen2020_composite")
