@@ -32,9 +32,9 @@ class TestPrintName(TestCase):
         # Test greek letters
         self.assertEqual(param2.delta.print_name, r"\delta")
 
-        # Test new_copy()
+        # Test create_copy()
         a_n = param2.n.prim.a
-        self.assertEqual(a_n.new_copy().print_name, r"a_{\mathrm{n}}")
+        self.assertEqual(a_n.create_copy().print_name, r"a_{\mathrm{n}}")
 
         # Test eps
         eps_n = pybamm.Variable("eps_n")

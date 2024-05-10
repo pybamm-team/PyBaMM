@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 import numbers
+import warnings
 
 import numpy as np
 import sympy
@@ -970,19 +971,6 @@ class Symbol:
         copy.deepcopy(), which is slow.
 
         If new_children are provided, they are used instead of the existing children.
-        """
-        children = self._children_for_copying(new_children)
-        return self.__class__(self.name, children, domains=self.domains)
-
-    def new_copy(
-        self,
-        new_children: list[Symbol] | None = None,
-        perform_simplifications: bool = True,
-    ):
-        """
-        Returns `create_copy` with added attributes
-
-        Optionally gives the copied symbol new children.
 
         If `perform_simplifications` = True, some classes (e.g. `BinaryOperator`,
         `UnaryOperator`, `Concatenation`) will perform simplifications and error checks
@@ -992,9 +980,22 @@ class Symbol:
         Turning off this behaviour to ensure the symbol remains unchanged is
         discouraged.
         """
-        obj = self.create_copy(new_children, perform_simplifications)
-        obj._print_name = self.print_name
-        return obj
+        children = self._children_for_copying(new_children)
+        return self.__class__(self.name, children, domains=self.domains)
+
+    def new_copy(
+        self,
+        new_children: list[Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
+        """ """
+        warnings.warn(
+            "The 'new_copy' function for expression tree symbols is deprecated, use "
+            "'create_copy' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.create_copy(new_children, perform_simplifications)
 
     @cached_property
     def size(self):

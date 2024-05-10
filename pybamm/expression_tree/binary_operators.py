@@ -852,11 +852,11 @@ def _simplified_binary_broadcast_concatenation(
         left, pybamm.ConcatenationVariable
     ):
         if right.evaluates_to_constant_number():
-            return left.new_copy([operator(child, right) for child in left.orphans])
+            return left.create_copy([operator(child, right) for child in left.orphans])
         elif isinstance(right, pybamm.Concatenation) and not isinstance(
             right, pybamm.ConcatenationVariable
         ):
-            return left.new_copy(
+            return left.create_copy(
                 [
                     operator(left_child, right_child)
                     for left_child, right_child in zip(left.orphans, right.orphans)
@@ -866,7 +866,7 @@ def _simplified_binary_broadcast_concatenation(
         right, pybamm.ConcatenationVariable
     ):
         if left.evaluates_to_constant_number():
-            return right.new_copy([operator(left, child) for child in right.orphans])
+            return right.create_copy([operator(left, child) for child in right.orphans])
     return None
 
 
