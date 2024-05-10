@@ -362,9 +362,7 @@ def find_symbols(
 
     else:
         raise NotImplementedError(
-            "Conversion to python not implemented for a symbol of type '{}'".format(
-                type(symbol)
-            )
+            f"Conversion to python not implemented for a symbol of type '{type(symbol)}'"
         )
 
     variable_symbols[symbol.id] = symbol_str
@@ -406,9 +404,7 @@ def to_python(
 
     if debug:  # pragma: no cover
         variable_lines = [
-            "print('{}'); ".format(
-                line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
-            )
+            f"print('{line_format.format(id_to_python_variable(symbol_id, False), symbol_line)}'); "
             + line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
             + "; print(type({0}),np.shape({0}))".format(
                 id_to_python_variable(symbol_id, False)

@@ -3,7 +3,7 @@
 #
 import numpy as np
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 def plot_summary_variables(
@@ -27,7 +27,7 @@ def plot_summary_variables(
         Keyword arguments, passed to plt.subplots.
 
     """
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     if isinstance(solutions, pybamm.Solution):
         solutions = [solutions]

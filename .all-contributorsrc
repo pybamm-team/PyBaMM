@@ -1,6 +1,6 @@
 {
   "files": [
-    "README.md"
+    "all_contributors.md"
   ],
   "imageSize": 100,
   "commit": false,
@@ -835,6 +835,35 @@
       "profile": "https://github.com/HarshvirSandhu",
       "contributions": [
         "code"
+      ]
+    },
+    {
+      "login": "lorenzofavaro",
+      "name": "Lorenzo",
+      "avatar_url": "https://avatars.githubusercontent.com/u/44714920?v=4",
+      "profile": "https://github.com/lorenzofavaro",
+      "contributions": [
+        "code",
+        "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "AndyLiuElysia",
+      "name": "AndyLiuElysia",
+      "avatar_url": "https://avatars.githubusercontent.com/u/143705453?v=4",
+      "profile": "https://github.com/AndyLiuElysia",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "Hongmeiqi",
+      "name": "Hongmeiqi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/143798726?v=4",
+      "profile": "https://github.com/Hongmeiqi",
+      "contributions": [
+        "doc"
       ]
     }
   ],

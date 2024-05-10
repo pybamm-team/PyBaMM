@@ -435,9 +435,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     )
                 else:
                     raise pybamm.OptionError(
-                        "Option '{}' not recognised. Best matches are {}".format(
-                            name, options.get_best_matches(name)
-                        )
+                        f"Option '{name}' not recognised. Best matches are {options.get_best_matches(name)}"
                     )
 
         # If any of "open-circuit potential", "particle" or "intercalation kinetics" is
@@ -611,14 +609,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 and options["particle"] == "Fickian diffusion"
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
-                and options["lithium plating"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', "
-                    "'loss of active material', 'lithium plating'"
+                    "be 'none': 'particle mechanics', 'loss of active material'"
                 )
 
         # Check options are valid
@@ -1038,9 +1034,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
             submodel.set_algebraic(self.variables)
             pybamm.logger.verbose(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
+                f"Setting boundary conditions for {submodel_name} submodel ({self.name})"
             )
 
             submodel.set_boundary_conditions(self.variables)
@@ -1139,7 +1133,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(
@@ -1151,7 +1145,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, self.options, "differential without max"
+                self.param, self.options, "differential"
             )
         elif self.options["operating mode"] == "explicit resistance":
             model = pybamm.external_circuit.ExplicitResistanceControl(
@@ -1166,6 +1160,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.param, self.options["operating mode"], self.options
             )
         self.submodels["external circuit"] = model
+        self.submodels["discharge and throughput variables"] = (
+            pybamm.external_circuit.DischargeThroughput(self.param, self.options)
+        )
 
     def set_transport_efficiency_submodels(self):
         self.submodels["electrolyte transport efficiency"] = (
