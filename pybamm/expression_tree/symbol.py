@@ -646,7 +646,7 @@ class Symbol:
         elif isinstance(self, pybamm.Broadcast):
             # Move negation inside the broadcast
             # Apply recursively
-            return self._unary_new_copy(-self.orphans[0])
+            return self.create_copy([-self.orphans[0]])
         elif isinstance(self, pybamm.Subtraction):
             # negation flips the subtraction
             return self.right - self.left
@@ -666,7 +666,7 @@ class Symbol:
             # Move absolute value inside the broadcast
             # Apply recursively
             abs_self_not_broad = abs(self.orphans[0])
-            return self._unary_new_copy(abs_self_not_broad)
+            return self.create_copy([abs_self_not_broad])
         else:
             k = pybamm.settings.abs_smoothing
             # Return exact approximation if that is the setting or the outcome is a

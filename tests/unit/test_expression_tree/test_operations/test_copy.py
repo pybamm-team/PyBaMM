@@ -293,6 +293,15 @@ class TestCopy(TestCase):
             pybamm.Divergence(pybamm.grad(w_n)),
         )
 
+        var = pybamm.Variable("var", domain="test")
+        ible = pybamm.Variable("ible", domain="test")
+        left_extrap = pybamm.BoundaryValue(var, "left")
+
+        self.assertEqual(
+            left_extrap.create_copy(new_children=[ible], perform_simplifications=False),
+            pybamm.BoundaryValue(ible, "left"),
+        )
+
     def test_unary_create_copy_no_simplification_averages(self):
         a_v = pybamm.Variable("a", domain=["negative electrode"])
         c = pybamm.Variable("a", domain=["current collector"])

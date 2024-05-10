@@ -840,9 +840,9 @@ def _simplified_binary_broadcast_concatenation(
     """
     # Broadcast commutes with elementwise operators
     if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(operator(left.orphans[0], right))
+        return left.create_copy([operator(left.orphans[0], right)])
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(operator(left, right.orphans[0]))
+        return right.create_copy([operator(left, right.orphans[0])])
 
     # Concatenation commutes with elementwise operators
     # If one of the sides is constant then commute concatenation with the operator
@@ -988,7 +988,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
-            return right._binary_new_copy(left + r_left, r_right)
+            return right.create_copy([left + r_left, r_right])
     if isinstance(left, Subtraction):
         if right == left.right:
             # Simplify (a - b) + b to a
@@ -1061,7 +1061,7 @@ def subtract(
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
-            return right._binary_new_copy(left - r_left, -r_right)
+            return right.create_copy([left - r_left, -r_right])
     elif isinstance(left, Addition):
         if right == left.right:
             # Simplify (b + a) - a to b
