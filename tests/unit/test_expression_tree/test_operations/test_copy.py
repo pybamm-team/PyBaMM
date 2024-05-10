@@ -362,6 +362,22 @@ class TestCopy(TestCase):
         with self.assertWarns(DeprecationWarning):
             pybamm.Symbol("a").new_copy()
 
+    def test_symbol_copy_tree(self):
+        model = pybamm.lithium_ion.DFN()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        y = model.concatenated_initial_conditions.evaluate()
+        copied_rhs = model.concatenated_rhs.create_copy()
+        np.testing.assert_array_equal(
+            model.concatenated_rhs.evaluate(None, y), copied_rhs.evaluate(None, y)
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
