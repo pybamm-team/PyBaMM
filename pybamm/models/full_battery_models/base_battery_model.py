@@ -1170,6 +1170,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.param, self.options["operating mode"], self.options
             )
         self.submodels["external circuit"] = model
+        self.submodels["discharge and throughput variables"] = (
+            pybamm.external_circuit.DischargeThroughput(self.param, self.options)
+        )
 
     def set_transport_efficiency_submodels(self):
         if self.options["transport efficiency"] == "Bruggeman":

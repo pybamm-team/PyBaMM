@@ -50,19 +50,14 @@ class FunctionControl(BaseModel):
             "C-rate": I / param.Q,
         }
 
-        # Add discharge capacity variable
-        variables.update(super().get_fundamental_variables())
-
         return variables
 
     def set_initial_conditions(self, variables):
-        super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current variable [A]"]
         self.initial_conditions[i_cell] = self.param.Q
 
     def set_rhs(self, variables):
-        super().set_rhs(variables)
         # External circuit submodels are always equations on the current
         # The external circuit function should provide an update law for the current
         # based on current/voltage/power/etc.

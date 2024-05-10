@@ -1,4 +1,5 @@
 from .base_external_circuit import BaseModel
+from .discharge_throughput import DischargeThroughput
 from .explicit_control_external_circuit import (
     ExplicitCurrentControl,
     ExplicitPowerControl,
