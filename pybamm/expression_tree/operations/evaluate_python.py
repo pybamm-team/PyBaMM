@@ -624,7 +624,6 @@ class EvaluatorJax:
                 c = c.astype(np.float32)
             if c.dtype == np.int64:
                 c = c.astype(np.int32)
-            c = jax.numpy.array(c)
         if isinstance(c, jax.numpy.ndarray):
             if c.dtype == jax.numpy.float64:
                 c = c.astype(jax.numpy.float32)

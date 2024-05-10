@@ -11,21 +11,33 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
   DEBUG("residual_eval");
   ExpressionSet<T> *p_python_functions =
     static_cast<ExpressionSet<T> *>(user_data);
+  
+  DEBUG_VECTORn(yy, 100);
+  DEBUG_VECTORn(yp, 100);
 
   p_python_functions->rhs_alg->m_arg[0] = &tres;
   p_python_functions->rhs_alg->m_arg[1] = NV_DATA(yy);
   p_python_functions->rhs_alg->m_arg[2] = p_python_functions->inputs.data();
   p_python_functions->rhs_alg->m_res[0] = NV_DATA(rr);
   (*p_python_functions->rhs_alg)();
+  DEBUG("rhs [" << N_VGetLength(rr) << "]");
+  DEBUG_VECTORn(rr, 100);
+
+  DEBUG("yp [" << N_VGetLength(yp) << "]");
+  DEBUG_VECTORn(yp, 100);
 
   realtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
   p_python_functions->mass_action->m_res[0] = tmp;
   (*p_python_functions->mass_action)();
+  DEBUG("mass [" << sizeof(tmp) << "]");
+  DEBUG_v(tmp, 100);
   
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
   axpy(ns, -1., tmp, NV_DATA(rr));
+  DEBUG("mass - rhs");
+  DEBUG_VECTORn(rr, 100);
   
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
@@ -118,6 +130,8 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
   axpy(ns, -cj, tmp, NV_DATA(Jv));
+  
+  DEBUG_VECTORn(Jv, 10);
 
   return 0;
 }
@@ -163,6 +177,8 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
     jac_data = SUNDenseMatrix_Data(JJ);
   }
 
+  DEBUG_VECTORn(yy, 100);
+
   // args are t, y, cj, put result in jacobian data matrix
   p_python_functions->jac_times_cjmass->m_arg[0] = &tt;
   p_python_functions->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
@@ -171,6 +187,9 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass->m_arg[3] = &cj;
   p_python_functions->jac_times_cjmass->m_res[0] = jac_data;
   (*p_python_functions->jac_times_cjmass)();
+
+  DEBUG("jac_times_cjmass [" << sizeof(jac_data) << "]");
+  DEBUG_v(jac_data, 100);
   
   if (p_python_functions->options.using_banded_matrix)
   {

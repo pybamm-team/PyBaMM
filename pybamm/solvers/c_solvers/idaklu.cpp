@@ -170,6 +170,19 @@ PYBIND11_MODULE(idaklu, m)
   );
 
   py::class_<casadi::Function>(m, "Function");
+  
+  py::class_<IREEBaseFunctionType>(m, "IREEBaseFunctionType")
+    .def(py::init<>())
+    .def_readwrite("mlir", &IREEBaseFunctionType::mlir)
+    .def_readwrite("kept_var_idx", &IREEBaseFunctionType::kept_var_idx)
+    .def(
+      "set_mlir",
+      &IREEBaseFunctionType::set_mlir
+    )
+    .def(
+      "set_kept_var_idx",
+      &IREEBaseFunctionType::set_kept_var_idx
+    );
 
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)

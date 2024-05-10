@@ -20,6 +20,17 @@ public:
   std::vector<expr_int> _get_col;
 };
 
+class IREEBaseFunctionType
+{
+public:
+  std::string mlir;
+  std::vector<int> kept_var_idx;
+
+  const std::string& get_mlir() const { return mlir; }
+  void set_mlir(const std::string& mlir) { this->mlir = mlir; }
+  void set_kept_var_idx(const std::vector<int>& kept_var_idx) { this->kept_var_idx = kept_var_idx; }
+};
+
 /**
  * @brief Class for handling individual iree functions
  */
@@ -27,7 +38,7 @@ class IREEFunction : public Expression
 {
 public:
 
-  typedef std::string BaseFunctionType;
+  typedef IREEBaseFunctionType BaseFunctionType;
   std::unique_ptr<IREESession> session;
   std::vector<float> result;
   std::vector<std::vector<int>> input_shape;
@@ -72,13 +83,13 @@ public:
   int iree_init_status;
   int iree_init() {
     // Initialise IREE
-    std::cout << "IREEFunctions: Initialising IREECompiler" << std::endl;
+    DEBUG("IREEFunctions: Initialising IREECompiler");
     iree_compiler = std::make_unique<IREECompiler>("local-sync");  // local-sync | metal
 
     int iree_argc = 2;
     const char* iree_argv[2] = {"iree", "--iree-hal-target-backends=llvm-cpu"};
     iree_compiler->init(iree_argc, iree_argv);
-    std::cout << "IREEFunctions: Initialised IREECompiler" << std::endl;
+    DEBUG("IREEFunctions: Initialised IREECompiler");
     return 0;
   }
 

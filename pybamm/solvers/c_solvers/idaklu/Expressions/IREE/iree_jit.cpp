@@ -1,6 +1,7 @@
 #include "iree_jit.hpp"
 #include "iree/hal/buffer_view.h"
 #include "iree/hal/buffer_view_util.h"
+#include "../../common.hpp"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -63,7 +64,6 @@ void IREECompiler::testSessions() {
 
 int IREECompiler::cleanup() {
   for (IREESession iree_session : iree_sessions) {
-    std::cout << "Cleaning up session" << std::endl;
     if (iree_session.cleanup() != 0)
       return 1;
   }
@@ -96,7 +96,7 @@ int IREESession::init() {
 int IREECompiler::initIREE(int argc, const char **argv) {
 
   if (device_uri == NULL) {
-    fprintf(stdout, "No device URI provided, using local-sync\n");
+    DEBUG("No device URI provided, using local-sync\n");
     device_uri = "local-sync";
   }
   
@@ -126,8 +126,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
   uint32_t api_version = (uint32_t)ireeCompilerGetAPIVersion();
   uint16_t api_version_major = (uint16_t)((api_version >> 16) & 0xFFFFUL);
   uint16_t api_version_minor = (uint16_t)(api_version & 0xFFFFUL);
-  fprintf(stdout, "Compiler API version: %" PRIu16 ".%" PRIu16 "\n",
-          api_version_major, api_version_minor);
+  DEBUG("Compiler API version: " << api_version_major << "." << api_version_minor);
   if (api_version_major > IREE_COMPILER_EXPECTED_API_MAJOR ||
       api_version_minor < IREE_COMPILER_EXPECTED_API_MINOR) {
     fprintf(stderr,
@@ -141,7 +140,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
 
   // Check for a build tag with release version information
   const char *revision = ireeCompilerGetRevision();
-  fprintf(stdout, "Compiler revision: '%s'\n", revision);
+  DEBUG("Compiler revision: '" << revision << "'");
   return 0;
 };
 
@@ -168,7 +167,7 @@ int IREESession::initCompiler() {
     cleanup_compiler_state(s);
     return 1;
   }
-  fprintf(stdout, "Wrapped buffer as a compiler source\n");
+  DEBUG("Wrapped buffer as a compiler source");
 
   return 0;
 };
@@ -193,7 +192,7 @@ int IREESession::initCompileToByteCode() {
     cleanup_compiler_state(s);
     return 1;
   }
-  fprintf(stdout, "Compilation successful, output:\n\n");
+  DEBUG("Compilation successful");
 
   // Create compiler 'output' to a memory buffer
   error = ireeCompilerOutputOpenMembuffer(&s.output);
@@ -275,11 +274,11 @@ int IREESession::buildAndIssueCall(std::string function_name) {
     input_data.push_back(d);
   }
 
-  fprintf(stdout, "\n\nRun 1:\n");
+  std::cout << "\n\nRun 1:\n";
   status = iree_runtime_exec(function_name, input_shape, input_data, result);
 
   if (!iree_status_is_ok(status)) {
-    std::cout << "Error: iree_runtime_demo_pybamm failed" << std::endl;
+    std::cerr << "Error: buildAndIssueCall failed" << std::endl;
     iree_status_fprint(stderr, status);
     //iree_status_ignore(status);
     return 1;
@@ -310,9 +309,29 @@ iree_status_t IREESession::iree_runtime_exec(
   std::vector<float>& result
 ) {
 
+  // Print inputs and data
+  std::cout << "Inputs: " << std::endl;
+  for (int i = 0; i < inputs.size(); i++) {
+    std::cout << "Input " << i << ": ";
+    for (int j = 0; j < inputs[i].size(); j++) {
+      std::cout << inputs[i][j] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Data " << i << ": ";
+    for (int j = 0; j < data[i].size(); j++) {
+      std::cout << data[i][j] << " ";
+    }
+    std::cout << std::endl;
+  }
+
   // Initialize the call to the function.
-  IREE_RETURN_IF_ERROR(iree_runtime_call_initialize_by_name(
-      session, iree_make_cstring_view(function_name.c_str()), &call));
+  status = iree_runtime_call_initialize_by_name(
+      session, iree_make_cstring_view(function_name.c_str()), &call);
+  if (!iree_status_is_ok(status)) {
+    std::cerr << "Error: iree_runtime_call_initialize_by_name failed" << std::endl;
+    iree_status_fprint(stderr, status);
+    return status;
+  }
 
   // Append the function inputs with the HAL device allocator in use by the
   // session. The buffers will be usable within the session and _may_ be usable
@@ -369,6 +388,10 @@ iree_status_t IREESession::iree_runtime_exec(
         //    stdout, arg, /*max_element_count=*/4096, host_allocator));
         // Add to the call inputs list (which retains the buffer view).
         status = iree_runtime_call_inputs_push_back_buffer_view(&call, arg);
+        if (!iree_status_is_ok(status)) {
+          std::cerr << "Error: iree_runtime_call_inputs_push_back_buffer_view failed" << std::endl;
+          iree_status_fprint(stderr, status);
+        }
       }
       // Since the call retains the buffer view we can release it here.
       iree_hal_buffer_view_release(arg);
@@ -376,12 +399,11 @@ iree_status_t IREESession::iree_runtime_exec(
   }
 
   // Synchronously perform the call.
-  std::cout << "Invoking function: " << function_name << std::endl;
   if (iree_status_is_ok(status)) {
     status = iree_runtime_call_invoke(&call, /*flags=*/0);
   }
   if (!iree_status_is_ok(status)) {
-    std::cout << "Error: iree_runtime_call_invoke failed" << std::endl;
+    std::cerr << "Error: iree_runtime_call_invoke failed" << std::endl;
     iree_status_fprint(stderr, status);
   }
 
@@ -391,19 +413,19 @@ iree_status_t IREESession::iree_runtime_exec(
     // Try to get the first call result as a buffer view.
     status = iree_runtime_call_outputs_pop_front_buffer_view(&call, &result_view);
     if (!iree_status_is_ok(status)) {
-      std::cout << "Error: iree_runtime_call_outputs_pop_front_buffer_view failed" << std::endl;
+      std::cerr << "Error: iree_runtime_call_outputs_pop_front_buffer_view failed" << std::endl;
       iree_status_fprint(stderr, status);
     }
   }
   if (iree_status_is_ok(status)) {
     // Get the buffer view contents as a numeric array
     iree_host_size_t buffer_length = iree_hal_buffer_view_element_count(result_view);
-    std::cout << "Buffer length: " << buffer_length << std::endl;
+    DEBUG("Buffer length: " << buffer_length);
     result.resize(buffer_length);
     status = iree_hal_buffer_map_read(iree_hal_buffer_view_buffer(result_view), 0,
                              &result[0], sizeof(float) * result.size());
     if (!iree_status_is_ok(status)) {
-      std::cout << "Error: iree_hal_buffer_map_read failed" << std::endl;
+      std::cerr << "Error: iree_hal_buffer_map_read failed" << std::endl;
       iree_status_fprint(stderr, status);
       iree_hal_buffer_view_release(result_view);
       return status;
@@ -412,6 +434,13 @@ iree_status_t IREESession::iree_runtime_exec(
   iree_hal_buffer_view_release(result_view);
 
   iree_runtime_call_deinitialize(&call);
+
+  // Print result
+  std::cout << "Result: ";
+  for (int i = 0; i < result.size(); i++) {
+    std::cout << result[i] << " ";
+  }
+  std::cout << std::endl;
 
   return status;
 }

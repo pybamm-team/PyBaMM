@@ -82,8 +82,10 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
 #define DEBUG_n(x)
 #else
 
-#define DEBUG_VECTORn(vector, N) {\
-  std::cout << #vector << "[n=" << N << "] = ["; \
+#define DEBUG_VECTORn(vector, L) {\
+  auto M = N_VGetLength(vector); \
+  auto N = (M < L) ? M : L; \
+  std::cout << #vector << "[" << N << " of " << M << "] = ["; \
   auto array_ptr = N_VGetArrayPointer(vector); \
   for (int i = 0; i < N; i++) { \
     std::cout << array_ptr[i]; \
@@ -105,7 +107,8 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
   } \
   std::cout << "]" << std::endl;  }
 
-#define DEBUG_v(v, N) {\
+#define DEBUG_v(v, M) {\
+  int N = 2; \
   std::cout << #v << "[n=" << N << "] = ["; \
   for (int i = 0; i < N; i++) { \
     std::cout << v[i]; \

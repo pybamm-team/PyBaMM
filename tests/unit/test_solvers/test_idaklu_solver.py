@@ -18,7 +18,8 @@ class TestIDAKLUSolver(TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
+        for form in ["python", "casadi", "jax", "iree"]:
+            print(form)
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
@@ -26,7 +27,7 @@ class TestIDAKLUSolver(TestCase):
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u = pybamm.Variable("u")
             v = pybamm.Variable("v")
             model.rhs = {u: 0.1 * v}
@@ -37,7 +38,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             solution = solver.solve(model, t_eval)
@@ -53,6 +57,8 @@ class TestIDAKLUSolver(TestCase):
             np.testing.assert_array_almost_equal(
                 solution.y[1, :], np.ones(solution.t.shape)
             )
+
+            print(solution.y[0, :])
 
             # test that y[0] = to true solution
             true_solution = 0.1 * solution.t
