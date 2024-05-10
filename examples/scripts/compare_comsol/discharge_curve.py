@@ -1,7 +1,7 @@
 import pybamm
 import numpy as np
 import os
-import pickle
+import json
 import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
@@ -59,11 +59,11 @@ for key, C_rate in C_rates.items():
     current = 24 * C_rate
     # load the comsol results
     comsol_results_path = pybamm.get_parameters_filepath(
-        f"input/comsol_results/comsol_{key}C.pickle"
+        f"input/comsol_results/comsol_{key}C.json"
     )
-    comsol_variables = pickle.load(open(comsol_results_path, "rb"))
-    comsol_time = comsol_variables["time"]
-    comsol_voltage = comsol_variables["voltage"]
+    comsol_variables = json.load(open(comsol_results_path))
+    comsol_time = np.array(comsol_variables["time"])
+    comsol_voltage = np.array(comsol_variables["voltage"])
 
     # solve model at comsol times
     t = comsol_time
