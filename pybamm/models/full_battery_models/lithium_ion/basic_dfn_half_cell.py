@@ -30,6 +30,7 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):
+        options = {"working electrode": "positive"}
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
@@ -244,6 +245,10 @@ class BasicDFNHalfCell(BaseModel):
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
         vdrop_Li = -eta_Li - delta_phis_Li
         voltage = vdrop_cell + vdrop_Li
+        num_cells = pybamm.Parameter(
+            "Number of cells connected in series to make a battery"
+        )
+
         c_e_total = pybamm.x_average(eps * c_e)
         c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
 
@@ -280,22 +285,29 @@ class BasicDFNHalfCell(BaseModel):
         # visualising the solution of the model
         self.variables = {
             "Time [s]": pybamm.t,
+            "Discharge capacity [A.h]": Q,
             "Positive particle surface concentration [mol.m-3]": c_s_surf_w,
             "X-averaged positive particle surface concentration "
             "[mol.m-3]": c_s_surf_w_av,
             "Positive particle concentration [mol.m-3]": c_s_w,
             "Total lithium in positive electrode [mol]": c_s_vol_av * L_w * param.A_cc,
             "Electrolyte concentration [mol.m-3]": c_e,
+            "Separator electrolyte concentration [mol.m-3]": c_e_s,
+            "Positive electrolyte concentration [mol.m-3]": c_e_w,
             "Total lithium in electrolyte [mol]": c_e_total * param.L_x * param.A_cc,
             "Current [A]": I,
+            "Current variable [A]": I,  # for compatibility with pybamm.Experiment
             "Current density [A.m-2]": i_cell,
             "Positive electrode potential [V]": phi_s_w,
             "Positive electrode open-circuit potential [V]": U_w(sto_surf_w, T),
             "Electrolyte potential [V]": phi_e,
+            "Separator electrolyte potential [V]": phi_e_s,
+            "Positive electrolyte potential [V]": phi_e_w,
             "Voltage drop in the cell [V]": vdrop_cell,
             "Negative electrode exchange current density [A.m-2]": j_Li,
             "Negative electrode reaction overpotential [V]": eta_Li,
             "Negative electrode potential drop [V]": delta_phis_Li,
             "Voltage [V]": voltage,
+            "Battery voltage [V]": voltage * num_cells,
             "Instantaneous power [W.m-2]": i_cell * voltage,
         }

@@ -126,20 +126,14 @@ html/
 results/
 
 # expression tree images for notebooks in docs
-!docs/source/examples/notebooks/expression_tree/expression_tree1.png
-!docs/source/examples/notebooks/expression_tree/expression_tree2.png
-!docs/source/examples/notebooks/expression_tree/expression_tree3.png
-!docs/source/examples/notebooks/expression_tree/expression_tree4.png
-!docs/source/examples/notebooks/expression_tree/expression_tree5.png
+!docs/source/examples/notebooks/expression_tree/*.png
 
 # do not ignore SPM images for notebooks in docs
-!docs/source/examples/notebooks/models/spm1.png
-!docs/source/examples/notebooks/models/spm2.png
+!docs/source/examples/notebooks/models/*.png
 
 # do not ignore images in _static folder in docs
 !docs/_static/favicon/favicon.png
-!docs/_static/pybamm_logo.png
-!docs/_static/pybamm_logo_whitetext.png
+!docs/_static/*.png
 
 # tests
 test_callback.log
