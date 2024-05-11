@@ -512,6 +512,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
+        # if self.options['open-circuit potential'] == 'Plett':
+        self.hysteresis_decay = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis decay rate"
+        )
+        self.hysteresis_switch = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis switching factor"
+        )
+        self.h_init = pybamm.Scalar(0)
 
         if self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
