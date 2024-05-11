@@ -96,29 +96,15 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
             # determine dQ/dU
-            # def Q(sto, epsilon_s_av):
-            #     """Capacity change as a function of stoichiometry and active material volume fraction"""
-            #     c_max = self.phase_param.c_max
-            #     # epsilon_s_av = self.epsilon_s_av
-            #     epsilon_s_av = pybamm.yz_average(epsilon_s_av)
-            #     V_electrode = self.phase_param.main_param.A_cc * self.domain_param.L
-            #     Li_max = c_max * V_electrode * epsilon_s_av
-            #     Q_max = Li_max * self.phase_param.main_param.F / 3600
-            #     return Q_max * sto
-
-            def Q(sto):
-                """Capacity change as a function of stoichiometry"""
-                if phase_name == "":
-                    C = variables[f"{Domain} electrode capacity [A.h]"]
-                else:
-                    C = variables[
-                        f"{Domain} electrode {phase_name}phase capacity [A.h]"
-                    ]
-                return C * sto
+            if phase_name == "":
+                Q_mag = variables[f"{Domain} electrode capacity [A.h]"]
+            else:
+                Q_mag = variables[
+                    f"{Domain} electrode {phase_name}phase capacity [A.h]"
+                ]
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
-            dQ = Q(sto_surf).diff(sto_surf)
-            dQdU = dQ / dU
+            dQdU = Q_mag / dU
             variables[
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ] = dQdU
