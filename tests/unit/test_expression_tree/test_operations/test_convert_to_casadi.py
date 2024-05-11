@@ -219,7 +219,7 @@ class TestCasadiConverter(TestCase):
         # linear
         y_test = np.array([0.4, 0.6])
         Y = (2 * x).sum(axis=1).reshape(*[len(el) for el in x_])
-        for interpolator in ["linear"]:
+        for interpolator in ["linear", "cubic"]:
             interp = pybamm.Interpolant(x_, Y, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])

@@ -33,6 +33,7 @@
 - Updated `plot_voltage_components.py` to support both `Simulation` and `Solution` objects. Added new methods in both `Simulation` and `Solution` classes for allow the syntax `simulation.plot_voltage_components` and `solution.plot_voltage_components`. Updated `test_plot_voltage_components.py` to reflect these changes ([#3723](https://github.com/pybamm-team/PyBaMM/pull/3723)).
 - The SEI thickness decreased at some intervals when the 'electron-migration limited' model was used. It has been corrected ([#3622](https://github.com/pybamm-team/PyBaMM/pull/3622))
 - Allow input parameters in ESOH model ([#3921](https://github.com/pybamm-team/PyBaMM/pull/3921))
+- Use casadi MX.interpn_linear function instead of plugin to fix casadi_interpolant_linear.dll not found on Windows ([#4077](https://github.com/pybamm-team/PyBaMM/pull/4077))
 
 ## Optimizations
 
