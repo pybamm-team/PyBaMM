@@ -4,8 +4,8 @@
 from __future__ import annotations
 import numpy as np
 from scipy import interpolate
-from typing import Sequence
-
+from collections.abc import Sequence
+import numbers
 
 import pybamm
 
@@ -102,8 +102,8 @@ class Interpolant(pybamm.Function):
                     "len(x1) should equal y=shape[0], "
                     f"but x1.shape={x1.shape} and y.shape={y.shape}"
                 )
-        # children should be a list not a symbol
-        if isinstance(children, pybamm.Symbol):
+        # children should be a list not a symbol or a number
+        if isinstance(children, (pybamm.Symbol, numbers.Number)):
             children = [children]
         # Either a single x is provided and there is one child
         # or x is a 2-tuple and there are two children
@@ -126,9 +126,10 @@ class Interpolant(pybamm.Function):
                     fill_value_1 = "extrapolate"
                 interpolating_function = interpolate.interp1d(
                     x1,
-                    y.T,
+                    y,
                     bounds_error=False,
                     fill_value=fill_value_1,
+                    axis=0,
                 )
             elif interpolator == "cubic":
                 interpolating_function = interpolate.CubicSpline(

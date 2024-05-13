@@ -1,5 +1,4 @@
 import pybamm
-import numpy as np
 
 
 class BaseTermination:
@@ -18,7 +17,7 @@ class BaseTermination:
     def __init__(self, value):
         self.value = value
 
-    def get_event(self, variables, step_value):
+    def get_event(self, variables, step):
         """
         Return a :class:`pybamm.Event` object corresponding to the termination event
 
@@ -27,8 +26,8 @@ class BaseTermination:
         variables : dict
             Dictionary of model variables, to be used for selecting the variable(s) that
             determine the event
-        step_value : float or :class:`pybamm.Symbol`
-            Value of the step for which this is a termination event, to be used in some
+        step : :class:`pybamm.step.BaseStep`
+            Step for which this is a termination event, to be used in some
             cases to determine the sign of the event.
         """
         raise NotImplementedError
@@ -47,7 +46,7 @@ class CrateTermination(BaseTermination):
     (e.g. "C/10") is provided
     """
 
-    def get_event(self, variables, step_value):
+    def get_event(self, variables, step):
         """
         See :meth:`BaseTermination.get_event`
         """
@@ -64,7 +63,7 @@ class CurrentTermination(BaseTermination):
     (e.g. "1A") is provided
     """
 
-    def get_event(self, variables, step_value):
+    def get_event(self, variables, step):
         """
         See :meth:`BaseTermination.get_event`
         """
@@ -81,7 +80,7 @@ class VoltageTermination(BaseTermination):
     (e.g. "4.2V") is provided
     """
 
-    def get_event(self, variables, step_value):
+    def get_event(self, variables, step):
         """
         See :meth:`BaseTermination.get_event`
         """
@@ -90,24 +89,22 @@ class VoltageTermination(BaseTermination):
         # figure out whether the voltage event is greater than the starting
         # voltage (charge) or less (discharge) and set the sign of the
         # event accordingly
-        if isinstance(step_value, pybamm.Symbol):
-            inpt = {"start time": 0}
-            init_curr = step_value.evaluate(t=0, inputs=inpt).flatten()[0]
-        else:
-            init_curr = step_value
-        sign = np.sign(init_curr)
-        if sign > 0:
-            name = "Discharge"
-        else:
-            name = "Charge"
-        if sign != 0:
-            # Event should be positive at initial conditions for both
-            # charge and discharge
-            event = pybamm.Event(
-                f"{name} voltage cut-off [V] [experiment]",
-                sign * (variables["Battery voltage [V]"] - self.value),
-            )
-            return event
+        direction = step.direction.capitalize()
+        if direction == "Charge":
+            sign = -1
+        elif direction == "Discharge":
+            sign = 1
+        elif direction == "Rest":
+            # No event for rest steps
+            return None
+
+        # Event should be positive at initial conditions for both
+        # charge and discharge
+        event = pybamm.Event(
+            f"{direction} voltage cut-off [V] [experiment]",
+            sign * (variables["Battery voltage [V]"] - self.value),
+        )
+        return event
 
 
 class CustomTermination(BaseTermination):
@@ -143,7 +140,7 @@ class CustomTermination(BaseTermination):
         self.name = name
         self.event_function = event_function
 
-    def get_event(self, variables, step_value):
+    def get_event(self, variables, step):
         """
         See :meth:`BaseTermination.get_event`
         """

@@ -32,7 +32,7 @@ class FunctionControl(BaseModel):
         param = self.param
         # Current is a variable
         i_var = pybamm.Variable("Current variable [A]", scale=param.Q)
-        if self.control in ["algebraic", "differential without max"]:
+        if self.control in ["algebraic", "differential"]:
             I = i_var
         elif self.control == "differential with max":
             i_input = pybamm.FunctionParameter(
@@ -50,19 +50,14 @@ class FunctionControl(BaseModel):
             "C-rate": I / param.Q,
         }
 
-        # Add discharge capacity variable
-        variables.update(super().get_fundamental_variables())
-
         return variables
 
     def set_initial_conditions(self, variables):
-        super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current variable [A]"]
         self.initial_conditions[i_cell] = self.param.Q
 
     def set_rhs(self, variables):
-        super().set_rhs(variables)
         # External circuit submodels are always equations on the current
         # The external circuit function should provide an update law for the current
         # based on current/voltage/power/etc.
@@ -118,7 +113,7 @@ class PowerFunctionControl(FunctionControl):
 class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
-    def __init__(self, param, options, control):
+    def __init__(self, param, options, control="algebraic"):
         super().__init__(param, self.constant_resistance, options, control=control)
 
     def constant_resistance(self, variables):

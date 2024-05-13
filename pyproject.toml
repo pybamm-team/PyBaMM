@@ -3,7 +3,7 @@ requires = [
     "setuptools>=64",
     "wheel",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.3; platform_system!='Windows'",
+    "casadi>=3.6.5; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
@@ -18,7 +18,7 @@ license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
-requires-python = ">=3.8, <3.13"
+requires-python = ">=3.9, <3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -28,7 +28,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -37,10 +36,13 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.23.5",
-    "scipy>=1.9.3",
-    "casadi>=3.6.3",
+    "scipy>=1.9.3,<1.13.0",
+    "casadi>=3.6.5",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
+    "sympy>=1.12",
+    "typing-extensions>=4.10.0",
+    "pandas>=1.5.0"
 ]
 
 [project.urls]
@@ -51,7 +53,6 @@ Releases = "https://github.com/pybamm-team/PyBaMM/releases"
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
 
 [project.optional-dependencies]
-# For the generation of documentation
 docs = [
     "sphinx>=6",
     "sphinx_rtd_theme>=0.5",
@@ -74,7 +75,6 @@ docs = [
 examples = [
     "jupyter",
 ]
-# Plotting functionality
 plot = [
     "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
@@ -82,13 +82,8 @@ plot = [
     # outside of plot() methods.
     "matplotlib>=3.6.0",
 ]
-# For the Citations class
 cite = [
     "pybtex>=0.24.0",
-]
-# To generate LaTeX strings
-latexify = [
-    "sympy>=1.12",
 ]
 # Battery Parameter eXchange format
 bpx = [
@@ -98,7 +93,6 @@ bpx = [
 tqdm = [
     "tqdm",
 ]
-# Dependencies intended for use by developers
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -107,36 +101,29 @@ dev = [
     # For running testing sessions
     "nox",
     # For coverage
-    "coverage[toml]",
+    "pytest-cov",
     # For test parameterization
     "parameterized>=0.9",
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
     "nbmake",
-]
-# Reading CSV files
-pandas = [
-    "pandas>=1.5.0",
+    # To access the metadata for python packages
+    "importlib-metadata; python_version < '3.10'",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
     "jax==0.4.20; python_version >= '3.9'",
     "jaxlib==0.4.20; python_version >= '3.9'",
 ]
-# For the scikits.odes solver
-odes = [
-    "scikits.odes"
-]
-# Contains all optional dependencies, except for odes, jax, and dev dependencies
+# Contains all optional dependencies, except for jax and dev dependencies
 all = [
     "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
-    "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]",
+    "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
 [project.scripts]
-pybamm_install_odes = "pybamm.install_odes:main"
 pybamm_install_jax = "pybamm.util:install_jax"
 
 [project.entry-points."pybamm_parameter_sets"]
@@ -184,7 +171,7 @@ extend-exclude = ["__init__.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    # "B",           # flake8-bugbear
+    "B",           # flake8-bugbear
     # "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
@@ -252,6 +239,10 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
+    # ignore warnings generated while running tests
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning",
 ]
 
 # Logging configuration

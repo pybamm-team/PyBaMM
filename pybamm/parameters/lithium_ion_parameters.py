@@ -76,8 +76,8 @@ class LithiumIonParameters(BaseParameters):
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut
         self.voltage_high_cut = self.elec.voltage_high_cut
-        self.ocp_soc_0_dimensional = self.elec.ocp_soc_0_dimensional
-        self.ocp_soc_100_dimensional = self.elec.ocp_soc_100_dimensional
+        self.ocp_soc_0 = self.elec.ocp_soc_0
+        self.ocp_soc_100 = self.elec.ocp_soc_100
 
         # Domain parameters
         for domain in self.domain_params.values():
@@ -91,18 +91,10 @@ class LithiumIonParameters(BaseParameters):
             ]
         )
 
-        # Lithium plating parameters
+        # Required by lithium plating and lithium metal plating reactions
         self.V_bar_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
         )
-        self.c_Li_typ = pybamm.Parameter(
-            "Typical plated lithium concentration [mol.m-3]"
-        )
-        self.c_plated_Li_0 = pybamm.Parameter(
-            "Initial plated lithium concentration [mol.m-3]"
-        )
-        self.alpha_plating = pybamm.Parameter("Lithium plating transfer coefficient")
-        self.alpha_stripping = 1 - self.alpha_plating
 
         # Initial conditions
         # Note: the initial concentration in the electrodes can be set as a function
@@ -188,33 +180,6 @@ class LithiumIonParameters(BaseParameters):
             "Exchange-current density for lithium metal electrode [A.m-2]", inputs
         )
 
-    def j0_stripping(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for stripping [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for stripping [A.m-2]", inputs
-        )
-
-    def j0_plating(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for plating [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for plating [A.m-2]", inputs
-        )
-
-    def dead_lithium_decay_rate(self, L_sei):
-        """Dimensional dead lithium decay rate [s-1]"""
-        inputs = {"Total SEI thickness [m]": L_sei}
-        return pybamm.FunctionParameter("Dead lithium decay rate [s-1]", inputs)
-
 
 class DomainLithiumIonParameters(BaseParameters):
     def __init__(self, domain, main_param):
@@ -243,6 +208,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Parameters that appear in the separator
         self.b_e = self.geo.b_e
+        self.tau_e = self.geo.tau_e
         self.L = self.geo.L
 
         # Thermal
@@ -300,6 +266,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Tortuosity parameters
         self.b_s = self.geo.b_s
+        self.tau_s = self.geo.tau_s
 
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
@@ -471,6 +438,18 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.k_sei = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
         self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
 
+        # Lithium plating parameters
+        self.c_Li_typ = pybamm.Parameter(
+            f"{pref}Typical plated lithium concentration [mol.m-3]"
+        )
+        self.c_plated_Li_0 = pybamm.Parameter(
+            f"{pref}Initial plated lithium concentration [mol.m-3]"
+        )
+        self.alpha_plating = pybamm.Parameter(
+            f"{pref}Lithium plating transfer coefficient"
+        )
+        self.alpha_stripping = 1 - self.alpha_plating
+
         if main.options.electrode_types[domain] == "planar":
             self.n_Li_init = pybamm.Scalar(0)
             self.Q_Li_init = pybamm.Scalar(0)
@@ -535,6 +514,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
+        # if self.options['open-circuit potential'] == 'Plett':
+        self.hysteresis_decay = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis decay rate"
+        )
+        self.hysteresis_switch = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis switching factor"
+        )
+        self.h_init = pybamm.Scalar(0)
 
         if self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
@@ -599,6 +586,40 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{Domain} electrode {lithiation}"
             "exchange-current density [A.m-2]",
             inputs,
+        )
+
+    def j0_stripping(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for stripping [A.m-2]"""
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{Domain} electrolyte concentration [mol.m-3]": c_e,
+            f"{Domain} plated lithium concentration [mol.m-3]": c_Li,
+            f"{Domain} temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}Exchange-current density for stripping [A.m-2]",
+            inputs,
+        )
+
+    def j0_plating(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for plating [A.m-2]"""
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{Domain} electrolyte concentration [mol.m-3]": c_e,
+            f"{Domain} plated lithium concentration [mol.m-3]": c_Li,
+            f"{Domain} temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}Exchange-current density for plating [A.m-2]",
+            inputs,
+        )
+
+    def dead_lithium_decay_rate(self, L_sei):
+        """Dimensional dead lithium decay rate [s-1]"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} total {self.phase_name}SEI thickness [m]": L_sei}
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}Dead lithium decay rate [s-1]", inputs
         )
 
     def U(self, sto, T, lithiation=None):

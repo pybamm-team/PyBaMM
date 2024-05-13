@@ -1,6 +1,3 @@
-#
-# CasADi Solver class
-#
 import casadi
 import pybamm
 import numpy as np
@@ -51,7 +48,7 @@ class CasadiSolver(pybamm.BaseSolver):
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
-        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        Please consult `CasADi documentation <https://web.casadi.org/python-api/#integrator>`_ for
         details. Some useful options:
 
         - "max_num_steps": Maximum number of integrator steps
@@ -59,7 +56,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
     extra_options_call : dict, optional
         Any options to pass to the CasADi integrator when calling the integrator.
-        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        Please consult `CasADi documentation <https://web.casadi.org/python-api/#integrator>`_ for
         details.
     return_solution_if_failed_early : bool, optional
         Whether to return a Solution object if the solver fails to reach the end of
@@ -276,7 +273,9 @@ class CasadiSolver(pybamm.BaseSolver):
                                 "time steps or period of the experiment."
                             )
                             if first_ts_solved and self.return_solution_if_failed_early:
-                                warnings.warn(message, pybamm.SolverWarning)
+                                warnings.warn(
+                                    message, pybamm.SolverWarning, stacklevel=2
+                                )
                                 termination_due_to_small_dt = True
                                 break
                             else:
@@ -285,7 +284,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                     + " Set `return_solution_if_failed_early=True` to "
                                     "return the solution object up to the point where "
                                     "failure occured."
-                                )
+                                ) from error
                 if termination_due_to_small_dt:
                     break
                 # Check if the sign of an event changes, if so find an accurate
@@ -360,7 +359,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Evaluations of the "event" function are (relatively) expensive
                 f_eval = {}
 
-                def f(idx):
+                def f(idx, f_eval=f_eval, event=event):
                     try:
                         return f_eval[idx]
                     except KeyError:
@@ -682,7 +681,7 @@ class CasadiSolver(pybamm.BaseSolver):
             except RuntimeError as error:
                 # If it doesn't work raise error
                 pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                raise pybamm.SolverError(error.args[0])
+                raise pybamm.SolverError(error.args[0]) from error
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
             # Manually add initial conditions and concatenate
@@ -720,7 +719,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 except RuntimeError as error:
                     # If it doesn't work raise error
                     pybamm.logger.debug(f"Casadi integrator failed with error {error}")
-                    raise pybamm.SolverError(error.args[0])
+                    raise pybamm.SolverError(error.args[0]) from error
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
                 z = casadi_sol["zf"]

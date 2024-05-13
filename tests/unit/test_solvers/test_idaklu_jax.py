@@ -30,7 +30,7 @@ if pybamm.have_idaklu() and pybamm.have_jax():
     model.initial_conditions = {u1: 0, u2: 0, v: 1}
     model.variables = {"v": v, "u1": u1, "u2": u2}
     disc = pybamm.Discretisation()
-    disc.process_model(model, remove_independent_variables_from_rhs=False)
+    disc.process_model(model)
     t_eval = np.linspace(0, 1, 100)
     idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
@@ -862,7 +862,7 @@ class TestIDAKLUJax(TestCase):
 
         # Check grad against actual
         sse_grad_actual = {}
-        for k, v in inputs_pred.items():
+        for k, _ in inputs_pred.items():
             sse_grad_actual[k] = 2 * np.sum(
                 (pred(t_eval) - data) * pred.sensitivities[k]
             )

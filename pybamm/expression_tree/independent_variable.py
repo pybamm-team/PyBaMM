@@ -6,7 +6,6 @@ import sympy
 import numpy as np
 
 import pybamm
-from pybamm.util import have_optional_dependency
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
@@ -58,7 +57,6 @@ class IndependentVariable(pybamm.Symbol):
 
     def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -102,7 +100,6 @@ class Time(IndependentVariable):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
         return sympy.Symbol("t")
 
 
