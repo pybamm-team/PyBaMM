@@ -25,10 +25,10 @@ class IREEBaseFunctionType
 public:
   std::string mlir;
   std::vector<int> kept_var_idx;
+  std::vector<int> pytree_shape;
+  std::vector<int> pytree_sizes;
 
   const std::string& get_mlir() const { return mlir; }
-  void set_mlir(const std::string& mlir) { this->mlir = mlir; }
-  void set_kept_var_idx(const std::vector<int>& kept_var_idx) { this->kept_var_idx = kept_var_idx; }
 };
 
 /**
@@ -58,6 +58,8 @@ public:
   BaseFunctionType m_func;
   std::string module_name;
   std::string function_name;
+  std::vector<int> m_arg_argno;
+  std::vector<int> m_arg_argix;
 
   /**
    * @brief Return the number of non-zero elements for the function output

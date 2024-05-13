@@ -309,21 +309,6 @@ iree_status_t IREESession::iree_runtime_exec(
   std::vector<float>& result
 ) {
 
-  // Print inputs and data
-  std::cout << "Inputs: " << std::endl;
-  for (int i = 0; i < inputs.size(); i++) {
-    std::cout << "Input " << i << ": ";
-    for (int j = 0; j < inputs[i].size(); j++) {
-      std::cout << inputs[i][j] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << "Data " << i << ": ";
-    for (int j = 0; j < data[i].size(); j++) {
-      std::cout << data[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
-
   // Initialize the call to the function.
   status = iree_runtime_call_initialize_by_name(
       session, iree_make_cstring_view(function_name.c_str()), &call);
@@ -420,7 +405,6 @@ iree_status_t IREESession::iree_runtime_exec(
   if (iree_status_is_ok(status)) {
     // Get the buffer view contents as a numeric array
     iree_host_size_t buffer_length = iree_hal_buffer_view_element_count(result_view);
-    DEBUG("Buffer length: " << buffer_length);
     result.resize(buffer_length);
     status = iree_hal_buffer_map_read(iree_hal_buffer_view_buffer(result_view), 0,
                              &result[0], sizeof(float) * result.size());
@@ -434,13 +418,6 @@ iree_status_t IREESession::iree_runtime_exec(
   iree_hal_buffer_view_release(result_view);
 
   iree_runtime_call_deinitialize(&call);
-
-  // Print result
-  std::cout << "Result: ";
-  for (int i = 0; i < result.size(); i++) {
-    std::cout << result[i] << " ";
-  }
-  std::cout << std::endl;
 
   return status;
 }

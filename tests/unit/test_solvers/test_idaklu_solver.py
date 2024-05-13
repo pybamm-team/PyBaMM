@@ -19,8 +19,7 @@ class TestIDAKLUSolver(TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax", "iree"]:
-            print(form)
-            if form == "jax" and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -58,15 +57,13 @@ class TestIDAKLUSolver(TestCase):
                 solution.y[1, :], np.ones(solution.t.shape)
             )
 
-            print(solution.y[0, :])
-
             # test that y[0] = to true solution
             true_solution = 0.1 * solution.t
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
     def test_model_events(self):
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["python", "casadi", "jax", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -74,7 +71,7 @@ class TestIDAKLUSolver(TestCase):
                 root_method = "lm"
             # Create model
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             var = pybamm.Variable("var")
             model.rhs = {var: 0.1 * var}
             model.initial_conditions = {var: 1}
@@ -83,7 +80,12 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             model_disc = disc.process_model(model, inplace=False)
             # Solve
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
             t_eval = np.linspace(0, 1, 100)
             solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_equal(solution.t, t_eval)
@@ -98,7 +100,12 @@ class TestIDAKLUSolver(TestCase):
             # enforce events that won't be triggered
             model.events = [pybamm.Event("an event", var + 1)]
             model_disc = disc.process_model(model, inplace=False)
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
             solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_equal(solution.t, t_eval)
             np.testing.assert_array_almost_equal(
@@ -108,7 +115,12 @@ class TestIDAKLUSolver(TestCase):
             # enforce events that will be triggered
             model.events = [pybamm.Event("an event", 1.01 - var)]
             model_disc = disc.process_model(model, inplace=False)
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
             solution = solver.solve(model_disc, t_eval)
             self.assertLess(len(solution.t), len(t_eval))
             np.testing.assert_array_almost_equal(
@@ -130,7 +142,12 @@ class TestIDAKLUSolver(TestCase):
             disc = get_discretisation_for_testing()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
             t_eval = np.linspace(0, 5, 100)
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_less(solution.y[0, :-1], 1.5)
@@ -146,15 +163,15 @@ class TestIDAKLUSolver(TestCase):
 
     def test_input_params(self):
         # test a mix of scalar and vector input params
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["python", "casadi", "jax", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u1 = pybamm.Variable("u1")
             u2 = pybamm.Variable("u2")
             u3 = pybamm.Variable("u3")
@@ -168,7 +185,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
@@ -189,6 +209,8 @@ class TestIDAKLUSolver(TestCase):
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
+            print(sol.y[1:3])
+            print(true_solution)
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
     def test_sensitivites_initial_condition(self):
@@ -224,15 +246,19 @@ class TestIDAKLUSolver(TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in [
+            "python",
+            "casadi",
+            "jax",
+        ]:  # , "iree"]: ############################################
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u = pybamm.Variable("u")
             v = pybamm.Variable("v")
             a = pybamm.InputParameter("a")
@@ -244,7 +270,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
@@ -299,15 +328,19 @@ class TestIDAKLUSolver(TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["casadi", "python", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in [
+            "casadi",
+            "python",
+            "jax",
+        ]:  # , "iree"]: ############################################
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u = pybamm.Variable("u")
             v = pybamm.Variable("v")
             a = pybamm.InputParameter("a")
@@ -320,7 +353,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
@@ -427,15 +463,15 @@ class TestIDAKLUSolver(TestCase):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["python", "casadi", "jax", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             var = pybamm.Variable("var")
             model.algebraic = {var: var + 1}
             model.initial_conditions = {var: 0}
@@ -443,7 +479,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
             t_eval = np.linspace(0, 1)
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)

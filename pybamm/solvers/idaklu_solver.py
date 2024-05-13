@@ -14,6 +14,7 @@ import warnings
 
 if pybamm.have_jax():
     import jax
+    from jax import numpy as jnp
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
@@ -365,14 +366,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ],
             )
         else:
-            if pybamm.have_jax():
-                array = jax.numpy.array
-            else:
-                array = np.array
 
             def rootfn(t, y, inputs):
                 new_inputs = inputs_to_dict(inputs)
-                return_root = array(
+                return_root = np.array(
                     [event(t, y, new_inputs) for event in model.terminate_events_eval]
                 ).reshape(-1)
 
@@ -477,10 +474,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 warnings.warn("Demoting expressions to 32-bit for MLIR conversion")
 
                 # input arguments (used for lowering)
-                t_eval = self._demote_64_to_32(np.array([0.0], dtype=np.float32))
+                t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnp.float32))
                 y0 = self._demote_64_to_32(model.y0)
-                inputs = self._demote_64_to_32(inputs)
-                cj = self._demote_64_to_32(np.array([1.0], dtype=np.float32))  # array
+                inputs0 = self._demote_64_to_32(inputs_to_dict(inputs))
+                cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnp.float32))  # array
+                mass_matrix = model.mass_matrix.entries.toarray()
                 mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
 
                 # rhs_algebraic
@@ -491,20 +489,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     # function wraps an expression tree (and names MLIR module)
                     return rhs_algebraic_demoted(t, y, inputs)
 
-                rhs_algebraic = self.make_iree_function(
-                    fcn_rhs_algebraic, t_eval, y0, inputs
+                rhs_algebraic = self._make_iree_function(
+                    fcn_rhs_algebraic, t_eval, y0, inputs0
                 )
 
                 # jac_times_cjmass
                 jac_rhs_algebraic_demoted = rhs_algebraic_demoted.get_jacobian()
 
                 def fcn_jac_times_cjmass(t, y, p, cj):
-                    return (
-                        jac_rhs_algebraic_demoted(t, y, p) - cj[0] * mass_matrix_demoted
-                    )
+                    return jac_rhs_algebraic_demoted(t, y, p) - cj * mass_matrix_demoted
 
                 sparse_eval = sparse.csc_matrix(
-                    fcn_jac_times_cjmass(t_eval, y0, inputs, cj)
+                    fcn_jac_times_cjmass(t_eval, y0, inputs0, cj)
                 )
                 jac_times_cjmass_nnz = sparse_eval.nnz
                 jac_times_cjmass_colptrs = sparse_eval.indptr
@@ -519,8 +515,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 def fcn_jac_times_cjmass_sparse(t, y, p, cj):
                     return fcn_jac_times_cjmass(t, y, p, cj)[coo.row, coo.col]
 
-                jac_times_cjmass = self.make_iree_function(
-                    fcn_jac_times_cjmass_sparse, t_eval, y0, inputs_to_dict(inputs), cj
+                jac_times_cjmass = self._make_iree_function(
+                    fcn_jac_times_cjmass_sparse, t_eval, y0, inputs0, cj
                 )
 
                 # Mass action
@@ -528,8 +524,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     return mass_matrix_demoted @ v
 
                 mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
-                mass_action = self.make_iree_function(
-                    mass_action_demoted, np.zeros(model.len_rhs_and_alg, np.float32)
+                mass_action = self._make_iree_function(
+                    mass_action_demoted, jnp.zeros(model.len_rhs_and_alg, jnp.float32)
                 )
 
                 # rootfn
@@ -537,19 +533,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     event = event._demote_constants()
 
                 def fcn_rootfn(t, y, inputs):
-                    new_inputs = inputs_to_dict(inputs)
-                    return_root = array(
-                        [
-                            event(t, y, new_inputs)
-                            for event in model.terminate_events_eval
-                        ]
+                    return_root = jnp.array(
+                        [event(t, y, inputs) for event in model.terminate_events_eval]
                     ).reshape(-1)
                     return return_root
 
                 def fcn_rootfn_demoted(t, y, inputs):
                     return self._demote_64_to_32(fcn_rootfn)(t, y, inputs)
 
-                rootfn = self.make_iree_function(fcn_rootfn_demoted, t_eval, y0, inputs)
+                rootfn = self._make_iree_function(
+                    fcn_rootfn_demoted, t_eval, y0, inputs0
+                )
 
                 # output_variables
                 self.var_idaklu_fcns = []
@@ -630,14 +624,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
-    def make_iree_function(self, fcn, *args):
+    def _make_iree_function(self, fcn, *args):
         lowered = jax.jit(fcn).lower(*args)
         mlir = lowered.as_text()
         self._check_mlir_conversion(fcn.__name__, mlir)
         kept_var_idx = list(lowered._lowering.compile_args["kept_var_idx"])
         iree_fcn = idaklu.IREEBaseFunctionType()
-        iree_fcn.set_mlir(mlir)
-        iree_fcn.set_kept_var_idx(kept_var_idx)
+        iree_fcn.mlir = mlir
+        iree_fcn.kept_var_idx = kept_var_idx
+        # number of variables in each argument (these will flatten in the mlir)
+        iree_fcn.pytree_shape = [
+            len(jax.tree_util.tree_flatten(arg)[0]) for arg in args
+        ]
+        # array length of each mlir variable
+        iree_fcn.pytree_sizes = [
+            len(arg) for arg in jax.tree_util.tree_flatten(args)[0]
+        ]
         return iree_fcn
 
     def _check_mlir_conversion(self, name, mlir: str):

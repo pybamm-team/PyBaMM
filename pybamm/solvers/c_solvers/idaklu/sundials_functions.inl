@@ -20,22 +20,18 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
   p_python_functions->rhs_alg->m_arg[2] = p_python_functions->inputs.data();
   p_python_functions->rhs_alg->m_res[0] = NV_DATA(rr);
   (*p_python_functions->rhs_alg)();
-  DEBUG("rhs [" << N_VGetLength(rr) << "]");
-  DEBUG_VECTORn(rr, 100);
 
-  DEBUG("yp [" << N_VGetLength(yp) << "]");
-  DEBUG_VECTORn(yp, 100);
+  DEBUG_VECTORn(rr, 100);
 
   realtype *tmp = p_python_functions->get_tmp_state_vector();
   p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
   p_python_functions->mass_action->m_res[0] = tmp;
   (*p_python_functions->mass_action)();
-  DEBUG("mass [" << sizeof(tmp) << "]");
-  DEBUG_v(tmp, 100);
   
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
   axpy(ns, -1., tmp, NV_DATA(rr));
+
   DEBUG("mass - rhs");
   DEBUG_VECTORn(rr, 100);
   
@@ -189,6 +185,10 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   (*p_python_functions->jac_times_cjmass)();
 
   DEBUG("jac_times_cjmass [" << sizeof(jac_data) << "]");
+  DEBUG("t = " << tt);
+  DEBUG_VECTORn(yy, 100);
+  DEBUG("inputs = " << p_python_functions->inputs);
+  DEBUG("cj = " << cj);
   DEBUG_v(jac_data, 100);
   
   if (p_python_functions->options.using_banded_matrix)
