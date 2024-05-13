@@ -102,7 +102,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
+                (default), "current sigmoid", "Wycisk", or "MSMR". If "MSMR" then the "particle"
                 option must also be "MSMR". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
             * "operating mode" : str
@@ -263,7 +263,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
-            "open-circuit potential": ["single", "current sigmoid", "MSMR"],
+            "open-circuit potential": ["single", "current sigmoid", "MSMR", "Wycisk"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -305,6 +305,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
+            "transport efficiency": [
+                "Bruggeman",
+                "ordered packing",
+                "hyperbola of revolution",
+                "overlapping spheres",
+                "tortuosity factor",
+                "random overlapping cylinders",
+                "heterogeneous catalyst",
+                "cation-exchange membrane",
+            ],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
@@ -1160,16 +1170,99 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.param, self.options["operating mode"], self.options
             )
         self.submodels["external circuit"] = model
+        self.submodels["discharge and throughput variables"] = (
+            pybamm.external_circuit.DischargeThroughput(self.param, self.options)
+        )
 
     def set_transport_efficiency_submodels(self):
-        self.submodels["electrolyte transport efficiency"] = (
-            pybamm.transport_efficiency.Bruggeman(
-                self.param, "Electrolyte", self.options
+        if self.options["transport efficiency"] == "Bruggeman":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.Bruggeman(
+                    self.param, "Electrolyte", self.options
+                )
             )
-        )
-        self.submodels["electrode transport efficiency"] = (
-            pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
-        )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.Bruggeman(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "tortuosity factor":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.TortuosityFactor(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.TortuosityFactor(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "ordered packing":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.OrderedPacking(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.OrderedPacking(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "hyperbola of revolution":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.HyperbolaOfRevolution(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.HyperbolaOfRevolution(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "overlapping spheres":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.OverlappingSpheres(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.OverlappingSpheres(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "random overlapping cylinders":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.RandomOverlappingCylinders(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.RandomOverlappingCylinders(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "heterogeneous catalyst":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.HeterogeneousCatalyst(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.HeterogeneousCatalyst(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "cation-exchange membrane":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.CationExchangeMembrane(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.CationExchangeMembrane(
+                    self.param, "Electrode", self.options
+                )
+            )
 
     def set_thermal_submodel(self):
         if self.options["thermal"] == "isothermal":

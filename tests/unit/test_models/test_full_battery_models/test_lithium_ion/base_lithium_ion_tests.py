@@ -406,6 +406,10 @@ class BaseUnitTestLithiumIon:
         options = {"open-circuit potential": "current sigmoid"}
         self.check_well_posedness(options)
 
+    def test_well_posed_wycisk_ocp(self):
+        options = {"open-circuit potential": "Wycisk"}
+        self.check_well_posedness(options)
+
     def test_well_posed_msmr(self):
         options = {
             "open-circuit potential": "MSMR",
@@ -426,6 +430,38 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_psd(self):
         options = {"particle size": "distribution", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_Bruggeman(self):
+        options = {"transport efficiency": "Bruggeman"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_ordered_packing(self):
+        options = {"transport efficiency": "ordered packing"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_overlapping_spheres(self):
+        options = {"transport efficiency": "overlapping spheres"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_random_overlapping_cylinders(self):
+        options = {"transport efficiency": "random overlapping cylinders"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_heterogeneous_catalyst(self):
+        options = {"transport efficiency": "heterogeneous catalyst"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_cation_exchange_membrane(self):
+        options = {"transport efficiency": "cation-exchange membrane"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_hyperbola(self):
+        options = {"transport efficiency": "hyperbola of revolution"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_tortuosity_factor(self):
+        options = {"transport efficiency": "tortuosity factor"}
         self.check_well_posedness(options)
 
     def test_well_posed_composite_kinetic_hysteresis(self):
