@@ -208,6 +208,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Parameters that appear in the separator
         self.b_e = self.geo.b_e
+        self.tau_e = self.geo.tau_e
         self.L = self.geo.L
 
         # Thermal
@@ -265,6 +266,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Tortuosity parameters
         self.b_s = self.geo.b_s
+        self.tau_s = self.geo.tau_s
 
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
