@@ -32,12 +32,14 @@ solution = solver.solve(model, t_eval)
 
 # step model
 dt = 500
+# t_eval is an array of time in the interval 0 to dt, dt being size of the step.
+t_eval = np.array([0, 50, 100, 200, 500])
 time = 0
 end_time = solution.t[-1]
 step_solver = pybamm.CasadiSolver()
 step_solution = None
 while time < end_time:
-    step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+    step_solution = step_solver.step(step_solution, model, dt=dt, t_eval=t_eval)
     time += dt
 
 # plot

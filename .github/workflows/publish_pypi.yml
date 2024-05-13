@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Get number of cores on Windows
         id: get_num_cores
@@ -89,7 +89,7 @@ jobs:
       - name: Upload Windows wheels
         uses: actions/upload-artifact@v4
         with:
-          name: windows_wheels
+          name: wheels_windows
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-12]
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -107,16 +107,16 @@ jobs:
       - uses: actions/setup-python@v5
         name: Set up Python
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install SuiteSparse and SUNDIALS on macOS
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
@@ -134,7 +134,7 @@ jobs:
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_BUILD_MACOS: >
@@ -142,19 +142,10 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
-      - name: Upload wheels for Linux
+      - name: Upload wheels for ${{ matrix.os }}
         uses: actions/upload-artifact@v4
-        if: matrix.os == 'ubuntu-latest'
         with:
-          name: linux_wheels
-          path: ./wheelhouse/*.whl
-          if-no-files-found: error
-
-      - name: Upload wheels for macOS amd64
-        uses: actions/upload-artifact@v4
-        if: matrix.os == 'macos-latest'
-        with:
-          name: macos_amd64_wheels
+          name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -173,7 +164,7 @@ jobs:
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
           python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py
@@ -188,7 +179,7 @@ jobs:
       - name: Upload wheels for macOS arm64
         uses: actions/upload-artifact@v4
         with:
-          name: macos_arm64_wheels
+          name: wheels_macos_arm64
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -218,24 +209,29 @@ jobs:
     name: Upload package to PyPI
     needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybamm
+    permissions:
+      id-token: write
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
-      - name: Move all package files to files/
-        run: |
-          mkdir files
-          mv windows_wheels/* linux_wheels/* macos_amd64_wheels/* macos_arm64_wheels/* sdist/* files/
+      - name: Sanity check downloaded artifacts
+        run: ls -lTA artifacts/
 
-      - name: Publish on PyPI
+      - name: Publish to PyPI
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          packages-dir: files/
+          packages-dir: artifacts/
 
-      - name: Publish on TestPyPI
+      - name: Publish to TestPyPI
         if: github.event.inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -245,7 +241,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
-    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_sdist]
+    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_macos_arm64_wheels, build_sdist]
     name: Open an issue if build fails
     if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest

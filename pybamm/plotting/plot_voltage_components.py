@@ -34,8 +34,7 @@ def plot_voltage_components(
         Whether to show the plots. Default is True. Set to False if you want to
         only display the plot after plt.show() has been called.
     kwargs_fill
-        Keyword arguments, passed to ax.fill_between
-
+        Keyword arguments: :obj:`matplotlib.axes.Axes.fill_between`
     """
     # Check if the input is a Simulation and extract Solution
     if isinstance(input_data, Simulation):
@@ -95,7 +94,7 @@ def plot_voltage_components(
     time = solution["Time [h]"].entries
     if split_by_electrode is False:
         ocv = solution["Battery open-circuit voltage [V]"]
-        initial_ocv = ocv(0)
+        initial_ocv = ocv(time[0])
         ocv = ocv.entries
         ax.fill_between(
             time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage"
@@ -103,8 +102,8 @@ def plot_voltage_components(
     else:
         ocp_n = solution["Battery negative electrode bulk open-circuit potential [V]"]
         ocp_p = solution["Battery positive electrode bulk open-circuit potential [V]"]
-        initial_ocp_n = ocp_n(0)
-        initial_ocp_p = ocp_p(0)
+        initial_ocp_n = ocp_n(time[0])
+        initial_ocp_p = ocp_p(time[0])
         initial_ocv = initial_ocp_p - initial_ocp_n
         delta_ocp_n = ocp_n.entries - initial_ocp_n
         delta_ocp_p = ocp_p.entries - initial_ocp_p

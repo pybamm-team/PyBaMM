@@ -71,6 +71,11 @@ class TestInterpolant(TestCase):
                 interp.evaluate(y=np.array([2]))[:, 0], np.array([np.nan])
             )
 
+    def test_interpolation_float(self):
+        x = np.linspace(0, 1, 200)
+        interp = pybamm.Interpolant(x, 2 * x, 0.5)
+        self.assertEqual(interp.evaluate(), 1)
+
     def test_interpolation_1_x_2d_y(self):
         x = np.linspace(0, 1, 200)
         y = np.tile(2 * x, (10, 1)).T

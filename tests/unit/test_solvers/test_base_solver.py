@@ -75,6 +75,22 @@ class TestBaseSolver(TestCase):
         ):
             solver.step(None, model, dt)
 
+        # Checking if array t_eval lies within range
+        dt = 2
+        t_eval = np.array([0, 1])
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Elements inside array t_eval must lie in the closed interval 0 to dt",
+        ):
+            solver.step(None, model, dt, t_eval=t_eval)
+
+        t_eval = np.array([1, dt])
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Elements inside array t_eval must lie in the closed interval 0 to dt",
+        ):
+            solver.step(None, model, dt, t_eval=t_eval)
+
     def test_solution_time_length_fail(self):
         model = pybamm.BaseModel()
         v = pybamm.Scalar(1)
@@ -331,6 +347,12 @@ class TestBaseSolver(TestCase):
         solver.solve(model, t_eval=[0, 1])
         with self.assertRaisesRegex(RuntimeError, "already been initialised"):
             solver.solve(model2, t_eval=[0, 1])
+
+    def test_multiprocess_context(self):
+        solver = pybamm.BaseSolver()
+        assert solver.get_platform_context("Win") == "spawn"
+        assert solver.get_platform_context("Linux") == "fork"
+        assert solver.get_platform_context("Darwin") == "fork"
 
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):

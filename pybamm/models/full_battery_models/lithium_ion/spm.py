@@ -160,3 +160,6 @@ class SPM(BaseModel):
             self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, options=self.options
             )
+
+    def set_summary_variables(self):
+        self.set_default_summary_variables()

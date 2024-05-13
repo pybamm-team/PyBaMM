@@ -30,7 +30,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
       .. code:: bash
 
-         brew install sundials && pip install pybamm
+         pip install pybamm
 
 
    .. tab:: conda
@@ -45,9 +45,8 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
-*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`_.
 *  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver>`_.
 
 Dependencies
@@ -69,6 +68,7 @@ Package                                                             Minimum supp
 `Anytree <https://anytree.readthedocs.io/en/stable/>`__             2.8.0
 `SymPy <https://docs.sympy.org/latest/index.html>`__                1.9.3
 `typing-extensions <https://pypi.org/project/typing-extensions/>`__ 4.10.0
+`pandas <https://pypi.org/project/pandas/>`__                       1.5.0
 =================================================================== ==========================
 
 .. _install.optional_dependencies:
@@ -95,19 +95,6 @@ Dependency                                                  Minimum Version    p
 =========================================================== ================== ================== ==================================================================
 `imageio <https://imageio.readthedocs.io/en/stable/>`__     2.3.0              plot               For generating simulation GIFs.
 `matplotlib <https://matplotlib.org/stable/>`__             3.6.0              plot               To plot various battery models, and analyzing battery performance.
-=========================================================== ================== ================== ==================================================================
-
-.. _install.pandas_dependencies:
-
-Pandas dependencies
-^^^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[pandas]"``
-
-=========================================================== ================== ================== ==================================================================
-Dependency                                                  Minimum Version    pip extra          Notes
-=========================================================== ================== ================== ==================================================================
-`pandas <https://pandas.pydata.org/docs/>`__                1.5.0              pandas             For data manipulation and analysis.
 =========================================================== ================== ================== ==================================================================
 
 .. _install.docs_dependencies:
@@ -215,23 +202,6 @@ Dependency                                                                Minimu
 `JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.20             jax                For the JAX solver
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
 ========================================================================= ================== ================== =======================
-
-.. _install.odes_dependencies:
-
-odes dependencies
-^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[odes]"``
-
-======================================================================================================================================= ================== ================== =============================
-Dependency                                                                                                                              Minimum Version    pip extra          Notes
-======================================================================================================================================= ================== ================== =============================
-`scikits.odes <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`__     \-                 odes               For scikits ODE & DAE solvers
-======================================================================================================================================= ================== ================== =============================
-
-.. note::
-
-   Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`_ .
 
 Full installation guide
 -----------------------

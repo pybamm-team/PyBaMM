@@ -1,8 +1,5 @@
-#
-# Tests the utility functions.
-#
+import importlib
 from tests import TestCase
-import numpy as np
 import os
 import sys
 import pybamm
@@ -10,9 +7,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from io import StringIO
-from tempfile import TemporaryDirectory
 
-anytree = sys.modules["anytree"]
+from tests import (
+    get_optional_distribution_deps,
+    get_required_distribution_deps,
+    get_present_optional_import_deps,
+)
 
 
 class TestUtil(TestCase):
@@ -20,19 +20,7 @@ class TestUtil(TestCase):
     Test the functionality in util.py
     """
 
-    def test_rmse(self):
-        self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
-        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)
-        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.ones(5)), 1)
-
-        x = np.array([1, 2, 3, 4, 5])
-        self.assertEqual(pybamm.rmse(x, x), 0)
-
-        with self.assertRaisesRegex(ValueError, "same length"):
-            pybamm.rmse(np.ones(5), np.zeros(3))
-
     def test_is_constant_and_can_evaluate(self):
-        sys.modules["anytree"] = anytree
         symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(False, pybamm.is_constant_and_can_evaluate(symbol))
         symbol = pybamm.StateVector(slice(0, 1))
@@ -100,27 +88,79 @@ class TestUtil(TestCase):
         self.assertEqual(git_commit_info[:2], "v2")
 
     def test_import_optional_dependency(self):
-        with self.assertRaisesRegex(
-            ModuleNotFoundError, "Optional dependency pybtex is not available."
-        ):
-            pybtex = sys.modules["pybtex"]
-            sys.modules["pybtex"] = None
-            pybamm.print_citations()
-        with self.assertRaisesRegex(
-            ModuleNotFoundError, "Optional dependency anytree is not available."
-        ):
-            with TemporaryDirectory() as dir_name:
-                sys.modules["anytree"] = None
-                test_stub = os.path.join(dir_name, "test_visualize")
-                test_name = f"{test_stub}.png"
-                c = pybamm.Variable("c", "negative electrode")
-                d = pybamm.Variable("d", "negative electrode")
-                sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
-                sym.visualise(test_name)
+        optional_distribution_deps = get_optional_distribution_deps("pybamm")
+        present_optional_import_deps = get_present_optional_import_deps(
+            "pybamm", optional_distribution_deps=optional_distribution_deps
+        )
 
-        sys.modules["pybtex"] = pybtex
-        pybamm.util.import_optional_dependency("pybtex")
-        pybamm.print_citations()
+        # Save optional dependencies, then make them not importable
+        modules = {}
+        for import_pkg in present_optional_import_deps:
+            modules[import_pkg] = sys.modules.get(import_pkg)
+            sys.modules[import_pkg] = None
+
+        # Test import optional dependency
+        for import_pkg in present_optional_import_deps:
+            with self.assertRaisesRegex(
+                ModuleNotFoundError,
+                f"Optional dependency {import_pkg} is not available.",
+            ):
+                pybamm.util.import_optional_dependency(import_pkg)
+
+        # Restore optional dependencies
+        for import_pkg in present_optional_import_deps:
+            sys.modules[import_pkg] = modules[import_pkg]
+
+    def test_pybamm_import(self):
+        optional_distribution_deps = get_optional_distribution_deps("pybamm")
+        present_optional_import_deps = get_present_optional_import_deps(
+            "pybamm", optional_distribution_deps=optional_distribution_deps
+        )
+
+        # Save optional dependencies and their sub-modules, then make them not importable
+        modules = {}
+        for module_name, module in sys.modules.items():
+            base_module_name = module_name.split(".")[0]
+            if base_module_name in present_optional_import_deps:
+                modules[module_name] = module
+                sys.modules[module_name] = None
+
+        # Unload pybamm and its sub-modules
+        for module_name in list(sys.modules.keys()):
+            base_module_name = module_name.split(".")[0]
+            if base_module_name == "pybamm":
+                sys.modules.pop(module_name)
+
+        # Test pybamm is still importable
+        try:
+            importlib.import_module("pybamm")
+        except ModuleNotFoundError as error:
+            self.fail(
+                f"Import of 'pybamm' shouldn't require optional dependencies. Error: {error}"
+            )
+        finally:
+            # Restore optional dependencies and their sub-modules
+            for module_name, module in modules.items():
+                sys.modules[module_name] = module
+
+    def test_optional_dependencies(self):
+        optional_distribution_deps = get_optional_distribution_deps("pybamm")
+        required_distribution_deps = get_required_distribution_deps("pybamm")
+
+        # Get nested required dependencies
+        for distribution_dep in list(required_distribution_deps):
+            required_distribution_deps.update(
+                get_required_distribution_deps(distribution_dep)
+            )
+
+        # Check that optional dependencies are not present in the core PyBaMM installation
+        optional_present_deps = optional_distribution_deps & required_distribution_deps
+        self.assertFalse(
+            bool(optional_present_deps),
+            f"Optional dependencies installed: {optional_present_deps}.\n"
+            "Please ensure that optional dependencies are not present in the core PyBaMM installation, "
+            "or list them as required.",
+        )
 
 
 class TestSearch(TestCase):
