@@ -866,6 +866,16 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "mleot",
+      "name": "mleot",
+      "avatar_url": "https://avatars.githubusercontent.com/u/140573653?v=4",
+      "profile": "https://github.com/mleot",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
