@@ -109,6 +109,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/AndyLiuElysia"><img src="https://avatars.githubusercontent.com/u/143705453?v=4?s=100" width="100px;" alt="AndyLiuElysia"/><br /><sub><b>AndyLiuElysia</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=AndyLiuElysia" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Hongmeiqi"><img src="https://avatars.githubusercontent.com/u/143798726?v=4?s=100" width="100px;" alt="Hongmeiqi"/><br /><sub><b>Hongmeiqi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Hongmeiqi" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/mleot"><img src="https://avatars.githubusercontent.com/u/140573653?v=4?s=100" width="100px;" alt="mleot"/><br /><sub><b>mleot</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=mleot" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=mleot" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/is"><img src="https://avatars.githubusercontent.com/u/3188?v=4?s=100" width="100px;" alt="Yu Xin"/><br /><sub><b>Yu Xin</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=is" title="Tests">⚠️</a></td>
     </tr>
   </tbody>
 </table>
