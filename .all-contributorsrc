@@ -876,6 +876,15 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "is",
+      "name": "Yu Xin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3188?v=4",
+      "profile": "https://github.com/is",
+      "contributions": [
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
