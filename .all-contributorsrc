@@ -1,6 +1,7 @@
 {
   "files": [
-    "all_contributors.md"
+    "all_contributors.md",
+    "README.md"
   ],
   "imageSize": 100,
   "commit": false,
