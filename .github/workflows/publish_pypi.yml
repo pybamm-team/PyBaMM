@@ -112,12 +112,15 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      # sometimes gfortran cannot be found, so reinstall gcc just to be sure
+      - uses: fortran-lang/setup-fortran@v1.6
+        id: setup-fortran
+        with:
+          compiler: gcc
+          version: 13
+
       - name: Install SuiteSparse and SUNDIALS on macOS
         if: matrix.os == 'macos-12'
         run: |
-          brew install graphviz
-          brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
@@ -137,6 +140,7 @@ jobs:
         if: matrix.os == 'macos-12'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
+          MACOSX_DEPLOYMENT_TARGET: 11.1
           CIBW_BEFORE_BUILD_MACOS: >
             python -m pip install --upgrade cmake casadi setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
@@ -162,10 +166,14 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
+      - uses: fortran-lang/setup-fortran@v1.6
+        id: setup-fortran
+        with:
+          compiler: gcc
+          version: 13
+
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
-          brew install graphviz
-          brew reinstall gcc
           python -m pip install cmake pipx
           python scripts/install_KLU_Sundials.py
 
