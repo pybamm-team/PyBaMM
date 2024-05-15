@@ -68,11 +68,11 @@ def install_suitesparse(download_dir):
     env = os.environ.copy()
     for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
         build_dir = os.path.join(suitesparse_src, libdir)
-        # We want to ensure that libsuitesparseconfig.dylib is not repeated in
-        # multiple paths at the time of wheel repair. Therefore, it should not be
-        # built with an RPATH since it is copied to the install prefix.
+        # Set an RPATH in order for libsuitesparseconfig.dylib to find libomp.dylib
         if libdir == "SuiteSparse_config":
-            env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
+            env["CMAKE_OPTIONS"] = (
+                f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib"
+            )
         else:
             # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
             # INSTALL RPATH in order to ensure that the dynamic libraries are found
@@ -164,6 +164,17 @@ def set_up_openmp(download_dir, install_dir):
             os.path.join(openmp_src, "usr", "local", "include", file),
             os.path.join(install_dir, "include"),
         )
+
+    # fix rpath; for some reason the downloaded dylib has an absolute path
+    # to /usr/local/lib/, so use self-referential rpath
+    subprocess.check_call(
+        [
+            "install_name_tool",
+            "-id",
+            "@rpath/libomp.dylib",
+            f"{os.path.join(install_dir, 'lib', 'libomp.dylib')}",
+        ]
+    )
 
 
 def check_libraries_installed(install_dir):
