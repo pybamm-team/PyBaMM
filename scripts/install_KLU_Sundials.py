@@ -116,7 +116,6 @@ def install_sundials(download_dir, install_dir):
 
         cmake_args += [
             "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
-            "-DOpenMP_CXX_FLAGS=" + OpenMP_C_FLAGS,
             "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
             "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
         ]
