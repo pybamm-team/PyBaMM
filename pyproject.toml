@@ -110,6 +110,8 @@ dev = [
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
+    # To fetch data from pybamm-data
+    "pooch",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [

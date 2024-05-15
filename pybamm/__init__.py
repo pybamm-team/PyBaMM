@@ -193,6 +193,9 @@ from .batch_study import BatchStudy
 # Callbacks
 from . import callbacks
 
+# Pybamm Data manager using pooch
+from .pybammdata import DataLoader
+
 # Remove any imported modules, so we don't expose them as part of pybamm
 del sys
 
