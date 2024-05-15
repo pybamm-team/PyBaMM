@@ -46,6 +46,3 @@ class DataLoader:
             return cache_file
         except NameError:
             raise NameError(f"Unable to find {filename} in the registry") from None
-
-    def getpath(self):
-        return self.path
