@@ -116,7 +116,7 @@ jobs:
         id: setup-fortran
         with:
           compiler: gcc
-          version: 13
+          version: 12
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         if: matrix.os == 'macos-12'
@@ -170,7 +170,7 @@ jobs:
         id: setup-fortran
         with:
           compiler: gcc
-          version: 13
+          version: 12
 
       - name: Install SuiteSparse and SUNDIALS on macOS
         run: |
@@ -180,6 +180,7 @@ jobs:
       - name: Build wheels on macOS arm64
         run: python -m pipx run cibuildwheel --output-dir wheelhouse
         env:
+          MACOSX_DEPLOYMENT_TARGET: 11.1
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
           CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
