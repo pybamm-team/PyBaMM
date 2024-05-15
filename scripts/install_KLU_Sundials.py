@@ -323,8 +323,12 @@ except OSError as error:
 # Build in parallel wherever possible
 os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
-# Set macOS environment variables for compatibility
-os.environ["MACOSX_DEPLOYMENT_TARGET"] = "11.0"
+# Set macOS environment variables for compatibility. this is set to
+# 1. 11.1 for arm64 (libcasadi.dylib), and
+# 2. 11.0 for x86_64 (libomp.dylib)
+os.environ["MACOSX_DEPLOYMENT_TARGET"] = (
+    "11.1" if platform.machine == "arm64" else "11.0"
+)
 
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
