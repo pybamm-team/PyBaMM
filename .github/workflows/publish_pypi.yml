@@ -115,6 +115,9 @@ jobs:
       # sometimes gfortran cannot be found, so reinstall gcc just to be sure
       - name: Install SuiteSparse and SUNDIALS on macOS
         if: matrix.os == 'macos-12'
+        # cibuildwheel sets this, but not for prerequisite C++ deps
+        env:
+          MACOSX_DEPLOYMENT_TARGET: 10.9
         run: |
           brew install graphviz libomp
           brew reinstall gcc
@@ -163,6 +166,9 @@ jobs:
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       - name: Install SuiteSparse and SUNDIALS on macOS
+        # cibuildwheel sets this, but not for prerequisite C++ deps
+        env:
+          MACOSX_DEPLOYMENT_TARGET: 11.0
         run: |
           brew install graphviz libomp
           brew reinstall gcc
