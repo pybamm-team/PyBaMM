@@ -181,7 +181,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-    def set_summary_variables(self):
+    def set_default_summary_variables(self):
         """
         Sets the default summary variables.
         """
@@ -248,6 +248,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                     ocp_model = ocp_submodels.SingleOpenCircuitPotential
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
+                elif ocp_option == "Wycisk":
+                    pybamm.citations.register("Wycisk2022")
+                    ocp_model = ocp_submodels.WyciskOpenCircuitPotential
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
