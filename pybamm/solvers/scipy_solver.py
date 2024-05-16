@@ -47,7 +47,7 @@ class ScipySolver(pybamm.BaseSolver):
         self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_list=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -68,11 +68,13 @@ class ScipySolver(pybamm.BaseSolver):
 
         """
         # Save inputs dictionary, and if necessary convert inputs to a casadi vector
-        inputs_dict = inputs_dict or {}
+        inputs_list = inputs_list or {}
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            inputs = casadi.vertcat(
+                *[x for inputs in inputs_list for x in inputs.values()]
+            )
         else:
-            inputs = inputs_dict
+            inputs = inputs_list
 
         extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
@@ -142,11 +144,11 @@ class ScipySolver(pybamm.BaseSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            sol = pybamm.Solution(
+            sol = pybamm.Solution.from_concatenated_state(
                 sol.t,
                 sol.y,
                 model,
-                inputs_dict,
+                inputs_list,
                 t_event,
                 y_event,
                 termination,

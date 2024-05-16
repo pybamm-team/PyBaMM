@@ -138,6 +138,52 @@ class Solution:
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
+    @classmethod
+    def from_concatenated_state(
+        cls,
+        t,
+        y,
+        model,
+        input_list,
+        t_event=None,
+        y_event=None,
+        termination="final time",
+        sensitivities=False,
+        check_solution=True,
+    ):
+        """
+        Create a list of Solution objects from a concatenated state vector
+
+        Parameters
+        ----------
+        t : :class:`numpy.array`
+            A one-dimensional array containing the times at which the solution is
+            evaluated.
+        y : :class:`numpy.array`
+            A one-dimensional column array containing the (concatenated) values of the solution for each input in input_list.
+        model : :class:`pybamm.BaseModel`
+            The model that was used to calculate the solution.
+        input_list : list of dict
+            The inputs
+        ...: see Solution.__init__()
+        """
+        ninputs = len(input_list)
+        ny = y.shape[0] // ninputs
+        return [
+            cls(
+                t,
+                y[i * ny : (i + 1) * ny],
+                model,
+                input_list[i],
+                t_event,
+                y_event,
+                termination,
+                sensitivities,
+                check_solution,
+            )
+            for i in range(ninputs)
+        ]
+
     def extract_explicit_sensitivities(self):
         # if we got here, we haven't set y yet
         self.set_y()

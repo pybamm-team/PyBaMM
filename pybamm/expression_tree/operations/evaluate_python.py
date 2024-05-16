@@ -485,7 +485,18 @@ class EvaluatorPython:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        result = self._evaluate(self._constants, t, y, inputs)
+        if isinstance(inputs, list):
+            ny = y.shape[0]
+            ni = len(inputs)
+            result = np.zeros((ni * ny, 1))
+            i = 0
+            for input in inputs:
+                result[i : i + ny] += self._evaluate(
+                    self._constants, t, y[i : i + ny], input
+                )
+                i += ny
+        else:
+            result = self._evaluate(self._constants, t, y, inputs)
 
         return result
 

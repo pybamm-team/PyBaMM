@@ -47,7 +47,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_list=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -57,14 +57,16 @@ class AlgebraicSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs_dict : dict, optional
+        inputs_list: list of dict, optional
             Any input parameters to pass to the model when solving
         """
-        inputs_dict = inputs_dict or {}
+        inputs_list = inputs_list or {}
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            inputs = casadi.vertcat(
+                *[x for inputs in inputs_list for x in inputs.values()]
+            )
         else:
-            inputs = inputs_dict
+            inputs = inputs_list
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -230,8 +232,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
         y_diff = np.r_[[y0_diff] * len(t_eval)].T
         y_sol = np.r_[y_diff, y_alg]
         # Return solution object (no events, so pass None to t_event, y_event)
-        sol = pybamm.Solution(
-            t_eval, y_sol, model, inputs_dict, termination="final time"
+        sol = pybamm.Solution.from_concatenated_state(
+            t_eval, y_sol, model, inputs_list, termination="final time"
         )
         sol.integration_time = integration_time
         return sol

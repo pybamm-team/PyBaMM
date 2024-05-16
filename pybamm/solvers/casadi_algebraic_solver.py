@@ -37,7 +37,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_list=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -47,14 +47,14 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs_dict : dict, optional
+        inputs_list: list of dict, optional
             Any input parameters to pass to the model when solving.
         """
         # Record whether there are any symbolic inputs
-        inputs_dict = inputs_dict or {}
+        inputs_list = inputs_list or {}
 
         # Create casadi objects for the root-finder
-        inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
+        inputs = casadi.vertcat(*[v for inputs in inputs_list for v in inputs.values()])
 
         y0 = model.y0
 
@@ -164,11 +164,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         except AttributeError:
             explicit_sensitivities = False
 
-        sol = pybamm.Solution(
+        sol = pybamm.Solution.from_concatenated_state(
             [t_eval],
             y_sol,
             model,
-            inputs_dict,
+            inputs_list,
             termination="final time",
             sensitivities=explicit_sensitivities,
         )

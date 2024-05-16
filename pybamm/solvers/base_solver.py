@@ -1,7 +1,6 @@
 import copy
 import itertools
 from scipy.sparse import block_diag
-import multiprocessing as mp
 import numbers
 import sys
 import warnings
@@ -104,19 +103,19 @@ class BaseSolver:
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs : dict, optional
+        inputs : list of dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
         """
-        inputs = inputs or {}
+        inputs = inputs or [{}]
 
         if ics_only:
             pybamm.logger.info("Start solver set-up, initial_conditions only")
         else:
             pybamm.logger.info("Start solver set-up")
 
-        self._check_and_prepare_model_inplace(model, inputs, ics_only)
+        self._check_and_prepare_model_inplace(model)
 
         # set default calculate sensitivities on model
         if not hasattr(model, "calculate_sensitivities"):
@@ -141,18 +140,21 @@ class BaseSolver:
             "initial_conditions",
             vars_for_processing,
             use_jacobian=False,
+            ninputs=len(inputs),
         )
         model.initial_conditions_eval = initial_conditions
         model.jacp_initial_conditions_eval = jacp_ic
 
         # evaluate initial condition
-        y0_total_size = (
+        y0_total_size = len(inputs) * (
             model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
         )
         y_zero = np.zeros((y0_total_size, 1))
         if model.convert_to_format == "casadi":
             # stack inputs
-            inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
+            inputs_casadi = casadi.vertcat(
+                *[x for inpt in inputs for x in inpt.items()]
+            )
             model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
             if jacp_ic is None:
                 model.y0S = None
@@ -180,11 +182,14 @@ class BaseSolver:
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables
         rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            model.concatenated_rhs, "RHS", vars_for_processing
+            model.concatenated_rhs, "RHS", vars_for_processing, ninputs=len(inputs)
         )
 
         algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
-            model.concatenated_algebraic, "algebraic", vars_for_processing
+            model.concatenated_algebraic,
+            "algebraic",
+            vars_for_processing,
+            ninputs=len(inputs),
         )
 
         # combine rhs and algebraic functions
@@ -202,7 +207,9 @@ class BaseSolver:
             jac_rhs_algebraic,
             jacp_rhs_algebraic,
             jac_rhs_algebraic_action,
-        ) = process(rhs_algebraic, "rhs_algebraic", vars_for_processing)
+        ) = process(
+            rhs_algebraic, "rhs_algebraic", vars_for_processing, ninputs=len(inputs)
+        )
 
         (
             casadi_switch_events,
@@ -250,6 +257,8 @@ class BaseSolver:
                 model.casadi_rhs = casadi.Function(
                     "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                 )
+                if len(inputs) > 1:
+                    model.casadi_rhs = model.casadi_rhs.map(len(inputs), "openmp")
             model.casadi_switch_events = casadi_switch_events
             model.casadi_algebraic = algebraic
             model.casadi_sensitivities = jacp_rhs_algebraic
@@ -281,6 +290,7 @@ class BaseSolver:
                     vars_for_processing,
                     use_jacobian=True,
                     return_jacp_stacked=True,
+                    ninputs=len(inputs),
                 )
 
         pybamm.logger.info("Finish solver set-up")
@@ -307,7 +317,7 @@ class BaseSolver:
             name = name.replace(string, replacement)
         return name
 
-    def _check_and_prepare_model_inplace(self, model, inputs, ics_only):
+    def _check_and_prepare_model_inplace(self, model):
         """
         Performs checks on the model and prepares it for solving.
         """
@@ -426,10 +436,11 @@ class BaseSolver:
             num_parameters = 0
             for name in model.calculate_sensitivities:
                 # if not a number, assume its a vector
-                if isinstance(inputs[name], numbers.Number):
+                if isinstance(inputs[0][name], numbers.Number):
                     num_parameters += 1
                 else:
-                    num_parameters += len(inputs[name])
+                    num_parameters += len(inputs[0][name])
+            num_parameters *= len(inputs)
             model.len_rhs_sens = model.len_rhs * num_parameters
             model.len_alg_sens = model.len_alg * num_parameters
         else:
@@ -575,6 +586,7 @@ class BaseSolver:
                         f"event_{n}",
                         vars_for_processing,
                         use_jacobian=False,
+                        ninputs=len(inputs),
                     )[0]
                     # use the actual casadi object as this will go into the rhs
                     casadi_switch_events.append(event_casadi)
@@ -585,6 +597,7 @@ class BaseSolver:
                     f"event_{n}",
                     vars_for_processing,
                     use_jacobian=False,
+                    ninputs=len(inputs),
                 )[0]
                 if event.event_type == pybamm.EventType.TERMINATION:
                     terminate_events.append(event_call)
@@ -670,7 +683,7 @@ class BaseSolver:
             The model for which to calculate initial conditions.
         time : float
             The time at which to calculate the states
-        inputs: dict, optional
+        inputs: list of dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -826,12 +839,7 @@ class BaseSolver:
                     f'"{existing_model.name}". Please create a separate '
                     "solver for this model"
                 )
-            # It is assumed that when len(inputs_list) > 1, model set
-            # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Therefore, only `model_inputs[0]`
-            # is passed to `set_up`.
-            # See https://github.com/pybamm-team/PyBaMM/pull/1261
-            self.set_up(model, model_inputs_list[0], t_eval)
+            self.set_up(model, model_inputs_list, t_eval)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -847,7 +855,7 @@ class BaseSolver:
                 else:
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
-                    self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
+                    self.set_up(model, model_inputs_list, t_eval, ics_only=True)
                 self._model_set_up[model]["initial conditions"] = (
                     model.concatenated_initial_conditions
                 )
@@ -855,32 +863,12 @@ class BaseSolver:
         set_up_time = timer.time()
         timer.reset()
 
-        # (Re-)calculate consistent initial conditions
-        # Assuming initial conditions do not depend on input parameters
-        # when len(inputs_list) > 1, only `model_inputs_list[0]`
-        # is passed to `_set_initial_conditions`.
-        # See https://github.com/pybamm-team/PyBaMM/pull/1261
-        if len(inputs_list) > 1:
-            all_inputs_names = set(
-                itertools.chain.from_iterable(
-                    [model_inputs.keys() for model_inputs in model_inputs_list]
-                )
-            )
-            initial_conditions_node_names = set(
-                [it.name for it in model.concatenated_initial_conditions.pre_order()]
-            )
-            if all_inputs_names.issubset(initial_conditions_node_names):
-                raise pybamm.SolverError(
-                    "Input parameters cannot appear in expression "
-                    "for initial conditions."
-                )
-
         self._set_initial_conditions(
-            model, t_eval[0], model_inputs_list[0], update_rhs=True
+            model, t_eval[0], model_inputs_list, update_rhs=True
         )
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, model_inputs_list[0])
+        self._check_events_with_initial_conditions(t_eval, model, model_inputs_list)
 
         # Process discontinuities
         (
@@ -898,34 +886,12 @@ class BaseSolver:
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
-            ninputs = len(model_inputs_list)
-            if ninputs == 1:
-                new_solution = self._integrate(
-                    model,
-                    t_eval[start_index:end_index],
-                    model_inputs_list[0],
-                )
-                new_solutions = [new_solution]
-            else:
-                if model.convert_to_format == "jax":
-                    # Jax can parallelize over the inputs efficiently
-                    new_solutions = self._integrate(
-                        model,
-                        t_eval[start_index:end_index],
-                        model_inputs_list,
-                    )
-                else:
-                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-                        new_solutions = p.starmap(
-                            self._integrate,
-                            zip(
-                                [model] * ninputs,
-                                [t_eval[start_index:end_index]] * ninputs,
-                                model_inputs_list,
-                            ),
-                        )
-                        p.close()
-                        p.join()
+            new_solutions = self._integrate(
+                model,
+                t_eval[start_index:end_index],
+                model_inputs_list,
+            )
+
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -948,7 +914,7 @@ class BaseSolver:
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval[end_index], model_inputs_list[0]
+                        model, t_eval[end_index], model_inputs_list
                     )
         solve_time = timer.time()
 
@@ -995,7 +961,7 @@ class BaseSolver:
             )
 
         # Return solution(s)
-        if ninputs == 1:
+        if len(inputs) == 1:
             return solutions[0]
         else:
             return solutions
@@ -1427,7 +1393,12 @@ class BaseSolver:
 
 
 def process(
-    symbol, name, vars_for_processing, use_jacobian=None, return_jacp_stacked=None
+    symbol,
+    name,
+    vars_for_processing,
+    use_jacobian=None,
+    return_jacp_stacked=None,
+    ninputs=1,
 ):
     """
     Parameters
@@ -1662,5 +1633,15 @@ def process(
         func = casadi.Function(
             name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
         )
+
+        if ninputs > 1:
+            parallelisation = "openmp"
+            func = func.map(ninputs, parallelisation)
+            if jac is not None:
+                jac = jac.map(ninputs, parallelisation)
+            if jacp is not None:
+                jacp = jacp.map(ninputs, parallelisation)
+            if jac_action is not None:
+                jac_action = jac_action.map(ninputs, parallelisation)
 
     return func, jac, jacp, jac_action
