@@ -128,7 +128,7 @@ jobs:
         if: matrix.os == 'macos-13'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          MACOSX_DEPLOYMENT_TARGET: 11.1
+          MACOSX_DEPLOYMENT_TARGET: 11.0
           # Sourced from
           # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
           CIBW_BEFORE_ALL_MACOS: |
