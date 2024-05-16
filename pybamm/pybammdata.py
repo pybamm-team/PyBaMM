@@ -16,8 +16,8 @@ class DataLoader:
                 "comsol_2C.json": "sha256:15c2637f54bf1639621c58795db859cb08611c8182b7b20ade10e4c3e2839a5b",
                 "comsol_3C.json": "sha256:11d5afccb70be85d4ac7e61d413c6e0f5e318e1635b1347c9a3c6784119711e6",
                 # Kokam SLPB 75106100 discharge data from Ecker et al (2015)
-                "Ecker_1C.csvs": "sha256:428dc5113a6430492f430fb9e895f67d3e20f5643dc49a1cc0a922b92a5a8e01",
-                "Ecker_5C.csv": "sha256:3b044135ad88bdb88959304a33fe42b654d5ef7ef79d1271dd909cec55b257fb",
+                "Ecker_1C.csv": "sha256:428dc5113a6430492f430fb9e895f67d3e20f5643dc49a1cc0a922b92a5a8e01",
+                "Ecker_5C.csv": "sha256:a89f8bf6e305b2a4195e1fae5e803277a40ed7557d263ef726f621803dcbb495",
                 # Enertech cells - discharge results for beginning of life
                 "0.1C_discharge_U.txt": "sha256:7b9fcd137441eea4ab686faee8d57fe242c5544400939ef358ccd99c63c9579d",
                 "0.1C_discharge_displacement.txt": "sha256:f1329731ead5a82a2be9851cf80e4c6d68dd0774e07aee5361e2af3ab420d7be",
@@ -42,7 +42,7 @@ class DataLoader:
 
     def getdata(self, filename: str):
         try:
-            cache_file = self.odie.fetch(filename)
-            return cache_file
+            self.odie.fetch(filename)
+            return f"{self.path}/{filename}"
         except NameError:
             raise NameError(f"Unable to find {filename} in the registry") from None
