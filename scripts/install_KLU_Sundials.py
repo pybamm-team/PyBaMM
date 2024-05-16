@@ -136,8 +136,8 @@ def install_sundials(download_dir, install_dir):
     subprocess.run(make_cmd, cwd=build_dir, check=True)
 
 
-# relevant for macOS only because recent Xcode Clang does not include OpenMP headers.
-# Other compilers (e.g. GCC) include OpenMP specification by default.
+# Relevant for macOS only because recent Xcode Clang versions do not include OpenMP headers.
+# Other compilers (e.g. GCC) include the OpenMP specification by default.
 def set_up_openmp(download_dir, install_dir):
     print("-" * 10, "Extracting OpenMP archive", "-" * 40)
 
@@ -323,13 +323,6 @@ except OSError as error:
 # Build in parallel wherever possible
 os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
-# Set macOS environment variables for compatibility. this is set to
-# 1. 11.1 for arm64 (libcasadi.dylib), and
-# 2. 11.0 for x86_64 (libomp.dylib)
-os.environ["MACOSX_DEPLOYMENT_TARGET"] = (
-    "11.1" if platform.machine == "arm64" else "11.0"
-)
-
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 download_dir = os.path.join(pybamm_dir, "install_KLU_Sundials")
@@ -401,7 +394,7 @@ if __name__ == "__main__":
             if platform.system() == "Darwin" and not openmp_found:
                 download_extract_library(OPENMP_URL, OPENMP_CHECKSUM, download_dir)
                 set_up_openmp(download_dir, install_dir)
-            # openmp needed for sundials on macOS
+            # openmp needed for SUNDIALS on macOS
             install_sundials(download_dir, install_dir)
         if not suitesparse_found:
             # Only SuiteSparse is missing, download and install it

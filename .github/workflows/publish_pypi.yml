@@ -242,10 +242,9 @@ jobs:
             python -m pip install cmake wget
             python scripts/install_KLU_Sundials.py
           CIBW_BEFORE_BUILD_MACOS: python -m pip install --upgrade pip cmake casadi setuptools wheel delocate
-          # Rename wheel for now: https://github.com/casadi/casadi/issues/3698
+          # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
-            mv {dest_dir}/{wheel} | sed 's/macosx_11_1/macosx_11_0/' {dest_dir}/{wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload wheels for macOS arm64
