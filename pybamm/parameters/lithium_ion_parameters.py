@@ -208,6 +208,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Parameters that appear in the separator
         self.b_e = self.geo.b_e
+        self.tau_e = self.geo.tau_e
         self.L = self.geo.L
 
         # Thermal
@@ -265,6 +266,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Tortuosity parameters
         self.b_s = self.geo.b_s
+        self.tau_s = self.geo.tau_s
 
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
@@ -512,6 +514,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
+        # if self.options['open-circuit potential'] == 'Plett':
+        self.hysteresis_decay = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis decay rate"
+        )
+        self.hysteresis_switch = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis switching factor"
+        )
+        self.h_init = pybamm.Scalar(0)
 
         if self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
