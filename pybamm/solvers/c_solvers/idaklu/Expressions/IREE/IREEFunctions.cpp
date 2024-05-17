@@ -100,12 +100,6 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   session = std::make_unique<IREESession>(device_uri, mlir);
   DEBUG("compile complete.");
 
-  // Size of m_args (IDAKLU call signatures); since these are not in the mlir we overallocate
-  //m_arg.resize(input_shape.size(), nullptr);
-  //m_res.resize(output_shape.size(), nullptr);
-  m_arg.resize(10, nullptr);  // 10 inputs should be enough
-  m_res.resize(1, nullptr);  // pretty sure we only ever have one output
-
   // Create index vectors into m_arg
   // This is required since Jax expands input arguments through PyTrees, which need to
   // be remapped to the corresponding expression call. For example:
@@ -167,11 +161,15 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
     input_data[j].resize(input_shape[j][0]);  // assumes 1D input
   }
 
-  // Check output count
-  if (output_shape.size() != 1) {
-    std::cerr << "Unsupported output shape: " << output_shape.size() << std::endl;
-    throw std::runtime_error("Only single outputs are supported");
+  // Allocate memory for input arguments
+  m_arg.resize(m_arg_argno.size(), nullptr);
+
+  // Size iree results vector (single precision) and idaklu results vector (double precision)
+  result.resize(output_shape.size());
+  for(int k=0; k<output_shape.size(); k++) {
+    result[k].resize(output_shape[k][0], 0.0f);
   }
+  m_res.resize(output_shape.size(), nullptr);
 }
 
 // only call this once m_arg and m_res have been set appropriately
@@ -185,7 +183,9 @@ void IREEFunction::operator()()
   // function. This appears to be due to aggressive optimisations in the lowering
   // process. As a result, we need to manually map the input arguments to the
   // correct positions in the MLIR function signature. We obtain these in Python and
-  // pass them (per function) as m_func.kept_var_idx.
+  // pass them (per function) as m_func.kept_var_idx.  Additionally, model inputs can be
+  // of arbitrary length, so we need to index into the input arguments using the
+  // corresponding shape. This is done by m_arg_argno and m_arg_argix.
   // 
   // For example:
   //   def fcn(x, y, z): return 2 * y
@@ -194,7 +194,6 @@ void IREEFunction::operator()()
   //
   // ***********************************************************************************
   
-
   DEBUG("Copying m_arg to input_data (" << m_func.kept_var_idx.size() << " vars)");
   for (int j=0; j<m_func.kept_var_idx.size(); j++) {
     int mlir_arg = m_func.kept_var_idx[j];
@@ -226,9 +225,12 @@ void IREEFunction::operator()()
     std::cerr << "MLIR: " << mlir.substr(0,1000) << std::endl;
     throw std::runtime_error("Execution failed");
   }
+  
   // Copy result to output
   for(size_t k=0; k<result.size(); k++) {
-    m_res[0][k] = result[k];
+    for(size_t j=0; j<result[k].size(); j++) {
+      m_res[k][j] = result[k][j];
+    }
   }
 }
 

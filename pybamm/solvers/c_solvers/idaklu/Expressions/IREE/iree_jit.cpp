@@ -263,7 +263,7 @@ int IREESession::buildAndIssueCall(std::string function_name) {
 
   std::vector<std::vector<int>> input_shape = {{10}};
   std::vector<std::vector<float>> input_data;
-  std::vector<float> result;
+  std::vector<std::vector<float>> result;
 
   for (const auto& shape : input_shape) {
     std::vector<float> d;
@@ -306,7 +306,7 @@ iree_status_t IREESession::iree_runtime_exec(
   std::string function_name,
   const std::vector<std::vector<int>>& inputs,
   const std::vector<std::vector<float>>& data,
-  std::vector<float>& result
+  std::vector<std::vector<float>>& result
 ) {
 
   // Initialize the call to the function.
@@ -392,30 +392,35 @@ iree_status_t IREESession::iree_runtime_exec(
     iree_status_fprint(stderr, status);
   }
 
-  // Dump the function outputs.
-  iree_hal_buffer_view_t* result_view = NULL;
-  if (iree_status_is_ok(status)) {
-    // Try to get the first call result as a buffer view.
-    status = iree_runtime_call_outputs_pop_front_buffer_view(&call, &result_view);
-    if (!iree_status_is_ok(status)) {
-      std::cerr << "Error: iree_runtime_call_outputs_pop_front_buffer_view failed" << std::endl;
-      iree_status_fprint(stderr, status);
+  for(int k=0; k<result.size(); k++) {
+    // Dump the function outputs
+    iree_hal_buffer_view_t* result_view = NULL;
+    if (iree_status_is_ok(status)) {
+      // Try to get the first call result as a buffer view.
+      auto pop_status = iree_runtime_call_outputs_pop_front_buffer_view(&call, &result_view);
+      if (!iree_status_is_ok(pop_status)) {
+        std::cerr << "Error: iree_runtime_call_outputs_pop_front_buffer_view failed" << std::endl;
+        iree_status_fprint(stderr, status);
+      }
     }
-  }
-  if (iree_status_is_ok(status)) {
-    // Get the buffer view contents as a numeric array
-    iree_host_size_t buffer_length = iree_hal_buffer_view_element_count(result_view);
-    result.resize(buffer_length);
-    status = iree_hal_buffer_map_read(iree_hal_buffer_view_buffer(result_view), 0,
-                             &result[0], sizeof(float) * result.size());
-    if (!iree_status_is_ok(status)) {
-      std::cerr << "Error: iree_hal_buffer_map_read failed" << std::endl;
-      iree_status_fprint(stderr, status);
-      iree_hal_buffer_view_release(result_view);
-      return status;
+    if (iree_status_is_ok(status)) {
+      // Get the buffer view contents as a numeric array
+      iree_host_size_t buffer_length = iree_hal_buffer_view_element_count(result_view);
+      if (buffer_length != result[k].size()) {
+        // Avoid reallocation if the buffer is already the right size
+        result[k].resize(buffer_length);
+      }
+      status = iree_hal_buffer_map_read(iree_hal_buffer_view_buffer(result_view), 0,
+                               &result[k][0], sizeof(float) * result[k].size());
+      if (!iree_status_is_ok(status)) {
+        std::cerr << "Error: iree_hal_buffer_map_read failed" << std::endl;
+        iree_status_fprint(stderr, status);
+        iree_hal_buffer_view_release(result_view);
+        return status;
+      }
     }
+    iree_hal_buffer_view_release(result_view);
   }
-  iree_hal_buffer_view_release(result_view);
 
   iree_runtime_call_deinitialize(&call);
 

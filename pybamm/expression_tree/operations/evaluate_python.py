@@ -281,7 +281,7 @@ def find_symbols(
         if isinstance(symbol, pybamm.Index):
             symbol_str = f"{children_vars[0]}[{symbol.slice.start}:{symbol.slice.stop}]"
         else:
-            symbol_str = symbol.name + children_vars[0]
+            symbol_str = symbol.name + "(" + children_vars[0] + ")"
 
     elif isinstance(symbol, pybamm.Function):
         children_str = ""

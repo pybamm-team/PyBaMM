@@ -120,6 +120,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
+        if options["jax_evaluator"] not in ["jax", "iree"]:
+            raise pybamm.SolverError(
+                "Evaluation engine must be 'jax' or 'iree' for IDAKLU solver"
+            )
         self._options = options
 
         self.output_variables = [] if output_variables is None else output_variables
@@ -303,7 +307,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         )
                     )
 
-        else:
+        elif self._options["jax_evaluator"] == "jax":
             t0 = 0 if t_eval is None else t_eval[0]
             jac_y0_t0 = model.jac_rhs_algebraic_eval(t0, y0, inputs_dict)
             if sparse.issparse(jac_y0_t0):
@@ -365,7 +369,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     )
                 ],
             )
-        else:
+        elif self._options["jax_evaluator"] == "jax":
 
             def rootfn(t, y, inputs):
                 new_inputs = inputs_to_dict(inputs)
@@ -529,14 +533,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 )
 
                 # rootfn
-                for event in model.terminate_events_eval:
-                    event = event._demote_constants()
+                for ix, _ in enumerate(model.terminate_events_eval):
+                    model.terminate_events_eval[ix]._demote_constants()
 
                 def fcn_rootfn(t, y, inputs):
-                    return_root = jnp.array(
-                        [event(t, y, inputs) for event in model.terminate_events_eval]
+                    return jnp.array(
+                        [event(t, y, inputs) for event in model.terminate_events_eval],
+                        dtype=jnp.float32,
                     ).reshape(-1)
-                    return return_root
 
                 def fcn_rootfn_demoted(t, y, inputs):
                     return self._demote_64_to_32(fcn_rootfn)(t, y, inputs)
@@ -545,13 +549,36 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     fcn_rootfn_demoted, t_eval, y0, inputs0
                 )
 
+                # jac_rhs_algebraic_action
+                jac_rhs_algebraic_action_demoted = (
+                    rhs_algebraic_demoted.get_jacobian_action()
+                )
+                y0S = y0
+
+                def fcn_jac_rhs_algebraic_action(t, y, v, p):
+                    return jac_rhs_algebraic_action_demoted(t, y, v, p)
+
+                jac_rhs_algebraic_action = self._make_iree_function(
+                    fcn_jac_rhs_algebraic_action, t_eval, y0, y0S, inputs0
+                )
+
+                # sensfn
+                if model.jacp_rhs_algebraic_eval is None:
+                    sensfn = idaklu.IREEBaseFunctionType()  # empty equation
+                else:
+                    sensfn_demoted = rhs_algebraic_demoted.get_sensitivities()
+
+                    def fcn_sensfn(t, y, p):
+                        return sensfn_demoted(t, y, p)
+
+                    sensfn = self._make_iree_function(
+                        fcn_sensfn, t_eval, jnp.zeros_like(y0), inputs0
+                    )
+
                 # output_variables
                 self.var_idaklu_fcns = []
                 self.dvar_dy_idaklu_fcns = []
                 self.dvar_dp_idaklu_fcns = []
-
-                jac_rhs_algebraic_action = idaklu.IREEBaseFunctionType()
-                sensfn = idaklu.IREEBaseFunctionType()
 
                 pybamm.demote_expressions_to_32bit = False
             else:
@@ -647,8 +674,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             with open(f"logs/{name}.mlir", "w") as f:
                 f.write(mlir)
             warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})")
-        if mlir.count("i64") > 0:
-            warnings.warn(f"i64 found in {name} (x{mlir.count('i64')})")
 
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
         return pybamm.EvaluatorJax._demote_64_to_32(x)
@@ -669,10 +694,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs_dict or {}
         # stack inputs
         if inputs_dict:
+            inputs_dict_keys = list(inputs_dict.keys())  # save order
             arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])
+            inputs_dict_keys = []
 
         # do this here cause y0 is set after set_up (calc consistent conditions)
         y0 = model.y0
@@ -681,25 +708,45 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y0 = y0.flatten()
 
         y0S = model.y0S
-        # only casadi solver needs sensitivity ics
-        if model.convert_to_format != "casadi":
-            y0S = None
-        if y0S is not None:
-            if isinstance(y0S, casadi.DM):
-                y0S = (y0S,)
-
-            y0S = (x.full() for x in y0S)
-            y0S = [x.flatten() for x in y0S]
-
-        # solver works with ydot0 set to zero
-        ydot0 = np.zeros_like(y0)
-        if y0S is not None:
-            ydot0S = [np.zeros_like(y0S_i) for y0S_i in y0S]
-            y0full = np.concatenate([y0, *y0S])
-            ydot0full = np.concatenate([ydot0, *ydot0S])
+        if (
+            model.convert_to_format == "jax"
+            and self._options["jax_evaluator"] == "iree"
+        ):
+            if y0S is not None:
+                pybamm.demote_expressions_to_32bit = True
+                # preserve order of inputs
+                y0S = self._demote_64_to_32(
+                    np.concatenate([y0S[k] for k in inputs_dict_keys]).flatten()
+                )
+                y0full = self._demote_64_to_32(np.concatenate([y0, y0S]).flatten())
+                ydot0S = self._demote_64_to_32(np.zeros_like(y0S))
+                ydot0full = self._demote_64_to_32(
+                    np.concatenate([np.zeros_like(y0), ydot0S]).flatten()
+                )
+                pybamm.demote_expressions_to_32bit = False
+            else:
+                y0full = y0
+                ydot0full = np.zeros_like(y0)
         else:
-            y0full = y0
-            ydot0full = ydot0
+            # only casadi solver needs sensitivity ics
+            if model.convert_to_format != "casadi":
+                y0S = None
+            if y0S is not None:
+                if isinstance(y0S, casadi.DM):
+                    y0S = (y0S,)
+
+                y0S = (x.full() for x in y0S)
+                y0S = [x.flatten() for x in y0S]
+
+            # solver works with ydot0 set to zero
+            ydot0 = np.zeros_like(y0)
+            if y0S is not None:
+                ydot0S = [np.zeros_like(y0S_i) for y0S_i in y0S]
+                y0full = np.concatenate([y0, *y0S])
+                ydot0full = np.concatenate([ydot0, *ydot0S])
+            else:
+                y0full = y0
+                ydot0full = ydot0
 
         try:
             atol = model.atol

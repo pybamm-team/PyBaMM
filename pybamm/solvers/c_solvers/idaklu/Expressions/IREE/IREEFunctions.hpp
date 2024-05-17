@@ -40,7 +40,7 @@ public:
 
   typedef IREEBaseFunctionType BaseFunctionType;
   std::unique_ptr<IREESession> session;
-  std::vector<float> result;
+  std::vector<std::vector<float>> result;
   std::vector<std::vector<int>> input_shape;
   std::vector<std::vector<int>> output_shape;
   std::vector<std::vector<float>> input_data;
@@ -81,18 +81,24 @@ public:
   std::unique_ptr<IREECompiler> iree_compiler;
 
   typedef IREEFunction::BaseFunctionType BaseFunctionType;  // expose typedef in class
-
+  
   int iree_init_status;
-  int iree_init() {
+
+  int iree_init(const std::string& device_uri, const std::string& target_backends) {
     // Initialise IREE
     DEBUG("IREEFunctions: Initialising IREECompiler");
-    iree_compiler = std::make_unique<IREECompiler>("local-sync");  // local-sync | metal
+    iree_compiler = std::make_unique<IREECompiler>(device_uri.c_str());
 
     int iree_argc = 2;
-    const char* iree_argv[2] = {"iree", "--iree-hal-target-backends=llvm-cpu"};
+    std::string target_backends_str = "--iree-hal-target-backends=" + target_backends;
+    const char* iree_argv[2] = {"iree", target_backends_str.c_str()};
     iree_compiler->init(iree_argc, iree_argv);
     DEBUG("IREEFunctions: Initialised IREECompiler");
     return 0;
+  }
+  
+  int iree_init() {
+    return iree_init("local-sync", "llvm-cpu");
   }
 
 

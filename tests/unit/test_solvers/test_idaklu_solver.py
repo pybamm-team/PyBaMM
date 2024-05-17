@@ -246,11 +246,7 @@ class TestIDAKLUSolver(TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in [
-            "python",
-            "casadi",
-            "jax",
-        ]:  # , "iree"]: ############################################
+        for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
@@ -318,21 +314,22 @@ class TestIDAKLUSolver(TestCase):
             dyda_fd = (sol_plus.y - sol_neg.y) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
+            decimal = (
+                2 if form == "iree" else 6
+            )  # iree currently operates with single precision
+            np.testing.assert_array_almost_equal(dyda_ida, dyda_fd, decimal=decimal)
 
             # get the sensitivities for the variable
             d2uda = sol["2u"].sensitivities["a"]
-            np.testing.assert_array_almost_equal(2 * dyda_ida[0:200:2], d2uda)
+            np.testing.assert_array_almost_equal(
+                2 * dyda_ida[0:200:2], d2uda, decimal=decimal
+            )
 
     def test_sensitivities_with_events(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in [
-            "casadi",
-            "python",
-            "jax",
-        ]:  # , "iree"]: ############################################
+        for form in ["casadi", "python", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
             if form == "casadi":
@@ -393,8 +390,11 @@ class TestIDAKLUSolver(TestCase):
             dyda_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
+            decimal = (
+                2 if form == "iree" else 6
+            )  # iree currently operates with single precision
             np.testing.assert_array_almost_equal(
-                dyda_ida[: (2 * max_index), :], dyda_fd
+                dyda_ida[: (2 * max_index), :], dyda_fd, decimal=decimal
             )
 
             sol_plus = solver.solve(
@@ -408,7 +408,7 @@ class TestIDAKLUSolver(TestCase):
             dydb_fd = dydb_fd.transpose().reshape(-1, 1)
 
             np.testing.assert_array_almost_equal(
-                dydb_ida[: (2 * max_index), :], dydb_fd
+                dydb_ida[: (2 * max_index), :], dydb_fd, decimal=decimal
             )
 
     def test_failures(self):
@@ -694,7 +694,7 @@ class TestIDAKLUSolver(TestCase):
         sol["x_s [m]"].initialise_1D()
 
     def test_with_output_variables_and_sensitivities(self):
-        # Construct a model and solve for all vairables, then test
+        # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
 

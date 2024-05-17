@@ -74,7 +74,7 @@ public:
     std::string function_name,
     const std::vector<std::vector<int>>& inputs,
     const std::vector<std::vector<float>>& data,
-    std::vector<float>& result
+    std::vector<std::vector<float>>& result
   );
 };
 
