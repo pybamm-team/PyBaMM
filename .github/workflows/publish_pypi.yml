@@ -130,6 +130,7 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: 11.0
           # Sourced from
+          # License: BSD-3-Clause
           # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
           CIBW_BEFORE_ALL_MACOS: |
             set -e -x
@@ -161,11 +162,6 @@ jobs:
             for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
               cp $lib_dir/$lib $HOME/.local/lib/
               install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-              # can be removed I think
-              # install_name_tool -change $lib_dir/$lib $HOME/.local/lib/$lib $HOME/.local/lib/libgfortran.5.dylib
-              # install_name_tool -change $lib_dir/$lib $HOME/.local/lib/$lib $HOME/.local/lib/libgfortran.dylib
-              # install_name_tool -change $lib_dir/$lib $HOME/.local/lib/$lib $HOME/.local/lib/libquadmath.0.dylib
-              # install_name_tool -change $lib_dir/$lib $HOME/.local/lib/$lib $HOME/.local/lib/libquadmath.dylib
             done
 
             export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
@@ -203,6 +199,7 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: 11.0
           # Sourced from
+          # License: BSD-3-Clause
           # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
           CIBW_BEFORE_ALL_MACOS: |
             set -e -x
