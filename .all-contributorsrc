@@ -1,6 +1,7 @@
 {
   "files": [
-    "all_contributors.md"
+    "all_contributors.md",
+    "README.md"
   ],
   "imageSize": 100,
   "commit": false,
@@ -864,6 +865,16 @@
       "profile": "https://github.com/Hongmeiqi",
       "contributions": [
         "doc"
+      ]
+    },
+    {
+      "login": "mleot",
+      "name": "mleot",
+      "avatar_url": "https://avatars.githubusercontent.com/u/140573653?v=4",
+      "profile": "https://github.com/mleot",
+      "contributions": [
+        "code",
+        "test"
       ]
     }
   ],
