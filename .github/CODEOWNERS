@@ -1,17 +1,17 @@
 # Automatically request reviews from maintainers
 
 # Package
-/pybamm/discretisations/ @martinjrobins @rtimms @tinosulzer
-/pybamm/experiment/ @brosaplanella @martinjrobins @rtimms @tinosulzer @TomTranter
-/pybamm/expression_tree/ @martinjrobins @rtimms @tinosulzer
-/pybamm/geometry/ @martinjrobins @rtimms @tinosulzer
-/pybamm/input/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @kratman
-/pybamm/meshes/ @martinjrobins @rtimms @tinosulzer @rtimms
-/pybamm/models/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms
-/pybamm/parameters/ @brosaplanella @DrSOKane @rtimms @tinosulzer @TomTranter @rtimms  @kratman
-/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @tinosulzer @rtimms  @kratman @agriyakhetarpal
-/pybamm/solvers/ @martinjrobins @rtimms @tinosulzer @TomTranter @rtimms
-/pybamm/spatial_methods/ @martinjrobins @rtimms @tinosulzer @rtimms
+/pybamm/discretisations/ @martinjrobins @rtimms @valentinsulzer
+/pybamm/experiment/ @brosaplanella @martinjrobins @rtimms @valentinsulzer @TomTranter
+/pybamm/expression_tree/ @martinjrobins @rtimms @valentinsulzer
+/pybamm/geometry/ @martinjrobins @rtimms @valentinsulzer
+/pybamm/input/ @brosaplanella @DrSOKane @rtimms @valentinsulzer @TomTranter @kratman
+/pybamm/meshes/ @martinjrobins @rtimms @valentinsulzer @rtimms
+/pybamm/models/ @brosaplanella @DrSOKane @rtimms @valentinsulzer @TomTranter @rtimms
+/pybamm/parameters/ @brosaplanella @DrSOKane @rtimms @valentinsulzer @TomTranter @rtimms  @kratman
+/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @valentinsulzer @rtimms  @kratman @agriyakhetarpal
+/pybamm/solvers/ @martinjrobins @rtimms @valentinsulzer @TomTranter @rtimms
+/pybamm/spatial_methods/ @martinjrobins @rtimms @valentinsulzer @rtimms
 /pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/, will not recurse
 
 # CI/CD workflows

@@ -498,7 +498,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.U_init = pybamm.Parameter(
                 f"{pref}Initial voltage in {domain} electrode [V]",
             )
-            self.c_init = self.x(self.U_init) * self.c_max
+            self.c_init = self.x(self.U_init, main.T_init) * self.c_max
         else:
             self.c_init = pybamm.FunctionParameter(
                 f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
@@ -623,7 +623,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
     def U(self, sto, T, lithiation=None):
-        """Dimensional open-circuit potential [V]"""
+        """
+        Dimensional open-circuit potential [V], calculated as
+        U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). See the documentation for
+        dUdT for more details.
+        """
         # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
         # will ensure that ocp goes to +- infinity if sto goes into that region
         # anyway
@@ -653,7 +657,14 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def dUdT(self, sto):
         """
-        Dimensional entropic change of the open-circuit potential [V.K-1]
+        Dimensional entropic change of the open-circuit potential [V.K-1].
+
+        Note: in the "classical" formulation, the open-circuit potential is defined
+        as U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). The user provides U_ref and
+        dUdT, and the model uses these to calculate U. dUdT is also used to calculate
+        the reversible heat generation term in the thermal model. However, in the
+        "MSMR" formulation, stoichiometry is explicitly defined as a function of U and
+        T, and dUdT is only used to calculate the reversible heat generation term.
         """
         domain, Domain = self.domain_Domain
         inputs = {
@@ -666,52 +677,54 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
-    def X_j(self, index):
+    def X_j(self, T, index):
         "Available host sites indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        Xj = pybamm.Parameter(f"X_{d}_{index}")
+        Xj = pybamm.FunctionParameter(f"X_{d}_{index}", inputs)
         return Xj
 
-    def U0_j(self, index):
+    def U0_j(self, T, index):
         "Equilibrium potential indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        U0j = pybamm.Parameter(f"U0_{d}_{index}")
+        U0j = pybamm.FunctionParameter(f"U0_{d}_{index}", inputs)
         return U0j
 
-    def w_j(self, index):
+    def w_j(self, T, index):
         "Order parameter indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        wj = pybamm.Parameter(f"w_{d}_{index}")
+        wj = pybamm.FunctionParameter(f"w_{d}_{index}", inputs)
         return wj
 
-    def alpha_bv_j(self, index):
+    def alpha_bv_j(self, T, index):
         "Dimensional Butler-Volmer exchange-current density indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        alpha_bv_j = pybamm.Parameter(f"a_{d}_{index}")
+        alpha_bv_j = pybamm.FunctionParameter(f"a_{d}_{index}", inputs)
         return alpha_bv_j
 
-    def x_j(self, U, index):
+    def x_j(self, U, T, index):
         "Fractional occupancy of site j as a function of potential"
-        T = self.main_param.T_ref
         f = self.main_param.F / (self.main_param.R * T)
-        U0j = self.U0_j(index)
-        wj = self.w_j(index)
-        Xj = self.X_j(index)
+        U0j = self.U0_j(T, index)
+        wj = self.w_j(T, index)
+        Xj = self.X_j(T, index)
         # Equation 5, Baker et al 2018
         xj = Xj / (1 + pybamm.exp(f * (U - U0j) / wj))
         return xj
 
-    def dxdU_j(self, U, index):
+    def dxdU_j(self, U, T, index):
         "Derivative of fractional occupancy of site j as a function of potential [V-1]"
-        T = self.main_param.T_ref
         f = self.main_param.F / (self.main_param.R * T)
-        U0j = self.U0_j(index)
-        wj = self.w_j(index)
-        Xj = self.X_j(index)
+        U0j = self.U0_j(T, index)
+        wj = self.w_j(T, index)
+        Xj = self.X_j(T, index)
         e = pybamm.exp(f * (U - U0j) / wj)
         # Equation 25, Baker et al 2018
         dxjdU = -(f / wj) * (Xj * e) / (1 + e) ** 2
@@ -725,13 +738,13 @@ class ParticleLithiumIonParameters(BaseParameters):
         tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
         c_e_ref = self.main_param.c_e_init
-        xj = self.x_j(U, index)
+        xj = self.x_j(U, T, index)
         # xj = pybamm.maximum(pybamm.minimum(xj, (1 - tol)), tol)
 
         f = self.main_param.F / (self.main_param.R * T)
-        wj = self.w_j(index)
-        self.X_j(index)
-        aj = self.alpha_bv_j(index)
+        wj = self.w_j(T, index)
+        self.X_j(T, index)
+        aj = self.alpha_bv_j(T, index)
         j0_ref_j = pybamm.FunctionParameter(
             f"j0_ref_{d}_{index}", {"Temperature [K]": T}
         )
@@ -749,21 +762,21 @@ class ParticleLithiumIonParameters(BaseParameters):
         j0_j = (
             j0_ref_j
             * xj**wj
-            * pybamm.exp(f * (1 - aj) * (U - self.U0_j(index)))
+            * pybamm.exp(f * (1 - aj) * (U - self.U0_j(T, index)))
             * (c_e / c_e_ref) ** (1 - aj)
         )
         return j0_j
 
-    def x(self, U):
+    def x(self, U, T):
         "Stoichiometry as a function of potential (for use with MSMR models)"
         N = int(self.options["number of MSMR reactions"])
         # Equation 6, Baker et al 2018
         x = 0
         for i in range(N):
-            x += self.x_j(U, i)
+            x += self.x_j(U, T, i)
         return x
 
-    def dxdU(self, U):
+    def dxdU(self, U, T):
         """
         Differential stoichiometry as a function of potential (for use with MSMR models)
         """
@@ -771,7 +784,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Equation 25, Baker et al 2018
         dxdU = 0
         for i in range(N):
-            dxdU += self.dxdU_j(U, i)
+            dxdU += self.dxdU_j(U, T, i)
         return dxdU
 
     def t_change(self, sto):
