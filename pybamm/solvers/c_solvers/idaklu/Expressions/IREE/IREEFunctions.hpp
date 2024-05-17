@@ -14,7 +14,7 @@ public:
   expr_int nnz() override { return _nnz; }
   std::vector<expr_int> get_row() override { return _get_row; }
   std::vector<expr_int> get_col() override { return _get_col; }
-  
+
   expr_int _nnz = 0;
   std::vector<expr_int> _get_row;
   std::vector<expr_int> _get_col;
@@ -44,12 +44,12 @@ public:
   std::vector<std::vector<int>> input_shape;
   std::vector<std::vector<int>> output_shape;
   std::vector<std::vector<float>> input_data;
-  
+
   /**
    * @brief Constructor
    */
   explicit IREEFunction(const BaseFunctionType &f);
-  
+
   void operator()() override;
 
   void operator()(const std::vector<realtype*>& inputs,
@@ -81,7 +81,7 @@ public:
   std::unique_ptr<IREECompiler> iree_compiler;
 
   typedef IREEFunction::BaseFunctionType BaseFunctionType;  // expose typedef in class
-  
+
   int iree_init_status;
 
   int iree_init(const std::string& device_uri, const std::string& target_backends) {
@@ -96,7 +96,7 @@ public:
     DEBUG("IREEFunctions: Initialised IREECompiler");
     return 0;
   }
-  
+
   int iree_init() {
     return iree_init("local-sync", "llvm-cpu");
   }
@@ -125,7 +125,7 @@ public:
     const std::vector<BaseFunctionType*>& dvar_dy_fcns,
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
     const Options& options
-  ) : 
+  ) :
     iree_init_status(iree_init()),
     rhs_alg_iree(rhs_alg),
     jac_times_cjmass_iree(jac_times_cjmass),

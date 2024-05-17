@@ -16,7 +16,7 @@ public:
   expr_int nnz() override { return _nnz; }
   std::vector<expr_int> get_row() override { return _get_row; }
   std::vector<expr_int> get_col() override { return _get_col; }
-  
+
   expr_int _nnz = 0;
   std::vector<expr_int> _get_row;
   std::vector<expr_int> _get_col;
@@ -30,12 +30,12 @@ class CasadiFunction : public Expression
 public:
 
   typedef casadi::Function BaseFunctionType;
-  
+
   /**
    * @brief Constructor
    */
   explicit CasadiFunction(const BaseFunctionType &f);
-  
+
   void operator()() override;
 
   void operator()(const std::vector<realtype*>& inputs,
@@ -86,7 +86,7 @@ public:
     const std::vector<BaseFunctionType*>& dvar_dy_fcns,
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
     const Options& options
-  ) : 
+  ) :
     rhs_alg_casadi(rhs_alg),
     jac_times_cjmass_casadi(jac_times_cjmass),
     jac_action_casadi(jac_action),

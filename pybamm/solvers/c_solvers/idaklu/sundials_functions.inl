@@ -11,7 +11,7 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
   DEBUG("residual_eval");
   ExpressionSet<T> *p_python_functions =
     static_cast<ExpressionSet<T> *>(user_data);
-  
+
   DEBUG_VECTORn(yy, 100);
   DEBUG_VECTORn(yp, 100);
 
@@ -27,14 +27,14 @@ int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *us
   p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
   p_python_functions->mass_action->m_res[0] = tmp;
   (*p_python_functions->mass_action)();
-  
+
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
   axpy(ns, -1., tmp, NV_DATA(rr));
 
   DEBUG("mass - rhs");
   DEBUG_VECTORn(rr, 100);
-  
+
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
 }
@@ -126,7 +126,7 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
   axpy(ns, -cj, tmp, NV_DATA(Jv));
-  
+
   DEBUG_VECTORn(Jv, 10);
 
   return 0;
@@ -190,7 +190,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   DEBUG("inputs = " << p_python_functions->inputs);
   DEBUG("cj = " << cj);
   DEBUG_v(jac_data, 100);
-  
+
   if (p_python_functions->options.using_banded_matrix)
   {
     // copy data from temporary matrix to the banded matrix

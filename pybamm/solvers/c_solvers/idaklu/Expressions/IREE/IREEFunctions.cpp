@@ -178,7 +178,7 @@ void IREEFunction::operator()()
   DEBUG("IreeFunction operator(): " << module_name);
 
   // ***********************************************************************************
-  // 
+  //
   // MLIR output from Jax does not retain the proper call signature of the original
   // function. This appears to be due to aggressive optimisations in the lowering
   // process. As a result, we need to manually map the input arguments to the
@@ -186,14 +186,14 @@ void IREEFunction::operator()()
   // pass them (per function) as m_func.kept_var_idx.  Additionally, model inputs can be
   // of arbitrary length, so we need to index into the input arguments using the
   // corresponding shape. This is done by m_arg_argno and m_arg_argix.
-  // 
+  //
   // For example:
   //   def fcn(x, y, z): return 2 * y
   //   produces MLIR with an {arg0} -> {res0} signature (i.e. x and z are reduced out)
   //   with kept_var_idx = [1]
   //
   // ***********************************************************************************
-  
+
   DEBUG("Copying m_arg to input_data (" << m_func.kept_var_idx.size() << " vars)");
   for (int j=0; j<m_func.kept_var_idx.size(); j++) {
     int mlir_arg = m_func.kept_var_idx[j];
@@ -225,7 +225,7 @@ void IREEFunction::operator()()
     std::cerr << "MLIR: " << mlir.substr(0,1000) << std::endl;
     throw std::runtime_error("Execution failed");
   }
-  
+
   // Copy result to output
   for(size_t k=0; k<result.size(); k++) {
     for(size_t j=0; j<result[k].size(); j++) {

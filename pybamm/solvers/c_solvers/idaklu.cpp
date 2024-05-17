@@ -63,7 +63,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("yp0"),
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
-  
+
   /*m.def("test_iree", &test_iree,
     "Test the IREE JIT",
     py::arg("mlir_code"),
@@ -94,7 +94,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
     py::return_value_policy::take_ownership);
-  
+
   m.def("create_iree_solver", &create_idaklu_solver<IREEFunctions>,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
@@ -170,7 +170,7 @@ PYBIND11_MODULE(idaklu, m)
   );
 
   py::class_<casadi::Function>(m, "Function");
-  
+
   py::class_<IREEBaseFunctionType>(m, "IREEBaseFunctionType")
     .def(py::init<>())
     .def_readwrite("mlir", &IREEBaseFunctionType::mlir)

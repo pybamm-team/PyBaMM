@@ -99,7 +99,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
     DEBUG("No device URI provided, using local-sync\n");
     device_uri = "local-sync";
   }
-  
+
   int cl_argc = argc;
   const char *COMPILER_PATH = std::getenv("IREE_COMPILER_PATH");
   char iree_compiler_lib[256];
@@ -151,7 +151,7 @@ int IREESession::initCompiler() {
 
   // Read the MLIR from file
   //error = ireeCompilerSourceOpenFile(s.session, mlir_filename, &s.source);
-  
+
   // Read the MLIR from memory
   error = ireeCompilerSourceWrapBuffer(
     s.session,
@@ -211,7 +211,7 @@ int IREESession::initCompileToByteCode() {
     cleanup_compiler_state(s);
     return 1;
   }
-  
+
   // Once the bytecode has been written, retrieve the memory map
   ireeCompilerOutputMapMemory(s.output, &contents, &size);
 
@@ -251,10 +251,10 @@ int IREESession::initRuntime() {
       iree_make_const_byte_span(contents, size),
       iree_allocator_null());
   }
-  
+
   if (!iree_status_is_ok(status))
     return 1;
-  
+
   return 0;
 };
 

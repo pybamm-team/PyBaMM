@@ -475,7 +475,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Convert Jax functions to MLIR (also, demote to single precision)
                 idaklu_solver_fcn = idaklu.create_iree_solver
                 pybamm.demote_expressions_to_32bit = True
-                warnings.warn("Demoting expressions to 32-bit for MLIR conversion")
+                warnings.warn(
+                    "Demoting expressions to 32-bit for MLIR conversion", stacklevel=2
+                )
 
                 # input arguments (used for lowering)
                 t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnp.float32))
@@ -673,7 +675,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if mlir.count("f64") > 0:
             with open(f"logs/{name}.mlir", "w") as f:
                 f.write(mlir)
-            warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})")
+            warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})", stacklevel=2)
 
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
         return pybamm.EvaluatorJax._demote_64_to_32(x)
