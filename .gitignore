@@ -137,3 +137,7 @@ results/
 
 # tests
 test_callback.log
+
+# openmp downloads
+install_KLU_Sundials/openmp-*
+install_KLU_Sundials/usr/
