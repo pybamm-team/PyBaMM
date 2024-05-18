@@ -43,11 +43,11 @@ You can install the above with
 
 	Where ``X`` is the version sub-number.
 
-.. tab:: MacOS
+.. tab:: macOS
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp cmake pandoc
+		brew install python openblas gcc gfortran graphviz cmake pandoc
 
 .. note::
 
@@ -82,8 +82,9 @@ If you are running windows, you can simply skip this section and jump to :ref:`p
 	  # in the PyBaMM/ directory
 	  nox -s pybamm-requires
 
-This will download, compile and install the SuiteSparse and SUNDIALS libraries.
-Both libraries are installed in ``~/.local``.
+This will download, compile and install the SuiteSparse and SUNDIALS (with OpenMP) libraries
+and the ``pybind11`` headers.
+SuiteSparse and SUNDIALS are installed in ``~/.local`` by default.
 
 For users requiring more control over the installation process, the ``pybamm-requires`` session supports additional command-line arguments:
 
@@ -110,7 +111,7 @@ If you'd rather do things yourself,
 
 1. Make sure you have CMake installed
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
-3. Compile and install SUNDIALS.
+3. Compile and install SUNDIALS with `OpenMP support <https://mac.r-project.org/openmp/>`_.
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
 
 
@@ -315,12 +316,12 @@ source files to your current directory.
 ``ValueError: Integrator name ida does not exist``, or
 ``ValueError: Integrator name cvode does not exist``.
 
-**Solution:** This could mean that you have not installed
-``scikits.odes`` correctly, check the instructions given above and make
+**Solution:** This could mean that you have not linked to
+SUNDIALS correctly, check the instructions given above and make
 sure each command was successful.
 
 One possibility is that you have not set your ``LD_LIBRARY_PATH`` to
-point to the sundials library, type ``echo $LD_LIBRARY_PATH`` and make
+point to the SUNDIALS library, type ``echo $LD_LIBRARY_PATH`` and make
 sure one of the directories printed out corresponds to where the
 SUNDIALS libraries are located.
 

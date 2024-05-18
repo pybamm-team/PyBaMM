@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-12]
+        os: [ubuntu-latest, macos-13]
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -111,15 +111,6 @@ jobs:
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
-
-      # sometimes gfortran cannot be found, so reinstall gcc just to be sure
-      - name: Install SuiteSparse and SUNDIALS on macOS
-        if: matrix.os == 'macos-12'
-        run: |
-          brew install graphviz libomp
-          brew reinstall gcc
-          python -m pip install cmake wget
-          python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
@@ -134,11 +125,50 @@ jobs:
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-12'
+        if: matrix.os == 'macos-13'
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BEFORE_BUILD_MACOS: >
-            python -m pip install --upgrade cmake casadi setuptools wheel
+          MACOSX_DEPLOYMENT_TARGET: 11.0
+          # Sourced from
+          # License: BSD-3-Clause
+          # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
+          CIBW_BEFORE_ALL_MACOS: |
+            set -e -x
+
+            # download gfortran with proper macos minimum version (11.0)
+            curl -L https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-x86_64-native.tar.gz -o gfortran.tar.gz
+
+            GFORTRAN_SHA256=$(shasum --algorithm 256 gfortran.tar.gz)
+            KNOWN_SHA256="981367dd0ad4335613e91bbee453d60b6669f5d7e976d18c7bdb7f1966f26ae4  gfortran.tar.gz"
+            if [ "$GFORTRAN_SHA256" != "$KNOWN_SHA256" ]; then
+              echo "SHA256 mismatch for gfortran.tar.gz"
+              echo "expected: $KNOWN_SHA256"
+              echo "got: $GFORTRAN_SHA256"
+              exit 1
+            fi
+
+            mkdir -p gfortran_installed/
+            tar -xv -C gfortran_installed/ -f gfortran.tar.gz
+
+            export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
+            export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
+
+            # link libgfortran.5.dylib, libgfortran.dylib, libquadmath.0.dylib, libquadmath.dylib, libgcc_s.1.dylib, libgcc_s.1.1.dylib
+            # and place them in $HOME/.local/lib, and then change rpath
+            # to $HOME/.local/lib
+
+            mkdir -p $HOME/.local/lib
+            lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
+            for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
+              cp $lib_dir/$lib $HOME/.local/lib/
+              install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
+            done
+
+            export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
+
+            python -m pip install cmake wget
+            python scripts/install_KLU_Sundials.py
+          CIBW_BEFORE_BUILD_MACOS: python -m pip install --upgrade pip cmake casadi setuptools wheel delocate
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
@@ -162,18 +192,57 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      - name: Install SuiteSparse and SUNDIALS on macOS
-        run: |
-          brew install graphviz libomp
-          brew reinstall gcc
-          python -m pip install cmake pipx
-          python scripts/install_KLU_Sundials.py
-
       - name: Build wheels on macOS arm64
-        run: python -m pipx run cibuildwheel --output-dir wheelhouse
+        run: |
+          python -m pip install cibuildwheel
+          python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
-          CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+          MACOSX_DEPLOYMENT_TARGET: 11.0
+          # Sourced from
+          # License: BSD-3-Clause
+          # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
+          CIBW_BEFORE_ALL_MACOS: |
+            set -e -x
+
+            # download gfortran with proper macos minimum version (11.0)
+            curl -L https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-arm64-native.tar.gz -o gfortran.tar.gz
+
+            GFORTRAN_SHA256=$(shasum --algorithm 256 gfortran.tar.gz)
+            KNOWN_SHA256="84364eee32ba843d883fb8124867e2bf61a0cd73b6416d9897ceff7b85a24604  gfortran.tar.gz"
+            if [ "$GFORTRAN_SHA256" != "$KNOWN_SHA256" ]; then
+              echo "SHA256 mismatch for gfortran.tar.gz"
+              echo "expected: $KNOWN_SHA256"
+              echo "got: $GFORTRAN_SHA256"
+              exit 1
+            fi
+
+            mkdir -p gfortran_installed/
+            tar -xv -C gfortran_installed/ -f gfortran.tar.gz
+
+            export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
+            export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
+
+            # link libgfortran.5.dylib, libgfortran.dylib, libquadmath.0.dylib, libquadmath.dylib, libgcc_s.1.1.dylib
+            # and place them in $HOME/.local/lib, and then change rpath
+            # note: libgcc_s.1.dylib not present for arm64, skip for now
+            # to $HOME/.local/lib
+
+            mkdir -p $HOME/.local/lib
+            lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
+            for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
+              cp $lib_dir/$lib $HOME/.local/lib/
+              install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
+            done
+
+            export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
+
+            python -m pip install cmake wget
+            python scripts/install_KLU_Sundials.py
+          CIBW_BEFORE_BUILD_MACOS: python -m pip install --upgrade pip cmake casadi setuptools wheel delocate
+          # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
+            delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+            for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload wheels for macOS arm64
