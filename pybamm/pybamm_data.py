@@ -96,7 +96,6 @@ class DataLoader:
             registry=self.files,
         )
 
-
     def get_data(self, filename: str):
         """
         Fetches the data file from upstream and stores it in the local cache directory under pybamm directory.
@@ -114,7 +113,6 @@ class DataLoader:
             return pathlib.Path(f"{self.path}/{self.version}/{filename}")
         except NameError:
             raise NameError(f"Unable to find {filename} in the registry") from None
-
 
     def show_registry(self, checksum: bool = False):
         """

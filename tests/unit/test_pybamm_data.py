@@ -13,6 +13,7 @@ def no_internet_connection():
     except requests.ConnectionError:
         return True
 
+
 @pytest.mark.skipif(
     no_internet_connection(),
     reason="Network not available to download files from registry",
