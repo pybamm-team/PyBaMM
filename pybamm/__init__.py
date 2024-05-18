@@ -195,3 +195,27 @@ from . import callbacks
 
 # Remove any imported modules, so we don't expose them as part of pybamm
 del sys
+
+__all__ = [
+    "batch_study",
+    "callbacks",
+    "citations",
+    "discretisations",
+    "doc_utils",
+    "experiment",
+    "expression_tree",
+    "geometry",
+    "input",
+    "logger",
+    "meshes",
+    "models",
+    "parameters",
+    "plotting",
+    "settings",
+    "simulation",
+    "solvers",
+    "spatial_methods",
+    "type_definitions",
+    "util",
+    "version",
+]

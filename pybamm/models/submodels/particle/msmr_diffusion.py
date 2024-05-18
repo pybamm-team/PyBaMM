@@ -12,6 +12,10 @@ class MSMRDiffusion(BaseParticle):
     :footcite:t:`Verbrugge2017`, along with parameter values for a number of
     substitutional materials.
 
+    In this submodel, the stoichiometry depends on the potential in the particle and
+    the temperature, so dUdT is not used. See `:meth:`pybamm.LithiumIonParameters.dUdT`
+    for more explanation.
+
     Parameters
     ----------
     param : parameter class
@@ -45,7 +49,6 @@ class MSMRDiffusion(BaseParticle):
         # particle-size distribution, if applicable). The potential is then used to
         # calculate the stoichiometry, which is used to calculate the particle
         # concentration.
-        c_max = self.phase_param.c_max
         if self.size_distribution is False:
             if self.x_average is False:
                 U = pybamm.Variable(
@@ -59,7 +62,7 @@ class MSMRDiffusion(BaseParticle):
                 U.print_name = f"U_{domain[0]}"
             else:
                 U_xav = pybamm.Variable(
-                    f"X-averaged {domain} {phase_name}particle " "potential [V]",
+                    f"X-averaged {domain} {phase_name}particle potential [V]",
                     f"{domain} {phase_name}particle",
                     auxiliary_domains={"secondary": "current collector"},
                 )
@@ -68,7 +71,7 @@ class MSMRDiffusion(BaseParticle):
         else:
             if self.x_average is False:
                 U_distribution = pybamm.Variable(
-                    f"{Domain} {phase_name}particle " "potential distribution [V]",
+                    f"{Domain} {phase_name}particle potential distribution [V]",
                     domain=f"{domain} {phase_name}particle",
                     auxiliary_domains={
                         "secondary": f"{domain} {phase_name}particle size",
@@ -117,24 +120,6 @@ class MSMRDiffusion(BaseParticle):
                 self._get_standard_potential_distribution_variables(U_distribution)
             )
 
-            # Calculate the stoichiometry distribution from the potential distribution
-            x_distribution = self.phase_param.x(U_distribution)
-            dxdU_distribution = self.phase_param.dxdU(U_distribution)
-
-            # Standard stoichiometry and concentration distribution variables
-            # (size-dependent)
-            c_s_distribution = x_distribution * c_max
-            variables.update(
-                self._get_standard_concentration_distribution_variables(
-                    c_s_distribution
-                )
-            )
-            variables.update(
-                self._get_standard_differential_stoichiometry_distribution_variables(
-                    dxdU_distribution
-                )
-            )
-
             # Standard size-averaged variables. Average potentials using
             # the volume-weighted distribution since they are volume-based
             # quantities. Necessary for output variables "Total lithium in
@@ -145,21 +130,6 @@ class MSMRDiffusion(BaseParticle):
 
         # Standard potential variables
         variables.update(self._get_standard_potential_variables(U))
-
-        # Standard fractional occupancy variables (these are indexed by reaction number)
-        variables.update(self._get_standard_fractional_occupancy_variables(U))
-        variables.update(
-            self._get_standard_differential_fractional_occupancy_variables(U)
-        )
-
-        # Calculate the (total) stoichiometry from the potential
-        x = self.phase_param.x(U)
-        dxdU = self.phase_param.dxdU(U)
-
-        # Standard (total) stoichiometry and concentration variables (size-independent)
-        c_s = x * c_max
-        variables.update(self._get_standard_concentration_variables(c_s))
-        variables.update(self._get_standard_differential_stoichiometry_variables(dxdU))
 
         return variables
 
@@ -190,9 +160,7 @@ class MSMRDiffusion(BaseParticle):
                     f"X-averaged {domain} {phase_name}particle differential "
                     "stoichiometry [V-1]"
                 ]
-                U = variables[
-                    f"X-averaged {domain} {phase_name}particle " "potential [V]"
-                ]
+                U = variables[f"X-averaged {domain} {phase_name}particle potential [V]"]
                 T = pybamm.PrimaryBroadcast(
                     variables[f"X-averaged {domain} electrode temperature [K]"],
                     [f"{domain} {phase_name}particle"],
@@ -217,7 +185,7 @@ class MSMRDiffusion(BaseParticle):
                     "distribution [V-1]"
                 ]
                 U = variables[
-                    f"{Domain} {phase_name}particle potential " "distribution [V]"
+                    f"{Domain} {phase_name}particle potential distribution [V]"
                 ]
                 # broadcast T to "particle size" domain then again into "particle"
                 T = pybamm.PrimaryBroadcast(
@@ -302,13 +270,11 @@ class MSMRDiffusion(BaseParticle):
             if self.x_average is False:
                 U = variables[f"{Domain} {phase_name}particle potential [V]"]
             else:
-                U = variables[
-                    f"X-averaged {domain} {phase_name}particle " "potential [V]"
-                ]
+                U = variables[f"X-averaged {domain} {phase_name}particle potential [V]"]
         else:
             if self.x_average is False:
                 U = variables[
-                    f"{Domain} {phase_name}particle " "potential distribution [V]"
+                    f"{Domain} {phase_name}particle potential distribution [V]"
                 ]
             else:
                 U = variables[
@@ -325,13 +291,11 @@ class MSMRDiffusion(BaseParticle):
             if self.x_average is False:
                 U = variables[f"{Domain} {phase_name}particle potential [V]"]
             else:
-                U = variables[
-                    f"X-averaged {domain} {phase_name}particle " "potential [V]"
-                ]
+                U = variables[f"X-averaged {domain} {phase_name}particle potential [V]"]
         else:
             if self.x_average is False:
                 U = variables[
-                    f"{Domain} {phase_name}particle " "potential distribution [V]"
+                    f"{Domain} {phase_name}particle potential distribution [V]"
                 ]
             else:
                 U = variables[
@@ -353,13 +317,11 @@ class MSMRDiffusion(BaseParticle):
             if self.x_average is False:
                 U = variables[f"{Domain} {phase_name}particle potential [V]"]
             else:
-                U = variables[
-                    f"X-averaged {domain} {phase_name}particle " "potential [V]"
-                ]
+                U = variables[f"X-averaged {domain} {phase_name}particle potential [V]"]
         else:
             if self.x_average is False:
                 U = variables[
-                    f"{Domain} {phase_name}particle " "potential distribution [V]"
+                    f"{Domain} {phase_name}particle potential distribution [V]"
                 ]
             else:
                 U = variables[
@@ -382,14 +344,14 @@ class MSMRDiffusion(BaseParticle):
         U_av = pybamm.r_average(U_xav)
         variables = {
             f"{Domain} {phase_name}particle potential [V]": U,
-            f"X-averaged {domain} {phase_name}particle " "potential [V]": U_xav,
-            f"R-averaged {domain} {phase_name}particle " "potential [V]": U_rav,
+            f"X-averaged {domain} {phase_name}particle potential [V]": U_xav,
+            f"R-averaged {domain} {phase_name}particle potential [V]": U_rav,
             f"Average {domain} {phase_name}particle potential [V]": U_av,
             f"{Domain} {phase_name}particle surface potential [V]": U_surf,
             f"X-averaged {domain} {phase_name}particle "
             "surface potential [V]": U_surf_av,
-            f"Minimum {domain} {phase_name}particle potential [V]" "": pybamm.min(U),
-            f"Maximum {domain} {phase_name}particle potential [V]" "": pybamm.max(U),
+            f"Minimum {domain} {phase_name}particle potential [V]": pybamm.min(U),
+            f"Maximum {domain} {phase_name}particle potential [V]": pybamm.max(U),
             f"Minimum {domain} {phase_name}particle "
             "surface potential [V]": pybamm.min(U_surf),
             f"Maximum {domain} {phase_name}particle "
@@ -492,7 +454,64 @@ class MSMRDiffusion(BaseParticle):
         }
         return variables
 
-    def _get_standard_fractional_occupancy_variables(self, U):
+
+class MSMRStoichiometryVariables(BaseParticle):
+    def __init__(self, param, domain, options, phase="primary", x_average=False):
+        super().__init__(param, domain, options, phase)
+        self.x_average = x_average
+
+    def get_coupled_variables(self, variables):
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+
+        U = variables[f"{Domain} {phase_name}particle potential [V]"]
+        T = variables[f"{Domain} electrode temperature [K]"]
+
+        # Standard fractional occupancy variables (these are indexed by reaction number)
+        variables.update(self._get_standard_fractional_occupancy_variables(U, T))
+        variables.update(
+            self._get_standard_differential_fractional_occupancy_variables(U, T)
+        )
+
+        # Calculate the (total) stoichiometry from the potential
+        x = self.phase_param.x(U, T)
+        dxdU = self.phase_param.dxdU(U, T)
+
+        # Standard (total) stoichiometry and concentration variables (size-independent)
+        c_max = self.phase_param.c_max
+        c_s = x * c_max
+        variables.update(self._get_standard_concentration_variables(c_s))
+        variables.update(self._get_standard_differential_stoichiometry_variables(dxdU))
+
+        if self.size_distribution is True:
+            U_distribution = variables[
+                f"{Domain} {phase_name}particle potential distribution [V]"
+            ]
+            T = variables[f"{Domain} electrode temperature [K]"]
+            T_distribution = pybamm.PrimaryBroadcast(
+                pybamm.PrimaryBroadcast(T, f"{domain} particle size"),
+                f"{domain} particle",
+            )
+            # Calculate the stoichiometry distribution from the potential distribution
+            x_distribution = self.phase_param.x(U_distribution, T_distribution)
+            dxdU_distribution = self.phase_param.dxdU(U_distribution, T_distribution)
+
+            # Standard stoichiometry and concentration distribution variables
+            # (size-dependent)
+            c_s_distribution = x_distribution * c_max
+            variables.update(
+                self._get_standard_concentration_distribution_variables(
+                    c_s_distribution
+                )
+            )
+            variables.update(
+                self._get_standard_differential_stoichiometry_distribution_variables(
+                    dxdU_distribution
+                )
+            )
+        return variables
+
+    def _get_standard_fractional_occupancy_variables(self, U, T):
         options = self.options
         domain = self.domain
         d = domain[0]
@@ -500,7 +519,7 @@ class MSMRDiffusion(BaseParticle):
         # Loop over all reactions
         N = int(getattr(options, domain)["number of MSMR reactions"])
         for i in range(N):
-            x = self.phase_param.x_j(U, i)
+            x = self.phase_param.x_j(U, T, i)
             x_surf = pybamm.surf(x)
             x_surf_av = pybamm.x_average(x_surf)
             x_xav = pybamm.x_average(x)
@@ -518,7 +537,7 @@ class MSMRDiffusion(BaseParticle):
             )
         return variables
 
-    def _get_standard_differential_fractional_occupancy_variables(self, U):
+    def _get_standard_differential_fractional_occupancy_variables(self, U, T):
         options = self.options
         domain = self.domain
         d = domain[0]
@@ -526,7 +545,7 @@ class MSMRDiffusion(BaseParticle):
         # Loop over all reactions
         N = int(getattr(options, domain)["number of MSMR reactions"])
         for i in range(N):
-            dxdU = self.phase_param.dxdU_j(U, i)
+            dxdU = self.phase_param.dxdU_j(U, T, i)
             dxdU_surf = pybamm.surf(dxdU)
             dxdU_surf_av = pybamm.x_average(dxdU_surf)
             dxdU_xav = pybamm.x_average(dxdU)
