@@ -175,6 +175,9 @@ PYBIND11_MODULE(idaklu, m)
     .def(py::init<>())
     .def_readwrite("mlir", &IREEBaseFunctionType::mlir)
     .def_readwrite("kept_var_idx", &IREEBaseFunctionType::kept_var_idx)
+    .def_readwrite("nnz", &IREEBaseFunctionType::nnz)
+    .def_readwrite("col", &IREEBaseFunctionType::col)
+    .def_readwrite("row", &IREEBaseFunctionType::row)
     .def_readwrite("pytree_shape", &IREEBaseFunctionType::pytree_shape)
     .def_readwrite("pytree_sizes", &IREEBaseFunctionType::pytree_sizes);
 

@@ -92,6 +92,17 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
         dim_str += c;
       }
     }
+    // Remove singelton elements from shape vector
+    /*auto it = std::find(shape.begin(), shape.end(), 1);
+    while (it != shape.end()) {
+      shape.erase(it);
+      it = std::find(shape.begin(), shape.end(), 1);
+    }*/
+    // If shape is empty, assume scalar (i.e. "tensor<f32>" or some singleton variant)
+    if (shape.size() == 0) {
+      shape.push_back(1);
+    }
+    // Add output to list
     output_shape.push_back(shape);
   }
 
@@ -165,8 +176,10 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   m_arg.resize(m_arg_argno.size(), nullptr);
 
   // Size iree results vector (single precision) and idaklu results vector (double precision)
+  result.clear();
   result.resize(output_shape.size());
   for(int k=0; k<output_shape.size(); k++) {
+    DEBUG("Output " << k << " size: " << output_shape[k][0]);
     result[k].resize(output_shape[k][0], 0.0f);
   }
   m_res.resize(output_shape.size(), nullptr);
@@ -176,6 +189,11 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
 void IREEFunction::operator()()
 {
   DEBUG("IreeFunction operator(): " << module_name);
+  evaluate(output_shape.size());  // return all outputs
+}
+
+void IREEFunction::evaluate(int n_outputs) {
+  // n_outputs is the number of outputs to return
 
   // ***********************************************************************************
   //
@@ -194,20 +212,18 @@ void IREEFunction::operator()()
   //
   // ***********************************************************************************
 
-  DEBUG("Copying m_arg to input_data (" << m_func.kept_var_idx.size() << " vars)");
+  DEBUG("Copying inputs, shape " << input_shape.size() << " - " << m_func.kept_var_idx.size());
   for (int j=0; j<m_func.kept_var_idx.size(); j++) {
     int mlir_arg = m_func.kept_var_idx[j];
     int m_arg_from = m_arg_argno[mlir_arg];
     int m_arg_to = j;
     if (m_func.pytree_shape[m_arg_from] > 1) {
       // Index into argument using appropriate shape
-      DEBUG("Copying m_arg[" << m_arg_from << "] to input_data[" << m_arg_to << "][" << m_arg_argix[mlir_arg] << "..] size " << m_func.pytree_sizes[mlir_arg]);
       for(int k=0; k<m_func.pytree_sizes[mlir_arg]; k++) {
         input_data[m_arg_to][k] = static_cast<float>(m_arg[m_arg_from][m_arg_argix[mlir_arg]+k]);
       }
     } else {
       // Copy the entire vector
-      DEBUG("Copying m_arg[" << m_arg_from << "] to input_data[" << m_arg_to << "]");
       for(int k=0; k<input_shape[m_arg_to][0]; k++) {
         input_data[m_arg_to][k] = static_cast<float>(m_arg[m_arg_from][k]);
       }
@@ -216,53 +232,55 @@ void IREEFunction::operator()()
 
   // Call the 'main' function of the module
   const std::string mlir = m_func.get_mlir();
-  DEBUG("Executing function '" << function_name << "'");
+  DEBUG("Calling function '" << function_name << "'");
   auto status = session->iree_runtime_exec(function_name, input_shape, input_data, result);
-  if (iree_status_is_ok(status)) {
-    DEBUG("MLIR execution successful");
-  } else {
+  if (!iree_status_is_ok(status)) {
     iree_status_fprint(stderr, status);
     std::cerr << "MLIR: " << mlir.substr(0,1000) << std::endl;
     throw std::runtime_error("Execution failed");
   }
 
-  // Copy result to output
-  for(size_t k=0; k<result.size(); k++) {
+  // Copy results to output array
+  for(size_t k=0; k<n_outputs; k++) {
     for(size_t j=0; j<result[k].size(); j++) {
-      m_res[k][j] = result[k][j];
+      m_res[k][j] = static_cast<realtype>(result[k][j]);
     }
   }
+
+  DEBUG("IreeFunction operator() complete");
+}
+
+expr_int IREEFunction::nnz() {
+  DEBUG("IreeFunction nnz: " << m_func.nnz);
+  return m_func.nnz;
 }
 
 expr_int IREEFunction::nnz_out() {
-  DEBUG("IreeFunction nnz_out");
-  throw std::runtime_error("IreeFunction nnz_out not implemented");
-  /*return static_cast<expr_int>(m_func.nnz_out());*/
-  return static_cast<expr_int>(0);
+  DEBUG("IreeFunction nnz_out" << m_func.nnz);
+  return m_func.nnz;
 }
 
-ExpressionSparsity *IREEFunction::sparsity_out(expr_int ind) {
-  DEBUG("IreeFunction sparsity_out");
-  throw std::runtime_error("IreeFunction sparsity_out not implemented");
-  /*iree::Sparsity iree_sparsity = m_func.sparsity_out(ind);
-  IreeSparsity *cs = new IreeSparsity();
-  cs->_nnz = iree_sparsity.nnz();
-  cs->_get_row = iree_sparsity.get_row();
-  cs->_get_col = iree_sparsity.get_col();
-  return cs;*/
-  return nullptr;
+std::vector<expr_int> IREEFunction::get_row() {
+  DEBUG("IreeFunction get_row" << m_func.row.size());
+  return m_func.row;
+}
+
+std::vector<expr_int> IREEFunction::get_col() {
+  DEBUG("IreeFunction get_col" << m_func.col.size());
+  return m_func.col;
 }
 
 void IREEFunction::operator()(const std::vector<realtype*>& inputs,
                                 const std::vector<realtype*>& results)
 {
   DEBUG("IreeFunction operator() with inputs and results");
-  throw std::runtime_error("IreeFunction operator() with inputs and results not implemented");
   // Set-up input arguments, provide result vector, then execute function
   // Example call: fcn({in1, in2, in3}, {out1})
-  for(size_t k=0; k<inputs.size(); k++)
-    m_arg[k] = inputs[k];
-  for(size_t k=0; k<results.size(); k++)
-    m_res[k] = results[k];
-  operator()();
+  for(size_t k=0; k<inputs.size(); k++) {
+    m_arg[k] = inputs[k];  // Copy references to vectors, not elements
+  }
+  for(size_t k=0; k<results.size(); k++) {
+    m_res[k] = results[k];  // Copy references to vectors, not elements
+  }
+  evaluate(results.size());  // only copy the number of requested outputs back
 }

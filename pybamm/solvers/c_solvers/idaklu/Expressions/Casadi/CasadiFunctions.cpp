@@ -33,20 +33,34 @@ void CasadiFunction::operator()()
   m_func.release(mem);
 }
 
-expr_int CasadiFunction::nnz_out() {
-  std::cout << "CasadiFunction nnz_out(): " << m_func.name() << std::endl;
+expr_int CasadiFunction::nnz() {
+  std::cout << "CasadiFunction nnz(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()) << std::endl;
   return static_cast<expr_int>(m_func.nnz_out());
 }
 
-ExpressionSparsity *CasadiFunction::sparsity_out(expr_int ind) {
-  std::cout << "CasadiFunction sparsity_out(): " << m_func.name() << std::endl;
+expr_int CasadiFunction::nnz_out() {
+  std::cout << "CasadiFunction nnz_out(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()) << std::endl;
+  return static_cast<expr_int>(m_func.nnz_out());
+}
 
+std::vector<expr_int> CasadiFunction::get_row() {
+  return get_row(0);
+}
+
+std::vector<expr_int> CasadiFunction::get_row(expr_int ind) {
+  std::cout << "CasadiFunction get_row(): " << m_func.name() << std::endl;
   casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
-  CasadiSparsity *cs = new CasadiSparsity();
-  cs->_nnz = casadi_sparsity.nnz();
-  cs->_get_row = casadi_sparsity.get_row();
-  cs->_get_col = casadi_sparsity.get_col();
-  return cs;
+  return casadi_sparsity.get_row();
+}
+
+std::vector<expr_int> CasadiFunction::get_col() {
+  return get_col(0);
+}
+
+std::vector<expr_int> CasadiFunction::get_col(expr_int ind) {
+  std::cout << "CasadiFunction get_col(): " << m_func.name() << std::endl;
+  casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
+  return casadi_sparsity.get_col();
 }
 
 void CasadiFunction::operator()(const std::vector<realtype*>& inputs,

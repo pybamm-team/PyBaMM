@@ -392,7 +392,14 @@ iree_status_t IREESession::iree_runtime_exec(
     iree_status_fprint(stderr, status);
   }
 
+  // print result vector
+  std::cerr << "Result vector(" << result.size() << "): " << std::endl;
+  for(int i = 0; i < result.size(); i++) {
+    std::cerr << result[i].size() << std::endl;
+  }
+
   for(int k=0; k<result.size(); k++) {
+    std::cerr << "Dumping output " << k << std::endl;
     // Dump the function outputs
     iree_hal_buffer_view_t* result_view = NULL;
     if (iree_status_is_ok(status)) {
@@ -408,6 +415,8 @@ iree_status_t IREESession::iree_runtime_exec(
       iree_host_size_t buffer_length = iree_hal_buffer_view_element_count(result_view);
       if (buffer_length != result[k].size()) {
         // Avoid reallocation if the buffer is already the right size
+        std::cerr << "Error: buffer_length (" << buffer_length << ") != result[k].size()" << result[k].size() << std::endl;
+        std::cerr << this->mlir_code << std::endl;
         result[k].resize(buffer_length);
       }
       status = iree_hal_buffer_map_read(iree_hal_buffer_view_buffer(result_view), 0,

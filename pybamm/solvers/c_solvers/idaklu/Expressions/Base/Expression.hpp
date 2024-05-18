@@ -2,7 +2,6 @@
 #define PYBAMM_EXPRESSION_HPP
 
 #include "ExpressionTypes.hpp"
-#include "ExpressionSparsity.hpp"
 #include "../../common.hpp"
 #include "../../Options.hpp"
 #include <memory>
@@ -30,12 +29,10 @@ public:
   /**
    * @brief Return the number of non-zero elements for the function output
    */
+  virtual expr_int nnz() = 0;
   virtual expr_int nnz_out() = 0;
-
-  /**
-   * @brief Return the number of non-zero elements for the function output
-   */
-  virtual ExpressionSparsity *sparsity_out(expr_int ind) = 0;
+  virtual std::vector<expr_int> get_row() = 0;
+  virtual std::vector<expr_int> get_col() = 0;
 
 public:
   std::vector<const double *> m_arg;

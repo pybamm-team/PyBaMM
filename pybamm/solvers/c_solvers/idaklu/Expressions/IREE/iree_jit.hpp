@@ -43,7 +43,6 @@ class IREESession {
 // Properties
 private:
   const char *device_uri = NULL;
-  const char *mlir_filename = NULL;
   compiler_state_t s;
   iree_compiler_error_t *error = NULL;
   void *contents = NULL;

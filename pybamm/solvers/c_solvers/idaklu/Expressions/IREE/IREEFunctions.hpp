@@ -6,25 +6,14 @@
 #include <memory>
 #include "iree_jit.hpp"
 
-class IREESparsity : public ExpressionSparsity
-{
-public:
-  IREESparsity() = default;
-
-  expr_int nnz() override { return _nnz; }
-  std::vector<expr_int> get_row() override { return _get_row; }
-  std::vector<expr_int> get_col() override { return _get_col; }
-
-  expr_int _nnz = 0;
-  std::vector<expr_int> _get_row;
-  std::vector<expr_int> _get_col;
-};
-
 class IREEBaseFunctionType
 {
 public:
   std::string mlir;
   std::vector<int> kept_var_idx;
+  expr_int nnz;
+  std::vector<expr_int> col;
+  std::vector<expr_int> row;
   std::vector<int> pytree_shape;
   std::vector<int> pytree_sizes;
 
@@ -51,6 +40,8 @@ public:
   explicit IREEFunction(const BaseFunctionType &f);
 
   void operator()() override;
+  void evaluate();
+  void evaluate(int n_outputs);
 
   void operator()(const std::vector<realtype*>& inputs,
                   const std::vector<realtype*>& results) override;
@@ -64,12 +55,10 @@ public:
   /**
    * @brief Return the number of non-zero elements for the function output
    */
+  expr_int nnz() override;
   expr_int nnz_out() override;
-
-  /**
-   * @brief Return the number of non-zero elements for the function output
-   */
-  ExpressionSparsity *sparsity_out(expr_int ind) override;
+  std::vector<expr_int> get_col() override;
+  std::vector<expr_int> get_row() override;
 };
 
 /**

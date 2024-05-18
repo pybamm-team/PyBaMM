@@ -8,20 +8,6 @@
 #include <casadi/core/sparsity.hpp>
 #include <memory>
 
-class CasadiSparsity : public ExpressionSparsity
-{
-public:
-  CasadiSparsity() = default;
-
-  expr_int nnz() override { return _nnz; }
-  std::vector<expr_int> get_row() override { return _get_row; }
-  std::vector<expr_int> get_col() override { return _get_col; }
-
-  expr_int _nnz = 0;
-  std::vector<expr_int> _get_row;
-  std::vector<expr_int> _get_col;
-};
-
 /**
  * @brief Class for handling individual casadi functions
  */
@@ -46,12 +32,13 @@ public:
   /**
    * @brief Return the number of non-zero elements for the function output
    */
+  expr_int nnz() override;
   expr_int nnz_out() override;
+  std::vector<expr_int> get_row() override;
+  std::vector<expr_int> get_row(expr_int ind);
+  std::vector<expr_int> get_col() override;
+  std::vector<expr_int> get_col(expr_int ind);
 
-  /**
-   * @brief Return the number of non-zero elements for the function output
-   */
-  ExpressionSparsity *sparsity_out(expr_int ind) override;
 };
 
 /**

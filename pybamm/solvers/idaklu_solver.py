@@ -197,10 +197,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # only casadi solver needs sensitivity ics
         if model.convert_to_format != "casadi":
             y0S = None
-            if self.output_variables:
+            if self.output_variables and not (
+                model.convert_to_format == "jax"
+                and self._options["jax_evaluator"] == "iree"
+            ):
                 raise pybamm.SolverError(
                     "output_variables can only be specified "
-                    'with convert_to_format="casadi"'
+                    'with convert_to_format="casadi", or convert_to_format="jax" '
+                    'with jax_evaluator="iree"'
                 )  # pragma: no cover
         if y0S is not None:
             if isinstance(y0S, casadi.DM):
@@ -581,6 +585,35 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self.var_idaklu_fcns = []
                 self.dvar_dy_idaklu_fcns = []
                 self.dvar_dp_idaklu_fcns = []
+                for key in self.output_variables:
+                    if isinstance(
+                        model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                    ):
+                        continue
+                    fcn = self.computed_var_fcns[key]
+                    fcn._demote_constants()
+                    self.var_idaklu_fcns.append(
+                        self._make_iree_function(
+                            lambda t, y, p: fcn(t, y, p),
+                            t_eval, y0, inputs0
+                        )
+                    )
+                    # Convert derivative functions for sensitivities
+                    if (len(inputs) > 0) and (model.calculate_sensitivities):
+                        dvar_dy = fcn.get_jacobian()
+                        self.dvar_dy_idaklu_fcns.append(
+                            self._make_iree_function(
+                                lambda t, y, p: dvar_dy(t, y, p),
+                                t_eval, y0, inputs0
+                            )
+                        )
+                        dvar_dp = fcn.get_sensitivities()
+                        self.dvar_dp_idaklu_fcns.append(
+                            self._make_iree_function(
+                                lambda t, y, p: dvar_dp(t, y, p),
+                                t_eval, y0, inputs0
+                            )
+                        )
 
                 pybamm.demote_expressions_to_32bit = False
             else:
@@ -661,6 +694,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         iree_fcn = idaklu.IREEBaseFunctionType()
         iree_fcn.mlir = mlir
         iree_fcn.kept_var_idx = kept_var_idx
+        # get sparsity pattern
+        try:
+            sparse_eval = sparse.coo_matrix(fcn(*args))
+            iree_fcn.nnz = sparse_eval.nnz
+            iree_fcn.col = sparse_eval.col
+            iree_fcn.row = sparse_eval.row
+        except (TypeError, AttributeError):
+            iree_fcn.nnz = 0
+            iree_fcn.col = []
+            iree_fcn.row = []
         # number of variables in each argument (these will flatten in the mlir)
         iree_fcn.pytree_shape = [
             len(jax.tree_util.tree_flatten(arg)[0]) for arg in args
@@ -850,12 +893,24 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         model.variables_and_events[var], pybamm.ExplicitTimeIntegral
                     ):
                         continue
-                    len_of_var = (
-                        self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
-                    )
+                    if model.convert_to_format == "casadi":
+                        len_of_var = (
+                            self._setup["var_casadi_fcns"][var](0., 0., 0.).sparsity().nnz()
+                        )
+                        base_variables = [self._setup["var_casadi_fcns"][var]],
+                    elif model.convert_to_format == "jax" and self._options["jax_evaluator"] == "iree":
+                        idx = self.output_variables.index(var)
+                        len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
+                        base_variables = [self.computed_var_fcns[var]]
+                    else:
+                        raise pybamm.SolverError(
+                            "Unsupported evaluation engine for convert_to_format="
+                            + f"{model.convert_to_format} "
+                            + f"(jax_evaluator={self._options['jax_evaluator']})"
+                        )
                     newsol._variables[var] = pybamm.ProcessedVariableComputed(
                         [model.variables_and_events[var]],
-                        [self._setup["var_casadi_fcns"][var]],
+                        base_variables,
                         [sol.y[:, startk : (startk + len_of_var)]],
                         newsol,
                     )

@@ -97,7 +97,6 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/Expressions/Base/Expression.hpp
   pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSet.hpp
   pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSparsity.hpp
   # IDAKLU expressions - concrete implementations
   ${IDAKLU_EXPR_CASADI_SOURCE_FILES}
   ${IDAKLU_EXPR_IREE_SOURCE_FILES}
