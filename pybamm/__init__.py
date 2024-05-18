@@ -194,7 +194,7 @@ from .batch_study import BatchStudy
 from . import callbacks
 
 # Pybamm Data manager using pooch
-from .pybammdata import DataLoader
+from .pybamm_data import DataLoader
 
 # Remove any imported modules, so we don't expose them as part of pybamm
 del sys
@@ -221,4 +221,5 @@ __all__ = [
     "type_definitions",
     "util",
     "version",
+    "pybamm_data",
 ]

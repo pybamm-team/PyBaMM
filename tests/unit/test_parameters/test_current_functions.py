@@ -6,7 +6,6 @@ import pybamm
 import numbers
 import unittest
 import numpy as np
-import os
 import pandas as pd
 
 
@@ -21,8 +20,9 @@ class TestCurrentFunctions(TestCase):
 
     def test_get_current_data(self):
         # test process parameters
+        data_loader = pybamm.DataLoader()
         current_data = pd.read_csv(
-            os.path.join(pybamm.__path__[0], "input", "drive_cycles", "US06.csv"),
+            data_loader.get_data("US06.csv"),
             comment="#",
             names=["Time [s]", "Current [A]"],
         )

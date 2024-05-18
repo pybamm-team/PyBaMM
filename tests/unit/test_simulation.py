@@ -202,8 +202,9 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 0.8)
 
         # test with drive cycle
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
+            data_loader.get_data("US06.csv"),
             comment="#",
             header=None,
         ).to_numpy()
@@ -499,10 +500,9 @@ class TestSimulation(TestCase):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         # Import drive cycle from file
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            pybamm.get_parameters_filepath(
-                os.path.join("input", "drive_cycles", "US06.csv")
-            ),
+            pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
             comment="#",
             skip_blank_lines=True,
             header=None,

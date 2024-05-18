@@ -17,7 +17,7 @@ param = model.default_parameter_values
 # import drive cycle from file
 data_loader = pybamm.DataLoader()
 drive_cycle = pd.read_csv(
-    data_loader.getdata("US06.csv"), comment="#", header=None
+    data_loader.get_data("US06.csv"), comment="#", header=None
 ).to_numpy()
 
 # create interpolant
