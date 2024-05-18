@@ -10,13 +10,7 @@ class DataLoader:
     ----------
     path: POSIX/Windows PATH
        POSIX/Windows path to the data file.
-       The folder locations are defined by the `platformdirs <https://platformdirs.readthedocs.io/en/latest/>`_ package using the `user_cache_dir <https://platformdirs.readthedocs.io/en/latest/api.html#cache-directory>`_ function. The default cache paths for pybamm are located under -
-
-        - Mac: ``~/Library/Caches/v1.x.x/pybamm``
-
-        - Unix: ``~/.cache/v1.x.x/pybamm`` or the value of the XDG_CACHE_HOME environment variable, if defined.
-
-        - Windows: ``C:\\Users\\<user>\\AppData\\Local\\pybamm\\v1.x.x\\Cache``
+       The folder locations are defined by the `platformdirs <https://platformdirs.readthedocs.io/en/latest/>`_ package using the `user_cache_dir <https://platformdirs.readthedocs.io/en/latest/api.html#cache-directory>`_ function.
     registry: pooch.core.Pooch object
         Creates a registry of data files available to fetch using pooch.
     """
@@ -25,7 +19,7 @@ class DataLoader:
         """
         Create a pooch registry with the following data files available upstream at https://github.com/pybamm-team/pybamm-data/
 
-        COMSOL RESULTS
+        COMSOL Results
         ---------------
         comsol_01C.json
         comsol_05C.json
@@ -102,6 +96,7 @@ class DataLoader:
             registry=self.files,
         )
 
+
     def get_data(self, filename: str):
         """
         Fetches the data file from upstream and stores it in the local cache directory under pybamm directory.
@@ -119,6 +114,7 @@ class DataLoader:
             return pathlib.Path(f"{self.path}/{self.version}/{filename}")
         except NameError:
             raise NameError(f"Unable to find {filename} in the registry") from None
+
 
     def show_registry(self, checksum: bool = False):
         """

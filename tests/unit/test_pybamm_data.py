@@ -6,16 +6,15 @@ import requests
 data_loader = pybamm.DataLoader()
 
 
-def internet_connection():
+def no_internet_connection():
     try:
         requests.get("https://github.com", timeout=5)
         return False
     except requests.ConnectionError:
         return True
 
-
 @pytest.mark.skipif(
-    internet_connection(),
+    no_internet_connection(),
     reason="Network not available to download files from registry",
 )  # Skip if no internet
 def test_fetch():
@@ -27,7 +26,7 @@ def test_fetch():
 
 
 @pytest.mark.skipif(
-    internet_connection(),
+    no_internet_connection(),
     reason="Network not available to download files from registry",
 )
 def test_fetch_fake():
