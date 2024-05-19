@@ -7,6 +7,8 @@ import numbers
 import unittest
 import numpy as np
 import pandas as pd
+import pytest
+from tests import no_internet_connection
 
 
 class TestCurrentFunctions(TestCase):
@@ -18,6 +20,10 @@ class TestCurrentFunctions(TestCase):
         processed_current = parameter_values.process_symbol(current)
         self.assertIsInstance(processed_current, pybamm.Scalar)
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_get_current_data(self):
         # test process parameters
         data_loader = pybamm.DataLoader()

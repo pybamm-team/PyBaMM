@@ -5,6 +5,7 @@ import pybamm
 from scipy.sparse import eye
 import sys
 import re
+import requests
 
 if sys.version_info < (3, 10):
     import importlib_metadata
@@ -327,3 +328,11 @@ def get_present_optional_import_deps(package_name, optional_distribution_deps=No
         if any(dep in optional_distribution_deps for dep in distribution_pkgs):
             present_optional_import_deps.add(import_pkg)
     return present_optional_import_deps
+
+
+def no_internet_connection():
+    try:
+        requests.get("https://github.com", timeout=5)
+        return False
+    except requests.ConnectionError:
+        return True

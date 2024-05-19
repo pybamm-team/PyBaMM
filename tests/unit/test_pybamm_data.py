@@ -1,17 +1,9 @@
 import pybamm
 import pytest
 import random
-import requests
+from tests import no_internet_connection
 
 data_loader = pybamm.DataLoader()
-
-
-def no_internet_connection():
-    try:
-        requests.get("https://github.com", timeout=5)
-        return False
-    except requests.ConnectionError:
-        return True
 
 
 @pytest.mark.skipif(
@@ -34,3 +26,19 @@ def test_fetch_fake():
     # Try to fetch a fake file not present in the registry
     with pytest.raises(ValueError):
         data_loader.get_data("NotAfile.json")
+
+
+@pytest.mark.skipif(
+    no_internet_connection(),
+    reason="Network not available to download files from registry",
+)
+def test_registry_checksum():
+    assert data_loader.show_registry(checksum=True) == data_loader.files
+
+
+@pytest.mark.skipif(
+    no_internet_connection(),
+    reason="Network not available to download files from registry",
+)
+def test_registry():
+    assert data_loader.show_registry() == list(data_loader.files)

@@ -30,6 +30,7 @@ class DataLoader:
 
         Kokam SLPB 75106100 discharge data from Ecker et al (2015)
         ----------------------------------------------------------
+
         Ecker_1C.csv
         Ecker_5C.csv
 
@@ -126,6 +127,8 @@ class DataLoader:
         if checksum:
             for key in self.files:
                 print(f"{key} : {self.files[key]}")
+            return self.files
         else:
             for key in self.files:
                 print(key)
+            return list(self.files.keys())
