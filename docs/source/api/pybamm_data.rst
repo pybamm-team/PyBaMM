@@ -1,4 +1,4 @@
-Pybamm Data
+PyBaMM Data
 ===========
 
 .. autoclass:: pybamm.DataLoader

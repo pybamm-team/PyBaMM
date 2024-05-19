@@ -141,11 +141,8 @@ class DataLoader:
         -------
         POSIX/Windows Path to the data file.
         """
-        try:
-            self.registry.fetch(filename)
-            return pathlib.Path(f"{self.path}/{self.version}/{filename}")
-        except NameError:
-            raise NameError(f"Unable to find {filename} in the registry") from None
+        self.registry.fetch(filename)
+        return pathlib.Path(f"{self.path}/{self.version}/{filename}")
 
     def show_registry(self, checksum: bool = False):
         """

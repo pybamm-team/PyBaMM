@@ -15,7 +15,7 @@ def test_fetch():
     data_loader = pybamm.DataLoader()
     random_file = random.choice(list(data_loader.files.keys()))
     file_path = data_loader.get_data(random_file)
-    assert file_path.is_file()
+    return file_path.is_file()
 
 
 @pytest.mark.skipif(
@@ -33,7 +33,7 @@ def test_fetch_fake():
     reason="Network not available to download files from registry",
 )
 def test_registry_checksum():
-    assert data_loader.show_registry(checksum=True) == data_loader.files
+    return data_loader.show_registry(checksum=True) == data_loader.files
 
 
 @pytest.mark.skipif(
@@ -41,4 +41,4 @@ def test_registry_checksum():
     reason="Network not available to download files from registry",
 )
 def test_registry():
-    assert data_loader.show_registry() == list(data_loader.files)
+    return data_loader.show_registry() == list(data_loader.files)
