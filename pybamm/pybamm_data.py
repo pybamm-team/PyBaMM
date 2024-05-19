@@ -13,49 +13,81 @@ class DataLoader:
        The folder locations are defined by the `platformdirs <https://platformdirs.readthedocs.io/en/latest/>`_ package using the `user_cache_dir <https://platformdirs.readthedocs.io/en/latest/api.html#cache-directory>`_ function.
     registry: pooch.core.Pooch object
         Creates a registry of data files available to fetch using pooch.
+
+
+    The following files are listed in the registry -
+
+    COMSOL Results
+    ---------------
+
+    :footcite:t:`Andersson2019`
+    :footcite:t:`Doyle1993`
+    :footcite:t:`Harris2020`
+    :footcite:t:`Marquis2019`
+    :footcite:t:`Marquis2020`
+
+    - comsol_01C.json
+    - comsol_05C.json
+    - comsol_1C.json
+    - comsol_1plus1D_3C.json
+    - comsol_2C.json
+    - comsol_3C.json
+
+    Kokam SLPB 75106100 discharge data from Ecker et al (2015)
+    ----------------------------------------------------------
+
+    :footcite:t:`Ecker2015i`
+    :footcite:t:`Ecker2015ii`
+
+    - Ecker_1C.csv
+    - Ecker_5C.csv
+
+    Enertech cells - discharge results for beginning of life
+    --------------------------------------------------------
+
+    :footcite:t:`Andersson2019`
+    :footcite:t:`Doyle1993`
+    :footcite:t:`Harris2020`
+    :footcite:t:`Marquis2019`
+    :footcite:t:`Ai2019`
+    :footcite:t:`Deshpande2012`
+    :footcite:t:`Timms2021`
+
+    - 0.1C_discharge_U.txt
+    - 0.1C_discharge_displacement.txt
+    - 0.5C_discharge_T.txt
+    - 0.5C_discharge_U.txt
+    - 0.5C_discharge_displacement.txt
+    - 1C_discharge_T.txt
+    - 1C_discharge_U.txt
+    - 1C_discharge_displacement.txt
+    - 2C_discharge_T.txt
+    - 2C_discharge_U.txt
+    - 2C_discharge_displacement.txt
+    - stn_2C.txt
+    - stp_2C.txt
+
+
+    Drive cycles
+    ------------
+
+    :footcite:t:`Andersson2019`
+    :footcite:t:`Doyle1993`
+    :footcite:t:`Harris2020`
+    :footcite:t:`Marquis2019`
+    :footcite:t:`Marquis2020`
+
+    - UDDS.csv
+    - US06.csv
+    - WLTC.csv
+    - car_current.csv
+
+
     """
 
     def __init__(self):
         """
         Create a pooch registry with the following data files available upstream at https://github.com/pybamm-team/pybamm-data/
-
-        COMSOL Results
-        ---------------
-        comsol_01C.json
-        comsol_05C.json
-        comsol_1C.json
-        comsol_1plus1D_3C.json
-        comsol_2C.json
-        comsol_3C.json
-
-        Kokam SLPB 75106100 discharge data from Ecker et al (2015)
-        ----------------------------------------------------------
-
-        Ecker_1C.csv
-        Ecker_5C.csv
-
-        Enertech cells - discharge results for beginning of life
-        --------------------------------------------------------
-        0.1C_discharge_U.txt
-        0.1C_discharge_displacement.txt
-        0.5C_discharge_T.txt
-        0.5C_discharge_U.txt
-        0.5C_discharge_displacement.txt
-        1C_discharge_T.txt
-        1C_discharge_U.txt
-        1C_discharge_displacement.txt
-        2C_discharge_T.txt
-        2C_discharge_U.txt
-        2C_discharge_displacement.txt
-        stn_2C.txt
-        stp_2C.txt
-
-        Drive cycles
-        ------------
-        UDDS.csv
-        US06.csv
-        WLTC.csv
-        car_current.csv
         """
         self.version = "v1.0.0"  # Version of pybamm-data release
         self.path = pooch.os_cache("pybamm")
@@ -123,6 +155,9 @@ class DataLoader:
         ----------
         checksum : bool, optional
             Prints file registries with checksums if True.
+        Returns
+        -------
+        list, dict (if checksum = True)
         """
         if checksum:
             for key in self.files:
