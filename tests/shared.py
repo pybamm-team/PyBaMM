@@ -5,7 +5,7 @@ import pybamm
 from scipy.sparse import eye
 import sys
 import re
-import requests
+import socket
 
 if sys.version_info < (3, 10):
     import importlib_metadata
@@ -332,7 +332,9 @@ def get_present_optional_import_deps(package_name, optional_distribution_deps=No
 
 def no_internet_connection():
     try:
-        requests.get("https://github.com", timeout=5)
+        host = socket.gethostbyname("www.github.com")
+        conn = socket.create_connection((host, 80), 2)
+        conn.close()
         return False
-    except requests.ConnectionError:
+    except socket.gaierror:
         return True
