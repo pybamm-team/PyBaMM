@@ -78,6 +78,7 @@ def run_integration(session):
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
     # TODO: Temporary fix for Python 3.12 CI.
+    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
     session.run("python", "run-tests.py", "--doctest")
@@ -147,6 +148,7 @@ def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
     # TODO: Temporary fix for Python 3.12 CI.
+    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
