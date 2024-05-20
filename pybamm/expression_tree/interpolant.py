@@ -4,7 +4,6 @@
 from __future__ import annotations
 import numpy as np
 from scipy import interpolate
-from scipy.sparse.linalg import spsolve
 from collections.abc import Sequence
 import numbers
 
