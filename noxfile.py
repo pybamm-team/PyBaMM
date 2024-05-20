@@ -146,6 +146,8 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
+    # TODO: Temporary fix for Python 3.12 CI.
+    session.install("setuptools", silent=False)
     session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development
