@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   run_unit_tests:
+    name: Unit tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -93,7 +94,6 @@ jobs:
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
@@ -110,10 +110,12 @@ jobs:
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4.3.1
+        if: github.repository == 'pybamm-team/PyBaMM'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   run_integration_tests:
+    name: Integration tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -149,7 +151,6 @@ jobs:
         run: choco install graphviz --version=8.0.5
 
       - name: Set up Python ${{ matrix.python-version }}
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -182,7 +183,6 @@ jobs:
           sudo apt-get install graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.11
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
@@ -210,7 +210,6 @@ jobs:
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
@@ -239,7 +238,6 @@ jobs:
           sudo apt install gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
