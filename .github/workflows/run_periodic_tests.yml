@@ -331,7 +331,7 @@ jobs:
 
   # M-series Mac Mini
   build-apple-mseries:
-    # if: github.repository_owner == 'pybamm-team'
+    if: github.repository_owner == 'pybamm-team'
     needs: style
     runs-on: [self-hosted, macOS, ARM64]
     env:
