@@ -113,8 +113,8 @@ dev = [
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
-    "jax==0.4.28; python_version >= '3.9'",
-    "jaxlib==0.4.28; python_version >= '3.9'",
+    "jax==0.4.28",
+    "jaxlib==0.4.28",
 ]
 # Contains all optional dependencies, except for jax and dev dependencies
 all = [
