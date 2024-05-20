@@ -4,6 +4,7 @@
 from __future__ import annotations
 import numpy as np
 from scipy import interpolate
+from scipy.sparse.linalg import spsolve
 from collections.abc import Sequence
 import numbers
 
@@ -150,12 +151,17 @@ class Interpolant(pybamm.Function):
                     fill_value = None
                 else:
                     fill_value = np.nan
+                if interpolator == "cubic":
+                    solver = spsolve
+                else:
+                    solver = None
                 interpolating_function = interpolate.RegularGridInterpolator(
                     (x1, x2),
                     y,
                     method=interpolator,
                     bounds_error=False,
                     fill_value=fill_value,
+                    solver=solver,
                 )
 
         elif len(x) == 3:
@@ -173,12 +179,17 @@ class Interpolant(pybamm.Function):
                     for 3D interpolation"""
                 )
             else:
+                if interpolator == "cubic":
+                    solver = spsolve
+                else:
+                    solver = None
                 interpolating_function = interpolate.RegularGridInterpolator(
                     (x1, x2, x3),
                     y,
                     method=interpolator,
                     bounds_error=False,
                     fill_value=fill_value,
+                    solver=solver,
                 )
         else:
             raise ValueError(f"Invalid dimension of x: {len(x)}")
