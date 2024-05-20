@@ -53,12 +53,17 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt install gfortran gcc graphviz pandoc
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
@@ -108,11 +113,16 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
           sudo apt install gfortran gcc graphviz pandoc
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
@@ -149,12 +159,17 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt install gfortran gcc graphviz pandoc
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
@@ -207,13 +222,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
           sudo apt install graphviz pandoc
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
           sudo dot -c
-          sudo apt-get install texlive-latex-extra dvipng
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         id: setup-python
@@ -241,12 +261,17 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt install gfortran gcc graphviz pandoc
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
@@ -277,12 +302,17 @@ jobs:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
 
-      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt install gfortran gcc graphviz
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install OpenBLAS and TeXLive for Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
