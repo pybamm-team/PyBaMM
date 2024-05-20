@@ -45,7 +45,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-12, macos-14, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        # Exclude Python 3.12 from unit tests since we run it in the coverage jobs 
+        # Exclude Python 3.12 from unit tests since we run it in the coverage jobs
         exclude:
           - os: ubuntu-latest
             python-version: "3.12"
@@ -103,8 +103,8 @@ jobs:
 
       - name: Install Linux system dependencies
         run: |
-          sudo apt-get update  
-          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra-dvipng  
+          sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra-dvipng
 
       - name: Set up Python 3.12
         id: setup-python
@@ -141,8 +141,8 @@ jobs:
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get update  
-          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng  
+          sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
@@ -178,7 +178,7 @@ jobs:
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
-    
+
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
