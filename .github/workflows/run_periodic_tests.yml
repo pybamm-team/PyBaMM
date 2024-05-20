@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   pull_request:
     branches:
-    - main
+      - main
 
   # Run every day at 3 am UTC
   schedule:
@@ -38,7 +38,106 @@ jobs:
           python -m pip install pre-commit
           pre-commit run -a
 
-  build:
+  run_unit_tests:
+    needs: style
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-12, macos-14, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        exclude:
+          - os: ubuntu-latest
+            python-version: "3.12"
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install Linux system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc graphviz pandoc
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Install macOS system dependencies
+        if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
+        run: |
+          brew analytics off
+          brew install graphviz
+          brew reinstall gcc
+
+      - name: Install Windows system dependencies
+        if: matrix.os == 'windows-latest'
+        run: choco install graphviz --version=8.0.5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install nox
+        run: python -m pip install nox
+
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
+        timeout-minutes: 10
+        if: matrix.os != 'windows-latest'
+        run: python -m nox -s pybamm-requires
+
+      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        run: python -m nox -s unit
+
+  check_coverage:
+    needs: style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Coverage tests (ubuntu-latest / Python 3.12)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc graphviz pandoc
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.12
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install nox
+        run: python -m pip install nox
+
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
+        run: python -m nox -s pybamm-requires
+
+      - name: Run unit tests for Ubuntu with Python 3.11 and generate coverage report
+        run: python -m nox -s coverage
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4.3.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  run_integration_tests:
     needs: style
     runs-on: ${{ matrix.os }}
     strategy:
@@ -49,23 +148,25 @@ jobs:
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
+      # dot -c is for registering graphviz fonts and plugins
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc libopenblas-dev graphviz pandoc
-          sudo apt install texlive-full
+          sudo apt install gfortran gcc graphviz pandoc
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
           brew install graphviz
@@ -73,7 +174,13 @@ jobs:
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
-        run: choco install graphviz --version=2.38.0.20190211
+        run: choco install graphviz --version=8.0.5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install nox
         run: python -m pip install nox
@@ -83,37 +190,116 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
-      - name: Run unit tests for GNU/Linux, macOS, and Windows with all Python versions
-        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
-        run: python -m nox -s unit
-
-      - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        run: python -m nox -s coverage
-
-      - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        uses: codecov/codecov-action@v4.3.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run integration tests
+      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
+    # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
 
-      - name: Install docs dependencies and run doctests
-        if: matrix.os == 'ubuntu-latest'
+  run_doctests:
+    needs: style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Doctests (ubuntu-latest / Python 3.11)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install graphviz pandoc
+          sudo dot -c
+          sudo apt-get install texlive-latex-extra dvipng
+
+      - name: Set up Python 3.12
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install nox
+        run: python -m pip install nox
+
+      - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
 
-      - name: Check if the documentation can be built
-        if: matrix.os == 'ubuntu-latest'
+      - name: Check if the documentation can be built for GNU/Linux
         run: python -m nox -s docs
 
-      - name: Install dev dependencies and run example tests
+  run_example_tests:
+    needs: style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Example notebooks (ubuntu-latest / Python 3.12)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc graphviz pandoc
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.12
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install nox
+        run: python -m pip install nox
+
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
+        run: python -m nox -s pybamm-requires
+
+      - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
-      - name: Run example scripts tests
+  run_scripts_tests:
+    needs: style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Example scripts (ubuntu-latest / Python 3.12)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+
+      # dot -c is for registering graphviz fonts and plugins
+      - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt install gfortran gcc graphviz
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.12
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install nox
+        run: python -m pip install nox
+
+      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
+        timeout-minutes: 10
+        run: python -m nox -s pybamm-requires
+
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts
 
   # M-series Mac Mini
@@ -130,7 +316,9 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@v4
+      
       - name: Install Python & create virtualenv
         shell: bash
         run: |
