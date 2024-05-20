@@ -97,7 +97,6 @@ class CMakeBuild(build_ext):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
             "-DPYBAMM_IDAKLU_EXPR_IREE=ON",
-            "-GNinja",
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         ]
         if self.suitesparse_root:

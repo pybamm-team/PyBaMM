@@ -355,12 +355,12 @@ iree_status_t IREESession::iree_runtime_exec(
             // Encoding type:
             IREE_HAL_ENCODING_TYPE_DENSE_ROW_MAJOR,
             (iree_hal_buffer_params_t){
-                // Where to allocate (host or device):
-                .type = IREE_HAL_MEMORY_TYPE_DEVICE_LOCAL,
-                // Access to allow to this memory:
-                .access = IREE_HAL_MEMORY_ACCESS_ALL,
                 // Intended usage of the buffer (transfers, dispatches, etc):
                 .usage = IREE_HAL_BUFFER_USAGE_DEFAULT,
+                // Access to allow to this memory:
+                .access = IREE_HAL_MEMORY_ACCESS_ALL,
+                // Where to allocate (host or device):
+                .type = IREE_HAL_MEMORY_TYPE_DEVICE_LOCAL,
             },
             // The actual heap buffer to wrap or clone and its allocator:
             iree_make_const_byte_span(&arg_data[0], sizeof(float) * arg_data.size()),
