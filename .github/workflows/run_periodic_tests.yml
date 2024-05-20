@@ -24,20 +24,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  style:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
-      - name: Check style
-        run: |
-          python -m pip install pre-commit
-          pre-commit run -a
-
   run_unit_tests:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -271,7 +257,6 @@ jobs:
   # M-series Mac Mini
   build-apple-mseries:
     if: github.repository_owner == 'pybamm-team'
-    needs: style
     runs-on: [self-hosted, macOS, ARM64]
     env:
       GITHUB_PATH: ${PYENV_ROOT/bin:$PATH}
