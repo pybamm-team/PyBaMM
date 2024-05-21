@@ -36,7 +36,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.23.5",
-    "scipy>=1.9.3,<1.13.0",
+    "scipy>=1.11.4",
     "casadi>=3.6.5",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
@@ -113,8 +113,8 @@ dev = [
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = [
-    "jax==0.4.20; python_version >= '3.9'",
-    "jaxlib==0.4.20; python_version >= '3.9'",
+    "jax==0.4.27",
+    "jaxlib==0.4.27",
 ]
 # Contains all optional dependencies, except for jax and dev dependencies
 all = [
