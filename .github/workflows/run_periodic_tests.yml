@@ -170,7 +170,6 @@ jobs:
   run_doctests:
     runs-on: ubuntu-latest
     name: Doctests (ubuntu-latest / Python 3.11)
-
     steps:
       - name: Check out PyBaMM repository
         uses: actions/checkout@v4
