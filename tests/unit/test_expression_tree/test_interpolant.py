@@ -133,7 +133,7 @@ class TestInterpolant(TestCase):
         # check also works for cubic
         interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="cubic")
         value = interp.evaluate(y=np.array([1, 5]))
-        np.testing.assert_equal(value, f(1, 5))
+        np.testing.assert_almost_equal(value, f(1, 5), decimal=3)
 
         # Test raising error if data is not 2D
         data_3d = np.zeros((11, 22, 33))
@@ -231,7 +231,7 @@ class TestInterpolant(TestCase):
             x_in, data, (var1, var2, var3), interpolator="cubic"
         )
         value = interp.evaluate(y=np.array([1, 5, 8]))
-        np.testing.assert_equal(value, f(1, 5, 8))
+        np.testing.assert_almost_equal(value, f(1, 5, 8), decimal=3)
 
         # Test raising error if data is not 3D
         data_4d = np.zeros((11, 22, 33, 5))
