@@ -5,6 +5,7 @@ import numpy as np
 import pybamm
 import numbers
 from pprint import pformat
+from warnings import warn
 from collections import defaultdict
 
 
@@ -229,7 +230,7 @@ class ParameterValues:
         if not isinstance(values, dict):
             values = values._dict_items
         # check parameter values
-        self.check_parameter_values(values)
+        values = self.check_parameter_values(values)
         # update
         for name, value in values.items():
             # check for conflicts
@@ -389,7 +390,8 @@ class ParameterValues:
         )
         return parameter_values
 
-    def check_parameter_values(self, values):
+    @staticmethod
+    def check_parameter_values(values):
         for param in values:
             if "propotional term" in param:
                 raise ValueError(
@@ -402,6 +404,15 @@ class ParameterValues:
                 raise ValueError(
                     f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
                 )
+            if "electrode diffusivity" in param:
+                warn(
+                    f"The parameter '{param}' has been renamed to '{param.replace('electrode', 'particle')}'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                param = param.replace("electrode", "particle")
+
+        return values
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
