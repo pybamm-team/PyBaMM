@@ -32,15 +32,6 @@ def test_fetch_fake():
     no_internet_connection(),
     reason="Network not available to download files from registry",
 )
-def test_registry_checksum():
-    # Checking if the checksums returned are equal to the ones in the registry
-    return data_loader.show_registry(checksum=True) == data_loader.files
-
-
-@pytest.mark.skipif(
-    no_internet_connection(),
-    reason="Network not available to download files from registry",
-)
 def test_registry():
     # Checking if the file names returned are equal to the ones in the registry
     return data_loader.show_registry() == list(data_loader.files)

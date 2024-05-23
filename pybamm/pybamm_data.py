@@ -6,15 +6,6 @@ class DataLoader:
     """
     Data Loader class for downloading and loading data files upstream at https://github.com/pybamm-team/pybamm-data/
 
-    Attributes
-    ----------
-    path: POSIX/Windows PATH
-       POSIX/Windows path to the data file.
-       The folder locations are defined by the `platformdirs <https://platformdirs.readthedocs.io/en/latest/>`_ package using the `user_cache_dir <https://platformdirs.readthedocs.io/en/latest/api.html#cache-directory>`_ function.
-    registry: pooch.core.Pooch object
-        Creates a registry of data files available to fetch using pooch.
-
-
     The following files are listed in the registry -
 
     COMSOL Results
@@ -139,28 +130,17 @@ class DataLoader:
             Name of the data file to be fetched from the registry.
         Returns
         -------
-        POSIX/Windows Path to the data file.
+        pathlib.PurePath
         """
         self.registry.fetch(filename)
         return pathlib.Path(f"{self.path}/{self.version}/{filename}")
 
-    def show_registry(self, checksum: bool = False):
+    def show_registry(self):
         """
-        Prints all the files present in the registry along with their checksums (optional).
+        Prints the name of all the files present in the registry.
 
-        Parameters
-        ----------
-        checksum : bool, optional
-            Prints file registries with checksums if True.
         Returns
         -------
-        list, dict (if checksum = True)
+        list
         """
-        if checksum:
-            for key in self.files:
-                print(f"{key} : {self.files[key]}")
-            return self.files
-        else:
-            for key in self.files:
-                print(key)
-            return list(self.files.keys())
+        return list(self.files.keys())
