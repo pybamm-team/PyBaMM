@@ -14,35 +14,18 @@ from multiprocessing import cpu_count
 
 SUITESPARSE_VERSION = "6.0.3"
 SUNDIALS_VERSION = "6.5.0"
-
 SUITESPARSE_URL = f"https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v{SUITESPARSE_VERSION}.tar.gz"
 SUNDIALS_URL = f"https://github.com/LLNL/sundials/releases/download/v{SUNDIALS_VERSION}/sundials-{SUNDIALS_VERSION}.tar.gz"
-
 SUITESPARSE_CHECKSUM = (
     "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
 )
 SUNDIALS_CHECKSUM = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
-
-# universal binaries for macOS 11.0 and later; sourced from https://mac.r-project.org/openmp/
-OPENMP_VERSION = "16.0.4"
-OPENMP_URL = (
-    f"https://mac.r-project.org/openmp/openmp-{OPENMP_VERSION}-darwin20-Release.tar.gz"
-)
-OPENMP_CHECKSUM = "a763f0bdc9115c4f4933accc81f514f3087d56d6528778f38419c2a0d2231972"
-
-
 DEFAULT_INSTALL_DIR = os.path.join(os.getenv("HOME"), ".local")
 
 
 def safe_remove_dir(path):
-    """Remove a directory or file if it exists."""
-    try:
-        if os.path.isfile(path):
-            os.remove(path)
-        elif os.path.isdir(path):
-            shutil.rmtree(path)
-    except Exception as e:
-        print(f"Error while removing {path}: {e}")
+    if os.path.exists(path):
+        shutil.rmtree(path)
 
 
 def install_suitesparse(download_dir):
@@ -68,11 +51,11 @@ def install_suitesparse(download_dir):
     env = os.environ.copy()
     for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
         build_dir = os.path.join(suitesparse_src, libdir)
-        # Set an RPATH in order for libsuitesparseconfig.dylib to find libomp.dylib
+        # We want to ensure that libsuitesparseconfig.dylib is not repeated in
+        # multiple paths at the time of wheel repair. Therefore, it should not be
+        # built with an RPATH since it is copied to the install prefix.
         if libdir == "SuiteSparse_config":
-            env["CMAKE_OPTIONS"] = (
-                f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib"
-            )
+            env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
         else:
             # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
             # INSTALL RPATH in order to ensure that the dynamic libraries are found
@@ -110,9 +93,20 @@ def install_sundials(download_dir, install_dir):
     # try to find OpenMP on mac
     if platform.system() == "Darwin":
         # flags to find OpenMP on mac
-        OpenMP_C_FLAGS = f"-Xpreprocessor -fopenmp -lomp -L{os.path.join(KLU_LIBRARY_DIR)} -I{os.path.join(KLU_INCLUDE_DIR)}"
-        OpenMP_C_LIB_NAMES = "omp"
-        OpenMP_omp_LIBRARY = os.path.join(KLU_LIBRARY_DIR, "libomp.dylib")
+        if platform.processor() == "arm":
+            OpenMP_C_FLAGS = (
+                "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include"
+            )
+            OpenMP_C_LIB_NAMES = "omp"
+            OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
+        elif platform.processor() == "i386":
+            OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
+            OpenMP_C_LIB_NAMES = "omp"
+            OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
+        else:
+            raise NotImplementedError(
+                f"Unsupported processor architecture: {platform.processor()}. Only 'arm' and 'i386' architectures are supported."
+            )
 
         cmake_args += [
             "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
@@ -134,47 +128,6 @@ def install_sundials(download_dir, install_dir):
     print("-" * 10, "Building SUNDIALS", "-" * 40)
     make_cmd = ["make", f"-j{cpu_count()}", "install"]
     subprocess.run(make_cmd, cwd=build_dir, check=True)
-
-
-# Relevant for macOS only because recent Xcode Clang versions do not include OpenMP headers.
-# Other compilers (e.g. GCC) include the OpenMP specification by default.
-def set_up_openmp(download_dir, install_dir):
-    print("-" * 10, "Extracting OpenMP archive", "-" * 40)
-
-    openmp_dir = f"openmp-{OPENMP_VERSION}"
-    openmp_src = os.path.join(download_dir, openmp_dir)
-
-    # extract OpenMP archive
-    with tarfile.open(
-        os.path.join(download_dir, f"{openmp_dir}-darwin20-Release.tar.gz")
-    ) as tar:
-        tar.extractall(openmp_src)
-
-    # create directories
-    os.makedirs(os.path.join(install_dir, "lib"), exist_ok=True)
-    os.makedirs(os.path.join(install_dir, "include"), exist_ok=True)
-
-    # copy files
-    shutil.copy(
-        os.path.join(openmp_src, "usr", "local", "lib", "libomp.dylib"),
-        os.path.join(install_dir, "lib"),
-    )
-    for file in os.listdir(os.path.join(openmp_src, "usr", "local", "include")):
-        shutil.copy(
-            os.path.join(openmp_src, "usr", "local", "include", file),
-            os.path.join(install_dir, "include"),
-        )
-
-    # fix rpath; for some reason the downloaded dylib has an absolute path
-    # to /usr/local/lib/, so use self-referential rpath
-    subprocess.check_call(
-        [
-            "install_name_tool",
-            "-id",
-            "@rpath/libomp.dylib",
-            f"{os.path.join(install_dir, 'lib', 'libomp.dylib')}",
-        ]
-    )
 
 
 def check_libraries_installed(install_dir):
@@ -224,7 +177,7 @@ def check_libraries_installed(install_dir):
         suitesparse_files = [file + ".dylib" for file in suitesparse_files]
     else:
         raise NotImplementedError(
-            f"Unsupported operating system: {platform.system()}. This script supports only Linux and macOS."
+            f"Unsupported operating system: {platform.system()}. This script currently supports only Linux and macOS."
         )
 
     suitesparse_lib_found = True
@@ -244,16 +197,6 @@ def check_libraries_installed(install_dir):
             break
 
     return sundials_lib_found, suitesparse_lib_found
-
-
-def check_openmp_installed_on_macos(install_dir):
-    openmp_lib_found = isfile(join(install_dir, "lib", "libomp.dylib"))
-    openmp_headers_found = isfile(join(install_dir, "include", "omp.h"))
-    if not openmp_lib_found or not openmp_headers_found:
-        print("libomp.dylib or omp.h not found. Proceeding with OpenMP installation.")
-    else:
-        print(f"libomp.dylib and omp.h found in {install_dir}.")
-    return openmp_lib_found
 
 
 def calculate_sha256(file_path):
@@ -331,7 +274,7 @@ if not os.path.exists(download_dir):
 
 # Get installation location
 parser = argparse.ArgumentParser(
-    description="Download, compile and install SUNDIALS and SuiteSparse."
+    description="Download, compile and install Sundials and SuiteSparse."
 )
 parser.add_argument(
     "--force",
@@ -353,20 +296,10 @@ if args.force:
     safe_remove_dir(os.path.join(download_dir, "build_sundials"))
     safe_remove_dir(os.path.join(download_dir, f"SuiteSparse-{SUITESPARSE_VERSION}"))
     safe_remove_dir(os.path.join(download_dir, f"sundials-{SUNDIALS_VERSION}"))
-    if platform.system() == "Darwin":
-        safe_remove_dir(os.path.join(install_dir, "lib", "libomp.dylib"))
-        safe_remove_dir(os.path.join(install_dir, "include", "omp.h"))
-        sundials_found, suitesparse_found, openmp_found = False, False, False
-    else:
-        sundials_found, suitesparse_found = False, False
+    sundials_found, suitesparse_found = False, False
 else:
     # Check whether the libraries are installed
-    if platform.system() == "Darwin":
-        sundials_found, suitesparse_found = check_libraries_installed(install_dir)
-        openmp_found = check_openmp_installed_on_macos(install_dir)
-    else:  # Linux
-        sundials_found, suitesparse_found = check_libraries_installed(install_dir)
-
+    sundials_found, suitesparse_found = check_libraries_installed(install_dir)
 
 if __name__ == "__main__":
     # Determine which libraries to download based on whether they were found
@@ -379,22 +312,12 @@ if __name__ == "__main__":
             ],
             download_dir,
         )
-
-        if platform.system() == "Darwin" and not openmp_found:
-            download_extract_library(OPENMP_URL, OPENMP_CHECKSUM, download_dir)
-            set_up_openmp(download_dir, install_dir)
-
         install_suitesparse(download_dir)
         install_sundials(download_dir, install_dir)
-
     else:
         if not sundials_found:
             # Only SUNDIALS is missing, download and install it
             parallel_download([(SUNDIALS_URL, SUNDIALS_CHECKSUM)], download_dir)
-            if platform.system() == "Darwin" and not openmp_found:
-                download_extract_library(OPENMP_URL, OPENMP_CHECKSUM, download_dir)
-                set_up_openmp(download_dir, install_dir)
-            # openmp needed for SUNDIALS on macOS
             install_sundials(download_dir, install_dir)
         if not suitesparse_found:
             # Only SuiteSparse is missing, download and install it
