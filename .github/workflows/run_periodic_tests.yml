@@ -57,7 +57,7 @@ jobs:
         # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz
+          brew install graphviz libomp
           brew reinstall gcc
 
       - name: Install Windows system dependencies
