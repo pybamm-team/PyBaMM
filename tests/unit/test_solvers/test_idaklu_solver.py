@@ -547,7 +547,7 @@ class TestIDAKLUSolver(TestCase):
                             soln = solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
-        # Construct a model and solve for all vairables, then test
+        # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
         input_parameters = {}  # Sensitivities dictionary
@@ -719,6 +719,25 @@ class TestIDAKLUSolver(TestCase):
         # Mock a 1D current collector and initialise (none in the model)
         sol["x_s [m]"].domain = ["current collector"]
         sol["x_s [m]"].initialise_1D()
+
+    def test_with_output_variables_and_event_termination(self):
+        model = pybamm.lithium_ion.DFN()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        sim1 = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(),
+        )
+        sim2 = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
+        )
+        sol1 = sim1.solve(np.linspace(0, 3600, 1000))
+        sol2 = sim2.solve(np.linspace(0, 3600, 1000))
+
+        assert sol1.termination == sol2.termination
 
 
 if __name__ == "__main__":

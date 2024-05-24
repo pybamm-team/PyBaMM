@@ -608,8 +608,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if self.output_variables:
             # Substitute empty vectors for state vector 'y'
             y_out = np.zeros((number_of_timesteps * number_of_states, 0))
+            number_of_samples = sol.y.shape[0] // number_of_timesteps
+            sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
+            y_out_events = sol.y
         else:
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
+            y_out_events = y_out
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -639,15 +643,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 model,
                 inputs_dict,
                 np.array([t[-1]]),
-                np.transpose(y_out[-1])[:, np.newaxis],
+                np.transpose(y_out_events[-1])[:, np.newaxis],
                 termination,
                 sensitivities=yS_out,
             )
             newsol.integration_time = integration_time
             if self.output_variables:
                 # Populate variables and sensititivies dictionaries directly
-                number_of_samples = sol.y.shape[0] // number_of_timesteps
-                sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
                 for _, var in enumerate(self.output_variables):
                     # ExplicitTimeIntegral's are not computed as part of the solver and
@@ -711,3 +713,95 @@ class IDAKLUSolver(pybamm.BaseSolver):
             calculate_sensitivities=calculate_sensitivities,
         )
         return obj
+
+    def get_termination_reason(
+        self, solution: pybamm.Solution, events: dict, variables: dict
+    ):
+        """
+        See `pybamm.BaseSolver.get_termination_reason()`
+        Overwrites the default method to handle events when output_variables are
+        provided to the IDAKLU solver, so only a subset of the model state vector is
+        returned.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution object
+        events : dict
+            Dictionary of events
+        variables : dict
+            Dictionary of model variables
+        """
+        if not self.output_variables or solution.termination == "final time":
+            return super().get_termination_reason(solution, events)
+
+        if solution.termination == "event":
+            pybamm.logger.debug("Start post-processing events")
+
+            termination_events = [
+                x for x in events if x.event_type == pybamm.EventType.TERMINATION
+            ]
+
+            # Get final event value
+            final_event_values = {}
+
+            output_vars = {var: variables[var] for var in self.output_variables}
+
+            for event in termination_events:
+                event_children = event.expression.children
+
+                # find the output variable that matches one of the event children
+                matching_var = {
+                    k: v for k, v in output_vars.items() if v in event_children
+                }
+                if len(matching_var) != 1:
+                    raise pybamm.SolverError(
+                        "Could not determine which variable should be used to calculate"
+                        " the termination event"
+                    )
+                ((k, v),) = matching_var.items()
+                # replace the function that matches the output variable with the final
+                # value
+                new_children = [
+                    (solution[k].entries[-1] if v == child else child)
+                    for child in event_children
+                ]
+                event_expression_copy = event.expression._binary_new_copy(
+                    new_children[0], new_children[1]
+                )
+
+                final_event_values[event.name] = event_expression_copy.evaluate(
+                    solution.t_event,
+                    solution.y_event,
+                    inputs=solution.all_inputs[-1],
+                )
+            termination_event = min(final_event_values, key=final_event_values.get)
+
+            # Check that it's actually an event
+            if final_event_values[termination_event] > 0.1:  # pragma: no cover
+                # Hard to test this
+                raise pybamm.SolverError(
+                    "Could not determine which event was triggered "
+                    "(possibly due to NaNs)"
+                )
+            # Add the event to the solution object
+            solution.termination = f"event: {termination_event}"
+            # Update t, y and inputs to include event time and state
+            # Note: if the final entry of t is equal to the event time we skip
+            # this (having duplicate entries causes an error later in ProcessedVariable)
+            if solution.t_event != solution.all_ts[-1][-1]:
+                event_sol = pybamm.Solution(
+                    solution.t_event,
+                    solution.y_event,
+                    solution.all_models[-1],
+                    solution.all_inputs[-1],
+                    solution.t_event,
+                    solution.y_event,
+                    solution.termination,
+                )
+                event_sol.solve_time = 0
+                event_sol.integration_time = 0
+                solution = solution + event_sol
+
+            pybamm.logger.debug("Finish post-processing events")
+            return solution, solution.termination

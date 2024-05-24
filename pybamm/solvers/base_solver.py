@@ -958,7 +958,7 @@ class BaseSolver:
             # Identify the event that caused termination and update the solution to
             # include the event time and state
             solutions[i], termination = self.get_termination_reason(
-                solution, model.events
+                solution, model.events, model.variables_and_events
             )
             # Assign times
             solutions[i].set_up_time = set_up_time
@@ -1252,7 +1252,9 @@ class BaseSolver:
 
         # Identify the event that caused termination and update the solution to
         # include the event time and state
-        solution, termination = self.get_termination_reason(solution, model.events)
+        solution, termination = self.get_termination_reason(
+            solution, model.events, model.variables_and_events
+        )
 
         # Assign setup time
         solution.set_up_time = set_up_time
@@ -1271,7 +1273,7 @@ class BaseSolver:
             return old_solution + solution
 
     @staticmethod
-    def get_termination_reason(solution, events):
+    def get_termination_reason(solution, events, variables=None):
         """
         Identify the cause for termination. In particular, if the solver terminated
         due to an event, (try to) pinpoint which event was responsible. If an event
