@@ -20,9 +20,6 @@ class ExplicitCurrentControl(BaseModel):
             "C-rate": I / self.param.Q,
         }
 
-        # Add discharge capacity variable
-        variables.update(super().get_fundamental_variables())
-
         return variables
 
 

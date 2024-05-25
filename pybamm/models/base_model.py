@@ -105,6 +105,7 @@ class BaseModel:
         self._boundary_conditions = {}
         self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
+        self._summary_variables = []
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None

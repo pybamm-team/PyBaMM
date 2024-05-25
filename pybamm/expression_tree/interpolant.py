@@ -126,9 +126,10 @@ class Interpolant(pybamm.Function):
                     fill_value_1 = "extrapolate"
                 interpolating_function = interpolate.interp1d(
                     x1,
-                    y.T,
+                    y,
                     bounds_error=False,
                     fill_value=fill_value_1,
+                    axis=0,
                 )
             elif interpolator == "cubic":
                 interpolating_function = interpolate.CubicSpline(

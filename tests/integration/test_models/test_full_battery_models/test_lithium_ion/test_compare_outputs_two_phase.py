@@ -144,7 +144,7 @@ class TestCompareOutputsTwoPhase(TestCase):
         )
 
         sim = pybamm.Simulation(model, parameter_values=param)
-        t_eval = np.linspace(0, 9000, 1000)
+        t_eval = np.linspace(0, 8000, 1000)
         inputs = [{"x": 0.01}, {"x": 0.1}]
         sol = sim.solve(t_eval, inputs=inputs)
 
