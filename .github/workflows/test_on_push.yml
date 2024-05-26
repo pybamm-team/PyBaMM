@@ -38,10 +38,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-12, macos-14, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        # We check coverage on Ubuntu with Python 3.12, so we skip unit tests for it here
-        exclude:
-          - os: ubuntu-latest
-            python-version: "3.12"
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
@@ -109,7 +105,7 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
-      - name: Run unit/coverage and integration tests
+      - name: Run unit/coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         shell: bash
         run: |
           if [ ${{ matrix.python-version }} == "3.12" && ${{ matrix.os }} == "ubuntu-latest" ]; then
@@ -117,7 +113,9 @@ jobs:
           else
             python -m nox -s unit
           fi
-          python -m nox -s integration
+
+      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        run: python -m nox -s integration
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
