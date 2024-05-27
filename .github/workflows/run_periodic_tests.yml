@@ -109,7 +109,7 @@ jobs:
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.3.1
+        uses: codecov/codecov-action@v4.4.1
         if: github.repository == 'pybamm-team/PyBaMM'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
