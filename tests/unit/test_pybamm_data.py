@@ -1,6 +1,5 @@
 import pybamm
 import pytest
-import random
 from tests import no_internet_connection
 
 data_loader = pybamm.DataLoader()
@@ -11,11 +10,9 @@ data_loader = pybamm.DataLoader()
     reason="Network not available to download files from registry",
 )  # Skip if no internet
 def test_fetch():
-    # Fetch a file from the registry and check it in local cache folder for its presence
     data_loader = pybamm.DataLoader()
-    random_file = random.choice(list(data_loader.files.keys()))
-    file_path = data_loader.get_data(random_file)
-    return file_path.is_file()
+    test_file = list(data_loader.files.keys())[0]
+    return data_loader.get_data(test_file).is_file()
 
 
 @pytest.mark.skipif(
