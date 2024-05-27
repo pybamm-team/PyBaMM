@@ -11,7 +11,7 @@ data_loader = pybamm.DataLoader()
 )  # Skip if no internet
 def test_fetch():
     data_loader = pybamm.DataLoader()
-    test_file = list(data_loader.files.keys())[0]
+    test_file = next(iter(data_loader.files.keys()))
     return data_loader.get_data(test_file).is_file()
 
 
