@@ -28,7 +28,7 @@ jobs:
 
       # use stable version for now to avoid breaking changes
       - name: Lychee URL checker
-        uses: lycheeverse/lychee-action@v1.9.3
+        uses: lycheeverse/lychee-action@v1.10.0
         with:
           # arguments with file types to check
           args: >-
@@ -47,6 +47,7 @@ jobs:
             --exclude-path ./scripts/update_version.py
             --exclude-path asv.conf.json
             --exclude-path docs/conf.py
+            --exclude-path all_contributors.md
             './**/*.rst'
             './**/*.md'
             './**/*.py'

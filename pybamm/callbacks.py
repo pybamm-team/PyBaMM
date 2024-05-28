@@ -1,10 +1,3 @@
-#
-# Base class for callbacks and some useful callbacks for pybamm
-# Callbacks are used to perform actions (e.g. logging, saving)
-# at certain points in the simulation
-# Inspired by Keras callbacks
-# https://github.com/keras-team/keras/blob/master/keras/callbacks/callback.py
-#
 import pybamm
 import numpy as np
 import inspect
@@ -99,8 +92,7 @@ class CallbackList(Callback):
 
     This is done without having to redefine the method each time by using the
     `callback_loop_decorator` decorator, which is applied to every method that starts
-    with `on_`, using the `inspect` module. See
-    https://stackoverflow.com/questions/1367514/how-to-decorate-a-method-inside-a-class.
+    with `on_`, using the `inspect` module.
 
     If better control over how the callbacks are called is required, it might be better
     to be more explicit with the for loop.
@@ -183,7 +175,19 @@ class LoggingCallback(Callback):
         )
 
     def on_step_end(self, logs):
-        pass
+        time_stop = logs["stopping conditions"]["time"]
+        if time_stop is not None:
+            time_now = logs["experiment time"]
+            if time_now < time_stop[0]:
+                self.logger.notice(
+                    f"Time is now {time_now:.3f} s, "
+                    f"will stop at {time_stop[0]:.3f} s."
+                )
+            else:
+                self.logger.notice(
+                    f"Stopping experiment since time ({time_now:.3f} s) "
+                    f"has reached stopping time ({time_stop[0]:.3f} s)."
+                )
 
     def on_cycle_end(self, logs):
         cap_stop = logs["stopping conditions"]["capacity"]

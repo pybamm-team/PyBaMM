@@ -3,6 +3,9 @@ import unittest
 import numpy as np
 from tests import TestCase
 import matplotlib.pyplot as plt
+from matplotlib import use
+
+use("Agg")
 
 
 class TestPlotVoltageComponents(TestCase):
@@ -12,7 +15,7 @@ class TestPlotVoltageComponents(TestCase):
         sol = sim.solve([0, 3600])
         for split in [True, False]:
             _, ax = pybamm.plot_voltage_components(
-                sol, testing=True, split_by_electrode=split
+                sol, show_plot=False, split_by_electrode=split
             )
             t, V = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(t, sol["Time [h]"].data)
@@ -29,7 +32,7 @@ class TestPlotVoltageComponents(TestCase):
 
         for split in [True, False]:
             _, ax = pybamm.plot_voltage_components(
-                sim, testing=True, split_by_electrode=split
+                sim, show_plot=False, split_by_electrode=split
             )
             t, V = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(t, sim.solution["Time [h]"].data)
@@ -44,7 +47,9 @@ class TestPlotVoltageComponents(TestCase):
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 3600])
         for split in [True, False]:
-            _, ax = sol.plot_voltage_components(testing=True, split_by_electrode=split)
+            _, ax = sol.plot_voltage_components(
+                show_plot=False, split_by_electrode=split
+            )
             t, V = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(t, sol["Time [h]"].data)
             np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
@@ -59,7 +64,9 @@ class TestPlotVoltageComponents(TestCase):
         sim.solve([0, 3600])
 
         for split in [True, False]:
-            _, ax = sim.plot_voltage_components(testing=True, split_by_electrode=split)
+            _, ax = sim.plot_voltage_components(
+                show_plot=False, split_by_electrode=split
+            )
             t, V = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(t, sim.solution["Time [h]"].data)
             np.testing.assert_array_equal(V, sim.solution["Battery voltage [V]"].data)

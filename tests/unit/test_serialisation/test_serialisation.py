@@ -139,7 +139,7 @@ class TestSerialiseModels(TestCase):
         new_solver = pybamm.ScipySolver()
         new_solution = new_solver.solve(new_model, t)
 
-        for x, val in enumerate(solution.all_ys):
+        for x, _ in enumerate(solution.all_ys):
             np.testing.assert_array_almost_equal(
                 solution.all_ys[x], new_solution.all_ys[x]
             )
@@ -564,7 +564,7 @@ class TestSerialise(TestCase):
         new_solution = pybamm.ScipySolver().solve(new_model, np.linspace(0, 1))
 
         # check dynamic plot loads
-        new_solution.plot(["c", "2c"], testing=True)
+        new_solution.plot(["c", "2c"], show_plot=False)
 
         # models with a mesh ----------------
         model = pybamm.lithium_ion.SPM(name="test_spm_plotting")
@@ -590,7 +590,7 @@ class TestSerialise(TestCase):
         new_solution = new_solver.solve(new_model, [0, 3600])
 
         # check dynamic plot loads
-        new_solution.plot(testing=True)
+        new_solution.plot(show_plot=False)
 
 
 if __name__ == "__main__":

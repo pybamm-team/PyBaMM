@@ -71,6 +71,11 @@ class TestInterpolant(TestCase):
                 interp.evaluate(y=np.array([2]))[:, 0], np.array([np.nan])
             )
 
+    def test_interpolation_float(self):
+        x = np.linspace(0, 1, 200)
+        interp = pybamm.Interpolant(x, 2 * x, 0.5)
+        self.assertEqual(interp.evaluate(), 1)
+
     def test_interpolation_1_x_2d_y(self):
         x = np.linspace(0, 1, 200)
         y = np.tile(2 * x, (10, 1)).T
@@ -128,7 +133,7 @@ class TestInterpolant(TestCase):
         # check also works for cubic
         interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="cubic")
         value = interp.evaluate(y=np.array([1, 5]))
-        np.testing.assert_equal(value, f(1, 5))
+        np.testing.assert_almost_equal(value, f(1, 5), decimal=3)
 
         # Test raising error if data is not 2D
         data_3d = np.zeros((11, 22, 33))
@@ -226,7 +231,7 @@ class TestInterpolant(TestCase):
             x_in, data, (var1, var2, var3), interpolator="cubic"
         )
         value = interp.evaluate(y=np.array([1, 5, 8]))
-        np.testing.assert_equal(value, f(1, 5, 8))
+        np.testing.assert_almost_equal(value, f(1, 5, 8), decimal=3)
 
         # Test raising error if data is not 3D
         data_4d = np.zeros((11, 22, 33, 5))

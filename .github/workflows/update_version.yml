@@ -44,7 +44,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: 3.12
 
       - name: Install dependencies
         run: |
@@ -82,7 +82,7 @@ jobs:
       # create a pull request updating versions in develop
       - name: Create Pull Request
         id: version_pr
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           delete-branch: true
           branch-suffix: short-commit-hash

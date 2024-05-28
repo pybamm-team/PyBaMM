@@ -5,11 +5,10 @@ import os
 import numpy as np
 import pybamm
 from collections import defaultdict
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class LoopList(list):
-
     """A list which loops over itself when accessing an
     index so that it never runs out"""
 
@@ -47,7 +46,7 @@ def split_long_string(title, max_words=None):
 
 def close_plots():
     """Close all open figures"""
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     plt.close("all")
 
@@ -117,9 +116,7 @@ class QuickPlot:
         else:
             if len(labels) != len(models):
                 raise ValueError(
-                    "labels '{}' have different length to models '{}'".format(
-                        labels, [model.name for model in models]
-                    )
+                    f"labels '{labels}' have different length to models '{[model.name for model in models]}'"
                 )
             self.labels = labels
 
@@ -163,7 +160,7 @@ class QuickPlot:
             self.spatial_unit = "mm"
         elif spatial_unit == "um":  # micrometers
             self.spatial_factor = 1e6
-            self.spatial_unit = "$\mu$m"
+            self.spatial_unit = r"$\mu$m"
         else:
             raise ValueError(f"spatial unit '{spatial_unit}' not recognized")
 
@@ -225,10 +222,10 @@ class QuickPlot:
                 except KeyError:
                     # if variable_tuple is not provided, default to "fixed"
                     self.variable_limits[variable_tuple] = "fixed"
-                except TypeError:
+                except TypeError as error:
                     raise TypeError(
                         "variable_limits must be 'fixed', 'tight', or a dict"
-                    )
+                    ) from error
 
         self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
@@ -298,18 +295,13 @@ class QuickPlot:
                 if variable.domain != domain:
                     raise ValueError(
                         "Mismatching variable domains. "
-                        "'{}' has domain '{}', but '{}' has domain '{}'".format(
-                            variable_tuple[0],
-                            domain,
-                            variable_tuple[idx],
-                            variable.domain,
-                        )
+                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
-                (spatial_var_name, spatial_var_value) = self.get_spatial_var(
+                (spatial_var_name, spatial_var_value) = self._get_spatial_var(
                     variable_tuple, first_variable, "first"
                 )
                 self.spatial_variable_dict[variable_tuple] = {
@@ -332,11 +324,11 @@ class QuickPlot:
                     (
                         first_spatial_var_name,
                         first_spatial_var_value,
-                    ) = self.get_spatial_var(variable_tuple, first_variable, "first")
+                    ) = self._get_spatial_var(variable_tuple, first_variable, "first")
                     (
                         second_spatial_var_name,
                         second_spatial_var_value,
-                    ) = self.get_spatial_var(variable_tuple, first_variable, "second")
+                    ) = self._get_spatial_var(variable_tuple, first_variable, "second")
                     self.spatial_variable_dict[variable_tuple] = {
                         first_spatial_var_name: first_spatial_var_value,
                         second_spatial_var_name: second_spatial_var_value,
@@ -368,7 +360,7 @@ class QuickPlot:
             self.variables[variable_tuple] = variables
             self.subplot_positions[variable_tuple] = (self.n_rows, self.n_cols, k + 1)
 
-    def get_spatial_var(self, key, variable, dimension):
+    def _get_spatial_var(self, key, variable, dimension):
         """Return the appropriate spatial variable(s)"""
 
         # Extract name and value
@@ -472,12 +464,15 @@ class QuickPlot:
         ----------
         t : float
             Dimensional time (in 'time_units') at which to plot.
+        dynamic : bool, optional
+            Determine whether to allocate space for a slider at the bottom of the plot when generating a dynamic plot.
+            If True, creates a dynamic plot with a slider.
         """
 
-        plt = have_optional_dependency("matplotlib.pyplot")
-        gridspec = have_optional_dependency("matplotlib.gridspec")
-        cm = have_optional_dependency("matplotlib", "cm")
-        colors = have_optional_dependency("matplotlib", "colors")
+        plt = import_optional_dependency("matplotlib.pyplot")
+        gridspec = import_optional_dependency("matplotlib.gridspec")
+        cm = import_optional_dependency("matplotlib", "cm")
+        colors = import_optional_dependency("matplotlib", "colors")
 
         t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
@@ -649,17 +644,18 @@ class QuickPlot:
         bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
-    def dynamic_plot(self, testing=False, step=None):
+    def dynamic_plot(self, show_plot=True, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
 
         Parameters
         ----------
-        step : float
+        step : float, optional
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
             of the total time.
-        testing : bool
-            Whether to actually make the plot (turned off for unit tests)
+        show_plot : bool, optional
+            Whether to show the plots. Default is True. Set to False if you want to
+            only display the plot after plt.show() has been called.
 
         """
         if pybamm.is_notebook():  # pragma: no cover
@@ -674,8 +670,8 @@ class QuickPlot:
                 continuous_update=False,
             )
         else:
-            plt = have_optional_dependency("matplotlib.pyplot")
-            Slider = have_optional_dependency("matplotlib.widgets", "Slider")
+            plt = import_optional_dependency("matplotlib.pyplot")
+            Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
             # create an initial plot at time self.min_t
             self.plot(self.min_t, dynamic=True)
@@ -692,7 +688,7 @@ class QuickPlot:
             )
             self.slider.on_changed(self.slider_update)
 
-            if not testing:  # pragma: no cover
+            if show_plot:  # pragma: no cover
                 plt.show()
 
     def slider_update(self, t):
@@ -771,16 +767,16 @@ class QuickPlot:
 
         Parameters
         ----------
-        number_of_images : int (optional)
+        number_of_images : int, optional
             Number of images/plots to be compiled for a GIF.
-        duration : float (optional)
+        duration : float, optional
             Duration of visibility of a single image/plot in the created GIF.
-        output_filename : str (optional)
+        output_filename : str, optional
             Name of the generated GIF file.
 
         """
-        imageio = have_optional_dependency("imageio.v2")
-        plt = have_optional_dependency("matplotlib.pyplot")
+        imageio = import_optional_dependency("imageio.v2")
+        plt = import_optional_dependency("matplotlib.pyplot")
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)

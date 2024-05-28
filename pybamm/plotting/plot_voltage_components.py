@@ -3,7 +3,7 @@
 #
 import numpy as np
 
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 from pybamm.simulation import Simulation
 from pybamm.solvers.solution import Solution
 
@@ -13,7 +13,7 @@ def plot_voltage_components(
     ax=None,
     show_legend=True,
     split_by_electrode=False,
-    testing=False,
+    show_plot=True,
     **kwargs_fill,
 ):
     """
@@ -30,25 +30,25 @@ def plot_voltage_components(
     split_by_electrode : bool, optional
         Whether to show the overpotentials for the negative and positive electrodes
         separately. Default is False.
-    testing : bool, optional
-        Whether to actually make the plot (turned off for unit tests)
+    show_plot : bool, optional
+        Whether to show the plots. Default is True. Set to False if you want to
+        only display the plot after plt.show() has been called.
     kwargs_fill
-        Keyword arguments, passed to ax.fill_between
-
+        Keyword arguments: :obj:`matplotlib.axes.Axes.fill_between`
     """
     # Check if the input is a Simulation and extract Solution
     if isinstance(input_data, Simulation):
         solution = input_data.solution
     elif isinstance(input_data, Solution):
         solution = input_data
-    plt = have_optional_dependency("matplotlib.pyplot")
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
     kwargs_fill = {"alpha": 0.6, **kwargs_fill}
 
     if ax is not None:
         fig = None
-        testing = True
+        show_plot = False
     else:
         fig, ax = plt.subplots(figsize=(8, 4))
 
@@ -94,7 +94,7 @@ def plot_voltage_components(
     time = solution["Time [h]"].entries
     if split_by_electrode is False:
         ocv = solution["Battery open-circuit voltage [V]"]
-        initial_ocv = ocv(0)
+        initial_ocv = ocv(time[0])
         ocv = ocv.entries
         ax.fill_between(
             time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage"
@@ -102,8 +102,8 @@ def plot_voltage_components(
     else:
         ocp_n = solution["Battery negative electrode bulk open-circuit potential [V]"]
         ocp_p = solution["Battery positive electrode bulk open-circuit potential [V]"]
-        initial_ocp_n = ocp_n(0)
-        initial_ocp_p = ocp_p(0)
+        initial_ocp_n = ocp_n(time[0])
+        initial_ocp_p = ocp_p(time[0])
         initial_ocv = initial_ocp_p - initial_ocp_n
         delta_ocp_n = ocp_n.entries - initial_ocp_n
         delta_ocp_p = ocp_p.entries - initial_ocp_p
@@ -151,7 +151,7 @@ def plot_voltage_components(
     )
     ax.set_ylim([y_min, y_max])
 
-    if not testing:  # pragma: no cover
+    if show_plot:  # pragma: no cover
         plt.show()
 
     return fig, ax

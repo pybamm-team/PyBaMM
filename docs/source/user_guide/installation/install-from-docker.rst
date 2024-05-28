@@ -20,35 +20,11 @@ Pulling the Docker image
 
 Use the following command to pull the PyBaMM Docker image from Docker Hub:
 
-.. tab:: No optional solver
 
-      .. code:: bash
+.. code:: bash
 
-            docker pull pybamm/pybamm:latest
+    docker pull pybamm/pybamm
 
-.. tab:: Scikits.odes solver
-
-      .. code:: bash
-
-            docker pull pybamm/pybamm:odes
-
-.. tab:: JAX solver
-
-      .. code:: bash
-
-            docker pull pybamm/pybamm:jax
-
-.. tab:: IDAKLU solver
-
-      .. code:: bash
-
-            docker pull pybamm/pybamm:idaklu
-
-.. tab:: All solvers
-
-      .. code:: bash
-
-            docker pull pybamm/pybamm:all
 
 Running the Docker container
 ----------------------------
@@ -57,39 +33,22 @@ Once you have pulled the Docker image, you can run a Docker container with the P
 
 1. In your terminal, use the following command to start a Docker container from the pulled image:
 
-.. tab:: Basic
 
-      .. code:: bash
+.. code:: bash
 
-            docker run -it pybamm/pybamm:latest
+    docker run -it pybamm/pybamm
 
-.. tab:: ODES Solver
-
-      .. code:: bash
-
-            docker run -it pybamm/pybamm:odes
-
-.. tab:: JAX Solver
-
-      .. code:: bash
-
-            docker run -it pybamm/pybamm:jax
-
-.. tab:: IDAKLU Solver
-
-      .. code:: bash
-
-            docker run -it pybamm/pybamm:idaklu
-
-.. tab:: All Solver
-
-      .. code:: bash
-
-            docker run -it pybamm/pybamm:all
 
 2. You will now be inside the Docker container's shell. You can use PyBaMM and its dependencies as if you were in a virtual environment.
 
 3. You can execute PyBaMM-related commands, run tests develop & contribute from the container.
+
+.. note::
+
+    The default user for the container is ``pybamm`` with ``pybamm`` as password. The user belongs to
+    ``sudoers`` and ``root`` group, so the sudo command can be issued to install additional packages to
+    the container.  After a clean install, ``sudo apt-get update`` should be executed to update the source
+    list. Additional packages can be installed using ``sudo apt-get install [package_name]``.
 
 Exiting the Docker container
 ----------------------------
@@ -137,59 +96,9 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 
       conda activate pybamm
 
-Building Docker images with optional arguments
-----------------------------------------------
+.. note::
 
-When building the PyBaMM Docker images locally, you have the option to include specific solvers by using optional arguments. These solvers include:
-
-- ``IDAKLU``: For IDA solver provided by the SUNDIALS plus KLU.
-- ``ODES``: For scikits.odes solver for ODE & DAE problems.
-- ``JAX``: For Jax solver.
-- ``ALL``: For all the above solvers.
-
-To build the Docker images with optional arguments, you can follow these steps for each solver:
-
-.. tab:: Scikits.odes solver
-
-      .. code-block:: bash
-
-            docker build -t pybamm:odes -f scripts/Dockerfile --build-arg ODES=true .
-
-.. tab:: JAX solver
-
-      .. code-block:: bash
-
-            docker build -t pybamm:jax -f scripts/Dockerfile --build-arg JAX=true .
-
-.. tab:: IDAKLU solver
-
-      .. code-block:: bash
-
-            docker build -t pybamm:idaklu -f scripts/Dockerfile --build-arg IDAKLU=true .
-
-.. tab:: All solvers
-
-      .. code-block:: bash
-
-            docker build -t pybamm:all -f scripts/Dockerfile --build-arg ALL=true .
-
-After building the Docker images with the desired solvers, use the ``docker run`` command followed by the desired image name. For example, to run a container from the image built with all optional solvers:
-
-.. code-block:: bash
-
-      docker run -it pybamm:all
-
-Activate PyBaMM development environment inside docker container using:
-
-.. code-block:: bash
-
-      conda activate pybamm
-
-If you want to exit the Docker container's shell, you can simply type:
-
-.. code-block:: bash
-
-      exit
+  PyBaMM's Docker image comes with all available solvers by default. These solvers include ``IDAKLU`` IDAS solver provided by the SUNDIALS linked with SuiteSparse's KLU and the ``JAX`` solver.
 
 
 Using Git inside a running Docker container

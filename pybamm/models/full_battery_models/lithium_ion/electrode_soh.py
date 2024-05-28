@@ -4,7 +4,6 @@
 import pybamm
 import numpy as np
 from functools import lru_cache
-import warnings
 
 
 class _BaseElectrodeSOH(pybamm.BaseModel):
@@ -113,8 +112,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.ocp_soc_100_dimensional
-        V_min = param.ocp_soc_0_dimensional
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -122,6 +121,10 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
             Q_Li = pybamm.InputParameter("Q_Li")
         elif known_value == "cell capacity":
             Q = pybamm.InputParameter("Q")
+        else:
+            raise ValueError(
+                "Known value must be cell capacity or cyclable lithium capacity"
+            )
 
         # Define variables for 100% state of charge
         if "x_100" in solve_for:
@@ -199,6 +202,7 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         x_n = param.n.prim.x
         x_p = param.p.prim.x
 
+        T = param.T_ref
         V_max = param.voltage_high_cut
         V_min = param.voltage_low_cut
         Q_n = pybamm.InputParameter("Q_n")
@@ -208,27 +212,31 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
             Q_Li = pybamm.InputParameter("Q_Li")
         elif known_value == "cell capacity":
             Q = pybamm.InputParameter("Q")
+        else:
+            raise ValueError(
+                "Known value must be cell capacity or cyclable lithium capacity"
+            )
 
         # Define variables for 0% state of charge
         # TODO: thermal effects (include dU/dT)
         if "Un_0" in solve_for:
             Un_0 = pybamm.Variable("Un(x_0)")
             Up_0 = V_min + Un_0
-            x_0 = x_n(Un_0)
-            y_0 = x_p(Up_0)
+            x_0 = x_n(Un_0, T)
+            y_0 = x_p(Up_0, T)
 
         # Define variables for 100% state of charge
         # TODO: thermal effects (include dU/dT)
         if "Un_100" in solve_for:
             Un_100 = pybamm.Variable("Un(x_100)")
             Up_100 = V_max + Un_100
-            x_100 = x_n(Un_100)
-            y_100 = x_p(Up_100)
+            x_100 = x_n(Un_100, T)
+            y_100 = x_p(Up_100, T)
         else:
             Un_100 = pybamm.InputParameter("Un(x_100)")
             Up_100 = pybamm.InputParameter("Up(y_100)")
-            x_100 = x_n(Un_100)
-            y_100 = x_p(Up_100)
+            x_100 = x_n(Un_100, T)
+            y_100 = x_p(Up_100, T)
 
         # Define equations for 100% state of charge
         if "Un_100" in solve_for:
@@ -288,6 +296,10 @@ class ElectrodeSOHSolver:
     ):
         self.parameter_values = parameter_values
         self.param = param or pybamm.LithiumIonParameters(options)
+        if known_value not in ["cell capacity", "cyclable lithium capacity"]:
+            raise ValueError(
+                "Known value must be cell capacity or cyclable lithium capacity"
+            )
         self.known_value = known_value
         self.options = options or pybamm.BatteryModelOptions({})
 
@@ -381,7 +393,8 @@ class ElectrodeSOHSolver:
         # Calculate theoretical energy
         # TODO: energy calc for MSMR
         if self.options["open-circuit potential"] != "MSMR":
-            energy = self.theoretical_energy_integral(sol_dict)
+            energy_inputs = {**sol_dict, **inputs}
+            energy = self.theoretical_energy_integral(energy_inputs)
             sol_dict.update({"Maximum theoretical energy [W.h]": energy})
         return sol_dict
 
@@ -527,8 +540,6 @@ class ElectrodeSOHSolver:
                     f"Q_Li={Q_Li:.4f} Ah is outside the range of possible values "
                     f"[{Q_Li_min:.4f}, {Q_Li_max:.4f}]."
                 )
-            if Q_Li > Q_p:
-                warnings.warn(f"Q_Li={Q_Li:.4f} Ah is greater than Q_p={Q_p:.4f} Ah.")
 
             # Update (tighten) stoich limits based on total lithium content and
             # electrode capacities
@@ -569,12 +580,8 @@ class ElectrodeSOHSolver:
 
         # Parameterize the OCP functions
         if self.OCV_function is None:
-            self.V_max = self.parameter_values.evaluate(
-                self.param.ocp_soc_100_dimensional
-            )
-            self.V_min = self.parameter_values.evaluate(
-                self.param.ocp_soc_0_dimensional
-            )
+            self.V_max = self.parameter_values.evaluate(self.param.ocp_soc_100)
+            self.V_min = self.parameter_values.evaluate(self.param.ocp_soc_0)
             if self.options["open-circuit potential"] == "MSMR":
                 # will solve for potentials at the sto limits, so no need
                 # to store a function
@@ -607,12 +614,10 @@ class ElectrodeSOHSolver:
         else:
             # address numpy 1.25 deprecation warning: array should have ndim=0
             # before conversion
-            V_lower_bound = float(
-                self.OCV_function.evaluate(inputs={"x": x0_min, "y": y0_max}).item()
-            )
-            V_upper_bound = float(
-                self.OCV_function.evaluate(inputs={"x": x100_max, "y": y100_min}).item()
-            )
+            all_inputs = {**inputs, "x": x0_min, "y": y0_max}
+            V_lower_bound = float(self.OCV_function.evaluate(inputs=all_inputs).item())
+            all_inputs.update({"x": x100_max, "y": y100_min})
+            V_upper_bound = float(self.OCV_function.evaluate(inputs=all_inputs).item())
 
         # Check that the min and max achievable voltages span wider than the desired
         # voltage range
@@ -635,7 +640,7 @@ class ElectrodeSOHSolver:
                 )
             )
 
-    def get_initial_stoichiometries(self, initial_value, tol=1e-6):
+    def get_initial_stoichiometries(self, initial_value, tol=1e-6, inputs=None):
         """
         Calculate initial stoichiometries to start off the simulation at a particular
         state of charge, given voltage limits, open-circuit potentials, etc defined by
@@ -660,14 +665,14 @@ class ElectrodeSOHSolver:
         """
         parameter_values = self.parameter_values
         param = self.param
-        x_0, x_100, y_100, y_0 = self.get_min_max_stoichiometries()
+        x_0, x_100, y_100, y_0 = self.get_min_max_stoichiometries(inputs=inputs)
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.ocp_soc_0_dimensional)
-            V_max = parameter_values.evaluate(param.ocp_soc_100_dimensional)
+            V_min = parameter_values.evaluate(param.ocp_soc_0)
+            V_max = parameter_values.evaluate(param.ocp_soc_100)
 
-            if not V_min < V_init < V_max:
+            if not V_min <= V_init <= V_max:
                 raise ValueError(
                     f"Initial voltage {V_init}V is outside the voltage limits "
                     f"({V_min}, {V_max})"
@@ -678,20 +683,20 @@ class ElectrodeSOHSolver:
             soc = pybamm.Variable("soc")
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
+            T_ref = parameter_values["Reference temperature [K]"]
             if self.options["open-circuit potential"] == "MSMR":
                 xn = param.n.prim.x
                 xp = param.p.prim.x
                 Up = pybamm.Variable("Up")
                 Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - xn(Un)
-                soc_model.algebraic[Un] = y - xp(Up)
+                soc_model.algebraic[Up] = x - xn(Un, T_ref)
+                soc_model.algebraic[Un] = y - xp(Up, T_ref)
                 soc_model.initial_conditions[Un] = 0
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
             else:
                 Up = param.p.prim.U
                 Un = param.n.prim.U
-                T_ref = parameter_values["Reference temperature [K]"]
                 soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
@@ -717,7 +722,7 @@ class ElectrodeSOHSolver:
 
         return x, y
 
-    def get_min_max_stoichiometries(self):
+    def get_min_max_stoichiometries(self, inputs=None):
         """
         Calculate min/max stoichiometries
         given voltage limits, open-circuit potentials, etc defined by parameter_values
@@ -727,20 +732,23 @@ class ElectrodeSOHSolver:
         x_0, x_100, y_100, y_0
             The min/max stoichiometries
         """
+        inputs = inputs or {}
         parameter_values = self.parameter_values
         param = self.param
 
-        Q_n = parameter_values.evaluate(param.n.Q_init)
-        Q_p = parameter_values.evaluate(param.p.Q_init)
+        Q_n = parameter_values.evaluate(param.n.Q_init, inputs=inputs)
+        Q_p = parameter_values.evaluate(param.p.Q_init, inputs=inputs)
 
         if self.known_value == "cyclable lithium capacity":
-            Q_Li = parameter_values.evaluate(param.Q_Li_particles_init)
-            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
+            Q_Li = parameter_values.evaluate(param.Q_Li_particles_init, inputs=inputs)
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
         elif self.known_value == "cell capacity":
-            Q = parameter_values.evaluate(param.Q / param.n_electrodes_parallel)
-            inputs = {"Q_n": Q_n, "Q_p": Q_p, "Q": Q}
+            Q = parameter_values.evaluate(
+                param.Q / param.n_electrodes_parallel, inputs=inputs
+            )
+            all_inputs = {**inputs, "Q_n": Q_n, "Q_p": Q_p, "Q": Q}
         # Solve the model and check outputs
-        sol = self.solve(inputs)
+        sol = self.solve(all_inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
     def get_initial_ocps(self, initial_value, tol=1e-6):
@@ -817,7 +825,7 @@ class ElectrodeSOHSolver:
         param = self.param
         T = param.T_amb_av(0)
         Vs = self.parameter_values.evaluate(
-            param.p.prim.U(y_vals, T) - param.n.prim.U(x_vals, T)
+            param.p.prim.U(y_vals, T) - param.n.prim.U(x_vals, T), inputs=inputs
         ).flatten()
         # Calculate dQ
         Q = Q_p * (y_0 - y_100)
@@ -834,6 +842,7 @@ def get_initial_stoichiometries(
     known_value="cyclable lithium capacity",
     options=None,
     tol=1e-6,
+    inputs=None,
 ):
     """
     Calculate initial stoichiometries to start off the simulation at a particular
@@ -869,7 +878,7 @@ def get_initial_stoichiometries(
         The initial stoichiometries that give the desired initial state of charge
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
-    return esoh_solver.get_initial_stoichiometries(initial_value, tol)
+    return esoh_solver.get_initial_stoichiometries(initial_value, tol, inputs=inputs)
 
 
 def get_min_max_stoichiometries(
@@ -1043,14 +1052,15 @@ def _get_msmr_potential_model(parameter_values, param):
     V_min = param.voltage_low_cut
     x_n = param.n.prim.x
     x_p = param.p.prim.x
+    T = param.T_ref
     model = pybamm.BaseModel()
     Un = pybamm.Variable("Un")
     Up = pybamm.Variable("Up")
     x = pybamm.InputParameter("x")
     y = pybamm.InputParameter("y")
     model.algebraic = {
-        Un: x_n(Un) - x,
-        Up: x_p(Up) - y,
+        Un: x_n(Un, T) - x,
+        Up: x_p(Up, T) - y,
     }
     model.initial_conditions = {
         Un: 1 - x,

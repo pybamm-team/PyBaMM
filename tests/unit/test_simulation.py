@@ -7,6 +7,7 @@ import sys
 import unittest
 import uuid
 from tempfile import TemporaryDirectory
+from scipy.integrate import cumulative_trapezoid
 
 
 class TestSimulation(TestCase):
@@ -69,8 +70,10 @@ class TestSimulation(TestCase):
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         # test solve without check
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sol = sim.solve(t_eval=[0, 600], check_model=False)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), discretisation_kwargs={"check_model": False}
+        )
+        sol = sim.solve(t_eval=[0, 600])
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             # skip test for scalar variables (e.g. discharge capacity)
@@ -82,6 +85,19 @@ class TestSimulation(TestCase):
             sim.solve(save_at_cycles=2)
         with self.assertRaisesRegex(ValueError, "starting_solution"):
             sim.solve(starting_solution=sol)
+
+    def test_solve_remove_independent_variables_from_rhs(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            discretisation_kwargs={"remove_independent_variables_from_rhs": True},
+        )
+        sol = sim.solve([0, 600])
+        t = sol["Time [s]"].data
+        I = sol["Current [A]"].data
+        q = sol["Discharge capacity [A.h]"].data
+        np.testing.assert_array_almost_equal(
+            q, cumulative_trapezoid(I, t, initial=0) / 3600
+        )
 
     def test_solve_non_battery_model(self):
         model = pybamm.BaseModel()
@@ -204,6 +220,38 @@ class TestSimulation(TestCase):
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
 
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        og_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": og_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1})
+
         # Test whether initial_soc works with half cell (solve)
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
@@ -237,6 +285,41 @@ class TestSimulation(TestCase):
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
+
+    def test_solve_with_initial_soc_with_input_param_in_ocv(self):
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+    def test_esoh_with_input_param(self):
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
+        param = model.default_parameter_values
+        original_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
@@ -391,7 +474,7 @@ class TestSimulation(TestCase):
         # now solve and plot
         t_eval = np.linspace(0, 100, 5)
         sim.solve(t_eval=t_eval)
-        sim.plot(testing=True)
+        sim.plot(show_plot=False)
 
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
@@ -409,7 +492,7 @@ class TestSimulation(TestCase):
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
             # call the plot method before creating the GIF
-            sim.plot(testing=True)
+            sim.plot(show_plot=False)
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     def test_drive_cycle_interpolant(self):

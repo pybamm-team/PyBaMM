@@ -293,6 +293,97 @@ def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_max, T
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
+def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
+    """
+    Exchange-current density for Li plating reaction [A.m-2].
+    References
+    ----------
+    .. [1] O’Kane, Simon EJ, Ian D. Campbell, Mohamed WJ Marzook, Gregory J. Offer, and
+    Monica Marinescu. "Physical origin of the differential voltage minimum associated
+    with lithium plating in Li-ion batteries." Journal of The Electrochemical Society
+    167, no. 9 (2020): 090540.
+    Parameters
+    ----------
+    c_e : :class:`pybamm.Symbol`
+        Electrolyte concentration [mol.m-3]
+    c_Li : :class:`pybamm.Symbol`
+        Plated lithium concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Exchange-current density [A.m-2]
+    """
+
+    k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
+
+    return pybamm.constants.F * k_plating * c_e
+
+
+def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
+    """
+    Exchange-current density for Li stripping reaction [A.m-2].
+
+    References
+    ----------
+
+    .. [1] O’Kane, Simon EJ, Ian D. Campbell, Mohamed WJ Marzook, Gregory J. Offer, and
+    Monica Marinescu. "Physical origin of the differential voltage minimum associated
+    with lithium plating in Li-ion batteries." Journal of The Electrochemical Society
+    167, no. 9 (2020): 090540.
+
+    Parameters
+    ----------
+
+    c_e : :class:`pybamm.Symbol`
+        Electrolyte concentration [mol.m-3]
+    c_Li : :class:`pybamm.Symbol`
+        Plated lithium concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+
+    Returns
+    -------
+
+    :class:`pybamm.Symbol`
+        Exchange-current density [A.m-2]
+    """
+
+    k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
+
+    return pybamm.constants.F * k_plating * c_Li
+
+
+def SEI_limited_dead_lithium_OKane2022(L_sei):
+    """
+    Decay rate for dead lithium formation [s-1].
+    References
+    ----------
+    .. [1] Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diega Alonso-Alvarez,
+    Robert Timms, Valentin Sulzer, Jaqueline Sophie Edge, Billy Wu, Gregory J. Offer
+    and Monica Marinescu. "Lithium-ion battery degradation: how to model it."
+    Physical Chemistry: Chemical Physics 24, no. 13 (2022): 7909-7922.
+    Parameters
+    ----------
+    L_sei : :class:`pybamm.Symbol`
+        Total SEI thickness [m]
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Dead lithium decay rate [s-1]
+    """
+
+    gamma_0 = pybamm.Parameter("Dead lithium decay constant [s-1]")
+    L_inner_0 = pybamm.Parameter("Initial inner SEI thickness [m]")
+    L_outer_0 = pybamm.Parameter("Initial outer SEI thickness [m]")
+    L_sei_0 = L_inner_0 + L_outer_0
+
+    gamma = gamma_0 * L_sei_0 / L_sei
+
+    return gamma
+
+
 def electrolyte_diffusivity_Ecker2015(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration [1, 2, 3].
@@ -409,6 +500,18 @@ def get_parameter_values():
 
     return {
         "chemistry": "lithium_ion",
+        # lithium plating
+        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
+        "Lithium plating kinetic rate constant [m.s-1]": 1e-10,
+        "Exchange-current density for plating [A.m-2]"
+        "": plating_exchange_current_density_OKane2020,
+        "Exchange-current density for stripping [A.m-2]"
+        "": stripping_exchange_current_density_OKane2020,
+        "Initial plated lithium concentration [mol.m-3]": 0.0,
+        "Typical plated lithium concentration [mol.m-3]": 1000.0,
+        "Lithium plating transfer coefficient": 0.5,
+        "Dead lithium decay constant [s-1]": 1e-06,
+        "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
         "Inner SEI reaction proportion": 0.5,
@@ -530,5 +633,6 @@ def get_parameter_values():
             "Zhao2018",
             "Hales2019",
             "Richardson2020",
+            "OKane2020",
         ],
     }
