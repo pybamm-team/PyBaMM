@@ -17,6 +17,7 @@ class ParameterSets(Mapping):
 
     .. doctest::
 
+        >>> import pybamm
         >>> list(pybamm.parameter_sets)
         ['Ai2020', 'Chen2020', ...]
 

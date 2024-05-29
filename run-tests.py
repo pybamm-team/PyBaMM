@@ -86,6 +86,15 @@ def run_doc_tests():
             ],
             check=True,
         )
+        print("Checking for doctests.")
+        subprocess.run(
+            [
+                "pytest",
+                "--doctest-plus",
+                "pybamm",
+            ],
+            check=True,
+        )
     except subprocess.CalledProcessError as e:
         print(f"FAILED with exit code {e.returncode}")
         sys.exit(e.returncode)
