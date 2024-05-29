@@ -138,7 +138,7 @@ class BaseThermal(pybamm.BaseSubModel):
         num_phases = int(self.options.negative["particle phases"])
         phase_names = [""]
         if num_phases > 1:
-            phase_names = ["primary", "secondary"]
+            phase_names = ["primary ", "secondary "]
 
         if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
@@ -218,6 +218,10 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_vol_av = Q_rev_W / V
         Q_vol_av = Q_W / V
 
+        # Effective heat capacity
+        T_vol_av = variables["Volume-averaged cell temperature [K]"]
+        rho_c_p_eff_av = param.rho_c_p_eff(T_vol_av)
+
         variables.update(
             {
                 # Ohmic
@@ -249,6 +253,9 @@ class BaseThermal(pybamm.BaseSubModel):
                 # Current collector
                 "Negative current collector Ohmic heating [W.m-3]": Q_ohm_s_cn,
                 "Positive current collector Ohmic heating [W.m-3]": Q_ohm_s_cp,
+                # Effective heat capacity
+                "Volume-averaged effective heat capacity [J.K-1.m-3]": rho_c_p_eff_av,
+                "Cell thermal volume [m3]": V,
             }
         )
         return variables

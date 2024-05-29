@@ -83,7 +83,8 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
+          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload Windows wheels

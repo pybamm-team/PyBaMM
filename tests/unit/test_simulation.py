@@ -7,6 +7,7 @@ import sys
 import unittest
 import uuid
 from tempfile import TemporaryDirectory
+from scipy.integrate import cumulative_trapezoid
 
 
 class TestSimulation(TestCase):
@@ -69,8 +70,10 @@ class TestSimulation(TestCase):
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         # test solve without check
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sol = sim.solve(t_eval=[0, 600], check_model=False)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), discretisation_kwargs={"check_model": False}
+        )
+        sol = sim.solve(t_eval=[0, 600])
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             # skip test for scalar variables (e.g. discharge capacity)
@@ -82,6 +85,19 @@ class TestSimulation(TestCase):
             sim.solve(save_at_cycles=2)
         with self.assertRaisesRegex(ValueError, "starting_solution"):
             sim.solve(starting_solution=sol)
+
+    def test_solve_remove_independent_variables_from_rhs(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            discretisation_kwargs={"remove_independent_variables_from_rhs": True},
+        )
+        sol = sim.solve([0, 600])
+        t = sol["Time [s]"].data
+        I = sol["Current [A]"].data
+        q = sol["Discharge capacity [A.h]"].data
+        np.testing.assert_array_almost_equal(
+            q, cumulative_trapezoid(I, t, initial=0) / 3600
+        )
 
     def test_solve_non_battery_model(self):
         model = pybamm.BaseModel()

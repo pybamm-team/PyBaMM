@@ -63,6 +63,9 @@ class Simulation:
         A list of variables to plot automatically
     C_rate: float (optional)
         The C-rate at which you would like to run a constant current (dis)charge.
+    discretisation_kwargs: dict (optional)
+        Any keyword arguments to pass to the Discretisation class.
+        See :class:`pybamm.Discretisation` for details.
     """
 
     def __init__(
@@ -77,15 +80,10 @@ class Simulation:
         solver=None,
         output_variables=None,
         C_rate=None,
+        discretisation_kwargs=None,
     ):
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
-
-        if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
-            if experiment is not None:
-                raise NotImplementedError(
-                    "BasicDFNHalfCell is not compatible with experiment simulations."
-                )
 
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
@@ -126,6 +124,7 @@ class Simulation:
         self._spatial_methods = spatial_methods or self._model.default_spatial_methods
         self._solver = solver or self._model.default_solver
         self._output_variables = output_variables
+        self._discretisation_kwargs = discretisation_kwargs or {}
 
         # Initialize empty built states
         self._model_with_set_params = None
@@ -268,7 +267,7 @@ class Simulation:
         # Save solved initial SOC in case we need to re-build the model
         self._built_initial_soc = initial_soc
 
-    def build(self, check_model=True, initial_soc=None, inputs=None):
+    def build(self, initial_soc=None, inputs=None):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
@@ -278,13 +277,12 @@ class Simulation:
 
         Parameters
         ----------
-        check_model : bool, optional
-            If True, model checks are performed after discretisation (see
-            :meth:`pybamm.Discretisation.process_model`). Default is True.
         initial_soc : float, optional
             Initial State of Charge (SOC) for the simulation. Must be between 0 and 1.
             If given, overwrites the initial concentrations provided in the parameter
             set.
+        inputs : dict, optional
+            A dictionary of input parameters to pass to the model when solving.
         """
         if initial_soc is not None:
             self.set_initial_soc(initial_soc, inputs=inputs)
@@ -297,14 +295,16 @@ class Simulation:
         else:
             self.set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            self._disc = pybamm.Discretisation(
+                self._mesh, self._spatial_methods, **self._discretisation_kwargs
+            )
             self._built_model = self._disc.process_model(
-                self._model_with_set_params, inplace=False, check_model=check_model
+                self._model_with_set_params, inplace=False
             )
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
 
-    def build_for_experiment(self, check_model=True, initial_soc=None, inputs=None):
+    def build_for_experiment(self, initial_soc=None, inputs=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
         experiment, where there may be several models and solvers to build.
@@ -322,7 +322,9 @@ class Simulation:
             self._parameter_values.process_geometry(self._geometry)
             # Only needs to set up mesh and discretisation once
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            self._disc = pybamm.Discretisation(
+                self._mesh, self._spatial_methods, **self._discretisation_kwargs
+            )
             # Process all the different models
             self.steps_to_built_models = {}
             self.steps_to_built_solvers = {}
@@ -333,7 +335,7 @@ class Simulation:
                 # It's ok to modify the model with set parameters in place as it's
                 # not returned anywhere
                 built_model = self._disc.process_model(
-                    model_with_set_params, inplace=True, check_model=check_model
+                    model_with_set_params, inplace=True
                 )
                 solver = self._solver.copy()
                 self.steps_to_built_solvers[step] = solver
@@ -343,7 +345,6 @@ class Simulation:
         self,
         t_eval=None,
         solver=None,
-        check_model=True,
         save_at_cycles=None,
         calc_esoh=True,
         starting_solution=None,
@@ -377,9 +378,6 @@ class Simulation:
             provided in the data.
         solver : :class:`pybamm.BaseSolver`, optional
             The solver to use to solve the model. If None, Simulation.solver is used
-        check_model : bool, optional
-            If True, model checks are performed after discretisation (see
-            :meth:`pybamm.Discretisation.process_model`). Default is True.
         save_at_cycles : int or list of ints, optional
             Which cycles to save the full sub-solutions for. If None, all cycles are
             saved. If int, every multiple of save_at_cycles is saved. If list, every
@@ -416,7 +414,7 @@ class Simulation:
         inputs = inputs or {}
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            self.build(check_model=check_model, initial_soc=initial_soc, inputs=inputs)
+            self.build(initial_soc=initial_soc, inputs=inputs)
             if save_at_cycles is not None:
                 raise ValueError(
                     "'save_at_cycles' option can only be used if simulating an "
@@ -493,9 +491,7 @@ class Simulation:
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
-            self.build_for_experiment(
-                check_model=check_model, initial_soc=initial_soc, inputs=inputs
-            )
+            self.build_for_experiment(initial_soc=initial_soc, inputs=inputs)
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
@@ -559,7 +555,8 @@ class Simulation:
             current_solution = starting_solution or pybamm.EmptySolution()
 
             voltage_stop = self.experiment.termination.get("voltage")
-            logs["stopping conditions"] = {"voltage": voltage_stop}
+            time_stop = self.experiment.termination.get("time")
+            logs["stopping conditions"] = {"voltage": voltage_stop, "time": time_stop}
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -671,6 +668,11 @@ class Simulation:
                         )
                     else:
                         dt = step.duration
+
+                    # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
+                    if time_stop is not None:
+                        dt = min(dt, time_stop[0] - start_time)
+
                     step_str = str(step)
                     model = self.steps_to_built_models[step.basic_repr()]
                     solver = self.steps_to_built_solvers[step.basic_repr()]
@@ -761,6 +763,7 @@ class Simulation:
 
                     current_solution = cycle_solution
 
+                    logs["experiment time"] = cycle_solution.t[-1]
                     callbacks.on_step_end(logs)
 
                     logs["termination"] = step_solution.termination
@@ -773,6 +776,11 @@ class Simulation:
                         callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
+
+                    if time_stop is not None:
+                        max_time = cycle_solution.t[-1]
+                        if max_time >= time_stop[0]:
+                            break
 
                     # Increment index for next iteration
                     idx += 1
@@ -832,6 +840,13 @@ class Simulation:
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()
+
+                # Add minimum voltage to summary variable logs if there is a voltage stop
+                # See PR #3995
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -842,7 +857,6 @@ class Simulation:
                         break
 
                 if voltage_stop is not None:
-                    min_voltage = cycle_sum_vars["Minimum voltage [V]"]
                     if min_voltage <= voltage_stop[0]:
                         break
 

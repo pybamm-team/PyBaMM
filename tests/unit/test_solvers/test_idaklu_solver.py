@@ -160,7 +160,7 @@ class TestIDAKLUSolver(TestCase):
             model.initial_conditions = {u1: 0, u2: 0, u3: 0, v: 1}
 
             disc = pybamm.Discretisation()
-            disc.process_model(model, remove_independent_variables_from_rhs=False)
+            disc.process_model(model)
 
             solver = pybamm.IDAKLUSolver(root_method=root_method)
 
@@ -563,7 +563,11 @@ class TestIDAKLUSolver(TestCase):
             param.process_geometry(geometry)
             var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc = pybamm.Discretisation(
+                mesh,
+                model.default_spatial_methods,
+                remove_independent_variables_from_rhs=True,
+            )
             disc.process_model(model)
             return model
 

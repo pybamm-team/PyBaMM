@@ -180,6 +180,7 @@ from .plotting.quick_plot import QuickPlot, close_plots, QuickPlotAxes
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components
+from .plotting.plot_thermal_components import plot_thermal_components
 from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 
@@ -194,3 +195,27 @@ from . import callbacks
 
 # Remove any imported modules, so we don't expose them as part of pybamm
 del sys
+
+__all__ = [
+    "batch_study",
+    "callbacks",
+    "citations",
+    "discretisations",
+    "doc_utils",
+    "experiment",
+    "expression_tree",
+    "geometry",
+    "input",
+    "logger",
+    "meshes",
+    "models",
+    "parameters",
+    "plotting",
+    "settings",
+    "simulation",
+    "solvers",
+    "spatial_methods",
+    "type_definitions",
+    "util",
+    "version",
+]

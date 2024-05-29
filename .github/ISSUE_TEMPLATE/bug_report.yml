@@ -34,7 +34,7 @@ body:
     id: reproduce
     attributes:
       label: Steps to Reproduce
-      description: Tell us how to reproduce this behaviour. Ideally, this should take the form of a [Minimum Workable Example](https://stackoverflow.com/help/minimal-reproducible-example)
+      description: Tell us how to reproduce this behaviour. Ideally, this should include a code block which produces the error. Strive to make this example as small and simple as possible. It should contain the code required to reproduce the error, and no additional code. For example, if your code includes lines to run a simulation, then lines to plot the results, and the lines to run the simulation fail, only include those lines (and not the plotting lines, which are irrelevant). Often, the act of simplifying code to pinpoint errors can help you find bugs in your own code. For more information, see [these references](https://en.wikipedia.org/wiki/Minimal_reproducible_example#External_links)
     validations:
       required: true
   - type: textarea
