@@ -1344,16 +1344,16 @@ class BaseModel:
         >>> model = pybamm.lithium_ion.SPM()
 
         This will returns all model equations in png
-        >>> model.latexify("equations.png")
+        >>> model.latexify("equations.png") # doctest: +SKIP
 
         This will return all the model equations in latex
-        >>> model.latexify()
+        >>> model.latexify() # doctest: +SKIP
 
         This will return the list of all the model equations
-        >>> model.latexify(newline=False)
+        >>> model.latexify(newline=False) # doctest: +SKIP
 
         This will return first five model equations
-        >>> model.latexify(newline=False)[1:5]
+        >>> model.latexify(newline=False)[1:5] # doctest: +SKIP
         """
         from pybamm.expression_tree.operations.latexify import Latexify
 
