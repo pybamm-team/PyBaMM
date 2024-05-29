@@ -12,6 +12,7 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm import ParameterValues
 
 
 class BaseSolver:
@@ -827,7 +828,7 @@ class BaseSolver:
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Thefore only `model_inputs[0]`
+            # not depend on input parameters. Therefore, only `model_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, model_inputs_list[0], t_eval)
@@ -1401,7 +1402,10 @@ class BaseSolver:
     @staticmethod
     def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
-        inputs = inputs or {}
+        if inputs is None:
+            inputs = {}
+        else:
+            inputs = ParameterValues.check_parameter_values(inputs)
 
         # Go through all input parameters that can be found in the model
         # Only keep the ones that are actually used in the model

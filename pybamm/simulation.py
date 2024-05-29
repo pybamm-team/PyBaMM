@@ -85,12 +85,6 @@ class Simulation:
         self._parameter_values = parameter_values or model.default_parameter_values
         self._unprocessed_parameter_values = self._parameter_values
 
-        if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
-            if experiment is not None:
-                raise NotImplementedError(
-                    "BasicDFNHalfCell is not compatible with experiment simulations."
-                )
-
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")
@@ -561,7 +555,8 @@ class Simulation:
             current_solution = starting_solution or pybamm.EmptySolution()
 
             voltage_stop = self.experiment.termination.get("voltage")
-            logs["stopping conditions"] = {"voltage": voltage_stop}
+            time_stop = self.experiment.termination.get("time")
+            logs["stopping conditions"] = {"voltage": voltage_stop, "time": time_stop}
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -673,6 +668,11 @@ class Simulation:
                         )
                     else:
                         dt = step.duration
+
+                    # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
+                    if time_stop is not None:
+                        dt = min(dt, time_stop[0] - start_time)
+
                     step_str = str(step)
                     model = self.steps_to_built_models[step.basic_repr()]
                     solver = self.steps_to_built_solvers[step.basic_repr()]
@@ -763,6 +763,7 @@ class Simulation:
 
                     current_solution = cycle_solution
 
+                    logs["experiment time"] = cycle_solution.t[-1]
                     callbacks.on_step_end(logs)
 
                     logs["termination"] = step_solution.termination
@@ -775,6 +776,11 @@ class Simulation:
                         callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
+
+                    if time_stop is not None:
+                        max_time = cycle_solution.t[-1]
+                        if max_time >= time_stop[0]:
+                            break
 
                     # Increment index for next iteration
                     idx += 1
@@ -834,6 +840,13 @@ class Simulation:
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()
+
+                # Add minimum voltage to summary variable logs if there is a voltage stop
+                # See PR #3995
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+
                 callbacks.on_cycle_end(logs)
 
                 # Break if stopping conditions are met
@@ -844,7 +857,6 @@ class Simulation:
                         break
 
                 if voltage_stop is not None:
-                    min_voltage = cycle_sum_vars["Minimum voltage [V]"]
                     if min_voltage <= voltage_stop[0]:
                         break
 
