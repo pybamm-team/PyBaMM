@@ -1,6 +1,8 @@
 # a list of links/files to be ignored by lychee link checker (see workflow file)
 https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v%7BSUITESPARSE_VERSION%7D.tar.gz
 https://github.com/LLNL/sundials/releases/download/v%7BSUNDIALS_VERSION%7D/sundials-%7BSUNDIALS_VERSION%7D.tar.gz
+https://mac.r-project.org/openmp/openmp-%7BOPENMP_VERSION%7D-darwin20-Release.tar.gz
+https://github.com/pybamm-team/pybamm-data/releases/download/%7Bself.version%7D
 
 # Errors in docs/source/user_guide/getting_started.md
 file:///home/runner/work/PyBaMM/PyBaMM/docs/source/user_guide/api_docs
