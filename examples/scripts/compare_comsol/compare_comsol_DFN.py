@@ -17,8 +17,9 @@ C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
+data_loader = pybamm.DataLoader()
 comsol_results_path = pybamm.get_parameters_filepath(
-    f"input/comsol_results/comsol_{C_rate}C.json"
+    f"{data_loader.get_data(f"comsol_{C_rate}C.json")}"
 )
 
 comsol_variables = json.load(open(comsol_results_path))

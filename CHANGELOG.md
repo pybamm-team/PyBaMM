@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added `pybamm.DataLoader` class to fetch data files from [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0) and store it under local cache. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
 - Transport efficiency submodel has new options from the literature relating to different tortuosity factor models and also a new option called "tortuosity factor" for specifying the value or function directly as parameters ([#3437](https://github.com/pybamm-team/PyBaMM/pull/3437))
 - Added `plot_thermal_components` to plot the contributions to the total heat generation in a battery ([#4021](https://github.com/pybamm-team/PyBaMM/pull/4021))
 - Added functions for normal probability density function (`pybamm.normal_pdf`) and cumulative distribution function (`pybamm.normal_cdf`) ([#3999](https://github.com/pybamm-team/PyBaMM/pull/3999))
@@ -10,6 +11,7 @@
 - Lithium plating now works on composite electrodes ([#3919](https://github.com/pybamm-team/PyBaMM/pull/3919))
 - Added lithium plating parameters to `Ecker2015` and `Ecker2015_graphite_halfcell` parameter sets ([#3919](https://github.com/pybamm-team/PyBaMM/pull/3919))
 - Added custom experiment steps ([#3835](https://github.com/pybamm-team/PyBaMM/pull/3835))
+- MSMR open-circuit voltage model now depends on the temperature ([#3832](https://github.com/pybamm-team/PyBaMM/pull/3832))
 - Added support for macOS arm64 (M-series) platforms. ([#3789](https://github.com/pybamm-team/PyBaMM/pull/3789))
 - Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
 - Modified `step` function to take an array of time `t_eval` as an argument and deprecated use of `npts`. ([#3627](https://github.com/pybamm-team/PyBaMM/pull/3627))
@@ -17,9 +19,11 @@
 - Add support for BPX version 0.4.0 which allows for blended electrodes and user-defined parameters in BPX([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
 - Added `by_submodel` feature in `print_parameter_info` method to allow users to print parameters and types of submodels in a tabular and readable format ([#3628](https://github.com/pybamm-team/PyBaMM/pull/3628))
 - Added `WyciskOpenCircuitPotential` for differential capacity hysteresis state open-circuit potential submodel ([#3593](https://github.com/pybamm-team/PyBaMM/pull/3593))
+- Added `time` as an option for `Experiment.termination`. Now allows solving up to a user-specified time while also allowing different cycles and steps in an experiment to be handled normally. ([#4073](https://github.com/pybamm-team/PyBaMM/pull/4073))
 
 ## Bug Fixes
 
+- Fixes the breaking changes caused by [#3624](https://github.com/pybamm-team/PyBaMM/pull/3624), specifically enables the deprecated parameter `electrode diffusivity` to be used by `ParameterValues.update({name:value})` and `Solver.solve(inputs={name:value})`. Fixes parameter translation from old name to new name, with corrected tests. ([#4072](https://github.com/pybamm-team/PyBaMM/pull/4072)
 - Set the `remove_independent_variables_from_rhs` to `False` by default, and moved the option from `Discretisation.process_model` to `Discretisation.__init__`. This fixes a bug related to the discharge capacity, but may make the simulation slower in some cases. To set the option to `True`, use `Simulation(..., discretisation_kwargs={"remove_independent_variables_from_rhs": True})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
 - Fixed a bug where independent variables were removed from models even if they appeared in events ([#4019](https://github.com/pybamm-team/PyBaMM/pull/4019))
 - Fix bug with upwind and downwind schemes producing the wrong discretised system ([#3979](https://github.com/pybamm-team/PyBaMM/pull/3979))
@@ -42,6 +46,7 @@
 
 ## Breaking changes
 
+- Removed data files under `pybamm/input` and released them in a separate repository upstream at [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0). Note that data files under `pybamm/input/parameters` have not been removed. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
 - Removed `check_model` argument from `Simulation.solve`. To change the `check_model` option, use `Simulation(..., discretisation_kwargs={"check_model": False})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
 - Removed multiple Docker images. Here on, a single Docker image tagged `pybamm/pybamm:latest` will be provided with both solvers (`IDAKLU` and `JAX`) pre-installed. ([#3992](https://github.com/pybamm-team/PyBaMM/pull/3992))
 - Removed support for Python 3.8 ([#3961](https://github.com/pybamm-team/PyBaMM/pull/3961))
@@ -67,7 +72,6 @@
 - Added a method, `insert_reference_electrode`, to `pybamm.lithium_ion.BaseModel` that insert a reference electrode to measure the electrolyte potential at a given position in space and adds new variables that mimic a 3E cell setup. ([#3573](https://github.com/pybamm-team/PyBaMM/pull/3573))
 - Serialisation added so models can be written to/read from JSON ([#3397](https://github.com/pybamm-team/PyBaMM/pull/3397))
 - Added a `get_parameter_info` method for models and modified "print_parameter_info" functionality to extract all parameters and their type in a tabular and readable format ([#3584](https://github.com/pybamm-team/PyBaMM/pull/3584))
-- Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
 
 ## Bug fixes
 

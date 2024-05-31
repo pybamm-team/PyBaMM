@@ -117,7 +117,7 @@ class MSMRButlerVolmer(BaseKinetics):
         return variables
 
     def _get_kinetics_by_reaction(self, j0, ne, eta_r, T, u, index):
-        alpha = self.phase_param.alpha_bv_j(index)
+        alpha = self.phase_param.alpha_bv_j(T, index)
         Feta_RT = self.param.F * eta_r / (self.param.R * T)
         return (
             u
