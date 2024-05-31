@@ -55,11 +55,12 @@ plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
 plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
 colors = iter(plt.cycler(color="bgrcmyk"))
 
+data_loader = pybamm.DataLoader()
 for key, C_rate in C_rates.items():
     current = 24 * C_rate
     # load the comsol results
     comsol_results_path = pybamm.get_parameters_filepath(
-        f"input/comsol_results/comsol_{key}C.json"
+        f"{data_loader.get_data(f"comsol_{key}C.json")}"
     )
     comsol_variables = json.load(open(comsol_results_path))
     comsol_time = np.array(comsol_variables["time"])
