@@ -30,3 +30,4 @@ For a high-level introduction to PyBaMM, see the :ref:`user guide <user_guide>` 
    callbacks
    citations
    batch_study
+   pybamm_data

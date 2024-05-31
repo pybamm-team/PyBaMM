@@ -43,5 +43,6 @@ from .shared import (
     get_required_distribution_deps,
     get_optional_distribution_deps,
     get_present_optional_import_deps,
+    no_internet_connection,
 )
 from .testcase import TestCase
