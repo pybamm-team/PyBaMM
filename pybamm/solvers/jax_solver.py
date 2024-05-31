@@ -31,8 +31,8 @@ class JaxSolver(pybamm.BaseSolver):
     Parameters
     ----------
     method: str, optional (see :func:`jax.experimental.odeint` for details)
-        'RK45' (default) uses jax.experimental.odeint
-        'BDF' uses custom jax_bdf_integrate (see :func:`jax_bdf_integrate.py` for details)
+        * 'RK45' (default) uses jax.experimental.odeint
+        * 'BDF' uses custom jax_bdf_integrate (see :func:`jax_bdf_integrate.py` for details)
     root_method: str, optional
         Method to use to calculate consistent initial conditions. By default this uses
         the newton chord method internal to the jax bdf solver, otherwise choose from
