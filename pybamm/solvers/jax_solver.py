@@ -30,7 +30,7 @@ class JaxSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
-    method: str, optional (see :ref:`jax.experimental.ode.odeint` for details)
+    method: str, optional (see `jax.experimental.ode.odeint` for details)
         * 'RK45' (default) uses jax.experimental.ode.odeint
         * 'BDF' uses custom jax_bdf_integrate (see :func:`jax_bdf_integrate.py` for details)
     root_method: str, optional
