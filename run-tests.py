@@ -90,8 +90,7 @@ def run_doc_tests():
         subprocess.run(
             [
                 f"{sys.executable}",
-                "-m"
-                "pytest",
+                "-m" "pytest",
                 "--doctest-plus",
                 "pybamm",
             ],
