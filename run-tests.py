@@ -89,6 +89,8 @@ def run_doc_tests():
         print("Checking for doctests.")
         subprocess.run(
             [
+                f"{sys.executable}",
+                "-m"
                 "pytest",
                 "--doctest-plus",
                 "pybamm",
