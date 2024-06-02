@@ -12,7 +12,6 @@ import sys
 import argparse
 import subprocess
 import pytest
-import unittest
 
 
 def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
