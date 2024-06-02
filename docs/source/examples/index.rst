@@ -50,6 +50,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/compare-particle-diffusion-models.ipynb
     notebooks/models/composite_particle.ipynb
     notebooks/models/coupled-degradation.ipynb
+    notebooks/models/differential-capacity-hysteresis-state.ipynb
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
@@ -71,6 +72,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/submodel_cracking_DFN_or_SPM.ipynb
     notebooks/models/loss_of_active_materials.ipynb
     notebooks/models/thermal-models.ipynb
+    notebooks/models/tortuosity_models.ipynb
     notebooks/models/unsteady-heat-equation.ipynb
     notebooks/models/using-model-options_thermal-example.ipynb
     notebooks/models/using-submodels.ipynb
@@ -125,3 +127,4 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
     notebooks/solution-data-and-processed-variables.ipynb
+    notebooks/pybamm_data.ipynb

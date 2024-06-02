@@ -12,3 +12,7 @@ from .inverse_kinetics.inverse_butler_volmer import (
     CurrentForInverseButlerVolmer,
     CurrentForInverseButlerVolmerLithiumMetal,
 )
+
+__all__ = ['base_kinetics', 'butler_volmer', 'diffusion_limited',
+           'inverse_kinetics', 'linear', 'marcus', 'msmr_butler_volmer',
+           'no_reaction', 'tafel', 'total_main_kinetics']

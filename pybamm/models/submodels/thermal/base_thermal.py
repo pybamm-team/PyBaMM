@@ -138,7 +138,7 @@ class BaseThermal(pybamm.BaseSubModel):
         num_phases = int(self.options.negative["particle phases"])
         phase_names = [""]
         if num_phases > 1:
-            phase_names = ["primary", "secondary"]
+            phase_names = ["primary ", "secondary "]
 
         if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
