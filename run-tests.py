@@ -37,12 +37,7 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         # currently activated virtual environment
         interpreter = sys.executable
     if executable is False:
-        if tests == "tests/unit":
-            ret = pytest.main(["-v", tests])
-        else:
-            suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-            result = unittest.TextTestRunner(verbosity=2).run(suite)
-            ret = int(not result.wasSuccessful())
+        ret = pytest.main(["-v", tests])
     else:
         print(f"Running {folder} tests with executable {interpreter}")
         cmd = [interpreter, "-m", "pytest", "-v", tests]
