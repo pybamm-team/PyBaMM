@@ -69,6 +69,17 @@ class DFN(BaseModel):
                     submod = pybamm.particle.MSMRDiffusion(
                         self.param, domain, self.options, phase=phase, x_average=False
                     )
+                    # also set the submodel for calculating stoichiometry from
+                    # potential
+                    self.submodels[f"{domain} {phase} stoichiometry"] = (
+                        pybamm.particle.MSMRStoichiometryVariables(
+                            self.param,
+                            domain,
+                            self.options,
+                            phase=phase,
+                            x_average=False,
+                        )
+                    )
                 self.submodels[f"{domain} {phase} particle"] = submod
                 self.submodels[f"{domain} {phase} total particle concentration"] = (
                     pybamm.particle.TotalConcentration(
@@ -121,3 +132,6 @@ class DFN(BaseModel):
             self.submodels[f"{domain} surface potential difference"] = surf_model(
                 self.param, domain, self.options
             )
+
+    def set_summary_variables(self):
+        self.set_default_summary_variables()

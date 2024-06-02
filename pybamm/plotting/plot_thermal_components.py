@@ -52,11 +52,7 @@ def plot_thermal_components(
 
     time_s = solution["Time [s]"].entries
     time_h = time_s / 3600
-    T = solution["X-averaged cell temperature [K]"].entries
     volume = solution["Cell thermal volume [m3]"].entries
-    rho_c_p_eff_av = solution[
-        "Volume-averaged effective heat capacity [J.K-1.m-3]"
-    ].entries
 
     heating_sources = [
         "Lumped total cooling",
@@ -65,7 +61,7 @@ def plot_thermal_components(
         "Reversible heating",
     ]
     try:
-        heats_volumetric = {
+        heats = {
             name: solution[name + " [W]"].entries / volume for name in heating_sources
         }
     except KeyError as err:
@@ -73,29 +69,33 @@ def plot_thermal_components(
             "plot_thermal_components is only implemented for lumped models"
         ) from err
 
-    dTs = {
-        name: cumulative_trapezoid(heat / rho_c_p_eff_av, time_s, initial=0)
-        for name, heat in heats_volumetric.items()
+    cumul_heats = {
+        name: cumulative_trapezoid(heat, time_s, initial=0)
+        for name, heat in heats.items()
     }
 
     # Plot
     # Initialise
     total_heat = 0
-    bottom_heat = heats_volumetric["Lumped total cooling"]
-    bottom_temp = T[0] + dTs["Lumped total cooling"]
+    bottom_heat = heats["Lumped total cooling"]
+    total_cumul_heat = 0
+    bottom_cumul_heat = cumul_heats["Lumped total cooling"]
     # Plot components
     for name in heating_sources:
-        top_temp = bottom_temp + abs(dTs[name])
-        ax[0].fill_between(time_h, bottom_temp, top_temp, **kwargs_fill, label=name)
-        bottom_temp = top_temp
-
-        top_heat = bottom_heat + abs(heats_volumetric[name])
-        ax[1].fill_between(time_h, bottom_heat, top_heat, **kwargs_fill, label=name)
+        top_heat = bottom_heat + abs(heats[name])
+        ax[0].fill_between(time_h, bottom_heat, top_heat, **kwargs_fill, label=name)
         bottom_heat = top_heat
-        total_heat += heats_volumetric[name]
+        total_heat += heats[name]
 
-    ax[0].plot(time_h, T, "k--", label="Cell temperature")
-    ax[1].plot(time_h, total_heat, "k--", label="Total heating")
+        top_cumul_heat = bottom_cumul_heat + abs(cumul_heats[name])
+        ax[1].fill_between(
+            time_h, bottom_cumul_heat, top_cumul_heat, **kwargs_fill, label=name
+        )
+        bottom_cumul_heat = top_cumul_heat
+        total_cumul_heat += cumul_heats[name]
+
+    ax[0].plot(time_h, total_heat, "k--")
+    ax[1].plot(time_h, total_cumul_heat, "k--", label="Total")
 
     if show_legend:
         leg = ax[1].legend(loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=True)
@@ -106,8 +106,8 @@ def plot_thermal_components(
         a.set_xlabel("Time [h]")
         a.set_xlim([time_h[0], time_h[-1]])
 
-    ax[0].set_title("Temperatures [K]")
-    ax[1].set_title("Heat sources [W/m$^3$]")
+    ax[0].set_title("Heat generation [W/m$^3$]")
+    ax[1].set_title("Cumulative heat generation [J/m$^3$]")
 
     if fig is not None:
         fig.tight_layout()
