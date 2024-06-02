@@ -148,7 +148,7 @@ class StandardModelTest:
             file_name, variables=self.model.variables, mesh=self.disc.mesh
         )
 
-        new_model = pybamm.load_model(file_name+".json")
+        new_model = pybamm.load_model(file_name + ".json")
 
         # create new solver for re-created model
         if solver is not None:
@@ -179,7 +179,7 @@ class StandardModelTest:
                 new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
             )
 
-        os.remove(file_name+".json")
+        os.remove(file_name + ".json")
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
