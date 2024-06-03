@@ -149,6 +149,7 @@ jobs:
       - name: Set up conda environment
         uses: conda-incubator/setup-miniconda@v2
         with:
+          miniconda-version: "latest"
           environment-file: environment.yml
           activate-environment: true
 
