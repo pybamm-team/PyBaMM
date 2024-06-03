@@ -1,0 +1,14 @@
+# Minimal environment file that is used to install dependencies for
+# conda/miniconda/mamba. This file is used in the GitHub Actions workflows
+# for PyBaMM and is not currently suited for general use outside of CI. If
+# you are looking for instructions on how to set up a developer environment
+# for contributing to PyBaMM, please refer to the documentation for the
+# instructions for building PyBaMM from source.
+
+name: pybamm-dev
+channels:
+  - conda-forge
+
+dependencies:
+- compilers
+- llvm-openmp
