@@ -144,12 +144,7 @@ jobs:
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
       - name: Set macOS-specific environment variables
-        run: |
-          if [[ $(uname -m) == "x86_64" ]]; then
-            echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
-          elif [[ $(uname -m) == "arm64" ]]; then
-            echo "MACOSX_DEPLOYMENT_TARGET=11.1" >> $GITHUB_ENV
-          fi
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
@@ -185,8 +180,13 @@ jobs:
             mkdir -p gfortran_installed
             tar -xv -C gfortran_installed/ -f gfortran.tar.gz
 
-            export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
-            export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
+            if [[ uname -m == "x86_64" ]]; then
+              export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
+              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
+            elif [[ uname -m == "arm64" ]]; then
+              export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
+              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
+            fi
 
             # link libgfortran dylibs and place them in $HOME/.local/lib
             # and then change rpath to $HOME/.local/lib for each of them
@@ -238,7 +238,13 @@ jobs:
         env:
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
-          CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND: |
+            if [[ $(uname -m) == "x86_64" ]]; then
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+            elif [[ $(uname -m) == "arm64" ]]; then
+              # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
           CIBW_TEST_EXTRAS: "dev,all"
           CIBW_TEST_COMMAND: |
             set -e -x
