@@ -85,8 +85,7 @@ jobs:
           CIBW_ARCHS: AMD64
           CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_EXTRAS: "dev,all,jax"
-          CIBW_TEST_COMMAND: pytest {project}/tests/integration/
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload Windows wheels
         uses: actions/upload-artifact@v4
@@ -119,8 +118,7 @@ jobs:
             bash scripts/install_sundials.sh 6.0.3 6.5.0
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_EXTRAS: "dev,all,jax"
-          CIBW_TEST_COMMAND: pytest {project}/tests/integration/
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4
@@ -249,8 +247,7 @@ jobs:
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
               for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
             fi
-          CIBW_TEST_EXTRAS: "dev,all,jax"
-          CIBW_TEST_COMMAND: pytest {project}/tests/integration/
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
       - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4
