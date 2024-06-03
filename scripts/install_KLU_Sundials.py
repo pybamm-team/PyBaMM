@@ -114,7 +114,8 @@ def install_sundials(download_dir, install_dir):
         # repair process, where Homebrew binaries are not built for distribution and
         # break MACOSX_DEPLOYMENT_TARGET. We use a custom OpenMP binary as described
         # in CIBW_BEFORE_ALL in the wheel builder CI job.
-        if os.environ.get("CIBUILDWHEEL") != "1":
+        # Check for CI environment variable to determine if we are building a wheel
+        if "CI" not in os.environ:
             print("Using Homebrew OpenMP for macOS build")
             cmake_args += [
                 "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
