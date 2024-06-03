@@ -147,11 +147,9 @@ jobs:
       # provided by the conda-forge compilers package to compile the wheels. Note that we do not
       # set up Python here, as we use the Python provided by GHA using setup-python.
       - name: Set up conda environment
-        uses: conda-incubator/setup-miniconda@v2
+        uses: mamba-org/setup-micromamba@v1.9.0
         with:
-          miniconda-version: "latest"
           environment-file: environment.yml
-          activate-environment: true
 
       - name: Set macOS-specific environment variables
         run: |
@@ -168,8 +166,8 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_BEFORE_ALL: |
-            conda env create --file environment.yml
-            conda activate pybamm-dev
+            mamba env create --file environment.yml
+            mamba activate pybamm-dev
             # export CC=$(conda run -n pybamm-dev which clang)
             # export CXX=$(conda run -n pybamm-dev which clang++)
             # export FC=$(conda run -n pybamm-dev which gfortran)
