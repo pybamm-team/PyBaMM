@@ -128,7 +128,7 @@ jobs:
           if-no-files-found: error
 
   build_macos_wheels:
-    name: Wheels for macOS (amd64, arm64)
+    name: Wheels (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
