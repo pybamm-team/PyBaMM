@@ -108,11 +108,19 @@ def install_sundials(download_dir, install_dir):
                 f"Unsupported processor architecture: {platform.processor()}. Only 'arm' and 'i386' architectures are supported."
             )
 
-        cmake_args += [
-            "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
-            "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
-            "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
-        ]
+        # Don't pass the following args to CMake when building wheels. We set a custom
+        # OpenMP installation for macOS wheels in the wheel build script.
+        # This is because we can't use Homebrew's OpenMP dylib due to the wheel
+        # repair process, where Homebrew binaries are not built for distribution and
+        # break MACOSX_DEPLOYMENT_TARGET. We use a custom OpenMP binary as described
+        # in CIBW_BEFORE_ALL in the wheel builder CI job.
+        if os.environ.get("CIBUILDWHEEL") != "1":
+            print("Using Homebrew OpenMP for macOS build")
+            cmake_args += [
+                "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
+                "-DOpenMP_C_LIB_NAMES=" + OpenMP_C_LIB_NAMES,
+                "-DOpenMP_omp_LIBRARY=" + OpenMP_omp_LIBRARY,
+            ]
 
     # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
     # download_dir
