@@ -248,7 +248,7 @@ jobs:
           CIBW_TEST_EXTRAS: "dev,all"
           CIBW_TEST_COMMAND: |
             set -e -x
-            pytest {package}/tests/integration/
+            pytest {project}/tests/integration/
 
       - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4
