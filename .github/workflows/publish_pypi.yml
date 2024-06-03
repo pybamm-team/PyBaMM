@@ -172,12 +172,8 @@ jobs:
             # brew install miniforge
             # mamba env create --file environment.yml
             # mamba init "$(basename "${SHELL}")"
-            # mamba activate pybamm-dev
-            # export CC=$(conda run -n pybamm-dev which clang)
-            # export CXX=$(mamba run -n pybamm-dev which clang++)
 
-            export PATH=$(mamba run -n pybamm-dev which gfortran):$PATH
-            export FC=$(mamba run -n pybamm-dev which gfortran)
+            mamba activate pybamm-dev
 
             python -m pip install cmake
             python scripts/install_KLU_Sundials.py
