@@ -94,13 +94,9 @@ jobs:
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-  build_macos_and_linux_wheels:
-    name: Wheels (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-12]
+  build_manylinux_wheels:
+    name: Wheels (linux-amd64)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -113,18 +109,8 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      # sometimes gfortran cannot be found, so reinstall gcc just to be sure
-      - name: Install SuiteSparse and SUNDIALS on macOS
-        if: matrix.os == 'macos-12'
-        run: |
-          brew install graphviz libomp
-          brew reinstall gcc
-          python -m pip install cmake wget
-          python scripts/install_KLU_Sundials.py
-
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
-        if: matrix.os == 'ubuntu-latest'
         env:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
@@ -132,55 +118,58 @@ jobs:
             bash scripts/install_sundials.sh 6.0.3 6.5.0
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
+          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()""
 
-      - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-12'
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BEFORE_BUILD_MACOS: >
-            python -m pip install --upgrade cmake casadi setuptools wheel
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
-
-      - name: Upload wheels for ${{ matrix.os }}
+      - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4
         with:
-          name: wheels_${{ matrix.os }}
+          name: wheels_manylinux
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-  build_macos_arm64_wheels:
-    name: Wheels (macos-arm64)
-    # Current runner is macOS X 14+ on GitHub-hosted runners
-    runs-on: macos-14
+  build_macos_wheels:
+    name: Wheels for macOS (amd64, arm64)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      - name: Install SuiteSparse and SUNDIALS on macOS
-        run: |
-          brew install graphviz libomp
-          brew reinstall gcc
-          python -m pip install cmake pipx
-          python scripts/install_KLU_Sundials.py
+      # We use the setup-miniconda action to set up compilers for our host machine. These are
+      # provided by the conda-forge compilers package to compile the wheels. Note that we do not
+      # set up Python here, as we use the Python provided by GHA using setup-python.
+      - name: Set up conda environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: environment.yml
+          activate-environment: true
 
       - name: Build wheels on macOS arm64
-        run: python -m pipx run cibuildwheel --output-dir wheelhouse
+        uses: pypa/cibuildwheel@v2.18.1
+        with:
+          package-dir: .
+          output-dir: wheelhouse
         env:
+          CIBW_BEFORE_ALL: |
+            python -m pip install cmake pipx
+            python scripts/install_KLU_Sundials.py
+          CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
           CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
 
-      - name: Upload wheels for macOS arm64
+      - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4
         with:
-          name: wheels_macos_arm64
+          name: wheels_macos_${{ matrix.os }}
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -208,7 +197,12 @@ jobs:
     # This job is only of value to PyBaMM and would always be skipped in forks
     if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
     name: Upload package to PyPI
-    needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
+    needs: [
+      build_manylinux_wheels,
+      build_macos_wheels,
+      build_windows_wheels,
+      build_sdist
+    ]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -242,7 +236,12 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
-    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_macos_arm64_wheels, build_sdist]
+    needs: [
+      build_windows_wheels,
+      build_manylinux_wheels,
+      build_macos_wheels,
+      build_sdist
+    ]
     name: Open an issue if build fails
     if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest
