@@ -146,11 +146,11 @@ jobs:
       # We use the setup-micromamba action to set up compilers for our host machine. These are
       # provided by the conda-forge compilers package to compile the wheels. Note that we do not
       # set up Python here, as we use the Python provided by GHA using setup-python.
-      - name: Set up mamba environment
-        uses: mamba-org/setup-micromamba@v1.9.0
-        with:
-          init-shell: bash
-          environment-file: environment.yml
+      # - name: Set up mamba environment
+      #   uses: mamba-org/setup-micromamba@v1.9.0
+      #   with:
+      #     init-shell: bash
+      #     environment-file: environment.yml
 
       - name: Set macOS-specific environment variables
         run: |
@@ -169,10 +169,9 @@ jobs:
         env:
           CIBW_BEFORE_ALL: |
             # TODO: remove these when everything works
-            # brew install miniforge
-            # mamba env create --file environment.yml
-            # mamba init "$(basename "${SHELL}")"
-
+            brew install miniforge
+            mamba env create --file environment.yml
+            mamba init "$(basename "${SHELL}")"
             mamba activate pybamm-dev
 
             python -m pip install cmake
