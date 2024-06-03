@@ -146,7 +146,7 @@ jobs:
       # We use the setup-miniconda action to set up compilers for our host machine. These are
       # provided by the conda-forge compilers package to compile the wheels. Note that we do not
       # set up Python here, as we use the Python provided by GHA using setup-python.
-      # - name: Set up conda environment
+      # - name: Set up mamba environment
       #   uses: mamba-org/setup-micromamba@v1.9.0
       #   with:
       #     environment-file: environment.yml
@@ -170,9 +170,12 @@ jobs:
             mamba env create --file environment.yml
             mamba activate pybamm-dev
             # export CC=$(conda run -n pybamm-dev which clang)
-            # export CXX=$(conda run -n pybamm-dev which clang++)
-            # export FC=$(conda run -n pybamm-dev which gfortran)
-            python -m pip install cmake pipx
+            # export CXX=$(mamba run -n pybamm-dev which clang++)
+
+            export PATH=$(mamba run -n pybamm-dev which gfortran):$PATH
+            export FC=$(mamba run -n pybamm-dev which gfortran)
+
+            python -m pip install cmake
             python scripts/install_KLU_Sundials.py
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
