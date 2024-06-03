@@ -218,6 +218,11 @@ jobs:
               PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev"
             fi
 
+            # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
+            cp $PREFIX/lib/libomp.dylib $HOME/.local/lib/
+            install_name_tool -id $HOME/.local/lib/libomp.dylib $HOME/.local/lib/libomp.dylib
+            codesign --force --sign - $HOME/.local/lib/libomp.dylib
+
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
             export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
