@@ -180,10 +180,10 @@ jobs:
             mkdir -p gfortran_installed
             tar -xv -C gfortran_installed/ -f gfortran.tar.gz
 
-            if [[ uname -m == "x86_64" ]]; then
+            if [[ $(uname -m) == "x86_64" ]]; then
               export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
               export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
-            elif [[ uname -m == "arm64" ]]; then
+            elif [[ $(uname -m) == "arm64" ]]; then
               export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
               export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
             fi
@@ -245,6 +245,7 @@ jobs:
               # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
               for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            fi
           CIBW_TEST_EXTRAS: "dev,all"
           CIBW_TEST_COMMAND: |
             set -e -x
