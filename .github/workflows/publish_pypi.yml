@@ -218,15 +218,15 @@ jobs:
               PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev"
             fi
 
-            # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
-            cp $PREFIX/lib/libomp.dylib $HOME/.local/lib/
-
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
             export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
             export CFLAGS="$CFLAGS -I$PREFIX/include"
             export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
             export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
+
+            # cibuildwheel not recognising its environment variable, so set manually
+            export CIBUILDWHEEL="1"
 
             python scripts/install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse

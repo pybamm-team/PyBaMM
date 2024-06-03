@@ -55,7 +55,14 @@ def install_suitesparse(download_dir):
         # multiple paths at the time of wheel repair. Therefore, it should not be
         # built with an RPATH since it is copied to the install prefix.
         if libdir == "SuiteSparse_config":
-            env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
+            # if in CI, set RPATH to the install directory for SuiteSparse_config
+            # dylibs to find libomp.dylib when repairing the wheel
+            if os.environ.get("CIBUILDWHEEL") == "1":
+                env["CMAKE_OPTIONS"] = (
+                    f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib"
+                )
+            else:
+                env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
         else:
             # For AMD, COLAMD, BTF and KLU; do not set a BUILD RPATH but use an
             # INSTALL RPATH in order to ensure that the dynamic libraries are found
@@ -115,7 +122,7 @@ def install_sundials(download_dir, install_dir):
         # break MACOSX_DEPLOYMENT_TARGET. We use a custom OpenMP binary as described
         # in CIBW_BEFORE_ALL in the wheel builder CI job.
         # Check for CI environment variable to determine if we are building a wheel
-        if "CI" not in os.environ:
+        if os.environ.get("CIBUILDWHEEL") != "1":
             print("Using Homebrew OpenMP for macOS build")
             cmake_args += [
                 "-DOpenMP_C_FLAGS=" + OpenMP_C_FLAGS,
