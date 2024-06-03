@@ -120,7 +120,7 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
-            python -c "import pybamm; pybamm.IDAKLUSolver()"
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4
@@ -251,12 +251,12 @@ jobs:
             fi
           CIBW_TEST_COMMAND: |
             set -e -x
-            python -c "import pybamm; pybamm.IDAKLUSolver()"
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4
         with:
-          name: wheels_macos_${{ matrix.os }}
+          name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
