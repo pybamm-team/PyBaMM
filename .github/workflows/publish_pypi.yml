@@ -168,10 +168,11 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_BEFORE_ALL: |
+            conda init
             conda activate pybamm-dev
-            export CC=$(conda run -n pybamm-dev which clang)
-            export CXX=$(conda run -n pybamm-dev which clang++)
-            export FC=$(conda run -n pybamm-dev which gfortran)
+            # export CC=$(conda run -n pybamm-dev which clang)
+            # export CXX=$(conda run -n pybamm-dev which clang++)
+            # export FC=$(conda run -n pybamm-dev which gfortran)
             python -m pip install cmake pipx
             python scripts/install_KLU_Sundials.py
           CIBW_ARCHS_MACOS: auto
