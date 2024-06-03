@@ -168,9 +168,9 @@ jobs:
             brew install miniforge
             mamba create -n pybamm-dev $OPENMP_URL
             if [[ $(uname -m) == "x86_64" ]]; then
-              PREFIX="/usr/local/miniconda/envs/pybamm-dev"
+              PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybamm-dev"
             elif [[ $(uname -m) == "arm64" ]]; then
-              PREFIX="/opt/homebrew/miniforge3/envs/pybamm-dev"
+              PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev"
             fi
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
