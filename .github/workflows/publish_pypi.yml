@@ -152,6 +152,14 @@ jobs:
           environment-file: environment.yml
           activate-environment: true
 
+      - name: Set macOS-specific environment variables
+        run: |
+          if [[ $(uname -m) == "x86_64" ]]; then
+            echo "MACOSX_DEPLOYMENT_TARGET='11.0'" >> $GITHUB_ENV
+          elif [[ $(uname -m) == "arm64" ]]; then
+            echo "MACOSX_DEPLOYMENT_TARGET='11.1'" >> $GITHUB_ENV
+          fi
+
       - name: Build wheels on macOS arm64
         uses: pypa/cibuildwheel@v2.18.1
         with:
