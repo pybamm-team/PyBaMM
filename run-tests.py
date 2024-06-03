@@ -12,7 +12,6 @@ import sys
 import argparse
 import subprocess
 import pytest
-import unittest
 
 
 def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
@@ -37,18 +36,10 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         # currently activated virtual environment
         interpreter = sys.executable
     if executable is False:
-        if tests == "tests/unit":
-            ret = pytest.main(["-v", tests])
-        else:
-            suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-            result = unittest.TextTestRunner(verbosity=2).run(suite)
-            ret = int(not result.wasSuccessful())
+        ret = pytest.main(["-v", tests])
     else:
         print(f"Running {folder} tests with executable {interpreter}")
-        if tests == "tests/unit":
-            cmd = [interpreter, "-m", "pytest", "-v", tests]
-        else:
-            cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
+        cmd = [interpreter, "-m", "pytest", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
