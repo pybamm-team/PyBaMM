@@ -143,15 +143,6 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      # We use the setup-micromamba action to set up compilers for our host machine. These are
-      # provided by the conda-forge compilers package to compile the wheels. Note that we do not
-      # set up Python here, as we use the Python provided by GHA using setup-python.
-      # - name: Set up mamba environment
-      #   uses: mamba-org/setup-micromamba@v1.9.0
-      #   with:
-      #     init-shell: bash
-      #     environment-file: environment.yml
-
       - name: Set macOS-specific environment variables
         run: |
           if [[ $(uname -m) == "x86_64" ]]; then
@@ -165,17 +156,32 @@ jobs:
 
       - name: Build wheels on macOS
         shell: bash
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BEFORE_ALL: |
-            # TODO: remove these when everything works
-            brew install miniforge
-            mamba env create --file environment.yml
-            mamba init "$(basename "${SHELL}")"
-            mamba activate pybamm-dev
+        run: |
+            # Set LLVM-OpenMP URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-64/llvm-openmp-11.1.0-hda6cdc1_1.tar.bz2"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-arm64/llvm-openmp-11.1.0-hf3c4609_1.tar.bz2"
+            fi
 
-            python -m pip install cmake
+            # Can't download directly, use conda/mamba and set environment variables
+            brew install miniforge
+            mamba create -n pybamm-dev $OPENMP_URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              PREFIX="/usr/local/miniconda/envs/pybamm-dev"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              PREFIX="/opt/homebrew/miniforge3/envs/pybamm-dev"
+            fi
+            export CC=/usr/bin/clang
+            export CXX=/usr/bin/clang++
+            export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
+            export CFLAGS="$CFLAGS -I$PREFIX/include"
+            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
+            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
+
             python scripts/install_KLU_Sundials.py
+            python -m cibuildwheel --output-dir wheelhouse
+        env:
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
           CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
