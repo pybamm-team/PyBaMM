@@ -10,5 +10,7 @@ channels:
   - conda-forge
 
 dependencies:
-- compilers
+- c-compiler
+- cxx-compiler
+- fortran-compiler
 - llvm-openmp
