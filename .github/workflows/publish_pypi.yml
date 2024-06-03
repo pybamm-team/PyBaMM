@@ -161,7 +161,11 @@ jobs:
             echo "MACOSX_DEPLOYMENT_TARGET=11.1" >> $GITHUB_ENV
           fi
 
-      - name: Build wheels on macOS arm64
+          # Get path to pybamm-dev environment and set FC from there; for
+          # some reason, the FC variable is not set in the environment
+          echo "FC=$(conda run -n pybamm-dev which gfortran)" >> $GITHUB_ENV
+
+      - name: Build wheels on macOS
         uses: pypa/cibuildwheel@v2.18.1
         with:
           package-dir: .
