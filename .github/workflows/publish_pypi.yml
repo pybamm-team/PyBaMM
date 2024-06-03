@@ -168,7 +168,7 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_BEFORE_ALL: |
-            conda init
+            conda env create --file environment.yml
             conda activate pybamm-dev
             # export CC=$(conda run -n pybamm-dev which clang)
             # export CXX=$(conda run -n pybamm-dev which clang++)
