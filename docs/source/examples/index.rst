@@ -127,3 +127,4 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
     notebooks/solution-data-and-processed-variables.ipynb
+    notebooks/pybamm_data.ipynb
