@@ -2,6 +2,7 @@
 
 ## Features
 
+- Updated solid-phase diffusivity functions in `Ecker2015` and `Ecker2015_graphite_halfcell` parameter sets to better match the original papers ([#4141](https://github.com/pybamm-team/PyBaMM/pull/4141))
 - Added `pybamm.DataLoader` class to fetch data files from [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0) and store it under local cache. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
 - Transport efficiency submodel has new options from the literature relating to different tortuosity factor models and also a new option called "tortuosity factor" for specifying the value or function directly as parameters ([#3437](https://github.com/pybamm-team/PyBaMM/pull/3437))
 - Added `plot_thermal_components` to plot the contributions to the total heat generation in a battery ([#4021](https://github.com/pybamm-team/PyBaMM/pull/4021))
@@ -46,6 +47,7 @@
 
 ## Breaking changes
 
+- Updated solid-phase diffusivity functions in `Ecker2015` and `Ecker2015_graphite_halfcell` parameter sets to better match the original papers ([#4141](https://github.com/pybamm-team/PyBaMM/pull/4141))
 - Removed data files under `pybamm/input` and released them in a separate repository upstream at [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0). Note that data files under `pybamm/input/parameters` have not been removed. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
 - Removed `check_model` argument from `Simulation.solve`. To change the `check_model` option, use `Simulation(..., discretisation_kwargs={"check_model": False})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
 - Removed multiple Docker images. Here on, a single Docker image tagged `pybamm/pybamm:latest` will be provided with both solvers (`IDAKLU` and `JAX`) pre-installed. ([#3992](https://github.com/pybamm-team/PyBaMM/pull/3992))
