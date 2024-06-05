@@ -172,7 +172,7 @@ extend-exclude = ["__init__.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    "B",           # flake8-bugbear
+    "B",             # flake8-bugbear
     # "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
@@ -184,11 +184,12 @@ extend-select = [
     # "PT",          # flake8-pytest-style
     # "PTH",         # flake8-use-pathlib
     # "RET",         # flake8-return
-    "RUF",         # Ruff-specific
+    "RUF",           # Ruff-specific
     # "SIM",         # flake8-simplify
     # "T20",         # flake8-print
-    "UP",          # pyupgrade
-    "YTT",         # flake8-2020
+    "UP",            # pyupgrade
+    "YTT",           # flake8-2020
+    "TID252",        # relative-imports
 ]
 ignore = [
     "E741",        # Ambiguous variable name
