@@ -15,7 +15,6 @@ class ParameterSets(Mapping):
     --------
     Listing available parameter sets:
 
-    .. doctest::
 
         >>> import pybamm
         >>> list(pybamm.parameter_sets)
