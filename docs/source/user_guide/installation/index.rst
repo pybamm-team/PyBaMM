@@ -146,7 +146,7 @@ Dependency                                                                      
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
 `pytest-cov <https://pytest-cov.readthedocs.io/en/stable/>`__                    \-                 dev                For calculating test coverage.
 `parameterized <https://github.com/wolever/parameterized>`__                     \-                 dev                For test parameterization.
-`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running Unit, Integration and Jupyter notebooks tests.
+`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running the test suites.
 `pytest-doctestplus <https://github.com/scientific-python/pytest-doctestplus>`__ \-                 dev                For running doctests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
