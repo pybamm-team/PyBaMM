@@ -148,7 +148,7 @@ class CasadiSolver(pybamm.BaseSolver):
         """
 
         # Record whether there are any symbolic inputs
-        inputs_list = inputs_list or []
+        inputs_list = inputs_list or [{}]
 
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for inputs in inputs_list for x in inputs.values()])
@@ -294,13 +294,18 @@ class CasadiSolver(pybamm.BaseSolver):
                 # termination point and exit
                 # Note: this is only done for the first solution, is this correct?
                 current_step_sols[0] = self._solve_for_event(current_step_sols[0])
-                for soln, current_step_sol in zip(current_step_sols, solutions):
-                    # assign temporary solve time
-                    current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    soln = soln + current_step_sol
+                if solutions is None:
+                    for s in current_step_sols:
+                        s.solve_time = np.nan
+                    solutions = current_step_sols
+                else:
+                    for i, current_step_sol in enumerate(current_step_sols):
+                        # assign temporary solve time
+                        current_step_sol.solve_time = np.nan
+                        # append solution from the current step to solution
+                        solutions[i] = solutions[i] + current_step_sol
 
-                if current_step_sol[0].termination == "event":
+                if current_step_sols[0].termination == "event":
                     break
                 else:
                     # update time as time
@@ -450,10 +455,10 @@ class CasadiSolver(pybamm.BaseSolver):
             use_grid = True
 
         y0 = coarse_solution.y[:, event_idx_lower]
-        dense_step_sol = self._run_integrator(
+        [dense_step_sol] = self._run_integrator(
             model,
             y0,
-            inputs_dict,
+            [inputs_dict],
             inputs,
             t_window_event_dense,
             use_grid=use_grid,
@@ -602,7 +607,7 @@ class CasadiSolver(pybamm.BaseSolver):
         self,
         model,
         y0,
-        inputs_dict,
+        inputs_list,
         inputs,
         t_eval,
         use_grid=True,
@@ -617,7 +622,7 @@ class CasadiSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         y0:
             casadi vector of initial conditions
-        inputs_dict : dict, optional
+        inputs_list : list of dict, optional
             Any input parameters to pass to the model when solving
         inputs:
             Casadi vector of inputs
@@ -701,7 +706,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_eval,
                 y_sol,
                 model,
-                inputs_dict,
+                inputs_list,
                 sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )
@@ -742,7 +747,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_eval,
                 y_sol,
                 model,
-                inputs_dict,
+                inputs_list,
                 sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )

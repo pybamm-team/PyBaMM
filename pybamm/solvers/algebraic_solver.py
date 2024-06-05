@@ -60,7 +60,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         inputs_list: list of dict, optional
             Any input parameters to pass to the model when solving
         """
-        inputs_list = inputs_list or {}
+        inputs_list = inputs_list or [{}]
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(
                 *[x for inputs in inputs_list for x in inputs.values()]
@@ -150,7 +150,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     if jac_fn is None:
                         jac_fn = "2-point"
                     timer.reset()
-                    sol = optimize.least_squares(
+                    solns = optimize.least_squares(
                         root_fun,
                         y0_alg,
                         method=method,
@@ -187,7 +187,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         ]
                         extra_options["bounds"] = bounds
                     timer.reset()
-                    sol = optimize.minimize(
+                    solns = optimize.minimize(
                         root_norm,
                         y0_alg,
                         method=method,
@@ -198,7 +198,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     integration_time += timer.time()
                 else:
                     timer.reset()
-                    sol = optimize.root(
+                    solns = optimize.root(
                         root_fun,
                         y0_alg,
                         method=self.method,
@@ -208,23 +208,23 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     )
                     integration_time += timer.time()
 
-                if sol.success and np.all(abs(sol.fun) < self.tol):
+                if solns.success and np.all(abs(solns.fun) < self.tol):
                     # update initial guess for the next iteration
-                    y0_alg = sol.x
+                    y0_alg = solns.x
                     # update solution array
                     y_alg[:, idx] = y0_alg
                     success = True
-                elif not sol.success:
+                elif not solns.success:
                     raise pybamm.SolverError(
-                        f"Could not find acceptable solution: {sol.message}"
+                        f"Could not find acceptable solution: {solns.message}"
                     )
                 else:
-                    y0_alg = sol.x
+                    y0_alg = solns.x
                     if itr > maxiter:
                         raise pybamm.SolverError(
                             "Could not find acceptable solution: solver terminated "
                             "successfully, but maximum solution error "
-                            f"({np.max(abs(sol.fun))}) above tolerance ({self.tol})"
+                            f"({np.max(abs(solns.fun))}) above tolerance ({self.tol})"
                         )
                 itr += 1
 
@@ -232,8 +232,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
         y_diff = np.r_[[y0_diff] * len(t_eval)].T
         y_sol = np.r_[y_diff, y_alg]
         # Return solution object (no events, so pass None to t_event, y_event)
-        sol = pybamm.Solution.from_concatenated_state(
+        solns = pybamm.Solution.from_concatenated_state(
             t_eval, y_sol, model, inputs_list, termination="final time"
         )
-        sol.integration_time = integration_time
-        return sol
+        for s in solns:
+            s.integration_time = integration_time
+        return solns

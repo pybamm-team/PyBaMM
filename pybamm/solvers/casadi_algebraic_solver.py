@@ -51,7 +51,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving.
         """
         # Record whether there are any symbolic inputs
-        inputs_list = inputs_list or {}
+        inputs_list = inputs_list or [{}]
 
         # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[v for inputs in inputs_list for v in inputs.values()])
@@ -164,7 +164,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         except AttributeError:
             explicit_sensitivities = False
 
-        sol = pybamm.Solution.from_concatenated_state(
+        sols = pybamm.Solution.from_concatenated_state(
             [t_eval],
             y_sol,
             model,
@@ -172,5 +172,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             termination="final time",
             sensitivities=explicit_sensitivities,
         )
-        sol.integration_time = integration_time
-        return sol
+        for sol in sols:
+            sol.integration_time = integration_time
+        return sols

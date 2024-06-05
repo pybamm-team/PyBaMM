@@ -172,7 +172,7 @@ class Solution:
         return [
             cls(
                 t,
-                y[i * ny : (i + 1) * ny],
+                y[i * ny : (i + 1) * ny, :],
                 model,
                 input_list[i],
                 t_event,

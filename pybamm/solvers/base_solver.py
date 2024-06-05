@@ -103,12 +103,16 @@ class BaseSolver:
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs : list of dict, optional
+        inputs : dict or list of dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
         """
-        inputs = inputs or [{}]
+
+        if inputs is None:
+            inputs = [{}]
+        elif isinstance(inputs, dict):
+            inputs = [inputs]
 
         if ics_only:
             pybamm.logger.info("Start solver set-up, initial_conditions only")
@@ -153,7 +157,7 @@ class BaseSolver:
         if model.convert_to_format == "casadi":
             # stack inputs
             inputs_casadi = casadi.vertcat(
-                *[x for inpt in inputs for x in inpt.items()]
+                *[x for inpt in inputs for x in inpt.values()]
             )
             model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
             if jacp_ic is None:
@@ -390,7 +394,7 @@ class BaseSolver:
             y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
-            for name, value in inputs.items():
+            for name, value in inputs[0].items():
                 if isinstance(value, numbers.Number):
                     p_casadi[name] = casadi.MX.sym(name)
                 else:
@@ -611,7 +615,7 @@ class BaseSolver:
             discontinuity_events,
         )
 
-    def _set_initial_conditions(self, model, time, inputs_dict, update_rhs):
+    def _set_initial_conditions(self, model, time, inputs_list, update_rhs):
         """
         Set initial conditions for the model. This is skipped if the solver is an
         algebraic solver (since this would make the algebraic solver redundant), and if
@@ -622,7 +626,7 @@ class BaseSolver:
         ----------
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
-        inputs_dict : dict
+        inputs_list: list of dict
             Any input parameters to pass to the model when solving
         update_rhs : bool
             Whether to update the rhs. True for 'solve', False for 'step'.
@@ -636,9 +640,11 @@ class BaseSolver:
 
         if model.convert_to_format == "casadi":
             # stack inputs
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            inputs = casadi.vertcat(
+                *[x for inpts in inputs_list for x in inpts.values()]
+            )
         else:
-            inputs = inputs_dict
+            inputs = inputs_list
 
         if self.algebraic_solver is True:
             # Don't update model.y0
@@ -668,7 +674,7 @@ class BaseSolver:
                     model.y0 = np.vstack(
                         (y0_from_inputs[:len_rhs], y0_from_model[len_rhs:])
                     )
-            y0 = self.calculate_consistent_state(model, time, inputs_dict)
+            y0 = self.calculate_consistent_state(model, time, inputs_list)
         # Make y0 a function of inputs if doing symbolic with casadi
         model.y0 = y0
 
@@ -697,15 +703,22 @@ class BaseSolver:
         if self.root_method is None:
             return model.y0
         try:
-            root_sol = self.root_method._integrate(model, np.array([time]), inputs)
+            root_sols = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
                 f"Could not find consistent states: {e.args[0]}"
             ) from e
         pybamm.logger.debug("Found consistent states")
 
-        self.check_extrapolation(root_sol, model.events)
-        y0 = root_sol.all_ys[0]
+        y0s = []
+        for s in root_sols:
+            self.check_extrapolation(s, model.events)
+            y0s.append(s.all_ys[0])
+
+        if isinstance(y0s[0], casadi.DM):
+            y0 = casadi.horzcat(*y0s)
+        else:
+            y0 = np.hstack(y0s)
         return y0
 
     def solve(
@@ -961,7 +974,7 @@ class BaseSolver:
             )
 
         # Return solution(s)
-        if len(inputs) == 1:
+        if len(inputs_list) == 1:
             return solutions[0]
         else:
             return solutions
@@ -1027,20 +1040,22 @@ class BaseSolver:
         return start_indices, end_indices, t_eval
 
     @staticmethod
-    def _check_events_with_initial_conditions(t_eval, model, inputs_dict):
+    def _check_events_with_initial_conditions(t_eval, model, inputs_list):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
 
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            inputs = casadi.vertcat(
+                *[x for inputs in inputs_list for x in inputs.values()]
+            )
 
         events_eval = [None] * num_terminate_events
         for idx, event in enumerate(model.terminate_events_eval):
             if model.convert_to_format == "casadi":
                 event_eval = event(t_eval[0], model.y0, inputs)
             elif model.convert_to_format in ["python", "jax"]:
-                event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_dict)
+                event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_list)
             events_eval[idx] = event_eval
 
         events_eval = np.array(events_eval)
@@ -1072,7 +1087,7 @@ class BaseSolver:
 
         Parameters
         ----------
-        old_solution : :class:`pybamm.Solution` or None
+        old_solution : :class:`pybamm.Solution` or list of :class:`pybamm.Solution` or None
             The previous solution to be added to. If `None`, a new solution is created.
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
@@ -1084,7 +1099,7 @@ class BaseSolver:
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
         npts : deprecated
-        inputs : dict, optional
+        inputs : dict or list of dict, optional
             Any input parameters to pass to the model when solving
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
@@ -1095,17 +1110,23 @@ class BaseSolver:
             `model.variables = {}`)
 
         """
+        inputs_list = inputs if isinstance(inputs, list) else [inputs]
         if old_solution is None:
-            old_solution = pybamm.EmptySolution()
+            old_solutions = [pybamm.EmptySolution()] * len(inputs_list)
+        elif not isinstance(old_solution, list):
+            old_solutions = [old_solution]
 
         if not (
-            isinstance(old_solution, pybamm.EmptySolution)
-            or old_solution.termination == "final time"
-            or "[experiment]" in old_solution.termination
+            isinstance(old_solutions[0], pybamm.EmptySolution)
+            or old_solutions[0].termination == "final time"
+            or "[experiment]" in old_solutions[0].termination
         ):
             # Return same solution as an event has already been triggered
             # With hack to allow stepping past experiment current / voltage cut-off
-            return old_solution
+            if len(old_solutions) == 1:
+                return old_solutions[0]
+            else:
+                return old_solutions
 
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
@@ -1140,7 +1161,7 @@ class BaseSolver:
         else:
             t_eval = np.array([0, dt])
 
-        t_start = old_solution.t[-1]
+        t_start = old_solutions[0].t[-1]
         t_eval = t_start + t_eval
         t_end = t_start + dt
 
@@ -1158,7 +1179,9 @@ class BaseSolver:
         timer = pybamm.Timer()
 
         # Set up inputs
-        model_inputs = self._set_up_model_inputs(model, inputs)
+        model_inputs_list = [
+            self._set_up_model_inputs(model, inputs) for inputs in inputs_list
+        ]
 
         first_step_this_model = False
         if model not in self._model_set_up:
@@ -1170,71 +1193,81 @@ class BaseSolver:
                     f'"{existing_model.name}". Please create a separate '
                     "solver for this model"
                 )
-            self.set_up(model, model_inputs)
+            self.set_up(model, model_inputs_list)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
 
         if (
-            isinstance(old_solution, pybamm.EmptySolution)
-            and old_solution.termination is None
+            isinstance(old_solutions[0], pybamm.EmptySolution)
+            and old_solutions[0].termination is None
         ):
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
-        if isinstance(old_solution, pybamm.EmptySolution):
+        if isinstance(old_solutions[0], pybamm.EmptySolution):
             if not first_step_this_model:
                 # reset y0 to original initial conditions
-                self.set_up(model, model_inputs, ics_only=True)
+                self.set_up(model, model_inputs_list, ics_only=True)
         else:
-            if old_solution.all_models[-1] == model:
+            if old_solutions[0].all_models[-1] == model:
                 # initialize with old solution
-                model.y0 = old_solution.all_ys[-1][:, -1]
+                y0s = [s.all_ys[-1][:, -1] for s in old_solutions]
+
             else:
-                _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                    old_solution, return_type="ics"
-                )
-                model.y0 = concatenated_initial_conditions.evaluate(
-                    0, inputs=model_inputs
-                )
+                y0s = []
+                for soln, inputs in zip(old_solutions, model_inputs_list):
+                    _, concatenated_initial_conditions = (
+                        model.set_initial_conditions_from(soln, return_type="ics")
+                    )
+                    y0s.append(
+                        concatenated_initial_conditions.evaluate(0, inputs=inputs)
+                    )
+
+            model.y0 = casadi.vertcat(*y0s)
 
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(
-            model, t_start_shifted, model_inputs, update_rhs=False
+            model, t_start_shifted, model_inputs_list, update_rhs=False
         )
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, model_inputs)
+        self._check_events_with_initial_conditions(t_eval, model, model_inputs_list)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
-        solution = self._integrate(model, t_eval, model_inputs)
-        solution.solve_time = timer.time()
+        solutions = self._integrate(model, t_eval, model_inputs_list)
+        for i, s in enumerate(solutions):
+            solutions[i].solve_time = timer.time()
 
-        # Check if extrapolation occurred
-        self.check_extrapolation(solution, model.events)
+            # Check if extrapolation occurred
+            self.check_extrapolation(s, model.events)
 
-        # Identify the event that caused termination and update the solution to
-        # include the event time and state
-        solution, termination = self.get_termination_reason(solution, model.events)
+            # Identify the event that caused termination and update the solution to
+            # include the event time and state
+            solutions[i], termination = self.get_termination_reason(s, model.events)
 
-        # Assign setup time
-        solution.set_up_time = set_up_time
+            # Assign setup time
+            solutions[i].set_up_time = set_up_time
 
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time} (of which integration time: {solution.integration_time}), "
-            f"Total time: {solution.total_time}"
+            f"Set-up time: {solutions[0].set_up_time}, Step time: {solutions[0].solve_time} (of which integration time: {solutions[0].integration_time}), "
+            f"Total time: {solutions[0].total_time}"
         )
 
         # Return solution
         if save is False:
-            return solution
+            ret = solutions
         else:
-            return old_solution + solution
+            ret = [old_s + s for (old_s, s) in zip(old_solutions, solutions)]
+        if len(ret) == 1:
+            return ret[0]
+        else:
+            return ret
 
     @staticmethod
     def get_termination_reason(solution, events):

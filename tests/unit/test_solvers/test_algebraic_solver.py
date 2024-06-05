@@ -55,13 +55,13 @@ class TestAlgebraicSolver(TestCase):
         # Try passing extra options to solver
         solver = pybamm.AlgebraicSolver(extra_options={"maxiter": 100})
         model = Model()
-        solution = solver._integrate(model, np.array([0]))
-        np.testing.assert_array_equal(solution.y, -2)
+        solutions = solver._integrate(model, np.array([0]))
+        np.testing.assert_array_equal(solutions[0].y, -2)
 
         # Relax options and see worse results
         solver = pybamm.AlgebraicSolver(extra_options={"ftol": 1})
-        solution = solver._integrate(model, np.array([0]))
-        self.assertNotEqual(solution.y, -2)
+        solutions = solver._integrate(model, np.array([0]))
+        self.assertNotEqual(solutions[0].y, -2)
 
     def test_root_find_fail(self):
         class Model(pybamm.BaseModel):
@@ -116,8 +116,8 @@ class TestAlgebraicSolver(TestCase):
         sol = np.array([3, -4])[:, np.newaxis]
 
         solver = pybamm.AlgebraicSolver()
-        solution = solver._integrate(model, np.array([0]))
-        np.testing.assert_array_almost_equal(solution.y, sol)
+        solutions = solver._integrate(model, np.array([0]))
+        np.testing.assert_array_almost_equal(solutions[0].y, sol)
 
     def test_model_solver(self):
         # Create model

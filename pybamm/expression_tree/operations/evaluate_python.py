@@ -486,15 +486,21 @@ class EvaluatorPython:
             y = y.reshape(-1, 1)
 
         if isinstance(inputs, list):
-            ny = y.shape[0]
-            ni = len(inputs)
-            result = np.zeros((ni * ny, 1))
-            i = 0
-            for input in inputs:
-                result[i : i + ny] += self._evaluate(
-                    self._constants, t, y[i : i + ny], input
-                )
-                i += ny
+            result = self._evaluate(self._constants, t, y, inputs[0])
+            if len(inputs) > 1:
+                if isinstance(result, numbers.Number):
+                    result = np.array([result])
+                ny = result.shape[0]
+                ni = len(inputs)
+                results = np.zeros((ni * ny, 1))
+                results[:ny] = result
+                i = ny
+                for input in inputs[1:]:
+                    results[i : i + ny] += self._evaluate(
+                        self._constants, t, y[i : i + ny], input
+                    )
+                    i += ny
+                result = results
         else:
             result = self._evaluate(self._constants, t, y, inputs)
 

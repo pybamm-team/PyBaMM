@@ -144,7 +144,7 @@ class ScipySolver(pybamm.BaseSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            sol = pybamm.Solution.from_concatenated_state(
+            solns = pybamm.Solution.from_concatenated_state(
                 sol.t,
                 sol.y,
                 model,
@@ -154,7 +154,8 @@ class ScipySolver(pybamm.BaseSolver):
                 termination,
                 sensitivities=bool(model.calculate_sensitivities),
             )
-            sol.integration_time = integration_time
-            return sol
+            for s in solns:
+                s.integration_time = integration_time
+            return solns
         else:
             raise pybamm.SolverError(sol.message)

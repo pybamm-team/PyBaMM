@@ -37,4 +37,4 @@ class DummySolver(pybamm.BaseSolver):
             t_eval, y_sol, model, inputs_list, termination="final time"
         )
         sol.integration_time = 0
-        return sol
+        return [sol]
