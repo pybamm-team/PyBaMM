@@ -6,7 +6,6 @@
 # (see https://github.com/pints-team/pints)
 #
 import os
-import shutil
 import pybamm
 import sys
 import argparse
