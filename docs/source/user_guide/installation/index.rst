@@ -144,7 +144,7 @@ Dependency                                                                      
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
-`pytest-cov <https://pytest-cov.readthedocs.io/en/latest/>`__                    \-                 dev                For calculating coverage of tests.
+`pytest-cov <https://pytest-cov.readthedocs.io/en/stable/>`__                    \-                 dev                For calculating test coverage.
 `parameterized <https://github.com/wolever/parameterized>`__                     \-                 dev                For test parameterization.
 `pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running Unit, Integration and Jupyter notebooks tests.
 `pytest-doctestplus <https://github.com/scientific-python/pytest-doctestplus>`__ \-                 dev                For running doctests.
