@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from ..leading_order_conductivity import LeadingOrder
+from pybamm.models.submodels.electrolyte_conductivity.leading_order_conductivity import LeadingOrder
 
 
 class BaseLeadingOrderSurfaceForm(LeadingOrder):
