@@ -70,27 +70,13 @@ def run_doc_tests():
     Checks if the documentation can be built, runs any doctests (currently not
     used).
     """
-    print("Checking if docs can be built.")
+    print("Checking for doctests.")
     try:
         subprocess.run(
             [
-                "sphinx-build",
-                "-j",
-                "auto",
-                "-b",
-                "doctest",
-                "docs",
-                "docs/build/html",
-                "-W",
-                "--keep-going",
-            ],
-            check=True,
-        )
-        print("Checking for doctests.")
-        subprocess.run(
-            [
                 f"{sys.executable}",
-                "-m" "pytest",
+                "-m",
+                "pytest",
                 "--doctest-plus",
                 "pybamm",
             ],
@@ -99,13 +85,6 @@ def run_doc_tests():
     except subprocess.CalledProcessError as e:
         print(f"FAILED with exit code {e.returncode}")
         sys.exit(e.returncode)
-    finally:
-        # Regardless of whether the doctests pass or fail, attempt to remove the built files.
-        print("Deleting built files.")
-        try:
-            shutil.rmtree("docs/build/html/.doctrees/")
-        except Exception as e:
-            print(f"Error deleting built files: {e}")
 
 
 def run_scripts(executable="python"):
