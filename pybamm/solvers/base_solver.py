@@ -508,6 +508,8 @@ class BaseSolver:
                     elif symbol.left == pybamm.t:
                         expr = symbol.right
                         found_t = True
+                    else:
+                        expr = None
 
                     # Update the events if the heaviside function depended on t
                     if found_t:
@@ -521,12 +523,11 @@ class BaseSolver:
                 elif isinstance(symbol, pybamm.Modulo):
                     if symbol.left == pybamm.t:
                         expr = symbol.right
-                        if t_eval is None:
-                            N_events = 200
-                        else:
-                            N_events = t_eval[-1] // expr.value
+                        num_events = 200
+                        if t_eval is not None:
+                            num_events = t_eval[-1] // expr.value
 
-                        for i in np.arange(N_events):
+                        for i in np.arange(num_events):
                             model.events.append(
                                 pybamm.Event(
                                     str(symbol),
@@ -534,6 +535,8 @@ class BaseSolver:
                                     pybamm.EventType.DISCONTINUITY,
                                 )
                             )
+                else:
+                    pass
 
         casadi_switch_events = []
         terminate_events = []
