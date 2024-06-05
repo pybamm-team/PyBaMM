@@ -31,7 +31,15 @@ def graphite_diffusivity_Ecker2015(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 8.4e-13 * np.exp(-11.3 * sto) + 8.2e-15
+    log_D_ref = (
+        -15.06
+        + 2.722 * np.exp(-((sto / 0.0777) ** 2))
+        + 1.503 * np.exp(-(((sto - 0.17) / 0.1153) ** 2))
+        + 1.055 * np.exp(-(((sto - 0.3118) / 0.04089) ** 2))
+        + 1.555 * np.exp(-(((sto - 0.6061) / 0.04545) ** 2))
+        + 1.215 * np.exp(-(((sto - 1) / 0.02759) ** 2))
+    )
+    D_ref = 10**log_D_ref
     E_D_s = 3.03e4
     arrhenius = np.exp(-E_D_s / (pybamm.constants.R * T)) * np.exp(
         E_D_s / (pybamm.constants.R * 296)
@@ -179,7 +187,12 @@ def nco_diffusivity_Ecker2015(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 3.7e-13 - 3.4e-13 * np.exp(-12 * (sto - 0.62) * (sto - 0.62))
+    log_D_ref = (
+        -12.67
+        - 1.597 * np.exp(-(((sto - 0.6169) / 0.07859) ** 2))
+        - 1.608 * np.exp(-(((sto - 1) / 0.0931) ** 2))
+    )
+    D_ref = 10**log_D_ref
     E_D_s = 8.06e4
     arrhenius = np.exp(-E_D_s / (pybamm.constants.R * T)) * np.exp(
         E_D_s / (pybamm.constants.R * 296.15)
@@ -634,5 +647,6 @@ def get_parameter_values():
             "Hales2019",
             "Richardson2020",
             "OKane2020",
+            "Yuan2023",
         ],
     }
