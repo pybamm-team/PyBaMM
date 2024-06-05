@@ -3,7 +3,9 @@
 #
 import pybamm
 
-from pybamm.models.submodels.electrolyte_conductivity.composite_conductivity import Composite
+from pybamm.models.submodels.electrolyte_conductivity.composite_conductivity import (
+    Composite,
+)
 
 
 class BaseModel(Composite):

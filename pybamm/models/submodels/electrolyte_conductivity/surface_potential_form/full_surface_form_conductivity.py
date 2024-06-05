@@ -2,7 +2,9 @@
 # Class for full surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
-from pybamm.models.submodels.electrolyte_conductivity.base_electrolyte_conductivity import BaseElectrolyteConductivity
+from pybamm.models.submodels.electrolyte_conductivity.base_electrolyte_conductivity import (
+    BaseElectrolyteConductivity,
+)
 
 
 class BaseModel(BaseElectrolyteConductivity):
