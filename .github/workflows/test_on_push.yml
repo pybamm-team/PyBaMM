@@ -105,11 +105,11 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
-      - name: Run unit/coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
 
-      - name: Run unit/coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+      - name: Run coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: python -m nox -s coverage
 
