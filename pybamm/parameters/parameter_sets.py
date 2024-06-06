@@ -22,7 +22,6 @@ class ParameterSets(Mapping):
 
     Get the docstring for a parameter set:
 
-    .. doctest::
 
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
         <BLANKLINE>
