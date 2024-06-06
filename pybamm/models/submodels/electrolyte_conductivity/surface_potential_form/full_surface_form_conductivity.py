@@ -2,7 +2,9 @@
 # Class for full surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
-from ..base_electrolyte_conductivity import BaseElectrolyteConductivity
+from pybamm.models.submodels.electrolyte_conductivity.base_electrolyte_conductivity import (
+    BaseElectrolyteConductivity,
+)
 
 
 class BaseModel(BaseElectrolyteConductivity):
@@ -270,13 +272,11 @@ class FullDifferential(BaseModel):
         domain, Domain = self.domain_Domain
 
         T = variables[f"{Domain} electrode temperature [K]"]
-
         C_dl = self.domain_param.C_dl(T)
 
         delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
         i_e = variables[f"{Domain} electrolyte current density [A.m-2]"]
 
-        # Variable summing all of the interfacial current densities
         sum_a_j = variables[
             f"Sum of {domain} electrode volumetric "
             "interfacial current densities [A.m-3]"
