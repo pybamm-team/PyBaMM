@@ -36,7 +36,7 @@ class TestUtil(TestCase):
                 "SEI current": 3,
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
-                "Positive electrode diffusivity [m2.s-1]": 6,
+                "Positive particle diffusivity [m2.s-1]": 6,
             }
         )
         self.assertEqual(d["test"], 1)
@@ -59,10 +59,7 @@ class TestUtil(TestCase):
             d.__getitem__("Open-circuit voltage at 100% SOC [V]")
 
         with self.assertWarns(DeprecationWarning):
-            self.assertEqual(
-                d["Positive electrode diffusivity [m2.s-1]"],
-                d["Positive particle diffusivity [m2.s-1]"],
-            )
+            self.assertEqual(d["Positive electrode diffusivity [m2.s-1]"], 6)
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")

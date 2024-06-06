@@ -83,8 +83,9 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel # skip CasADi and CMake
-          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
+          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
+          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
+          CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload Windows wheels
         uses: actions/upload-artifact@v4
@@ -93,13 +94,9 @@ jobs:
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-  build_macos_and_linux_wheels:
-    name: Wheels (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-13]
+  build_manylinux_wheels:
+    name: Wheels (linux-amd64)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         name: Check out PyBaMM repository
@@ -114,7 +111,6 @@ jobs:
 
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
-        if: matrix.os == 'ubuntu-latest'
         env:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
@@ -122,133 +118,145 @@ jobs:
             bash scripts/install_sundials.sh 6.0.3 6.5.0
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
-
-      - name: Build wheels on macOS amd64
-        if: matrix.os == 'macos-13'
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          MACOSX_DEPLOYMENT_TARGET: 11.0
-          # Sourced from
-          # License: BSD-3-Clause
-          # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
-          CIBW_BEFORE_ALL_MACOS: |
+          CIBW_TEST_COMMAND: |
             set -e -x
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
-            # download gfortran with proper macos minimum version (11.0)
-            curl -L https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-x86_64-native.tar.gz -o gfortran.tar.gz
-
-            GFORTRAN_SHA256=$(shasum --algorithm 256 gfortran.tar.gz)
-            KNOWN_SHA256="981367dd0ad4335613e91bbee453d60b6669f5d7e976d18c7bdb7f1966f26ae4  gfortran.tar.gz"
-            if [ "$GFORTRAN_SHA256" != "$KNOWN_SHA256" ]; then
-              echo "SHA256 mismatch for gfortran.tar.gz"
-              echo "expected: $KNOWN_SHA256"
-              echo "got: $GFORTRAN_SHA256"
-              exit 1
-            fi
-
-            mkdir -p gfortran_installed/
-            tar -xv -C gfortran_installed/ -f gfortran.tar.gz
-
-            export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
-            export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
-
-            # link libgfortran.5.dylib, libgfortran.dylib, libquadmath.0.dylib, libquadmath.dylib, libgcc_s.1.dylib, libgcc_s.1.1.dylib
-            # and place them in $HOME/.local/lib, and then change rpath
-            # to $HOME/.local/lib
-
-            mkdir -p $HOME/.local/lib
-            lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
-            for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
-              cp $lib_dir/$lib $HOME/.local/lib/
-              install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-            done
-
-            export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
-
-            python -m pip install cmake wget
-            python scripts/install_KLU_Sundials.py
-          CIBW_BEFORE_BUILD_MACOS: python -m pip install --upgrade pip cmake casadi setuptools wheel delocate
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
-
-      - name: Upload wheels for ${{ matrix.os }}
+      - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4
         with:
-          name: wheels_${{ matrix.os }}
+          name: wheels_manylinux
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
-  build_macos_arm64_wheels:
-    name: Wheels (macos-arm64)
-    # Current runner is macOS X 14+ on GitHub-hosted runners
-    runs-on: macos-14
+  build_macos_wheels:
+    name: Wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
 
-      - name: Build wheels on macOS arm64
+      - name: Set macOS-specific environment variables
+        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
+
+      - name: Build wheels on macOS
+        shell: bash
         run: |
-          python -m pip install cibuildwheel
-          python -m cibuildwheel --output-dir wheelhouse
-        env:
-          MACOSX_DEPLOYMENT_TARGET: 11.0
-          # Sourced from
-          # License: BSD-3-Clause
-          # https://github.com/scipy/scipy/blob/f2d4775e7762fad984f8f0acd8227c725ff21630/tools/wheels/cibw_before_build_macos.sh#L23-L49
-          CIBW_BEFORE_ALL_MACOS: |
             set -e -x
 
-            # download gfortran with proper macos minimum version (11.0)
-            curl -L https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-arm64-native.tar.gz -o gfortran.tar.gz
+            # Set LLVM-OpenMP URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-64/llvm-openmp-11.1.0-hda6cdc1_1.tar.bz2"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-arm64/llvm-openmp-11.1.0-hf3c4609_1.tar.bz2"
+            fi
 
-            GFORTRAN_SHA256=$(shasum --algorithm 256 gfortran.tar.gz)
-            KNOWN_SHA256="84364eee32ba843d883fb8124867e2bf61a0cd73b6416d9897ceff7b85a24604  gfortran.tar.gz"
-            if [ "$GFORTRAN_SHA256" != "$KNOWN_SHA256" ]; then
-              echo "SHA256 mismatch for gfortran.tar.gz"
-              echo "expected: $KNOWN_SHA256"
-              echo "got: $GFORTRAN_SHA256"
+            # Download gfortran with proper macOS minimum version (11.0)
+            if [[ $(uname -m) == "x86_64" ]]; then
+              GFORTRAN_URL="https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-x86_64-native.tar.gz"
+              KNOWN_SHA256="981367dd0ad4335613e91bbee453d60b6669f5d7e976d18c7bdb7f1966f26ae4 gfortran.tar.gz"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              GFORTRAN_URL="https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-arm64-native.tar.gz"
+              KNOWN_SHA256="84364eee32ba843d883fb8124867e2bf61a0cd73b6416d9897ceff7b85a24604 gfortran.tar.gz"
+            fi
+
+            # Validate gfortran tarball
+            curl -L $GFORTRAN_URL -o gfortran.tar.gz
+            if ! echo "$KNOWN_SHA256" != "$(shasum --algorithm 256 gfortran.tar.gz)"; then
+              echo "Checksum failed"
               exit 1
             fi
 
-            mkdir -p gfortran_installed/
+            mkdir -p gfortran_installed
             tar -xv -C gfortran_installed/ -f gfortran.tar.gz
 
-            export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
-            export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
+            if [[ $(uname -m) == "x86_64" ]]; then
+              export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
+              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
+            elif [[ $(uname -m) == "arm64" ]]; then
+              export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
+              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
+            fi
 
-            # link libgfortran.5.dylib, libgfortran.dylib, libquadmath.0.dylib, libquadmath.dylib, libgcc_s.1.1.dylib
-            # and place them in $HOME/.local/lib, and then change rpath
-            # note: libgcc_s.1.dylib not present for arm64, skip for now
-            # to $HOME/.local/lib
-
+            # link libgfortran dylibs and place them in $HOME/.local/lib
+            # and then change rpath to $HOME/.local/lib for each of them
+            # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
             mkdir -p $HOME/.local/lib
-            lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
-            for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
-              cp $lib_dir/$lib $HOME/.local/lib/
-              install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-            done
+            if [[ $(uname -m) == "x86_64" ]]; then
+              lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
+              for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
+                cp $lib_dir/$lib $HOME/.local/lib/
+                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
+                codesign --force --sign - $HOME/.local/lib/$lib
+              done
+            elif [[ $(uname -m) == "arm64" ]]; then
+              lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
+              for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
+                cp $lib_dir/$lib $HOME/.local/lib/
+                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
+                codesign --force --sign - $HOME/.local/lib/$lib
+              done
+            fi
 
             export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
 
-            python -m pip install cmake wget
-            python scripts/install_KLU_Sundials.py
-          CIBW_BEFORE_BUILD_MACOS: python -m pip install --upgrade pip cmake casadi setuptools wheel delocate
-          # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
-            delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
-            for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
-          CIBW_TEST_COMMAND: python -c "import pybamm; pybamm.IDAKLUSolver()"
+            # Can't download LLVM-OpenMP directly, use conda/mamba and set environment variables
+            brew install miniforge
+            mamba create -n pybamm-dev $OPENMP_URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybamm-dev"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev"
+            fi
 
-      - name: Upload wheels for macOS arm64
+            # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
+            cp $PREFIX/lib/libomp.dylib $HOME/.local/lib/
+            install_name_tool -id $HOME/.local/lib/libomp.dylib $HOME/.local/lib/libomp.dylib
+            codesign --force --sign - $HOME/.local/lib/libomp.dylib
+
+            export CC=/usr/bin/clang
+            export CXX=/usr/bin/clang++
+            export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
+            export CFLAGS="$CFLAGS -I$PREFIX/include"
+            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
+            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
+
+            # cibuildwheel not recognising its environment variable, so set manually
+            export CIBUILDWHEEL="1"
+
+            python scripts/install_KLU_Sundials.py
+            python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_MACOS: auto
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
+          CIBW_REPAIR_WHEEL_COMMAND: |
+            if [[ $(uname -m) == "x86_64" ]]; then
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+            elif [[ $(uname -m) == "arm64" ]]; then
+              # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            fi
+          CIBW_TEST_COMMAND: |
+            set -e -x
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
+
+      - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4
         with:
-          name: wheels_macos_arm64
+          name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
           if-no-files-found: error
 
@@ -276,7 +284,12 @@ jobs:
     # This job is only of value to PyBaMM and would always be skipped in forks
     if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
     name: Upload package to PyPI
-    needs: [build_macos_and_linux_wheels, build_macos_arm64_wheels, build_windows_wheels, build_sdist]
+    needs: [
+      build_manylinux_wheels,
+      build_macos_wheels,
+      build_windows_wheels,
+      build_sdist
+    ]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -310,7 +323,12 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
-    needs: [build_windows_wheels, build_macos_and_linux_wheels, build_macos_arm64_wheels, build_sdist]
+    needs: [
+      build_windows_wheels,
+      build_manylinux_wheels,
+      build_macos_wheels,
+      build_sdist
+    ]
     name: Open an issue if build fails
     if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest
