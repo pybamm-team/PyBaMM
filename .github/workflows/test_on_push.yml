@@ -108,7 +108,7 @@ jobs:
       - name: Run unit/coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         shell: bash
         run: |
-          if [ ${{ matrix.python-version }} == "3.12" && ${{ matrix.os }} == "ubuntu-latest" ]; then
+          if [ ${{ matrix.python-version }} == 3.12 && ${{ matrix.os }} == ubuntu-latest ]; then
             python -m nox -s coverage
           else
             python -m nox -s unit
