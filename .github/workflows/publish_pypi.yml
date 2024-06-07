@@ -48,7 +48,7 @@ jobs:
               output_stream.write(f"count={num_cpus}\n")
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
       - name: Install vcpkg on Windows
         run: |
@@ -107,7 +107,7 @@ jobs:
           python-version: 3.11
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
@@ -143,7 +143,7 @@ jobs:
           python-version: '3.11'
 
       - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git
+        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
       - name: Set macOS-specific environment variables
         run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
