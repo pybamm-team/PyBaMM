@@ -261,6 +261,8 @@ class BaseSolver:
             self.computed_var_fcns = {}
             self.computed_dvar_dy_fcns = {}
             self.computed_dvar_dp_fcns = {}
+            if self.output_variables:
+                self._compare_events_to_output_variables(model, self.output_variables)
             for key in self.output_variables:
                 # ExplicitTimeIntegral's are not computed as part of the solver and
                 # do not need to be converted
@@ -1426,6 +1428,61 @@ class BaseSolver:
         ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
 
         return ordered_inputs
+
+    def _compare_events_to_output_variables(self, model, output_variables):
+        """
+        Compares the model events and output variables requested by the user to check
+        that all events can be calculated using the output variables which will be
+        returned by the solver.
+        If the event doesn't require access to the state vector ('y[...]') then it
+        doesn't need a corresponding output variable.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model object
+        output_variables : list[str]
+            List of variables that will be returned by the solver
+        """
+
+        output_vars = {var: model.variables[var] for var in output_variables}
+
+        for event in model.events:
+            event_children = event.expression.children
+
+            if all(
+                [
+                    "y[" not in event_children[i].__str__()
+                    for i in range(len(event_children))
+                ]
+            ):
+                # event can be calculated without state vector, variables not needed
+                continue
+
+            # check for variables that match the event children in output_variables
+            matching_var = {k: v for k, v in output_vars.items() if v in event_children}
+
+            # search for variables that can be used to calculate the event
+            if len(matching_var) == 0:
+                required_vars = []
+                for k, v in model.variables.items():
+                    if v in event_children:
+                        required_vars.append(k)
+                if required_vars:
+                    joined_vars = "\n".join(required_vars)
+                    raise ValueError(
+                        f"{self.name}: Event '{event.name}' cannot be calculated "
+                        "using the current output variables.\n"
+                        f"Add one of the following to `output_variables`:\n{joined_vars}"
+                    )
+                else:
+                    # no variables identified which match the event children
+                    raise ValueError(
+                        f"{self.name}: Event '{event.name}' cannot be calculated "
+                        "using the current output variables.\n"
+                        f"Add one of {event_children} as a variable in the model, "
+                        "then add the variable to `output_varaibles`."
+                    )
 
 
 def process(
