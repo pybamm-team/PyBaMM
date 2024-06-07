@@ -22,8 +22,8 @@ import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
 # the extras dependencies in pyproject.toml, and therefore must be kept in sync.
-JAX_VERSION = "0.4"
-JAXLIB_VERSION = "0.4"
+JAX_VERSION = "0.4.27"
+JAXLIB_VERSION = "0.4.27"
 
 
 def root_dir():
@@ -57,14 +57,14 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError as error:
-            if "particle diffusivity" in key:
+            if "electrode diffusivity" in key:
                 warn(
-                    f"The parameter '{key.replace('particle', 'electrode')}' "
+                    f"The parameter '{key.replace('electrode', 'particle')}' "
                     f"has been renamed to '{key}'",
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                return super().__getitem__(key.replace("particle", "electrode"))
+                return super().__getitem__(key.replace("electrode", "particle"))
             if key in ["Negative electrode SOC", "Positive electrode SOC"]:
                 domain = key.split(" ")[0]
                 raise KeyError(

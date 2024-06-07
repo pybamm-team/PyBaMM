@@ -12,6 +12,7 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm import ParameterValues
 
 
 class BaseSolver:
@@ -1401,7 +1402,10 @@ class BaseSolver:
     @staticmethod
     def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
-        inputs = inputs or {}
+        if inputs is None:
+            inputs = {}
+        else:
+            inputs = ParameterValues.check_parameter_values(inputs)
 
         # Go through all input parameters that can be found in the model
         # Only keep the ones that are actually used in the model
