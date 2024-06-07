@@ -608,12 +608,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if self.output_variables:
             # Substitute empty vectors for state vector 'y'
             y_out = np.zeros((number_of_timesteps * number_of_states, 0))
-            number_of_samples = sol.y.shape[0] // number_of_timesteps
-            sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-            y_out_events = sol.y
         else:
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
-            y_out_events = y_out
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -643,13 +639,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 model,
                 inputs_dict,
                 np.array([t[-1]]),
-                np.transpose(y_out_events[-1])[:, np.newaxis],
+                np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
                 sensitivities=yS_out,
             )
             newsol.integration_time = integration_time
             if self.output_variables:
                 # Populate variables and sensititivies dictionaries directly
+                number_of_samples = sol.y.shape[0] // number_of_timesteps
+                sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
                 for _, var in enumerate(self.output_variables):
                     # ExplicitTimeIntegral's are not computed as part of the solver and
