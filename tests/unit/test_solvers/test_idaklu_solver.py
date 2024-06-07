@@ -730,7 +730,7 @@ class TestIDAKLUSolver(TestCase):
             solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
         )
         sol = sim.solve(np.linspace(0, 3600, 1000))
-        assert sol.termination == "event: Minimum voltage [V]"
+        self.assertEqual(sol.termination, "event: Minimum voltage [V]")
 
         sim2 = pybamm.Simulation(
             model,
@@ -758,7 +758,7 @@ class TestIDAKLUSolver(TestCase):
             solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
         )
         sol3 = sim3.solve(np.linspace(0, 3600, 1000))
-        assert sol3.termination == "event: Minimum voltage [V]"
+        self.assertEqual(sol3.termination, "event: Minimum voltage [V]")
 
 
 if __name__ == "__main__":
