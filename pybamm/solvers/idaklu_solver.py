@@ -753,10 +753,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     k: v for k, v in output_vars.items() if v in event_children
                 }
                 if len(matching_var) != 1:
-                    raise pybamm.SolverError(
-                        "Could not determine which variable should be used to calculate"
-                        " the termination event"
-                    )
+                    try:
+                        final_event_values[event.name] = event.expression.evaluate(
+                            solution.t_event,
+                            solution.y_event,
+                            inputs=solution.all_inputs[-1],
+                        )
+                        continue
+                    except ValueError as e:  # pragma: no cover
+                        raise pybamm.SolverError(
+                            "Could not determine which variable should be used to calculate"
+                            f" the termination event {event.name}"
+                        ) from e
                 ((k, v),) = matching_var.items()
                 # replace the function that matches the output variable with the final
                 # value

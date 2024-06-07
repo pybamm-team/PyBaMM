@@ -724,20 +724,41 @@ class TestIDAKLUSolver(TestCase):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
 
-        sim1 = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            solver=pybamm.IDAKLUSolver(),
-        )
-        sim2 = pybamm.Simulation(
+        sim = pybamm.Simulation(
             model,
             parameter_values=parameter_values,
             solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
         )
-        sol1 = sim1.solve(np.linspace(0, 3600, 1000))
-        sol2 = sim2.solve(np.linspace(0, 3600, 1000))
+        sol = sim.solve(np.linspace(0, 3600, 1000))
+        assert sol.termination == "event: Minimum voltage [V]"
 
-        assert sol1.termination == sol2.termination
+        sim2 = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Cell temperature [K]"]),
+        )
+        with self.assertRaisesRegex(
+            ValueError, "cannot be calculated using the current output variables"
+        ):
+            sim2.solve(np.linspace(0, 3600, 1000))
+
+        # create an event that doesn't require the state vector
+        eps_p = model.variables["Positive electrode porosity"]
+        model.events.append(
+            pybamm.Event(
+                "Zero positive electrode porosity cut-off",
+                pybamm.min(eps_p),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+
+        sim3 = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
+        )
+        sol3 = sim3.solve(np.linspace(0, 3600, 1000))
+        assert sol3.termination == "event: Minimum voltage [V]"
 
 
 if __name__ == "__main__":

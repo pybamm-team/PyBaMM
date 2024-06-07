@@ -1468,21 +1468,12 @@ class BaseSolver:
                 for k, v in model.variables.items():
                     if v in event_children:
                         required_vars.append(k)
-                if required_vars:
-                    joined_vars = "\n".join(required_vars)
-                    raise ValueError(
-                        f"{self.name}: Event '{event.name}' cannot be calculated "
-                        "using the current output variables.\n"
-                        f"Add one of the following to `output_variables`:\n{joined_vars}"
-                    )
-                else:
-                    # no variables identified which match the event children
-                    raise ValueError(
-                        f"{self.name}: Event '{event.name}' cannot be calculated "
-                        "using the current output variables.\n"
-                        f"Add one of {event_children} as a variable in the model, "
-                        "then add the variable to `output_varaibles`."
-                    )
+                joined_vars = "\n".join(required_vars)
+                raise ValueError(
+                    f"{self.name}: Event '{event.name}' cannot be calculated "
+                    "using the current output variables.\n"
+                    f"Add one of the following to `output_variables`:\n{joined_vars}"
+                )
 
 
 def process(
