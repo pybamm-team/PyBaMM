@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from ..base_thermal import BaseThermal
+from pybamm.models.submodels.thermal.base_thermal import BaseThermal
 
 
 class CurrentCollector2D(BaseThermal):
