@@ -387,6 +387,7 @@ class TestCasadiSolver(TestCase):
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
+
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
@@ -395,6 +396,17 @@ class TestCasadiSolver(TestCase):
         np.testing.assert_allclose(
             solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
         )
+
+        # multiple inputs
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 10, 100)
+        solutions = solver.solve(model, t_eval, inputs=[{"rate": 0.1}, {"rate": 0.2}])
+        self.assertEqual(len(solutions), 2)
+        for solution, rate in zip(solutions, [0.1, 0.2]):
+            self.assertLess(len(solution.t), len(t_eval))
+            np.testing.assert_allclose(
+                solution.y.full()[0], np.exp(-rate * solution.t), rtol=1e-04
+            )
 
         # Without grid
         solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
@@ -409,6 +421,16 @@ class TestCasadiSolver(TestCase):
         np.testing.assert_allclose(
             solution.y.full()[0], np.exp(-1.1 * solution.t), rtol=1e-04
         )
+
+        # multiple inputs and without grid
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 10, 100)
+        solutions = solver.solve(model, t_eval, inputs=[{"rate": 0.1}, {"rate": 0.2}])
+        self.assertEqual(len(solutions), 2)
+        for solution, rate in zip(solutions, [0.1, 0.2]):
+            np.testing.assert_allclose(
+                solution.y.full()[0], np.exp(-rate * solution.t), rtol=1e-04
+            )
 
     def test_model_solver_dae_inputs_in_initial_conditions(self):
         # Create model

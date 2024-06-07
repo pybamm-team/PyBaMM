@@ -138,6 +138,95 @@ class Solution:
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
+    def split(self, rhs_len, alg_len, inputs_list):
+        """
+        split up the concatenated solution into a list of solutions for each input
+        the state vector is assumed to have the form:
+        [rhs0p0, rhs1p0, ..., rhs0p1, rhs1p1, ..., alg0p0, alg1p0, ..., alg0p1, alg1p1, ...]
+        """
+        if not isinstance(self, Solution):
+            raise TypeError("split can only be called on a Solution object")
+
+        ninputs = len(inputs_list)
+        if ninputs == 1:
+            return [self]
+
+        if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+            all_ys_split = [
+                [
+                    casadi.vertcat(
+                        self.all_ys[i][(p * rhs_len) : (p * rhs_len + rhs_len), :],
+                        self.all_ys[i][
+                            (p * alg_len + ninputs * rhs_len) : (
+                                p * alg_len + ninputs * rhs_len + alg_len
+                            ),
+                            :,
+                        ],
+                    )
+                    for i in range(len(self.all_ys))
+                ]
+                for p in range(ninputs)
+            ]
+            y_events = [
+                casadi.vertcat(
+                    self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
+                    self.y_event[
+                        (p * alg_len + ninputs * rhs_len) : (
+                            p * alg_len + ninputs * rhs_len + alg_len
+                        )
+                    ],
+                )
+                for p in range(ninputs)
+            ]
+        else:
+            all_ys_split = [
+                [
+                    np.vstack(
+                        [
+                            self.all_ys[i][(p * rhs_len) : (p * rhs_len + rhs_len)],
+                            self.all_ys[i][
+                                (p * alg_len + ninputs * rhs_len) : (
+                                    p * alg_len + ninputs * rhs_len + alg_len
+                                )
+                            ],
+                        ]
+                    )
+                    for i in range(len(self.all_ys))
+                ]
+                for p in range(ninputs)
+            ]
+            y_events = [
+                np.vstack(
+                    [
+                        self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
+                        self.y_event[
+                            (p * alg_len + ninputs * rhs_len) : (
+                                p * alg_len + ninputs * rhs_len + alg_len
+                            )
+                        ],
+                    ]
+                )
+                for p in range(ninputs)
+            ]
+
+        ret = [
+            type(self)(
+                self.all_ts,
+                all_ys,
+                self.all_models,
+                inputs,
+                self.t_event,
+                y_event,
+                self.termination,
+                self.sensitivities,
+                False,
+            )
+            for all_ys, inputs, y_event in zip(all_ys_split, inputs_list, y_events)
+        ]
+        for sol in ret:
+            sol.integration_time = self.integration_time
+        return ret
+
     @classmethod
     def from_concatenated_state(
         cls,
@@ -183,6 +272,25 @@ class Solution:
             )
             for i in range(ninputs)
         ]
+
+    # @classmethod
+    # def to_concatenated_state(cls, solutions):
+    #    solution = solutions[0]
+    #    all_ys = [
+    #        [np.vstack([sol.all_ys[i] for sol in solutions])]
+    #        for i in range(len(solution.all_ys))
+    #    ]
+    #    return cls(
+    #        solution._all_ts,
+    #        all_ys,
+    #        solution._all_models,
+    #        solution._all_inputs,
+    #        solution._t_event,
+    #        solution._y_event,
+    #        solution._termination,
+    #        solution.sensitivities,
+    #        False,
+    #    )
 
     def extract_explicit_sensitivities(self):
         # if we got here, we haven't set y yet

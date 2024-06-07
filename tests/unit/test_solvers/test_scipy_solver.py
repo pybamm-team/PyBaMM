@@ -313,14 +313,15 @@ class TestScipySolver(TestCase):
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-    def test_model_solver_multiple_inputs_initial_conditions_error(self):
+    def test_model_solver_multiple_inputs_initial_conditions(self):
         # Create model
         model = pybamm.BaseModel()
         model.convert_to_format = "casadi"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
+        rate = pybamm.InputParameter("rate")
+        model.rhs = {var: -rate * var}
+        model.initial_conditions = {var: 2 * rate}
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -332,11 +333,12 @@ class TestScipySolver(TestCase):
         ninputs = 8
         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-        with self.assertRaisesRegex(
-            pybamm.SolverError,
-            ("Input parameters cannot appear in expression " "for initial conditions."),
-        ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+        solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+        for inputs, solution in zip(inputs_list, solutions):
+            np.testing.assert_array_equal(solution.t, t_eval)
+            np.testing.assert_allclose(
+                solution.y[0], 2 * inputs["rate"] * np.exp(-inputs["rate"] * solution.t)
+            )
 
     def test_model_solver_multiple_inputs_jax_format(self):
         if pybamm.have_jax():
