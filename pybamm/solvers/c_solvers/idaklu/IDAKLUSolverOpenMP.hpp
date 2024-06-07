@@ -61,9 +61,9 @@ public:
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
   std::unique_ptr<CExprSet> functions;
-  realtype *res = nullptr;
-  realtype *res_dvar_dy = nullptr;
-  realtype *res_dvar_dp = nullptr;
+  std::vector<realtype> res;
+  std::vector<realtype> res_dvar_dy;
+  std::vector<realtype> res_dvar_dp;
   Options options;
 
 #if SUNDIALS_VERSION_MAJOR >= 6

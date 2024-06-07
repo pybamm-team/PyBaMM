@@ -80,6 +80,7 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
 #define DEBUG_v(v, N)
 #define DEBUG(x)
 #define DEBUG_n(x)
+#define ASSERT(x)
 #else
 
 #define DEBUG_VECTORn(vector, L) {\
@@ -124,6 +125,13 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
 
 #define DEBUG_n(x) { \
     std::cerr << __FILE__ << ":" << __LINE__ << "," << #x << " = " << x << std::endl; \
+  }
+
+#define ASSERT(x) { \
+    if (!(x)) { \
+      std::cerr << __FILE__ << ":" << __LINE__ << " Assertion failed: " << #x << std::endl; \
+      throw std::runtime_error("Assertion failed: " #x); \
+    } \
   }
 
 #endif

@@ -207,7 +207,7 @@ void IDAKLUSolverOpenMP<CExprSet>::CalcVars(
   // Evaluate functions for each requested variable and store
   size_t j = 0;
   for (auto& var_fcn : functions->var_fcns) {
-    (*var_fcn)({tret, yval, functions->inputs.data()}, {res});
+    (*var_fcn)({tret, yval, functions->inputs.data()}, {&res[0]});
     // store in return vector
     for (size_t jj=0; jj<var_fcn->nnz_out(); jj++)
       y_return[t_i*length_of_return_vector + j++] = res[jj];
@@ -224,18 +224,17 @@ void IDAKLUSolverOpenMP<CExprSet>::CalcVarsSensitivities(
     realtype *yS_return,
     size_t *ySk
 ) {
+  DEBUG("IDAKLUSolver::CalcVarsSensitivities");
   // Calculate sensitivities
-
-  // Loop over variables
-  realtype* dens_dvar_dp = new realtype[number_of_parameters];
+  std::vector<realtype> dens_dvar_dp = std::vector<realtype>(number_of_parameters, 0);
   for (size_t dvar_k=0; dvar_k<functions->dvar_dy_fcns.size(); dvar_k++) {
     // Isolate functions
     Expression* dvar_dy = functions->dvar_dy_fcns[dvar_k];
     Expression* dvar_dp = functions->dvar_dp_fcns[dvar_k];
     // Calculate dvar/dy
-    (*dvar_dy)({tret, yval, functions->inputs.data()}, {res_dvar_dy});
+    (*dvar_dy)({tret, yval, functions->inputs.data()}, {&res_dvar_dy[0]});
     // Calculate dvar/dp and convert to dense array for indexing
-    (*dvar_dp)({tret, yval, functions->inputs.data()}, {res_dvar_dp});
+    (*dvar_dp)({tret, yval, functions->inputs.data()}, {&res_dvar_dp[0]});
     for(int k=0; k<number_of_parameters; k++)
       dens_dvar_dp[k]=0;
     for(int k=0; k<dvar_dp->nnz(); k++)
@@ -340,9 +339,9 @@ Solution IDAKLUSolverOpenMP<CExprSet>::solve(
                                      number_of_timesteps *
                                      length_of_return_vector];
 
-  res = new realtype[max_res_size];
-  res_dvar_dy = new realtype[max_res_dvar_dy];
-  res_dvar_dp = new realtype[max_res_dvar_dp];
+  res.resize(max_res_size);
+  res_dvar_dy.resize(max_res_dvar_dy);
+  res_dvar_dp.resize(max_res_dvar_dp);
 
   py::capsule free_t_when_done(
     t_return,

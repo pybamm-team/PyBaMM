@@ -92,12 +92,6 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
         dim_str += c;
       }
     }
-    // Remove singelton elements from shape vector
-    /*auto it = std::find(shape.begin(), shape.end(), 1);
-    while (it != shape.end()) {
-      shape.erase(it);
-      it = std::find(shape.begin(), shape.end(), 1);
-    }*/
     // If shape is empty, assume scalar (i.e. "tensor<f32>" or some singleton variant)
     if (shape.size() == 0) {
       shape.push_back(1);
@@ -110,7 +104,6 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   const char* device_uri = "local-sync";
   session = std::make_unique<IREESession>(device_uri, mlir);
   DEBUG("compile complete.");
-
   // Create index vectors into m_arg
   // This is required since Jax expands input arguments through PyTrees, which need to
   // be remapped to the corresponding expression call. For example:
@@ -161,18 +154,21 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   // Allocate memory for result (also check that the input is a vector)
   input_data.resize(input_shape.size());
   for(int j=0; j<input_shape.size(); j++) {
-    if ((input_shape[j].size() > 2) || ((input_shape[j].size() == 2) && (input_shape[j][1] > 1))) {
+    if (
+      (input_shape[j].size() > 2) ||
+      ((input_shape[j].size() == 2) && (input_shape[j][1] > 1))
+    ) {
       std::cerr << "Unsupported input shape: " << input_shape[j].size() << " [";
       for (int k=0; k<input_shape[j].size(); k++) {
         std::cerr << input_shape[j][k] << " ";
       }
       std::cerr << "]" << std::endl;
-      throw std::runtime_error("Only 1D inputs are supported");
+      throw std::runtime_error("Only 1D column vectors are supported as input arguments");
     }
     input_data[j].resize(input_shape[j][0]);  // assumes 1D input
   }
 
-  // Allocate memory for input arguments
+  // Allocate memory for input arguments (over-allocate based on number of MLIR inputs)
   m_arg.resize(m_arg_argno.size(), nullptr);
 
   // Size iree results vector (single precision) and idaklu results vector (double precision)
@@ -180,7 +176,11 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   result.resize(output_shape.size());
   for(int k=0; k<output_shape.size(); k++) {
     DEBUG("Output " << k << " size: " << output_shape[k][0]);
-    result[k].resize(output_shape[k][0], 0.0f);
+    auto elements = 1;
+    for (auto i : output_shape[k])
+      elements *= i;
+    // Sparse functions return NNZ elements, so we don't need to worry about sparsity
+    result[k].resize(elements, 0.0f);
   }
   m_res.resize(output_shape.size(), nullptr);
 }
