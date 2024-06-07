@@ -110,6 +110,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Hongmeiqi"><img src="https://avatars.githubusercontent.com/u/143798726?v=4?s=100" width="100px;" alt="Hongmeiqi"/><br /><sub><b>Hongmeiqi</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Hongmeiqi" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/mleot"><img src="https://avatars.githubusercontent.com/u/140573653?v=4?s=100" width="100px;" alt="mleot"/><br /><sub><b>mleot</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=mleot" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=mleot" title="Tests">⚠️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/abhicodes369"><img src="https://avatars.githubusercontent.com/u/119055274?v=4?s=100" width="100px;" alt="Abhi ram"/><br /><sub><b>Abhi ram</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=abhicodes369" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/parkec3"><img src="https://avatars.githubusercontent.com/u/26883801?v=4?s=100" width="100px;" alt="Caitlin D. Parke"/><br /><sub><b>Caitlin D. Parke</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=parkec3" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
