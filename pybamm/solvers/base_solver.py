@@ -501,12 +501,12 @@ class BaseSolver:
                 model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, _Heaviside):
+                    expr = None
                     if symbol.right == pybamm.t:
                         expr = symbol.left
-                    elif symbol.left == pybamm.t:
-                        expr = symbol.right
                     else:
-                        expr = None
+                        if symbol.left == pybamm.t:
+                            expr = symbol.right
 
                     # Update the events if the heaviside function depended on t
                     if expr is not None:
