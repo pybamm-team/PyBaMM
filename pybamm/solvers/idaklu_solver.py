@@ -2,6 +2,7 @@
 # Solver class using sundials with the KLU sparse linear solver
 #
 # mypy: ignore-errors
+import os
 import casadi
 import pybamm
 import numpy as np
@@ -15,6 +16,10 @@ import warnings
 if pybamm.have_jax():
     import jax
     from jax import numpy as jnp
+    try:
+        import iree.compiler
+    except ImportError:
+        pass
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
@@ -614,6 +619,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
                                 t_eval, y0, inputs0
                             )
                         )
+
+                # Identify IREE library
+                iree_lib_path = os.path.join(iree.compiler.__path__[0], '_mlir_libs')
+                os.environ['IREE_COMPILER_LIB'] = os.path.join(
+                    iree_lib_path,
+                    [f for f in os.listdir(iree_lib_path) if 'IREECompiler' in f][0],
+                )
 
                 pybamm.demote_expressions_to_32bit = False
             else:

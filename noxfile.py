@@ -17,6 +17,7 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
+    # Expression evaluators, though EXPR_CASADI=OFF is not currently supported.
     "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
     "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "ON"),
     "PYTHONIOENCODING": "utf-8",

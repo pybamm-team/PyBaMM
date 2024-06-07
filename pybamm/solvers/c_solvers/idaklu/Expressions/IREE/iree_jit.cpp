@@ -101,10 +101,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
   }
 
   int cl_argc = argc;
-  const char *COMPILER_PATH = std::getenv("IREE_COMPILER_PATH");
-  char iree_compiler_lib[256];
-  strcpy(iree_compiler_lib, COMPILER_PATH);
-  strcat(iree_compiler_lib, "/libIREECompiler.dylib");
+  const char *iree_compiler_lib = std::getenv("IREE_COMPILER_LIB");
 
   // Load the compiler library then initialize it
   bool result = ireeCompilerLoadLibrary(iree_compiler_lib);
