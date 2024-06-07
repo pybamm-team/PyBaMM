@@ -105,23 +105,22 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: python -m nox -s pybamm-requires
 
-      - name: Run unit/coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        shell: bash
-        run: |
-          if [ ${{ matrix.python-version }} == "3.12" && ${{ matrix.os }} == "ubuntu-latest" ]; then
-            python -m nox -s coverage
-          else
-            python -m nox -s unit
-          fi
+      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
+        run: python -m nox -s unit
 
-      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: python -m nox -s integration
+      - name: Run coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: python -m nox -s coverage
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4.4.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        run: python -m nox -s integration
 
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
