@@ -1,6 +1,3 @@
-#
-# Base submodel class
-#
 import pybamm
 
 
@@ -33,15 +30,15 @@ class BaseSubModel(pybamm.BaseModel):
     ----------
     param: parameter class
         The model parameter symbols
-    rhs: dict
+    _rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
-    algebraic: dict
+    _algebraic: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the algebraic equations. The algebraic expressions are assumed to equate
         to zero. Note that all the variables in the model must exist in the keys of
         `rhs` or `algebraic`.
-    initial_conditions: dict
+    _initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the initial conditions for the state variables y. The initial conditions for
         algebraic variables are provided as initial guesses to a root finding algorithm
@@ -52,10 +49,10 @@ class BaseSubModel(pybamm.BaseModel):
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
-    events: list
+    _events: list
         A list of events. Each event can either cause the solver to terminate
         (e.g. concentration goes negative), or be used to inform the solver of the
-        existance of a discontinuity (e.g. discontinuity in the input current)
+        existence of a discontinuity (e.g. discontinuity in the input current)
     """
 
     def __init__(
