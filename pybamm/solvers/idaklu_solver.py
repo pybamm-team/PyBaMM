@@ -792,22 +792,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 )
             # Add the event to the solution object
             solution.termination = f"event: {termination_event}"
-            # Update t, y and inputs to include event time and state
-            # Note: if the final entry of t is equal to the event time we skip
-            # this (having duplicate entries causes an error later in ProcessedVariable)
-            if solution.t_event != solution.all_ts[-1][-1]:
-                event_sol = pybamm.Solution(
-                    solution.t_event,
-                    solution.y_event,
-                    solution.all_models[-1],
-                    solution.all_inputs[-1],
-                    solution.t_event,
-                    solution.y_event,
-                    solution.termination,
-                )
-                event_sol.solve_time = 0
-                event_sol.integration_time = 0
-                solution = solution + event_sol
 
             pybamm.logger.debug("Finish post-processing events")
             return solution, solution.termination
