@@ -63,8 +63,8 @@ public:
   Expression *sens = nullptr;
   Expression *events = nullptr;
 
-  // NB: cppcheck-suppress unusedStructMember is used because codacy reports
-  //     these members as unused even though they are important
+  // `cppcheck-suppress unusedStructMember` is used because codacy reports
+  // these members as unused, but they are inherited through variadics
   std::vector<Expression*> var_fcns;  // cppcheck-suppress unusedStructMember
   std::vector<Expression*> dvar_dy_fcns;  // cppcheck-suppress unusedStructMember
   std::vector<Expression*> dvar_dp_fcns;  // cppcheck-suppress unusedStructMember
@@ -78,7 +78,7 @@ public:
   virtual realtype *get_tmp_state_vector() = 0;
   virtual realtype *get_tmp_sparse_jacobian_data() = 0;
 
-//private:
+protected:
   std::vector<realtype> tmp_state_vector;
   std::vector<realtype> tmp_sparse_jacobian_data;
 };

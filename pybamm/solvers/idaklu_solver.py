@@ -521,7 +521,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 jac_times_cjmass_nnz = sparse_eval.nnz
                 jac_times_cjmass_colptrs = sparse_eval.indptr
                 jac_times_cjmass_rowvals = sparse_eval.indices
-                jac_bw_lower, jac_bw_upper = bandwidth(sparse_eval.todense())
+                jac_bw_lower, jac_bw_upper = bandwidth(sparse_eval.todense())  # potentially slow
                 if jac_bw_upper <= 1:
                     jac_bw_upper = jac_bw_lower - 1
                 if jac_bw_lower <= 1:

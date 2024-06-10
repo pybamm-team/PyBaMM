@@ -321,12 +321,12 @@ Solution IDAKLUSolverOpenMP<CExprSet>::solve(
   if (functions->var_fcns.size() > 0) {
     // return only the requested variables list after computation
     for (auto& var_fcn : functions->var_fcns) {
-      max_res_size = std::max(max_res_size, size_t(var_fcn->nnz_out()));
+      max_res_size = std::max(max_res_size, size_t(var_fcn->out_shape(0)));
       length_of_return_vector += var_fcn->nnz_out();
       for (auto& dvar_fcn : functions->dvar_dy_fcns)
-        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn->nnz_out()));
+        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn->out_shape(0)));
       for (auto& dvar_fcn : functions->dvar_dp_fcns)
-        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn->nnz_out()));
+        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn->out_shape(0)));
     }
   } else {
     // Return full y state-vector
@@ -338,12 +338,6 @@ Solution IDAKLUSolverOpenMP<CExprSet>::solve(
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
                                      length_of_return_vector];
-
-  //*** DO NOT COMMIT - NEED TO ALLOCATE PROPERLY *** //
-  max_res_size = 1000;
-  max_res_dvar_dy = 1000;
-  max_res_dvar_dp = 1000;
-  // ************************************************ //
 
   res.resize(max_res_size);
   res_dvar_dy.resize(max_res_dvar_dy);

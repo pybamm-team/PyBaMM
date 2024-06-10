@@ -5,55 +5,7 @@
 #include "../Expressions.hpp"
 #include <memory>
 #include "iree_jit.hpp"
-
-class IREEBaseFunctionType
-{
-public:
-  std::string mlir;
-  std::vector<int> kept_var_idx;
-  expr_int nnz;
-  std::vector<expr_int> col;
-  std::vector<expr_int> row;
-  std::vector<int> pytree_shape;
-  std::vector<int> pytree_sizes;
-  expr_int n_args;
-
-  const std::string& get_mlir() const { return mlir; }
-};
-
-/**
- * @brief Class for handling individual iree functions
- */
-class IREEFunction : public Expression
-{
-public:
-  typedef IREEBaseFunctionType BaseFunctionType;
-
-  explicit IREEFunction(const BaseFunctionType &f);
-  void operator()() override;
-  void evaluate();
-  void evaluate(int n_outputs);
-  void operator()(const std::vector<realtype*>& inputs,
-                  const std::vector<realtype*>& results) override;
-  expr_int nnz() override;
-  expr_int nnz_out() override;
-  std::vector<expr_int> get_col() override;
-  std::vector<expr_int> get_row() override;
-
-public:
-  std::unique_ptr<IREESession> session;
-  std::vector<std::vector<float>> result;
-  std::vector<std::vector<int>> input_shape;
-  std::vector<std::vector<int>> output_shape;
-  std::vector<std::vector<float>> input_data;
-  
-  BaseFunctionType m_func;
-  std::string module_name;
-  std::string function_name;
-  std::vector<int> m_arg_argno;
-  std::vector<int> m_arg_argix;
-  std::vector<int> numel;
-};
+#include "IREEFunction.hpp"
 
 /**
  * @brief Class for handling iree functions

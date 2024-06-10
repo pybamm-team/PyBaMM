@@ -22,16 +22,11 @@ public:
    */
   explicit CasadiFunction(const BaseFunctionType &f);
 
+  // Method overrides
   void operator()() override;
-
   void operator()(const std::vector<realtype*>& inputs,
                   const std::vector<realtype*>& results) override;
-
-  BaseFunctionType m_func;
-
-  /**
-   * @brief Return the number of non-zero elements for the function output
-   */
+  expr_int out_shape(int k) override;
   expr_int nnz() override;
   expr_int nnz_out() override;
   std::vector<expr_int> get_row() override;
@@ -39,6 +34,15 @@ public:
   std::vector<expr_int> get_col() override;
   std::vector<expr_int> get_col(expr_int ind);
 
+public:
+  /*
+   * @brief Casadi function
+   */
+  BaseFunctionType m_func;
+
+private:
+  std::vector<expr_int> m_iw;
+  std::vector<double> m_w;
 };
 
 /**

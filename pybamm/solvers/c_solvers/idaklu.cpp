@@ -15,8 +15,6 @@
 #include "idaklu/Expressions/Casadi/CasadiFunctions.hpp"
 #include "idaklu/Expressions/IREE/IREEFunctions.hpp"
 
-#include "idaklu/Expressions/IREE/iree_jit.hpp"  // for test_iree
-
 
 casadi::Function generate_casadi_function(const std::string &data)
 {
@@ -63,11 +61,6 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("yp0"),
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
-
-  /*m.def("test_iree", &test_iree,
-    "Test the IREE JIT",
-    py::arg("mlir_code"),
-    py::return_value_policy::take_ownership);*/
 
   m.def("create_casadi_solver", &create_idaklu_solver<CasadiFunctions>,
     "Create a casadi idaklu solver object",

@@ -258,9 +258,18 @@ void IREEFunction::evaluate(int n_outputs) {
   DEBUG("IreeFunction operator() complete");
 }
 
+expr_int IREEFunction::out_shape(int k) {
+  DEBUG("IreeFunction nnz(" << k << "): " << m_func.nnz);
+  auto elements = 1;
+  for (auto i : output_shape[k]) {
+    elements *= i;
+  }
+  return elements;
+}
+
 expr_int IREEFunction::nnz() {
   DEBUG("IreeFunction nnz: " << m_func.nnz);
-  return m_func.nnz;
+  return nnz_out();
 }
 
 expr_int IREEFunction::nnz_out() {

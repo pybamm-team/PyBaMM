@@ -4,7 +4,7 @@
 CasadiFunction::CasadiFunction(const BaseFunctionType &f) : Expression()
 {
   m_func = f;
-  std::cout << "CasadiFunction constructor: " << m_func.name() << std::endl;
+  DEBUG("CasadiFunction constructor: " << m_func.name());
 
   size_t sz_arg;
   size_t sz_res;
@@ -13,9 +13,8 @@ CasadiFunction::CasadiFunction(const BaseFunctionType &f) : Expression()
   m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
 
   int nnz = (sz_res>0) ? m_func.nnz_out() : 0;
-  std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = "
-    << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz <<
-    std::endl;
+  DEBUG("name = "<< m_func.name() << " arg = " << sz_arg << " res = "
+    << sz_res << " iw = " << sz_iw << " w = " << sz_w << " nnz = " << nnz);
 
   m_arg.resize(sz_arg, nullptr);
   m_res.resize(sz_res, nullptr);
@@ -26,20 +25,24 @@ CasadiFunction::CasadiFunction(const BaseFunctionType &f) : Expression()
 // only call this once m_arg and m_res have been set appropriately
 void CasadiFunction::operator()()
 {
-  //std::cout << "CasadiFunction operator(): " << m_func.name() << std::endl;
-
+  DEBUG("CasadiFunction operator(): " << m_func.name());
   int mem = m_func.checkout();
   m_func(m_arg.data(), m_res.data(), m_iw.data(), m_w.data(), mem);
   m_func.release(mem);
 }
 
+expr_int CasadiFunction::out_shape(int k) {
+  DEBUG("CasadiFunctions out_shape(): " << m_func.name() << " " << m_func.nnz_out());
+  return static_cast<expr_int>(m_func.nnz_out());
+}
+
 expr_int CasadiFunction::nnz() {
-  std::cout << "CasadiFunction nnz(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()) << std::endl;
+  DEBUG("CasadiFunction nnz(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()));
   return static_cast<expr_int>(m_func.nnz_out());
 }
 
 expr_int CasadiFunction::nnz_out() {
-  std::cout << "CasadiFunction nnz_out(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()) << std::endl;
+  DEBUG("CasadiFunction nnz_out(): " << m_func.name() << " " << static_cast<expr_int>(m_func.nnz_out()));
   return static_cast<expr_int>(m_func.nnz_out());
 }
 
@@ -48,7 +51,7 @@ std::vector<expr_int> CasadiFunction::get_row() {
 }
 
 std::vector<expr_int> CasadiFunction::get_row(expr_int ind) {
-  std::cout << "CasadiFunction get_row(): " << m_func.name() << std::endl;
+  DEBUG("CasadiFunction get_row(): " << m_func.name());
   casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
   return casadi_sparsity.get_row();
 }
@@ -58,7 +61,7 @@ std::vector<expr_int> CasadiFunction::get_col() {
 }
 
 std::vector<expr_int> CasadiFunction::get_col(expr_int ind) {
-  std::cout << "CasadiFunction get_col(): " << m_func.name() << std::endl;
+  DEBUG("CasadiFunction get_col(): " << m_func.name());
   casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
   return casadi_sparsity.get_col();
 }
@@ -66,7 +69,7 @@ std::vector<expr_int> CasadiFunction::get_col(expr_int ind) {
 void CasadiFunction::operator()(const std::vector<realtype*>& inputs,
                                 const std::vector<realtype*>& results)
 {
-  std::cout << "CasadiFunction operator() with inputs and results: " << m_func.name() << std::endl;
+  DEBUG("CasadiFunction operator() with inputs and results: " << m_func.name());
 
   // Set-up input arguments, provide result vector, then execute function
   // Example call: fcn({in1, in2, in3}, {out1})

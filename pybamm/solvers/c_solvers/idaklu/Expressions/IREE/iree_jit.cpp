@@ -43,19 +43,6 @@ int IREECompiler::init(int argc, const char **argv) {
   return initIREE(argc, argv);  // Initialisation and version checking
 };
 
-IREESession IREECompiler::addSession(const std::string& mlir_fcn) {
-  IREESession iree_session(device_uri, mlir_fcn);
-  iree_sessions.push_back(iree_session);
-  return iree_session;
-};
-
-std::vector<IREESession> IREECompiler::addSessions(const std::vector<std::string>& mlir_fcns) {
-  for (const std::string& mlir_fcn : mlir_fcns) {
-    addSession(mlir_fcn);
-  }
-  return iree_sessions;
-};
-
 int IREECompiler::cleanup() {
   for (IREESession iree_session : iree_sessions) {
     if (iree_session.cleanup() != 0)
@@ -103,13 +90,11 @@ int IREECompiler::initIREE(int argc, const char **argv) {
     fprintf(stderr, "** Failed to initialize IREE Compiler **\n");
     return 1;
   }
-  // must be balanced with a call to ireeCompilerGlobalShutdown()
+  // Must be balanced with a call to ireeCompilerGlobalShutdown()
   ireeCompilerGlobalInitialize();
 
   // To set global options (see `iree-compile --help` for possibilities), use
-  // |ireeCompilerGetProcessCLArgs| and |ireeCompilerSetupGlobalCL| here.
-  // For an example of how to splice flags between a wrapping application and
-  // the IREE compiler, see the "ArgParser" class in iree-run-mlir-main.cc.
+  // |ireeCompilerGetProcessCLArgs| and |ireeCompilerSetupGlobalCL|
   ireeCompilerGetProcessCLArgs(&cl_argc, &argv);
   ireeCompilerSetupGlobalCL(cl_argc, argv, "iree-jit", false);
 
@@ -139,9 +124,6 @@ int IREESession::initCompiler() {
 
   // A session provides a scope where one or more invocations can be executed
   s.session = ireeCompilerSessionCreate();
-
-  // Read the MLIR from file
-  //error = ireeCompilerSourceOpenFile(s.session, mlir_filename, &s.source);
 
   // Read the MLIR from memory
   error = ireeCompilerSourceWrapBuffer(
@@ -249,35 +231,6 @@ int IREESession::initRuntime() {
   return 0;
 };
 
-int IREESession::buildAndIssueCall(std::string function_name) {
-  // Build and issue the call
-
-  std::vector<std::vector<int>> input_shape = {{10}};
-  std::vector<std::vector<float>> input_data;
-  std::vector<std::vector<float>> result;
-
-  for (const auto& shape : input_shape) {
-    std::vector<float> d;
-    d.resize(shape[0]);
-    for (int i = 0; i < shape[0]; i++) {
-      d[i] = (float) i;
-    }
-    input_data.push_back(d);
-  }
-
-  std::cout << "\n\nRun 1:\n";
-  status = iree_runtime_exec(function_name, input_shape, input_data, result);
-
-  if (!iree_status_is_ok(status)) {
-    std::cerr << "Error: buildAndIssueCall failed" << std::endl;
-    iree_status_fprint(stderr, status);
-    //iree_status_ignore(status);
-    return 1;
-  }
-
-  return 0;
-};
-
 // Release the session and free all cached resources.
 int IREESession::cleanup() {
   iree_runtime_session_release(session);
@@ -312,7 +265,6 @@ iree_status_t IREESession::iree_runtime_exec(
   // Append the function inputs with the HAL device allocator in use by the
   // session. The buffers will be usable within the session and _may_ be usable
   // in other sessions depending on whether they share a compatible device.
-  //iree_hal_device_t* device = iree_runtime_session_device(session);
   iree_hal_allocator_t* device_allocator =
       iree_runtime_session_device_allocator(session);
   host_allocator = iree_runtime_session_host_allocator(session);
