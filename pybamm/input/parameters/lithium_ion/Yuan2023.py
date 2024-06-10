@@ -572,8 +572,8 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 903.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 398.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 238.0,
-        "Nominal cell capacity [A.h]": 0.15625,
-        "Current function [A]": 0.15652,
+        "Nominal cell capacity [A.h]": 7.5,
+        "Current function [A]": 7.5,
         "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 14.0,
@@ -622,15 +622,15 @@ def get_parameter_values():
         # experiment
         "Reference temperature [K]": 296.15,
         "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 35.0,
+        "": 10.0,
         "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 35.0,
-        "Negative tab heat transfer coefficient [W.m-2.K-1]": 35.0,
-        "Positive tab heat transfer coefficient [W.m-2.K-1]": 35.0,
-        "Edge heat transfer coefficient [W.m-2.K-1]": 35.0,
-        "Total heat transfer coefficient [W.m-2.K-1]": 35.0,
+        "": 10.0,
+        "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
+        "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
+        "Edge heat transfer coefficient [W.m-2.K-1]": 10.0,
+        "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Ambient temperature [K]": 298.15,
-        "Number of electrodes connected in parallel to make a cell": 1.0,
+        "Number of electrodes connected in parallel to make a cell": 48.0,
         "Number of cells connected in series to make a battery": 1.0,
         "Lower voltage cut-off [V]": 2.5,
         "Upper voltage cut-off [V]": 4.2,
