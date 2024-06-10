@@ -179,7 +179,8 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("col", &IREEBaseFunctionType::col)
     .def_readwrite("row", &IREEBaseFunctionType::row)
     .def_readwrite("pytree_shape", &IREEBaseFunctionType::pytree_shape)
-    .def_readwrite("pytree_sizes", &IREEBaseFunctionType::pytree_sizes);
+    .def_readwrite("pytree_sizes", &IREEBaseFunctionType::pytree_sizes)
+    .def_readwrite("n_args", &IREEBaseFunctionType::n_args);
 
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)

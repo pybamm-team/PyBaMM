@@ -237,7 +237,7 @@ void IDAKLUSolverOpenMP<CExprSet>::CalcVarsSensitivities(
     (*dvar_dp)({tret, yval, functions->inputs.data()}, {&res_dvar_dp[0]});
     for(int k=0; k<number_of_parameters; k++)
       dens_dvar_dp[k]=0;
-    for(int k=0; k<dvar_dp->nnz(); k++)
+    for(int k=0; k<dvar_dp->nnz_out(); k++)
       dens_dvar_dp[dvar_dp->get_row()[k]] = res_dvar_dp[k];
     // Calculate sensitivities
     for(int paramk=0; paramk<number_of_parameters; paramk++) {
@@ -338,6 +338,12 @@ Solution IDAKLUSolverOpenMP<CExprSet>::solve(
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
                                      length_of_return_vector];
+
+  //*** DO NOT COMMIT - NEED TO ALLOCATE PROPERLY *** //
+  max_res_size = 1000;
+  max_res_dvar_dy = 1000;
+  max_res_dvar_dp = 1000;
+  // ************************************************ //
 
   res.resize(max_res_size);
   res_dvar_dy.resize(max_res_dvar_dy);

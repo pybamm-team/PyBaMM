@@ -16,6 +16,7 @@ public:
   std::vector<expr_int> row;
   std::vector<int> pytree_shape;
   std::vector<int> pytree_sizes;
+  expr_int n_args;
 
   const std::string& get_mlir() const { return mlir; }
 };
@@ -26,39 +27,32 @@ public:
 class IREEFunction : public Expression
 {
 public:
-
   typedef IREEBaseFunctionType BaseFunctionType;
+
+  explicit IREEFunction(const BaseFunctionType &f);
+  void operator()() override;
+  void evaluate();
+  void evaluate(int n_outputs);
+  void operator()(const std::vector<realtype*>& inputs,
+                  const std::vector<realtype*>& results) override;
+  expr_int nnz() override;
+  expr_int nnz_out() override;
+  std::vector<expr_int> get_col() override;
+  std::vector<expr_int> get_row() override;
+
+public:
   std::unique_ptr<IREESession> session;
   std::vector<std::vector<float>> result;
   std::vector<std::vector<int>> input_shape;
   std::vector<std::vector<int>> output_shape;
   std::vector<std::vector<float>> input_data;
-
-  /**
-   * @brief Constructor
-   */
-  explicit IREEFunction(const BaseFunctionType &f);
-
-  void operator()() override;
-  void evaluate();
-  void evaluate(int n_outputs);
-
-  void operator()(const std::vector<realtype*>& inputs,
-                  const std::vector<realtype*>& results) override;
-
+  
   BaseFunctionType m_func;
   std::string module_name;
   std::string function_name;
   std::vector<int> m_arg_argno;
   std::vector<int> m_arg_argix;
-
-  /**
-   * @brief Return the number of non-zero elements for the function output
-   */
-  expr_int nnz() override;
-  expr_int nnz_out() override;
-  std::vector<expr_int> get_col() override;
-  std::vector<expr_int> get_row() override;
+  std::vector<int> numel;
 };
 
 /**

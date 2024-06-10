@@ -56,12 +56,6 @@ std::vector<IREESession> IREECompiler::addSessions(const std::vector<std::string
   return iree_sessions;
 };
 
-void IREECompiler::testSessions() {
-  for(IREESession iree_session : iree_sessions) {
-    iree_session.buildAndIssueCall("jit_evaluate_jax.main");
-  }
-};
-
 int IREECompiler::cleanup() {
   for (IREESession iree_session : iree_sessions) {
     if (iree_session.cleanup() != 0)
@@ -335,39 +329,37 @@ iree_status_t IREESession::iree_runtime_exec(
         for (int i = 0; i < input_shape.size(); i++) {
           arg_shape[i] = input_shape[i];
         }
-        int numel = 0;
+        int numel = 1;
         for(int i = 0; i < input_shape.size(); i++) {
-          numel += input_shape[i];
+          numel *= input_shape[i];
         }
         std::vector<float> arg_data(numel);
         for(int i = 0; i < numel; i++) {
           arg_data[i] = input_data[i];
+        }
 
         status = iree_hal_buffer_view_allocate_buffer_copy(
-            device, device_allocator,
-            // Shape rank and dimensions:
-            arg_shape.size(), arg_shape.data(),
-            // Element type:
-            IREE_HAL_ELEMENT_TYPE_FLOAT_32,
-            // Encoding type:
-            IREE_HAL_ENCODING_TYPE_DENSE_ROW_MAJOR,
-            (iree_hal_buffer_params_t){
-                // Intended usage of the buffer (transfers, dispatches, etc):
-                .usage = IREE_HAL_BUFFER_USAGE_DEFAULT,
-                // Access to allow to this memory:
-                .access = IREE_HAL_MEMORY_ACCESS_ALL,
-                // Where to allocate (host or device):
-                .type = IREE_HAL_MEMORY_TYPE_DEVICE_LOCAL,
-            },
-            // The actual heap buffer to wrap or clone and its allocator:
-            iree_make_const_byte_span(&arg_data[0], sizeof(float) * arg_data.size()),
-            // Buffer view + storage are returned and owned by the caller:
-            &arg);
-        }
+          device, device_allocator,
+          // Shape rank and dimensions:
+          arg_shape.size(), arg_shape.data(),
+          // Element type:
+          IREE_HAL_ELEMENT_TYPE_FLOAT_32,
+          // Encoding type:
+          IREE_HAL_ENCODING_TYPE_DENSE_ROW_MAJOR,
+          (iree_hal_buffer_params_t){
+              // Intended usage of the buffer (transfers, dispatches, etc):
+              .usage = IREE_HAL_BUFFER_USAGE_DEFAULT,
+              // Access to allow to this memory:
+              .access = IREE_HAL_MEMORY_ACCESS_ALL,
+              // Where to allocate (host or device):
+              .type = IREE_HAL_MEMORY_TYPE_DEVICE_LOCAL,
+          },
+          // The actual heap buffer to wrap or clone and its allocator:
+          iree_make_const_byte_span(&arg_data[0], sizeof(float) * arg_data.size()),
+          // Buffer view + storage are returned and owned by the caller:
+          &arg);
       }
       if (iree_status_is_ok(status)) {
-        //IREE_IGNORE_ERROR(iree_hal_buffer_view_fprint(
-        //    stdout, arg, /*max_element_count=*/4096, host_allocator));
         // Add to the call inputs list (which retains the buffer view).
         status = iree_runtime_call_inputs_push_back_buffer_view(&call, arg);
         if (!iree_status_is_ok(status)) {

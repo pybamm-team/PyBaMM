@@ -29,7 +29,6 @@ public:
   IREESession addSession(const std::string& mlir_fcn);
   std::vector<IREESession> addSessions(const std::vector<std::string>& mlir_fcns);
   int cleanup();
-  void testSessions();
 };
 
 typedef struct compiler_state_t {

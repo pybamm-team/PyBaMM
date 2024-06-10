@@ -130,6 +130,7 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   }
 
   // Debug print arguments lists
+  DEBUG("Number of original function arguments: " << m_func.n_args);
   DEBUG("m_arg_argno:");
   for (int i=0; i<m_arg_argno.size(); i++) {
     DEBUG("  " << i << ": " << m_arg_argno[i]);
@@ -153,6 +154,7 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
 
   // Allocate memory for result (also check that the input is a vector)
   input_data.resize(input_shape.size());
+  numel.resize(input_shape.size());
   for(int j=0; j<input_shape.size(); j++) {
     if (
       (input_shape[j].size() > 2) ||
@@ -165,11 +167,16 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
       std::cerr << "]" << std::endl;
       throw std::runtime_error("Only 1D column vectors are supported as input arguments");
     }
-    input_data[j].resize(input_shape[j][0]);  // assumes 1D input
+    int count = 1;
+    for(int k=0; k<input_shape[j].size(); k++) {
+      count *= input_shape[j][k];
+    }
+    numel[j] = count;
+    input_data[j].resize(numel[j]);
   }
 
-  // Allocate memory for input arguments (over-allocate based on number of MLIR inputs)
-  m_arg.resize(m_arg_argno.size(), nullptr);
+  // Allocate memory for input arguments
+  m_arg.resize(m_func.n_args, nullptr);
 
   // Size iree results vector (single precision) and idaklu results vector (double precision)
   result.clear();
@@ -177,8 +184,9 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   for(int k=0; k<output_shape.size(); k++) {
     DEBUG("Output " << k << " size: " << output_shape[k][0]);
     auto elements = 1;
-    for (auto i : output_shape[k])
+    for (auto i : output_shape[k]) {
       elements *= i;
+    }
     // Sparse functions return NNZ elements, so we don't need to worry about sparsity
     result[k].resize(elements, 0.0f);
   }
@@ -276,6 +284,7 @@ void IREEFunction::operator()(const std::vector<realtype*>& inputs,
   DEBUG("IreeFunction operator() with inputs and results");
   // Set-up input arguments, provide result vector, then execute function
   // Example call: fcn({in1, in2, in3}, {out1})
+  ASSERT(inputs.size() == m_func.n_args);
   for(size_t k=0; k<inputs.size(); k++) {
     m_arg[k] = inputs[k];  // Copy references to vectors, not elements
   }

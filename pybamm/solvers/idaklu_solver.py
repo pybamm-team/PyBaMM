@@ -493,6 +493,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 y0 = self._demote_64_to_32(model.y0)
                 inputs0 = self._demote_64_to_32(inputs_to_dict(inputs))
                 cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnp.float32))  # array
+                v0 = jnp.zeros(model.len_rhs_and_alg, jnp.float32)
                 mass_matrix = model.mass_matrix.entries.toarray()
                 mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
 
@@ -540,7 +541,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
                 mass_action = self._make_iree_function(
-                    mass_action_demoted, jnp.zeros(model.len_rhs_and_alg, jnp.float32)
+                    mass_action_demoted, v0
                 )
 
                 # rootfn
@@ -566,11 +567,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 )
                 y0S = y0
 
-                def fcn_jac_rhs_algebraic_action(t, y, v, p):
-                    return jac_rhs_algebraic_action_demoted(t, y, v, p)
+                def fcn_jac_rhs_algebraic_action(t, y, p, v):  # sundials calls (t, y, inputs, v)
+                    return jac_rhs_algebraic_action_demoted(t, y, v, p)  # jvp calls (t, y, v, inputs)
 
                 jac_rhs_algebraic_action = self._make_iree_function(
-                    fcn_jac_rhs_algebraic_action, t_eval, y0, y0S, inputs0
+                    fcn_jac_rhs_algebraic_action, t_eval, y0, inputs0, v0
                 )
 
                 # sensfn
@@ -713,9 +714,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             iree_fcn.col = sparse_eval.col
             iree_fcn.row = sparse_eval.row
         except (TypeError, AttributeError):
-            iree_fcn.nnz = 0
-            iree_fcn.col = []
-            iree_fcn.row = []
+            print(f"Could not get sparsity pattern for {fcn.__name__}")
+            print(type(fcn(*args)))
+            print(fcn(*args))
+            raise pybamm.SolverError(
+                "Could not get sparsity pattern for function"
+            )
         # number of variables in each argument (these will flatten in the mlir)
         iree_fcn.pytree_shape = [
             len(jax.tree_util.tree_flatten(arg)[0]) for arg in args
@@ -724,6 +728,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         iree_fcn.pytree_sizes = [
             len(arg) for arg in jax.tree_util.tree_flatten(args)[0]
         ]
+        iree_fcn.n_args = len(args)
         return iree_fcn
 
     def _check_mlir_conversion(self, name, mlir: str):
