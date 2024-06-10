@@ -2,7 +2,7 @@
 # Inverse Bulter-Volmer class
 #
 import pybamm
-from ...base_interface import BaseInterface
+from pybamm.models.submodels.interface.base_interface import BaseInterface
 
 
 class InverseButlerVolmer(BaseInterface):
