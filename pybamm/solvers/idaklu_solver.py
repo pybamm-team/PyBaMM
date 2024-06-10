@@ -714,11 +714,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             iree_fcn.col = sparse_eval.col
             iree_fcn.row = sparse_eval.row
         except (TypeError, AttributeError):
-            print(f"Could not get sparsity pattern for {fcn.__name__}")
-            print(type(fcn(*args)))
-            print(fcn(*args))
             raise pybamm.SolverError(
-                "Could not get sparsity pattern for function"
+                "Could not get sparsity pattern for function {fcn.__name__}"
             )
         # number of variables in each argument (these will flatten in the mlir)
         iree_fcn.pytree_shape = [
