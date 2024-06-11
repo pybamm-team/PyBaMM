@@ -20,59 +20,14 @@ class BaseModel:
     ----------
     name: str
         A string giving the name of the model.
-    _options: dict
-        A dictionary of options to be passed to the model.
     submodels: dict
         A dictionary of submodels that the model is composed of.
-    _rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs.
-    _algebraic: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the algebraic equations. The algebraic expressions are assumed to equate
-        to zero. Note that all the variables in the model must exist in the keys of
-        `rhs` or `algebraic`.
-    _initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the state variables y. The initial conditions for
-        algebraic variables are provided as initial guesses to a root finding algorithm
-        that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions.
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables.
-    _events: list of :class:`pybamm.Event`
-        A list of events. Each event can either cause the solver to terminate
-        (e.g. concentration goes negative), or be used to inform the solver of the
-        existance of a discontinuity (e.g. discontinuity in the input current).
-    _concatenated_rhs : :class:`pybamm.Concatenation`
-        After discretisation, contains the expressions representing the rhs equations
-        concatenated into a single expression.
-    _concatenated_algebraic : :class:`pybamm.Concatenation`
-        After discretisation, contains the expressions representing the algebraic
-        equations concatenated into a single expression.
-    _concatenated_initial_conditions : :class:`numpy.array`
-        After discretisation, contains the vector of initial conditions.
-    _mass_matrix : :class:`pybamm.Matrix`
-        After discretisation, contains the mass matrix for the model. This is computed
-        automatically.
-    _mass_matrix_inv : :class:`pybamm.Matrix`
-        After discretisation, contains the inverse mass matrix for the differential
-        (rhs) part of model. This is computed automatically.
-    _jacobian : :class:`pybamm.Concatenation`
-        Contains the Jacobian for the model. If model.use_jacobian is True, the
-        Jacobian is computed automatically during solver set up.
-    _jacobian_rhs : :class:`pybamm.Concatenation`
-        Contains the Jacobian for the part of the model which contains time derivatives.
-        If model.use_jacobian is True, the Jacobian is computed automatically during
-        solver set up.
-    _jacobian_algebraic : :class:`pybamm.Concatenation`
-        Contains the Jacobian for the algebraic part of the model. This may be used
-        by the solver when calculating consistent initial conditions. If
-        model.use_jacobian is True, the Jacobian is computed automatically during
-        solver set up.
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True).
     convert_to_format : str

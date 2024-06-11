@@ -30,29 +30,12 @@ class BaseSubModel(pybamm.BaseModel):
     ----------
     param: parameter class
         The model parameter symbols
-    _rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    _algebraic: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the algebraic equations. The algebraic expressions are assumed to equate
-        to zero. Note that all the variables in the model must exist in the keys of
-        `rhs` or `algebraic`.
-    _initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the state variables y. The initial conditions for
-        algebraic variables are provided as initial guesses to a root finding algorithm
-        that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
-    _events: list
-        A list of events. Each event can either cause the solver to terminate
-        (e.g. concentration goes negative), or be used to inform the solver of the
-        existence of a discontinuity (e.g. discontinuity in the input current)
     """
 
     def __init__(
@@ -138,7 +121,8 @@ class BaseSubModel(pybamm.BaseModel):
         use :py:attr:`model.parameters`.
         """
         raise NotImplementedError(
-            "Cannot use get_parameter_info OR print_parameter_info directly on a submodel. Please use it on the full model."
+            "Cannot use get_parameter_info OR print_parameter_info directly on a submodel. "
+            "Please use it on the full model."
         )
 
     def get_fundamental_variables(self):
