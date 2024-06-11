@@ -31,6 +31,9 @@ class TestNewmanTobias(BaseUnitTestLithiumIon, TestCase):
     def test_well_posed_composite_diffusion_hysteresis(self):
         pass  # skip this test
 
+    def test_well_posed_composite_different_degradation(self):
+        pass  # skip this test
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
