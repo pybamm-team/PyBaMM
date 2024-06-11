@@ -49,8 +49,14 @@ def run_pybamm_requires(session):
             session.run(
                 "git",
                 "clone",
+                "--depth",
+                "1",
+                "--branch",
+                "v2.12.0",
                 "https://github.com/pybind/pybind11.git",
                 "pybind11/",
+                "-c",
+                "advice.detachedHead=false",
                 external=True,
             )
     else:

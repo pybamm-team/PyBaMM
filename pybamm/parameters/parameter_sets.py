@@ -15,14 +15,13 @@ class ParameterSets(Mapping):
     --------
     Listing available parameter sets:
 
-    .. doctest::
 
+        >>> import pybamm
         >>> list(pybamm.parameter_sets)
         ['Ai2020', 'Chen2020', ...]
 
     Get the docstring for a parameter set:
 
-    .. doctest::
 
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
         <BLANKLINE>

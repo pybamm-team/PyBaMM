@@ -103,6 +103,8 @@ dev = [
     "nox",
     # For coverage
     "pytest-cov",
+    # For doctest
+    "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
     # For testing Jupyter notebooks
