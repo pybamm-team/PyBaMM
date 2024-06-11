@@ -422,6 +422,8 @@ def get_parameter_values():
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Initial inner SEI thickness [m]": 0.0,
         "Initial outer SEI thickness [m]": 5e-09,
+        "Initial inner SEI on cracks thickness [m]": 0,
+        "Initial outer SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
