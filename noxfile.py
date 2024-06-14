@@ -15,7 +15,6 @@ else:
 
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
