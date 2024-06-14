@@ -1,6 +1,3 @@
-#
-# Tests for the Casadi Algebraic Solver class
-#
 from tests import TestCase
 import casadi
 import pybamm

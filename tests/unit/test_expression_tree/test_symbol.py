@@ -169,8 +169,12 @@ class TestSymbol(TestCase):
 
     def test_symbol_create_copy(self):
         a = pybamm.Symbol("a")
-        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
-            a.create_copy()
+        new_a = a.create_copy()
+        self.assertEqual(new_a, a)
+
+        b = pybamm.Symbol("b")
+        new_b = b.create_copy(new_children=[a])
+        self.assertEqual(new_b, pybamm.Symbol("b", children=[a]))
 
     def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed

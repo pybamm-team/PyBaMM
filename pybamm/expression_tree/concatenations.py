@@ -129,14 +129,26 @@ class Concatenation(pybamm.Symbol):
         children_eval = [child.evaluate(t, y, y_dot, inputs) for child in self.children]
         return self._concatenation_evaluate(children_eval)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_children = [child.new_copy() for child in self.children]
-        return self._concatenation_new_copy(new_children)
+        children = self._children_for_copying(new_children)
 
-    def _concatenation_new_copy(self, children):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return concatenation(*children)
+        return self._concatenation_new_copy(children, perform_simplifications)
+
+    def _concatenation_new_copy(self, children, perform_simplifications: bool = True):
+        """
+        Creates a copy for the current concatenation class using the convenience
+        function :meth:`concatenation` to perform simplifications based on the new
+        children before creating the new copy.
+        """
+        if perform_simplifications:
+            return concatenation(*children)
+        else:
+            return self.__class__(*children)
 
     def _concatenation_jac(self, children_jacs):
         """Calculate the Jacobian of a concatenation."""
@@ -225,9 +237,19 @@ class NumpyConcatenation(Concatenation):
         else:
             return SparseStack(*children_jacs)
 
-    def _concatenation_new_copy(self, children):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return numpy_concatenation(*children)
+    def _concatenation_new_copy(
+        self,
+        children,
+        perform_simplifications: bool = True,
+    ):
+        """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""
+        if perform_simplifications:
+            return numpy_concatenation(*children)
+        else:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} should always be copied using "
+                "simplification checks"
+            )
 
 
 class DomainConcatenation(Concatenation):
@@ -373,12 +395,16 @@ class DomainConcatenation(Concatenation):
                 jacs.append(pybamm.Index(child_jac, child_slice[i]))
         return SparseStack(*jacs)
 
-    def _concatenation_new_copy(self, children: list[pybamm.Symbol]):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_symbol = simplified_domain_concatenation(
-            children, self.full_mesh, copy_this=self
-        )
-        return new_symbol
+    def _concatenation_new_copy(
+        self, children: list[pybamm.Symbol], perform_simplifications: bool = True
+    ):
+        """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""
+        if perform_simplifications:
+            return simplified_domain_concatenation(
+                children, self.full_mesh, copy_this=self
+            )
+        else:
+            return DomainConcatenation(children, self.full_mesh, copy_this=self)
 
     def to_json(self):
         """
@@ -434,8 +460,8 @@ class SparseStack(Concatenation):
             concat_fun=concatenation_function,
         )
 
-    def _concatenation_new_copy(self, children):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
+    def _concatenation_new_copy(self, children, perform_simplifications=True):
+        """See :meth:`pybamm.Concatenation._concatenation_new_copy()`."""
         return SparseStack(*children)
 
 
