@@ -18,6 +18,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
+    "MPLBACKEND": "Agg",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -73,7 +74,7 @@ def run_integration(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--integration")
+    session.run("python", "-m", "pytest", "-v", "tests/integration")
 
 
 @nox.session(name="doctests")
@@ -83,7 +84,12 @@ def run_doctests(session):
     # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
-    session.run("python", "run-tests.py", "--doctest")
+    session.run("python",
+                "-m",
+                "pytest",
+                "--doctest-plus",
+                "pybamm",
+                )
 
 
 @nox.session(name="unit")
@@ -92,7 +98,7 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--unit")
+    session.run("python", "-m", "pytest", "-v", "tests/unit")
 
 
 @nox.session(name="examples")
@@ -114,7 +120,7 @@ def run_scripts(session):
     # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
-    session.run("python", "run-tests.py", "--scripts")
+    session.run("python", "-m", "pytest", "tests/test_examples.py")
 
 
 @nox.session(name="dev")
@@ -145,7 +151,7 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--all")
+    session.run("python", "-m", "pytest", "-v", "tests")
 
 
 @nox.session(name="docs")
