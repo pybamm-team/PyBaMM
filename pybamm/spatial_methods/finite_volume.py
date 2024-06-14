@@ -1121,9 +1121,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 method = "arithmetic"
             disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
-        out = pybamm.simplify_if_constant(
-            bin_op._binary_new_copy(disc_left, disc_right)
-        )
+        out = pybamm.simplify_if_constant(bin_op.create_copy([disc_left, disc_right]))
 
         return out
 

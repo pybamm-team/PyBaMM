@@ -244,8 +244,10 @@ class Interpolant(pybamm.Function):
             )
         )
 
-    def _function_new_copy(self, children):
-        """See :meth:`Function._function_new_copy()`"""
+    def create_copy(self, new_children=None, perform_simplifications=True):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        children = self._children_for_copying(new_children)
+
         return pybamm.Interpolant(
             self.x,
             self.y,
