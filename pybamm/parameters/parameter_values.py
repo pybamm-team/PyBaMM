@@ -411,7 +411,7 @@ class ParameterValues:
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                values[new_param] = values.pop(param)
+                values[new_param] = values.get(param)
 
         return values
 
