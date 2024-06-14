@@ -438,6 +438,111 @@ class TestSimulationExperiment(TestCase):
         # Summary variables are not None
         self.assertIsNotNone(sol.summary_variables["Capacity [A.h]"])
 
+    def test_experiment_solution_step_tag_filters(self):
+        # Test cycle_summary_variables works for different combinations of data and
+        # function OCPs
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.string(
+                        "Discharge at 1C until 3.3V", tags=["tag1", "tag2"]
+                    )
+                ),
+                (
+                    pybamm.step.string("Charge at C/3 until 4.0V", tags=["tag3"]),
+                    pybamm.step.string("Hold at 4.0V until C/10", tags=["tag4"]),
+                ),
+            ]
+            * 5,
+        )
+        model = pybamm.lithium_ion.SPM()
+
+        # O'Kane 2022: pos = function, neg = data
+        param = pybamm.ParameterValues("OKane2022")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        solution = sim.solve(solver=pybamm.CasadiSolver("fast with events"))
+
+        sub_solutions = solution.search_tags(["tag1"])
+        assert len(sub_solutions) == 5
+
+        sub_solutions = solution.search_tags(["tag3"])
+        assert len(sub_solutions) == 5
+
+        sub_solutions = solution.search_tags(["tag1", "tag3"])
+        assert len(sub_solutions) == 10
+
+    def test_experiment_solution_step_tags(self):
+        # Test that solution objects contain specified step tags
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.string(
+                        "Discharge at 1C until 3.3V", tags=["tag1", "tag2"]
+                    )
+                ),
+                (
+                    pybamm.step.string("Charge at C/3 until 4.0V", tags=["tag3"]),
+                    pybamm.step.string("Hold at 4.0V until C/10", tags=["tag4"]),
+                ),
+            ]
+            * 5,
+        )
+        model = pybamm.lithium_ion.SPM()
+
+        # O'Kane 2022: pos = function, neg = data
+        param = pybamm.ParameterValues("OKane2022")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        solution = sim.solve(solver=pybamm.CasadiSolver("fast with events"))
+
+        assert solution.cycles[0].steps[0].tags == ["tag1", "tag2"]
+        assert solution.cycles[1].steps[0].tags == ["tag3"]
+        assert solution.cycles[1].steps[1].tags == ["tag4"]
+
+        # Chen 2020: pos = function, neg = function
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        solution = sim.solve(solver=pybamm.CasadiSolver("fast with events"))
+
+        assert solution.cycles[0].steps[0].tags == ["tag1", "tag2"]
+        assert solution.cycles[1].steps[0].tags == ["tag3"]
+        assert solution.cycles[1].steps[1].tags == ["tag4"]
+
+        # Chen 2020 with data: pos = data, neg = data
+        # Load negative electrode OCP data
+        filename = os.path.join(
+            pybamm.root_dir(),
+            "pybamm",
+            "input",
+            "parameters",
+            "lithium_ion",
+            "data",
+            "graphite_LGM50_ocp_Chen2020.csv",
+        )
+        param["Negative electrode OCP [V]"] = pybamm.parameters.process_1D_data(
+            filename
+        )
+
+        # Load positive electrode OCP data
+        filename = os.path.join(
+            pybamm.root_dir(),
+            "pybamm",
+            "input",
+            "parameters",
+            "lithium_ion",
+            "data",
+            "nmc_LGM50_ocp_Chen2020.csv",
+        )
+        param["Positive electrode OCP [V]"] = pybamm.parameters.process_1D_data(
+            filename
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        solution = sim.solve(solver=pybamm.CasadiSolver("safe"), save_at_cycles=2)
+
+        assert solution.cycles[0].steps[0].tags == ["tag1", "tag2"]
+        assert solution.cycles[1].steps[0].tags == ["tag3"]
+        assert solution.cycles[1].steps[1].tags == ["tag4"]
+
     def test_cycle_summary_variables(self):
         # Test cycle_summary_variables works for different combinations of data and
         # function OCPs

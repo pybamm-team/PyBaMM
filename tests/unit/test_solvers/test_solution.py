@@ -359,6 +359,30 @@ class TestSolution(TestCase):
             data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
         )
 
+    def test_get_data_cycles_steps_tags(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.string(
+                        "Discharge at 1C until 3.3V", tags=["tag1", "tag2"]
+                    )
+                ),
+                (
+                    pybamm.step.string("Charge at C/3 until 4.0V", tags=["tag3"]),
+                    pybamm.step.string("Hold at 4.0V until C/10", tags=["tag4"]),
+                ),
+            ]
+            * 5,
+        )
+        sim = pybamm.Simulation(
+            model=model,
+            experiment=experiment,
+        )
+        solution = sim.solve()
+        data_dict = solution.get_data_dict(["Terminal voltage [V]", "Time [s]"])
+        assert set(data_dict["Tags"]).issubset({"tag1;tag2", "tag3", "tag4"})
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry

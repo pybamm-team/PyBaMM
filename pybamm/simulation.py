@@ -652,6 +652,7 @@ class Simulation:
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     step = self.experiment.steps[idx]
+                    tags = step.tags
                     start_time = current_solution.t[-1]
 
                     # If step has an end time, dt must take that into account
@@ -716,6 +717,7 @@ class Simulation:
                             break
 
                     step_termination = step_solution.termination
+                    step_solution.tags = tags
 
                     # Add a padding rest step if necessary
                     if step.next_start_time is not None:
