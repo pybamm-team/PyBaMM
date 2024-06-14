@@ -732,7 +732,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.child, pybamm.Parameter("param"))
         self.assertEqual(expr.initial_condition, pybamm.Scalar(1))
         self.assertEqual(expr.name, "explicit time integral")
-        self.assertEqual(expr.new_copy(), expr)
+        self.assertEqual(expr.create_copy(), expr)
         self.assertFalse(expr.is_constant())
 
     def test_to_from_json(self):
