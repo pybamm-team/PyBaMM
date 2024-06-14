@@ -90,12 +90,13 @@ def run_doctests(session):
     # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
-    session.run("python",
-                "-m",
-                "pytest",
-                "--doctest-plus",
-                "pybamm",
-                )
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "--doctest-plus",
+        "pybamm",
+    )
 
 
 @nox.session(name="unit")
