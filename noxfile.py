@@ -28,7 +28,7 @@ def set_environment_variables(env_dict, session):
     Sets environment variables for a nox Session object.
 
     Parameters
-    -----------
+    ---------
         session : nox.Session
             The session to set the environment variables for.
         env_dict : dict
@@ -126,7 +126,7 @@ def run_scripts(session):
     # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
-    session.run("python", "-m", "pytest", "tests/test_examples.py")
+    session.run("python", "-m", "pytest", "-v", "--examples", "tests/test_examples.py")
 
 
 @nox.session(name="dev")
