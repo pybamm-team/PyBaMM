@@ -19,7 +19,9 @@ def pytest_collection_modifyitems(config, items):
         marker for option, marker in options.items() if config.getoption(option)
     ]
     if "examples" not in selected_markers:
-        skip_example = pytest.mark.skip(reason="Skipping example tests since --examples option is not provided")
+        skip_example = pytest.mark.skip(
+            reason="Skipping example tests since --examples option is not provided"
+        )
         for item in items:
-            if 'examples' in item.keywords:
+            if "examples" in item.keywords:
                 item.add_marker(skip_example)
