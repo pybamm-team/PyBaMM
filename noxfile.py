@@ -15,7 +15,6 @@ else:
 
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
@@ -28,7 +27,7 @@ def set_environment_variables(env_dict, session):
     Sets environment variables for a nox Session object.
 
     Parameters
-    ---------
+    -----------
         session : nox.Session
             The session to set the environment variables for.
         env_dict : dict
@@ -90,12 +89,13 @@ def run_doctests(session):
     # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
-    session.run("python",
-                "-m",
-                "pytest",
-                "--doctest-plus",
-                "pybamm",
-                )
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "--doctest-plus",
+        "pybamm",
+    )
 
 
 @nox.session(name="unit")
@@ -126,7 +126,7 @@ def run_scripts(session):
     # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
-    session.run("python", "-m", "pytest", "-v", "--examples", "tests/test_examples.py")
+    session.run("python", "-m", "pytest", "tests/test_examples.py")
 
 
 @nox.session(name="dev")
