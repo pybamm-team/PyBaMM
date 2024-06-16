@@ -126,7 +126,9 @@ def run_scripts(session):
     # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
-    session.run("python", "-m", "pytest", "-svra", "--examples", "tests/test_examples.py")
+    session.run(
+        "python", "-m", "pytest", "-svra", "--examples", "tests/test_examples.py"
+    )
 
 
 @nox.session(name="dev")
