@@ -6,6 +6,8 @@ from pathlib import Path
 
 
 ROOT_DIR = Path(os.path.join(os.path.dirname(__file__), ".."))
+
+
 class TestExamples:
     """
     A class to test the example scripts.

@@ -221,6 +221,9 @@ ignore = [
 # NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
 minversion = "6"
+markers = [
+      "examples: mark a test as an example test",
+]
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
