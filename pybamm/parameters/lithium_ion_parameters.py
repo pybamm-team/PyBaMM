@@ -416,11 +416,12 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
         self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
-
-        # Dividing by 10000 makes initial condition effectively zero
-        # without triggering division by zero errors
-        self.L_inner_crack_0 = self.L_inner_0 / 10000
-        self.L_outer_crack_0 = self.L_outer_0 / 10000
+        self.L_inner_crack_0 = pybamm.Parameter(
+            f"{pref}Initial inner SEI on cracks thickness [m]"
+        )
+        self.L_outer_crack_0 = pybamm.Parameter(
+            f"{pref}Initial outer SEI on cracks thickness [m]"
+        )
 
         self.L_sei_0 = self.L_inner_0 + self.L_outer_0
         self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")

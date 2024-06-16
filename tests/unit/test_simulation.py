@@ -6,8 +6,10 @@ import os
 import sys
 import unittest
 import uuid
+import pytest
 from tempfile import TemporaryDirectory
 from scipy.integrate import cumulative_trapezoid
+from tests import no_internet_connection
 
 
 class TestSimulation(TestCase):
@@ -186,6 +188,10 @@ class TestSimulation(TestCase):
             sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
         )
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_solve_with_initial_soc(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
@@ -202,8 +208,9 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 0.8)
 
         # test with drive cycle
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
+            data_loader.get_data("US06.csv"),
             comment="#",
             header=None,
         ).to_numpy()
@@ -495,14 +502,17 @@ class TestSimulation(TestCase):
             sim.plot(show_plot=False)
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         # Import drive cycle from file
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            pybamm.get_parameters_filepath(
-                os.path.join("input", "drive_cycles", "US06.csv")
-            ),
+            pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
             comment="#",
             skip_blank_lines=True,
             header=None,

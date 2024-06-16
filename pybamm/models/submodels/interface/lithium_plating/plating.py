@@ -83,7 +83,9 @@ class Plating(BasePlating):
         alpha_stripping = phase_param.alpha_stripping
         alpha_plating = phase_param.alpha_plating
 
-        lithium_plating_option = getattr(self.options, domain)["lithium plating"]
+        lithium_plating_option = getattr(getattr(self.options, domain), self.phase)[
+            "lithium plating"
+        ]
         if lithium_plating_option in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(
                 F_RT * alpha_stripping * eta_stripping
@@ -132,7 +134,9 @@ class Plating(BasePlating):
             ]
             L_sei = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
 
-        lithium_plating_option = getattr(self.options, domain)["lithium plating"]
+        lithium_plating_option = getattr(getattr(self.options, domain), self.phase)[
+            "lithium plating"
+        ]
         if lithium_plating_option == "reversible":
             # In the reversible plating model, there is no dead lithium
             dc_plated_Li = -a_j_stripping / self.param.F

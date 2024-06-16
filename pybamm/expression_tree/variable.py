@@ -118,7 +118,11 @@ class VariableBase(pybamm.Symbol):
             )
         )
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications=True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name,
