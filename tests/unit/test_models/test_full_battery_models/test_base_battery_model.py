@@ -375,7 +375,7 @@ class TestBaseBatteryModel(TestCase):
             )
         
         # thermal heat of mixing
-        with self.assertRaisesRegex(pybamm.OptionError, "Heat of mixing"):
+        with self.assertRaisesRegex(NotImplementedError, "Heat of mixing"):
             pybamm.BaseBatteryModel(
                 {
                     "heat of mixing": "true",
