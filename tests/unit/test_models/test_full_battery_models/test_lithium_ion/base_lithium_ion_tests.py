@@ -91,7 +91,7 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal_model_1D_hom(self):
-        options = {"thermal": "x-lumped", "heat of mixing": "true"}
+        options = {"thermal": "lumped", "heat of mixing": "true"}
         self.check_well_posedness(options)
 
     def test_well_posed_x_full_thermal_model_hom(self):
