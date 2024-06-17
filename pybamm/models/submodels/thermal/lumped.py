@@ -49,9 +49,9 @@ class Lumped(BaseThermal):
 
         # Newton cooling, accounting for surface area to volume ratio
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        T_amb = variables["Volume-averaged ambient temperature [K]"]
+        T_surf_av = variables["Volume-averaged surface temperature [K]"]
         V = variables["Cell thermal volume [m3]"]
-        Q_cool_W = -self.param.h_total * (T_vol_av - T_amb) * self.param.A_cooling
+        Q_cool_W = -self.param.h_total * (T_vol_av - T_surf_av) * self.param.A_cooling
         Q_cool_vol_av = Q_cool_W / V
         variables.update(
             {

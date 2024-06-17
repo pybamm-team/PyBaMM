@@ -1282,6 +1282,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.submodels["thermal"] = thermal_submodel(self.param, self.options)
 
+    def set_surface_temperature_submodel(self):
+        submodel = pybamm.thermal.surface.SurfaceAmbientTemperature(
+            self.param, self.options
+        )
+        self.submodels["surface temperature"] = submodel
+
     def set_current_collector_submodel(self):
         if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)

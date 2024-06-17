@@ -54,7 +54,7 @@ class CurrentCollector1D(BaseThermal):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating [W.m-3]"]
-        T_amb = variables["Ambient temperature [K]"]
+        T_surf = variables["Surface temperature [K]"]
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -64,13 +64,13 @@ class CurrentCollector1D(BaseThermal):
         cell_volume = self.param.L * self.param.L_y * self.param.L_z
         Q_yz_surface = (
             -(self.param.n.h_cc(y, z) + self.param.p.h_cc(y, z))
-            * (T_av - T_amb)
+            * (T_av - T_surf)
             * yz_surface_area
             / cell_volume
         )
         Q_edge = (
             -(self.param.h_edge(0, z) + self.param.h_edge(self.param.L_y, z))
-            * (T_av - T_amb)
+            * (T_av - T_surf)
             * edge_area
             / cell_volume
         )
@@ -87,7 +87,7 @@ class CurrentCollector1D(BaseThermal):
 
     def set_boundary_conditions(self, variables):
         param = self.param
-        T_amb = variables["Ambient temperature [K]"]
+        T_surf = variables["Surface temperature [K]"]
         T_av = variables["X-averaged cell temperature [K]"]
 
         # Find tab locations (top vs bottom)
@@ -118,10 +118,10 @@ class CurrentCollector1D(BaseThermal):
         # Calculate heat fluxes weighted by area
         # Note: can't do y-average of h_edge here since y isn't meshed. Evaluate at
         # midpoint.
-        q_tab_n = -param.n.h_tab * (T_av - T_amb)
-        q_tab_p = -param.p.h_tab * (T_av - T_amb)
-        q_edge_top = -param.h_edge(L_y / 2, L_z) * (T_av - T_amb)
-        q_edge_bottom = -param.h_edge(L_y / 2, 0) * (T_av - T_amb)
+        q_tab_n = -param.n.h_tab * (T_av - T_surf)
+        q_tab_p = -param.p.h_tab * (T_av - T_surf)
+        q_edge_top = -param.h_edge(L_y / 2, L_z) * (T_av - T_surf)
+        q_edge_bottom = -param.h_edge(L_y / 2, 0) * (T_av - T_surf)
         q_top = (
             q_tab_n * neg_tab_area * neg_tab_top_bool
             + q_tab_p * pos_tab_area * pos_tab_top_bool
