@@ -1,0 +1,63 @@
+name: Build package
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - develop
+
+# Set options available for all jobs that use cibuildwheel
+env:
+  # Increase pip debugging output, equivalent to `pip -vv`
+  CIBW_BUILD_VERBOSITY: 2
+  # Disable build isolation to allow pre-installing build-time dependencies.
+  # Note: CIBW_BEFORE_BUILD must be present in all jobs using cibuildwheel.
+  CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+  # Skip PyPy and MUSL builds in any and all jobs
+  CIBW_SKIP: "pp* *musllinux*"
+  FORCE_COLOR: 3
+
+jobs:
+  build_manylinux_wheels:
+    name: Wheels (linux-amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Check out PyBaMM repository
+
+      - uses: actions/setup-python@v5
+        name: Set up Python
+        with:
+          python-version: 3.11
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
+
+      - name: Build wheels on Linux
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_LINUX: x86_64
+          # CIBW_BEFORE_ALL_LINUX: >
+          #   yum -y install openblas-devel lapack-devel &&
+          #   bash scripts/install_sundials.sh 6.0.3 6.5.0
+          CIBW_BEFORE_ALL_LINUX: >
+            yum -y install openblas-devel lapack-devel &&
+            python scripts/install_KLU_Sundials.py
+          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi scikit-build-core
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            set -e -x
+            mkdir -p temp_wheel_dir
+            unzip -d temp_wheel_dir {wheel}
+            yum install -y tree
+            tree temp_wheel_dir
+            rm -rf temp_wheel_dir
+            auditwheel repair -w {dest_dir} {wheel}
+          CIBW_TEST_COMMAND: |
+            set -e -x
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
+
+      - name: Upload wheels for Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels_manylinux
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
