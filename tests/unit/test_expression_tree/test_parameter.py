@@ -5,9 +5,8 @@ from tests import TestCase
 import numbers
 import unittest
 
-import sympy
-
 import pybamm
+import sympy
 
 
 class TestParameter(TestCase):
@@ -30,6 +29,15 @@ class TestParameter(TestCase):
 
         # Test name
         self.assertEqual(func1.to_equation(), sympy.Symbol("test_name"))
+
+    def test_to_json_error(self):
+        func = pybamm.Parameter("test_string")
+
+        with self.assertRaises(NotImplementedError):
+            func.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.Parameter._from_json({})
 
 
 class TestFunctionParameter(TestCase):
@@ -55,7 +63,7 @@ class TestFunctionParameter(TestCase):
         a = pybamm.Parameter("a")
         func = pybamm.FunctionParameter("func", {"2a": 2 * a})
 
-        new_func = func.new_copy()
+        new_func = func.create_copy()
         self.assertEqual(func.input_names, new_func.input_names)
 
     def test_print_input_names(self):
@@ -108,6 +116,15 @@ class TestFunctionParameter(TestCase):
         # Test name
         func1.print_name = None
         self.assertEqual(func1.to_equation(), sympy.Symbol("func"))
+
+    def test_to_json_error(self):
+        func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
+
+        with self.assertRaises(NotImplementedError):
+            func.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.FunctionParameter._from_json({})
 
 
 if __name__ == "__main__":

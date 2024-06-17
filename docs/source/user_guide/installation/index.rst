@@ -30,7 +30,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
       .. code:: bash
 
-         brew install sundials && pip install pybamm
+         pip install pybamm
 
 
    .. tab:: conda
@@ -45,10 +45,9 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
-*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_.
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver>`_.
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver>`_.
 
 Dependencies
 ------------
@@ -59,14 +58,19 @@ Required dependencies
 
 PyBaMM requires the following dependencies.
 
-================================================================ ==========================
-Package                                                          Minimum supported version
-================================================================ ==========================
-`NumPy <https://numpy.org>`__                                    1.16.0
-`SciPy <https://docs.scipy.org/doc/scipy/>`__                    2.8.2
-`CasADi <https://web.casadi.org/docs/>`__                        3.6.0
-`Xarray <https://docs.xarray.dev/en/stable/>`__                  2023.04.0
-================================================================ ==========================
+=================================================================== ==========================
+Package                                                             Minimum supported version
+=================================================================== ==========================
+`NumPy <https://numpy.org>`__                                       1.23.5
+`SciPy <https://docs.scipy.org/doc/scipy/>`__                       1.9.3
+`CasADi <https://web.casadi.org/docs/>`__                           3.6.3
+`Xarray <https://docs.xarray.dev/en/stable/>`__                     2022.6.0
+`Anytree <https://anytree.readthedocs.io/en/stable/>`__             2.8.0
+`SymPy <https://docs.sympy.org/latest/index.html>`__                1.9.3
+`typing-extensions <https://pypi.org/project/typing-extensions/>`__ 4.10.0
+`pandas <https://pypi.org/project/pandas/>`__                       1.5.0
+`pooch <https://www.fatiando.org/pooch/>`__                         1.8.1
+=================================================================== ==========================
 
 .. _install.optional_dependencies:
 
@@ -76,7 +80,7 @@ Optional Dependencies
 PyBaMM has a number of optional dependencies for different functionalities.
 If the optional dependency is not installed, PyBaMM will raise an ImportError when the method requiring that dependency is called.
 
-If using pip, optional PyBaMM dependencies can be installed or managed in a file (e.g. requirements.txt or setup.py)
+If you are using ``pip``, optional PyBaMM dependencies can be installed or managed in a file (e.g., setup.py, or pyproject.toml)
 as optional extras (e.g.,``pybamm[dev,plot]``). All optional dependencies can be installed with ``pybamm[all]``,
 and specific sets of dependencies are listed in the sections below.
 
@@ -90,21 +94,8 @@ Installable with ``pip install "pybamm[plot]"``
 =========================================================== ================== ================== ==================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ==================================================================
-`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.9.0              plot               For generating simulation GIFs.
-`matplotlib <https://matplotlib.org/stable/>`__             2.0.0              plot               To plot various battery models, and analyzing battery performance.
-=========================================================== ================== ================== ==================================================================
-
-.. _install.pandas_dependencies:
-
-Pandas dependencies
-^^^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[pandas]"``
-
-=========================================================== ================== ================== ==================================================================
-Dependency                                                  Minimum Version    pip extra          Notes
-=========================================================== ================== ================== ==================================================================
-`pandas <https://pandas.pydata.org/docs/>`__                0.24.0             pandas             For data manipulation and analysis.
+`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.3.0              plot               For generating simulation GIFs.
+`matplotlib <https://matplotlib.org/stable/>`__             3.6.0              plot               To plot various battery models, and analyzing battery performance.
 =========================================================== ================== ================== ==================================================================
 
 .. _install.docs_dependencies:
@@ -117,7 +108,7 @@ Installable with ``pip install "pybamm[docs]"``
 ================================================================================================= ================== ================== =======================================================================
 Dependency                                                                                        Minimum Version    pip extra          Notes
 ================================================================================================= ================== ================== =======================================================================
-`sphinx <https://www.sphinx-doc.org/en/master/>`__                                                1.5.0              docs               Sphinx makes it easy to create intelligent and beautiful documentation.
+`sphinx <https://www.sphinx-doc.org/en/master/>`__                                                \-                 docs               Sphinx makes it easy to create intelligent and beautiful documentation.
 `pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__                   \-                 docs               A clean, Bootstrap-based Sphinx theme.
 `sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__                               \-                 docs               A sphinx extension for designing.
 `sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__                       \-                 docs               To copy codeblocks.
@@ -152,6 +143,13 @@ Dependency                                                                      
 ================================================================================ ================== ================== =============================================================
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
+`nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
+`pytest-cov <https://pytest-cov.readthedocs.io/en/stable/>`__                    \-                 dev                For calculating test coverage.
+`parameterized <https://github.com/wolever/parameterized>`__                     \-                 dev                For test parameterization.
+`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running the test suites.
+`pytest-doctestplus <https://github.com/scientific-python/pytest-doctestplus>`__ \-                 dev                For running doctests.
+`pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
+`nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:
@@ -166,19 +164,6 @@ Dependency                                                  Minimum Version    p
 =========================================================== ================== ================== =========================================
 `pybtex <https://docs.pybtex.org/>`__                       0.24.0             cite               BibTeX-compatible bibliography processor.
 =========================================================== ================== ================== =========================================
-
-.. _install.latexify_dependencies:
-
-Latexify dependencies
-^^^^^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[latexify]"``
-
-=========================================================== ================== ================== =========================
-Dependency                                                  Minimum Version    pip extra          Notes
-=========================================================== ================== ================== =========================
-`sympy <https://docs.sympy.org/latest/index.html>`__        1.8.0              latexify           For symbolic mathematics.
-=========================================================== ================== ================== =========================
 
 .. _install.bpx_dependencies:
 
@@ -211,31 +196,14 @@ Dependency                                                  Minimum Version    p
 Jax dependencies
 ^^^^^^^^^^^^^^^^^
 
-Installable with ``pip install "pybamm[jax]"``
+Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
 
 ========================================================================= ================== ================== =======================
 Dependency                                                                Minimum Version    pip extra          Notes
 ========================================================================= ================== ================== =======================
-`JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.8              jax                For JAX solvers
-`jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.7              jax                Support library for JAX
+`JAX <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`__  0.4.20             jax                For the JAX solver
+`jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
 ========================================================================= ================== ================== =======================
-
-.. _install.odes_dependencies:
-
-odes dependencies
-^^^^^^^^^^^^^^^^^
-
-Installable with ``pip install "pybamm[odes]"``
-
-================================================================================================================================ ================== ================== =============================
-Dependency                                                                                                                       Minimum Version    pip extra          Notes
-================================================================================================================================ ================== ================== =============================
-`scikits.odes <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`__  \-                 odes               For scikits ODE & DAE solvers
-================================================================================================================================ ================== ================== =============================
-
-.. note::
-
-   Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-scikits-odes-solver>`_ .
 
 Full installation guide
 -----------------------
@@ -245,7 +213,7 @@ Installing a specific version? Installing from source? Check the advanced instal
 .. toctree::
    :maxdepth: 1
 
-   GNU-linux
+   gnu-linux-mac
    windows
    windows-wsl
    install-from-source

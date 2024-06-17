@@ -52,14 +52,25 @@ class NewmanTobias(DFN):
                     submod = pybamm.particle.MSMRDiffusion(
                         self.param, domain, self.options, phase=phase, x_average=True
                     )
+                    # also set the submodel for calculating stoichiometry from
+                    # potential
+                    self.submodels[f"{domain} {phase} stoichiometry"] = (
+                        pybamm.particle.MSMRStoichiometryVariables(
+                            self.param,
+                            domain,
+                            self.options,
+                            phase=phase,
+                            x_average=True,
+                        )
+                    )
                 self.submodels[f"{domain} {phase} particle"] = submod
-                self.submodels[
-                    f"{domain} {phase} total particle concentration"
-                ] = pybamm.particle.TotalConcentration(
-                    self.param, domain, self.options, phase
+                self.submodels[f"{domain} {phase} total particle concentration"] = (
+                    pybamm.particle.TotalConcentration(
+                        self.param, domain, self.options, phase
+                    )
                 )
 
     def set_electrolyte_concentration_submodel(self):
-        self.submodels[
-            "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
+        self.submodels["electrolyte diffusion"] = (
+            pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
+        )

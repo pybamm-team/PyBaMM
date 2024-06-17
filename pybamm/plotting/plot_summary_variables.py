@@ -3,10 +3,11 @@
 #
 import numpy as np
 import pybamm
+from pybamm.util import import_optional_dependency
 
 
 def plot_summary_variables(
-    solutions, output_variables=None, labels=None, testing=False, **kwargs_fig
+    solutions, output_variables=None, labels=None, show_plot=True, **kwargs_fig
 ):
     """
     Generate a plot showing/comparing the summary variables.
@@ -19,13 +20,14 @@ def plot_summary_variables(
         A list of variables to plot automatically. If None, the default ones are used.
     labels: list (optional)
         A list of labels to be added to the legend. No labels are added by default.
-    testing : bool (optional)
-        Whether to actually make the plot (turned off for unit tests).
+    show_plot : bool, optional
+        Whether to show the plots. Default is True. Set to False if you want to
+        only display the plot after plt.show() has been called.
     kwargs_fig
         Keyword arguments, passed to plt.subplots.
 
     """
-    import matplotlib.pyplot as plt
+    plt = import_optional_dependency("matplotlib.pyplot")
 
     if isinstance(solutions, pybamm.Solution):
         solutions = [solutions]
@@ -37,7 +39,7 @@ def plot_summary_variables(
         output_variables = [
             "Capacity [A.h]",
             "Loss of lithium inventory [%]",
-            "Loss of capacity to SEI [A.h]",
+            "Total capacity lost to side reactions [A.h]",
             "Loss of active material in negative electrode [%]",
             "Loss of active material in positive electrode [%]",
             "x_100",
@@ -73,7 +75,7 @@ def plot_summary_variables(
     # add labels in legend
     if labels is not None:  # pragma: no cover
         fig.legend(labels, loc="lower right")
-    if not testing:  # pragma: no cover
+    if show_plot:  # pragma: no cover
         plt.show()
 
     return axes

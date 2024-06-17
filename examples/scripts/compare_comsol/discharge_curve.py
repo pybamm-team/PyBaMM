@@ -1,7 +1,7 @@
 import pybamm
 import numpy as np
 import os
-import pickle
+import json
 import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
@@ -53,16 +53,18 @@ plt.yscale("log")
 plt.grid(True)
 plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
 plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
+colors = iter(plt.cycler(color="bgrcmyk"))
 
+data_loader = pybamm.DataLoader()
 for key, C_rate in C_rates.items():
     current = 24 * C_rate
     # load the comsol results
     comsol_results_path = pybamm.get_parameters_filepath(
-        "input/comsol_results/comsol_{}C.pickle".format(key)
+        f"{data_loader.get_data(f'comsol_{key}C.json')}"
     )
-    comsol_variables = pickle.load(open(comsol_results_path, "rb"))
-    comsol_time = comsol_variables["time"]
-    comsol_voltage = comsol_variables["voltage"]
+    comsol_variables = json.load(open(comsol_results_path))
+    comsol_time = np.array(comsol_variables["time"])
+    comsol_voltage = np.array(comsol_variables["voltage"])
 
     # solve model at comsol times
     t = comsol_time
@@ -85,7 +87,7 @@ for key, C_rate in C_rates.items():
     voltage_difference = np.abs(voltage_sol[0:end_index] - comsol_voltage[0:end_index])
 
     # plot discharge curves and absolute voltage_difference
-    color = next(ax._get_lines.prop_cycler)["color"]
+    color = next(colors)["color"]
     discharge_curve.plot(
         comsol_discharge_capacity, comsol_voltage, color=color, linestyle=":"
     )
@@ -94,7 +96,7 @@ for key, C_rate in C_rates.items():
         voltage_sol,
         color=color,
         linestyle="-",
-        label="{} C".format(C_rate),
+        label=f"{C_rate} C",
     )
     voltage_difference_plot.plot(
         discharge_capacity_sol[0:end_index], voltage_difference, color=color

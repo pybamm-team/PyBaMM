@@ -1,14 +1,14 @@
 #
 # Unary operator classes and methods
 #
-import numbers
+from __future__ import annotations
 
 import numpy as np
-import sympy
 from scipy.sparse import csr_matrix, issparse
-from sympy.vector.operators import Divergence as sympy_Divergence
-from sympy.vector.operators import Gradient as sympy_Gradient
+import sympy
 import pybamm
+from pybamm.util import import_optional_dependency
+from pybamm.type_definitions import DomainsType
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -24,26 +24,59 @@ class UnaryOperator(pybamm.Symbol):
         name of the node
     child : :class:`Symbol`
         child node
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}.
     """
 
-    def __init__(self, name, child, domains=None):
-        if isinstance(child, numbers.Number):
+    def __init__(
+        self,
+        name: str,
+        child: pybamm.Symbol,
+        domains: DomainsType = None,
+    ):
+        if isinstance(child, (float, int, np.number)):
             child = pybamm.Scalar(child)
         domains = domains or child.domains
 
         super().__init__(name, children=[child], domains=domains)
         self.child = self.children[0]
 
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """Use to instantiate when deserialising"""
+
+        instance = cls.__new__(cls)
+
+        super(UnaryOperator, instance).__init__(
+            snippet["name"],
+            snippet["children"],
+            domains=snippet["domains"],
+        )
+        instance.child = instance.children[0]
+
+        return instance
+
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{}({!s})".format(self.name, self.child)
+        return f"{self.name}({self.child!s})"
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_child = self.child.new_copy()
-        return self._unary_new_copy(new_child)
+        if new_children and len(new_children) > 1:
+            raise ValueError(
+                f"Unary operator of type {type(self)} must have exactly one child."
+            )
+        child = self._children_for_copying(new_children)[0]
 
-    def _unary_new_copy(self, child):
+        new_symbol = self._unary_new_copy(child, perform_simplifications)
+        new_symbol.copy_domains(self)
+        return new_symbol
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """Make a new copy of the unary operator, with child `child`"""
         return self.__class__(child)
 
@@ -57,7 +90,13 @@ class UnaryOperator(pybamm.Symbol):
             f"{self.__class__} does not implement _unary_evaluate."
         )
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         child = self.child.evaluate(t, y, y_dot, inputs)
         return self._unary_evaluate(child)
@@ -69,7 +108,7 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self.children[0].evaluate_for_shape()
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.child.evaluates_on_edges(dimension)
 
@@ -101,9 +140,9 @@ class Negate(UnaryOperator):
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
-        return "{}{!s}".format(self.name, self.child)
+        return f"{self.name}{self.child!s}"
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return -self.child.diff(variable)
 
@@ -115,9 +154,17 @@ class Negate(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return -child
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return -child
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the overridden :meth:`__neg__` to cover scenarios where the child
+        is some specific symbol types.
+        """
+        if perform_simplifications:
+            return -child
+        else:
+            return Negate(child)
 
 
 class AbsoluteValue(UnaryOperator):
@@ -141,9 +188,17 @@ class AbsoluteValue(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return abs(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the overridden :meth:`__abs__` to cover scenarios where the child
+        is some specific symbol types.
+        """
+        if perform_simplifications:
+            return abs(child)
+        else:
+            return AbsoluteValue(child)
 
 
 class Sign(UnaryOperator):
@@ -154,6 +209,10 @@ class Sign(UnaryOperator):
     def __init__(self, child):
         """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("sign", child)
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        raise NotImplementedError()
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -171,9 +230,17 @@ class Sign(UnaryOperator):
             with np.errstate(invalid="ignore"):
                 return np.sign(child)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return sign(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`sign` to cover scenarios where the child is
+        a concatenation or broadcast, and simplifies the symbol.
+        """
+        if perform_simplifications:
+            return sign(child)
+        else:
+            return Sign(child)
 
 
 class Floor(UnaryOperator):
@@ -254,9 +321,9 @@ class Index(UnaryOperator):
             self.slice = index
             if name is None:
                 if index.start is None:
-                    name = "Index[:{:d}]".format(index.stop)
+                    name = f"Index[:{index.stop:d}]"
                 else:
-                    name = "Index[{:d}:{:d}]".format(index.start, index.stop)
+                    name = f"Index[{index.start:d}:{index.stop:d}]"
         else:
             raise TypeError("index must be integer or slice")
 
@@ -271,6 +338,22 @@ class Index(UnaryOperator):
         # no domain for integer value key
         if isinstance(index, int):
             self.clear_domains()
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        index = slice(
+            snippet["index"]["start"],
+            snippet["index"]["stop"],
+            snippet["index"]["step"],
+        )
+
+        return cls(
+            snippet["children"][0],
+            index,
+            name=snippet["name"],
+            check_size=snippet["check_size"],
+        )
 
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
@@ -294,16 +377,17 @@ class Index(UnaryOperator):
                 self.slice.start,
                 self.slice.stop,
                 self.children[0].id,
+                *tuple(self.domain),
             )
-            + tuple(self.domain)
         )
 
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return child[self.slice]
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
+        # this
         new_index = self.__class__(child, self.index, check_size=False)
         # Keep same domains
         new_index.copy_domains(self)
@@ -312,9 +396,27 @@ class Index(UnaryOperator):
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
+
+    def to_json(self):
+        """
+        Method to serialise an Index object into JSON.
+        """
+
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+            "index": {
+                "start": self.slice.start,
+                "stop": self.slice.stop,
+                "step": self.slice.step,
+            },
+            "check_size": False,
+        }
+
+        return json_dict
 
 
 class SpatialOperator(UnaryOperator):
@@ -334,10 +436,30 @@ class SpatialOperator(UnaryOperator):
         name of the node
     child : :class:`Symbol`
         child node
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}.
     """
 
-    def __init__(self, name, child, domains=None):
+    def __init__(
+        self,
+        name: str,
+        child: pybamm.Symbol,
+        domains: dict[str, list[str] | str] | None = None,
+    ):
         super().__init__(name, child, domains)
+
+    def to_json(self):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator:"
+            "Serialisation is only implemented for discretised models."
+        )
+
+    @classmethod
+    def _from_json(cls, snippet):
+        raise NotImplementedError(
+            "pybamm.SpatialOperator:"
+            "Please use a discretised model when reading in from JSON."
+        )
 
 
 class Gradient(SpatialOperator):
@@ -348,26 +470,37 @@ class Gradient(SpatialOperator):
     def __init__(self, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot take gradient of '{}' since its domain is empty. ".format(child)
+                f"Cannot take gradient of '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is True:
             raise TypeError(
-                "Cannot take gradient of '{}' since it evaluates on edges".format(child)
+                f"Cannot take gradient of '{child}' since it evaluates on edges"
             )
         super().__init__("grad", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return grad(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`grad` to cover scenarios where the gradient
+        is zero, or the child is a broadcast object.
+        """
+        if perform_simplifications:
+            return grad(child)
+        else:
+            return Gradient(child)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Gradient = import_optional_dependency(
+            "sympy.vector.operators", "Gradient"
+        )
         return sympy_Gradient(child)
 
 
@@ -379,30 +512,39 @@ class Divergence(SpatialOperator):
     def __init__(self, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot take divergence of '{}' since its domain is empty. ".format(
-                    child
-                )
+                f"Cannot take divergence of '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is False:
             raise TypeError(
-                "Cannot take divergence of '{}' since it does not ".format(child)
+                f"Cannot take divergence of '{child}' since it does not "
                 + "evaluate on edges. Usually, a gradient should be taken before the "
                 "divergence."
             )
         super().__init__("div", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return div(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`div` to cover scenarios where divergence is
+        0 or interacts with other functions.
+        """
+        if perform_simplifications:
+            return div(child)
+        else:
+            return Divergence(child)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        sympy_Divergence = import_optional_dependency(
+            "sympy.vector.operators", "Divergence"
+        )
         return sympy_Divergence(child)
 
 
@@ -415,7 +557,7 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -431,7 +573,7 @@ class GradientSquared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -481,7 +623,13 @@ class Integral(SpatialOperator):
         The variable over which to integrate
     """
 
-    def __init__(self, child, integration_variable):
+    def __init__(
+        self,
+        child,
+        integration_variable: (
+            list[pybamm.IndependentVariable] | pybamm.IndependentVariable
+        ),
+    ):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
@@ -505,9 +653,9 @@ class Integral(SpatialOperator):
             else:
                 raise TypeError(
                     "integration_variable must be of type pybamm.SpatialVariable, "
-                    "not {}".format(type(var))
+                    f"not {type(var)}"
                 )
-            name += " d{}".format(var.name)
+            name += f" d{var.name}"
 
         if self._integration_dimension == "primary":
             # integral of a child takes the domain from auxiliary domain of the child
@@ -541,7 +689,7 @@ class Integral(SpatialOperator):
                 "tertiary": child.domains["tertiary"],
             }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
-            name += " {}".format(child.domain)
+            name += f" {child.domain}"
 
         self._integration_variable = integration_variable
         super().__init__(name, child, domains)
@@ -553,27 +701,29 @@ class Integral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name)
-            + tuple(
-                [
-                    integration_variable.id
-                    for integration_variable in self.integration_variable
-                ]
+            (
+                self.__class__,
+                self.name,
+                *tuple(
+                    [
+                        integration_variable.id
+                        for integration_variable in self.integration_variable
+                    ]
+                ),
+                self.children[0].id,
+                *tuple(self.domain),
             )
-            + (self.children[0].id,)
-            + tuple(self.domain)
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-
         return self.__class__(child, self.integration_variable)
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -636,11 +786,9 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
     def __init__(self, child, integration_variable):
         super().__init__(child, integration_variable)
         # Overwrite the name
-        self.name = "{} integrated w.r.t {}".format(
-            child.name, self.integration_variable[0].name
-        )
+        self.name = f"{child.name} integrated w.r.t {self.integration_variable[0].name}"
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(self.integration_variable[0].domain)
+            self.name += f" on {self.integration_variable[0].domain}"
 
 
 class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
@@ -664,11 +812,9 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
     def __init__(self, child, integration_variable):
         super().__init__(child, integration_variable)
         # Overwrite the name
-        self.name = "{} integrated backward w.r.t {}".format(
-            child.name, self.integration_variable[0].name
-        )
+        self.name = f"{child.name} integrated backward w.r.t {self.integration_variable[0].name}"
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(self.integration_variable[0].domain)
+            self.name += f" on {self.integration_variable[0].domain}"
 
 
 class DefiniteIntegralVector(SpatialOperator):
@@ -685,7 +831,8 @@ class DefiniteIntegralVector(SpatialOperator):
     Parameters
     ----------
     variable : :class:`pybamm.Symbol`
-        The variable whose basis will be integrated over the entire domain
+        The variable whose basis will be integrated over the entire domain (will
+        become self.children[0])
     vector_type : str, optional
         Whether to return a row or column vector (default is row)
     """
@@ -700,14 +847,17 @@ class DefiniteIntegralVector(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.vector_type)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (
+                self.__class__,
+                self.name,
+                self.vector_type,
+                self.children[0].id,
+                *tuple(self.domain),
+            )
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-
         return self.__class__(child, vector_type=self.vector_type)
 
     def _evaluate_for_shape(self):
@@ -755,19 +905,18 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
+            (self.__class__, self.name, self.children[0].id, *tuple(self.domain))
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-
         return self.__class__(child, region=self.region)
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
@@ -796,15 +945,20 @@ class DeltaFunction(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (
+                self.__class__,
+                self.name,
+                self.side,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
         )
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.side, self.domain)
 
@@ -818,7 +972,8 @@ class DeltaFunction(SpatialOperator):
 
 class BoundaryOperator(SpatialOperator):
     """
-    A node in the expression tree which gets the boundary value of a variable.
+    A node in the expression tree which gets the boundary value of a variable on its
+    primary domain.
 
     Parameters
     ----------
@@ -836,10 +991,8 @@ class BoundaryOperator(SpatialOperator):
         if side in ["negative tab", "positive tab"]:
             if child.domain[0] != "current collector":
                 raise pybamm.ModelError(
-                    """Can only take boundary value on the tabs in the domain
-                'current collector', but {} has domain {}""".format(
-                        child, child.domain[0]
-                    )
+                    f"""Can only take boundary value on the tabs in the domain
+                'current collector', but {child} has domain {child.domain[0]}"""
                 )
         self.side = side
         # boundary value of a child takes the primary domain from secondary domain
@@ -855,11 +1008,16 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
-            (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            (
+                self.__class__,
+                self.name,
+                self.side,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.side)
 
@@ -870,7 +1028,8 @@ class BoundaryOperator(SpatialOperator):
 
 class BoundaryValue(BoundaryOperator):
     """
-    A node in the expression tree which gets the boundary value of a variable.
+    A node in the expression tree which gets the boundary value of a variable on its
+    primary domain.
 
     Parameters
     ----------
@@ -883,9 +1042,17 @@ class BoundaryValue(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return boundary_value(child, self.side)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`boundary_value` to perform checks before
+        creating a BoundaryValue object.
+        """
+        if perform_simplifications:
+            return boundary_value(child, self.side)
+        else:
+            return BoundaryValue(child, self.side)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -913,16 +1080,35 @@ class ExplicitTimeIntegral(UnaryOperator):
         super().__init__("explicit time integral", children)
         self.initial_condition = initial_condition
 
-    def _unary_new_copy(self, child):
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        return cls(snippet["children"][0], snippet["initial_condition"])
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
 
     def is_constant(self):
         return False
 
+    def to_json(self):
+        """
+        Convert ExplicitTimeIntegral to json for serialisation.
+
+        Both `children` and `initial_condition` contain Symbols, and are therefore
+        dealt with by `pybamm.Serialise._SymbolEncoder.default()` directly.
+        """
+        json_dict = {
+            "name": self.name,
+            "id": self.id,
+        }
+
+        return json_dict
+
 
 class BoundaryGradient(BoundaryOperator):
     """
-    A node in the expression tree which gets the boundary flux of a variable.
+    A node in the expression tree which gets the boundary flux of a variable on its
+    primary domain.
 
     Parameters
     ----------
@@ -936,6 +1122,59 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
+class EvaluateAt(SpatialOperator):
+    """
+    A node in the expression tree which evaluates a symbol at a given position in space
+    in its primary domain. Currently this is only implemented for 1D primary domains.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable to evaluate
+    position : :class:`pybamm.Symbol`
+        The position in space on the symbol's primary domain at which to evaluate
+        the symbol.
+    """
+
+    def __init__(self, child, position):
+        self.position = position
+
+        # "evaluate at" of a child takes the primary domain from secondary domain
+        # of the child
+        # tertiary auxiliary domain shift down to secondary, quarternary to tertiary
+        domains = {
+            "primary": child.domains["secondary"],
+            "secondary": child.domains["tertiary"],
+            "tertiary": child.domains["quaternary"],
+        }
+
+        super().__init__("evaluate", child, domains)
+
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id()`"""
+        self._id = hash(
+            (
+                self.__class__,
+                self.name,
+                self.position,
+                self.children[0].id,
+                *tuple([(k, tuple(v)) for k, v in self.domains.items()]),
+            )
+        )
+
+    def _unary_jac(self, child_jac):
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
+        return pybamm.Scalar(0)
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.position)
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
+
+
 class UpwindDownwind(SpatialOperator):
     """
     A node in the expression tree representing an upwinding or downwinding operator.
@@ -945,18 +1184,17 @@ class UpwindDownwind(SpatialOperator):
     def __init__(self, name, child):
         if child.domain == []:
             raise pybamm.DomainError(
-                "Cannot upwind '{}' since its domain is empty. ".format(child)
+                f"Cannot upwind '{child}' since its domain is empty. "
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
         if child.evaluates_on_edges("primary") is True:
             raise TypeError(
-                "Cannot upwind '{}' since it does not ".format(child)
-                + "evaluate on nodes."
+                f"Cannot upwind '{child}' since it does not " + "evaluate on nodes."
             )
         super().__init__(name, child)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
@@ -985,11 +1223,7 @@ class NotConstant(UnaryOperator):
     def __init__(self, child):
         super().__init__("not_constant", child)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return NotConstant(child)
-
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.child.diff(variable)
 
@@ -1071,8 +1305,6 @@ def div(symbol):
         left, right = symbol.orphans
         if isinstance(left, pybamm.Negate):
             return -div(symbol._binary_new_copy(left.orphans[0], right))
-        # elif isinstance(right, pybamm.Negate):
-        #     return -div(symbol._binary_new_copy(left, right.orphans[0]))
 
     # Last resort
     return Divergence(symbol)

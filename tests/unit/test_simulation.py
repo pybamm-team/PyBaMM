@@ -6,6 +6,10 @@ import os
 import sys
 import unittest
 import uuid
+import pytest
+from tempfile import TemporaryDirectory
+from scipy.integrate import cumulative_trapezoid
+from tests import no_internet_connection
 
 
 class TestSimulation(TestCase):
@@ -68,8 +72,10 @@ class TestSimulation(TestCase):
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         # test solve without check
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sol = sim.solve(t_eval=[0, 600], check_model=False)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), discretisation_kwargs={"check_model": False}
+        )
+        sol = sim.solve(t_eval=[0, 600])
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             # skip test for scalar variables (e.g. discharge capacity)
@@ -81,6 +87,19 @@ class TestSimulation(TestCase):
             sim.solve(save_at_cycles=2)
         with self.assertRaisesRegex(ValueError, "starting_solution"):
             sim.solve(starting_solution=sol)
+
+    def test_solve_remove_independent_variables_from_rhs(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            discretisation_kwargs={"remove_independent_variables_from_rhs": True},
+        )
+        sol = sim.solve([0, 600])
+        t = sol["Time [s]"].data
+        I = sol["Current [A]"].data
+        q = sol["Discharge capacity [A.h]"].data
+        np.testing.assert_array_almost_equal(
+            q, cumulative_trapezoid(I, t, initial=0) / 3600
+        )
 
     def test_solve_non_battery_model(self):
         model = pybamm.BaseModel()
@@ -169,6 +188,10 @@ class TestSimulation(TestCase):
             sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
         )
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_solve_with_initial_soc(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
@@ -185,8 +208,9 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 0.8)
 
         # test with drive cycle
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
+            data_loader.get_data("US06.csv"),
             comment="#",
             header=None,
         ).to_numpy()
@@ -203,12 +227,106 @@ class TestSimulation(TestCase):
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
 
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        og_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": og_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1})
+
+        # Test whether initial_soc works with half cell (solve)
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.DFN(options)
+        sim = pybamm.Simulation(model)
+        sim.solve([0, 1], initial_soc=0.9)
+        self.assertEqual(sim._built_initial_soc, 0.9)
+
+        # Test whether initial_soc works with half cell (build)
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.DFN(options)
+        sim = pybamm.Simulation(model)
+        sim.build(initial_soc=0.9)
+        self.assertEqual(sim._built_initial_soc, 0.9)
+
+        # Test whether initial_soc works with half cell when it is a voltage
+        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
+        parameter_values = model.default_parameter_values
+        ucv = parameter_values["Open-circuit voltage at 100% SOC [V]"]
+        parameter_values["Open-circuit voltage at 100% SOC [V]"] = ucv + 1e-12
+        parameter_values["Upper voltage cut-off [V]"] = ucv + 1e-12
+        options = {"working electrode": "positive"}
+        parameter_values["Current function [A]"] = 0.0
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
+        voltage = sol["Terminal voltage [V]"].entries
+        self.assertAlmostEqual(voltage[0], ucv, places=5)
+
         # test with MSMR
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
         param = pybamm.ParameterValues("MSMR_Example")
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.build(initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
+
+    def test_solve_with_initial_soc_with_input_param_in_ocv(self):
+        # test having an input parameter in the ocv function
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        a = pybamm.Parameter("a")
+
+        def ocv_with_parameter(sto):
+            u_eq = (4.2 - 2.5) * (1 - sto) + 2.5
+            return a * u_eq
+
+        parameter_values.update(
+            {
+                "Positive electrode OCP [V]": ocv_with_parameter,
+            }
+        )
+        parameter_values.update({"a": "[input]"}, check_already_exists=False)
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
+    def test_esoh_with_input_param(self):
+        # Test that initial soc works with a relevant input parameter
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
+        param = model.default_parameter_values
+        original_eps_p = param["Positive electrode active material volume fraction"]
+        param["Positive electrode active material volume fraction"] = (
+            pybamm.InputParameter("eps_p")
+        )
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
+        self.assertEqual(sim._built_initial_soc, 0.8)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
@@ -248,32 +366,35 @@ class TestSimulation(TestCase):
         )
 
     def test_save_load(self):
-        model = pybamm.lead_acid.LOQS()
-        model.use_jacobian = True
-        sim = pybamm.Simulation(model)
+        with TemporaryDirectory() as dir_name:
+            test_name = os.path.join(dir_name, "tests.pickle")
 
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+            model = pybamm.lead_acid.LOQS()
+            model.use_jacobian = True
+            sim = pybamm.Simulation(model)
 
-        # save after solving
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
 
-        # with python formats
-        model.convert_to_format = None
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        model.convert_to_format = "python"
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        with self.assertRaisesRegex(
-            NotImplementedError, "Cannot save simulation if model format is python"
-        ):
-            sim.save("test.pickle")
+            # save after solving
+            sim.solve([0, 600])
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
+
+            # with python formats
+            model.convert_to_format = None
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 600])
+            sim.save(test_name)
+            model.convert_to_format = "python"
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 600])
+            with self.assertRaisesRegex(
+                NotImplementedError, "Cannot save simulation if model format is python"
+            ):
+                sim.save(test_name)
 
     def test_load_param(self):
         # Test load_sim for parameters imports
@@ -299,33 +420,56 @@ class TestSimulation(TestCase):
         os.remove(filename)
 
     def test_save_load_dae(self):
+        with TemporaryDirectory() as dir_name:
+            test_name = os.path.join(dir_name, "test.pickle")
+
+            model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+            model.use_jacobian = True
+            sim = pybamm.Simulation(model)
+
+            # save after solving
+            sim.solve([0, 600])
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
+
+            # with python format
+            model.convert_to_format = None
+            sim = pybamm.Simulation(model)
+            sim.solve([0, 600])
+            sim.save(test_name)
+
+            # with Casadi solver & experiment
+            model.convert_to_format = "casadi"
+            sim = pybamm.Simulation(
+                model,
+                experiment="Discharge at 1C for 20 minutes",
+                solver=pybamm.CasadiSolver(),
+            )
+            sim.solve([0, 600])
+            sim.save(test_name)
+            sim_load = pybamm.load_sim(test_name)
+            self.assertEqual(sim.model.name, sim_load.model.name)
+
+    def test_save_load_model(self):
         model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
         model.use_jacobian = True
         sim = pybamm.Simulation(model)
 
+        # test exception if not discretised
+        with self.assertRaises(NotImplementedError):
+            sim.save_model("sim_save")
+
         # save after solving
         sim.solve([0, 600])
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+        sim.save_model("sim_save")
 
-        # with python format
-        model.convert_to_format = None
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 600])
-        sim.save("test.pickle")
+        # load model
+        saved_model = pybamm.load_model("sim_save.json")
 
-        # with Casadi solver & experiment
-        model.convert_to_format = "casadi"
-        sim = pybamm.Simulation(
-            model,
-            experiment="Discharge at 1C for 20 minutes",
-            solver=pybamm.CasadiSolver(),
-        )
-        sim.solve([0, 600])
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
+        self.assertEqual(model.options, saved_model.options)
+
+        os.remove("sim_save.json")
 
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -337,29 +481,38 @@ class TestSimulation(TestCase):
         # now solve and plot
         t_eval = np.linspace(0, 100, 5)
         sim.solve(t_eval=t_eval)
-        sim.plot(testing=True)
+        sim.plot(show_plot=False)
 
     def test_create_gif(self):
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sim.solve(t_eval=[0, 10])
+        with TemporaryDirectory() as dir_name:
+            sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+            with self.assertRaisesRegex(
+                ValueError, "The simulation has not been solved yet."
+            ):
+                sim.create_gif()
+            sim.solve(t_eval=[0, 10])
 
-        # create a GIF without calling the plot method
-        sim.create_gif(number_of_images=3, duration=1)
+            # Create a temporary file name
+            test_file = os.path.join(dir_name, "test_sim.gif")
 
-        # call the plot method before creating the GIF
-        sim.plot(testing=True)
-        sim.create_gif(number_of_images=3, duration=1)
+            # create a GIF without calling the plot method
+            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
-        os.remove("plot.gif")
+            # call the plot method before creating the GIF
+            sim.plot(show_plot=False)
+            sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         # Import drive cycle from file
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            pybamm.get_parameters_filepath(
-                os.path.join("input", "drive_cycles", "US06.csv")
-            ),
+            pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
             comment="#",
             skip_blank_lines=True,
             header=None,

@@ -1,6 +1,3 @@
-#
-# Casadi algebraic solver class
-#
 import casadi
 import pybamm
 import numpy as np
@@ -19,7 +16,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         The tolerance for the solver (default is 1e-6).
     extra_options : dict, optional
         Any options to pass to the CasADi rootfinder.
-        Please consult `CasADi documentation <https://tinyurl.com/y7hrxm7d>`_ for
+        Please consult `CasADi documentation <https://web.casadi.org/python-api/#rootfinding>`_ for
         details.
 
     """
@@ -110,7 +107,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         integration_time = 0
-        for idx, t in enumerate(t_eval):
+        for _, t in enumerate(t_eval):
             # Solve
             try:
                 timer.reset()
@@ -129,7 +126,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             # If there are no symbolic inputs, check the function is below the tol
             # Skip this check if there are symbolic inputs
             if success and (
-                (not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol))
+                not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol)
             ):
                 # update initial guess for the next iteration
                 y0_alg = y_alg_sol
@@ -141,7 +138,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y_alg_sol)
             elif not success:
                 raise pybamm.SolverError(
-                    "Could not find acceptable solution: {}".format(message)
+                    f"Could not find acceptable solution: {message}"
                 )
             elif any(np.isnan(fun)):
                 raise pybamm.SolverError(
@@ -149,13 +146,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 )
             else:
                 raise pybamm.SolverError(
-                    """
+                    f"""
                     Could not find acceptable solution: solver terminated
-                    successfully, but maximum solution error ({})
-                    above tolerance ({})
-                    """.format(
-                        casadi.mmax(casadi.fabs(fun)), self.tol
-                    )
+                    successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))})
+                    above tolerance ({self.tol})
+                    """
                 )
 
         # Concatenate differential part

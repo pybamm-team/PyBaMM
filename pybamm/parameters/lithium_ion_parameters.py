@@ -50,9 +50,11 @@ class LithiumIonParameters(BaseParameters):
         self.T_ref = self.therm.T_ref
         self.T_init = self.therm.T_init
         self.T_amb = self.therm.T_amb
+        self.T_amb_av = self.therm.T_amb_av
         self.h_edge = self.therm.h_edge
         self.h_total = self.therm.h_total
         self.rho_c_p_eff = self.therm.rho_c_p_eff
+        self.lambda_eff = self.therm.lambda_eff
 
         # Macroscale geometry
         self.L_x = self.geo.L_x
@@ -74,8 +76,8 @@ class LithiumIonParameters(BaseParameters):
         self.n_cells = self.elec.n_cells
         self.voltage_low_cut = self.elec.voltage_low_cut
         self.voltage_high_cut = self.elec.voltage_high_cut
-        self.ocp_soc_0_dimensional = self.elec.ocp_soc_0_dimensional
-        self.ocp_soc_100_dimensional = self.elec.ocp_soc_100_dimensional
+        self.ocp_soc_0 = self.elec.ocp_soc_0
+        self.ocp_soc_100 = self.elec.ocp_soc_100
 
         # Domain parameters
         for domain in self.domain_params.values():
@@ -89,18 +91,10 @@ class LithiumIonParameters(BaseParameters):
             ]
         )
 
-        # Lithium plating parameters
-        self.V_bar_plated_Li = pybamm.Parameter(
+        # Required by lithium plating and lithium metal plating reactions
+        self.V_bar_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
         )
-        self.c_Li_typ = pybamm.Parameter(
-            "Typical plated lithium concentration [mol.m-3]"
-        )
-        self.c_plated_Li_0 = pybamm.Parameter(
-            "Initial plated lithium concentration [mol.m-3]"
-        )
-        self.alpha_plating = pybamm.Parameter("Lithium plating transfer coefficient")
-        self.alpha_stripping = 1 - self.alpha_plating
 
         # Initial conditions
         # Note: the initial concentration in the electrodes can be set as a function
@@ -175,32 +169,16 @@ class LithiumIonParameters(BaseParameters):
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
-    def j0_stripping(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for stripping [A.m-2]"""
+    def j0_Li_metal(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for lithium metal electrode [A.m-2]"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
+            "Lithium metal concentration [mol.m-3]": c_Li,
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            "Exchange-current density for stripping [A.m-2]", inputs
+            "Exchange-current density for lithium metal electrode [A.m-2]", inputs
         )
-
-    def j0_plating(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for plating [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for plating [A.m-2]", inputs
-        )
-
-    def dead_lithium_decay_rate(self, L_sei):
-        """Dimensional dead lithium decay rate [s-1]"""
-        inputs = {"Total SEI thickness [m]": L_sei}
-        return pybamm.FunctionParameter("Dead lithium decay rate [s-1]", inputs)
 
 
 class DomainLithiumIonParameters(BaseParameters):
@@ -230,6 +208,7 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Parameters that appear in the separator
         self.b_e = self.geo.b_e
+        self.tau_e = self.geo.tau_e
         self.L = self.geo.L
 
         # Thermal
@@ -287,17 +266,15 @@ class DomainLithiumIonParameters(BaseParameters):
 
         # Tortuosity parameters
         self.b_s = self.geo.b_s
+        self.tau_s = self.geo.tau_s
 
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{Domain} electrode Poisson's ratio")
-        self.E = pybamm.Parameter(f"{Domain} electrode Young's modulus [Pa]")
         self.c_0 = pybamm.Parameter(
             f"{Domain} electrode reference concentration for free of deformation "
             "[mol.m-3]"
         )
-        self.Omega = pybamm.Parameter(
-            f"{Domain} electrode partial molar volume [m3.mol-1]"
-        )
+
         self.l_cr_0 = pybamm.Parameter(f"{Domain} electrode initial crack length [m]")
         self.w_cr = pybamm.Parameter(f"{Domain} electrode initial crack width [m]")
         self.rho_cr = pybamm.Parameter(
@@ -334,6 +311,22 @@ class DomainLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode double-layer capacity [F.m-2]", inputs
+        )
+
+    def Omega(self, sto, T):
+        """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode partial molar volume [m3.mol-1]", inputs
+        )
+
+    def E(self, sto, T):
+        """Dimensional Young's modulus"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{Domain} electrode Young's modulus [Pa]", inputs
         )
 
     def sigma(self, T):
@@ -395,64 +388,68 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} electrode Butler-Volmer transfer coefficient"
         )
 
-        if self.domain == "negative":
-            # SEI parameters
-            self.V_bar_inner = pybamm.Parameter(
-                f"{pref}Inner SEI partial molar volume [m3.mol-1]"
-            )
-            self.V_bar_outer = pybamm.Parameter(
-                f"{pref}Outer SEI partial molar volume [m3.mol-1]"
-            )
+        # SEI parameters
+        self.V_bar_inner = pybamm.Parameter(
+            f"{pref}Inner SEI partial molar volume [m3.mol-1]"
+        )
+        self.V_bar_outer = pybamm.Parameter(
+            f"{pref}Outer SEI partial molar volume [m3.mol-1]"
+        )
 
-            self.j0_sei = pybamm.Parameter(
-                f"{pref}SEI reaction exchange current density [A.m-2]"
-            )
+        self.j0_sei = pybamm.Parameter(
+            f"{pref}SEI reaction exchange current density [A.m-2]"
+        )
 
-            self.R_sei = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
-            self.D_sol = pybamm.Parameter(
-                f"{pref}Outer SEI solvent diffusivity [m2.s-1]"
-            )
-            self.c_sol = pybamm.Parameter(f"{pref}Bulk solvent concentration [mol.m-3]")
-            self.U_inner = pybamm.Parameter(
-                f"{pref}Inner SEI open-circuit potential [V]"
-            )
-            self.U_outer = pybamm.Parameter(
-                f"{pref}Outer SEI open-circuit potential [V]"
-            )
-            self.kappa_inner = pybamm.Parameter(
-                f"{pref}Inner SEI electron conductivity [S.m-1]"
-            )
-            self.D_li = pybamm.Parameter(
-                f"{pref}Inner SEI lithium interstitial diffusivity [m2.s-1]"
-            )
-            self.c_li_0 = pybamm.Parameter(
-                f"{pref}Lithium interstitial reference concentration [mol.m-3]"
-            )
-            self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
-            self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
+        self.R_sei = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
+        self.D_sol = pybamm.Parameter(f"{pref}Outer SEI solvent diffusivity [m2.s-1]")
+        self.c_sol = pybamm.Parameter(f"{pref}Bulk solvent concentration [mol.m-3]")
+        self.U_inner = pybamm.Parameter(f"{pref}Inner SEI open-circuit potential [V]")
+        self.U_outer = pybamm.Parameter(f"{pref}Outer SEI open-circuit potential [V]")
+        self.kappa_inner = pybamm.Parameter(
+            f"{pref}Inner SEI electron conductivity [S.m-1]"
+        )
+        self.D_li = pybamm.Parameter(
+            f"{pref}Inner SEI lithium interstitial diffusivity [m2.s-1]"
+        )
+        self.c_li_0 = pybamm.Parameter(
+            f"{pref}Lithium interstitial reference concentration [mol.m-3]"
+        )
+        self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
+        self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
+        self.L_inner_crack_0 = pybamm.Parameter(
+            f"{pref}Initial inner SEI on cracks thickness [m]"
+        )
+        self.L_outer_crack_0 = pybamm.Parameter(
+            f"{pref}Initial outer SEI on cracks thickness [m]"
+        )
 
-            # Dividing by 10000 makes initial condition effectively zero
-            # without triggering division by zero errors
-            self.L_inner_crack_0 = self.L_inner_0 / 10000
-            self.L_outer_crack_0 = self.L_outer_0 / 10000
+        self.L_sei_0 = self.L_inner_0 + self.L_outer_0
+        self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")
+        self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
+        self.inner_sei_proportion = pybamm.Parameter(
+            f"{pref}Inner SEI reaction proportion"
+        )
+        self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
 
-            self.L_sei_0 = self.L_inner_0 + self.L_outer_0
-            self.E_sei = pybamm.Parameter(
-                f"{pref}SEI growth activation energy [J.mol-1]"
-            )
-            self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
-            self.inner_sei_proportion = pybamm.Parameter(
-                f"{pref}Inner SEI reaction proportion"
-            )
-            self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
+        # EC reaction
+        self.c_ec_0 = pybamm.Parameter(
+            f"{pref}EC initial concentration in electrolyte [mol.m-3]"
+        )
+        self.D_ec = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
+        self.k_sei = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
+        self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
 
-            # EC reaction
-            self.c_ec_0 = pybamm.Parameter(
-                f"{pref}EC initial concentration in electrolyte [mol.m-3]"
-            )
-            self.D_ec = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
-            self.k_sei = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
-            self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
+        # Lithium plating parameters
+        self.c_Li_typ = pybamm.Parameter(
+            f"{pref}Typical plated lithium concentration [mol.m-3]"
+        )
+        self.c_plated_Li_0 = pybamm.Parameter(
+            f"{pref}Initial plated lithium concentration [mol.m-3]"
+        )
+        self.alpha_plating = pybamm.Parameter(
+            f"{pref}Lithium plating transfer coefficient"
+        )
+        self.alpha_stripping = 1 - self.alpha_plating
 
         if main.options.electrode_types[domain] == "planar":
             self.n_Li_init = pybamm.Scalar(0)
@@ -502,7 +499,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.U_init = pybamm.Parameter(
                 f"{pref}Initial voltage in {domain} electrode [V]",
             )
-            self.c_init = self.x(self.U_init) * self.c_max
+            self.c_init = self.x(self.U_init, main.T_init) * self.c_max
         else:
             self.c_init = pybamm.FunctionParameter(
                 f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
@@ -518,6 +515,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         eps_c_init_av = pybamm.xyz_average(
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
+        # if self.options['open-circuit potential'] == 'Plett':
+        self.hysteresis_decay = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis decay rate"
+        )
+        self.hysteresis_switch = pybamm.Parameter(
+            f"{pref}{Domain} particle hysteresis switching factor"
+        )
+        self.h_init = pybamm.Scalar(0)
 
         if self.options["open-circuit potential"] != "MSMR":
             self.U_init = self.U(self.sto_init_av, main.T_init)
@@ -553,7 +558,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode {lithiation}"
+            f"{self.phase_prefactor}{Domain} particle {lithiation}"
             "diffusivity [m2.s-1]",
             inputs,
         )
@@ -584,8 +589,46 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
+    def j0_stripping(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for stripping [A.m-2]"""
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{Domain} electrolyte concentration [mol.m-3]": c_e,
+            f"{Domain} plated lithium concentration [mol.m-3]": c_Li,
+            f"{Domain} temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}Exchange-current density for stripping [A.m-2]",
+            inputs,
+        )
+
+    def j0_plating(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for plating [A.m-2]"""
+        Domain = self.domain.capitalize()
+        inputs = {
+            f"{Domain} electrolyte concentration [mol.m-3]": c_e,
+            f"{Domain} plated lithium concentration [mol.m-3]": c_Li,
+            f"{Domain} temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}Exchange-current density for plating [A.m-2]",
+            inputs,
+        )
+
+    def dead_lithium_decay_rate(self, L_sei):
+        """Dimensional dead lithium decay rate [s-1]"""
+        Domain = self.domain.capitalize()
+        inputs = {f"{Domain} total {self.phase_name}SEI thickness [m]": L_sei}
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}Dead lithium decay rate [s-1]", inputs
+        )
+
     def U(self, sto, T, lithiation=None):
-        """Dimensional open-circuit potential [V]"""
+        """
+        Dimensional open-circuit potential [V], calculated as
+        U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). See the documentation for
+        dUdT for more details.
+        """
         # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
         # will ensure that ocp goes to +- infinity if sto goes into that region
         # anyway
@@ -648,7 +691,14 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def dUdT(self, sto):
         """
-        Dimensional entropic change of the open-circuit potential [V.K-1]
+        Dimensional entropic change of the open-circuit potential [V.K-1].
+
+        Note: in the "classical" formulation, the open-circuit potential is defined
+        as U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref). The user provides U_ref and
+        dUdT, and the model uses these to calculate U. dUdT is also used to calculate
+        the reversible heat generation term in the thermal model. However, in the
+        "MSMR" formulation, stoichiometry is explicitly defined as a function of U and
+        T, and dUdT is only used to calculate the reversible heat generation term.
         """
         domain, Domain = self.domain_Domain
         inputs = {
@@ -661,52 +711,54 @@ class ParticleLithiumIonParameters(BaseParameters):
             inputs,
         )
 
-    def X_j(self, index):
+    def X_j(self, T, index):
         "Available host sites indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        Xj = pybamm.Parameter(f"X_{d}_{index}")
+        Xj = pybamm.FunctionParameter(f"X_{d}_{index}", inputs)
         return Xj
 
-    def U0_j(self, index):
+    def U0_j(self, T, index):
         "Equilibrium potential indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        U0j = pybamm.Parameter(f"U0_{d}_{index}")
+        U0j = pybamm.FunctionParameter(f"U0_{d}_{index}", inputs)
         return U0j
 
-    def w_j(self, index):
+    def w_j(self, T, index):
         "Order parameter indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        wj = pybamm.Parameter(f"w_{d}_{index}")
+        wj = pybamm.FunctionParameter(f"w_{d}_{index}", inputs)
         return wj
 
-    def alpha_bv_j(self, index):
+    def alpha_bv_j(self, T, index):
         "Dimensional Butler-Volmer exchange-current density indexed by reaction j"
+        inputs = {"Temperature [K]": T}
         domain = self.domain
         d = domain[0]
-        alpha_bv_j = pybamm.Parameter(f"a_{d}_{index}")
+        alpha_bv_j = pybamm.FunctionParameter(f"a_{d}_{index}", inputs)
         return alpha_bv_j
 
-    def x_j(self, U, index):
+    def x_j(self, U, T, index):
         "Fractional occupancy of site j as a function of potential"
-        T = self.main_param.T_ref
         f = self.main_param.F / (self.main_param.R * T)
-        U0j = self.U0_j(index)
-        wj = self.w_j(index)
-        Xj = self.X_j(index)
+        U0j = self.U0_j(T, index)
+        wj = self.w_j(T, index)
+        Xj = self.X_j(T, index)
         # Equation 5, Baker et al 2018
         xj = Xj / (1 + pybamm.exp(f * (U - U0j) / wj))
         return xj
 
-    def dxdU_j(self, U, index):
+    def dxdU_j(self, U, T, index):
         "Derivative of fractional occupancy of site j as a function of potential [V-1]"
-        T = self.main_param.T_ref
         f = self.main_param.F / (self.main_param.R * T)
-        U0j = self.U0_j(index)
-        wj = self.w_j(index)
-        Xj = self.X_j(index)
+        U0j = self.U0_j(T, index)
+        wj = self.w_j(T, index)
+        Xj = self.X_j(T, index)
         e = pybamm.exp(f * (U - U0j) / wj)
         # Equation 25, Baker et al 2018
         dxjdU = -(f / wj) * (Xj * e) / (1 + e) ** 2
@@ -720,13 +772,13 @@ class ParticleLithiumIonParameters(BaseParameters):
         tol = pybamm.settings.tolerances["j0__c_e"]
         c_e = pybamm.maximum(c_e, tol)
         c_e_ref = self.main_param.c_e_init
-        xj = self.x_j(U, index)
+        xj = self.x_j(U, T, index)
         # xj = pybamm.maximum(pybamm.minimum(xj, (1 - tol)), tol)
 
         f = self.main_param.F / (self.main_param.R * T)
-        wj = self.w_j(index)
-        self.X_j(index)
-        aj = self.alpha_bv_j(index)
+        wj = self.w_j(T, index)
+        self.X_j(T, index)
+        aj = self.alpha_bv_j(T, index)
         j0_ref_j = pybamm.FunctionParameter(
             f"j0_ref_{d}_{index}", {"Temperature [K]": T}
         )
@@ -744,21 +796,21 @@ class ParticleLithiumIonParameters(BaseParameters):
         j0_j = (
             j0_ref_j
             * xj**wj
-            * pybamm.exp(f * (1 - aj) * (U - self.U0_j(index)))
+            * pybamm.exp(f * (1 - aj) * (U - self.U0_j(T, index)))
             * (c_e / c_e_ref) ** (1 - aj)
         )
         return j0_j
 
-    def x(self, U):
+    def x(self, U, T):
         "Stoichiometry as a function of potential (for use with MSMR models)"
         N = int(self.options["number of MSMR reactions"])
         # Equation 6, Baker et al 2018
         x = 0
         for i in range(N):
-            x += self.x_j(U, i)
+            x += self.x_j(U, T, i)
         return x
 
-    def dxdU(self, U):
+    def dxdU(self, U, T):
         """
         Differential stoichiometry as a function of potential (for use with MSMR models)
         """
@@ -766,7 +818,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Equation 25, Baker et al 2018
         dxdU = 0
         for i in range(N):
-            dxdU += self.dxdU_j(U, i)
+            dxdU += self.dxdU_j(U, T, i)
         return dxdU
 
     def t_change(self, sto):

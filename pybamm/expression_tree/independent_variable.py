@@ -1,9 +1,12 @@
 #
 # IndependentVariable class
 #
+from __future__ import annotations
 import sympy
+import numpy as np
 
 import pybamm
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
 KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
@@ -29,25 +32,43 @@ class IndependentVariable(pybamm.Symbol):
         deprecated.
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None, domains=None):
+    def __init__(
+        self,
+        name: str,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
+    ) -> None:
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
+
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        return cls(snippet["name"], domains=snippet["domains"])
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
-    def _jac(self, variable):
+    def _jac(self, variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
-    def to_equation(self):
+    def to_equation(self) -> sympy.Symbol:
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
             return sympy.Symbol(self.name)
+
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications=True,
+    ):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        return self.__class__(self.name, domains=self.domains)
 
 
 class Time(IndependentVariable):
@@ -58,11 +79,25 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    def create_copy(self):
+    @classmethod
+    def _from_json(cls, snippet: dict):
+        return cls()
+
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications=True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if t is None:
             raise ValueError("t must be provided")
@@ -101,8 +136,13 @@ class SpatialVariable(IndependentVariable):
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, domains=None, coord_sys=None
-    ):
+        self,
+        name: str,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
+        coord_sys=None,
+    ) -> None:
         self.coord_sys = coord_sys
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
@@ -128,11 +168,13 @@ class SpatialVariable(IndependentVariable):
         elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
             ["particle" in dom for dom in domain]
         ):
-            raise pybamm.DomainError(
-                "domain cannot be particle if name is '{}'".format(name)
-            )
+            raise pybamm.DomainError(f"domain cannot be particle if name is '{name}'")
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications=True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
 
@@ -159,8 +201,13 @@ class SpatialVariableEdge(SpatialVariable):
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, domains=None, coord_sys=None
-    ):
+        self,
+        name: str,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
+        coord_sys=None,
+    ) -> None:
         super().__init__(name, domain, auxiliary_domains, domains, coord_sys)
 
     def _evaluates_on_edges(self, dimension):

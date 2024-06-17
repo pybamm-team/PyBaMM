@@ -1,0 +1,8 @@
+graft pybamm
+include CITATION.cff
+prune tests
+
+exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md all_contributors.md
+include CMakeLists.txt
+
+global-exclude __pycache__ *.py[cod] .venv

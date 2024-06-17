@@ -41,6 +41,6 @@ class BaseModel(pybamm.BaseSubModel):
             )
 
         # Override print_name
-        tor.print_name = r"\epsilon^{b_e}"
+        tor.print_name = r"\mathcal{B}"
 
         return variables

@@ -1,13 +1,13 @@
 """
 Tests for the sympy_overrides.py
 """
+
 from tests import TestCase
 import unittest
 
-import sympy
-
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
+import sympy
 
 
 class TestCustomPrint(TestCase):

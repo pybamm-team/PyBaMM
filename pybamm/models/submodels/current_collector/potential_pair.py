@@ -58,13 +58,12 @@ class BasePotentialPair(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        applied_current = self.param.current_with_time
         phi_s_cn = variables["Negative current collector potential [V]"]
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            i_boundary_cc: applied_current,
+            i_boundary_cc: pybamm.Scalar(0),
         }
 
 
@@ -80,12 +79,13 @@ class PotentialPair1plus1D(BasePotentialPair):
 
         param = self.param
         applied_current_density = variables["Total current density [A.m-2]"]
-        cc_area = self._get_effective_current_collector_area()
+        total_current = applied_current_density * param.A_cc
 
-        # cc_area appears here due to choice of non-dimensionalisation
-        pos_tab_bc = (
-            -applied_current_density * cc_area / (param.p.sigma_cc * param.p.L_cc)
-        )
+        # In the 1+1D model, the behaviour is averaged over the y-direction, so the
+        # effective tab area is the cell width multiplied by the current collector
+        # thickness
+        positive_tab_area = param.L_y * param.p.L_cc
+        pos_tab_bc = -total_current / (param.p.sigma_cc * positive_tab_area)
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object
@@ -100,10 +100,6 @@ class PotentialPair1plus1D(BasePotentialPair):
             },
         }
 
-    def _get_effective_current_collector_area(self):
-        """In the 1+1D models the current collector effectively has surface area l_z"""
-        return self.param.L_z
-
 
 class PotentialPair2plus1D(BasePotentialPair):
     """Base class for a 2+1D potential pair model"""
@@ -117,21 +113,18 @@ class PotentialPair2plus1D(BasePotentialPair):
 
         param = self.param
         applied_current_density = variables["Total current density [A.m-2]"]
-        cc_area = self._get_effective_current_collector_area()
+        total_current = applied_current_density * param.A_cc
 
         # Note: we divide by the *numerical* tab area so that the correct total
         # current is applied. That is, numerically integrating the current density
         # around the boundary gives the applied current exactly.
-
         positive_tab_area = pybamm.BoundaryIntegral(
             pybamm.PrimaryBroadcast(param.p.L_cc, "current collector"),
             region="positive tab",
         )
 
         # cc_area appears here due to choice of non-dimensionalisation
-        pos_tab_bc = (
-            -applied_current_density * cc_area / (param.p.sigma_cc * positive_tab_area)
-        )
+        pos_tab_bc = -total_current / (param.p.sigma_cc * positive_tab_area)
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object
@@ -160,7 +153,3 @@ class PotentialPair2plus1D(BasePotentialPair):
                 "positive tab": (pos_tab_bc, "Neumann"),
             },
         }
-
-    def _get_effective_current_collector_area(self):
-        """Return the area of the current collector."""
-        return self.param.L_y * self.param.L_z

@@ -77,30 +77,36 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_open_circuit_potential_submodel(self):
         for domain in ["negative", "positive"]:
-            self.submodels[
-                f"{domain} open-circuit potential"
-            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-                self.param, domain, "lead-acid main", self.options, "primary"
+            self.submodels[f"{domain} open-circuit potential"] = (
+                pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                    self.param, domain, "lead-acid main", self.options, "primary"
+                )
             )
-            self.submodels[
-                f"{domain} oxygen open-circuit potential"
-            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-                self.param, domain, "lead-acid oxygen", self.options, "primary"
+            self.submodels[f"{domain} oxygen open-circuit potential"] = (
+                pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                    self.param, domain, "lead-acid oxygen", self.options, "primary"
+                )
             )
 
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:
-            self.submodels[
-                f"{domain} active material"
-            ] = pybamm.active_material.Constant(
-                self.param, domain, self.options, "primary"
+            self.submodels[f"{domain} active material"] = (
+                pybamm.active_material.Constant(
+                    self.param, domain, self.options, "primary"
+                )
             )
 
     def set_sei_submodel(self):
-        self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
+        for domain in ["negative", "positive"]:
+            self.submodels[f"{domain} sei"] = pybamm.sei.NoSEI(
+                self.param, domain, self.options
+            )
 
     def set_lithium_plating_submodel(self):
-        self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
+        for domain in ["negative", "positive"]:
+            self.submodels[f"{domain} lithium plating"] = (
+                pybamm.lithium_plating.NoPlating(self.param, domain)
+            )
 
     def set_total_interface_submodel(self):
         self.submodels["total interface"] = pybamm.interface.TotalInterfacialCurrent(

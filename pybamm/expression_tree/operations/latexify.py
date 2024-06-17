@@ -1,14 +1,15 @@
 #
 # Latexify class
 #
+from __future__ import annotations
+
 import copy
 import re
 import warnings
 
-import sympy
-
 import pybamm
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
+import sympy
 
 
 def get_rng_min_max_name(rng, min_or_max):
@@ -37,19 +38,19 @@ class Latexify:
     >>> model = pybamm.lithium_ion.SPM()
 
     This will returns all model equations in png
-    >>> model.latexify("equations.png")
+    >>> model.latexify("equations.png") # doctest: +SKIP
 
     This will return all the model equations in latex
-    >>> model.latexify()
+    >>> model.latexify() # doctest: +SKIP
 
     This will return the list of all the model equations
-    >>> model.latexify(newline=False)
+    >>> model.latexify(newline=False) # doctest: +SKIP
 
     This will return first five model equations
-    >>> model.latexify(newline=False)[1:5]
+    >>> model.latexify(newline=False)[1:5] # doctest: +SKIP
     """
 
-    def __init__(self, model, filename=None, newline=True):
+    def __init__(self, model, filename: str | None = None, newline: bool = True):
         self.model = model
         self.filename = filename
         self.newline = newline
@@ -75,10 +76,10 @@ class Latexify:
             rng_min = get_rng_min_max_name(rng, "min")
 
         # Take range maximum from the last domain
-        for var_name, rng in self.model.default_geometry[var.domain[-1]].items():
+        for _, rng in self.model.default_geometry[var.domain[-1]].items():
             rng_max = get_rng_min_max_name(rng, "max")
 
-        geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
+        geo_latex = rf"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)
 
         return geo
@@ -93,9 +94,9 @@ class Latexify:
 
         if bcs:
             # Take range minimum from the first domain
-            var_name = list(self.model.default_geometry[var.domain[0]].keys())[0]
-            rng_left = list(self.model.default_geometry[var.domain[0]].values())[0]
-            rng_right = list(self.model.default_geometry[var.domain[-1]].values())[0]
+            var_name = next(iter(self.model.default_geometry[var.domain[0]].keys()))
+            rng_left = next(iter(self.model.default_geometry[var.domain[0]].values()))
+            rng_right = next(iter(self.model.default_geometry[var.domain[-1]].values()))
 
             # Trim name (r_n --> r)
             var_name = re.findall(r"(.)_*.*", str(var_name))[0]
@@ -302,7 +303,8 @@ class Latexify:
                 # When equations are too huge, set output resolution to default
                 except RuntimeError:  # pragma: no cover
                     warnings.warn(
-                        "RuntimeError - Setting the output resolution to default"
+                        "RuntimeError - Setting the output resolution to default",
+                        stacklevel=2,
                     )
                     return sympy.preview(
                         eqn_new_line,

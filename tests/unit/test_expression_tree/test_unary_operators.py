@@ -3,10 +3,11 @@
 #
 import unittest
 from tests import TestCase
+import unittest.mock as mock
 
 import numpy as np
-import sympy
 from scipy.sparse import diags
+import sympy
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
 
@@ -52,6 +53,20 @@ class TestUnaryOperators(TestCase):
             pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(nega, "test"), "test2"),
         )
 
+        # Test from_json
+        input_json = {
+            "name": "-",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Negate._from_json(input_json), nega)
+
     def test_absolute(self):
         a = pybamm.Symbol("a")
         absa = pybamm.AbsoluteValue(a)
@@ -78,6 +93,20 @@ class TestUnaryOperators(TestCase):
             abs_broad,
             pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(absa, "test"), "test2"),
         )
+
+        # Test from_json
+        input_json = {
+            "name": "abs",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.AbsoluteValue._from_json(input_json), absa)
 
     def test_smooth_absolute_value(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -115,6 +144,11 @@ class TestUnaryOperators(TestCase):
             ),
         )
 
+        # Test from_json
+        with self.assertRaises(NotImplementedError):
+            # signs are always scalar/array types in a discretised model
+            pybamm.Sign._from_json({})
+
     def test_floor(self):
         a = pybamm.Symbol("a")
         floora = pybamm.Floor(a)
@@ -129,6 +163,20 @@ class TestUnaryOperators(TestCase):
         floorc = pybamm.Floor(c)
         self.assertEqual(floorc.evaluate(), -4)
 
+        # Test from_json
+        input_json = {
+            "name": "floor",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Floor._from_json(input_json), floora)
+
     def test_ceiling(self):
         a = pybamm.Symbol("a")
         ceila = pybamm.Ceiling(a)
@@ -142,6 +190,20 @@ class TestUnaryOperators(TestCase):
         c = pybamm.Scalar(-3.2)
         ceilc = pybamm.Ceiling(c)
         self.assertEqual(ceilc.evaluate(), -3)
+
+        # Test from_json
+        input_json = {
+            "name": "ceil",
+            "id": mock.ANY,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [a],
+        }
+        self.assertEqual(pybamm.Ceiling._from_json(input_json), ceila)
 
     def test_gradient(self):
         # gradient of scalar symbol should fail
@@ -393,6 +455,11 @@ class TestUnaryOperators(TestCase):
         with self.assertRaisesRegex(ValueError, "slice size exceeds child size"):
             pybamm.Index(vec, 5)
         pybamm.settings.debug_mode = debug_mode
+
+    def test_evaluate_at(self):
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        f = pybamm.EvaluateAt(a, 1)
+        self.assertEqual(f.position, 1)
 
     def test_upwind_downwind(self):
         # upwind of scalar symbol should fail
@@ -665,8 +732,64 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.child, pybamm.Parameter("param"))
         self.assertEqual(expr.initial_condition, pybamm.Scalar(1))
         self.assertEqual(expr.name, "explicit time integral")
-        self.assertEqual(expr.new_copy(), expr)
+        self.assertEqual(expr.create_copy(), expr)
         self.assertFalse(expr.is_constant())
+
+    def test_to_from_json(self):
+        # UnaryOperator
+        a = pybamm.Symbol("a", domain=["test"])
+        un = pybamm.UnaryOperator("unary test", a)
+
+        un_json = {
+            "name": "unary test",
+            "id": mock.ANY,
+            "domains": {
+                "primary": ["test"],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+        }
+
+        self.assertEqual(un.to_json(), un_json)
+
+        un_json["children"] = [a]
+        self.assertEqual(pybamm.UnaryOperator._from_json(un_json), un)
+
+        # Index
+        vec = pybamm.StateVector(slice(0, 5))
+        ind = pybamm.Index(vec, 3)
+
+        ind_json = {
+            "name": "Index[3]",
+            "id": mock.ANY,
+            "index": {"start": 3, "stop": 4, "step": None},
+            "check_size": False,
+        }
+
+        self.assertEqual(ind.to_json(), ind_json)
+
+        ind_json["children"] = [vec]
+        self.assertEqual(pybamm.Index._from_json(ind_json), ind)
+
+        # SpatialOperator
+        spatial_vec = pybamm.SpatialOperator("name", vec)
+        with self.assertRaises(NotImplementedError):
+            spatial_vec.to_json()
+
+        with self.assertRaises(NotImplementedError):
+            pybamm.SpatialOperator._from_json({})
+
+        # ExplicitTimeIntegral
+        expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
+
+        expr_json = {"name": "explicit time integral", "id": mock.ANY}
+
+        self.assertEqual(expr.to_json(), expr_json)
+
+        expr_json["children"] = [pybamm.Parameter("param")]
+        expr_json["initial_condition"] = [pybamm.Scalar(1)]
+        self.assertEqual(pybamm.ExplicitTimeIntegral._from_json(expr_json), expr)
 
 
 if __name__ == "__main__":

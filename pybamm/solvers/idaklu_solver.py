@@ -1,6 +1,7 @@
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
+# mypy: ignore-errors
 import casadi
 import pybamm
 import numpy as np
@@ -13,7 +14,8 @@ idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
     try:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
-        idaklu_spec.loader.exec_module(idaklu)
+        if idaklu_spec.loader:
+            idaklu_spec.loader.exec_module(idaklu)
     except ImportError:  # pragma: no cover
         idaklu_spec = None
 
@@ -43,6 +45,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    output_variables : list[str], optional
+        List of variables to calculate and return. If none are specified then
+        the complete state vector is returned (can be very large) (default is [])
     options: dict, optional
         Addititional options to pass to the solver, by default:
 
@@ -84,6 +89,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=None,
+        output_variables=None,
         options=None,
     ):
         # set default options,
@@ -106,6 +112,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     options[key] = value
         self._options = options
 
+        self.output_variables = [] if output_variables is None else output_variables
+
         if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
 
@@ -116,6 +124,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             root_method,
             root_tol,
             extrap_tol,
+            output_variables,
         )
         self.name = "IDA KLU solver"
 
@@ -174,6 +183,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # only casadi solver needs sensitivity ics
         if model.convert_to_format != "casadi":
             y0S = None
+            if self.output_variables:
+                raise pybamm.SolverError(
+                    "output_variables can only be specified "
+                    'with convert_to_format="casadi"'
+                )  # pragma: no cover
         if y0S is not None:
             if isinstance(y0S, casadi.DM):
                 y0S = (y0S,)
@@ -250,6 +264,34 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_action = casadi.Function(
                 "mass_action", [v_casadi], [casadi.densify(mass_matrix @ v_casadi)]
             )
+
+            # if output_variables specified then convert 'variable' casadi
+            # function expressions to idaklu-compatible functions
+            self.var_idaklu_fcns = []
+            self.dvar_dy_idaklu_fcns = []
+            self.dvar_dp_idaklu_fcns = []
+            for key in self.output_variables:
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
+                if isinstance(
+                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
+                ):
+                    continue
+                self.var_idaklu_fcns.append(
+                    idaklu.generate_function(self.computed_var_fcns[key].serialize())
+                )
+                # Convert derivative functions for sensitivities
+                if (len(inputs) > 0) and (model.calculate_sensitivities):
+                    self.dvar_dy_idaklu_fcns.append(
+                        idaklu.generate_function(
+                            self.computed_dvar_dy_fcns[key].serialize()
+                        )
+                    )
+                    self.dvar_dp_idaklu_fcns.append(
+                        idaklu.generate_function(
+                            self.computed_dvar_dp_fcns[key].serialize()
+                        )
+                    )
 
         else:
             t0 = 0 if t_eval is None else t_eval[0]
@@ -421,28 +463,36 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "ids": ids,
                 "sensitivity_names": sensitivity_names,
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
+                "output_variables": self.output_variables,
+                "var_casadi_fcns": self.computed_var_fcns,
+                "var_idaklu_fcns": self.var_idaklu_fcns,
+                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
+                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
             }
 
             solver = idaklu.create_casadi_solver(
-                len(y0),
-                self._setup["number_of_sensitivity_parameters"],
-                self._setup["rhs_algebraic"],
-                self._setup["jac_times_cjmass"],
-                self._setup["jac_times_cjmass_colptrs"],
-                self._setup["jac_times_cjmass_rowvals"],
-                self._setup["jac_times_cjmass_nnz"],
-                jac_bw_lower,
-                jac_bw_upper,
-                self._setup["jac_rhs_algebraic_action"],
-                self._setup["mass_action"],
-                self._setup["sensfn"],
-                self._setup["rootfn"],
-                self._setup["num_of_events"],
-                self._setup["ids"],
-                atol,
-                rtol,
-                len(inputs),
-                self._options,
+                number_of_states=len(y0),
+                number_of_parameters=self._setup["number_of_sensitivity_parameters"],
+                rhs_alg=self._setup["rhs_algebraic"],
+                jac_times_cjmass=self._setup["jac_times_cjmass"],
+                jac_times_cjmass_colptrs=self._setup["jac_times_cjmass_colptrs"],
+                jac_times_cjmass_rowvals=self._setup["jac_times_cjmass_rowvals"],
+                jac_times_cjmass_nnz=self._setup["jac_times_cjmass_nnz"],
+                jac_bandwidth_lower=jac_bw_lower,
+                jac_bandwidth_upper=jac_bw_upper,
+                jac_action=self._setup["jac_rhs_algebraic_action"],
+                mass_action=self._setup["mass_action"],
+                sens=self._setup["sensfn"],
+                events=self._setup["rootfn"],
+                number_of_events=self._setup["num_of_events"],
+                rhs_alg_id=self._setup["ids"],
+                atol=atol,
+                rtol=rtol,
+                inputs=len(inputs),
+                var_casadi_fcns=self._setup["var_idaklu_fcns"],
+                dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
+                dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
+                options=self._options,
             )
 
             self._setup["solver"] = solver
@@ -555,7 +605,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t = sol.t
         number_of_timesteps = t.size
         number_of_states = y0.size
-        y_out = sol.y.reshape((number_of_timesteps, number_of_states))
+        if self.output_variables:
+            # Substitute empty vectors for state vector 'y'
+            y_out = np.zeros((number_of_timesteps * number_of_states, 0))
+        else:
+            y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -579,7 +633,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             elif sol.flag == 2:
                 termination = "event"
 
-            sol = pybamm.Solution(
+            newsol = pybamm.Solution(
                 sol.t,
                 np.transpose(y_out),
                 model,
@@ -589,7 +643,71 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 termination,
                 sensitivities=yS_out,
             )
-            sol.integration_time = integration_time
-            return sol
+            newsol.integration_time = integration_time
+            if self.output_variables:
+                # Populate variables and sensititivies dictionaries directly
+                number_of_samples = sol.y.shape[0] // number_of_timesteps
+                sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
+                startk = 0
+                for _, var in enumerate(self.output_variables):
+                    # ExplicitTimeIntegral's are not computed as part of the solver and
+                    # do not need to be converted
+                    if isinstance(
+                        model.variables_and_events[var], pybamm.ExplicitTimeIntegral
+                    ):
+                        continue
+                    len_of_var = (
+                        self._setup["var_casadi_fcns"][var](0, 0, 0).sparsity().nnz()
+                    )
+                    newsol._variables[var] = pybamm.ProcessedVariableComputed(
+                        [model.variables_and_events[var]],
+                        [self._setup["var_casadi_fcns"][var]],
+                        [sol.y[:, startk : (startk + len_of_var)]],
+                        newsol,
+                    )
+                    # Add sensitivities
+                    newsol[var]._sensitivities = {}
+                    if model.calculate_sensitivities:
+                        for paramk, param in enumerate(inputs_dict.keys()):
+                            newsol[var].add_sensitivity(
+                                param,
+                                [sol.yS[:, startk : (startk + len_of_var), paramk]],
+                            )
+                    startk += len_of_var
+            return newsol
         else:
             raise pybamm.SolverError("idaklu solver failed")
+
+    def jaxify(
+        self,
+        model,
+        t_eval,
+        *,
+        output_variables=None,
+        calculate_sensitivities=True,
+    ):
+        """JAXify the solver object
+
+        Creates a JAX expression representing the IDAKLU-wrapped solver
+        object.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model to be solved
+        t_eval : numeric type, optional
+            The times at which to compute the solution. If None, the times in the model
+            are used.
+        output_variables : list of str, optional
+            The variables to be returned. If None, all variables in the model are used.
+        calculate_sensitivities : bool, optional
+            Whether to calculate sensitivities. Default is True.
+        """
+        obj = pybamm.IDAKLUJax(
+            self,  # IDAKLU solver instance
+            model,
+            t_eval,
+            output_variables=output_variables,
+            calculate_sensitivities=calculate_sensitivities,
+        )
+        return obj

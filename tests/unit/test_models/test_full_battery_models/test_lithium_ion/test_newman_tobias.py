@@ -19,7 +19,16 @@ class TestNewmanTobias(BaseUnitTestLithiumIon, TestCase):
     def test_well_posed_particle_phases(self):
         pass  # skip this test
 
+    def test_well_posed_particle_phases_thermal(self):
+        pass  # Skip this test
+
     def test_well_posed_particle_phases_sei(self):
+        pass  # skip this test
+
+    def test_well_posed_composite_kinetic_hysteresis(self):
+        pass  # skip this test
+
+    def test_well_posed_composite_diffusion_hysteresis(self):
         pass  # skip this test
 
 

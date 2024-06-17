@@ -2,7 +2,7 @@
 # Base class for open-circuit potential
 #
 import pybamm
-from ..base_interface import BaseInterface
+from pybamm.models.submodels.interface.base_interface import BaseInterface
 
 
 class BaseOpenCircuitPotential(BaseInterface):
@@ -90,8 +90,8 @@ class BaseOpenCircuitPotential(BaseInterface):
         if self.reaction in ["lithium-ion main", "lead-acid main"]:
             variables.update(
                 {
-                    f"{Domain} electrode entropic change [V.K-1]": dUdT,
-                    f"X-averaged {domain} electrode entropic change [V.K-1]": dUdT_av,
+                    f"{Domain} electrode {reaction_name}entropic change [V.K-1]": dUdT,
+                    f"X-averaged {domain} electrode {reaction_name}entropic change [V.K-1]": dUdT_av,
                 }
             )
 

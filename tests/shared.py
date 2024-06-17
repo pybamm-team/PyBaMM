@@ -3,6 +3,14 @@
 #
 import pybamm
 from scipy.sparse import eye
+import sys
+import re
+import socket
+
+if sys.version_info < (3, 10):
+    import importlib_metadata
+else:
+    import importlib.metadata as importlib_metadata
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
@@ -153,8 +161,10 @@ def get_2p1d_mesh_for_testing(
     ypts=15,
     zpts=15,
     include_particles=True,
-    cc_submesh=pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
+    cc_submesh=None,
 ):
+    if cc_submesh is None:
+        cc_submesh = pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
     geometry = pybamm.battery_geometry(
         include_particles=include_particles, options={"dimensionality": 2}
     )
@@ -245,6 +255,18 @@ def get_size_distribution_disc_for_testing(xpts=None, rpts=10, Rpts=10, zpts=15)
     )
 
 
+def function_test(arg):
+    return arg + arg
+
+
+def multi_var_function_test(arg1, arg2):
+    return arg1 + arg2
+
+
+def multi_var_function_cube_test(arg1, arg2):
+    return arg1 + arg2**3
+
+
 def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
     return get_discretisation_for_testing(
         mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts),
@@ -274,3 +296,45 @@ def get_base_model_with_battery_geometry(**kwargs):
     model = pybamm.BaseModel()
     model._geometry = pybamm.battery_geometry(**kwargs)
     return model
+
+
+def get_required_distribution_deps(package_name):
+    pattern = re.compile(r"(?!.*extra\b)^([^<>=;\[]+)\b.*$")
+    if json_deps := importlib_metadata.metadata(package_name).json.get("requires_dist"):
+        return {m.group(1) for dep_name in json_deps if (m := pattern.match(dep_name))}
+    return set()
+
+
+def get_optional_distribution_deps(package_name):
+    pattern = re.compile(rf"(?!.*{package_name}\b|.*docs\b|.*dev\b)^([^<>=;\[]+)\b.*$")
+    if json_deps := importlib_metadata.metadata(package_name).json.get("requires_dist"):
+        return {
+            m.group(1)
+            for dep_name in json_deps
+            if (m := pattern.match(dep_name)) and "extra" in m.group(0)
+        }
+    return set()
+
+
+def get_present_optional_import_deps(package_name, optional_distribution_deps=None):
+    if optional_distribution_deps is None:
+        optional_distribution_deps = get_optional_distribution_deps(package_name)
+
+    present_optional_import_deps = set()
+    for (
+        import_pkg,
+        distribution_pkgs,
+    ) in importlib_metadata.packages_distributions().items():
+        if any(dep in optional_distribution_deps for dep in distribution_pkgs):
+            present_optional_import_deps.add(import_pkg)
+    return present_optional_import_deps
+
+
+def no_internet_connection():
+    try:
+        host = socket.gethostbyname("www.github.com")
+        conn = socket.create_connection((host, 80), 2)
+        conn.close()
+        return False
+    except socket.gaierror:
+        return True

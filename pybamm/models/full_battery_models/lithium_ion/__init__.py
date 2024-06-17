@@ -9,7 +9,10 @@ from .electrode_soh import (
     get_initial_ocps,
     get_min_max_ocps,
 )
-from .electrode_soh_half_cell import ElectrodeSOHHalfCell
+from .electrode_soh_half_cell import (
+    ElectrodeSOHHalfCell,
+    get_initial_stoichiometry_half_cell,
+)
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN
@@ -21,3 +24,8 @@ from .basic_dfn_composite import BasicDFNComposite
 from .Yang2017 import Yang2017
 from .mpm import MPM
 from .msmr import MSMR
+
+__all__ = ['Yang2017', 'base_lithium_ion_model', 'basic_dfn',
+           'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_spm', 'dfn',
+           'electrode_soh', 'electrode_soh_half_cell', 'mpm', 'msmr',
+           'newman_tobias', 'spm', 'spme']

@@ -410,11 +410,11 @@ class TestFiniteVolume(TestCase):
         y_test = 2 * np.ones_like(nodes)
         np.testing.assert_array_equal(
             disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([5, 0.5]), 2 * np.ones(n - 1)])[:, np.newaxis],
+            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
         )
         np.testing.assert_array_equal(
             disc_downwind.evaluate(y=y_test),
-            np.concatenate([2 * np.ones(n - 1), np.array([1.5, 3])])[:, np.newaxis],
+            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
         )
 
         # Remove boundary conditions and check error is raised
@@ -550,6 +550,30 @@ class TestFiniteVolume(TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
+
+    def test_evaluate_at(self):
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        n = mesh["negative electrode"].npts
+        var = pybamm.StateVector(slice(0, n), domain="negative electrode")
+
+        idx = 3
+        position = pybamm.Scalar(mesh["negative electrode"].nodes[idx])
+        evaluate_at = pybamm.EvaluateAt(var, position)
+        evaluate_at_disc = disc.process_symbol(evaluate_at)
+
+        self.assertIsInstance(evaluate_at_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(evaluate_at_disc.left, pybamm.Matrix)
+        self.assertIsInstance(evaluate_at_disc.right, pybamm.StateVector)
+
+        y = np.arange(n)[:, np.newaxis]
+        self.assertEqual(evaluate_at_disc.evaluate(y=y), y[idx])
 
 
 if __name__ == "__main__":

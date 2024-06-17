@@ -21,6 +21,15 @@ caption: Fundamentals and usage
 maxdepth: 2
 ---
 fundamentals/index
+fundamentals/battery_models
+```
+
+```{toctree}
+---
+caption: Contributing guide
+maxdepth: 1
+---
+contributing
 ```
 
 # Example notebooks
@@ -48,8 +57,6 @@ glob:
 ../examples/notebooks/getting_started/tutorial-7-model-options.ipynb
 ../examples/notebooks/getting_started/tutorial-8-solver-options.ipynb
 ../examples/notebooks/getting_started/tutorial-9-changing-the-mesh.ipynb
-../examples/notebooks/getting_started/tutorial-10-creating-a-model.ipynb
-../examples/notebooks/getting_started/tutorial-11-creating-a-submodel.ipynb
 ```
 
 ```{nbgallery}

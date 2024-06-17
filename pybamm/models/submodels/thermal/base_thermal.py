@@ -122,38 +122,60 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
 
-        # Irreversible electrochemical heating
-        a_j_p = variables[
-            "Positive electrode volumetric interfacial current density [A.m-3]"
-        ]
-        eta_r_p = variables["Positive electrode reaction overpotential [V]"]
+        num_phases = int(self.options.positive["particle phases"])
+        phase_names = [""]
+        if num_phases > 1:
+            phase_names = ["primary ", "secondary "]
+
+        Q_rxn_p, Q_rev_p = 0, 0
+        T_p = variables["Positive electrode temperature [K]"]
+        for phase in phase_names:
+            a_j_p = variables[
+                f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
+            ]
+            eta_r_p = variables[f"Positive electrode {phase}reaction overpotential [V]"]
+            # Irreversible electrochemical heating
+            Q_rxn_p += a_j_p * eta_r_p
+            # Reversible electrochemical heating
+            dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
+            Q_rev_p += a_j_p * T_p * dUdT_p
+
+        num_phases = int(self.options.negative["particle phases"])
+        phase_names = [""]
+        if num_phases > 1:
+            phase_names = ["primary ", "secondary "]
+
         if self.options.electrode_types["negative"] == "planar":
             Q_rxn_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
-        else:
-            a_j_n = variables[
-                "Negative electrode volumetric interfacial current density [A.m-3]"
-            ]
-            eta_r_n = variables["Negative electrode reaction overpotential [V]"]
-            Q_rxn_n = a_j_n * eta_r_n
-        Q_rxn_p = a_j_p * eta_r_p
-        Q_rxn = pybamm.concatenation(
-            Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
-        )
-
-        # Reversible electrochemical heating
-        T_p = variables["Positive electrode temperature [K]"]
-        dUdT_p = variables["Positive electrode entropic change [V.K-1]"]
-        if self.options.electrode_types["negative"] == "planar":
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
             )
         else:
             T_n = variables["Negative electrode temperature [K]"]
-            dUdT_n = variables["Negative electrode entropic change [V.K-1]"]
-            Q_rev_n = a_j_n * T_n * dUdT_n
-        Q_rev_p = a_j_p * T_p * dUdT_p
+            Q_rxn_n = 0
+            Q_rev_n = 0
+            for phase in phase_names:
+                a_j_n = variables[
+                    f"Negative electrode {phase}volumetric interfacial current density [A.m-3]"
+                ]
+                eta_r_n = variables[
+                    f"Negative electrode {phase}reaction overpotential [V]"
+                ]
+                # Irreversible electrochemical heating
+                Q_rxn_n += a_j_n * eta_r_n
+
+                # Reversible electrochemical heating
+                dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
+                Q_rev_n += a_j_n * T_n * dUdT_n
+
+        # Irreversible electrochemical heating
+        Q_rxn = pybamm.concatenation(
+            Q_rxn_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rxn_p
+        )
+
+        # Reversible electrochemical heating
         Q_rev = pybamm.concatenation(
             Q_rev_n, pybamm.FullBroadcast(0, "separator", "current collector"), Q_rev_p
         )
@@ -166,39 +188,96 @@ class BaseThermal(pybamm.BaseSubModel):
         Q = Q_ohm + Q_rxn + Q_rev + Q_mix
 
         # Compute the X-average over the entire cell, including current collectors
+        # Note: this can still be a function of y and z for higher-dimensional pouch
+        # cell models
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
-        Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_mix_av = self._x_average(Q_mix, 0, 0)
+        Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
-        # Compute volume-averaged heat source terms
-        Q_ohm_vol_av = self._yz_average(Q_ohm_av)
-        Q_rxn_vol_av = self._yz_average(Q_rxn_av)
-        Q_rev_vol_av = self._yz_average(Q_rev_av)
-        Q_vol_av = self._yz_average(Q_av)
-        Q_mix_vol_av = self._yz_average(Q_mix_av)
+        # Compute the integrated heat source per unit simulated electrode-pair area
+        # in W.m-2. Note: this can still be a function of y and z for
+        # higher-dimensional pouch cell models
+        Q_ohm_Wm2 = Q_ohm_av * param.L
+        Q_rxn_Wm2 = Q_rxn_av * param.L
+        Q_rev_Wm2 = Q_rev_av * param.L
+        Q_mix_Wm2 = Q_mix_av * param.L
+        Q_Wm2 = Q_av * param.L
+
+        # Now average over the electrode height and width
+        Q_ohm_Wm2_av = self._yz_average(Q_ohm_Wm2)
+        Q_rxn_Wm2_av = self._yz_average(Q_rxn_Wm2)
+        Q_rev_Wm2_av = self._yz_average(Q_rev_Wm2)
+        Q_mix_Wm2_av = self._yz_average(Q_mix_Wm2)
+        Q_Wm2_av = self._yz_average(Q_Wm2)
+
+        # Compute total heat source terms (in W) over the *entire cell volume*, not
+        # the product of electrode height * electrode width * electrode stack thickness
+        # Note: we multiply by the number of electrode pairs, since the Q_xx_Wm2_av
+        # variables are per electrode pair
+        n_elec = param.n_electrodes_parallel
+        A = param.L_y * param.L_z  # *modelled* electrode area
+        Q_ohm_W = Q_ohm_Wm2_av * n_elec * A
+        Q_rxn_W = Q_rxn_Wm2_av * n_elec * A
+        Q_rev_W = Q_rev_Wm2_av * n_elec * A
+        Q_mix_W = Q_mix_Wm2_av * n_elec * A
+        Q_W = Q_Wm2_av * n_elec * A
+
+        # Compute volume-averaged heat source terms over the *entire cell volume*, not
+        # the product of electrode height * electrode width * electrode stack thickness
+        V = param.V_cell  # *actual* cell volume
+        Q_ohm_vol_av = Q_ohm_W / V
+        Q_rxn_vol_av = Q_rxn_W / V
+        Q_rev_vol_av = Q_rev_W / V
+        Q_mix_vol_av = Q_mix_W / V
+        Q_vol_av = Q_W / V
+
+        # Effective heat capacity
+        T_vol_av = variables["Volume-averaged cell temperature [K]"]
+        rho_c_p_eff_av = param.rho_c_p_eff(T_vol_av)
 
         variables.update(
             {
+                # Ohmic
                 "Ohmic heating [W.m-3]": Q_ohm,
                 "X-averaged Ohmic heating [W.m-3]": Q_ohm_av,
                 "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av,
-                "Heat of mixing [W.m-3]": Q_mix,
-                "X-averaged heat of mixing [W.m-3]": Q_mix_av,
                 "Volume-averaged heat of mixing [W.m-3]": Q_mix_vol_av,
+                "Ohmic heating per unit electrode-pair area [W.m-2]": Q_ohm_Wm2,
+                "Ohmic heating [W]": Q_ohm_W,
+                # Irreversible
                 "Irreversible electrochemical heating [W.m-3]": Q_rxn,
                 "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av,
                 "Volume-averaged irreversible electrochemical heating "
                 + "[W.m-3]": Q_rxn_vol_av,
+                "Irreversible electrochemical heating per unit "
+                + "electrode-pair area [W.m-2]": Q_rxn_Wm2,
+                "Irreversible electrochemical heating [W]": Q_rxn_W,
+                # Reversible
                 "Reversible heating [W.m-3]": Q_rev,
                 "X-averaged reversible heating [W.m-3]": Q_rev_av,
                 "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av,
+                "Reversible heating per unit electrode-pair area " "[W.m-2]": Q_rev_Wm2,
+                "Reversible heating [W]": Q_rev_W,
+                # Mixing
+                "Heat of mixing [W.m-3]": Q_mix,
+                "X-averaged heat of mixing [W.m-3]": Q_mix_av,
+                "Volume-averaged heating of mixing [W.m-3]": Q_mix_vol_av,
+                "Heat of mixing per unit electrode-pair area " "[W.m-2]": Q_mix_Wm2,
+                "Heat of mixing [W]": Q_mix_W,
+                # Total
                 "Total heating [W.m-3]": Q,
                 "X-averaged total heating [W.m-3]": Q_av,
                 "Volume-averaged total heating [W.m-3]": Q_vol_av,
+                "Total heating per unit electrode-pair area [W.m-2]": Q_Wm2,
+                "Total heating [W]": Q_W,
+                # Current collector
                 "Negative current collector Ohmic heating [W.m-3]": Q_ohm_s_cn,
                 "Positive current collector Ohmic heating [W.m-3]": Q_ohm_s_cp,
+                # Effective heat capacity
+                "Volume-averaged effective heat capacity [J.K-1.m-3]": rho_c_p_eff_av,
+                "Cell thermal volume [m3]": V,
             }
         )
         return variables

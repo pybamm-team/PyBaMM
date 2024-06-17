@@ -69,9 +69,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     E_r = 5000  # activation energy for Temperature Dependent Reaction Constant [J/mol]
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
@@ -272,9 +270,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     E_r = 5000
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
-    return (
-        m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
-    )
+    return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
 def lico2_entropic_change_Ai2020_function(sto, c_s_max):
@@ -451,7 +447,7 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
         Solid diffusivity
     """
 
-    D_c_e = 10 ** (-8.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
+    D_c_e = 10 ** (-4.43 - 54 / (T - 229 - 5e-3 * c_e) - 0.22e-3 * c_e)
 
     return D_c_e
 
@@ -553,6 +549,8 @@ def get_parameter_values():
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Initial inner SEI thickness [m]": 2.5e-09,
         "Initial outer SEI thickness [m]": 2.5e-09,
+        "Initial inner SEI on cracks thickness [m]": 2.5e-13,  # avoid division by zero
+        "Initial outer SEI on cracks thickness [m]": 2.5e-13,  # avoid division by zero
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -586,7 +584,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
-        "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
+        "Negative particle diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
         "Negative electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
         "Negative electrode porosity": 0.33,
         "Negative electrode active material volume fraction": 0.61,
@@ -621,7 +619,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49943.0,
-        "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
+        "Positive particle diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
         "Positive electrode OCP [V]": lico2_ocp_Ai2020,
         "Positive electrode porosity": 0.32,
         "Positive electrode active material volume fraction": 0.62,

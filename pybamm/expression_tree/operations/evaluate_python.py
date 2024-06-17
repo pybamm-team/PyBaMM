@@ -1,8 +1,10 @@
 #
 # Write a symbol to python
 #
+from __future__ import annotations
 import numbers
 from collections import OrderedDict
+from numpy.typing import ArrayLike
 
 import numpy as np
 import scipy.sparse
@@ -11,9 +13,10 @@ import pybamm
 
 if pybamm.have_jax():
     import jax
-    from jax.config import config
 
-    config.update("jax_enable_x64", True)
+    platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+    if platform != "metal":
+        jax.config.update("jax_enable_x64", True)
 
 
 class JaxCooMatrix:
@@ -37,10 +40,12 @@ class JaxCooMatrix:
         where x is the number of rows, and y the number of columns of the matrix
     """
 
-    def __init__(self, row, col, data, shape):
+    def __init__(
+        self, row: ArrayLike, col: ArrayLike, data: ArrayLike, shape: tuple[int, int]
+    ):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         self.row = jax.numpy.array(row)
@@ -67,7 +72,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
         return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
 
-    def scalar_multiply(self, b):
+    def scalar_multiply(self, b: float):
         """
         multiply of matrix with a scalar b
 
@@ -90,7 +95,7 @@ class JaxCooMatrix:
         return self.dot_product(b)
 
 
-def create_jax_coo_matrix(value):
+def create_jax_coo_matrix(value: scipy.sparse):
     """
     Creates a JaxCooMatrix from a scipy.sparse matrix
 
@@ -130,7 +135,12 @@ def is_scalar(arg):
         return np.all(np.array(arg.shape) == 1)
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
+def find_symbols(
+    symbol: pybamm.Symbol,
+    constant_symbols: OrderedDict,
+    variable_symbols: OrderedDict,
+    output_jax=False,
+):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -171,7 +181,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             if output_jax and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
                 constant_symbols[symbol.id] = create_jax_coo_matrix(value)
-
             else:
                 constant_symbols[symbol.id] = value
         return
@@ -202,62 +211,52 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = "{0}.scalar_multiply({1})".format(
-                        children_vars[0], children_vars[1]
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
                     )
                 else:
-                    symbol_str = "{0}.multiply({1})".format(
-                        children_vars[0], children_vars[1]
-                    )
+                    symbol_str = f"{children_vars[0]}.multiply({children_vars[1]})"
             elif scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})".format(
-                    children_vars[0], children_vars[1]
-                )
+                symbol_str = f"{children_vars[1]}.multiply({children_vars[0]})"
             else:
-                symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
+                symbol_str = f"{children_vars[0]} * {children_vars[1]}"
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = "{0}.scalar_multiply(1/{1})".format(
-                        children_vars[0], children_vars[1]
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
                     )
                 else:
-                    symbol_str = "{0}.multiply(1/{1})".format(
-                        children_vars[0], children_vars[1]
-                    )
+                    symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"
             else:
-                symbol_str = "{0} / {1}".format(children_vars[0], children_vars[1])
+                symbol_str = f"{children_vars[0]} / {children_vars[1]}"
 
         elif isinstance(symbol, pybamm.Inner):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
-                    symbol_str = "{0}.scalar_multiply({1})".format(
-                        children_vars[0], children_vars[1]
+                    symbol_str = (
+                        f"{children_vars[0]}.scalar_multiply({children_vars[1]})"
                     )
                 else:
-                    symbol_str = "{0}.multiply({1})".format(
-                        children_vars[0], children_vars[1]
-                    )
+                    symbol_str = f"{children_vars[0]}.multiply({children_vars[1]})"
             elif scipy.sparse.issparse(dummy_eval_right):
                 if output_jax and is_scalar(dummy_eval_left):
-                    symbol_str = "{1}.scalar_multiply({0})".format(
-                        children_vars[0], children_vars[1]
+                    symbol_str = (
+                        f"{children_vars[1]}.scalar_multiply({children_vars[0]})"
                     )
                 else:
-                    symbol_str = "{1}.multiply({0})".format(
-                        children_vars[0], children_vars[1]
-                    )
+                    symbol_str = f"{children_vars[1]}.multiply({children_vars[0]})"
             else:
-                symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
+                symbol_str = f"{children_vars[0]} * {children_vars[1]}"
 
         elif isinstance(symbol, pybamm.Minimum):
-            symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
+            symbol_str = f"np.minimum({children_vars[0]},{children_vars[1]})"
         elif isinstance(symbol, pybamm.Maximum):
-            symbol_str = "np.maximum({},{})".format(children_vars[0], children_vars[1])
+            symbol_str = f"np.maximum({children_vars[0]},{children_vars[1]})"
 
         elif isinstance(symbol, pybamm.MatrixMultiplication):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
@@ -280,9 +279,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
     elif isinstance(symbol, pybamm.UnaryOperator):
         # Index has a different syntax than other univariate operations
         if isinstance(symbol, pybamm.Index):
-            symbol_str = "{}[{}:{}]".format(
-                children_vars[0], symbol.slice.start, symbol.slice.stop
-            )
+            symbol_str = f"{children_vars[0]}[{symbol.slice.start}:{symbol.slice.stop}]"
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -295,13 +292,13 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
                 children_str += ", " + child_var
         if isinstance(symbol.function, np.ufunc):
             # write any numpy functions directly
-            symbol_str = "np.{}({})".format(symbol.function.__name__, children_str)
+            symbol_str = f"np.{symbol.function.__name__}({children_str})"
         else:
             # unknown function, store it as a constant and call this in the
             # generated code
             constant_symbols[symbol.id] = symbol.function
             funct_var = id_to_python_variable(symbol.id, True)
-            symbol_str = "{}({})".format(funct_var, children_str)
+            symbol_str = f"{funct_var}({children_str})"
 
     elif isinstance(symbol, pybamm.Concatenation):
         # no need to concatenate if there is only a single child
@@ -333,9 +330,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
                     for child_dom, child_slice in slices.items():
                         slice_starts.append(symbol._slices[child_dom][i].start)
                         child_vectors.append(
-                            "{}[{}:{}]".format(
-                                child_var, child_slice[i].start, child_slice[i].stop
-                            )
+                            f"{child_var}[{child_slice[i].start}:{child_slice[i].stop}]"
                         )
                 all_child_vectors.extend(
                     [v for _, v in sorted(zip(slice_starts, child_vectors))]
@@ -352,30 +347,30 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
         indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
         consecutive = np.all(indices[1:] - indices[:-1] == 1)
         if len(indices) == 1 or consecutive:
-            symbol_str = "y[{}:{}]".format(indices[0], indices[-1] + 1)
+            symbol_str = f"y[{indices[0]}:{indices[-1] + 1}]"
         else:
             indices_array = pybamm.Array(indices)
             constant_symbols[indices_array.id] = indices
             index_name = id_to_python_variable(indices_array.id, True)
-            symbol_str = "y[{}]".format(index_name)
+            symbol_str = f"y[{index_name}]"
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
 
     elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = 'inputs["{}"]'.format(symbol.name)
+        symbol_str = f'inputs["{symbol.name}"]'
 
     else:
         raise NotImplementedError(
-            "Conversion to python not implemented for a symbol of type '{}'".format(
-                type(symbol)
-            )
+            f"Conversion to python not implemented for a symbol of type '{type(symbol)}'"
         )
 
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False, output_jax=False):
+def to_python(
+    symbol: pybamm.Symbol, debug=False, output_jax=False
+) -> tuple[OrderedDict, str]:
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -401,17 +396,15 @@ def to_python(symbol, debug=False, output_jax=False):
         operations are used
 
     """
-    constant_values = OrderedDict()
-    variable_symbols = OrderedDict()
+    constant_values: OrderedDict = OrderedDict()
+    variable_symbols: OrderedDict = OrderedDict()
     find_symbols(symbol, constant_values, variable_symbols, output_jax)
 
     line_format = "{} = {}"
 
     if debug:  # pragma: no cover
         variable_lines = [
-            "print('{}'); ".format(
-                line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
-            )
+            f"print('{line_format.format(id_to_python_variable(symbol_id, False), symbol_line)}'); "
             + line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
             + "; print(type({0}),np.shape({0}))".format(
                 id_to_python_variable(symbol_id, False)
@@ -441,13 +434,13 @@ class EvaluatorPython:
 
     """
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: pybamm.Symbol):
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):
             const_name = id_to_python_variable(symbol_id, True)
-            python_str = "{} = constants[{}]\n".format(const_name, i) + python_str
+            python_str = f"{const_name} = constants[{i}]\n" + python_str
 
         # constants passed in as an ordered dict, convert to list
         self._constants = list(constants.values())
@@ -533,10 +526,10 @@ class EvaluatorJax:
 
     """
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: pybamm.Symbol):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
-                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+                "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
 
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)
@@ -573,7 +566,7 @@ class EvaluatorJax:
         args = "t=None, y=None, inputs=None"
         if self._arg_list:
             args = ",".join(self._arg_list) + ", " + args
-        python_str = "def evaluate_jax({}):\n".format(args) + python_str
+        python_str = f"def evaluate_jax({args}):\n" + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
@@ -599,7 +592,8 @@ class EvaluatorJax:
 
         self._static_argnums = tuple(static_argnums)
         self._jit_evaluate = jax.jit(
-            self._evaluate_jax, static_argnums=self._static_argnums
+            self._evaluate_jax,  # type:ignore[attr-defined]
+            static_argnums=self._static_argnums,
         )
 
     def get_jacobian(self):

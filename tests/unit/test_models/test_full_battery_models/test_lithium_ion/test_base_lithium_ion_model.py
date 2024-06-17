@@ -29,6 +29,25 @@ class TestBaseLithiumIonModel(TestCase):
         )
         os.chdir(cwd)
 
+    def test_insert_reference_electrode(self):
+        model = pybamm.lithium_ion.SPM()
+        model.insert_reference_electrode()
+        self.assertIn("Negative electrode 3E potential [V]", model.variables)
+        self.assertIn("Positive electrode 3E potential [V]", model.variables)
+        self.assertIn("Reference electrode potential [V]", model.variables)
+
+        model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
+        model.insert_reference_electrode()
+        self.assertNotIn("Negative electrode potential [V]", model.variables)
+        self.assertIn("Positive electrode 3E potential [V]", model.variables)
+        self.assertIn("Reference electrode potential [V]", model.variables)
+
+        model = pybamm.lithium_ion.SPM({"dimensionality": 2})
+        with self.assertRaisesRegex(
+            NotImplementedError, "Reference electrode can only be"
+        ):
+            model.insert_reference_electrode()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

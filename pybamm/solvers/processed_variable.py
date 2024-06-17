@@ -2,14 +2,13 @@
 # Processed Variable class
 #
 import casadi
-import numbers
 import numpy as np
 import pybamm
 from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 
 
-class ProcessedVariable(object):
+class ProcessedVariable:
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -73,9 +72,8 @@ class ProcessedVariable(object):
         self.t_pts = solution.t
 
         # Evaluate base variable at initial time
-        self.base_eval = self.base_variables_casadi[0](
-            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
-        ).full()
+        self.base_eval_shape = self.base_variables[0].shape
+        self.base_eval_size = self.base_variables[0].size
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -87,15 +85,11 @@ class ProcessedVariable(object):
 
         # check variable shape
         else:
-            if (
-                isinstance(self.base_eval, numbers.Number)
-                or len(self.base_eval.shape) == 0
-                or self.base_eval.shape[0] == 1
-            ):
+            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
                 self.initialise_0D()
             else:
                 n = self.mesh.npts
-                base_shape = self.base_eval.shape[0]
+                base_shape = self.base_eval_shape[0]
                 # Try some shapes that could make the variable a 1D variable
                 if base_shape in [n, n + 1]:
                     self.initialise_1D()
@@ -104,7 +98,7 @@ class ProcessedVariable(object):
                     first_dim_nodes = self.mesh.nodes
                     first_dim_edges = self.mesh.edges
                     second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-                    if self.base_eval.size // len(second_dim_pts) in [
+                    if self.base_eval_size // len(second_dim_pts) in [
                         len(first_dim_nodes),
                         len(first_dim_edges),
                     ]:
@@ -112,15 +106,15 @@ class ProcessedVariable(object):
                     else:
                         # Raise error for 3D variable
                         raise NotImplementedError(
-                            "Shape not recognized for {} ".format(base_variables[0])
+                            f"Shape not recognized for {base_variables[0]}"
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 
+        # xr_data_array is initialized when needed
+        self._xr_data_array = None
+
     def initialise_0D(self):
         # initialise empty array of the correct size
-        entries = np.empty(len(self.t_pts))
-        idx = 0
-
         entries = np.empty(len(self.t_pts))
         idx = 0
         # Evaluate the base_variable index-by-index
@@ -139,14 +133,15 @@ class ProcessedVariable(object):
                 entries, self.t_pts, initial=float(self.cumtrapz_ic)
             )
 
-        # set up interpolation
-        self._xr_data_array = xr.DataArray(entries, coords=[("t", self.t_pts)])
+        # save attributes for interpolation
+        self.entries_for_interp = entries
+        self.coords_for_interp = {"t": self.t_pts}
 
         self.entries = entries
         self.dimensions = 0
 
     def initialise_1D(self, fixed_t=False):
-        len_space = self.base_eval.shape[0]
+        len_space = self.base_eval_shape[0]
         entries = np.empty((len_space, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
@@ -194,11 +189,9 @@ class ProcessedVariable(object):
         # Set first_dim_pts to edges for nicer plotting
         self.first_dim_pts = edges
 
-        # set up interpolation
-        self._xr_data_array = xr.DataArray(
-            entries_for_interp,
-            coords=[(self.first_dimension, pts_for_interp), ("t", self.t_pts)],
-        )
+        # save attributes for interpolation
+        self.entries_for_interp = entries_for_interp
+        self.coords_for_interp = {self.first_dimension: pts_for_interp, "t": self.t_pts}
 
     def initialise_2D(self):
         """
@@ -208,9 +201,9 @@ class ProcessedVariable(object):
         first_dim_edges = self.mesh.edges
         second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
         second_dim_edges = self.base_variables[0].secondary_mesh.edges
-        if self.base_eval.size // len(second_dim_nodes) == len(first_dim_nodes):
+        if self.base_eval_size // len(second_dim_nodes) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
-        elif self.base_eval.size // len(second_dim_nodes) == len(first_dim_edges):
+        elif self.base_eval_size // len(second_dim_nodes) == len(first_dim_edges):
             first_dim_pts = first_dim_edges
 
         second_dim_pts = second_dim_nodes
@@ -298,15 +291,13 @@ class ProcessedVariable(object):
         self.first_dim_pts = first_dim_edges
         self.second_dim_pts = second_dim_edges
 
-        # set up interpolation
-        self._xr_data_array = xr.DataArray(
-            entries_for_interp,
-            coords={
-                self.first_dimension: first_dim_pts_for_interp,
-                self.second_dimension: second_dim_pts_for_interp,
-                "t": self.t_pts,
-            },
-        )
+        # save attributes for interpolation
+        self.entries_for_interp = entries_for_interp
+        self.coords_for_interp = {
+            self.first_dimension: first_dim_pts_for_interp,
+            self.second_dimension: second_dim_pts_for_interp,
+            "t": self.t_pts,
+        }
 
     def initialise_2D_scikit_fem(self):
         y_sol = self.mesh.edges["y"]
@@ -340,11 +331,9 @@ class ProcessedVariable(object):
         self.first_dim_pts = y_sol
         self.second_dim_pts = z_sol
 
-        # set up interpolation
-        self._xr_data_array = xr.DataArray(
-            entries,
-            coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
-        )
+        # save attributes for interpolation
+        self.entries_for_interp = entries
+        self.coords_for_interp = {"y": y_sol, "z": z_sol, "t": self.t_pts}
 
     def _process_spatial_variable_names(self, spatial_variable):
         if len(spatial_variable) == 0:
@@ -372,14 +361,26 @@ class ProcessedVariable(object):
             return raw_names[0]
         else:
             raise NotImplementedError(
-                "Spatial variable name not recognized for {}".format(spatial_variable)
+                f"Spatial variable name not recognized for {spatial_variable}"
             )
+
+    def _initialize_xr_data_array(self):
+        """
+        Initialize the xarray DataArray for interpolation. We don't do this by
+        default as it has some overhead (~75 us) and sometimes we only need the entries
+        of the processed variable, not the xarray object for interpolation.
+        """
+        entries = self.entries_for_interp
+        coords = self.coords_for_interp
+        self._xr_data_array = xr.DataArray(entries, coords=coords)
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
+        if self._xr_data_array is None:
+            self._initialize_xr_data_array()
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         # Remove any None arguments
         kwargs = {key: value for key, value in kwargs.items() if value is not None}

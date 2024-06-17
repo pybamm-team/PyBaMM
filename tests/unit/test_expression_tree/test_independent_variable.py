@@ -4,9 +4,9 @@
 from tests import TestCase
 import unittest
 
-import sympy
 
 import pybamm
+import sympy
 
 
 class TestIndependentVariable(TestCase):

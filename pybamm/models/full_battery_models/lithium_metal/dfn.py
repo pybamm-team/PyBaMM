@@ -2,7 +2,7 @@
 # Doyle-Fuller-Newman (DFN) Model
 #
 import pybamm
-from ..lithium_ion.dfn import DFN as LithiumIonDFN
+from pybamm.models.full_battery_models.lithium_ion.dfn import DFN as LithiumIonDFN
 
 
 class DFN(LithiumIonDFN):
