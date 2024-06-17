@@ -178,11 +178,11 @@ class BaseThermal(pybamm.BaseSubModel):
         # Contact resistance heating Q_cr
         # TODO check that the volume is the correct volume for contact resistance
         if self.options["contact resistance"] == "true":
-                I = variables["Current [A]"]
-                V = param.V_cell
-                Q_cr = I**2 * param.R_contact / V
-            else:
-                Q_cr = pybamm.Scalar(0)
+            I = variables["Current [A]"]
+            V = param.V_cell
+            Q_cr = I**2 * param.R_contact / V
+        else:
+            Q_cr = pybamm.Scalar(0)
 
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev + Q_cr
