@@ -262,7 +262,8 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Contact resistance heating [W.m-3]": Q_cr,
                 "X-averaged contact resistance heating [W.m-3]": Q_cr_av,
                 "Volume-averaged contact resistance heating [W.m-3]": Q_cr_vol_av,
-                "Contact resistance heating per unit electrode-pair area " "[W.m-2]": Q_cr_Wm2,
+                "Contact resistance heating per unit electrode-pair area "
+                "[W.m-2]": Q_cr_Wm2,
                 "Contact resistance heating [W]": Q_cr_W,
                 # Total
                 "Total heating [W.m-3]": Q,
