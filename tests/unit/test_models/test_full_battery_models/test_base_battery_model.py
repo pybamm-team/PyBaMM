@@ -373,7 +373,7 @@ class TestBaseBatteryModel(TestCase):
                     "working electrode": "positive",
                 }
             )
-        
+
         # thermal heat of mixing
         with self.assertRaisesRegex(NotImplementedError, "Heat of mixing"):
             pybamm.BaseBatteryModel(
@@ -382,7 +382,7 @@ class TestBaseBatteryModel(TestCase):
                     "particle size": "distribution",
                 }
             )
-        
+
         # phases
         with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
             pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
