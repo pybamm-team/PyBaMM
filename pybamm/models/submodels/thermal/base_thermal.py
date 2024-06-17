@@ -340,8 +340,8 @@ class BaseThermal(pybamm.BaseSubModel):
                 T_n_part = pybamm.PrimaryBroadcast(T_n, ["negative particle"])
                 dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
                 D_n = param.n.prim.D(c_n, T_n_part)
-                dUeq_n = param.n.prim.dUdsto(c_n / param.n.prim.c_max, T_n_part)
-                integrand_r_n = D_n * dc_n_dr2 * dUeq_n / param.n.prim.c_max
+                dUeq_n = param.n.prim.U(c_n / param.n.prim.c_max, T_n_part).diff(c_n)
+                integrand_r_n = D_n * dc_n_dr2 * dUeq_n
                 integration_variable_r_n = [
                     pybamm.SpatialVariable("r", domain=integrand_r_n.domain)
                 ]
@@ -361,8 +361,8 @@ class BaseThermal(pybamm.BaseSubModel):
             T_p_part = pybamm.PrimaryBroadcast(T_p, ["positive particle"])
             dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
             D_p = param.p.prim.D(c_p, T_p_part)
-            dUeq_p = param.p.prim.dUdsto(c_p / param.p.prim.c_max, T_p_part)
-            integrand_r_p = D_p * dc_p_dr2 * dUeq_p / param.p.prim.c_max
+            dUeq_p = param.p.prim.U(c_p / param.p.prim.c_max, T_p_part).diff(c_p)
+            integrand_r_p = D_p * dc_p_dr2 * dUeq_p
             integration_variable_r_p = [
                 pybamm.SpatialVariable("r", domain=integrand_r_p.domain)
             ]
