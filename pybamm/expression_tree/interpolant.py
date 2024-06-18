@@ -189,9 +189,7 @@ class Interpolant(pybamm.Function):
         self.x = x
         self.y = y
         self.entries_string = entries_string
-        super().__init__(
-            interpolating_function, *children, name=name, derivative="derivative"
-        )
+        super().__init__(interpolating_function, *children, name=name)
 
         # Store information as attributes
         self.interpolator = interpolator
@@ -310,6 +308,15 @@ class Interpolant(pybamm.Function):
 
         else:  # pragma: no cover
             raise ValueError(f"Invalid dimension: {self.dimension}")
+
+    def _function_diff(self, children: Sequence[pybamm.Symbol], idx: float):
+        """
+        Derivative with respect to child number 'idx'.
+        See :meth:`pybamm.Symbol._diff()`.
+        """
+        raise NotImplementedError(
+            "Cannot differentiate Interpolant symbol with respect to its children."
+        )
 
     def to_json(self):
         """
