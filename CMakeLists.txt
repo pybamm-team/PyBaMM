@@ -46,7 +46,7 @@ message("PYBAMM_IDAKLU_EXPR_CASADI: ${PYBAMM_IDAKLU_EXPR_CASADI}")
 # Casadi PyBaMM source files
 set(IDAKLU_EXPR_CASADI_SOURCE_FILES "")
 if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON" )
-  add_compile_definitions(PYBAMM_IDAKLU_EXPR_CASADI)
+  add_compile_definitions(CASADI_ENABLE)
   set(IDAKLU_EXPR_CASADI_SOURCE_FILES
     pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
     pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
@@ -63,7 +63,7 @@ message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
 set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
 set(IREE_COMPILER_PATH "")
 if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
-  add_compile_definitions(PYBAMM_IDAKLU_EXPR_IREE)
+  add_compile_definitions(IREE_ENABLE)
   # Find the IREE python module path for compiler linkage
   execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
