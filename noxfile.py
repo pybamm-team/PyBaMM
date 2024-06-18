@@ -17,10 +17,11 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
-    # Expression evaluators, though EXPR_CASADI=OFF is not currently supported.
-    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
-    "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "ON"),
     "PYTHONIOENCODING": "utf-8",
+    # Expression evaluators (currently PYBAMM_IDAKLU_EXPR_CASADI has no effect).
+    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
+    "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF"),
+    "IREE_INDEX_URL": os.getenv("IREE_INDEX_URL", "https://iree.dev/pip-release-links.html")
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -75,7 +76,7 @@ def run_pybamm_requires(session):
                 "--depth=1",
                 "--recurse-submodules",
                 "--shallow-submodules",
-                "--branch=candidate-20240311.828",
+                "--branch=candidate-20240507.886",
                 "https://github.com/openxla/iree",
                 "iree/",
                 external=True,
@@ -174,6 +175,24 @@ def set_dev(session):
         ".[all,dev,jax]",
         external=True,
     )
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
+        # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
+        # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
+        # When upgrading Jax/IREE ensure that the following are compatible with each other:
+        #  - Jax and Jaxlib version [pyproject.toml]
+        #  - IREE repository clone (use the matching nightly candidate) [noxfile.py]
+        #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
+        session.run(
+            python,
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            ".[iree]",
+            "--find-links",
+            PYBAMM_ENV.get("IREE_INDEX_URL"),
+            external=True,
+        )
 
 
 @nox.session(name="tests")
