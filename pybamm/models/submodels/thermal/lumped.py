@@ -70,7 +70,7 @@ class Lumped(BaseThermal):
                 "Lumped total cooling [W]": Q_cool_W,
                 # Contact resistance
                 "Lumped contact resistance heating [W.m-3]": Q_cr_vol_av,
-                "Lumped contact resistance heating [W]": Q_cr_W
+                "Lumped contact resistance heating [W]": Q_cr_W,
             }
         )
         return variables
