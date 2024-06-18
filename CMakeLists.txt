@@ -37,29 +37,39 @@ if(NOT PYBIND11_DIR)
 endif()
 add_subdirectory(${PYBIND11_DIR})
 
+# Check Casadi build flag
+if(NOT DEFINED PYBAMM_IDAKLU_EXPR_CASADI)
+  set(PYBAMM_IDAKLU_EXPR_CASADI ON)
+endif()
+message("PYBAMM_IDAKLU_EXPR_CASADI: ${PYBAMM_IDAKLU_EXPR_CASADI}")
+
+# Casadi PyBaMM source files
+set(IDAKLU_EXPR_CASADI_SOURCE_FILES "")
+if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON" )
+  add_compile_definitions(PYBAMM_IDAKLU_EXPR_CASADI)
+  set(IDAKLU_EXPR_CASADI_SOURCE_FILES
+    pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
+    pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
+  )
+endif()
+
 # Check IREE build flag
 if(NOT DEFINED PYBAMM_IDAKLU_EXPR_IREE)
   set(PYBAMM_IDAKLU_EXPR_IREE OFF)
 endif()
 message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
 
-# Casadi PyBaMM source files
-set(IDAKLU_EXPR_CASADI_SOURCE_FILES
-  pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
-  pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
-)
-
 # IREE (MLIR expression evaluation) PyBaMM source files
 set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
 set(IREE_COMPILER_PATH "")
 if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+  add_compile_definitions(PYBAMM_IDAKLU_EXPR_IREE)
   # Find the IREE python module path for compiler linkage
   execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
     "import iree.compiler as _; print(_.__path__[0])"
     OUTPUT_VARIABLE IREE_COMPILER_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(IREE_COMPILER "${IREE_COMPILER_PATH}/_mlir_libs/libIREECompiler.dylib")
   # Source file list
   set(IDAKLU_EXPR_IREE_SOURCE_FILES
     pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp

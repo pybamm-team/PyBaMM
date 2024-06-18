@@ -92,11 +92,14 @@ class CMakeBuild(build_ext):
             use_python_casadi = True
 
         build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "RELEASE")
+        idaklu_expr_casadi = os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON")
+        idaklu_expr_iree = os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF")
         cmake_args = [
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
-            "-DPYBAMM_IDAKLU_EXPR_IREE=ON",
+            "-DPYBAMM_IDAKLU_EXPR_CASADI={}".format(idaklu_expr_casadi),
+            "-DPYBAMM_IDAKLU_EXPR_IREE={}".format(idaklu_expr_iree),
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         ]
         if self.suitesparse_root:

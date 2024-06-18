@@ -13,7 +13,10 @@
 #include "idaklu/common.hpp"
 #include "idaklu/python.hpp"
 #include "idaklu/Expressions/Casadi/CasadiFunctions.hpp"
+
+#ifdef IREE_ENABLE
 #include "idaklu/Expressions/IREE/IREEFunctions.hpp"
+#endif
 
 
 casadi::Function generate_casadi_function(const std::string &data)
@@ -88,6 +91,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::return_value_policy::take_ownership);
 
+#ifdef IREE_ENABLE
   m.def("create_iree_solver", &create_idaklu_solver<IREEFunctions>,
     "Create a casadi idaklu solver object",
     py::arg("number_of_states"),
@@ -113,6 +117,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
     py::return_value_policy::take_ownership);
+#endif
 
   m.def("generate_function", &generate_casadi_function,
     "Generate a casadi function",
@@ -164,6 +169,7 @@ PYBIND11_MODULE(idaklu, m)
 
   py::class_<casadi::Function>(m, "Function");
 
+#ifdef IREE_ENABLE
   py::class_<IREEBaseFunctionType>(m, "IREEBaseFunctionType")
     .def(py::init<>())
     .def_readwrite("mlir", &IREEBaseFunctionType::mlir)
@@ -174,6 +180,7 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("pytree_shape", &IREEBaseFunctionType::pytree_shape)
     .def_readwrite("pytree_sizes", &IREEBaseFunctionType::pytree_sizes)
     .def_readwrite("n_args", &IREEBaseFunctionType::n_args);
+#endif
 
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)

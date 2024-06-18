@@ -162,6 +162,17 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    components = ["all","dev","jax"]
+    args = []
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
+        # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
+        # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
+        # When upgrading Jax/IREE ensure that the following are compatible with each other:
+        #  - Jax and Jaxlib version [pyproject.toml]
+        #  - IREE repository clone (use the matching nightly candidate) [noxfile.py]
+        #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
+        components.append("iree")
+        args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
     # Temporary fix for Python 3.12 CI. TODO: remove after
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
@@ -172,27 +183,10 @@ def set_dev(session):
         "pip",
         "install",
         "-e",
-        ".[all,dev,jax]",
+        ".[{}]".format(",".join(components)),
+        *args,
         external=True,
     )
-    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
-        # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
-        # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
-        # When upgrading Jax/IREE ensure that the following are compatible with each other:
-        #  - Jax and Jaxlib version [pyproject.toml]
-        #  - IREE repository clone (use the matching nightly candidate) [noxfile.py]
-        #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
-        session.run(
-            python,
-            "-m",
-            "pip",
-            "install",
-            "-e",
-            ".[iree]",
-            "--find-links",
-            PYBAMM_ENV.get("IREE_INDEX_URL"),
-            external=True,
-        )
 
 
 @nox.session(name="tests")
