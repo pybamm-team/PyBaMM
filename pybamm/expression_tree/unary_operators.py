@@ -1269,6 +1269,11 @@ def grad(symbol):
         else:
             new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
+    elif isinstance(symbol, pybamm.SecondaryBroadcast):
+        # Take gradient of the child
+        # then broadcast back to the originalsymbol's secondary domain
+        # We can do this because gradient only acts on the primary domain
+        return pybamm.SecondaryBroadcast(grad(symbol.child), symbol.secondary_domain)
     elif isinstance(symbol, pybamm.FullBroadcast):
         return pybamm.FullBroadcastToEdges(0, broadcast_domains=symbol.domains)
     else:
