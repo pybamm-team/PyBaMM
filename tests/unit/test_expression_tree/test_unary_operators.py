@@ -223,6 +223,14 @@ class TestUnaryOperators(TestCase):
         grad = pybamm.grad(a)
         self.assertEqual(grad, pybamm.PrimaryBroadcastToEdges(0, "test domain"))
 
+        # gradient of a secondary broadcast moves the secondary out of the gradient
+        a = pybamm.Symbol("a", domain="test domain")
+        a_broad = pybamm.SecondaryBroadcast(a, "another domain")
+        grad = pybamm.grad(a_broad)
+        self.assertEqual(
+            grad, pybamm.SecondaryBroadcast(pybamm.grad(a), "another domain")
+        )
+
         # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)
@@ -732,7 +740,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.child, pybamm.Parameter("param"))
         self.assertEqual(expr.initial_condition, pybamm.Scalar(1))
         self.assertEqual(expr.name, "explicit time integral")
-        self.assertEqual(expr.new_copy(), expr)
+        self.assertEqual(expr.create_copy(), expr)
         self.assertFalse(expr.is_constant())
 
     def test_to_from_json(self):
