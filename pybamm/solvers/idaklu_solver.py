@@ -28,13 +28,20 @@ if idaklu_spec is not None:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         if idaklu_spec.loader:
             idaklu_spec.loader.exec_module(idaklu)
-    except ImportError as e:  # pragma: no cover
-        print(e)
+    except ImportError:  # pragma: no cover
         idaklu_spec = None
 
 
 def have_idaklu():
     return idaklu_spec is not None
+
+
+def have_iree():
+    try:
+        import iree.compiler  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 class IDAKLUSolver(pybamm.BaseSolver):
@@ -664,9 +671,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
                 "output_variables": self.output_variables,
                 "var_casadi_fcns": self.computed_var_fcns,
-                "var_idaklu_fcns": self.var_idaklu_fcns,  # impl
-                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,  # impl
-                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,  # impl
+                "var_idaklu_fcns": self.var_idaklu_fcns,
+                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
+                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
             }
 
             solver = self._setup["solver_function"](

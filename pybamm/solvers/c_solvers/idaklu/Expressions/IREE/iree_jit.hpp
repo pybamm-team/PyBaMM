@@ -30,12 +30,6 @@ private:
    */
   const char *device_uri = NULL;
 
-  /*
-   * @brief IREE sessions list
-   * @details This list contains all the IREE sessions created by the compiler.
-   */
-  std::vector<IREESession> iree_sessions;
-
 private:
   /*
    * @brief Initialize the IREE runtime

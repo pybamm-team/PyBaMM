@@ -21,6 +21,8 @@ class TestIDAKLUSolver(TestCase):
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
+            if (form == "iree") and not pybamm.have_iree():
+                continue
             if form == "casadi":
                 root_method = "casadi"
             else:
@@ -64,6 +66,8 @@ class TestIDAKLUSolver(TestCase):
     def test_model_events(self):
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -166,6 +170,8 @@ class TestIDAKLUSolver(TestCase):
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
                 continue
+            if (form == "iree") and not pybamm.have_iree():
+                continue
             if form == "casadi":
                 root_method = "casadi"
             else:
@@ -209,8 +215,6 @@ class TestIDAKLUSolver(TestCase):
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            print(sol.y[1:3])
-            print(true_solution)
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
     def test_sensitivites_initial_condition(self):
@@ -248,6 +252,8 @@ class TestIDAKLUSolver(TestCase):
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -331,6 +337,8 @@ class TestIDAKLUSolver(TestCase):
         # see sundials ida examples pdf
         for form in ["casadi", "python", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -465,6 +473,8 @@ class TestIDAKLUSolver(TestCase):
     def test_dae_solver_algebraic_model(self):
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"

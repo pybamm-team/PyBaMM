@@ -44,10 +44,6 @@ int IREECompiler::init(int argc, const char **argv) {
 };
 
 int IREECompiler::cleanup() {
-  for (IREESession iree_session : iree_sessions) {
-    if (iree_session.cleanup() != 0)
-      return 1;
-  }
   return 0;
 };
 
@@ -348,7 +344,6 @@ iree_status_t IREESession::iree_runtime_exec(
       // Get the buffer view contents as a numeric array
       iree_host_size_t buffer_length = iree_hal_buffer_view_element_count(result_view);
       if (buffer_length != result[k].size()) {
-        // Avoid reallocation if the buffer is already the right size
         throw std::runtime_error(
           "Error: buffer_length (" + std::to_string(buffer_length) +
           ") != result[k].size()" + std::to_string(result[k].size())

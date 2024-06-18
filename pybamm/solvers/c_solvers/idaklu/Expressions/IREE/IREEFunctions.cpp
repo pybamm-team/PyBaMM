@@ -109,7 +109,7 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
   // be remapped to the corresponding expression call. For example:
   //   fcn(t, y, inputs, cj) with inputs = [[in1], [in2], [in3]]
   // will produce a function with six inputs; we therefore need to be able to map
-  // arguments to their 1) correspinding input argument, and 2) the correct position
+  // arguments to their 1) corresponding input argument, and 2) the correct position
   // within that argument.
   m_arg_argno.clear();
   m_arg_argix.clear();

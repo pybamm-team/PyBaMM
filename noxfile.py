@@ -18,7 +18,7 @@ PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
-    # Expression evaluators (currently PYBAMM_IDAKLU_EXPR_CASADI has no effect).
+    # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
     "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
     "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF"),
     "IREE_INDEX_URL": os.getenv(
