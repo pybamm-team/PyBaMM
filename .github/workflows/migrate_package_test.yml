@@ -163,7 +163,7 @@ jobs:
             python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
