@@ -17,40 +17,40 @@ env:
   FORCE_COLOR: 3
 
 jobs:
-  build_manylinux_wheels:
-    name: Wheels (linux-amd64)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        name: Check out PyBaMM repository
+  # build_manylinux_wheels:
+  #   name: Wheels (linux-amd64)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       name: Check out PyBaMM repository
 
-      - uses: actions/setup-python@v5
-        name: Set up Python
-        with:
-          python-version: 3.11
+  #     - uses: actions/setup-python@v5
+  #       name: Set up Python
+  #       with:
+  #         python-version: 3.11
 
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
+  #     - name: Clone pybind11 repo (no history)
+  #       run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
-      - name: Build wheels on Linux
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ARCHS_LINUX: x86_64
-          CIBW_BEFORE_ALL_LINUX: >
-            yum -y install openblas-devel lapack-devel &&
-            python scripts/install_KLU_Sundials.py
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi scikit-build-core
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: |
-            set -e -x
-            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
+  #     - name: Build wheels on Linux
+  #       run: pipx run cibuildwheel --output-dir wheelhouse
+  #       env:
+  #         CIBW_ARCHS_LINUX: x86_64
+  #         CIBW_BEFORE_ALL_LINUX: >
+  #           yum -y install openblas-devel lapack-devel &&
+  #           python scripts/install_KLU_Sundials.py
+  #         CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi scikit-build-core
+  #         CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
+  #         CIBW_TEST_COMMAND: |
+  #           set -e -x
+  #           python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
-      - name: Upload wheels for Linux
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels_manylinux
-          path: ./wheelhouse/*.whl
-          if-no-files-found: error
+  #     - name: Upload wheels for Linux
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: wheels_manylinux
+  #         path: ./wheelhouse/*.whl
+  #         if-no-files-found: error
 
   build_macos_wheels:
     name: Wheels (${{ matrix.os }})
