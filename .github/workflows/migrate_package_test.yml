@@ -1,12 +1,12 @@
 name: Build package
 on:
   workflow_dispatch:
-    inputs:
-      debug_enabled:
-        type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
+    # inputs:
+    #   debug_enabled:
+    #     type: boolean
+    #     description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+    #     required: false
+    #     default: false
   push:
     branches:
       - develop
@@ -228,9 +228,9 @@ jobs:
           key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Build 64-bit wheels on Windows
         run: pipx run cibuildwheel --output-dir wheelhouse
