@@ -62,7 +62,7 @@ class Lumped(BaseThermal):
             Q_cr_vol_av = Q_cr_W / V
         else:
             Q_cr_W = pybamm.Scalar(0)
-            Q_cr_vol_av = Q_cr
+            Q_cr_vol_av = Q_cr_W
         variables.update(
             {
                 # Lumped cooling
