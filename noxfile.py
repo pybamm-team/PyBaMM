@@ -21,7 +21,9 @@ PYBAMM_ENV = {
     # Expression evaluators (currently PYBAMM_IDAKLU_EXPR_CASADI has no effect).
     "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
     "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF"),
-    "IREE_INDEX_URL": os.getenv("IREE_INDEX_URL", "https://iree.dev/pip-release-links.html")
+    "IREE_INDEX_URL": os.getenv(
+        "IREE_INDEX_URL", "https://iree.dev/pip-release-links.html"
+    ),
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -162,7 +164,7 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
-    components = ["all","dev","jax"]
+    components = ["all", "dev", "jax"]
     args = []
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
         # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver

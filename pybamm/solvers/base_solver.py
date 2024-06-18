@@ -264,9 +264,7 @@ class BaseSolver:
         for key in self.output_variables:
             # ExplicitTimeIntegral's are not computed as part of the solver and
             # do not need to be converted
-            if isinstance(
-                model.variables_and_events[key], pybamm.ExplicitTimeIntegral
-            ):
+            if isinstance(model.variables_and_events[key], pybamm.ExplicitTimeIntegral):
                 continue
             # Generate Casadi function to calculate variable and derivates
             # to enable sensitivites to be computed within the solver

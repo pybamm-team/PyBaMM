@@ -98,8 +98,8 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
-            "-DPYBAMM_IDAKLU_EXPR_CASADI={}".format(idaklu_expr_casadi),
-            "-DPYBAMM_IDAKLU_EXPR_IREE={}".format(idaklu_expr_iree),
+            f"-DPYBAMM_IDAKLU_EXPR_CASADI={idaklu_expr_casadi}",
+            f"-DPYBAMM_IDAKLU_EXPR_IREE={idaklu_expr_iree}",
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         ]
         if self.suitesparse_root:

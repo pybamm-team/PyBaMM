@@ -110,7 +110,7 @@ private:  // private methods
   int initRuntime();
 
 public:  // public methods
-  
+
   /*
    * @brief Default constructor
    */

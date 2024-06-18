@@ -43,12 +43,12 @@ public:  // method declarations
    * @brief Return the number of non-zero elements for the function output
    */
   virtual expr_int nnz_out() = 0;
-  
+
   /**
    * @brief Returns the row vector of matrix element coordinates in COO format
    */
   virtual std::vector<expr_int> get_row() = 0;
-  
+
   /**
    * @brief Returns the column vector of matrix element coordinates in COO format
    */

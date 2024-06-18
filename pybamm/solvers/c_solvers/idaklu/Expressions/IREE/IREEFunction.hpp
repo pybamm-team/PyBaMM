@@ -47,7 +47,7 @@ public:
   std::vector<std::vector<int>> input_shape;
   std::vector<std::vector<int>> output_shape;
   std::vector<std::vector<float>> input_data;
-  
+
   BaseFunctionType m_func;
   std::string module_name;
   std::string function_name;

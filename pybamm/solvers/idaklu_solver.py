@@ -16,6 +16,7 @@ import warnings
 if pybamm.have_jax():
     import jax
     from jax import numpy as jnp
+
     try:
         import iree.compiler
     except ImportError:
@@ -521,7 +522,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 jac_times_cjmass_nnz = sparse_eval.nnz
                 jac_times_cjmass_colptrs = sparse_eval.indptr
                 jac_times_cjmass_rowvals = sparse_eval.indices
-                jac_bw_lower, jac_bw_upper = bandwidth(sparse_eval.todense())  # potentially slow
+                jac_bw_lower, jac_bw_upper = bandwidth(
+                    sparse_eval.todense()
+                )  # potentially slow
                 if jac_bw_upper <= 1:
                     jac_bw_upper = jac_bw_lower - 1
                 if jac_bw_lower <= 1:
@@ -540,9 +543,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     return mass_matrix_demoted @ v
 
                 mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
-                mass_action = self._make_iree_function(
-                    mass_action_demoted, v0
-                )
+                mass_action = self._make_iree_function(mass_action_demoted, v0)
 
                 # rootfn
                 for ix, _ in enumerate(model.terminate_events_eval):
@@ -567,8 +568,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 )
                 y0S = y0
 
-                def fcn_jac_rhs_algebraic_action(t, y, p, v):  # sundials calls (t, y, inputs, v)
-                    return jac_rhs_algebraic_action_demoted(t, y, v, p)  # jvp calls (t, y, v, inputs)
+                def fcn_jac_rhs_algebraic_action(
+                    t, y, p, v
+                ):  # sundials calls (t, y, inputs, v)
+                    return jac_rhs_algebraic_action_demoted(
+                        t, y, v, p
+                    )  # jvp calls (t, y, v, inputs)
 
                 jac_rhs_algebraic_action = self._make_iree_function(
                     fcn_jac_rhs_algebraic_action, t_eval, y0, inputs0, v0
@@ -600,8 +605,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     fcn._demote_constants()
                     self.var_idaklu_fcns.append(
                         self._make_iree_function(
-                            lambda t, y, p: fcn(t, y, p),
-                            t_eval, y0, inputs0
+                            lambda t, y, p: fcn(t, y, p),  # noqa: B023
+                            t_eval,
+                            y0,
+                            inputs0,
                         )
                     )
                     # Convert derivative functions for sensitivities
@@ -609,23 +616,27 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         dvar_dy = fcn.get_jacobian()
                         self.dvar_dy_idaklu_fcns.append(
                             self._make_iree_function(
-                                lambda t, y, p: dvar_dy(t, y, p),
-                                t_eval, y0, inputs0
+                                lambda t, y, p: dvar_dy(t, y, p),  # noqa: B023
+                                t_eval,
+                                y0,
+                                inputs0,
                             )
                         )
                         dvar_dp = fcn.get_sensitivities()
                         self.dvar_dp_idaklu_fcns.append(
                             self._make_iree_function(
-                                lambda t, y, p: dvar_dp(t, y, p),
-                                t_eval, y0, inputs0
+                                lambda t, y, p: dvar_dp(t, y, p),  # noqa: B023
+                                t_eval,
+                                y0,
+                                inputs0,
                             )
                         )
 
                 # Identify IREE library
-                iree_lib_path = os.path.join(iree.compiler.__path__[0], '_mlir_libs')
-                os.environ['IREE_COMPILER_LIB'] = os.path.join(
+                iree_lib_path = os.path.join(iree.compiler.__path__[0], "_mlir_libs")
+                os.environ["IREE_COMPILER_LIB"] = os.path.join(
                     iree_lib_path,
-                    [f for f in os.listdir(iree_lib_path) if 'IREECompiler' in f][0],
+                    next(f for f in os.listdir(iree_lib_path) if "IREECompiler" in f),
                 )
 
                 pybamm.demote_expressions_to_32bit = False
@@ -713,10 +724,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             iree_fcn.nnz = sparse_eval.nnz
             iree_fcn.col = sparse_eval.col
             iree_fcn.row = sparse_eval.row
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError) as error:
             raise pybamm.SolverError(
                 "Could not get sparsity pattern for function {fcn.__name__}"
-            )
+            ) from error
         # number of variables in each argument (these will flatten in the mlir)
         iree_fcn.pytree_shape = [
             len(jax.tree_util.tree_flatten(arg)[0]) for arg in args
@@ -909,10 +920,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         continue
                     if model.convert_to_format == "casadi":
                         len_of_var = (
-                            self._setup["var_casadi_fcns"][var](0., 0., 0.).sparsity().nnz()
+                            self._setup["var_casadi_fcns"][var](0.0, 0.0, 0.0)
+                            .sparsity()
+                            .nnz()
                         )
-                        base_variables = [self._setup["var_casadi_fcns"][var]],
-                    elif model.convert_to_format == "jax" and self._options["jax_evaluator"] == "iree":
+                        base_variables = ([self._setup["var_casadi_fcns"][var]],)
+                    elif (
+                        model.convert_to_format == "jax"
+                        and self._options["jax_evaluator"] == "iree"
+                    ):
                         idx = self.output_variables.index(var)
                         len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
                         base_variables = [self.computed_var_fcns[var]]
