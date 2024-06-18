@@ -138,7 +138,7 @@ class TestBPX(TestCase):
             with tempfile.NamedTemporaryFile(
                 suffix=filename, delete=False, mode="w"
             ) as tmp:
-                # write to a tempory file so we can
+                # write to a temporary file so we can
                 # get the source later on using inspect.getsource
                 # (as long as the file still exists)
                 json.dump(obj, tmp)
