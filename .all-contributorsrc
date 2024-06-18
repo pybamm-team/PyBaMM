@@ -8,7 +8,7 @@
   "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg)](#-contributors)",
   "contributors": [
     {
-      "login": "tinosulzer",
+      "login": "valentinsulzer",
       "name": "Valentin Sulzer",
       "avatar_url": "https://avatars3.githubusercontent.com/u/20817509?v=4",
       "profile": "https://sites.google.com/view/valentinsulzer",
@@ -893,6 +893,34 @@
       "profile": "https://github.com/parkec3",
       "contributions": [
         "code"
+      ]
+    },
+    {
+      "login": "Afgr1087",
+      "name": "Andres Felipe Galvis Rodriguez",
+      "avatar_url": "https://avatars.githubusercontent.com/u/56610829?v=4",
+      "profile": "https://github.com/Afgr1087",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "ikorotkin",
+      "name": "Ivan Korotkin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/29599800?v=4",
+      "profile": "https://github.com/ikorotkin",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "santacodes",
+      "name": "Santhosh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/52504160?v=4",
+      "profile": "https://github.com/santacodes",
+      "contributions": [
+        "code",
+        "infra"
       ]
     }
   ],
