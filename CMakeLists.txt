@@ -19,6 +19,8 @@ endif()
 
 project(idaklu)
 
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -31,6 +33,8 @@ endif()
 
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+
+set(PYBIND11_FINDPYTHON ON)
 
 if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
@@ -113,3 +117,7 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+
+# Python_add_library(idaklu MODULE ${idaklu} WITH_SOABI)
+
+install(TARGETS idaklu DESTINATION pybamm/solvers)

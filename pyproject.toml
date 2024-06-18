@@ -1,7 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=64",
-    "wheel",
+    "scikit-build-core>=0.9",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.5; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
@@ -9,17 +8,17 @@ requires = [
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybamm"
 version = "24.1"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
-authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
-maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
+authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
+maintainers = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
 requires-python = ">=3.9, <3.13"
-readme = {file = "README.md", content-type = "text/markdown"}
+readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -73,9 +72,7 @@ docs = [
     "sphinx-docsearch",
 ]
 # For example notebooks
-examples = [
-    "jupyter",
-]
+examples = ["jupyter"]
 plot = [
     "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
@@ -83,17 +80,11 @@ plot = [
     # outside of plot() methods.
     "matplotlib>=3.6.0",
 ]
-cite = [
-    "pybtex>=0.24.0",
-]
+cite = ["pybtex>=0.24.0"]
 # Battery Parameter eXchange format
-bpx = [
-    "bpx>=0.4.0",
-]
+bpx = ["bpx>=0.4.0"]
 # Low-overhead progress bars
-tqdm = [
-    "tqdm",
-]
+tqdm = ["tqdm"]
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -115,10 +106,7 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
 ]
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
-jax = [
-    "jax==0.4.27",
-    "jaxlib==0.4.27",
-]
+jax = ["jax==0.4.27", "jaxlib==0.4.27"]
 # Contains all optional dependencies, except for jax and dev dependencies
 all = [
     "autograd>=1.6.2",
@@ -148,15 +136,28 @@ Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 
-[tool.setuptools]
-include-package-data = true
+[tool.scikit-build]
+minimum-version = "0.8"
+build-dir = "build/{wheel_tag}"
+# install.components = ["python", "docs", "examples"]
 
-# List of files to include as package data. These are mainly the parameter CSV files in
-# the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
-# README.md files, and specific .txt files inside the pybamm/ directory are also included.
-# These are specified to be included in the SDist through MANIFEST.in.
-[tool.setuptools.package-data]
-pybamm = [
+[tool.scikit-build.cmake]
+version = ">=3.13"
+verbose = true
+build-type = "Release"
+targets = ["idaklu"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_INSTALL_PREFIX = "."
+
+[tool.scikit-build.logging]
+level = "INFO"
+
+[tool.scikit-build.wheel]
+expand-macos-universal-tags = true
+
+[tool.scikit-build.sdist]
+include = [
     "*.txt",
     "*.md",
     "*.csv",
@@ -165,8 +166,35 @@ pybamm = [
     "pybamm/plotting/mplstyle",
 ]
 
-[tool.setuptools.packages.find]
-include = ["pybamm", "pybamm.*"]
+# graft pybamm
+# include CITATION.cff
+# prune tests
+
+# exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md all_contributors.md
+# include CMakeLists.txt
+
+# global-exclude __pycache__ *.py[cod] .venv
+
+
+# [tool.setuptools]
+# include-package-data = true
+
+# # List of files to include as package data. These are mainly the parameter CSV files in
+# # the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
+# # README.md files, and specific .txt files inside the pybamm/ directory are also included.
+# # These are specified to be included in the SDist through MANIFEST.in.
+# [tool.setuptools.package-data]
+# pybamm = [
+#     "*.txt",
+#     "*.md",
+#     "*.csv",
+#     "*.py",
+#     "pybamm/CITATIONS.bib",
+#     "pybamm/plotting/mplstyle",
+# ]
+
+# [tool.setuptools.packages.find]
+# include = ["pybamm", "pybamm.*"]
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
@@ -174,7 +202,7 @@ extend-exclude = ["__init__.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    "B",             # flake8-bugbear
+    "B", # flake8-bugbear
     # "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
@@ -186,29 +214,29 @@ extend-select = [
     # "PT",          # flake8-pytest-style
     # "PTH",         # flake8-use-pathlib
     # "RET",         # flake8-return
-    "RUF",           # Ruff-specific
+    "RUF", # Ruff-specific
     # "SIM",         # flake8-simplify
     # "T20",         # flake8-print
-    "UP",            # pyupgrade
-    "YTT",           # flake8-2020
-    "TID252",        # relative-imports
+    "UP",     # pyupgrade
+    "YTT",    # flake8-2020
+    "TID252", # relative-imports
 ]
 ignore = [
-    "E741",        # Ambiguous variable name
-    "RUF012",      # Mutable class attributes should be annotated with `typing.ClassVar`
-    "SIM108",      # Use ternary operator
-    "ARG001",      # Unused function argument:
-    "ARG002",      # Unused method arguments
-    "PLR2004",     # Magic value used in comparison
-    "PLR0915",     # Too many statements
-    "PLR0913",     # Too many arguments
-    "PLR0912",     # Too many branches
-    "RET504",      # Unnecessary assignment
-    "RET505",      # Unnecessary `else`
-    "RET506",      # Unnecessary `elif`
-    "B018",        # Found useless expression
-    "RUF002",      # Docstring contains ambiguous
-    "UP007",       # For pyupgrade
+    "E741",    # Ambiguous variable name
+    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+    "SIM108",  # Use ternary operator
+    "ARG001",  # Unused function argument:
+    "ARG002",  # Unused method arguments
+    "PLR2004", # Magic value used in comparison
+    "PLR0915", # Too many statements
+    "PLR0913", # Too many arguments
+    "PLR0912", # Too many branches
+    "RET504",  # Unnecessary assignment
+    "RET505",  # Unnecessary `else`
+    "RET506",  # Unnecessary `elif`
+    "B018",    # Found useless expression
+    "RUF002",  # Docstring contains ambiguous
+    "UP007",   # For pyupgrade
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -223,19 +251,9 @@ ignore = [
 minversion = "6"
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
-required_plugins = [
-    "pytest-xdist",
-]
-addopts = [
-    "-nauto",
-    "-v",
-    "-ra",
-    "--strict-config",
-    "--strict-markers",
-]
-testpaths = [
-    "docs/source/examples/",
-]
+required_plugins = ["pytest-xdist"]
+addopts = ["-nauto", "-v", "-ra", "--strict-config", "--strict-markers"]
+testpaths = ["docs/source/examples/"]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
@@ -261,7 +279,7 @@ concurrency = ["multiprocessing"]
 
 [tool.repo-review]
 ignore = [
-    "PP003"  # list wheel as a build-dep
+    "PP003", # list wheel as a build-dep
 ]
 
 [tool.mypy]
@@ -271,7 +289,7 @@ disable_error_code = ["call-overload", "operator"]
 
 [[tool.mypy.overrides]]
 module = [
-        "pybamm.models.base_model.*",
-        "pybamm.models.full_battery_models.base_battery_model.*"
-        ]
+    "pybamm.models.base_model.*",
+    "pybamm.models.full_battery_models.base_battery_model.*",
+]
 disable_error_code = "attr-defined"
