@@ -14,6 +14,8 @@ on:
 
 env:
   FORCE_COLOR: 3
+  PYBAMM_IDAKLU_EXPR_CASADI: ON
+  PYBAMM_IDAKLU_EXPR_IREE: ON
 
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
