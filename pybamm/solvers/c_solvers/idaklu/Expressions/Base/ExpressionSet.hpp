@@ -21,8 +21,8 @@ public:
     const int jac_times_cjmass_nnz,
     const int jac_bandwidth_lower,
     const int jac_bandwidth_upper,
-    const np_array_int &jac_times_cjmass_rowvals_arg,
-    const np_array_int &jac_times_cjmass_colptrs_arg,
+    const np_array_int &jac_times_cjmass_rowvals_arg,  // cppcheck-suppress unusedStructMember
+    const np_array_int &jac_times_cjmass_colptrs_arg,  // cppcheck-suppress unusedStructMember
     const int inputs_length,
     Expression* jac_action,
     Expression* mass_action,
@@ -71,7 +71,7 @@ public:
 
   std::vector<int64_t> jac_times_cjmass_rowvals;
   std::vector<int64_t> jac_times_cjmass_colptrs;
-  std::vector<realtype> inputs;
+  std::vector<realtype> inputs;  // cppcheck-suppress unusedStructMember
 
   Options options;
 

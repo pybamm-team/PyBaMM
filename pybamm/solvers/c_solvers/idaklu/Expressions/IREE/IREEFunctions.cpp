@@ -6,10 +6,9 @@
 #include <vector>
 #include <regex>
 
-IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression()
+IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression(), m_func(f)
 {
   DEBUG("IreeFunction constructor");
-  m_func = f;
   const std::string& mlir = f.get_mlir();
 
   // Parse IREE (MLIR) function string

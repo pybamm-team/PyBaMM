@@ -71,10 +71,10 @@ public:
  * @brief Compiler state
  */
 typedef struct compiler_state_t {
-  iree_compiler_session_t *session;
-  iree_compiler_source_t *source;
-  iree_compiler_output_t *output;
-  iree_compiler_invocation_t *inv;
+  iree_compiler_session_t *session;  // cppcheck-suppress unusedStructMember
+  iree_compiler_source_t *source;  // cppcheck-suppress unusedStructMember
+  iree_compiler_output_t *output;  // cppcheck-suppress unusedStructMember
+  iree_compiler_invocation_t *inv;  // cppcheck-suppress unusedStructMember
 } compiler_state_t;
 
 /*
@@ -91,7 +91,7 @@ private:  // data members
   iree_status_t status;
   iree_hal_device_t* device = NULL;
   iree_runtime_instance_t* instance = NULL;
-  std::string mlir_code;
+  std::string mlir_code;  // cppcheck-suppress unusedStructMember
   iree_runtime_call_t call;
   iree_allocator_t host_allocator;
 
@@ -130,7 +130,7 @@ public:  // public methods
    * @param result List of output data
    */
   iree_status_t iree_runtime_exec(
-    std::string function_name,
+    const std::string& function_name,
     const std::vector<std::vector<int>>& inputs,
     const std::vector<std::vector<float>>& data,
     std::vector<std::vector<float>>& result

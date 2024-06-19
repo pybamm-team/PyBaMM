@@ -43,17 +43,17 @@ public:
 
 public:
   std::unique_ptr<IREESession> session;
-  std::vector<std::vector<float>> result;
-  std::vector<std::vector<int>> input_shape;
-  std::vector<std::vector<int>> output_shape;
-  std::vector<std::vector<float>> input_data;
+  std::vector<std::vector<float>> result;  // cppcheck-suppress unusedStructMember
+  std::vector<std::vector<int>> input_shape;  // cppcheck-suppress unusedStructMember
+  std::vector<std::vector<int>> output_shape;  // cppcheck-suppress unusedStructMember
+  std::vector<std::vector<float>> input_data;  // cppcheck-suppress unusedStructMember
 
-  BaseFunctionType m_func;
-  std::string module_name;
-  std::string function_name;
-  std::vector<int> m_arg_argno;
-  std::vector<int> m_arg_argix;
-  std::vector<int> numel;
+  BaseFunctionType m_func;  // cppcheck-suppress unusedStructMember
+  std::string module_name;  // cppcheck-suppress unusedStructMember
+  std::string function_name;  // cppcheck-suppress unusedStructMember
+  std::vector<int> m_arg_argno;  // cppcheck-suppress unusedStructMember
+  std::vector<int> m_arg_argix;  // cppcheck-suppress unusedStructMember
+  std::vector<int> numel;  // cppcheck-suppress unusedStructMember
 };
 
 #endif // PYBAMM_IDAKLU_IREE_FUNCTION_HPP

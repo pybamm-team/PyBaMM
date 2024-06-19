@@ -41,8 +41,8 @@ public:
   BaseFunctionType m_func;
 
 private:
-  std::vector<expr_int> m_iw;
-  std::vector<double> m_w;
+  std::vector<expr_int> m_iw;  // cppcheck-suppress unusedStructMember
+  std::vector<double> m_w;  // cppcheck-suppress unusedStructMember
 };
 
 /**

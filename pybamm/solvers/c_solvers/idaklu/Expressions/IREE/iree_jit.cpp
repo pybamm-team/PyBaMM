@@ -32,7 +32,8 @@ void IREESession::cleanup_compiler_state(compiler_state_t s) {
 }
 
 IREECompiler::IREECompiler() {
-  device_uri = "local-sync";
+  const char *uri = "local-sync";
+  device_uri = uri;
 };
 
 IREECompiler::~IREECompiler() {
@@ -111,7 +112,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
   }
 
   // Check for a build tag with release version information
-  const char *revision = ireeCompilerGetRevision();
+  const char *revision = ireeCompilerGetRevision();  // cppcheck-suppress unreadVariable
   DEBUG("Compiler revision: '" << revision << "'");
   return 0;
 };
@@ -243,7 +244,7 @@ int IREESession::cleanup() {
 }
 
 iree_status_t IREESession::iree_runtime_exec(
-  std::string function_name,
+  const std::string& function_name,
   const std::vector<std::vector<int>>& inputs,
   const std::vector<std::vector<float>>& data,
   std::vector<std::vector<float>>& result

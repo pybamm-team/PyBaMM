@@ -13,14 +13,14 @@ public:  // methods
   const std::string& get_mlir() const { return mlir; }
 
 public:  // data members
-  std::string mlir;
-  std::vector<int> kept_var_idx;
-  expr_int nnz;
-  std::vector<expr_int> col;
-  std::vector<expr_int> row;
-  std::vector<int> pytree_shape;
-  std::vector<int> pytree_sizes;
-  expr_int n_args;
+  std::string mlir;  // cppcheck-suppress unusedStructMember
+  std::vector<int> kept_var_idx;  // cppcheck-suppress unusedStructMember
+  expr_int nnz;  // cppcheck-suppress unusedStructMember
+  std::vector<expr_int> col;  // cppcheck-suppress unusedStructMember
+  std::vector<expr_int> row;  // cppcheck-suppress unusedStructMember
+  std::vector<int> pytree_shape;  // cppcheck-suppress unusedStructMember
+  std::vector<int> pytree_sizes;  // cppcheck-suppress unusedStructMember
+  expr_int n_args;  // cppcheck-suppress unusedStructMember
 };
 
 #endif // PYBAMM_IDAKLU_IREE_BASE_FUNCTION_HPP
