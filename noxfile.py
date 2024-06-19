@@ -1,6 +1,7 @@
 import nox
 import os
 import sys
+import warnings
 from pathlib import Path
 
 
@@ -13,6 +14,42 @@ else:
     nox.options.sessions = ["pre-commit", "unit"]
 
 
+def set_iree_state():
+    """
+    Check if IREE is enabled and set the environment variable accordingly.
+
+    Returns
+    -------
+    str
+        "ON" if IREE is enabled, "OFF" otherwise.
+
+    """
+    state = "ON" if os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF") == "ON" else "OFF"
+    if state == "ON":
+        if sys.platform == "win32":
+            warnings.warn(
+                (
+                    "IREE is not enabled on Windows yet. "
+                    "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                ),
+                stacklevel=2,
+            )
+            return "OFF"
+        if sys.platform == "darwin":
+            # iree-compiler is currently only available as a wheel on macOS for
+            # Python version 3.11
+            if not sys.version_info[:2] == (3, 11):
+                warnings.warn(
+                    (
+                        "IREE is only supported on MacOS with Python 3.11. "
+                        "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                    ),
+                    stacklevel=2,
+                )
+                return "OFF"
+    return state
+
+
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
@@ -20,7 +57,7 @@ PYBAMM_ENV = {
     "PYTHONIOENCODING": "utf-8",
     # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
     "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
-    "PYBAMM_IDAKLU_EXPR_IREE": os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF"),
+    "PYBAMM_IDAKLU_EXPR_IREE": set_iree_state(),
     "IREE_INDEX_URL": os.getenv(
         "IREE_INDEX_URL", "https://iree.dev/pip-release-links.html"
     ),
@@ -104,7 +141,7 @@ def run_coverage(session):
     session.install("setuptools", silent=False)
     session.install("coverage", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
         session.install(
             "-e",
@@ -141,7 +178,7 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
         session.install(
             "-e",
@@ -184,7 +221,7 @@ def set_dev(session):
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
     args = []
-    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
         # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
         # When upgrading Jax/IREE ensure that the following are compatible with each other:
