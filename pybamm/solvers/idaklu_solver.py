@@ -39,6 +39,7 @@ def have_idaklu():
 def have_iree():
     try:
         import iree.compiler  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -494,7 +495,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 pybamm.demote_expressions_to_32bit = True
                 if pybamm.demote_expressions_to_32bit:
                     warnings.warn(
-                        "Demoting expressions to 32-bit for MLIR conversion", stacklevel=2
+                        "Demoting expressions to 32-bit for MLIR conversion",
+                        stacklevel=2,
                     )
                     jnpfloat = jnp.float32
                 else:
