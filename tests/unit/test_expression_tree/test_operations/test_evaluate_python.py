@@ -80,7 +80,7 @@ class TestEvaluate(TestCase):
         # test values of variable_symbols
         self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
         self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
-        self.assertEqual(list(variable_symbols.values())[2], f"-{var_b}")
+        self.assertEqual(list(variable_symbols.values())[2], f"-({var_b})")
         var_child = pybamm.id_to_python_variable(expr.children[1].id)
         self.assertEqual(
             list(variable_symbols.values())[3], f"np.maximum({var_a},{var_child})"
