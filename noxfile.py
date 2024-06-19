@@ -134,7 +134,13 @@ def run_unit(session):
     session.install("-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and sys.platform != "win32":
         # See comments in 'dev' session
-        session.install("-e", ".[iree]", "--find-links", PYBAMM_ENV.get("IREE_INDEX_URL"), silent=False)
+        session.install(
+            "-e",
+            ".[iree]",
+            "--find-links",
+            PYBAMM_ENV.get("IREE_INDEX_URL"),
+            silent=False,
+        )
     session.run("python", "run-tests.py", "--unit")
 
 
