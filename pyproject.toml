@@ -147,9 +147,6 @@ verbose = true
 build-type = "Release"
 targets = ["idaklu"]
 
-[tool.scikit-build.cmake.define]
-CMAKE_INSTALL_PREFIX = "."
-
 [tool.scikit-build.logging]
 level = "INFO"
 
