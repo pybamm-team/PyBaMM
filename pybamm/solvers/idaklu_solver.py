@@ -492,16 +492,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Convert Jax functions to MLIR (also, demote to single precision)
                 idaklu_solver_fcn = idaklu.create_iree_solver
                 pybamm.demote_expressions_to_32bit = True
-                warnings.warn(
-                    "Demoting expressions to 32-bit for MLIR conversion", stacklevel=2
-                )
+                if pybamm.demote_expressions_to_32bit:
+                    warnings.warn(
+                        "Demoting expressions to 32-bit for MLIR conversion", stacklevel=2
+                    )
+                    jnpfloat = jnp.float32
+                else:
+                    jnpfloat = jnp.float64
 
                 # input arguments (used for lowering)
-                t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnp.float32))
+                t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnpfloat))
                 y0 = self._demote_64_to_32(model.y0)
                 inputs0 = self._demote_64_to_32(inputs_to_dict(inputs))
-                cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnp.float32))  # array
-                v0 = jnp.zeros(model.len_rhs_and_alg, jnp.float32)
+                cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnpfloat))  # array
+                v0 = jnp.zeros(model.len_rhs_and_alg, jnpfloat)
                 mass_matrix = model.mass_matrix.entries.toarray()
                 mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
 
@@ -559,7 +563,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 def fcn_rootfn(t, y, inputs):
                     return jnp.array(
                         [event(t, y, inputs) for event in model.terminate_events_eval],
-                        dtype=jnp.float32,
+                        dtype=jnpfloat,
                     ).reshape(-1)
 
                 def fcn_rootfn_demoted(t, y, inputs):
@@ -748,8 +752,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def _check_mlir_conversion(self, name, mlir: str):
         if mlir.count("f64") > 0:
-            with open(f"logs/{name}.mlir", "w") as f:
-                f.write(mlir)
             warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})", stacklevel=2)
 
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
