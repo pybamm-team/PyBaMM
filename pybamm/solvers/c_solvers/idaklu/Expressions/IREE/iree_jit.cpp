@@ -32,8 +32,7 @@ void IREESession::cleanup_compiler_state(compiler_state_t s) {
 }
 
 IREECompiler::IREECompiler() {
-  const char *uri = "local-sync";
-  device_uri = uri;
+  this->device_uri = "local-sync";
 };
 
 IREECompiler::~IREECompiler() {
@@ -75,7 +74,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
 
   if (device_uri == NULL) {
     DEBUG("No device URI provided, using local-sync\n");
-    device_uri = "local-sync";
+    this->device_uri = "local-sync";
   }
 
   int cl_argc = argc;

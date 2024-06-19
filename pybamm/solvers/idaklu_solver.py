@@ -935,7 +935,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                             .sparsity()
                             .nnz()
                         )
-                        base_variables = ([self._setup["var_casadi_fcns"][var]],)
+                        base_variables = [self._setup["var_casadi_fcns"][var]]
                     elif (
                         model.convert_to_format == "jax"
                         and self._options["jax_evaluator"] == "iree"

@@ -69,8 +69,8 @@ public:
   std::vector<Expression*> dvar_dy_fcns;  // cppcheck-suppress unusedStructMember
   std::vector<Expression*> dvar_dp_fcns;  // cppcheck-suppress unusedStructMember
 
-  std::vector<int64_t> jac_times_cjmass_rowvals;
-  std::vector<int64_t> jac_times_cjmass_colptrs;
+  std::vector<int64_t> jac_times_cjmass_rowvals;  // cppcheck-suppress unusedStructMember
+  std::vector<int64_t> jac_times_cjmass_colptrs;  // cppcheck-suppress unusedStructMember
   std::vector<realtype> inputs;  // cppcheck-suppress unusedStructMember
 
   Options options;
