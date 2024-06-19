@@ -369,6 +369,7 @@ class TestInterpolant(TestCase):
             ],
             "interpolator": "linear",
             "extrapolate": True,
+            "_num_derivatives": 0,
         }
 
         # check correct writing to json

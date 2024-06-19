@@ -50,6 +50,7 @@ class Interpolant(pybamm.Function):
         interpolator: str | None = "linear",
         extrapolate: bool = True,
         entries_string: str | None = None,
+        _num_derivatives: int = 0,
     ):
         # Check interpolator is valid
         if interpolator not in ["linear", "cubic", "pchip"]:
@@ -189,6 +190,12 @@ class Interpolant(pybamm.Function):
         self.x = x
         self.y = y
         self.entries_string = entries_string
+
+        # Differentiate the interpolating function if necessary
+        self._num_derivatives = _num_derivatives
+        for _ in range(_num_derivatives):
+            interpolating_function = interpolating_function.derivative()
+
         super().__init__(interpolating_function, *children, name=name)
 
         # Store information as attributes
@@ -211,6 +218,7 @@ class Interpolant(pybamm.Function):
             name=snippet["name"],
             interpolator=snippet["interpolator"],
             extrapolate=snippet["extrapolate"],
+            _num_derivatives=snippet["_num_derivatives"],
         )
 
     @property
@@ -239,6 +247,7 @@ class Interpolant(pybamm.Function):
                 self.entries_string,
                 *tuple([child.id for child in self.children]),
                 *tuple(self.domain),
+                self._num_derivatives,
             )
         )
 
@@ -254,6 +263,7 @@ class Interpolant(pybamm.Function):
             interpolator=self.interpolator,
             extrapolate=self.extrapolate,
             entries_string=self.entries_string,
+            _num_derivatives=self._num_derivatives,
         )
 
     def _function_evaluate(self, evaluated_children):
@@ -314,9 +324,21 @@ class Interpolant(pybamm.Function):
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.
         """
-        raise NotImplementedError(
-            "Cannot differentiate Interpolant symbol with respect to its children."
-        )
+        if len(children) > 1:
+            raise ValueError(
+                "differentiation not implemented for functions with more than one child"
+            )
+        else:
+            # keep using "derivative" as derivative
+            return Interpolant(
+                self.x,
+                self.y,
+                children,
+                name=self.name,
+                interpolator=self.interpolator,
+                extrapolate=self.extrapolate,
+                _num_derivatives=self._num_derivatives + 1,
+            )
 
     def to_json(self):
         """
@@ -330,6 +352,7 @@ class Interpolant(pybamm.Function):
             "y": self.y.tolist(),
             "interpolator": self.interpolator,
             "extrapolate": self.extrapolate,
+            "_num_derivatives": self._num_derivatives,
         }
 
         return json_dict
