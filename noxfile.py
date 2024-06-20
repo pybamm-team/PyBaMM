@@ -39,7 +39,7 @@ def set_iree_state():
         if sys.platform == "darwin":
             # iree-compiler is currently only available as a wheel on macOS 13 (or
             # higher) and Python version 3.11
-            mac_ver = int(platform.mac_ver()[0].split('.')[0])
+            mac_ver = int(platform.mac_ver()[0].split(".")[0])
             if (not sys.version_info[:2] == (3, 11)) or mac_ver < 13:
                 warnings.warn(
                     (

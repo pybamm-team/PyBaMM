@@ -19,7 +19,7 @@ if pybamm.have_jax():
 
     try:
         import iree.compiler
-    except ImportError:
+    except ImportError:  # pragma: no cover
         pass
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
@@ -39,9 +39,8 @@ def have_idaklu():
 def have_iree():
     try:
         import iree.compiler  # noqa: F401
-
         return True
-    except ImportError:
+    except ImportError:  # pragma: no cover
         return False
 
 
@@ -134,7 +133,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
-        if options["jax_evaluator"] not in ["jax", "iree"]:
+        if options["jax_evaluator"] not in ["jax", "iree"]:  # pragma: no cover
             raise pybamm.SolverError(
                 "Evaluation engine must be 'jax' or 'iree' for IDAKLU solver"
             )
@@ -493,7 +492,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Convert Jax functions to MLIR (also, demote to single precision)
                 idaklu_solver_fcn = idaklu.create_iree_solver
                 pybamm.demote_expressions_to_32bit = True
-                if pybamm.demote_expressions_to_32bit:
+                if pybamm.demote_expressions_to_32bit:  # pragma: no cover
                     warnings.warn(
                         "Demoting expressions to 32-bit for MLIR conversion",
                         stacklevel=2,
@@ -653,7 +652,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 )
 
                 pybamm.demote_expressions_to_32bit = False
-            else:
+            else:  # pragma: no cover
                 raise pybamm.SolverError(
                     "Unsupported evaluation engine for convert_to_format='jax'"
                 )
@@ -737,7 +736,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             iree_fcn.nnz = sparse_eval.nnz
             iree_fcn.col = sparse_eval.col
             iree_fcn.row = sparse_eval.row
-        except (TypeError, AttributeError) as error:
+        except (TypeError, AttributeError) as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not get sparsity pattern for function {fcn.__name__}"
             ) from error
@@ -753,7 +752,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         return iree_fcn
 
     def _check_mlir_conversion(self, name, mlir: str):
-        if mlir.count("f64") > 0:
+        if mlir.count("f64") > 0:  # pragma: no cover
             warnings.warn(f"f64 found in {name} (x{mlir.count('f64')})", stacklevel=2)
 
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
@@ -943,7 +942,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         idx = self.output_variables.index(var)
                         len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
                         base_variables = [self.computed_var_fcns[var]]
-                    else:
+                    else:  # pragma: no cover
                         raise pybamm.SolverError(
                             "Unsupported evaluation engine for convert_to_format="
                             + f"{model.convert_to_format} "

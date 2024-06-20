@@ -229,7 +229,7 @@ def find_symbols(
                         f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
                     )
                 else:
-                    symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"
+                    symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"  # pragma: no cover
             else:
                 symbol_str = f"{children_vars[0]} / {children_vars[1]}"
 
@@ -310,7 +310,7 @@ def find_symbols(
 
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) == 1:
-                symbol_str = children_vars[0]
+                symbol_str = children_vars[0]  # pragma: no cover
             else:
                 if output_jax:
                     raise NotImplementedError
@@ -599,29 +599,28 @@ class EvaluatorJax:
     def _demote_constants(self):
         """Demote 64-bit constants (f64, i64) to 32-bit (f32, i32)"""
         if not pybamm.demote_expressions_to_32bit:
-            return
+            return  # pragma: no cover
         self._constants = EvaluatorJax._demote_64_to_32(self._constants)
 
     @classmethod
     def _demote_64_to_32(cls, c):
         """Demote 64-bit operations (f64, i64) to 32-bit (f32, i32)"""
-        from jax import numpy as jnp
 
         if not pybamm.demote_expressions_to_32bit:
             return c
         if isinstance(c, float):
-            c = jnp.float32(c)
+            c = jax.numpy.float32(c)
         if isinstance(c, int):
-            c = jnp.int32(c)
+            c = jax.numpy.int32(c)
         if isinstance(c, np.float64):
-            c = c.astype(jnp.float32)
+            c = c.astype(jax.numpy.float32)
         if isinstance(c, np.int64):
-            c = c.astype(jnp.int32)
+            c = c.astype(jax.numpy.int32)
         if isinstance(c, np.ndarray):
             if c.dtype == np.float64:
-                c = c.astype(jnp.float32)
+                c = c.astype(jax.numpy.float32)
             if c.dtype == np.int64:
-                c = c.astype(jnp.int32)
+                c = c.astype(jax.numpy.int32)
         if isinstance(c, jax.numpy.ndarray):
             if c.dtype == jax.numpy.float64:
                 c = c.astype(jax.numpy.float32)
@@ -631,15 +630,15 @@ class EvaluatorJax:
             c, pybamm.expression_tree.operations.evaluate_python.JaxCooMatrix
         ):
             if c.data.dtype == np.float64:
-                c.data = c.data.astype(jnp.float32)
+                c.data = c.data.astype(jax.numpy.float32)
             if c.data.dtype == jax.numpy.float64:
                 c.data = c.data.astype(jax.numpy.float32)
             if c.row.dtype == np.int64:
-                c.row = c.row.astype(jnp.int32)
+                c.row = c.row.astype(jax.numpy.int32)
             if c.row.dtype == jax.numpy.int64:
                 c.row = c.row.astype(jax.numpy.int32)
             if c.col.dtype == np.int64:
-                c.col = c.col.astype(jnp.int32)
+                c.col = c.col.astype(jax.numpy.int32)
             if c.col.dtype == jax.numpy.int64:
                 c.col = c.col.astype(jax.numpy.int32)
         if isinstance(c, pybamm.Symbol):
@@ -650,8 +649,6 @@ class EvaluatorJax:
             c = tuple(EvaluatorJax._demote_64_to_32(value) for value in c)
         if isinstance(c, list):
             c = [EvaluatorJax._demote_64_to_32(value) for value in c]
-        if isinstance(c, set):
-            c = {EvaluatorJax._demote_64_to_32(value) for value in c}
         return c
 
     @property
