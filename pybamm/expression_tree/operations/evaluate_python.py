@@ -430,11 +430,16 @@ class EvaluatorPython:
 
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to python code
-
+    is_event: bool
+        Indicates this symbol is an event expression
+    is_matrix: bool
+        Indicates the evaluation of this symbol results in a matrix (otherwise result is a vector)
 
     """
 
-    def __init__(self, symbol: pybamm.Symbol):
+    def __init__(
+        self, symbol: pybamm.Symbol, is_event: bool = False, is_matrix: bool = False
+    ):
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
         # extract constants in generated function
@@ -472,6 +477,8 @@ class EvaluatorPython:
         self._python_str = python_str
         self._result_var = result_var
         self._symbol = symbol
+        self._is_event = is_event
+        self._is_matrix = is_matrix
 
         # compile and run the generated python code,
         compiled_function = compile(python_str, result_var, "exec")
@@ -486,21 +493,41 @@ class EvaluatorPython:
             y = y.reshape(-1, 1)
 
         if isinstance(inputs, list):
-            result = self._evaluate(self._constants, t, y, inputs[0])
-            if len(inputs) > 1:
-                if isinstance(result, numbers.Number):
-                    result = np.array([result])
-                ny = result.shape[0]
-                ni = len(inputs)
-                results = np.zeros((ni * ny, 1))
-                results[:ny] = result
-                i = ny
-                for input in inputs[1:]:
-                    results[i : i + ny] += self._evaluate(
-                        self._constants, t, y[i : i + ny], input
-                    )
-                    i += ny
-                result = results
+            if len(inputs) == 1:
+                # nothing to do for a single input
+                result = self._evaluate(self._constants, t, y, inputs[0])
+            elif self._is_event:
+                # if an event do a soft max on the results to combine events from multiple
+                # inputs
+                results = np.array(
+                    [self._evaluate(self._constants, t, y, input) for input in inputs]
+                )
+                margin = 1e-4
+                alpha = np.log(len(inputs)) / margin
+                result = scipy.special.logsumexp(alpha * results) / alpha
+            elif self._is_matrix:
+                # if a matrix output, concatenate the results in a block diagonal matrix
+                results = [
+                    self._evaluate(self._constants, t, y, input) for input in inputs
+                ]
+                result = scipy.sparse.block_diag(*results, format="csr")
+            else:
+                # otherwise concatenate the results in a column vector
+                result = self._evaluate(self._constants, t, y, inputs[0])
+                if len(inputs) > 1:
+                    if isinstance(result, numbers.Number):
+                        result = np.array([result])
+                    ny = result.shape[0]
+                    ni = len(inputs)
+                    results = np.zeros((ni * ny, 1))
+                    results[:ny] = result
+                    i = ny
+                    for input in inputs[1:]:
+                        results[i : i + ny] += self._evaluate(
+                            self._constants, t, y[i : i + ny], input
+                        )
+                        i += ny
+                    result = results
         else:
             result = self._evaluate(self._constants, t, y, inputs)
 

@@ -1394,7 +1394,76 @@ class BaseSolver:
         return ordered_inputs
 
 
-def map_func_over_inputs(name, f, vars_for_processing, ninputs):
+def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs):
+    """
+    This takes a casadi function f and returns a new casadi function that maps f over
+    the provided number of inputs. Some functions (e.g. jacobian action) require an additional
+    vector input v, which is why add_v is provided.
+
+    Parameters
+    ----------
+    name: str
+        name of the new function. This must end in the string "_action" for jacobian action functions,
+        "_jac" for jacobian functions, or "_jacp" for jacp functions.
+    f: casadi.Function
+        function to map
+    vars_for_processing: dict
+        dictionary of variables for processing
+    ninputs: int
+        number of inputs to map over
+    """
+    if f is None:
+        return None
+
+    is_event = "event" in name
+    add_v = name.endswith("_action")
+    matrix_output = name.endswith("_jac") or name.endswith("_jacp")
+
+    nstates = vars_for_processing["y_and_S"].shape[0]
+    nparams = vars_for_processing["p_casadi_stacked"].shape[0]
+
+    parallelisation = "thread"
+    y_and_S_inputs_stacked = casadi.MX.sym("y_and_S_stacked", nstates * ninputs)
+    p_casadi_inputs_stacked = casadi.MX.sym("p_stacked", nparams * ninputs)
+    v_inputs_stacked = casadi.MX.sym("v_stacked", nstates * ninputs)
+
+    y_and_S_2d = y_and_S_inputs_stacked.reshape((nstates, ninputs))
+    p_casadi_2d = p_casadi_inputs_stacked.reshape((nparams, ninputs))
+    v_2d = v_inputs_stacked.reshape((nstates, ninputs))
+
+    t_casadi = vars_for_processing["t_casadi"]
+
+    if add_v:
+        inputs_2d = [t_casadi, y_and_S_2d, p_casadi_2d, v_2d]
+        inputs_stacked = [
+            t_casadi,
+            y_and_S_inputs_stacked,
+            p_casadi_inputs_stacked,
+            v_inputs_stacked,
+        ]
+    else:
+        inputs_2d = [t_casadi, y_and_S_2d, p_casadi_2d]
+        inputs_stacked = [t_casadi, y_and_S_inputs_stacked, p_casadi_inputs_stacked]
+
+    mapped_f = f.map(ninputs, parallelisation)(*inputs_2d)
+    if matrix_output:
+        # for matrix output we need to stack the outputs in a block diagonal matrix
+        splits = [i * nstates for i in range(ninputs + 1)]
+        split = casadi.horzsplit(mapped_f, splits)
+        stack = casadi.diagcat(*split)
+    elif is_event:
+        # Events need to return a scalar, so we combine the vector output
+        # of the mapped function into a scalar output by calculating a smooth max of the vector output.
+        stack = casadi.logsumexp(casadi.transpose(mapped_f), 1e-4)
+    else:
+        # for vector outputs we need to stack them vertically in a single column vector
+        splits = [i for i in range(ninputs + 1)]
+        split = casadi.horzsplit(mapped_f, splits)
+        stack = casadi.vertcat(*split)
+    return casadi.Function(name, inputs_stacked, [stack])
+
+
+def map_func_over_inputs_jax(name, f, vars_for_processing, ninputs):
     """
     This takes a casadi function f and returns a new casadi function that maps f over
     the provided number of inputs. Some functions (e.g. jacobian action) require an additional
@@ -1578,7 +1647,7 @@ def process(
             jac_action = None
 
         report(f"Converting {name} to python")
-        func = pybamm.EvaluatorPython(symbol)
+        func = pybamm.EvaluatorPython(symbol, is_event="event" in name)
 
     else:
         t_casadi = vars_for_processing["t_casadi"]
@@ -1707,12 +1776,14 @@ def process(
         )
 
         if ninputs > 1:
-            func = map_func_over_inputs(name, func, vars_for_processing, ninputs)
-            jac = map_func_over_inputs(name + "_jac", jac, vars_for_processing, ninputs)
-            jacp = map_func_over_inputs(
+            func = map_func_over_inputs_casadi(name, func, vars_for_processing, ninputs)
+            jac = map_func_over_inputs_casadi(
+                name + "_jac", jac, vars_for_processing, ninputs
+            )
+            jacp = map_func_over_inputs_casadi(
                 name + "_jacp", jacp, vars_for_processing, ninputs
             )
-            jac_action = map_func_over_inputs(
+            jac_action = map_func_over_inputs_casadi(
                 name + "_jac_action", jac_action, vars_for_processing, ninputs
             )
 

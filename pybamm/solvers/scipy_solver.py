@@ -57,7 +57,7 @@ class ScipySolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs_dict : dict, optional
+        inputs_list : list of dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -68,7 +68,7 @@ class ScipySolver(pybamm.BaseSolver):
 
         """
         # Save inputs dictionary, and if necessary convert inputs to a casadi vector
-        inputs_list = inputs_list or {}
+        inputs_list = inputs_list or [{}]
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(
                 *[x for inputs in inputs_list for x in inputs.values()]
