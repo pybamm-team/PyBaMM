@@ -27,14 +27,16 @@ experiment = pybamm.Experiment(
 parameter_values = pybamm.ParameterValues("ORegan2022")
 parameter_values.update(
     {
-        "External volumetric heat capacity [J.m-3.K-1]": 3e6,
-        "External volumetric thermal resistance [K.W-1.m-3]": 5e-4,
+        "External volumetric heat capacity [J.m-3.K-1]": 3e7,
+        "External volumetric thermal resistance [K.W-1.m-3]": 5e-3,
     },
     check_already_exists=False,
 )
 # create and run simulations
 sols = []
-for model in models:
+for idx, model in enumerate(models):
+    if idx == 1:
+        parameter_values["Total heat transfer coefficient [W.m-2.K-1]"] *= 3
     sim = pybamm.Simulation(
         model, parameter_values=parameter_values, experiment=experiment
     )
