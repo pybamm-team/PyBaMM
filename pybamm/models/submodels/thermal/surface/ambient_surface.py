@@ -3,7 +3,7 @@
 import pybamm
 
 
-class SurfaceAmbientTemperature(pybamm.BaseSubModel):
+class Ambient(pybamm.BaseSubModel):
     """
     Class for setting surface temperature equal to ambient temperature.
 
@@ -22,6 +22,12 @@ class SurfaceAmbientTemperature(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
         T_amb = variables["Ambient temperature [K]"]
         T_amb_av = variables["Volume-averaged ambient temperature [K]"]
-        variables["Surface temperature [K]"] = T_amb
-        variables["Volume-averaged surface temperature [K]"] = T_amb_av
+
+        variables.update(
+            {
+                "Surface temperature [K]": T_amb,
+                "Volume-averaged surface temperature [K]": T_amb_av,
+                "External total cooling [W.m-3]": 0,
+            }
+        )
         return variables
