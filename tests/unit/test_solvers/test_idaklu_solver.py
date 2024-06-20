@@ -713,6 +713,14 @@ class TestIDAKLUSolver(TestCase):
         # equivalence
 
         for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
             # construct model
             model = pybamm.lithium_ion.DFN()
             model.convert_to_format = "jax" if form == "iree" else form
@@ -750,6 +758,7 @@ class TestIDAKLUSolver(TestCase):
 
             # Use the full model as comparison (tested separately)
             solver_all = pybamm.IDAKLUSolver(
+                root_method=root_method,
                 atol=1e-8 if form != "iree" else 1e-1,
                 rtol=1e-8 if form != "iree" else 1e-1,
                 options=options,
