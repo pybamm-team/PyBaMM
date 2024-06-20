@@ -325,7 +325,7 @@ class Interpolant(pybamm.Function):
         See :meth:`pybamm.Symbol._diff()`.
         """
         if len(children) > 1:
-            raise ValueError(
+            raise NotImplementedError(
                 "differentiation not implemented for functions with more than one child"
             )
         else:
