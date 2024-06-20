@@ -24,19 +24,24 @@ experiment = pybamm.Experiment(
     ]
 )
 
-parameter_values = pybamm.ParameterValues("ORegan2022")
+parameter_values = pybamm.ParameterValues("Chen2020")
 parameter_values.update(
     {
-        "External volumetric heat capacity [J.m-3.K-1]": 3e7,
-        "External volumetric thermal resistance [K.W-1.m-3]": 5e-3,
+        "Casing heat capacity [J.K-1]": 30,
+        "Environment thermal resistance [K.W-1]": 10,
     },
     check_already_exists=False,
 )
+
 # create and run simulations
 sols = []
-for idx, model in enumerate(models):
-    if idx == 1:
-        parameter_values["Total heat transfer coefficient [W.m-2.K-1]"] *= 3
+for model in models:
+    model.variables["Bulk temperature [°C]"] = (
+        model.variables["Volume-averaged cell temperature [K]"] - 273.15
+    )
+    model.variables["Surface temperature [°C]"] = (
+        model.variables["Surface temperature [K]"] - 273.15
+    )
     sim = pybamm.Simulation(
         model, parameter_values=parameter_values, experiment=experiment
     )
@@ -48,9 +53,9 @@ pybamm.dynamic_plot(
     sols,
     [
         "Voltage [V]",
-        "Volume-averaged cell temperature [K]",
-        "Surface temperature [K]",
-        "Lumped total cooling [W.m-3]",
-        "External total cooling [W.m-3]",
+        "Bulk temperature [°C]",
+        "Surface temperature [°C]",
+        "Surface total cooling [W]",
+        "Environment total cooling [W]",
     ],
 )

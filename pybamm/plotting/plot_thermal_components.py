@@ -55,7 +55,7 @@ def plot_thermal_components(
     volume = solution["Cell thermal volume [m3]"].entries
 
     heating_sources = [
-        "Lumped total cooling",
+        " total cooling",
         "Ohmic heating",
         "Irreversible electrochemical heating",
         "Reversible heating",

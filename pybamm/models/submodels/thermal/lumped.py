@@ -55,9 +55,9 @@ class Lumped(BaseThermal):
         Q_cool_vol_av = Q_cool_W / V
         variables.update(
             {
-                # Lumped cooling
-                "Lumped total cooling [W.m-3]": Q_cool_vol_av,
-                "Lumped total cooling [W]": Q_cool_W,
+                # Lumped surface cooling
+                "Surface total cooling [W.m-3]": Q_cool_vol_av,
+                "Surface total cooling [W]": Q_cool_W,
             }
         )
         return variables
@@ -65,7 +65,7 @@ class Lumped(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
-        Q_cool_vol_av = variables["Lumped total cooling [W.m-3]"]
+        Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
         rho_c_p_eff_av = variables[
             "Volume-averaged effective heat capacity [J.K-1.m-3]"
         ]

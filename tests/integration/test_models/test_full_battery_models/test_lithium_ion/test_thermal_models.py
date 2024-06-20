@@ -103,6 +103,35 @@ class TestThermal(TestCase):
 
         self.assertGreater(1e-5, err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"]))
 
+    def test_surface_temperature_models(self):
+        models = {
+            option: pybamm.lithium_ion.SPM(
+                {"thermal": "lumped", "surface temperature": option}
+            )
+            for option in ["lumped", "ambient"]
+        }
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "Casing heat capacity [J.K-1]": 30,
+                "Environment thermal resistance [K.W-1]": 10,
+            },
+            check_already_exists=False,
+        )
+
+        sols = {}
+        for name, model in models.items():
+            sim = pybamm.Simulation(model, parameter_values=parameter_values)
+            sol = sim.solve([0, 3600])
+            sols[name] = sol
+
+        for var in ["Volume-averaged cell temperature [K]", "Surface temperature [K]"]:
+            # ignore first entry as it is the initial condition
+            T_ambient_model = sols["ambient"][var].entries[1:]
+            T_lumped_model = sols["lumped"][var].entries[1:]
+            np.testing.assert_array_less(T_ambient_model, T_lumped_model)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
