@@ -167,17 +167,18 @@ class Solution:
                 ]
                 for p in range(ninputs)
             ]
-            y_events = [
-                casadi.vertcat(
-                    self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
-                    self.y_event[
-                        (p * alg_len + ninputs * rhs_len) : (
-                            p * alg_len + ninputs * rhs_len + alg_len
-                        )
-                    ],
-                )
-                for p in range(ninputs)
-            ]
+            if self.y_event is not None:
+                y_events = [
+                    casadi.vertcat(
+                        self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
+                        self.y_event[
+                            (p * alg_len + ninputs * rhs_len) : (
+                                p * alg_len + ninputs * rhs_len + alg_len
+                            )
+                        ],
+                    )
+                    for p in range(ninputs)
+                ]
         else:
             all_ys_split = [
                 [
@@ -195,19 +196,20 @@ class Solution:
                 ]
                 for p in range(ninputs)
             ]
-            y_events = [
-                np.vstack(
-                    [
-                        self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
-                        self.y_event[
-                            (p * alg_len + ninputs * rhs_len) : (
-                                p * alg_len + ninputs * rhs_len + alg_len
-                            )
-                        ],
-                    ]
-                )
-                for p in range(ninputs)
-            ]
+            if self.y_event is not None:
+                y_events = [
+                    np.vstack(
+                        [
+                            self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
+                            self.y_event[
+                                (p * alg_len + ninputs * rhs_len) : (
+                                    p * alg_len + ninputs * rhs_len + alg_len
+                                )
+                            ],
+                        ]
+                    )
+                    for p in range(ninputs)
+                ]
 
         ret = [
             type(self)(

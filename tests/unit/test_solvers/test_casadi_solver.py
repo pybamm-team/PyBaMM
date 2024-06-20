@@ -393,6 +393,7 @@ class TestCasadiSolver(TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
+        single_len = len(solution.t)
         np.testing.assert_allclose(
             solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
         )
@@ -404,6 +405,7 @@ class TestCasadiSolver(TestCase):
         self.assertEqual(len(solutions), 2)
         for solution, rate in zip(solutions, [0.1, 0.2]):
             self.assertLess(len(solution.t), len(t_eval))
+            self.assertEqual(len(solution.t), single_len)
             np.testing.assert_allclose(
                 solution.y.full()[0], np.exp(-rate * solution.t), rtol=1e-04
             )

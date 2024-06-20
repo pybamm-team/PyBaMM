@@ -1411,12 +1411,11 @@ def map_func_over_inputs(name, f, vars_for_processing, ninputs):
         dictionary of variables for processing
     ninputs: int
         number of inputs to map over
-    add_v: bool
-        whether to add a vector v to the inputs
     """
     if f is None:
         return None
 
+    is_event = "event" in name
     add_v = name.endswith("_action")
     matrix_output = name.endswith("_jac") or name.endswith("_jacp")
 
@@ -1452,6 +1451,10 @@ def map_func_over_inputs(name, f, vars_for_processing, ninputs):
         splits = [i * nstates for i in range(ninputs + 1)]
         split = casadi.horzsplit(mapped_f, splits)
         stack = casadi.diagcat(*split)
+    elif is_event:
+        # Events need to return a scalar, so we combine the vector output
+        # of the mapped function into a scalar output by calculating a smooth max of the vector output.
+        stack = casadi.logsumexp(casadi.transpose(mapped_f), 1e-4)
     else:
         # for vector outputs we need to stack them vertically in a single column vector
         splits = [i for i in range(ninputs + 1)]
