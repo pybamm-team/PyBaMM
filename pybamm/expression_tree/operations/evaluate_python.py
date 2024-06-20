@@ -612,8 +612,6 @@ class EvaluatorJax:
             c = jax.numpy.float32(c)
         if isinstance(c, int):
             c = jax.numpy.int32(c)
-        if isinstance(c, np.float64):
-            c = c.astype(jax.numpy.float32)
         if isinstance(c, np.int64):
             c = c.astype(jax.numpy.int32)
         if isinstance(c, np.ndarray):
@@ -631,18 +629,10 @@ class EvaluatorJax:
         ):
             if c.data.dtype == np.float64:
                 c.data = c.data.astype(jax.numpy.float32)
-            if c.data.dtype == jax.numpy.float64:
-                c.data = c.data.astype(jax.numpy.float32)
             if c.row.dtype == np.int64:
-                c.row = c.row.astype(jax.numpy.int32)
-            if c.row.dtype == jax.numpy.int64:
                 c.row = c.row.astype(jax.numpy.int32)
             if c.col.dtype == np.int64:
                 c.col = c.col.astype(jax.numpy.int32)
-            if c.col.dtype == jax.numpy.int64:
-                c.col = c.col.astype(jax.numpy.int32)
-        if isinstance(c, pybamm.Symbol):
-            c.children = (EvaluatorJax._demote_64_to_32(child) for child in c.children)
         if isinstance(c, dict):
             c = {key: EvaluatorJax._demote_64_to_32(value) for key, value in c.items()}
         if isinstance(c, tuple):

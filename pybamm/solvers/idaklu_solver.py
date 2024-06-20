@@ -500,7 +500,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     )
                     jnpfloat = jnp.float32
                 else:
-                    jnpfloat = jnp.float64
+                    jnpfloat = jnp.float64  # pragma: no cover
 
                 # input arguments (used for lowering)
                 t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnpfloat))

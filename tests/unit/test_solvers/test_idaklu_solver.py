@@ -606,7 +606,7 @@ class TestIDAKLUSolver(TestCase):
                             soln = solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
-        # Construct a model and solve for all vairables, then test
+        # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
         input_parameters = {}  # Sensitivities dictionary
@@ -712,72 +712,79 @@ class TestIDAKLUSolver(TestCase):
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
 
-        # construct model
-        model = pybamm.lithium_ion.DFN()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        input_parameters = {  # Sensitivities dictionary
-            "Current function [A]": 0.680616,
-            "Separator porosity": 1.0,
-        }
-        param.update({key: "[input]" for key in input_parameters})
-        param.process_model(model)
-        param.process_geometry(geometry)
-        var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        t_eval = np.linspace(0, 3600, 100)
+        for form in ["casadi", "iree"]:
+            # construct model
+            model = pybamm.lithium_ion.DFN()
+            model.convert_to_format = "jax" if form == "iree" else form
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            input_parameters = {  # Sensitivities dictionary
+                "Current function [A]": 0.680616,
+                "Separator porosity": 1.0,
+            }
+            param.update({key: "[input]" for key in input_parameters})
+            param.process_model(model)
+            param.process_geometry(geometry)
+            var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
+            mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            t_eval = np.linspace(0, 3600, 100)
 
-        options = {
-            "linear_solver": "SUNLinSol_KLU",
-            "jacobian": "sparse",
-            "num_threads": 4,
-        }
+            options = {
+                "linear_solver": "SUNLinSol_KLU",
+                "jacobian": "sparse",
+                "num_threads": 4,
+            }
+            if form == "iree":
+                options["jax_evaluator"] = "iree"
 
-        # Use a selection of variables of different types
-        output_variables = [
-            "Voltage [V]",
-            "Time [min]",
-            "x [m]",
-            "Negative particle flux [mol.m-2.s-1]",
-            "Throughput capacity [A.h]",  # ExplicitTimeIntegral
-        ]
+            # Use a selection of variables of different types
+            output_variables = [
+                "Voltage [V]",
+                "Time [min]",
+                "x [m]",
+                "Negative particle flux [mol.m-2.s-1]",
+                "Throughput capacity [A.h]",  # ExplicitTimeIntegral
+            ]
 
-        # Use the full model as comparison (tested separately)
-        solver_all = pybamm.IDAKLUSolver(
-            atol=1e-8,
-            rtol=1e-8,
-            options=options,
-        )
-        sol_all = solver_all.solve(
-            model,
-            t_eval,
-            inputs=input_parameters,
-            calculate_sensitivities=True,
-        )
+            # Use the full model as comparison (tested separately)
+            solver_all = pybamm.IDAKLUSolver(
+                atol=1e-8 if form != "iree" else 1e-1,
+                rtol=1e-8 if form != "iree" else 1e-1,
+                options=options,
+            )
+            sol_all = solver_all.solve(
+                model,
+                t_eval,
+                inputs=input_parameters,
+                calculate_sensitivities=True,
+            )
 
-        # Solve for a subset of variables and compare results
-        solver = pybamm.IDAKLUSolver(
-            atol=1e-8,
-            rtol=1e-8,
-            options=options,
-            output_variables=output_variables,
-        )
-        sol = solver.solve(
-            model,
-            t_eval,
-            inputs=input_parameters,
-            calculate_sensitivities=True,
-        )
+            # Solve for a subset of variables and compare results
+            solver = pybamm.IDAKLUSolver(
+                atol=1e-8 if form != "iree" else 1e-1,
+                rtol=1e-8 if form != "iree" else 1e-1,
+                options=options,
+                output_variables=output_variables,
+            )
+            sol = solver.solve(
+                model,
+                t_eval,
+                inputs=input_parameters,
+                calculate_sensitivities=True,
+            )
 
-        # Compare output to sol_all
-        for varname in output_variables:
-            self.assertTrue(np.allclose(sol[varname].data, sol_all[varname].data))
+            # Compare output to sol_all
+            tol = 1e-5 if form != "iree" else 1e-1
+            for varname in output_variables:
+                self.assertTrue(
+                    np.allclose(sol[varname].data, sol_all[varname].data, tol)
+                )
 
-        # Mock a 1D current collector and initialise (none in the model)
-        sol["x_s [m]"].domain = ["current collector"]
-        sol["x_s [m]"].initialise_1D()
+            # Mock a 1D current collector and initialise (none in the model)
+            sol["x_s [m]"].domain = ["current collector"]
+            sol["x_s [m]"].initialise_1D()
 
 
 if __name__ == "__main__":
