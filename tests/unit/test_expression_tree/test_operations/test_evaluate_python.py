@@ -685,14 +685,20 @@ class TestEvaluate(TestCase):
                     1.0,
                     1,
                 ]:
-                    assert str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:] == target_dtype
+                    assert (
+                        str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
+                        == target_dtype
+                    )
             for c in [
                 np.float64(1.0),
                 np.int64(1),
                 np.array([1.0], dtype=np.float64),
                 np.array([1], dtype=np.int64),
             ]:
-                assert str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:] == target_dtype
+                assert (
+                    str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
+                    == target_dtype
+                )
             for c in [
                 {key: np.float64(1.0) for key in ["a", "b"]},
             ]:
@@ -706,21 +712,15 @@ class TestEvaluate(TestCase):
                 [np.float64(1.0), np.float64(2.0)],
             ]:
                 expr_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(
-                    str(c_i.dtype)[-2:] == target_dtype
-                    for c_i in expr_demoted
-                )
+                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in expr_demoted)
             for dtype in [
                 np.float64,
                 jax.numpy.float64,
             ]:
-                c = pybamm.JaxCooMatrix(
-                    [0, 1], [0, 1], dtype([1.0, 2.0]), (2, 2)
-                )
+                c = pybamm.JaxCooMatrix([0, 1], [0, 1], dtype([1.0, 2.0]), (2, 2))
                 c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
                 assert all(
-                    str(c_i.dtype)[-2:] == target_dtype
-                    for c_i in c_demoted.data
+                    str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.data
                 )
             for dtype in [
                 np.int64,
@@ -730,14 +730,8 @@ class TestEvaluate(TestCase):
                     dtype([0, 1]), dtype([0, 1]), [1.0, 2.0], (2, 2)
                 )
                 c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(
-                    str(c_i.dtype)[-2:] == target_dtype
-                    for c_i in c_demoted.row
-                )
-                assert all(
-                    str(c_i.dtype)[-2:] == target_dtype
-                    for c_i in c_demoted.col
-                )
+                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.row)
+                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.col)
             pybamm.demote_expressions_to_32bit = False
 
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")

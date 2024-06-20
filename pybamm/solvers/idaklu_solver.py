@@ -39,6 +39,7 @@ def have_idaklu():
 def have_iree():
     try:
         import iree.compiler  # noqa: F401
+
         return True
     except ImportError:  # pragma: no cover
         return False
