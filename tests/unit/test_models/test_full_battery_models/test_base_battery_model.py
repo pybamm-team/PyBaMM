@@ -46,6 +46,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'SEI porosity change': 'false' (possible: ['false', 'true'])
 'stress-induced diffusion': 'true' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
+'surface temperature': 'ambient' (possible: ['ambient', 'lumped'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
@@ -210,8 +211,6 @@ class TestBaseBatteryModel(TestCase):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(pybamm.OptionError, "The 'fast diffusion'"):
-            pybamm.BaseBatteryModel({"particle": "fast diffusion"})
         with self.assertRaisesRegex(pybamm.OptionError, "working electrode"):
             pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
         with self.assertRaisesRegex(pybamm.OptionError, "The 'negative' working"):
@@ -232,10 +231,6 @@ class TestBaseBatteryModel(TestCase):
             pybamm.BaseBatteryModel({"SEI film resistance": "bad SEI film resistance"})
         with self.assertRaisesRegex(pybamm.OptionError, "SEI porosity change"):
             pybamm.BaseBatteryModel({"SEI porosity change": "bad SEI porosity change"})
-        with self.assertRaisesRegex(
-            pybamm.OptionError, "SEI porosity change must now be given in string format"
-        ):
-            pybamm.BaseBatteryModel({"SEI porosity change": True})
         # changing defaults based on other options
         model = pybamm.BaseBatteryModel()
         self.assertEqual(model.options["SEI film resistance"], "none")
