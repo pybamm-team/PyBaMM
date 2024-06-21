@@ -153,18 +153,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def set_up(self, model, input_list=None, t_eval=None, ics_only=False):
-        base_set_up_return = super().set_up(model, input_list, t_eval, ics_only)
+    def set_up(self, model, inputs_list=None, t_eval=None, ics_only=False):
+        base_set_up_return = super().set_up(model, inputs_list, t_eval, ics_only)
 
-        inputs_list = input_list or [{}]
+        inputs_list = inputs_list or [{}]
         nparams = sum(
             len(np.array(v).reshape(-1, 1)) for _, v in inputs_list[0].items()
         )
         ninputs = len(inputs_list)
         nstates = model.y0.shape[0]
-        print("nstates", nstates)
-        print("nparams", nparams)
-        print("ninputs", ninputs)
 
         # stack inputs
         if inputs_list and len(inputs_list) > 0 and len(inputs_list[0]) > 0:
@@ -173,8 +170,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 for inputs in inputs_list
                 for x in inputs.values()
             ]
-            inputs_sizes = [len(array) for array in arrays_to_stack]
-            print(arrays_to_stack)
+            inputs_sizes = [
+                len(array) for array in arrays_to_stack[: len(inputs_list[0])]
+            ]
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs_sizes = []
@@ -182,13 +180,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         def inputs_to_dict(inputs):
             index = 0
-            new_inputs_list = []
-            for inputs in inputs_list:
-                inputs_dict = {}
-                for n, key in zip(inputs_sizes, inputs.keys()):
-                    inputs_dict[key] = inputs[index : (index + n)]
+            for i in range(ninputs):
+                for n, key in zip(inputs_sizes, inputs_list[0].keys()):
+                    inputs_list[i][key] = inputs[index : (index + n)]
                     index += n
-                new_inputs_list.append(inputs_dict)
             return inputs_list
 
         y0 = model.y0
@@ -229,12 +224,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             # TODO: do we need densify here?
             rhs_algebraic = model.rhs_algebraic_eval
-            print("rhs_algebraic_eval", rhs_algebraic(0, y0, inputs))
         else:
 
             def resfn(t, y, inputs, ydot):
-                print("resfn", y, inputs)
-                print(model.rhs_algebraic_eval(t, y, inputs_to_dict(inputs)))
                 return (
                     model.rhs_algebraic_eval(t, y, inputs_to_dict(inputs)).flatten()
                     - mass_matrix @ ydot
@@ -246,7 +238,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # need to provide jacobian_rhs_alg - cj * mass_matrix
         if model.convert_to_format == "casadi":
             t_casadi = casadi.MX.sym("t")
-            print("nstates", nstates)
             y_casadi = casadi.MX.sym("y", nstates)
             cj_casadi = casadi.MX.sym("cj")
             p_casadi_stacked = casadi.MX.sym("p_stacked", nparams * ninputs)
@@ -259,7 +250,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     - cj_casadi * mass_matrix
                 ],
             )
-            print("jac_times_cjmass", jac_times_cjmass(0, y0, inputs, 1))
 
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
             jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()
@@ -315,19 +305,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, inputs, cj):
-                    print("calling jacfn", y, inputs, inputs_to_dict(inputs))
-                    print(model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs)))
                     j = (
                         model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
                         - cj * mass_matrix
                     )
-                    print("jacfn", j)
                     return j
 
             else:
 
                 def jacfn(t, y, inputs, cj):
-                    print("calling jacfn", y, inputs)
                     jac_eval = (
                         model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
                         - cj * mass_matrix
@@ -375,7 +361,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     )
                 ],
             )
-            print("rootfn", rootfn(0, y0, inputs))
         else:
 
             def rootfn(t, y, inputs):
@@ -393,7 +378,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             rhs_ids = np.ones(model.rhs_eval(0, y0, inputs_list).shape[0])
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
-        print("ids", ids)
 
         number_of_sensitivity_parameters = 0
         if model.jacp_rhs_algebraic_eval is not None:
@@ -557,7 +541,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])
-        print("inputs", inputs)
 
         # do this here cause y0 is set after set_up (calc consistent conditions)
         y0 = model.y0

@@ -9,6 +9,7 @@
 *.csv
 *.hidden
 *.pkl
+*.env
 
 # don't ignore important .txt and .csv files
 !requirements*

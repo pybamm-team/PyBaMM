@@ -18,7 +18,7 @@ class TestIDAKLUSolver(TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["casadi", "jax"]:
+        for form in ["python", "casadi", "jax"]:
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
@@ -141,6 +141,7 @@ class TestIDAKLUSolver(TestCase):
     def test_input_params(self):
         # test a mix of scalar and vector input params
         for form in ["python", "casadi", "jax"]:
+            print("form", form)
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
