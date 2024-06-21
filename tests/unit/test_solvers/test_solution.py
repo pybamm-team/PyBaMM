@@ -365,15 +365,14 @@ class TestSolution(TestCase):
             [
                 (
                     pybamm.step.string(
-                        "Discharge at 1C until 3.3V", tags=["tag1", "tag2"]
+                        "Discharge at 1C until 3.3V",
+                        tags=["tag1"],
                     )
                 ),
-                (
-                    pybamm.step.string("Charge at C/3 until 4.0V", tags=["tag3"]),
-                    pybamm.step.string("Hold at 4.0V until C/10", tags=["tag4"]),
-                ),
+                (pybamm.step.string("Charge at 2C until 4.0V", tags=["tag2"]),),
             ]
-            * 5,
+            * 2,
+            period="1 hour",
         )
         sim = pybamm.Simulation(
             model=model,
@@ -381,7 +380,10 @@ class TestSolution(TestCase):
         )
         solution = sim.solve()
         data_dict = solution.get_data_dict(["Terminal voltage [V]", "Time [s]"])
-        assert set(data_dict["Tags"]).issubset({"tag1;tag2", "tag3", "tag4"})
+        np.testing.assert_array_equal(
+            data_dict["Tags"],
+            ["tag1", "tag1", "tag2", "tag2", "tag1", "tag1", "tag1", "tag2", "tag2"],
+        )
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
