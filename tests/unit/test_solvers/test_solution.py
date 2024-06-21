@@ -385,6 +385,27 @@ class TestSolution(TestCase):
             ["tag1", "tag1", "tag2", "tag2", "tag1", "tag1", "tag1", "tag2", "tag2"],
         )
 
+    def test_get_data_cycles_steps_empty_tags(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                (pybamm.step.string("Discharge at 1C until 3.3V")),
+                (pybamm.step.string("Charge at 2C until 4.0V")),
+            ]
+            * 2,
+            period="1 hour",
+        )
+        sim = pybamm.Simulation(
+            model=model,
+            experiment=experiment,
+        )
+        solution = sim.solve()
+        data_dict = solution.get_data_dict(["Terminal voltage [V]", "Time [s]"])
+        np.testing.assert_array_equal(
+            data_dict["Tags"],
+            ["", "", "", "", "", "", "", "", ""],
+        )
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
