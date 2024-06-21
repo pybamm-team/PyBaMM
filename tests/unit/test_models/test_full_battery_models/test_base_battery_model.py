@@ -378,6 +378,12 @@ class TestBaseBatteryModel(TestCase):
                 }
             )
 
+        # surface thermal model
+        with self.assertRaisesRegex(pybamm.OptionError, "surface temperature"):
+            pybamm.BaseBatteryModel(
+                {"surface temperature": "lumped", "thermal": "x-full"}
+            )
+
         # phases
         with self.assertRaisesRegex(pybamm.OptionError, "multiple particle phases"):
             pybamm.BaseBatteryModel({"particle phases": "2", "surface form": "false"})
