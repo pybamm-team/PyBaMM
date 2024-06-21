@@ -283,7 +283,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "particle": [
                 "Fickian diffusion",
-                "fast diffusion",
                 "uniform profile",
                 "quadratic profile",
                 "quartic profile",
