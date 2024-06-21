@@ -50,6 +50,7 @@
 
 ## Breaking changes
 
+- Functions that are created using `pybamm.Function(function_object, children)` can no longer be differentiated symbolically (e.g. to compute the Jacobian). This should affect no users, since function derivatives for all "standard" functions are explicitly implemented ([#4196](https://github.com/pybamm-team/PyBaMM/pull/4196))
 - Removed data files under `pybamm/input` and released them in a separate repository upstream at [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0). Note that data files under `pybamm/input/parameters` have not been removed. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
 - Removed `check_model` argument from `Simulation.solve`. To change the `check_model` option, use `Simulation(..., discretisation_kwargs={"check_model": False})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
 - Removed multiple Docker images. Here on, a single Docker image tagged `pybamm/pybamm:latest` will be provided with both solvers (`IDAKLU` and `JAX`) pre-installed. ([#3992](https://github.com/pybamm-team/PyBaMM/pull/3992))

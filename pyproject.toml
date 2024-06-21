@@ -121,7 +121,6 @@ jax = [
 ]
 # Contains all optional dependencies, except for jax and dev dependencies
 all = [
-    "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
