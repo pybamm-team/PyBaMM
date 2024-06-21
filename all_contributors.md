@@ -116,6 +116,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ikorotkin"><img src="https://avatars.githubusercontent.com/u/29599800?v=4?s=100" width="100px;" alt="Ivan Korotkin"/><br /><sub><b>Ivan Korotkin</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=ikorotkin" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/santacodes"><img src="https://avatars.githubusercontent.com/u/52504160?v=4?s=100" width="100px;" alt="Santhosh"/><br /><sub><b>Santhosh</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=santacodes" title="Code">💻</a> <a href="#infra-santacodes" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/smitasahu2"><img src="https://avatars.githubusercontent.com/u/57876346?v=4?s=100" width="100px;" alt="Smita Sahu"/><br /><sub><b>Smita Sahu</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=smitasahu2" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
