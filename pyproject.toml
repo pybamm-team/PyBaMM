@@ -166,7 +166,6 @@ pybamm = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["pybamm", "pybamm.*"]
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
