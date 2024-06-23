@@ -114,6 +114,7 @@ class TestCompareBasicModels(TestCase):
                 basic_sol[name].entries, sol[name].entries, rtol=1e-4
             )
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
