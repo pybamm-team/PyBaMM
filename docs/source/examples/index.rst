@@ -27,6 +27,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
 
     notebooks/creating_models/1-an-ode-model.ipynb
     notebooks/creating_models/2-a-pde-model.ipynb
+    notebooks/creating_models/3-model-into-a-class.ipynb
 
 .. nbgallery::
     :caption: Expression Tree
