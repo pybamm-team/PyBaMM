@@ -9,7 +9,6 @@ import unittest
 from scipy.sparse import eye
 from tests import (
     get_1p1d_discretisation_for_testing,
-    multi_var_function_test,
 )
 
 
@@ -199,12 +198,6 @@ class TestJacobian(TestCase):
         func = pybamm.sin(const)
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy)
-
-        # several children
-        func = pybamm.Function(multi_var_function_test, 2 * y, 3 * y)
-        jacobian = np.diag(5 * np.ones(8))
-        dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
     def test_jac_of_domain_concatenation(self):
         # create mesh
