@@ -68,7 +68,7 @@ def run_doc_tests():
                 "-m",
                 "pytest",
                 "--doctest-plus",
-                "pybamm",
+                "src/pybamm",
             ],
             check=True,
         )
