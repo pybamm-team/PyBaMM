@@ -188,9 +188,6 @@ class Experiment:
                     ]
                 ]
             ):
-                time = term.split(" ")[0]
-                unit = term.split(" ")[1]
-                time_and_unit = time + "" + unit
                 termination_dict["time"] = _convert_time_to_seconds(term)
             else:
                 raise ValueError(
