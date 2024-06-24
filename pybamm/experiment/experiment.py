@@ -169,20 +169,28 @@ class Experiment:
             elif term.endswith("V"):
                 end_discharge_V = term.split("V")[0]
                 termination_dict["voltage"] = (float(end_discharge_V), "V")
-            elif term.split(" ")[1] in [
-                "hour",
-                "hours",
-                "h",
-                "hr",
-                "minute",
-                "minutes",
-                "m",
-                "min",
-                "second",
-                "seconds",
-                "s",
-                "sec",
-            ]:
+            elif any(
+                [
+                    term.endswith(key)
+                    for key in [
+                        "hour",
+                        "hours",
+                        "h",
+                        "hr",
+                        "minute",
+                        "minutes",
+                        "m",
+                        "min",
+                        "second",
+                        "seconds",
+                        "s",
+                        "sec",
+                    ]
+                ]
+            ):
+                time = term.split(" ")[0]
+                unit = term.split(" ")[1]
+                time_and_unit = time + "" + unit
                 termination_dict["time"] = _convert_time_to_seconds(term)
             else:
                 raise ValueError(

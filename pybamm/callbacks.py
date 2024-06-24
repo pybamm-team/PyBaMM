@@ -178,15 +178,14 @@ class LoggingCallback(Callback):
         time_stop = logs["stopping conditions"]["time"]
         if time_stop is not None:
             time_now = logs["experiment time"]
-            if time_now < time_stop[0]:
+            if time_now < time_stop:
                 self.logger.notice(
-                    f"Time is now {time_now:.3f} s, "
-                    f"will stop at {time_stop[0]:.3f} s."
+                    f"Time is now {time_now:.3f} s, " f"will stop at {time_stop:.3f} s."
                 )
             else:
                 self.logger.notice(
                     f"Stopping experiment since time ({time_now:.3f} s) "
-                    f"has reached stopping time ({time_stop[0]:.3f} s)."
+                    f"has reached stopping time ({time_stop:.3f} s)."
                 )
 
     def on_cycle_end(self, logs):
