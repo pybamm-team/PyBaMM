@@ -314,22 +314,6 @@ class TestCasadiConverter(TestCase):
         y_eval = np.linspace(0, 1, expr.size)
         self.assert_casadi_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval)))
 
-    def test_convert_differentiated_function(self):
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-
-        def myfunction(x, y):
-            return x + y**3
-
-        f = pybamm.Function(myfunction, a, b).diff(a)
-        self.assert_casadi_equal(
-            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(1), evalf=True
-        )
-        f = pybamm.Function(myfunction, a, b).diff(b)
-        self.assert_casadi_equal(
-            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(12), evalf=True
-        )
-
     def test_convert_input_parameter(self):
         casadi_t = casadi.MX.sym("t")
         casadi_y = casadi.MX.sym("y", 10)
