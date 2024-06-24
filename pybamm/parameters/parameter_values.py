@@ -65,7 +65,8 @@ class ParameterValues:
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
             else:
-                raise ValueError("Invalid Parameter Value")
+                valid_sets = "\n".join(pybamm.parameter_sets.keys())
+                raise ValueError(f"{values} is not a valid parameter set. Parameter set must be one of:\n {valid_sets} ")
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
