@@ -718,6 +718,7 @@ class Simulation:
 
                     step_termination = step_solution.termination
                     step_solution.tags = tags
+                    step_solution.step = step_num
 
                     # Add a padding rest step if necessary
                     if step.next_start_time is not None:
@@ -819,6 +820,7 @@ class Simulation:
                         inputs=user_inputs,
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
+                    cycle_solution.cycle = cycle_num + cycle_offset
                     all_cycle_solutions.append(cycle_solution)
                     all_summary_variables.append(cycle_sum_vars)
                     all_first_states.append(cycle_first_state)

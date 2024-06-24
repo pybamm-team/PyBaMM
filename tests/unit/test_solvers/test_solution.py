@@ -385,6 +385,12 @@ class TestSolution(TestCase):
             ["tag1", "tag1", "tag2", "tag2", "tag1", "tag1", "tag1", "tag2", "tag2"],
         )
 
+        assert solution.cycles[0].cycle == 1
+        assert solution.cycles[1].cycle == 2
+        assert solution.cycles[2].cycle == 3
+        assert solution.cycles[3].cycle == 4
+        assert solution.cycles[0].steps[0].step == 1
+
     def test_get_data_cycles_steps_empty_tags(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
@@ -405,6 +411,12 @@ class TestSolution(TestCase):
             data_dict["Tags"],
             ["", "", "", "", "", "", "", "", ""],
         )
+
+        assert solution.cycles[0].cycle == 1
+        assert solution.cycles[1].cycle == 2
+        assert solution.cycles[2].cycle == 3
+        assert solution.cycles[3].cycle == 4
+        assert solution.cycles[0].steps[0].step == 1
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()

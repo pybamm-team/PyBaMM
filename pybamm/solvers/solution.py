@@ -129,6 +129,10 @@ class Solution:
             tags = [""]
         self.tags = tags
 
+        # initialize cycle and step attributes
+        self.cycle = None
+        self.step = None
+
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
 
