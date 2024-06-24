@@ -10,6 +10,7 @@ import pybamm
 import pandas as pd
 from scipy.io import savemat
 from functools import cached_property
+from typing import List
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -859,7 +860,7 @@ class Solution:
             **kwargs_fill,
         )
 
-    def search_tags(self, tags: str | list[str]):
+    def search_tags(self, tags: str | List[str]):
         """
         Search for the tag in the solution and return the corresponding solution steps
         """
