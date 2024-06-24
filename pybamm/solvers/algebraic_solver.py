@@ -61,12 +61,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         """
         inputs_list = inputs_list or [{}]
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(
-                *[x for inputs in inputs_list for x in inputs.values()]
-            )
-        else:
-            inputs = inputs_list
+        inputs = pybamm.BaseSolver._inputs_to_stacked_vect(
+            inputs_list, model.convert_to_format
+        )
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):

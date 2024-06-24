@@ -386,11 +386,9 @@ class TestBaseSolver(TestCase):
                             inputs = {"a": a_value, "b": b_value}
                             all_inputs.append((t, y, inputs))
             for t, y, inputs in all_inputs:
-                if model.convert_to_format == "casadi":
-                    use_inputs = casadi.vertcat(*[x for x in inputs.values()])
-                else:
-                    use_inputs = inputs
-
+                use_inputs = pybamm.BaseSolver._inputs_to_stacked_vect(
+                    inputs, convert_to_format
+                )
                 sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
 
                 if convert_to_format == "casadi":

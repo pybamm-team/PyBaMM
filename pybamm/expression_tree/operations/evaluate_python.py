@@ -364,8 +364,8 @@ def find_symbols(
         symbol_str = "t"
 
     elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = f'inputs["{input_slices[symbol.name]}"]'
-
+        input_slice = input_slices[symbol.name]
+        symbol_str = f"inputs[{input_slice}]"
     else:
         raise NotImplementedError(
             f"Conversion to python not implemented for a symbol of type '{type(symbol)}'"
@@ -407,17 +407,7 @@ def to_python(
     """
     constant_values: OrderedDict = OrderedDict()
     variable_symbols: OrderedDict = OrderedDict()
-    input_slices = {}
-    i = 0
-    for input_dict in inputs:
-        for key, value in input_dict.items():
-            if isinstance(value, np.ndarray):
-                inc = value.shape[0]
-                input_slices[key] = slice(i, i + inc)
-            else:
-                inc = 1
-                input_slices[key] = i
-            i += inc
+    input_slices = pybamm.BaseSolver._input_dict_to_slices(inputs[0])
     find_symbols(symbol, constant_values, variable_symbols, input_slices, output_jax)
 
     line_format = "{} = {}"
@@ -526,6 +516,8 @@ class EvaluatorPython:
         else:
             nstates = y.shape[0] // self._ninputs
             nparams = len(inputs) // self._ninputs
+            print("nstates:", nstates)
+            print("nparams:", nparams)
 
             results = [
                 self._evaluate(
@@ -809,8 +801,5 @@ class EvaluatorJaxSensitivities:
 
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
-        result = {
-            key: value.reshape(value.shape[0], -1) for key, value in result.items()
-        }
 
         return result

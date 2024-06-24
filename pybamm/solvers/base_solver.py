@@ -142,8 +142,8 @@ class BaseSolver:
             model.concatenated_initial_conditions,
             "initial_conditions",
             vars_for_processing,
+            inputs,
             use_jacobian=False,
-            ninputs=len(inputs),
         )
         model.initial_conditions_eval = initial_conditions
         model.jacp_initial_conditions_eval = jacp_ic
@@ -153,18 +153,17 @@ class BaseSolver:
             model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
         )
         y_zero = np.zeros((y0_total_size, 1))
+
+        stacked_inputs = self._inputs_to_stacked_vect(inputs, model.convert_to_format)
         if model.convert_to_format == "casadi":
             # stack inputs
-            inputs_casadi = casadi.vertcat(
-                *[x for inpt in inputs for x in inpt.values()]
-            )
-            model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
+            model.y0 = initial_conditions(0.0, y_zero, stacked_inputs)
             if jacp_ic is None:
                 model.y0S = None
             else:
-                model.y0S = jacp_ic(0.0, y_zero, inputs_casadi)
+                model.y0S = jacp_ic(0.0, y_zero, stacked_inputs)
         else:
-            model.y0 = initial_conditions(0.0, y_zero, inputs)
+            model.y0 = initial_conditions(0.0, y_zero, stacked_inputs)
             if jacp_ic is None:
                 model.y0S = None
             else:
@@ -172,11 +171,9 @@ class BaseSolver:
                 # so need to make sure we convert int -> float
                 # This is to satisfy JAX jacfwd function which requires
                 # float inputs
-                inputs_float = {
-                    key: float(value) if isinstance(value, int) else value
-                    for key, value in inputs.items()
-                }
-                model.y0S = jacp_ic(0.0, y_zero, inputs_float)
+                if stacked_inputs.dtype == int:
+                    stacked_inputs = stacked_inputs.astype(float)
+                model.y0S = jacp_ic(0.0, y_zero, stacked_inputs)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -192,14 +189,14 @@ class BaseSolver:
         else:
             rhs = model.concatenated_rhs
         rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            rhs, "RHS", vars_for_processing, ninputs=len(inputs)
+            rhs, "RHS", vars_for_processing, inputs
         )
 
         algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
             model.concatenated_algebraic,
             "algebraic",
             vars_for_processing,
-            ninputs=len(inputs),
+            inputs,
         )
 
         # combine rhs and algebraic functions
@@ -218,7 +215,10 @@ class BaseSolver:
             jacp_rhs_algebraic,
             jac_rhs_algebraic_action,
         ) = process(
-            rhs_algebraic, "rhs_algebraic", vars_for_processing, ninputs=len(inputs)
+            rhs_algebraic,
+            "rhs_algebraic",
+            vars_for_processing,
+            inputs,
         )
 
         (
@@ -286,9 +286,9 @@ class BaseSolver:
                     model.variables_and_events[key],
                     BaseSolver._wrangle_name(key),
                     vars_for_processing,
+                    inputs,
                     use_jacobian=True,
                     return_jacp_stacked=True,
-                    ninputs=len(inputs),
                 )
 
         pybamm.logger.info("Finish solver set-up")
@@ -554,8 +554,8 @@ class BaseSolver:
                         event_sigmoid,
                         f"event_{n}",
                         vars_for_processing,
+                        inputs,
                         use_jacobian=False,
-                        ninputs=len(inputs),
                     )[0]
                     # use the actual casadi object as this will go into the rhs
                     casadi_switch_events.append(event_casadi)
@@ -565,8 +565,8 @@ class BaseSolver:
                     event.expression,
                     f"event_{n}",
                     vars_for_processing,
+                    inputs,
                     use_jacobian=False,
-                    ninputs=len(inputs),
                 )[0]
                 if event.event_type == pybamm.EventType.TERMINATION:
                     terminate_events.append(event_call)
@@ -1393,6 +1393,38 @@ class BaseSolver:
 
         return ordered_inputs
 
+    @staticmethod
+    def _inputs_to_stacked_vect(inputs_list: list[dict], convert_to_format: str):
+        if len(inputs_list) == 0 or len(inputs_list[0]) == 0:
+            return np.array([[]])
+        if convert_to_format == "casadi":
+            inputs = casadi.vertcat(
+                *[x for inputs in inputs_list for x in inputs.values()]
+            )
+        else:
+            arrays_to_stack = [
+                np.array(x).reshape(-1, 1)
+                for inputs in inputs_list
+                for x in inputs.values()
+            ]
+            print(inputs_list, arrays_to_stack)
+            inputs = np.vstack(arrays_to_stack)
+        return inputs
+
+    @staticmethod
+    def _input_dict_to_slices(input_dict: dict):
+        input_slices = {}
+        i = 0
+        for key, value in input_dict.items():
+            if isinstance(value, np.ndarray):
+                inc = value.shape[0]
+                input_slices[key] = slice(i, i + inc)
+            else:
+                inc = 1
+                input_slices[key] = i
+            i += inc
+        return input_slices
+
 
 def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs):
     """
@@ -1536,9 +1568,9 @@ def process(
     symbol,
     name,
     vars_for_processing,
+    inputs: list[dict],
     use_jacobian=None,
     return_jacp_stacked=None,
-    ninputs=1,
 ):
     """
     Parameters
@@ -1547,6 +1579,10 @@ def process(
         expression tree to convert
     name: str
         function evaluators created will have this base name
+    vars_for_processing: dict
+        dictionary of variables for processing
+    inputs: list of dict
+        list of input parameters to pass to the model when solving
     use_jacobian: bool, optional
         whether to return Jacobian functions
     return_jacp_stacked: bool, optional
@@ -1579,6 +1615,8 @@ def process(
         i.e. $\\frac{\\partial f}{\\partial y} * v$
 
     """
+    ninputs = len(inputs)
+    is_event = "event" in name
 
     def report(string):
         # don't log event conversion
@@ -1592,7 +1630,7 @@ def process(
 
     if model.convert_to_format == "jax":
         report(f"Converting {name} to jax")
-        func = pybamm.EvaluatorJax(symbol)
+        func = pybamm.EvaluatorJax(symbol, inputs, is_event=is_event)
         jacp = None
         if model.calculate_sensitivities:
             report(
@@ -1622,16 +1660,10 @@ def process(
                 p: symbol.diff(pybamm.InputParameter(p))
                 for p in model.calculate_sensitivities
             }
+            jacp = pybamm.NumpyConcatenation(*[v for v in jacp_dict.values()])
 
             report(f"Converting sensitivities for {name} to python")
-            jacp_dict = {
-                p: pybamm.EvaluatorPython(jacp) for p, jacp in jacp_dict.items()
-            }
-
-            # jacp should be a function that returns a dict of sensitivities
-            def jacp(*args, **kwargs):
-                return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
-
+            jacp = pybamm.EvaluatorPython(jacp, inputs)
         else:
             jacp = None
 
@@ -1639,7 +1671,7 @@ def process(
             report(f"Calculating jacobian for {name}")
             jac = jacobian.jac(symbol, y)
             report(f"Converting jacobian for {name} to python")
-            jac = pybamm.EvaluatorPython(jac)
+            jac = pybamm.EvaluatorPython(jac, inputs)
             # cannot do jacobian action efficiently for now
             jac_action = None
         else:
@@ -1647,7 +1679,7 @@ def process(
             jac_action = None
 
         report(f"Converting {name} to python")
-        func = pybamm.EvaluatorPython(symbol, is_event="event" in name)
+        func = pybamm.EvaluatorPython(symbol, inputs, is_event=is_event)
 
     else:
         t_casadi = vars_for_processing["t_casadi"]
