@@ -67,6 +67,76 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_isothermal_heat_source_hom(self):
+        options = {
+            "calculate heat source for isothermal models": "true",
+            "thermal": "isothermal",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_2plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_model_1D_hom(self):
+        options = {"thermal": "lumped", "heat of mixing": "true"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_x_full_thermal_model_hom(self):
+        options = {
+            "thermal": "x-full",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_1plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_2plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_thermal_1plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "x-lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_thermal_2plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "x-lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_contact_resistance(self):
         options = {"contact resistance": "true"}
         self.check_well_posedness(options)
