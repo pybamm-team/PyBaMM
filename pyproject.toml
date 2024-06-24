@@ -35,7 +35,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "numpy>=1.23.5",
+    "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
     "casadi>=3.6.5",
     "xarray>=2022.6.0",
@@ -121,7 +121,6 @@ jax = [
 ]
 # Contains all optional dependencies, except for jax and dev dependencies
 all = [
-    "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
