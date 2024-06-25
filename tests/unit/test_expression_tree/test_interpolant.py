@@ -326,12 +326,26 @@ class TestInterpolant(TestCase):
                 decimal=3,
             )
 
+        # test 2D interpolation diff fails
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.01))
+        xx, yy = np.meshgrid(x[0], x[1], indexing="ij")
+        z = np.sin(xx**2 + yy**2)
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        # linear
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "differentiation not implemented for functions with more than one child",
+        ):
+            interp.diff(var1)
+
     def test_processing(self):
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
         interp = pybamm.Interpolant(x, 2 * x, y)
 
-        self.assertEqual(interp, interp.new_copy())
+        self.assertEqual(interp, interp.create_copy())
 
     def test_to_from_json(self):
         x = np.linspace(0, 1, 10)
@@ -369,6 +383,7 @@ class TestInterpolant(TestCase):
             ],
             "interpolator": "linear",
             "extrapolate": True,
+            "_num_derivatives": 0,
         }
 
         # check correct writing to json

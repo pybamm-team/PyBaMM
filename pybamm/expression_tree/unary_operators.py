@@ -60,12 +60,23 @@ class UnaryOperator(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return f"{self.name}({self.child!s})"
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_child = self.child.new_copy()
-        return self._unary_new_copy(new_child)
+        if new_children and len(new_children) > 1:
+            raise ValueError(
+                f"Unary operator of type {type(self)} must have exactly one child."
+            )
+        child = self._children_for_copying(new_children)[0]
 
-    def _unary_new_copy(self, child):
+        new_symbol = self._unary_new_copy(child, perform_simplifications)
+        new_symbol.copy_domains(self)
+        return new_symbol
+
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """Make a new copy of the unary operator, with child `child`"""
         return self.__class__(child)
 
@@ -143,9 +154,17 @@ class Negate(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return -child
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return -child
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the overridden :meth:`__neg__` to cover scenarios where the child
+        is some specific symbol types.
+        """
+        if perform_simplifications:
+            return -child
+        else:
+            return Negate(child)
 
 
 class AbsoluteValue(UnaryOperator):
@@ -169,9 +188,17 @@ class AbsoluteValue(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return abs(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the overridden :meth:`__abs__` to cover scenarios where the child
+        is some specific symbol types.
+        """
+        if perform_simplifications:
+            return abs(child)
+        else:
+            return AbsoluteValue(child)
 
 
 class Sign(UnaryOperator):
@@ -203,9 +230,17 @@ class Sign(UnaryOperator):
             with np.errstate(invalid="ignore"):
                 return np.sign(child)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return sign(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`sign` to cover scenarios where the child is
+        a concatenation or broadcast, and simplifies the symbol.
+        """
+        if perform_simplifications:
+            return sign(child)
+        else:
+            return Sign(child)
 
 
 class Floor(UnaryOperator):
@@ -350,8 +385,9 @@ class Index(UnaryOperator):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return child[self.slice]
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
+        # this
         new_index = self.__class__(child, self.index, check_size=False)
         # Keep same domains
         new_index.copy_domains(self)
@@ -448,9 +484,17 @@ class Gradient(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return grad(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`grad` to cover scenarios where the gradient
+        is zero, or the child is a broadcast object.
+        """
+        if perform_simplifications:
+            return grad(child)
+        else:
+            return Gradient(child)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -484,9 +528,17 @@ class Divergence(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return div(child)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`div` to cover scenarios where divergence is
+        0 or interacts with other functions.
+        """
+        if perform_simplifications:
+            return div(child)
+        else:
+            return Divergence(child)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -663,9 +715,8 @@ class Integral(SpatialOperator):
             )
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-
         return self.__class__(child, self.integration_variable)
 
     def _evaluate_for_shape(self):
@@ -805,9 +856,8 @@ class DefiniteIntegralVector(SpatialOperator):
             )
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-
         return self.__class__(child, vector_type=self.vector_type)
 
     def _evaluate_for_shape(self):
@@ -858,9 +908,8 @@ class BoundaryIntegral(SpatialOperator):
             (self.__class__, self.name, self.children[0].id, *tuple(self.domain))
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-
         return self.__class__(child, region=self.region)
 
     def _evaluate_for_shape(self):
@@ -909,7 +958,7 @@ class DeltaFunction(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.side, self.domain)
 
@@ -968,7 +1017,7 @@ class BoundaryOperator(SpatialOperator):
             )
         )
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.side)
 
@@ -993,9 +1042,17 @@ class BoundaryValue(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return boundary_value(child, self.side)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`boundary_value` to perform checks before
+        creating a BoundaryValue object.
+        """
+        if perform_simplifications:
+            return boundary_value(child, self.side)
+        else:
+            return BoundaryValue(child, self.side)
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
@@ -1027,7 +1084,7 @@ class ExplicitTimeIntegral(UnaryOperator):
     def _from_json(cls, snippet: dict):
         return cls(snippet["children"][0], snippet["initial_condition"])
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         return self.__class__(child, self.initial_condition)
 
     def is_constant(self):
@@ -1109,7 +1166,7 @@ class EvaluateAt(SpatialOperator):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         return pybamm.Scalar(0)
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.position)
 
@@ -1166,10 +1223,6 @@ class NotConstant(UnaryOperator):
     def __init__(self, child):
         super().__init__("not_constant", child)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return NotConstant(child)
-
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.child.diff(variable)
@@ -1216,6 +1269,11 @@ def grad(symbol):
         else:
             new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
+    elif isinstance(symbol, pybamm.SecondaryBroadcast):
+        # Take gradient of the child
+        # then broadcast back to the originalsymbol's secondary domain
+        # We can do this because gradient only acts on the primary domain
+        return pybamm.SecondaryBroadcast(grad(symbol.child), symbol.secondary_domain)
     elif isinstance(symbol, pybamm.FullBroadcast):
         return pybamm.FullBroadcastToEdges(0, broadcast_domains=symbol.domains)
     else:
@@ -1252,8 +1310,6 @@ def div(symbol):
         left, right = symbol.orphans
         if isinstance(left, pybamm.Negate):
             return -div(symbol._binary_new_copy(left.orphans[0], right))
-        # elif isinstance(right, pybamm.Negate):
-        #     return -div(symbol._binary_new_copy(left, right.orphans[0]))
 
     # Last resort
     return Divergence(symbol)

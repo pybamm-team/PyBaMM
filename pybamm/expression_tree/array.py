@@ -128,7 +128,11 @@ class Array(pybamm.Symbol):
         jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
         return pybamm.Matrix(jac)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.entries,
