@@ -41,8 +41,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo dot -c
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+          sudo dot -c
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
@@ -109,8 +109,8 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo dot -c
           sudo apt-get install graphviz pandoc texlive-latex-extra dvipng
+          sudo dot -c
 
       - name: Set up Python
         id: setup-python
