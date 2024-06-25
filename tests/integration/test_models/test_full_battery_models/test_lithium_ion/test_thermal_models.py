@@ -108,10 +108,18 @@ class TestThermal(TestCase):
 
         # load models
         model_no_contact_resistance = pybamm.lithium_ion.SPMe(
-            {"cell geometry": "arbitrary", "thermal": "lumped", "contact resistance": "false"}
+            {
+                "cell geometry": "arbitrary",
+                "thermal": "lumped",
+                "contact resistance": "false",
+            }
         )
         model_contact_resistance = pybamm.lithium_ion.SPMe(
-            {"cell geometry": "arbitrary", "thermal": "lumped", "contact resistance": "true"}
+            {
+                "cell geometry": "arbitrary",
+                "thermal": "lumped",
+                "contact resistance": "true",
+            }
         )
         models = [model_no_contact_resistance, model_contact_resistance]
 
@@ -121,7 +129,9 @@ class TestThermal(TestCase):
         lumped_params_contact_resistance = parameter_values.copy()
 
         lumped_params_contact_resistance.update(
-            { "Contact resistance [Ohm]": 0.05,}
+            {
+                "Contact resistance [Ohm]": 0.05,
+            }
         )
 
         # solve the models
@@ -131,7 +141,7 @@ class TestThermal(TestCase):
             sim = pybamm.Simulation(model, parameter_values=param)
             sim.solve([0, 3600])
             sols.append(sim.solution)
-        
+
         # get the average temperature from each model
         avg_cell_temp = sols[0]["X-averaged cell temperature [K]"].entries
         avg_cell_temp_cr = sols[1]["X-averaged cell temperature [K]"].entries
@@ -139,7 +149,8 @@ class TestThermal(TestCase):
         # check that the time-averaged cell temperature of the lumped thermal model
         # with contact resistance is higher than without contact resistance
         self.assertGreater(
-            sum(avg_cell_temp_cr)/len(avg_cell_temp_cr), sum(avg_cell_temp)/len(avg_cell_temp)
+            sum(avg_cell_temp_cr) / len(avg_cell_temp_cr),
+            sum(avg_cell_temp) / len(avg_cell_temp),
         )
 
 
