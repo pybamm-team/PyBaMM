@@ -229,7 +229,7 @@ jobs:
         with:
           artifacts_path: files/
           anaconda_nightly_upload_organization: # TODO: create
-          anaconda_nightly_upload_token: ${{ secrets.ANACONDA_ORG_UPLOAD_TOKEN }} # TODO: configure
+          anaconda_nightly_upload_token: ${{ secrets.ANACONDA_ORG_UPLOAD_TOKEN }}
 
   publish_pypi:
     # This job is only of value to PyBaMM and would always be skipped in forks
