@@ -110,6 +110,7 @@ dev = [
     # For testing Jupyter notebooks
     "pytest>=6",
     "pytest-xdist",
+    "pytest-mock",
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
@@ -224,6 +225,7 @@ minversion = "6"
 # error if not installed
 required_plugins = [
     "pytest-xdist",
+    "pytest-mock",
 ]
 addopts = [
     "-nauto",
