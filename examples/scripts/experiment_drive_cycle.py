@@ -10,8 +10,9 @@ os.chdir(pybamm.__path__[0] + "/..")
 pybamm.set_logging_level("INFO")
 
 # import drive cycle from file
+data_loader = pybamm.DataLoader()
 drive_cycle_current = pd.read_csv(
-    "pybamm/input/drive_cycles/US06.csv", comment="#", header=None
+    f"{data_loader.get_data('US06.csv')}", comment="#", header=None
 ).to_numpy()
 
 

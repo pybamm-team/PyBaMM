@@ -12,6 +12,7 @@ import numpy as np
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm import ParameterValues
 
 
 class BaseSolver:
@@ -500,16 +501,15 @@ class BaseSolver:
                 model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, _Heaviside):
-                    found_t = False
+                    expr = None
                     if symbol.right == pybamm.t:
                         expr = symbol.left
-                        found_t = True
-                    elif symbol.left == pybamm.t:
-                        expr = symbol.right
-                        found_t = True
+                    else:
+                        if symbol.left == pybamm.t:
+                            expr = symbol.right
 
                     # Update the events if the heaviside function depended on t
-                    if found_t:
+                    if expr is not None:
                         model.events.append(
                             pybamm.Event(
                                 str(symbol),
@@ -520,12 +520,11 @@ class BaseSolver:
                 elif isinstance(symbol, pybamm.Modulo):
                     if symbol.left == pybamm.t:
                         expr = symbol.right
-                        if t_eval is None:
-                            N_events = 200
-                        else:
-                            N_events = t_eval[-1] // expr.value
+                        num_events = 200
+                        if t_eval is not None:
+                            num_events = t_eval[-1] // expr.value
 
-                        for i in np.arange(N_events):
+                        for i in np.arange(num_events):
                             model.events.append(
                                 pybamm.Event(
                                     str(symbol),
@@ -533,6 +532,8 @@ class BaseSolver:
                                     pybamm.EventType.DISCONTINUITY,
                                 )
                             )
+                else:
+                    pass
 
         casadi_switch_events = []
         terminate_events = []
@@ -827,7 +828,7 @@ class BaseSolver:
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Thefore only `model_inputs[0]`
+            # not depend on input parameters. Therefore, only `model_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, model_inputs_list[0], t_eval)
@@ -1401,7 +1402,10 @@ class BaseSolver:
     @staticmethod
     def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
-        inputs = inputs or {}
+        if inputs is None:
+            inputs = {}
+        else:
+            inputs = ParameterValues.check_parameter_values(inputs)
 
         # Go through all input parameters that can be found in the model
         # Only keep the ones that are actually used in the model

@@ -77,6 +77,10 @@ class Broadcast(pybamm.SpatialOperator):
             "pybamm.Broadcast: Please use a discretised model when reading in from JSON"
         )
 
+    def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.broadcast_domain)
+
 
 class PrimaryBroadcast(Broadcast):
     """
@@ -173,10 +177,6 @@ class PrimaryBroadcast(Broadcast):
         }
 
         return domains
-
-    def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
         """
@@ -308,10 +308,6 @@ class SecondaryBroadcast(Broadcast):
 
         return domains
 
-    def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
-        return SecondaryBroadcast(child, self.broadcast_domain)
-
     def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a Broadcast.
@@ -429,10 +425,6 @@ class TertiaryBroadcast(Broadcast):
 
         return domains
 
-    def _unary_new_copy(self, child: pybamm.Symbol):
-        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, self.broadcast_domain)
-
     def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a Broadcast.
@@ -506,7 +498,7 @@ class FullBroadcast(Broadcast):
 
         return broadcast_domains
 
-    def _unary_new_copy(self, child):
+    def _unary_new_copy(self, child, perform_simplifications=True):
         """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, broadcast_domains=self.domains)
 

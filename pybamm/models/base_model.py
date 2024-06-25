@@ -1,6 +1,3 @@
-#
-# Base model class
-#
 from __future__ import annotations
 
 import numbers
@@ -23,59 +20,14 @@ class BaseModel:
     ----------
     name: str
         A string giving the name of the model.
-    options: dict
-        A dictionary of options to be passed to the model.
     submodels: dict
         A dictionary of submodels that the model is composed of.
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs.
-    algebraic: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the algebraic equations. The algebraic expressions are assumed to equate
-        to zero. Note that all the variables in the model must exist in the keys of
-        `rhs` or `algebraic`.
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the state variables y. The initial conditions for
-        algebraic variables are provided as initial guesses to a root finding algorithm
-        that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions.
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables.
-    events: list of :class:`pybamm.Event`
-        A list of events. Each event can either cause the solver to terminate
-        (e.g. concentration goes negative), or be used to inform the solver of the
-        existance of a discontinuity (e.g. discontinuity in the input current).
-    concatenated_rhs : :class:`pybamm.Concatenation`
-        After discretisation, contains the expressions representing the rhs equations
-        concatenated into a single expression.
-    concatenated_algebraic : :class:`pybamm.Concatenation`
-        After discretisation, contains the expressions representing the algebraic
-        equations concatenated into a single expression.
-    concatenated_initial_conditions : :class:`numpy.array`
-        After discretisation, contains the vector of initial conditions.
-    mass_matrix : :class:`pybamm.Matrix`
-        After discretisation, contains the mass matrix for the model. This is computed
-        automatically.
-    mass_matrix_inv : :class:`pybamm.Matrix`
-        After discretisation, contains the inverse mass matrix for the differential
-        (rhs) part of model. This is computed automatically.
-    jacobian : :class:`pybamm.Concatenation`
-        Contains the Jacobian for the model. If model.use_jacobian is True, the
-        Jacobian is computed automatically during solver set up.
-    jacobian_rhs : :class:`pybamm.Concatenation`
-        Contains the Jacobian for the part of the model which contains time derivatives.
-        If model.use_jacobian is True, the Jacobian is computed automatically during
-        solver set up.
-    jacobian_algebraic : :class:`pybamm.Concatenation`
-        Contains the Jacobian for the algebraic part of the model. This may be used
-        by the solver when calculating consistent initial conditions. If
-        model.use_jacobian is True, the Jacobian is computed automatically during
-        solver set up.
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True).
     convert_to_format : str
@@ -105,6 +57,7 @@ class BaseModel:
         self._boundary_conditions = {}
         self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
+        self._summary_variables = []
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
@@ -138,22 +91,23 @@ class BaseModel:
 
         instance.options = properties["options"]
 
+        return cls.generic_deserialise(instance, properties)
+
+    @classmethod
+    def generic_deserialise(cls, instance, properties):
         # Initialise model with stored variables that have already been discretised
         instance._concatenated_rhs = properties["concatenated_rhs"]
         instance._concatenated_algebraic = properties["concatenated_algebraic"]
         instance._concatenated_initial_conditions = properties[
             "concatenated_initial_conditions"
         ]
-
         instance.len_rhs = instance.concatenated_rhs.size
         instance.len_alg = instance.concatenated_algebraic.size
         instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
-
         instance.bounds = properties["bounds"]
         instance.events = properties["events"]
         instance.mass_matrix = properties["mass_matrix"]
         instance.mass_matrix_inv = properties["mass_matrix_inv"]
-
         # add optional properties not required for model to solve
         if properties["variables"]:
             instance._variables = pybamm.FuzzyDict(properties["variables"])
@@ -175,10 +129,8 @@ class BaseModel:
         else:
             # Delete the default variables which have not been discretised
             instance._variables = pybamm.FuzzyDict({})
-
         # Model has already been discretised
         instance.is_discretised = True
-
         return instance
 
     @property
@@ -1344,16 +1296,16 @@ class BaseModel:
         >>> model = pybamm.lithium_ion.SPM()
 
         This will returns all model equations in png
-        >>> model.latexify("equations.png")
+        >>> model.latexify("equations.png") # doctest: +SKIP
 
         This will return all the model equations in latex
-        >>> model.latexify()
+        >>> model.latexify() # doctest: +SKIP
 
         This will return the list of all the model equations
-        >>> model.latexify(newline=False)
+        >>> model.latexify(newline=False) # doctest: +SKIP
 
         This will return first five model equations
-        >>> model.latexify(newline=False)[1:5]
+        >>> model.latexify(newline=False)[1:5] # doctest: +SKIP
         """
         from pybamm.expression_tree.operations.latexify import Latexify
 

@@ -1,13 +1,14 @@
 {
   "files": [
-    "all_contributors.md"
+    "all_contributors.md",
+    "README.md"
   ],
   "imageSize": 100,
   "commit": false,
   "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg)](#-contributors)",
   "contributors": [
     {
-      "login": "tinosulzer",
+      "login": "valentinsulzer",
       "name": "Valentin Sulzer",
       "avatar_url": "https://avatars3.githubusercontent.com/u/20817509?v=4",
       "profile": "https://sites.google.com/view/valentinsulzer",
@@ -855,6 +856,89 @@
       "profile": "https://github.com/AndyLiuElysia",
       "contributions": [
         "doc"
+      ]
+    },
+    {
+      "login": "Hongmeiqi",
+      "name": "Hongmeiqi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/143798726?v=4",
+      "profile": "https://github.com/Hongmeiqi",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "mleot",
+      "name": "mleot",
+      "avatar_url": "https://avatars.githubusercontent.com/u/140573653?v=4",
+      "profile": "https://github.com/mleot",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "abhicodes369",
+      "name": "Abhi ram",
+      "avatar_url": "https://avatars.githubusercontent.com/u/119055274?v=4",
+      "profile": "https://github.com/abhicodes369",
+      "contributions": [
+        "test"
+      ]
+    },
+    {
+      "login": "parkec3",
+      "name": "Caitlin D. Parke",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26883801?v=4",
+      "profile": "https://github.com/parkec3",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "Afgr1087",
+      "name": "Andres Felipe Galvis Rodriguez",
+      "avatar_url": "https://avatars.githubusercontent.com/u/56610829?v=4",
+      "profile": "https://github.com/Afgr1087",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "ikorotkin",
+      "name": "Ivan Korotkin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/29599800?v=4",
+      "profile": "https://github.com/ikorotkin",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "santacodes",
+      "name": "Santhosh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/52504160?v=4",
+      "profile": "https://github.com/santacodes",
+      "contributions": [
+        "code",
+        "infra"
+      ]
+    },
+    {
+      "login": "smitasahu2",
+      "name": "Smita Sahu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/57876346?v=4",
+      "profile": "https://github.com/smitasahu2",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "Ubham16",
+      "name": "Ubham16",
+      "avatar_url": "https://avatars.githubusercontent.com/u/173074476?v=4",
+      "profile": "https://github.com/Ubham16",
+      "contributions": [
+        "code"
       ]
     }
   ],

@@ -1,11 +1,3 @@
-#
-# Logging class for PyBaMM
-# Includes additional logging levels inspired by verboselogs
-# https://pypi.org/project/verboselogs/#overview-of-logging-levels
-#
-# Implementation from stackoverflow
-# https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility
-#
 import logging
 
 

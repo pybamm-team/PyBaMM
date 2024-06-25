@@ -77,6 +77,7 @@ class DomainGeometricParameters(BaseParameters):
         if self.domain == "separator":
             self.L = pybamm.Parameter("Separator thickness [m]")
             self.b_e = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
+            self.tau_e = pybamm.Parameter("Separator tortuosity factor (electrolyte)")
             return
 
         Domain = self.domain.capitalize()
@@ -97,6 +98,12 @@ class DomainGeometricParameters(BaseParameters):
         )
         self.b_s = pybamm.Parameter(
             f"{Domain} electrode Bruggeman coefficient (electrode)"
+        )
+        self.tau_e = pybamm.Parameter(
+            f"{Domain} electrode tortuosity factor (electrolyte)"
+        )
+        self.tau_s = pybamm.Parameter(
+            f"{Domain} electrode tortuosity factor (electrode)"
         )
 
 

@@ -25,7 +25,7 @@
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
     "/bin/rm -rf pybind11",
-    "/usr/bin/git clone --depth 1 --branch v2.11.1 https://github.com/pybind/pybind11.git",
+    "/usr/bin/git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git pybind11 -c advice.detachedHead=false",
     "python -m pip install build",
     "python -m build --wheel -o {build_cache_dir} {build_dir}"
   ],
@@ -82,7 +82,6 @@
       "wget": [],
       "cmake": [],
       "anytree": [],
-      "autograd": [],
       "scikit-fem": [],
       "imageio": [],
       "pybtex": [],
