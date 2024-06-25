@@ -305,7 +305,7 @@ jobs:
           merge-multiple: true
 
       - name: Sanity check downloaded artifacts
-        run: ls -lTA artifacts/
+        run: ls -lTa artifacts/
 
       - name: Publish to PyPI
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
