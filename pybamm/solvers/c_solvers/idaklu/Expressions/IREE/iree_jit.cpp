@@ -113,7 +113,8 @@ int IREECompiler::initIREE(int argc, const char **argv) {
   }
   // Suppress stderr
   int saved_stderr = dup(fileno(stderr));
-  freopen(NULL_DEVICE, "w", stderr);
+  if (!freopen(NULL_DEVICE, "w", stderr))
+    DEBUG("Error: failed redirecting stderr");
   // Load library
   bool result = ireeCompilerLoadLibrary(iree_compiler_lib);
   // Restore stderr
