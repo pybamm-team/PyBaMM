@@ -119,16 +119,15 @@ def run_pybamm_requires(session):
                 "iree/",
                 external=True,
             )
-            session.chdir("iree")
-            session.run(
-                "git",
-                "submodule",
-                "update",
-                "--init",
-                "--recursive",
-                external=True,
-            )
-            session.chdir("..")
+            with session.chdir("iree"):
+                session.run(
+                   "git",
+                    "submodule",
+                    "update",
+                    "--init",
+                    "--recursive",
+                    external=True,
+                )
     else:
         session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 
