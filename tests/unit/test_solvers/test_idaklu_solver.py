@@ -217,9 +217,13 @@ class TestIDAKLUSolver(TestCase):
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
-    def test_sensitivites_initial_condition(self):
+    def test_sensitivities_initial_condition(self):
         for form in ["casadi", "iree"]:
             for output_variables in [[], ["2v"]]:
+                if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                    continue
+                if (form == "iree") and not pybamm.have_iree():
+                    continue
                 if form == "casadi":
                     root_method = "casadi"
                 else:

@@ -612,7 +612,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     if isinstance(
                         model.variables_and_events[key], pybamm.ExplicitTimeIntegral
                     ):
-                        continue
+                        continue  # pragma: no cover
                     fcn = self.computed_var_fcns[key]
                     fcn._demote_constants()
                     self.var_idaklu_fcns.append(
