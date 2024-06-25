@@ -65,7 +65,10 @@ class ParameterValues:
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
             else:
-                raise ValueError("Invalid Parameter Value")
+                valid_sets = "\n".join(pybamm.parameter_sets.keys())
+                raise ValueError(
+                    f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
+                )
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -392,7 +395,7 @@ class ParameterValues:
 
     @staticmethod
     def check_parameter_values(values):
-        for param in values:
+        for param in list(values.keys()):
             if "propotional term" in param:
                 raise ValueError(
                     f"The parameter '{param}' has been renamed to "
@@ -405,12 +408,13 @@ class ParameterValues:
                     f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
                 )
             if "electrode diffusivity" in param:
+                new_param = param.replace("electrode", "particle")
                 warn(
-                    f"The parameter '{param}' has been renamed to '{param.replace('electrode', 'particle')}'",
+                    f"The parameter '{param}' has been renamed to '{new_param}'",
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                param = param.replace("electrode", "particle")
+                values[new_param] = values.get(param)
 
         return values
 

@@ -11,7 +11,6 @@ from collections.abc import Sequence
 from typing_extensions import TypeVar
 
 import pybamm
-from pybamm.util import import_optional_dependency
 
 
 class Function(pybamm.Symbol):
@@ -26,9 +25,6 @@ class Function(pybamm.Symbol):
         func(child0.evaluate(t, y, u), child1.evaluate(t, y, u), etc).
     children : :class:`pybamm.Symbol`
         The children nodes to apply the function to
-    derivative : str, optional
-        Which derivative to use when differentiating ("autograd" or "derivative").
-        Default is "autograd".
     differentiated_function : method, optional
         The function which was differentiated to obtain this one. Default is None.
     """
@@ -38,7 +34,6 @@ class Function(pybamm.Symbol):
         function: Callable,
         *children: pybamm.Symbol,
         name: str | None = None,
-        derivative: str | None = "autograd",
         differentiated_function: Callable | None = None,
     ):
         # Turn numbers into scalars
@@ -57,7 +52,6 @@ class Function(pybamm.Symbol):
         domains = self.get_children_domains(children)
 
         self.function = function
-        self.derivative = derivative
         self.differentiated_function = differentiated_function
 
         super().__init__(name, children=children, domains=domains)
@@ -99,30 +93,10 @@ class Function(pybamm.Symbol):
         Derivative with respect to child number 'idx'.
         See :meth:`pybamm.Symbol._diff()`.
         """
-        autograd = import_optional_dependency("autograd")
-        # Store differentiated function, needed in case we want to convert to CasADi
-        if self.derivative == "autograd":
-            return Function(
-                autograd.elementwise_grad(self.function, idx),
-                *children,
-                differentiated_function=self.function,
-            )
-        elif self.derivative == "derivative":
-            if len(children) > 1:
-                raise ValueError(
-                    """
-                    differentiation using '.derivative()' not implemented for functions
-                    with more than one child
-                    """
-                )
-            else:
-                # keep using "derivative" as derivative
-                return pybamm.Function(
-                    self.function.derivative(),  # type: ignore[attr-defined]
-                    *children,
-                    derivative="derivative",
-                    differentiated_function=self.function,
-                )
+        raise NotImplementedError(
+            "Derivative of base Function class is not implemented. "
+            "Please implement in child class."
+        )
 
     def _function_jac(self, children_jacs):
         """Calculate the Jacobian of a function."""
@@ -190,7 +164,6 @@ class Function(pybamm.Symbol):
                 self.function,
                 *children,
                 name=self.name,
-                derivative=self.derivative,
                 differentiated_function=self.differentiated_function,
             )
         else:
@@ -217,7 +190,6 @@ class Function(pybamm.Symbol):
                 self.function,
                 *children,
                 name=self.name,
-                derivative=self.derivative,
                 differentiated_function=self.differentiated_function,
             )
         )
