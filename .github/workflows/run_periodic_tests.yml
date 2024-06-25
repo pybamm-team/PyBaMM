@@ -38,19 +38,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          packages: gfortran gcc graphviz pandoc
-          execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
@@ -75,23 +67,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
 
       - name: Install nox
         run: python -m pip install nox
-
-      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@v4
-        if: matrix.os != 'windows-latest'
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
         timeout-minutes: 10
@@ -129,24 +107,16 @@ jobs:
           fetch-depth: 0
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
-        with:
-          packages: graphviz pandoc
-          execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install TeXLive for Linux
         run: |
           sudo apt-get update
           sudo dot -c
-          sudo apt-get install texlive-latex-extra dvipng
+          sudo apt-get install graphviz pandoc texlive-latex-extra dvipng
 
       - name: Set up Python
         id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
-          cache: 'pip'
 
       - name: Install nox
         run: python -m pip install nox
