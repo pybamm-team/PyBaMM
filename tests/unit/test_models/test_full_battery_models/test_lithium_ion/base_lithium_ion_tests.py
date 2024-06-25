@@ -68,7 +68,10 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_contact_resistance(self):
-        options = {"contact resistance": "true"}
+        options = {
+            "contact resistance": "true",
+            "thermal": "lumped",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_particle_uniform(self):

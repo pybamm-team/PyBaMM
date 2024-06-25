@@ -53,16 +53,17 @@ class Lumped(BaseThermal):
         V = variables["Cell thermal volume [m3]"]
         Q_cool_W = -self.param.h_total * (T_vol_av - T_amb) * self.param.A_cooling
         Q_cool_vol_av = Q_cool_W / V
+
         # Contact resistance heating Q_cr
         if self.options["contact resistance"] == "true":
-            param = self.param
             I = variables["Current [A]"]
-            V = variables["Cell volume [m3"]
-            Q_cr_W = I**2 * param.R_contact
-            Q_cr_vol_av = Q_cr_W / V
+            Q_cr_W = self.calculate_Q_cr_W(I, self.param.R_contact)
+            V = self.param.V_cell
+            Q_cr_vol_av = self.calculate_Q_cr_vol_av(I, self.param.R_contact, V)
         else:
             Q_cr_W = pybamm.Scalar(0)
             Q_cr_vol_av = Q_cr_W
+            
         variables.update(
             {
                 # Lumped cooling
@@ -89,3 +90,12 @@ class Lumped(BaseThermal):
     def set_initial_conditions(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         self.initial_conditions = {T_vol_av: self.param.T_init}
+    
+    def calculate_Q_cr_W(self, current, contact_resistance):
+        Q_cr_W = current**2 * contact_resistance
+        return Q_cr_W
+    
+    def calculate_Q_cr_vol_av(self, current, contact_resistance, volume):
+        Q_cr_W = self.calculate_Q_cr_W(current, contact_resistance)
+        Q_cr_vol_av = Q_cr_W / volume
+        return Q_cr_vol_av

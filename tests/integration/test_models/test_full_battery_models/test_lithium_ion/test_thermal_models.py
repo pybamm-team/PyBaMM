@@ -103,6 +103,45 @@ class TestThermal(TestCase):
 
         self.assertGreater(1e-5, err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"]))
 
+    def test_lumped_contact_resistance(self):
+        # Test that the heating with contact resistance is greater than without
+
+        # load models
+        model_no_contact_resistance = pybamm.lithium_ion.SPMe(
+            {"cell geometry": "arbitrary", "thermal": "lumped", "contact resistance": "false"}
+        )
+        model_contact_resistance = pybamm.lithium_ion.SPMe(
+            {"cell geometry": "arbitrary", "thermal": "lumped", "contact resistance": "true"}
+        )
+        models = [model_no_contact_resistance, model_contact_resistance]
+
+        # parameters
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        lumped_params = parameter_values.copy()
+        lumped_params_contact_resistance = parameter_values.copy()
+
+        lumped_params_contact_resistance.update(
+            { "Contact resistance [Ohm]": 0.05,}
+        )
+
+        # solve the models
+        params = [lumped_params, lumped_params_contact_resistance]
+        sols = []
+        for model, param in zip(models, params):
+            sim = pybamm.Simulation(model, parameter_values=param)
+            sim.solve([0, 3600])
+            sols.append(sim.solution)
+        
+        # get the average temperature from each model
+        avg_cell_temp = sols[0]["X-averaged cell temperature [K]"].entries
+        avg_cell_temp_cr = sols[1]["X-averaged cell temperature [K]"].entries
+
+        # check that the time-averaged cell temperature of the lumped thermal model
+        # with contact resistance is higher than without contact resistance
+        self.assertGreater(
+            sum(avg_cell_temp_cr)/len(avg_cell_temp_cr), sum(avg_cell_temp)/len(avg_cell_temp)
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
