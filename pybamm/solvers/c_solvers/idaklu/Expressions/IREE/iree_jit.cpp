@@ -9,10 +9,25 @@
 #include <iostream>
 #include <tuple>
 #include <vector>
+#include <cstdio>
+#include <unistd.h>
 
 #include <iree/compiler/embedding_api.h>
 #include <iree/compiler/loader.h>
 #include <iree/runtime/api.h>
+
+// Used to suppress stderr output (see initIREE below)
+#ifdef _WIN32
+#include <io.h>
+#define close _close
+#define dup _dup
+#define fileno _fileno
+#define open _open
+#define dup2 _dup2
+#define NULL_DEVICE "NUL"
+#else
+#define NULL_DEVICE "/dev/null"
+#endif
 
 void IREESession::handle_compiler_error(iree_compiler_error_t *error) {
   const char *msg = ireeCompilerErrorGetMessage(error);
@@ -80,10 +95,35 @@ int IREECompiler::initIREE(int argc, const char **argv) {
   int cl_argc = argc;
   const char *iree_compiler_lib = std::getenv("IREE_COMPILER_LIB");
 
-  // Load the compiler library then initialize it
+  // Load the compiler library and initialize it
+  // NOTE: On second and subsequent calls, the function will return false and display
+  // a message on stderr, but it is safe to ignore this message. For an improved user
+  // experience we actively suppress stderr during the call to this function but since
+  // this also suppresses any other error message, we actively check for the presence
+  // of the library file prior to the call.
+  
+  // Check if the library file exists
+  if (iree_compiler_lib == NULL) {
+    fprintf(stderr, "Error: IREE_COMPILER_LIB environment variable not set\n");
+    return 1;
+  }
+  if (access(iree_compiler_lib, F_OK) == -1) {
+    fprintf(stderr, "Error: IREE_COMPILER_LIB file not found\n");
+    return 1;
+  }
+  // Suppress stderr
+  int saved_stderr = dup(fileno(stderr));
+  freopen(NULL_DEVICE, "w", stderr);
+  // Load library
   bool result = ireeCompilerLoadLibrary(iree_compiler_lib);
+  // Restore stderr
+  fflush(stderr);
+  dup2(saved_stderr, fileno(stderr));
+  close(saved_stderr);
+  // Process result
   if (!result) {
-    fprintf(stderr, "** Failed to initialize IREE Compiler **\n");
+    // Library may have already been loaded (can be safely ignored),
+    // or may not be found (critical error), we cannot tell which from the return value.
     return 1;
   }
   // Must be balanced with a call to ireeCompilerGlobalShutdown()
