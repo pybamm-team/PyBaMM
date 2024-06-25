@@ -21,6 +21,7 @@ def test_is_constant_and_can_evaluate():
     symbol = pybamm.Scalar(0)
     assert True is pybamm.is_constant_and_can_evaluate(symbol)
 
+
 def test_fuzzy_dict():
     d = pybamm.FuzzyDict(
         {
@@ -52,8 +53,11 @@ def test_fuzzy_dict():
         d.__getitem__("Open-circuit voltage at 100% SOC [V]")
 
     with pytest.warns(DeprecationWarning):
-        assert d["Positive electrode diffusivity [m2.s-1]"] == \
-            d["Positive particle diffusivity [m2.s-1]"]
+        assert (
+            d["Positive electrode diffusivity [m2.s-1]"]
+            == d["Positive particle diffusivity [m2.s-1]"]
+        )
+
 
 def test_get_parameters_filepath():
     tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
@@ -66,15 +70,18 @@ def test_get_parameters_filepath():
     assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
     tempfile_obj.close()
 
+
 def test_is_jax_compatible():
     if pybamm.have_jax():
         compatible = pybamm.is_jax_compatible()
         assert compatible
 
+
 def test_git_commit_info():
     git_commit_info = pybamm.get_git_commit_info()
     assert isinstance(git_commit_info, str)
     assert git_commit_info[:2] == "v2"
+
 
 def test_import_optional_dependency():
     optional_distribution_deps = get_optional_distribution_deps("pybamm")
@@ -90,12 +97,16 @@ def test_import_optional_dependency():
 
     # Test import optional dependency
     for import_pkg in present_optional_import_deps:
-        with pytest.raises(ModuleNotFoundError, match=f"Optional dependency {import_pkg} is not available."):
+        with pytest.raises(
+            ModuleNotFoundError,
+            match=f"Optional dependency {import_pkg} is not available.",
+        ):
             pybamm.util.import_optional_dependency(import_pkg)
 
     # Restore optional dependencies
     for import_pkg in present_optional_import_deps:
         sys.modules[import_pkg] = modules[import_pkg]
+
 
 def test_pybamm_import():
     optional_distribution_deps = get_optional_distribution_deps("pybamm")
@@ -129,6 +140,7 @@ def test_pybamm_import():
         for module_name, module in modules.items():
             sys.modules[module_name] = module
 
+
 def test_optional_dependencies():
     optional_distribution_deps = get_optional_distribution_deps("pybamm")
     required_distribution_deps = get_required_distribution_deps("pybamm")
@@ -141,12 +153,11 @@ def test_optional_dependencies():
 
     # Check that optional dependencies are not present in the core PyBaMM installation
     optional_present_deps = optional_distribution_deps & required_distribution_deps
-    assert not  \
-        bool(optional_present_deps), \
-        f"Optional dependencies installed: {optional_present_deps}.\n" \
-        "Please ensure that optional dependencies are not present in the core PyBaMM installation, " \
+    assert not bool(optional_present_deps), (
+        f"Optional dependencies installed: {optional_present_deps}.\n"
+        "Please ensure that optional dependencies are not present in the core PyBaMM installation, "
         "or list them as required."
-
+    )
 
 
 def test_url_gets_to_stdout(mocker):
