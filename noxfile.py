@@ -85,8 +85,7 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation.
-    """
+    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.install("cmake", silent=False)
@@ -121,7 +120,7 @@ def run_pybamm_requires(session):
             )
             with session.chdir("iree"):
                 session.run(
-                   "git",
+                    "git",
                     "submodule",
                     "update",
                     "--init",
