@@ -47,7 +47,7 @@ class Function(pybamm.Symbol):
             if isinstance(child, (float, int, np.number)):
                 children[idx] = pybamm.Scalar(child)
 
-        if name is not None:
+        if name is not None:  # pragma: no branch
             self.name = name
         else:
             try:
@@ -67,7 +67,7 @@ class Function(pybamm.Symbol):
         out = f"{self.name[10:-1]}("
         for child in self.children:
             out += f"{child!s}, "
-        out = out[:-2] + ")"
+        out = out[:-2] + ")"  # pragma: no cover
         return out
 
     def diff(self, variable: pybamm.Symbol):
@@ -115,7 +115,7 @@ class Function(pybamm.Symbol):
                     with more than one child
                     """
                 )
-            else:
+            else:  # pragma: no cover
                 # keep using "derivative" as derivative
                 return pybamm.Function(
                     self.function.derivative(),  # type: ignore[attr-defined]

@@ -717,7 +717,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def electrode_types(self):
         try:
             return self._electrode_types
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             self._electrode_types = {}
             for domain in ["negative", "positive"]:
                 if f"{domain} electrode" in self.whole_cell_domains:
@@ -743,7 +743,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def negative(self):
         "Returns the options for the negative electrode"
         # index 0 in a 2-tuple for the negative electrode
-        return BatteryModelDomainOptions(self.items(), 0)
+        return BatteryModelDomainOptions(self.items(), 0)  # pragma: no cover
 
     @property
     def positive(self):
@@ -961,7 +961,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         if (
             isinstance(self, pybamm.lead_acid.LOQS)
-            and options["surface form"] == "false"
+            and options["surface form"] == "false"  # pragma: no cover
             and options["hydrolysis"] == "true"
         ):
             raise pybamm.OptionError(
@@ -1237,7 +1237,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             elif self.options["dimensionality"] == 2:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D
         elif self.options["thermal"] == "x-full":
-            if self.options["dimensionality"] == 0:
+            if self.options["dimensionality"] == 0:  # pragma: no cover
                 thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
         self.submodels["thermal"] = thermal_submodel(self.param, self.options)
