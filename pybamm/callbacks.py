@@ -180,7 +180,7 @@ class LoggingCallback(Callback):
             time_now = logs["experiment time"]
             if time_now < time_stop:
                 self.logger.notice(
-                    f"Time is now {time_now:.3f} s, " f"will stop at {time_stop:.3f} s."
+                    f"Time is now {time_now:.3f} s, will stop at {time_stop:.3f} s."
                 )
             else:
                 self.logger.notice(
