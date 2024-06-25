@@ -67,7 +67,7 @@ class ParameterValues:
             else:
                 valid_sets = "\n".join(pybamm.parameter_sets.keys())
                 raise ValueError(
-                    f"{values} is not a valid parameter set. Parameter set must be one of:\n{valid_sets} "
+                    f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
                 )
 
         # Initialise empty _processed_symbols dict (for caching)
