@@ -101,7 +101,7 @@ int IREECompiler::initIREE(int argc, const char **argv) {
   // experience we actively suppress stderr during the call to this function but since
   // this also suppresses any other error message, we actively check for the presence
   // of the library file prior to the call.
-  
+
   // Check if the library file exists
   if (iree_compiler_lib == NULL) {
     fprintf(stderr, "Error: IREE_COMPILER_LIB environment variable not set\n");
