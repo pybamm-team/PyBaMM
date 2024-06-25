@@ -36,7 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'number of MSMR reactions': 'none' (possible: ['none'])
 'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'Wycisk'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
-'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
+'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
