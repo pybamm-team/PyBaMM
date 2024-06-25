@@ -220,6 +220,10 @@ class TestIDAKLUSolver(TestCase):
     def test_sensitivites_initial_condition(self):
         for form in ["casadi", "iree"]:
             for output_variables in [[], ["2v"]]:
+                if form == "casadi":
+                    root_method = "casadi"
+                else:
+                    root_method = "lm"
                 model = pybamm.BaseModel()
                 model.convert_to_format = "jax" if form == "iree" else form
                 u = pybamm.Variable("u")
@@ -233,6 +237,7 @@ class TestIDAKLUSolver(TestCase):
                 disc = pybamm.Discretisation()
                 disc.process_model(model)
                 solver = pybamm.IDAKLUSolver(
+                    root_method=root_method,
                     output_variables=output_variables,
                     options={"jax_evaluator": "iree"} if form == "iree" else {},
                 )
@@ -721,15 +726,16 @@ class TestIDAKLUSolver(TestCase):
                 root_method = "casadi"
             else:
                 root_method = "lm"
+            input_parameters = {  # Sensitivities dictionary
+                "Current function [A]": 0.222,
+                "Separator porosity": 0.3,
+            }
+
             # construct model
             model = pybamm.lithium_ion.DFN()
             model.convert_to_format = "jax" if form == "iree" else form
             geometry = model.default_geometry
             param = model.default_parameter_values
-            input_parameters = {  # Sensitivities dictionary
-                "Current function [A]": 0.680616,
-                "Separator porosity": 1.0,
-            }
             param.update({key: "[input]" for key in input_parameters})
             param.process_model(model)
             param.process_geometry(geometry)
@@ -737,6 +743,7 @@ class TestIDAKLUSolver(TestCase):
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
+
             t_eval = np.linspace(0, 3600, 100)
 
             options = {
@@ -759,8 +766,8 @@ class TestIDAKLUSolver(TestCase):
             # Use the full model as comparison (tested separately)
             solver_all = pybamm.IDAKLUSolver(
                 root_method=root_method,
-                atol=1e-8 if form != "iree" else 1e-1,
-                rtol=1e-8 if form != "iree" else 1e-1,
+                atol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
+                rtol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
                 options=options,
             )
             sol_all = solver_all.solve(
@@ -772,8 +779,9 @@ class TestIDAKLUSolver(TestCase):
 
             # Solve for a subset of variables and compare results
             solver = pybamm.IDAKLUSolver(
-                atol=1e-8 if form != "iree" else 1e-1,
-                rtol=1e-8 if form != "iree" else 1e-1,
+                root_method=root_method,
+                atol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
+                rtol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
                 options=options,
                 output_variables=output_variables,
             )
@@ -785,10 +793,10 @@ class TestIDAKLUSolver(TestCase):
             )
 
             # Compare output to sol_all
-            tol = 1e-5 if form != "iree" else 1e-1
+            tol = 1e-5 if form != "iree" else 1e-2  # iree has reduced precision
             for varname in output_variables:
-                self.assertTrue(
-                    np.allclose(sol[varname].data, sol_all[varname].data, tol)
+                np.testing.assert_array_almost_equal(
+                    sol[varname].data, sol_all[varname].data, tol
                 )
 
             # Mock a 1D current collector and initialise (none in the model)

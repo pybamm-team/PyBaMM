@@ -16,6 +16,7 @@ public:  // data members
   std::string mlir;  // cppcheck-suppress unusedStructMember
   std::vector<int> kept_var_idx;  // cppcheck-suppress unusedStructMember
   expr_int nnz;  // cppcheck-suppress unusedStructMember
+  expr_int numel;  // cppcheck-suppress unusedStructMember
   std::vector<expr_int> col;  // cppcheck-suppress unusedStructMember
   std::vector<expr_int> row;  // cppcheck-suppress unusedStructMember
   std::vector<int> pytree_shape;  // cppcheck-suppress unusedStructMember

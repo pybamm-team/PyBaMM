@@ -579,7 +579,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 jac_rhs_algebraic_action_demoted = (
                     rhs_algebraic_demoted.get_jacobian_action()
                 )
-                y0S = y0
 
                 def fcn_jac_rhs_algebraic_action(
                     t, y, p, v
@@ -633,6 +632,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                                 t_eval,
                                 y0,
                                 inputs0,
+                                sparse_index=True,
                             )
                         )
                         dvar_dp = fcn.get_sensitivities()
@@ -676,7 +676,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "sensitivity_names": sensitivity_names,
                 "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
                 "output_variables": self.output_variables,
-                "var_casadi_fcns": self.computed_var_fcns,
+                "var_fcns": self.computed_var_fcns,
                 "var_idaklu_fcns": self.var_idaklu_fcns,
                 "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
                 "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
@@ -701,7 +701,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 atol=atol,
                 rtol=rtol,
                 inputs=len(inputs),
-                var_casadi_fcns=self._setup["var_idaklu_fcns"],
+                var_fcns=self._setup["var_idaklu_fcns"],
                 dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
                 dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
                 options=self._options,
@@ -723,29 +723,43 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
-    def _make_iree_function(self, fcn, *args):
-        lowered = jax.jit(fcn).lower(*args)
-        mlir = lowered.as_text()
-        self._check_mlir_conversion(fcn.__name__, mlir)
-        kept_var_idx = list(lowered._lowering.compile_args["kept_var_idx"])
+    def _make_iree_function(self, fcn, *args, sparse_index=False):
+        # Initialise IREE function object
         iree_fcn = idaklu.IREEBaseFunctionType()
-        iree_fcn.mlir = mlir
-        iree_fcn.kept_var_idx = kept_var_idx
-        # get sparsity pattern
+        # Get sparsity pattern index outputs as needed
         try:
-            sparse_eval = sparse.coo_matrix(fcn(*args))
-            iree_fcn.nnz = sparse_eval.nnz
-            iree_fcn.col = sparse_eval.col
-            iree_fcn.row = sparse_eval.row
+            fcn_eval = fcn(*args)
+            if not isinstance(fcn_eval, np.ndarray):
+                fcn_eval = jax.flatten_util.ravel_pytree(fcn_eval)[0]
+            coo = sparse.coo_matrix(fcn_eval)
+            iree_fcn.nnz = coo.nnz
+            iree_fcn.numel = np.prod(coo.shape)
+            iree_fcn.col = coo.col
+            iree_fcn.row = coo.row
+            if sparse_index:
+                # Isolate NNZ elements while recording original sparsity structure
+                fcn_inner = fcn
+
+                def fcn(*args):
+                    return fcn_inner(*args)[coo.row, coo.col]
+            elif coo.nnz != iree_fcn.numel:
+                iree_fcn.nnz = iree_fcn.numel
+                iree_fcn.col = list(range(iree_fcn.numel))
+                iree_fcn.row = [0] * iree_fcn.numel
         except (TypeError, AttributeError) as error:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not get sparsity pattern for function {fcn.__name__}"
             ) from error
-        # number of variables in each argument (these will flatten in the mlir)
+        # Lower to MLIR
+        lowered = jax.jit(fcn).lower(*args)
+        iree_fcn.mlir = lowered.as_text()
+        self._check_mlir_conversion(fcn.__name__, iree_fcn.mlir)
+        iree_fcn.kept_var_idx = list(lowered._lowering.compile_args["kept_var_idx"])
+        # Record number of variables in each argument (these will flatten in the mlir)
         iree_fcn.pytree_shape = [
             len(jax.tree_util.tree_flatten(arg)[0]) for arg in args
         ]
-        # array length of each mlir variable
+        # Record array length of each mlir variable
         iree_fcn.pytree_sizes = [
             len(arg) for arg in jax.tree_util.tree_flatten(args)[0]
         ]
@@ -931,18 +945,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         continue
                     if model.convert_to_format == "casadi":
                         len_of_var = (
-                            self._setup["var_casadi_fcns"][var](0.0, 0.0, 0.0)
-                            .sparsity()
-                            .nnz()
+                            self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
                         )
-                        base_variables = [self._setup["var_casadi_fcns"][var]]
+                        base_variables = [self._setup["var_fcns"][var]]
                     elif (
                         model.convert_to_format == "jax"
                         and self._options["jax_evaluator"] == "iree"
                     ):
                         idx = self.output_variables.index(var)
                         len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
-                        base_variables = [self.computed_var_fcns[var]]
+                        base_variables = [self._setup["var_idaklu_fcns"][idx]]
                     else:  # pragma: no cover
                         raise pybamm.SolverError(
                             "Unsupported evaluation engine for convert_to_format="

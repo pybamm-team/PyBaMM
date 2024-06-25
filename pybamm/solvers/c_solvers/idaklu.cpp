@@ -85,7 +85,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("atol"),
     py::arg("rtol"),
     py::arg("inputs"),
-    py::arg("var_casadi_fcns"),
+    py::arg("var_fcns"),
     py::arg("dvar_dy_fcns"),
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
@@ -112,7 +112,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("atol"),
     py::arg("rtol"),
     py::arg("inputs"),
-    py::arg("var_casadi_fcns"),
+    py::arg("var_fcns"),
     py::arg("dvar_dy_fcns"),
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
@@ -175,6 +175,7 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("mlir", &IREEBaseFunctionType::mlir)
     .def_readwrite("kept_var_idx", &IREEBaseFunctionType::kept_var_idx)
     .def_readwrite("nnz", &IREEBaseFunctionType::nnz)
+    .def_readwrite("numel", &IREEBaseFunctionType::numel)
     .def_readwrite("col", &IREEBaseFunctionType::col)
     .def_readwrite("row", &IREEBaseFunctionType::row)
     .def_readwrite("pytree_shape", &IREEBaseFunctionType::pytree_shape)

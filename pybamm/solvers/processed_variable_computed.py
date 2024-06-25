@@ -120,16 +120,25 @@ class ProcessedVariableComputed:
         # unroll in nnz != numel, otherwise copy
         if realdata is None:
             realdata = self.base_variables_data
-        sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
-        if sp.nnz() != sp.numel():
+        if isinstance(self.base_variables_casadi[0], casadi.Function):  # casadi fcn
+            sp = self.base_variables_casadi[0](0, 0, 0).sparsity()
+            nnz = sp.nnz()
+            numel = sp.numel()
+            row = sp.row()
+        elif "nnz" in dir(self.base_variables_casadi[0]):  # IREE fcn
+            sp = self.base_variables_casadi[0]
+            nnz = sp.nnz
+            numel = sp.numel
+            row = sp.row
+        if nnz != numel:
             data = [None] * len(realdata)
             for datak in range(len(realdata)):
                 data[datak] = np.zeros(self.base_eval_shape[0] * len(self.t_pts))
                 var_data = realdata[0].flatten()
                 k = 0
                 for t_i in range(len(self.t_pts)):
-                    base = t_i * sp.numel()
-                    for r in sp.row():
+                    base = t_i * numel
+                    for r in row:
                         data[datak][base + r] = var_data[k]
                         k = k + 1
         else:
