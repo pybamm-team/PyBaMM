@@ -643,12 +643,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         u_ref = pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode {lithiation}OCP [V]", inputs
         )
+
+        dudt_func = self.dUdT(sto)
+        u_ref = u_ref + (T - self.main_param.T_ref) * dudt_func
+
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        dudt_func = self.dUdT(sto)
-        out = u_ref + (T - self.main_param.T_ref) * dudt_func
+        out = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
 
         if self.domain == "negative":
             out.print_name = r"U_\mathrm{n}(c^\mathrm{surf}_\mathrm{s,n}, T)"
