@@ -23,8 +23,9 @@ class ScipySolver(pybamm.BaseSolver):
         The tolerance to assert whether extrapolation occurs or not (default is 0).
     extra_options : dict, optional
         Any options to pass to the solver.
-        Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
-        details.
+        Please consult `SciPy documentation
+        <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_
+        for details.
     """
 
     def __init__(
