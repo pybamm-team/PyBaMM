@@ -426,6 +426,9 @@ def value_based_charge_or_discharge(step_value):
     elif isinstance(step_value, pybamm.Symbol):
         inpt = {"start time": 0}
         init_curr = step_value.evaluate(t=0, inputs=inpt).flatten()[0]
+    elif callable(step_value):
+        inpt = {"start time": 0}
+        init_curr = step_value(pybamm.t).evaluate(t=0, inputs=inpt).flatten()[0]
     else:
         init_curr = step_value
     sign = np.sign(init_curr)

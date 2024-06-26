@@ -37,7 +37,7 @@ class BaseStep:
     ----------
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
-        2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
+        2-tuple (for cccv_ode), a 2-column array (for drive cycles), or a 1-argument function of t
     duration : float, optional
         The duration of the step in seconds.
     termination : str or list, optional
@@ -73,6 +73,7 @@ class BaseStep:
     ):
         # Check if drive cycle
         self.is_drive_cycle = isinstance(value, np.ndarray)
+        is_python_function = callable(value)
         if self.is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
@@ -83,6 +84,21 @@ class BaseStep:
             t = value[:, 0]
             if t[0] != 0:
                 raise ValueError("Drive cycle must start at t=0")
+        elif is_python_function:
+            t0 = 0
+            # Check if the function is only a function of t
+            try:
+                value_t0 = value(t0)
+            except TypeError:
+                raise TypeError(
+                    "Input function must have only 1 positional argument for time"
+                ) from None
+
+            # Check if the value at t0 is feasible
+            if not (np.isfinite(value_t0) and np.isscalar(value_t0)):
+                raise ValueError(
+                    f"Input function must return a real number output at t = {t0}"
+                )
 
         # Set duration
         if duration is None:
@@ -135,6 +151,10 @@ class BaseStep:
                 name="Drive Cycle",
             )
             self.period = np.diff(t).min()
+        elif is_python_function:
+            t = pybamm.t - pybamm.InputParameter("start time")
+            self.value = value(t)
+            self.period = _convert_time_to_seconds(period)
         else:
             self.value = value
             self.period = _convert_time_to_seconds(period)
