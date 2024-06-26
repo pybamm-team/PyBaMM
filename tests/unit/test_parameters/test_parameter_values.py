@@ -43,7 +43,7 @@ class TestParameterValues(TestCase):
             pybamm.ParameterValues(None, chemistry="lithium-ion")
 
         # junk param values rejected
-        with self.assertRaisesRegex(ValueError, "Invalid Parameter Value"):
+        with self.assertRaisesRegex(ValueError, "'Junk' is not a valid parameter set."):
             pybamm.ParameterValues("Junk")
 
     def test_repr(self):
