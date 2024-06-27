@@ -416,11 +416,12 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
         self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
-
-        # Dividing by 10000 makes initial condition effectively zero
-        # without triggering division by zero errors
-        self.L_inner_crack_0 = self.L_inner_0 / 10000
-        self.L_outer_crack_0 = self.L_outer_0 / 10000
+        self.L_inner_crack_0 = pybamm.Parameter(
+            f"{pref}Initial inner SEI on cracks thickness [m]"
+        )
+        self.L_outer_crack_0 = pybamm.Parameter(
+            f"{pref}Initial outer SEI on cracks thickness [m]"
+        )
 
         self.L_sei_0 = self.L_inner_0 + self.L_outer_0
         self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")
@@ -642,12 +643,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         u_ref = pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode {lithiation}OCP [V]", inputs
         )
+
+        dudt_func = self.dUdT(sto)
+        u_ref = u_ref + (T - self.main_param.T_ref) * dudt_func
+
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        dudt_func = self.dUdT(sto)
-        out = u_ref + (T - self.main_param.T_ref) * dudt_func
+        out = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
 
         if self.domain == "negative":
             out.print_name = r"U_\mathrm{n}(c^\mathrm{surf}_\mathrm{s,n}, T)"

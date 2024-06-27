@@ -238,6 +238,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
+            "heat of mixing": ["false", "true"],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -512,6 +513,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
+            if options["heat of mixing"] != "false":
+                raise NotImplementedError(
+                    "Heat of mixing submodels do not yet support particle-size "
+                    "distributions."
+                )
             if options["lithium plating"] != "none":
                 raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
@@ -821,47 +827,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             options=properties["options"], name=properties["name"] + "_saved"
         )
 
-        # Initialise model with stored variables that have already been discretised
-        instance._concatenated_rhs = properties["concatenated_rhs"]
-        instance._concatenated_algebraic = properties["concatenated_algebraic"]
-        instance._concatenated_initial_conditions = properties[
-            "concatenated_initial_conditions"
-        ]
-
-        instance.len_rhs = instance.concatenated_rhs.size
-        instance.len_alg = instance.concatenated_algebraic.size
-        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
-
-        instance.bounds = properties["bounds"]
-        instance.events = properties["events"]
-        instance.mass_matrix = properties["mass_matrix"]
-        instance.mass_matrix_inv = properties["mass_matrix_inv"]
-
-        # add optional properties not required for model to solve
-        if properties["variables"]:
-            instance._variables = pybamm.FuzzyDict(properties["variables"])
-
-            # assign meshes to each variable
-            for var in instance._variables.values():
-                if var.domain != []:
-                    var.mesh = properties["mesh"][var.domain]
-                else:
-                    var.mesh = None
-
-                if var.domains["secondary"] != []:
-                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
-                else:
-                    var.secondary_mesh = None
-
-            instance._geometry = pybamm.Geometry(properties["geometry"])
-        else:
-            # Delete the default variables which have not been discretised
-            instance._variables = pybamm.FuzzyDict({})
-
-        # Model has already been discretised
-        instance.is_discretised = True
-
-        return instance
+        return cls.generic_deserialise(instance, properties)
 
     @property
     def default_geometry(self):
@@ -1280,7 +1246,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
-        self.submodels["thermal"] = thermal_submodel(self.param, self.options)
+        x_average = getattr(self, "x_average", False)
+        self.submodels["thermal"] = thermal_submodel(
+            self.param, self.options, x_average
+        )
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in ["uniform"]:

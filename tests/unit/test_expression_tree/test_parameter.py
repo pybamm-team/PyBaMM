@@ -63,7 +63,7 @@ class TestFunctionParameter(TestCase):
         a = pybamm.Parameter("a")
         func = pybamm.FunctionParameter("func", {"2a": 2 * a})
 
-        new_func = func.new_copy()
+        new_func = func.create_copy()
         self.assertEqual(func.input_names, new_func.input_names)
 
     def test_print_input_names(self):

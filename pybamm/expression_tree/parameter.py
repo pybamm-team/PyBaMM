@@ -28,7 +28,11 @@ class Parameter(pybamm.Symbol):
     def __init__(self, name: str) -> None:
         super().__init__(name)
 
-    def create_copy(self) -> pybamm.Parameter:
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications=True,
+    ) -> pybamm.Parameter:
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name)
 
@@ -193,42 +197,19 @@ class FunctionParameter(pybamm.Symbol):
             print_name=self.print_name + "'",
         )
 
-    def create_copy(self):
+    def create_copy(self, new_children=None, perform_simplifications=True):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        out = self._function_parameter_new_copy(
-            self._input_names, self.orphans, print_name=self.print_name
-        )
-        return out
 
-    def _function_parameter_new_copy(
-        self,
-        input_names: list[str],
-        children: list[pybamm.Symbol],
-        print_name="calculate",
-    ) -> pybamm.FunctionParameter:
-        """
-        Returns a new copy of the function parameter.
-
-        Inputs
-        ------
-        input_names : : list
-            A list of str of the names of the children/function inputs
-        children : : list
-            A list of the children of the function
-
-        Returns
-        -------
-        :class:`pybamm.FunctionParameter`
-            A new copy of the function parameter
-        """
-
-        input_dict = {input_names[i]: children[i] for i in range(len(input_names))}
+        input_dict = {
+            self._input_names[i]: self.children[i]
+            for i in range(len(self._input_names))
+        }
 
         return FunctionParameter(
             self.name,
             input_dict,
             diff_variable=self.diff_variable,
-            print_name=print_name,
+            print_name=self.print_name,
         )
 
     def _evaluate_for_shape(self):
