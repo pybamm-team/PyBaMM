@@ -177,7 +177,7 @@ IREEFunction::IREEFunction(const BaseFunctionType &f) : Expression(), m_func(f)
   // Allocate memory for input arguments
   m_arg.resize(m_func.n_args, nullptr);
 
-  // Size iree results vector (single precision) and idaklu results vector (double precision)
+  // Size iree results vector (single precision) and casadi results vector (double precision)
   result.clear();
   result.resize(output_shape.size());
   for(int k=0; k<output_shape.size(); k++) {
