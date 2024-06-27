@@ -392,6 +392,20 @@ class TestSimulation(TestCase):
                     sol[name].entries, np.array(oscillating(sol.t - t0))
                 )
 
+        for x in (np.nan, np.inf):
+
+            def f(t, x=x):
+                return x + t
+
+            with self.assertRaises(ValueError):
+                pybamm.step.current(f)
+
+        def g(t, y):
+            return t
+
+        with self.assertRaises(TypeError):
+            pybamm.step.current(g)
+
     def test_save_load(self):
         with TemporaryDirectory() as dir_name:
             test_name = os.path.join(dir_name, "tests.pickle")
