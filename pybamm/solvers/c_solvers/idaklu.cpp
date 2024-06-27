@@ -93,7 +93,7 @@ PYBIND11_MODULE(idaklu, m)
 
 #ifdef IREE_ENABLE
   m.def("create_iree_solver", &create_idaklu_solver<IREEFunctions>,
-    "Create a casadi idaklu solver object",
+    "Create a iree idaklu solver object",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),
     py::arg("rhs_alg"),
