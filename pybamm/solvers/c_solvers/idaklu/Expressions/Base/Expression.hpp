@@ -15,21 +15,21 @@ public:  // method declarations
   Expression() = default;
 
   /**
-   * @brief Evaluation operator
+   * @brief Evaluation operator (for use after setting input and output data references)
    */
   virtual void operator()() = 0;
 
   /**
-   * @brief Evaluation operator given data vectors
+   * @brief Evaluation operator (supplying data references)
    */
   virtual void operator()(
     const std::vector<realtype*>& inputs,
     const std::vector<realtype*>& results) = 0;
 
   /**
-   * @brief Returns the maximum number of elements returned by the k'th output
+   * @brief The maximum number of elements returned by the k'th output
    *
-   * This is used to allocate memory for the output of the function and usual (but
+   * This is used to allocate memory for the output of the function and usually (but
    * not always) corresponds to the number of non-zero elements (NNZ).
    */
   virtual expr_int out_shape(int k) = 0;
@@ -45,12 +45,12 @@ public:  // method declarations
   virtual expr_int nnz_out() = 0;
 
   /**
-   * @brief Returns the row vector of matrix element coordinates in COO format
+   * @brief Returns row indices in COO format (where the output data represents sparse matrix elements)
    */
   virtual std::vector<expr_int> get_row() = 0;
 
   /**
-   * @brief Returns the column vector of matrix element coordinates in COO format
+   * @brief Returns column indices in COO format (where the output data represents sparse matrix elements)
    */
   virtual std::vector<expr_int> get_col() = 0;
 
