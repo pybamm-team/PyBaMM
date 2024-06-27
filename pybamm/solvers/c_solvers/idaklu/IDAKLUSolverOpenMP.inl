@@ -1,8 +1,8 @@
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 
-template <class CExprSet>
-IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
+template <class ExprSet>
+IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   np_array atol_np,
   double rel_tol,
   np_array rhs_alg_id,
@@ -11,7 +11,7 @@ IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
   int jac_times_cjmass_nnz,
   int jac_bandwidth_lower,
   int jac_bandwidth_upper,
-  std::unique_ptr<CExprSet> functions_arg,
+  std::unique_ptr<ExprSet> functions_arg,
   const Options &options
 ) :
   atol_np(atol_np),
@@ -57,14 +57,14 @@ IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
   SetMatrix();
 
   // initialise solver
-  IDAInit(ida_mem, residual_eval<CExprSet>, 0, yy, yp);
+  IDAInit(ida_mem, residual_eval<ExprSet>, 0, yy, yp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // set events
-  IDARootInit(ida_mem, number_of_events, events_eval<CExprSet>);
+  IDARootInit(ida_mem, number_of_events, events_eval<ExprSet>);
   void *user_data = functions.get();
   IDASetUserData(ida_mem, user_data);
 
@@ -75,8 +75,8 @@ IDAKLUSolverOpenMP<CExprSet>::IDAKLUSolverOpenMP(
   }
 }
 
-template <class CExprSet>
-void IDAKLUSolverOpenMP<CExprSet>::AllocateVectors() {
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
   // Create vectors
   yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
   yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
@@ -84,8 +84,8 @@ void IDAKLUSolverOpenMP<CExprSet>::AllocateVectors() {
   id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
 }
 
-template <class CExprSet>
-void IDAKLUSolverOpenMP<CExprSet>::SetMatrix() {
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::SetMatrix() {
   // Create Matrix object
   if (options.jacobian == "sparse")
   {
@@ -124,8 +124,8 @@ void IDAKLUSolverOpenMP<CExprSet>::SetMatrix() {
     throw std::invalid_argument("Unsupported matrix requested");
 }
 
-template <class CExprSet>
-void IDAKLUSolverOpenMP<CExprSet>::Initialize() {
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
@@ -140,18 +140,18 @@ void IDAKLUSolverOpenMP<CExprSet>::Initialize() {
     IDABBDPrecInit(
       ida_mem, number_of_states, options.precon_half_bandwidth,
       options.precon_half_bandwidth, options.precon_half_bandwidth_keep,
-      options.precon_half_bandwidth_keep, 0.0, residual_eval_approx<CExprSet>, NULL);
+      options.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL);
   }
 
   if (options.jacobian == "matrix-free")
-    IDASetJacTimes(ida_mem, NULL, jtimes_eval<CExprSet>);
+    IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>);
   else if (options.jacobian != "none")
-    IDASetJacFn(ida_mem, jacobian_eval<CExprSet>);
+    IDASetJacFn(ida_mem, jacobian_eval<ExprSet>);
 
   if (number_of_parameters > 0)
   {
     IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
-                sensitivities_eval<CExprSet>, yyS, ypS);
+                sensitivities_eval<ExprSet>, yyS, ypS);
     IDASensEEtolerances(ida_mem);
   }
 
@@ -168,8 +168,8 @@ void IDAKLUSolverOpenMP<CExprSet>::Initialize() {
   IDASetId(ida_mem, id);
 }
 
-template <class CExprSet>
-IDAKLUSolverOpenMP<CExprSet>::~IDAKLUSolverOpenMP()
+template <class ExprSet>
+IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP()
 {
   // Free memory
   if (number_of_parameters > 0)
@@ -192,8 +192,8 @@ IDAKLUSolverOpenMP<CExprSet>::~IDAKLUSolverOpenMP()
   SUNContext_Free(&sunctx);
 }
 
-template <class CExprSet>
-void IDAKLUSolverOpenMP<CExprSet>::CalcVars(
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CalcVars(
     realtype *y_return,
     size_t length_of_return_vector,
     size_t t_i,
@@ -216,8 +216,8 @@ void IDAKLUSolverOpenMP<CExprSet>::CalcVars(
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
 }
 
-template <class CExprSet>
-void IDAKLUSolverOpenMP<CExprSet>::CalcVarsSensitivities(
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CalcVarsSensitivities(
     realtype *tret,
     realtype *yval,
     const std::vector<realtype*>& ySval,
@@ -249,8 +249,8 @@ void IDAKLUSolverOpenMP<CExprSet>::CalcVarsSensitivities(
   }
 }
 
-template <class CExprSet>
-Solution IDAKLUSolverOpenMP<CExprSet>::solve(
+template <class ExprSet>
+Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     np_array t_np,
     np_array y0_np,
     np_array yp0_np,

@@ -36,7 +36,7 @@
  *   19. Destroy objects
  *   20. (N/A) Finalize MPI
  */
-template <class CExprSet>
+template <class ExprSet>
 class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
@@ -60,7 +60,7 @@ public:
   int jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
-  std::unique_ptr<CExprSet> functions;
+  std::unique_ptr<ExprSet> functions;
   std::vector<realtype> res;
   std::vector<realtype> res_dvar_dy;
   std::vector<realtype> res_dvar_dp;
@@ -83,7 +83,7 @@ public:
     int jac_times_cjmass_nnz,
     int jac_bandwidth_lower,
     int jac_bandwidth_upper,
-    std::unique_ptr<CExprSet> functions,
+    std::unique_ptr<ExprSet> functions,
     const Options& options);
 
   /**
