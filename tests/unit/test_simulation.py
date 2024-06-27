@@ -380,7 +380,8 @@ class TestSimulation(TestCase):
             "Power [W]": pybamm.step.power,
         }
         for name in operating_modes:
-            step = operating_modes[name](oscillating, duration=tf / 2)
+            operating_mode = operating_modes[name]
+            step = operating_mode(oscillating, duration=tf / 2)
             experiment = pybamm.Experiment([step, step], period=f"{tf / 100} seconds")
 
             solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
@@ -392,19 +393,20 @@ class TestSimulation(TestCase):
                     sol[name].entries, np.array(oscillating(sol.t - t0))
                 )
 
-        for x in (np.nan, np.inf):
+            # check improper inputs
+            for x in (np.nan, np.inf):
 
-            def f(t, x=x):
-                return x + t
+                def f(t, x=x):
+                    return x + t
 
-            with self.assertRaises(ValueError):
-                pybamm.step.current(f)
+                with self.assertRaises(ValueError):
+                    operating_mode(f)
 
-        def g(t, y):
-            return t
+            def g(t, y):
+                return t
 
-        with self.assertRaises(TypeError):
-            pybamm.step.current(g)
+            with self.assertRaises(TypeError):
+                operating_mode(g)
 
     def test_save_load(self):
         with TemporaryDirectory() as dir_name:

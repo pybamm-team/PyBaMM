@@ -105,27 +105,6 @@ class BaseStep:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
-        # Record all the args for repr and hash
-        self.repr_args = f"{value}, duration={duration}"
-        self.hash_args = f"{value}"
-        if termination:
-            self.repr_args += f", termination={termination}"
-            self.hash_args += f", termination={termination}"
-        if period:
-            self.repr_args += f", period={period}"
-        if temperature:
-            self.repr_args += f", temperature={temperature}"
-            self.hash_args += f", temperature={temperature}"
-        if tags:
-            self.repr_args += f", tags={tags}"
-        if start_time:
-            self.repr_args += f", start_time={start_time}"
-        if description:
-            self.repr_args += f", description={description}"
-        if direction:
-            self.repr_args += f", direction={direction}"
-            self.hash_args += f", direction={direction}"
-
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
         if self.is_drive_cycle:
@@ -159,6 +138,34 @@ class BaseStep:
             self.value = value
             self.period = _convert_time_to_seconds(period)
 
+        if (
+            hasattr(self, "calculate_charge_or_discharge")
+            and self.calculate_charge_or_discharge
+        ):
+            direction = self.value_based_charge_or_discharge()
+        self.direction = direction
+
+        # Record all the args for repr and hash
+        self.repr_args = f"{value}, duration={duration}"
+        self.hash_args = f"{value}"
+        if termination:
+            self.repr_args += f", termination={termination}"
+            self.hash_args += f", termination={termination}"
+        if period:
+            self.repr_args += f", period={period}"
+        if temperature:
+            self.repr_args += f", temperature={temperature}"
+            self.hash_args += f", temperature={temperature}"
+        if tags:
+            self.repr_args += f", tags={tags}"
+        if start_time:
+            self.repr_args += f", start_time={start_time}"
+        if description:
+            self.repr_args += f", description={description}"
+        if direction:
+            self.repr_args += f", direction={direction}"
+            self.hash_args += f", direction={direction}"
+
         self.description = description
 
         if termination is None:
@@ -186,8 +193,6 @@ class BaseStep:
             raise TypeError("`start_time` should be a datetime.datetime object")
         self.next_start_time = None
         self.end_time = None
-
-        self.direction = direction
 
     def copy(self):
         """
@@ -296,6 +301,24 @@ class BaseStep:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )
+
+    def value_based_charge_or_discharge(self):
+        """
+        Determine whether the step is a charge or discharge step based on the value of the
+        step
+        """
+        if isinstance(self.value, pybamm.Symbol):
+            inpt = {"start time": 0}
+            init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
+        else:
+            init_curr = self.value
+        sign = np.sign(init_curr)
+        if sign == 0:
+            return "Rest"
+        elif sign > 0:
+            return "Discharge"
+        else:
+            return "Charge"
 
 
 class BaseStepExplicit(BaseStep):
