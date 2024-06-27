@@ -61,7 +61,7 @@ class Function(pybamm.Symbol):
         out = f"{self.name[10:-1]}("
         for child in self.children:
             out += f"{child!s}, "
-        out = out[:-2] + ")"  # pragma: no cover
+        out = out[:-2] + ")"
         return out
 
     def diff(self, variable: pybamm.Symbol):
