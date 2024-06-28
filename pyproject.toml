@@ -123,6 +123,7 @@ jax = [
 ]
 # For MLIR expression evaluation (IDAKLU Solver)
 iree = [
+    # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
     "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
 ]
 # Contains all optional dependencies, except for jax, iree, and dev dependencies
