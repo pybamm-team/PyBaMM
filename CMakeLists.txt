@@ -61,15 +61,8 @@ message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
 
 # IREE (MLIR expression evaluation) PyBaMM source files
 set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
-set(IREE_COMPILER_PATH "")
 if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
   add_compile_definitions(IREE_ENABLE)
-  # Find the IREE python module path for compiler linkage
-  execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}" -c
-    "import iree.compiler as _; print(_.__path__[0])"
-    OUTPUT_VARIABLE IREE_COMPILER_PATH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
   # Source file list
   set(IDAKLU_EXPR_IREE_SOURCE_FILES
     pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp
