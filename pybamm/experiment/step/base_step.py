@@ -145,26 +145,17 @@ class BaseStep:
             direction = self.value_based_charge_or_discharge()
         self.direction = direction
 
-        # Record all the args for repr and hash
-        self.repr_args = f"{value}, duration={duration}"
-        self.hash_args = f"{value}"
-        if termination:
-            self.repr_args += f", termination={termination}"
-            self.hash_args += f", termination={termination}"
-        if period:
-            self.repr_args += f", period={period}"
-        if temperature:
-            self.repr_args += f", temperature={temperature}"
-            self.hash_args += f", temperature={temperature}"
-        if tags:
-            self.repr_args += f", tags={tags}"
-        if start_time:
-            self.repr_args += f", start_time={start_time}"
-        if description:
-            self.repr_args += f", description={description}"
-        if direction:
-            self.repr_args += f", direction={direction}"
-            self.hash_args += f", direction={direction}"
+        self.repr_args, self.hash_args = self.record_tags(
+            value,
+            duration,
+            termination,
+            period,
+            temperature,
+            tags,
+            start_time,
+            description,
+            direction,
+        )
 
         self.description = description
 
@@ -319,6 +310,40 @@ class BaseStep:
             return "Discharge"
         else:
             return "Charge"
+
+    def record_tags(
+        self,
+        value,
+        duration,
+        termination,
+        period,
+        temperature,
+        tags,
+        start_time,
+        description,
+        direction,
+    ):
+        """Record all the args for repr and hash"""
+        repr_args = f"{value}, duration={duration}"
+        hash_args = f"{value}"
+        if termination:
+            repr_args += f", termination={termination}"
+            hash_args += f", termination={termination}"
+        if period:
+            repr_args += f", period={period}"
+        if temperature:
+            repr_args += f", temperature={temperature}"
+            hash_args += f", temperature={temperature}"
+        if tags:
+            repr_args += f", tags={tags}"
+        if start_time:
+            repr_args += f", start_time={start_time}"
+        if description:
+            repr_args += f", description={description}"
+        if direction:
+            repr_args += f", direction={direction}"
+            hash_args += f", direction={direction}"
+        return repr_args, hash_args
 
 
 class BaseStepExplicit(BaseStep):
