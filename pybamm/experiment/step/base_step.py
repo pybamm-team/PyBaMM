@@ -242,6 +242,16 @@ class BaseStep:
         if isinstance(value, np.ndarray):
             t = value[:, 0]
             return t[-1]
+        elif isinstance(self, pybamm.step.CRate):
+            # Current control: max simulation time: 3h / C-rate
+            return 3 / abs(value) * 3600
+        elif isinstance(self, pybamm.step.Current):
+            # Doesn't work as this needs to return a float
+            return (
+                3
+                / (abs(value) / pybamm.Parameter("Nominal cell capacity [A.h]"))
+                * 3600
+            )
         else:
             return 24 * 3600  # 24 hours in seconds
 
