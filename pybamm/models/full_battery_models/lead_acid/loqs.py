@@ -27,6 +27,7 @@ class LOQS(BaseModel):
         self.set_electrolyte_submodel()
         self.set_electrode_submodels()
         self.set_thermal_submodel()
+        self.set_surface_temperature_submodel()
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
         self.set_sei_submodel()

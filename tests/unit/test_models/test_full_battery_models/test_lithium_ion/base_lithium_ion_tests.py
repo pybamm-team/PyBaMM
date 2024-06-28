@@ -31,6 +31,10 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "lumped"}
         self.check_well_posedness(options)
 
+    def test_well_posed_lumped_thermal_model_surface_temperature(self):
+        options = {"thermal": "lumped", "surface temperature": "lumped"}
+        self.check_well_posedness(options)
+
     def test_well_posed_x_full_thermal_model(self):
         options = {"thermal": "x-full"}
         self.check_well_posedness(options)
