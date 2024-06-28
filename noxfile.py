@@ -114,7 +114,9 @@ def run_examples(session):
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
-    session.run("pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True)
+    session.run(
+        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
+    )
 
 
 @nox.session(name="scripts")
