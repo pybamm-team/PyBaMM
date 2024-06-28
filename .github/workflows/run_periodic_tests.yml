@@ -42,7 +42,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
-          sudo dot -c
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
@@ -63,7 +62,6 @@ jobs:
         run: choco install graphviz --version=8.0.5
 
       - name: Set up Python ${{ matrix.python-version }}
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -96,8 +94,6 @@ jobs:
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
@@ -110,10 +106,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install graphviz pandoc texlive-latex-extra dvipng
-          sudo dot -c
 
       - name: Set up Python
-        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
