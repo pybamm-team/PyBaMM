@@ -72,9 +72,9 @@ class BaseStep:
         direction=None,
     ):
         # Check if drive cycle
-        self.is_drive_cycle = isinstance(value, np.ndarray)
+        is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
-        if self.is_drive_cycle:
+        if is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
                     "Drive cycle must be a 2-column array with time in the first column"
@@ -107,7 +107,7 @@ class BaseStep:
 
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
-        if self.is_drive_cycle:
+        if is_drive_cycle:
             t_max = self.duration
             if t_max > value[-1, 0]:
                 # duration longer than drive cycle values so loop
