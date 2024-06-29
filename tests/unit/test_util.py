@@ -176,9 +176,3 @@ def test_url_gets_to_stdout(mocker):
         assert fake_out.getvalue() == "test\t10\n"
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
