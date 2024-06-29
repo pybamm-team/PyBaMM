@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-
+import pybamm
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -52,3 +52,8 @@ def pytest_collection_modifyitems(config, items):
 # Set the random seed to 42 for all tests
 def set_random_seed():
     np.random.seed(42)
+
+
+@pytest.fixture(autouse=True)
+def set_debug_value():
+    pybamm.settings.debug_mode = True
