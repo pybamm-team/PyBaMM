@@ -107,7 +107,7 @@ dev = [
     "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
-    # For testing Jupyter notebooks
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
     "pytest-mock",
