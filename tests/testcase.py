@@ -9,6 +9,7 @@ class TestCase(unittest.TestCase):
     Custom TestCase class for pybamms
     TO BE REMOVED
     """
+
     def assertDomainEqual(self, a, b):
         "Check that two domains are equal, ignoring empty domains"
         a_dict = {k: v for k, v in a.items() if v != []}
