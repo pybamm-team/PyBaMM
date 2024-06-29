@@ -185,5 +185,3 @@ def test_url_gets_to_stdout(mocker):
     with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
         param.search("test")
         assert fake_out.getvalue() == "test\t10\n"
-
-
