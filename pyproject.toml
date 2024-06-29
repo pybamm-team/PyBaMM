@@ -107,10 +107,11 @@ dev = [
     "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
-    # For testing Jupyter notebooks
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
     "pytest-mock",
+    # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
