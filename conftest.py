@@ -49,5 +49,6 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(autouse=True)
+# Set the random seed to 42 for all tests
 def set_random_seed():
-    np.random.seed(42)  # Set the random seed to 42 for all tests
+    np.random.seed(42)
