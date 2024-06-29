@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import pybamm
 
+
 def pytest_addoption(parser):
     parser.addoption(
         "--scripts", action="store_true", default=False, help="run examples tests"
