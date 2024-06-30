@@ -15,7 +15,7 @@ from tests import (
 
 def test_is_constant_and_can_evaluate():
     symbol = pybamm.PrimaryBroadcast(0, "negative electrode")
-    assert False is pybamm.is_constant_and_can_evaluate(symbol)
+    assert not pybamm.is_constant_and_can_evaluate(symbol)
     symbol = pybamm.StateVector(slice(0, 1))
     assert False is pybamm.is_constant_and_can_evaluate(symbol)
     symbol = pybamm.Scalar(0)
