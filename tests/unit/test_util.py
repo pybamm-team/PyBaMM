@@ -19,7 +19,7 @@ def test_is_constant_and_can_evaluate():
     symbol = pybamm.StateVector(slice(0, 1))
     assert not pybamm.is_constant_and_can_evaluate(symbol)
     symbol = pybamm.Scalar(0)
-    assert True is pybamm.is_constant_and_can_evaluate(symbol)
+    assert pybamm.is_constant_and_can_evaluate(symbol)
 
 
 def test_fuzzy_dict():
