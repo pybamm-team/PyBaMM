@@ -146,12 +146,10 @@ class TestThermal(TestCase):
         avg_cell_temp = sols[0]["X-averaged cell temperature [K]"].entries
         avg_cell_temp_cr = sols[1]["X-averaged cell temperature [K]"].entries
 
-        # check that the time-averaged cell temperature of the lumped thermal model
+        # check that the cell temperature of the lumped thermal model
         # with contact resistance is higher than without contact resistance
-        self.assertGreater(
-            sum(avg_cell_temp_cr) / len(avg_cell_temp_cr),
-            sum(avg_cell_temp) / len(avg_cell_temp),
-        )
+        # skip the first entry because they are the same due to initial conditions
+        np.testing.assert_array_less(avg_cell_temp[1:], avg_cell_temp_cr[1:])
 
 
 if __name__ == "__main__":
