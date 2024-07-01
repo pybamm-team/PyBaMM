@@ -223,6 +223,14 @@ class TestUnaryOperators(TestCase):
         grad = pybamm.grad(a)
         self.assertEqual(grad, pybamm.PrimaryBroadcastToEdges(0, "test domain"))
 
+        # gradient of a secondary broadcast moves the secondary out of the gradient
+        a = pybamm.Symbol("a", domain="test domain")
+        a_broad = pybamm.SecondaryBroadcast(a, "another domain")
+        grad = pybamm.grad(a_broad)
+        self.assertEqual(
+            grad, pybamm.SecondaryBroadcast(pybamm.grad(a), "another domain")
+        )
+
         # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)

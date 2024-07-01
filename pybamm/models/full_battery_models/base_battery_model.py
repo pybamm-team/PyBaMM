@@ -238,6 +238,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
+            "heat of mixing": ["false", "true"],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -512,6 +513,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
+            if options["heat of mixing"] != "false":
+                raise NotImplementedError(
+                    "Heat of mixing submodels do not yet support particle-size "
+                    "distributions."
+                )
             if options["lithium plating"] != "none":
                 raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
@@ -625,6 +631,20 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "'false', 'particle size' must be 'single', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
                     "be 'none': 'particle mechanics', 'loss of active material'"
+                )
+
+        if "true" in options["SEI on cracks"]:
+            sei_on_cr = options["SEI on cracks"]
+            p_mechanics = options["particle mechanics"]
+            if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
+                p_mechanics = (p_mechanics, p_mechanics)
+            if any(
+                sei == "true" and mech != "swelling and cracking"
+                for mech, sei in zip(p_mechanics, sei_on_cr)
+            ):
+                raise pybamm.OptionError(
+                    "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "
+                    "'swelling and cracking'."
                 )
 
         # Check options are valid
@@ -1240,7 +1260,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
-        self.submodels["thermal"] = thermal_submodel(self.param, self.options)
+        x_average = getattr(self, "x_average", False)
+        self.submodels["thermal"] = thermal_submodel(
+            self.param, self.options, x_average
+        )
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in ["uniform"]:
