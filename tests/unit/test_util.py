@@ -13,7 +13,7 @@ from tests import (
 )
 
 
-class TestUtil():
+class TestUtil:
     """
     Test the functionality in util.py
     """
@@ -58,13 +58,15 @@ class TestUtil():
 
         with pytest.warns(DeprecationWarning):
             assert (
-                    d["Positive electrode diffusivity [m2.s-1]"]
-                    == d["Positive particle diffusivity [m2.s-1]"]
+                d["Positive electrode diffusivity [m2.s-1]"]
+                == d["Positive particle diffusivity [m2.s-1]"]
             )
 
     def test_get_parameters_filepath(self):
         with tempfile.NamedTemporaryFile("w", dir=".") as tempfile_obj:
-            assert pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
+            assert (
+                pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
+            )
 
         package_dir = os.path.join(pybamm.root_dir(), "pybamm")
         with tempfile.NamedTemporaryFile("w", dir=package_dir) as tempfile_obj:
@@ -95,8 +97,8 @@ class TestUtil():
         # Test import optional dependency
         for import_pkg in present_optional_import_deps:
             with pytest.raises(
-                    ModuleNotFoundError,
-                    match=f"Optional dependency {import_pkg} is not available.",
+                ModuleNotFoundError,
+                match=f"Optional dependency {import_pkg} is not available.",
             ):
                 pybamm.util.import_optional_dependency(import_pkg)
 
@@ -147,14 +149,17 @@ class TestUtil():
             )
 
         # Check that optional dependencies are not present in the core PyBaMM installation
-        optional_present_deps = bool(optional_distribution_deps & required_distribution_deps)
+        optional_present_deps = bool(
+            optional_distribution_deps & required_distribution_deps
+        )
         assert not optional_present_deps, (
             f"Optional dependencies installed: {optional_present_deps}.\n"
             "Please ensure that optional dependencies are not present in the core PyBaMM installation, "
             "or list them as required."
         )
 
-class TestSearch():
+
+class TestSearch:
     def test_url_gets_to_stdout(self, mocker):
         model = pybamm.BaseModel()
         model.variables = {"Electrolyte concentration": 1, "Electrode potential": 0}
