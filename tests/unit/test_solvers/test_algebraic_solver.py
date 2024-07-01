@@ -1,14 +1,14 @@
 #
 # Tests for the Algebraic Solver class
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 import numpy as np
 from tests import get_discretisation_for_testing
 
 
-class TestAlgebraicSolver(TestCase):
+class TestAlgebraicSolver(unittest.TestCase):
     def test_algebraic_solver_init(self):
         solver = pybamm.AlgebraicSolver(
             method="hybr", tol=1e-4, extra_options={"maxfev": 100}

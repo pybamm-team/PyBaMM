@@ -1,7 +1,7 @@
 #
 # Tests for the Matrix class
 #
-from tests import TestCase
+
 import pybamm
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -10,7 +10,7 @@ import unittest
 import unittest.mock as mock
 
 
-class TestMatrix(TestCase):
+class TestMatrix(unittest.TestCase):
     def setUp(self):
         self.A = np.array([[1, 2, 0], [0, 1, 0], [0, 0, 1]])
         self.x = np.array([1, 2, 3])

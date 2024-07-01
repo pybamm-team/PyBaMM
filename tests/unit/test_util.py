@@ -1,5 +1,5 @@
 import importlib
-from tests import TestCase
+
 import os
 import sys
 import pybamm
@@ -15,7 +15,7 @@ from tests import (
 )
 
 
-class TestUtil(TestCase):
+class TestUtil(unittest.TestCase):
     """
     Test the functionality in util.py
     """
@@ -163,7 +163,7 @@ class TestUtil(TestCase):
         )
 
 
-class TestSearch(TestCase):
+class TestSearch(unittest.TestCase):
     def test_url_gets_to_stdout(self):
         model = pybamm.BaseModel()
         model.variables = {"Electrolyte concentration": 1, "Electrode potential": 0}

@@ -1,14 +1,14 @@
 import pybamm
 import unittest
 import numpy as np
-from tests import TestCase
+
 import matplotlib.pyplot as plt
 from matplotlib import use
 
 use("Agg")
 
 
-class TestPlot(TestCase):
+class TestPlot(unittest.TestCase):
     def test_plot(self):
         x = pybamm.Array(np.array([0, 3, 10]))
         y = pybamm.Array(np.array([6, 16, 78]))

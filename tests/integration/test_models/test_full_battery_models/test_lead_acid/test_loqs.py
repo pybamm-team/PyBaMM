@@ -1,7 +1,7 @@
 #
 # Tests for the lead-acid LOQS model
 #
-from tests import TestCase
+
 import pybamm
 import tests
 
@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 
 
-class TestLOQS(TestCase):
+class TestLOQS(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.LOQS()
         modeltest = tests.StandardModelTest(model)

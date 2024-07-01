@@ -1,9 +1,9 @@
 import pybamm
 import unittest
-from tests import TestCase
 
 
-class TestSubMesh0D(TestCase):
+
+class TestSubMesh0D(unittest.TestCase):
     def test_exceptions(self):
         position = {"x": {"position": 0}, "y": {"position": 0}}
         with self.assertRaises(pybamm.GeometryError):

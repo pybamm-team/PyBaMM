@@ -1,7 +1,7 @@
 #
 # Test for the evaluate-to-python functions
 #
-from tests import TestCase
+
 import pybamm
 
 from tests import get_discretisation_for_testing, get_1p1d_discretisation_for_testing
@@ -18,7 +18,7 @@ from tests import (
 )
 
 
-class TestEvaluate(TestCase):
+class TestEvaluate(unittest.TestCase):
     def test_find_symbols(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))

@@ -1,10 +1,10 @@
 import pybamm
 import unittest
 import tests
-from tests import TestCase
 
 
-class TestThevenin(TestCase):
+
+class TestThevenin(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.equivalent_circuit.Thevenin()
         modeltest = tests.StandardModelTest(model)

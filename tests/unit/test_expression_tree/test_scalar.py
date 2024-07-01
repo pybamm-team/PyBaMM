@@ -1,14 +1,14 @@
 #
 # Tests for the Scalar class
 #
-from tests import TestCase
+
 import unittest
 import unittest.mock as mock
 
 import pybamm
 
 
-class TestScalar(TestCase):
+class TestScalar(unittest.TestCase):
     def test_scalar_eval(self):
         a = pybamm.Scalar(5)
         self.assertEqual(a.value, 5)

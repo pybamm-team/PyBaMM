@@ -1,12 +1,12 @@
 #
 # Tests for the symbol unpacker
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestSymbolUnpacker(TestCase):
+class TestSymbolUnpacker(unittest.TestCase):
     def test_basic_symbols(self):
         a = pybamm.Scalar(1)
         unpacker = pybamm.SymbolUnpacker(pybamm.Scalar)

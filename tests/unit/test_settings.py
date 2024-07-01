@@ -1,12 +1,12 @@
 #
 # Tests the settings class.
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestSettings(TestCase):
+class TestSettings(unittest.TestCase):
     def test_simplify(self):
         self.assertTrue(pybamm.settings.simplify)
 

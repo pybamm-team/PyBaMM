@@ -2,7 +2,7 @@
 Tests for the batch_study.py
 """
 
-from tests import TestCase
+
 import os
 import pybamm
 import unittest
@@ -34,7 +34,7 @@ bs_true = pybamm.BatchStudy(
 )
 
 
-class TestBatchStudy(TestCase):
+class TestBatchStudy(unittest.TestCase):
     def test_solve(self):
         # Tests for exceptions
         for name in pybamm.BatchStudy.INPUT_LIST:

@@ -1,12 +1,12 @@
 #
 # Tests getting model info
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestModelInfo(TestCase):
+class TestModelInfo(unittest.TestCase):
     def test_find_parameter_info(self):
         model = pybamm.lithium_ion.SPM()
         model.info("Negative particle diffusivity [m2.s-1]")

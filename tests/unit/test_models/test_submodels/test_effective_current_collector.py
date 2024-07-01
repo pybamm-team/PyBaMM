@@ -1,13 +1,13 @@
 #
 # Tests for the Effective Current Collector Resistance models
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 import numpy as np
 
 
-class TestEffectiveResistance(TestCase):
+class TestEffectiveResistance(unittest.TestCase):
     def test_well_posed(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
         model.check_well_posedness()
@@ -46,7 +46,7 @@ class TestEffectiveResistance(TestCase):
             pybamm.current_collector.EffectiveResistance({"dimensionality": 10})
 
 
-class TestEffectiveResistancePostProcess(TestCase):
+class TestEffectiveResistancePostProcess(unittest.TestCase):
     def test_get_processed_variables(self):
         # solve cheap SPM to test post-processing (think of an alternative test?)
         models = [

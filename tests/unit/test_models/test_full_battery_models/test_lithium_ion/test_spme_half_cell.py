@@ -4,11 +4,11 @@
 #
 import pybamm
 import unittest
-from tests import TestCase
+
 from tests import BaseUnitTestLithiumIonHalfCell
 
 
-class TestSPMeHalfCell(BaseUnitTestLithiumIonHalfCell, TestCase):
+class TestSPMeHalfCell(BaseUnitTestLithiumIonHalfCell, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPMe
 

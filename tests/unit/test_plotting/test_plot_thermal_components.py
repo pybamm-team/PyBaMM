@@ -1,14 +1,14 @@
 import pybamm
 import unittest
 import numpy as np
-from tests import TestCase
+
 import matplotlib.pyplot as plt
 from matplotlib import use
 
 use("Agg")
 
 
-class TestPlotThermalComponents(TestCase):
+class TestPlotThermalComponents(unittest.TestCase):
     def test_plot_with_solution(self):
         model = pybamm.lithium_ion.SPM({"thermal": "lumped"})
         sim = pybamm.Simulation(

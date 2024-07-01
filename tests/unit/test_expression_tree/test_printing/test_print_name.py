@@ -2,13 +2,13 @@
 Tests for the print_name.py
 """
 
-from tests import TestCase
+
 import unittest
 
 import pybamm
 
 
-class TestPrintName(TestCase):
+class TestPrintName(unittest.TestCase):
     def test_prettify_print_name(self):
         param = pybamm.LithiumIonParameters()
         param2 = pybamm.LeadAcidParameters()

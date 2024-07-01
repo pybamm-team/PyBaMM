@@ -2,7 +2,7 @@
 Tests for the sympy_overrides.py
 """
 
-from tests import TestCase
+
 import unittest
 
 import pybamm
@@ -10,7 +10,7 @@ from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 import sympy
 
 
-class TestCustomPrint(TestCase):
+class TestCustomPrint(unittest.TestCase):
     def test_print_Derivative(self):
         # Test force_partial
         der1 = sympy.Derivative("y", "x")

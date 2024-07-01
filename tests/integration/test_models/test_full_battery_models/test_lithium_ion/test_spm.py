@@ -1,13 +1,13 @@
 #
 # Tests for the lithium-ion SPM model
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 from tests import BaseIntegrationTestLithiumIon
 
 
-class TestSPM(BaseIntegrationTestLithiumIon, TestCase):
+class TestSPM(BaseIntegrationTestLithiumIon,unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPM
 

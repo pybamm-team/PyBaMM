@@ -2,12 +2,12 @@
 Tests for the base_parameters.py
 """
 
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestBaseParameters(TestCase):
+class TestBaseParameters(unittest.TestCase):
     def test_getattr__(self):
         param = pybamm.LithiumIonParameters()
         # ending in _n / _s / _p

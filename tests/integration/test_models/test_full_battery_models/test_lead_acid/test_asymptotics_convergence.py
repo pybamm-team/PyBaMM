@@ -1,14 +1,14 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-from tests import TestCase
+
 import pybamm
 
 import numpy as np
 import unittest
 
 
-class TestAsymptoticConvergence(TestCase):
+class TestAsymptoticConvergence(unittest.TestCase):
     def test_leading_order_convergence(self):
         """
         Check that the leading-order model solution converges linearly in C_e to the

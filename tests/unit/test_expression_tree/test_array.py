@@ -1,7 +1,7 @@
 #
 # Tests for the Array class
 #
-from tests import TestCase
+
 import unittest
 import unittest.mock as mock
 
@@ -11,7 +11,7 @@ import sympy
 import pybamm
 
 
-class TestArray(TestCase):
+class TestArray(unittest.TestCase):
     def test_name(self):
         arr = pybamm.Array(np.array([1, 2, 3]))
         self.assertEqual(arr.name, "Array of shape (3, 1)")

@@ -1,12 +1,12 @@
 #
 # Tests for the standard parameters
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestGeometricParameters(TestCase):
+class TestGeometricParameters(unittest.TestCase):
     def test_macroscale_parameters(self):
         geo = pybamm.geometric_parameters
         L_n = geo.n.L

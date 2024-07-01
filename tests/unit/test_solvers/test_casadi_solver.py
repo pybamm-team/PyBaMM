@@ -1,4 +1,4 @@
-from tests import TestCase
+
 import pybamm
 import unittest
 import numpy as np
@@ -6,7 +6,7 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
 
 
-class TestCasadiSolver(TestCase):
+class TestCasadiSolver(unittest.TestCase):
     def test_bad_mode(self):
         with self.assertRaisesRegex(ValueError, "invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
@@ -582,7 +582,7 @@ class TestCasadiSolver(TestCase):
         )
 
 
-class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
+class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -963,7 +963,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
         )
 
 
-class TestCasadiSolverDAEsWithForwardSensitivityEquations(TestCase):
+class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()

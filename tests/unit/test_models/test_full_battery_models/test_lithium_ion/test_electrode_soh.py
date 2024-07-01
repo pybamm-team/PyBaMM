@@ -1,12 +1,12 @@
 #
 # Tests for the lithium-ion electrode-specific SOH model
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestElectrodeSOH(TestCase):
+class TestElectrodeSOH(unittest.TestCase):
     def test_known_solution(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -146,7 +146,7 @@ class TestElectrodeSOH(TestCase):
             esoh_solver.solve(inputs)
 
 
-class TestElectrodeSOHMSMR(TestCase):
+class TestElectrodeSOHMSMR(unittest.TestCase):
     def test_known_solution(self):
         options = {
             "open-circuit potential": "MSMR",
@@ -232,7 +232,7 @@ class TestElectrodeSOHMSMR(TestCase):
             esoh_solver._get_electrode_soh_sims_split()
 
 
-class TestElectrodeSOHHalfCell(TestCase):
+class TestElectrodeSOHHalfCell(unittest.TestCase):
     def test_known_solution(self):
         model = pybamm.lithium_ion.ElectrodeSOHHalfCell()
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
@@ -247,7 +247,7 @@ class TestElectrodeSOHHalfCell(TestCase):
         self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
 
 
-class TestCalculateTheoreticalEnergy(TestCase):
+class TestCalculateTheoreticalEnergy(unittest.TestCase):
     def test_efficiency(self):
         model = pybamm.lithium_ion.DFN(options={"calculate discharge energy": "true"})
         parameter_values = pybamm.ParameterValues("Chen2020")
@@ -266,7 +266,7 @@ class TestCalculateTheoreticalEnergy(TestCase):
         self.assertLess(0, theoretical_energy)
 
 
-class TestGetInitialSOC(TestCase):
+class TestGetInitialSOC(unittest.TestCase):
     def test_initial_soc(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -390,7 +390,7 @@ class TestGetInitialSOC(TestCase):
             )
 
 
-class TestGetInitialOCP(TestCase):
+class TestGetInitialOCP(unittest.TestCase):
     def test_get_initial_ocp(self):
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -412,7 +412,7 @@ class TestGetInitialOCP(TestCase):
         self.assertAlmostEqual(Up_0 - Un_0, 2.8)
 
 
-class TestGetInitialOCPMSMR(TestCase):
+class TestGetInitialOCPMSMR(unittest.TestCase):
     def test_get_initial_ocp(self):
         options = {
             "open-circuit potential": "MSMR",

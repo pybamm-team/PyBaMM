@@ -1,7 +1,7 @@
 #
 # Tests for the Function classes
 #
-from tests import TestCase
+
 import unittest
 import unittest.mock as mock
 
@@ -16,7 +16,7 @@ from tests import (
 )
 
 
-class TestFunction(TestCase):
+class TestFunction(unittest.TestCase):
     def test_number_input(self):
         # with numbers
         log = pybamm.Function(np.log, 10)
@@ -104,7 +104,7 @@ class TestFunction(TestCase):
             pybamm.Function._from_json({})
 
 
-class TestSpecificFunctions(TestCase):
+class TestSpecificFunctions(unittest.TestCase):
     def test_to_json(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
@@ -450,7 +450,7 @@ class TestSpecificFunctions(TestCase):
         )
 
 
-class TestNonObjectFunctions(TestCase):
+class TestNonObjectFunctions(unittest.TestCase):
     def test_normal_pdf(self):
         x = pybamm.InputParameter("x")
         mu = pybamm.InputParameter("mu")

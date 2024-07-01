@@ -1,12 +1,12 @@
 #
 # Tests for Ai (2020) Enertech parameter set loads
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestAi2020(TestCase):
+class TestAi2020(unittest.TestCase):
     def test_functions(self):
         param = pybamm.ParameterValues("Ai2020")
         sto = pybamm.Scalar(0.5)

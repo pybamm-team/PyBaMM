@@ -1,13 +1,13 @@
 #
 # Tests for the lead-acid LOQS model
 #
-from tests import TestCase
+
 import pybamm
 import tests
 import unittest
 
 
-class TestLeadAcidLOQSWithSideReactions(TestCase):
+class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
     def test_discharge_differential(self):
         options = {"surface form": "differential", "hydrolysis": "true"}
         model = pybamm.lead_acid.LOQS(options)

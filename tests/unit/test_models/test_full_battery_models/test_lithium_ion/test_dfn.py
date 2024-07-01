@@ -1,13 +1,13 @@
 #
 # Tests for the lithium-ion DFN model
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 from tests import BaseUnitTestLithiumIon
 
 
-class TestDFN(BaseUnitTestLithiumIon, TestCase):
+class TestDFN(BaseUnitTestLithiumIon,unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN
 
