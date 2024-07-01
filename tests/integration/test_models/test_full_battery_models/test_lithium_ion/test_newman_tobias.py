@@ -7,7 +7,7 @@ import unittest
 from tests import BaseIntegrationTestLithiumIon
 
 
-class TestNewmanTobias(BaseIntegrationTestLithiumIon,unittest.TestCase):
+class TestNewmanTobias(BaseIntegrationTestLithiumIon, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.NewmanTobias
 

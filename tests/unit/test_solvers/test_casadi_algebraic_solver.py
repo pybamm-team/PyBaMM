@@ -1,4 +1,3 @@
-
 import casadi
 import pybamm
 import unittest

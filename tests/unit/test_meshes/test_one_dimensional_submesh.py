@@ -3,7 +3,6 @@ import unittest
 import numpy as np
 
 
-
 class TestSubMesh1D(unittest.TestCase):
     def test_tabs(self):
         edges = np.linspace(0, 1, 10)

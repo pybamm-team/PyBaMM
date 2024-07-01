@@ -7,7 +7,6 @@ import pybamm
 from tests import assert_domain_equal
 
 
-
 class TestUnaryOperators(unittest.TestCase):
     def test_x_average(self):
         a = pybamm.Scalar(4)

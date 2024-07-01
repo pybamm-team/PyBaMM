@@ -2,7 +2,6 @@
 Tests for the sympy_overrides.py
 """
 
-
 import unittest
 
 import pybamm

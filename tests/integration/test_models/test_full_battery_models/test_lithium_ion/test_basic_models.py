@@ -21,22 +21,22 @@ class BaseBasicModelTest:
         sim.solve(calc_esoh=False)
 
 
-class TestBasicSPM(BaseBasicModelTest,unittest.TestCase):
+class TestBasicSPM(BaseBasicModelTest, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.BasicSPM()
 
 
-class TestBasicDFN(BaseBasicModelTest,unittest.TestCase):
+class TestBasicDFN(BaseBasicModelTest, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.BasicDFN()
 
 
-class TestBasicDFNComposite(BaseBasicModelTest,unittest.TestCase):
+class TestBasicDFNComposite(BaseBasicModelTest, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.BasicDFNComposite()
 
 
-class TestBasicDFNHalfCell(BaseBasicModelTest,unittest.TestCase):
+class TestBasicDFNHalfCell(BaseBasicModelTest, unittest.TestCase):
     def setUp(self):
         options = {"working electrode": "positive"}
         self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)

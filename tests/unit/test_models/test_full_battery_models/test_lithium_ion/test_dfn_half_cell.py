@@ -7,7 +7,7 @@ import unittest
 from tests import BaseUnitTestLithiumIonHalfCell
 
 
-class TestDFNHalfCell(BaseUnitTestLithiumIonHalfCell,unittest.TestCase):
+class TestDFNHalfCell(BaseUnitTestLithiumIonHalfCell, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN
 

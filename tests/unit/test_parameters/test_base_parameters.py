@@ -2,7 +2,6 @@
 Tests for the base_parameters.py
 """
 
-
 import pybamm
 import unittest
 

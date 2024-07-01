@@ -2,7 +2,6 @@
 Tests for the latexify.py
 """
 
-
 import os
 import platform
 import unittest

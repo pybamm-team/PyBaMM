@@ -2,7 +2,6 @@
 Tests for the print_name.py
 """
 
-
 import unittest
 
 import pybamm

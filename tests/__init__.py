@@ -46,4 +46,3 @@ from .shared import (
     no_internet_connection,
     assert_domain_equal,
 )
-

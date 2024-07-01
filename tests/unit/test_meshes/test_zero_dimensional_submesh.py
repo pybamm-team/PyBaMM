@@ -2,7 +2,6 @@ import pybamm
 import unittest
 
 
-
 class TestSubMesh0D(unittest.TestCase):
     def test_exceptions(self):
         position = {"x": {"position": 0}, "y": {"position": 0}}

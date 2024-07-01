@@ -7,7 +7,7 @@ import unittest
 from tests import BaseUnitTestLithiumIon
 
 
-class TestSPM(BaseUnitTestLithiumIon,unittest.TestCase):
+class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPM
 

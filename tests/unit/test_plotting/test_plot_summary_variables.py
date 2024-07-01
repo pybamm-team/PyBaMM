@@ -3,7 +3,6 @@ import unittest
 import numpy as np
 
 
-
 class TestPlotSummaryVariables(unittest.TestCase):
     def test_plot(self):
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})

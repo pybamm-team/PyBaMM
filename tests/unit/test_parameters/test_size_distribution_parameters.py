@@ -7,7 +7,6 @@ import unittest
 import numpy as np
 
 
-
 class TestSizeDistributionParameters(unittest.TestCase):
     def test_parameter_values(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values

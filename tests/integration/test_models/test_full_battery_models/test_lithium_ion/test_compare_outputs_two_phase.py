@@ -6,7 +6,6 @@ import numpy as np
 import unittest
 
 
-
 class TestCompareOutputsTwoPhase(unittest.TestCase):
     def compare_outputs_two_phase_graphite_graphite(self, model_class):
         """

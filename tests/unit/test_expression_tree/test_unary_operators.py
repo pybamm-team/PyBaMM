@@ -604,9 +604,7 @@ class TestUnaryOperators(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         boundary_a_sec = pybamm.boundary_value(a_sec, "right")
-        assert_domain_equal(
-            boundary_a_sec.domains, {"primary": ["current collector"]}
-        )
+        assert_domain_equal(boundary_a_sec.domains, {"primary": ["current collector"]})
         # test with secondary domain and tertiary domain
         a_tert = pybamm.Symbol(
             "a",

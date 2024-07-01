@@ -8,7 +8,6 @@ import pybamm
 import unittest
 
 
-
 class TestTimer(unittest.TestCase):
     """
     Tests the basic methods of the Timer class.

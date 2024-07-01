@@ -2,7 +2,6 @@
 Tests for the batch_study.py
 """
 
-
 import os
 import pybamm
 import unittest
