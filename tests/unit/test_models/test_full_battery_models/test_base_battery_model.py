@@ -310,6 +310,10 @@ class TestBaseBatteryModel(TestCase):
         # SEI on cracks
         with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
+        with self.assertRaisesRegex(pybamm.OptionError, "'SEI on cracks' is 'true'"):
+            pybamm.BaseBatteryModel(
+                {"SEI on cracks": "true", "particle mechanics": "swelling only"}
+            )
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
