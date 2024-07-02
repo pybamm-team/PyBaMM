@@ -107,9 +107,11 @@ dev = [
     "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
-    # For testing Jupyter notebooks
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
+    "pytest-mock",
+    # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
@@ -217,16 +219,19 @@ ignore = [
 "**.ipynb" = ["E402", "E703"]
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
-# NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
 minversion = "6"
+<<<<<<< removing-runtest
 markers = [
       "examples: mark a test as an example test",
 ]
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
+=======
+>>>>>>> develop
 required_plugins = [
     "pytest-xdist",
+    "pytest-mock",
 ]
 addopts = [
     "-nauto",
