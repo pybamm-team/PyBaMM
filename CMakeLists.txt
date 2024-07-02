@@ -79,10 +79,16 @@ execute_process(
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+set(CMAKE_PREFIX_PATH "${CASADI_DIR}/../../casadi" ${CMAKE_PREFIX_PATH})
+
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found Python casadi path: ${CASADI_DIR}")
+else()
+  message(FATAL_ERROR "Python casadi path not found")
 endif()
+
+message("VCPKG_ROOT_DIR is set to: ${VCPKG_ROOT_DIR}")
 
 if(${USE_PYTHON_CASADI})
   message("Trying to link against Python casadi package")
