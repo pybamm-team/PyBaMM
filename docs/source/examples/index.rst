@@ -27,11 +27,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
 
     notebooks/creating_models/1-an-ode-model.ipynb
     notebooks/creating_models/2-a-pde-model.ipynb
-    notebooks/creating_models/3-negative-particle-problem.ipynb
-    notebooks/creating_models/4-comparing-full-and-reduced-order-models.ipynb
-    notebooks/creating_models/5-half-cell-model.ipynb
-    notebooks/creating_models/6-a-simple-SEI-model.ipynb
-    notebooks/creating_models/7-creating-a-submodel.ipynb
+    notebooks/creating_models/3-model-into-a-class.ipynb
 
 .. nbgallery::
     :caption: Expression Tree

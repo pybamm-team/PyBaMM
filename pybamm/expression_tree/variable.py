@@ -164,7 +164,7 @@ class Variable(VariableBase):
 
     name : str
         name of the node
-        domain : iterable of str, optional
+    domain : iterable of str, optional
         list of domains that this variable is valid over
     auxiliary_domains : dict, optional
         dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,

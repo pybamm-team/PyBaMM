@@ -89,6 +89,31 @@ class TestCompareBasicModels(TestCase):
                 basic_sol[name].entries, sol[name].entries, rtol=1e-4
             )
 
+    def test_compare_rms(self):
+        parameter_values = pybamm.ParameterValues("Ecker2015")
+        basic_rm = pybamm.lithium_ion.BasicSPM()
+        rm = pybamm.lithium_ion.SPM()
+
+        # Solve basic SPM
+        basic_sim = pybamm.Simulation(basic_rm, parameter_values=parameter_values)
+        t_eval = np.linspace(0, 3600)
+        basic_sim.solve(t_eval)
+        basic_sol = basic_sim.solution
+
+        # Solve main SPM
+        sim = pybamm.Simulation(rm, parameter_values=parameter_values)
+        t_eval = np.linspace(0, 3600)
+        sim.solve(t_eval)
+        sol = sim.solution
+
+        # Compare solution data
+        np.testing.assert_allclose(basic_sol.t, sol.t)
+        # Compare variables
+        for name in basic_rm.variables:
+            np.testing.assert_allclose(
+                basic_sol[name].entries, sol[name].entries, rtol=1e-4
+            )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

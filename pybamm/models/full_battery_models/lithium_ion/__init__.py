@@ -19,6 +19,7 @@ from .dfn import DFN
 from .newman_tobias import NewmanTobias
 from .basic_dfn import BasicDFN
 from .basic_spm import BasicSPM
+from .basic_reservoir import BasicReservoir
 from .basic_dfn_half_cell import BasicDFNHalfCell
 from .basic_dfn_composite import BasicDFNComposite
 from .Yang2017 import Yang2017

@@ -67,8 +67,5 @@ glob:
 ---
 ../examples/notebooks/creating_models/1-an-ode-model.ipynb
 ../examples/notebooks/creating_models/2-a-pde-model.ipynb
-../examples/notebooks/creating_models/3-negative-particle-problem.ipynb
-../examples/notebooks/creating_models/4-comparing-full-and-reduced-order-models.ipynb
-../examples/notebooks/creating_models/5-half-cell-model.ipynb
-../examples/notebooks/creating_models/6-a-simple-SEI-model.ipynb
+../examples/notebooks/creating_models/3-model-into-a-class.ipynb
 ```

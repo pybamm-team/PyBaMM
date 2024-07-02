@@ -15,6 +15,10 @@ class TestBasicModels(TestCase):
         model = pybamm.lithium_ion.BasicSPM()
         model.check_well_posedness()
 
+    def test_rm_well_posed(self):
+        model = pybamm.lithium_ion.BasicReservoir()
+        model.check_well_posedness()
+
     def test_dfn_half_cell_well_posed(self):
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
