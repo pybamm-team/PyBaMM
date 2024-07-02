@@ -67,6 +67,11 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu.cpp
 )
 
+find_package(OpenBLAS REQUIRED)
+message("OpenBLAS found in ${OpenBLAS_INCLUDE_DIRS}: ${OpenBLAS_LIBRARIES}")
+include_directories(${OpenBLAS_INCLUDE_DIRS})
+
+
 if (NOT DEFINED USE_PYTHON_CASADI)
   set(USE_PYTHON_CASADI TRUE)
 endif()
@@ -79,14 +84,14 @@ execute_process(
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-set(CMAKE_PREFIX_PATH "${CASADI_DIR}/../../casadi" ${CMAKE_PREFIX_PATH})
-
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found Python casadi path: ${CASADI_DIR}")
 else()
   message(FATAL_ERROR "Python casadi path not found")
 endif()
+
+set(CMAKE_PREFIX_PATH "${CASADI_DIR}/../../casadi" ${CMAKE_PREFIX_PATH})
 
 message("VCPKG_ROOT_DIR is set to: ${VCPKG_ROOT_DIR}")
 
@@ -106,11 +111,17 @@ set_target_properties(
 )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
+
 # Sundials
 find_package(SUNDIALS REQUIRED)
 message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
+
+if(TARGET casadi)
+  target_link_libraries(casadi INTERFACE $(OpenBLAS_LIBRARIES))
+endif()
+
 
 # link suitesparse
 # if using vcpkg, use config mode to
