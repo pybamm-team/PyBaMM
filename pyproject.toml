@@ -221,7 +221,6 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "6"
-<<<<<<< removing-runtest
 markers = [
       "examples: mark a test as an example test",
 ]
