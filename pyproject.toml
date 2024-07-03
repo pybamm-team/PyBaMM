@@ -139,6 +139,7 @@ Marquis2019 = "pybamm.input.parameters.lithium_ion.Marquis2019:get_parameter_val
 Mohtat2020 = "pybamm.input.parameters.lithium_ion.Mohtat2020:get_parameter_values"
 NCA_Kim2011 = "pybamm.input.parameters.lithium_ion.NCA_Kim2011:get_parameter_values"
 OKane2022 = "pybamm.input.parameters.lithium_ion.OKane2022:get_parameter_values"
+OKane2022_posmolar_0703 = "pybamm.input.parameters.lithium_ion.OKane2022_posmolar_0703:get_parameter_values"
 OKane2022_graphite_SiOx_halfcell = "pybamm.input.parameters.lithium_ion.OKane2022_graphite_SiOx_halfcell:get_parameter_values"
 ORegan2022 = "pybamm.input.parameters.lithium_ion.ORegan2022:get_parameter_values"
 Prada2013 = "pybamm.input.parameters.lithium_ion.Prada2013:get_parameter_values"
