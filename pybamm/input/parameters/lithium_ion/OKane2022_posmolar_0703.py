@@ -623,7 +623,7 @@ def get_parameter_values():
         "Positive electrode reference concentration for free of deformation [mol.m-3]"
         "": 0.0,
         ##"Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
-        "Positive electrode partial molar volume [m3.mol-1]": 1e-6, # updated by Xinlei 2024/7/3
+        "Positive electrode partial molar volume [m3.mol-1]": 0.5e-6, # updated by Xinlei 2024/7/3
         "Positive electrode volume change": volume_change_Ai2020,
         "Positive electrode initial crack length [m]": 2e-08,
         "Positive electrode initial crack width [m]": 1.5e-08,
