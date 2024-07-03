@@ -26,8 +26,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
         The tolerance for the solver (default is 1e-6).
     extra_options : dict, optional
         Any options to pass to the rootfinder. Vary depending on which method is chosen.
-        Please consult `SciPy documentation <https://tinyurl.com/ybr6cfqs>`_ for
-        details.
+        Please consult `SciPy documentation
+        <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.show_options.html>`_
+        for details.
     """
 
     def __init__(self, method="lm", tol=1e-6, extra_options=None):
