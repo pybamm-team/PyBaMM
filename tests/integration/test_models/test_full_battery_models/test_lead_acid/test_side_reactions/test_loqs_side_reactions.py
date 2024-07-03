@@ -44,5 +44,3 @@ class TestLeadAcidLOQSWithSideReactions:
         parameter_values.update({"Current function [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
-
-

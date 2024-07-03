@@ -5,6 +5,7 @@ import pybamm
 from tests import BaseIntegrationTestLithiumIon
 import pytest
 
+
 class TestSPMe(BaseIntegrationTestLithiumIon):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -13,5 +14,3 @@ class TestSPMe(BaseIntegrationTestLithiumIon):
     def test_integrated_conductivity(self):
         options = {"electrolyte conductivity": "integrated"}
         self.run_basic_processing_test(options)
-
-

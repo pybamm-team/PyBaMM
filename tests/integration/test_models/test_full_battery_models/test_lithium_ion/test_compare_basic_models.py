@@ -86,4 +86,3 @@ class TestCompareBasicModels:
             np.testing.assert_allclose(
                 basic_sol[name].entries, sol[name].entries, rtol=1e-4
             )
-

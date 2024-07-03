@@ -4,6 +4,7 @@
 import pybamm
 import pytest
 
+
 class BaseBasicModelTest:
     def test_with_experiment(self):
         model = self.model
@@ -41,5 +42,3 @@ class TestBasicDFNHalfCell(BaseBasicModelTest):
     def setUp(self):
         options = {"working electrode": "positive"}
         self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)
-
-

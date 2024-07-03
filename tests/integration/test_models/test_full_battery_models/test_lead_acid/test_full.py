@@ -86,5 +86,3 @@ class TestLeadAcidFullSurfaceForm:
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-
-

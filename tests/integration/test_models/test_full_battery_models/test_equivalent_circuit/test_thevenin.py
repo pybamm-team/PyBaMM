@@ -7,5 +7,3 @@ class TestThevenin:
         model = pybamm.equivalent_circuit.Thevenin()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-
-

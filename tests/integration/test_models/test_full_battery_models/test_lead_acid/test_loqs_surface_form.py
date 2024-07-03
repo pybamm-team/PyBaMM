@@ -56,5 +56,3 @@ class TestLeadAcidLoqsSurfaceForm:
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
-
-

@@ -70,5 +70,3 @@ class TestAsymptoticConvergence:
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
 
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
-
-

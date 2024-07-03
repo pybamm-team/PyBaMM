@@ -72,5 +72,3 @@ class TestLOQS:
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
-
-

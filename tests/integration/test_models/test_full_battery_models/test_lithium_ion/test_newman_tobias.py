@@ -1,10 +1,10 @@
 #
 # Tests for the lithium-ion Newman-Tobias model
 #
-from tests import TestCase
 import pybamm
 from tests import BaseIntegrationTestLithiumIon
 import pytest
+
 
 class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     @pytest.fixture(autouse=True)
@@ -26,5 +26,3 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
 
     def test_composite_graphite_silicon_sei(self):
         pass  # skip this test
-
-

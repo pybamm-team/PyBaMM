@@ -25,5 +25,3 @@ class TestInputLumpedTemperature:
             inputs = {"Volume-averaged cell temperature [K]": T_av}
             T_av += 1
             sim.step(dt, inputs=inputs)  # works
-
-
