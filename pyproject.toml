@@ -227,8 +227,6 @@ markers = [
 ]
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
-=======
->>>>>>> develop
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
