@@ -713,7 +713,11 @@ class Symbol:
             The variable with respect to which to differentiate
         """
         if variable == self:
-            return pybamm.Scalar(1)
+            eval_shape = self.evaluate_for_shape()
+            if isinstance(eval_shape, numbers.Number):
+                return pybamm.Scalar(1)
+            else:
+                return pybamm.Vector(np.ones_like(eval_shape), domain=self.domains)
         elif any(variable == x for x in self.pre_order()):
             return self._diff(variable)
         elif variable == pybamm.t and self.has_symbol_of_classes(
@@ -721,7 +725,11 @@ class Symbol:
         ):
             return self._diff(variable)
         else:
-            return pybamm.Scalar(0)
+            eval_shape = self.evaluate_for_shape()
+            if isinstance(eval_shape, numbers.Number):
+                return pybamm.Scalar(0)
+            else:
+                return pybamm.Vector(np.zeros_like(eval_shape), domain=self.domains)
 
     def _diff(self, variable):
         """

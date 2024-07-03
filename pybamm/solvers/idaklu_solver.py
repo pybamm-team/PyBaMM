@@ -153,10 +153,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def set_up(self, model, inputs_list=None, t_eval=None, ics_only=False):
-        base_set_up_return = super().set_up(model, inputs_list, t_eval, ics_only)
+    def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
+        base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
-        inputs_list = inputs_list or [{}]
+        if isinstance(inputs, dict):
+            inputs_list = [inputs]
+        else:
+            inputs_list = inputs or [{}]
         nparams = sum(
             len(np.array(v).reshape(-1, 1)) for _, v in inputs_list[0].items()
         )
@@ -165,7 +168,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # stack inputs
         inputs = self._inputs_to_stacked_vect(inputs_list, model.convert_to_format)
-        input_slices = self._input_dict_to_slices(inputs_list[0])
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -268,7 +270,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     idaklu.generate_function(self.computed_var_fcns[key].serialize())
                 )
                 # Convert derivative functions for sensitivities
-                if (len(inputs) > 0) and (model.calculate_sensitivities):
+                if (inputs.shape[0] > 0) and (model.calculate_sensitivities):
                     self.dvar_dy_idaklu_fcns.append(
                         idaklu.generate_function(
                             self.computed_dvar_dy_fcns[key].serialize()
@@ -358,10 +360,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_sensitivity_parameters = 0
         if model.jacp_rhs_algebraic_eval is not None:
             sensitivity_names = model.calculate_sensitivities
-            if model.convert_to_format == "casadi":
-                number_of_sensitivity_parameters = model.jacp_rhs_algebraic_eval.n_out()
-            else:
-                number_of_sensitivity_parameters = len(sensitivity_names)
+            for name in model.calculate_sensitivities:
+                inp = inputs_list[0][name]
+                if isinstance(inp, np.ndarray):
+                    number_of_sensitivity_parameters += inp.size
+                else:
+                    number_of_sensitivity_parameters += 1
         else:
             sensitivity_names = []
 
@@ -407,8 +411,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 dFdyd = mass_matrix
                 dFdp = model.jacp_rhs_algebraic_eval(t, y, inputs)
 
-                for i, input_slice in enumerate(input_slices.values()):
-                    resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp[input_slice]
+                for i in range(dFdp.shape[1]):
+                    resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp[:, [i]]
 
         try:
             atol = model.atol
@@ -469,7 +473,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 rhs_alg_id=self._setup["ids"],
                 atol=atol,
                 rtol=rtol,
-                inputs=len(inputs),
+                inputs=inputs.shape[0],
                 var_casadi_fcns=self._setup["var_idaklu_fcns"],
                 dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
                 dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],

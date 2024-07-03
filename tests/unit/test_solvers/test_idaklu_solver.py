@@ -220,6 +220,7 @@ class TestIDAKLUSolver(TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax"]:
+            print("form", form)
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
@@ -295,6 +296,7 @@ class TestIDAKLUSolver(TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "python", "jax"]:
+            print(form)
             if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":

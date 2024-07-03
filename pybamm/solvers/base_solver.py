@@ -1657,13 +1657,15 @@ def process(
                 f"to parameters {model.calculate_sensitivities}"
             )
             jacp_dict = {
-                p: symbol.diff(pybamm.InputParameter(p))
+                p: pybamm.EvaluatorPython(symbol.diff(pybamm.InputParameter(p)), inputs)
                 for p in model.calculate_sensitivities
             }
-            jacp = pybamm.NumpyConcatenation(*[v for v in jacp_dict.values()])
 
-            report(f"Converting sensitivities for {name} to python")
-            jacp = pybamm.EvaluatorPython(jacp, inputs)
+            # jacp returns a matrix where each column is the sensitivity for
+            # a different parameter
+            def jacp(t, y, inputs):
+                sens_list = [v(t, y, inputs) for v in jacp_dict.values()]
+                return np.hstack(sens_list)
         else:
             jacp = None
 
@@ -1757,26 +1759,11 @@ def process(
             )
             # Compute derivate wrt p-stacked (can be passed to solver to
             # compute sensitivities online)
-            if return_jacp_stacked:
-                jacp = casadi.Function(
-                    f"d{name}_dp",
-                    [t_casadi, y_casadi, p_casadi_stacked],
-                    [casadi.jacobian(casadi_expression, p_casadi_stacked)],
-                )
-            else:
-                # WARNING, jacp for convert_to_format=casadi does not return a dict
-                # instead it returns multiple return values, one for each param
-                # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
-                jacp = casadi.Function(
-                    name + "_jacp",
-                    [t_casadi, y_and_S, p_casadi_stacked],
-                    [
-                        casadi.densify(
-                            casadi.jacobian(casadi_expression, p_casadi[pname])
-                        )
-                        for pname in model.calculate_sensitivities
-                    ],
-                )
+            jacp = casadi.Function(
+                f"d{name}_dp",
+                [t_casadi, y_casadi, p_casadi_stacked],
+                [casadi.jacobian(casadi_expression, p_casadi_stacked)],
+            )
 
         if use_jacobian:
             report(f"Calculating jacobian for {name} using CasADi")

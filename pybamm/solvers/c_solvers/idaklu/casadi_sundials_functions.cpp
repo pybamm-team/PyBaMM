@@ -307,35 +307,46 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
   p_python_functions->sens.m_arg[0] = &t;
   p_python_functions->sens.m_arg[1] = NV_DATA(yy);
   p_python_functions->sens.m_arg[2] = p_python_functions->inputs.data();
-  for (int i = 0; i < np; i++)
-  {
-    p_python_functions->sens.m_res[i] = NV_DATA(resvalS[i]);
-  }
-  // resvalsS now has (∂F/∂p i )
+
+  realtype *sens_data = p_python_functions->get_tmp_sparse_sens_data();
+  p_python_functions->sens.m_res[0] = sens_data;
+
+  // sens_data now has (∂F/∂p i ) non-zero elements, where i is the column index
+  // of the matrix
   p_python_functions->sens();
+
+  // get sparsity data for later
+  casadi::Sparsity sens_sparsity = p_python_functions->sens.sparsity_out(0);
 
   for (int i = 0; i < np; i++)
   {
-    // put (∂F/∂y)s i (t) in tmp
-    realtype *tmp = p_python_functions->get_tmp_state_vector();
+    // put (∂F/∂y)s i (t) in resvalS[i]
     p_python_functions->jac_action.m_arg[0] = &t;
     p_python_functions->jac_action.m_arg[1] = NV_DATA(yy);
     p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
     p_python_functions->jac_action.m_arg[3] = NV_DATA(yS[i]);
-    p_python_functions->jac_action.m_res[0] = tmp;
+    p_python_functions->jac_action.m_res[0] = NV_DATA(resvalS[i]);
     p_python_functions->jac_action();
 
-    const int ns = p_python_functions->number_of_states;
-    casadi::casadi_axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
-
-    // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
+    // put -(∂F/∂ ẏ) ṡ i (t) in tmp
+    realtype *tmp = p_python_functions->get_tmp_state_vector();
     p_python_functions->mass_action.m_arg[0] = NV_DATA(ypS[i]);
     p_python_functions->mass_action.m_res[0] = tmp;
     p_python_functions->mass_action();
 
-    // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
-    // AXPY: y <- a*x + y
+    // resvalS[i] = (∂F/∂y)s i (t) + (∂F/∂ ẏ) ṡ i (t)
+    const int ns = p_python_functions->number_of_states;
     casadi::casadi_axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
+
+    // add (∂F/∂p i ) to resvalS[i]
+    const int col_start = sens_sparsity.colind(i);
+    const int col_end = sens_sparsity.colind(i + 1);
+    for (int j = col_start; j < col_end; j++)
+    {
+      const int row = sens_sparsity.row(j);
+      const realtype value = sens_data[j];
+      NV_Ith_S(resvalS[i], row) += value;
+    }
   }
 
   return 0;

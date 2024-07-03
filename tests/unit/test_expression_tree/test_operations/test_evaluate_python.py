@@ -26,8 +26,9 @@ class TestEvaluate(TestCase):
         # test a + b
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
+        input_slices = {}
         expr = a + b
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(constant_symbols), 0)
 
         # test keys of known_symbols
@@ -47,7 +48,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = a + b + b
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(constant_symbols), 0)
 
         # test keys of variable_symbols
@@ -68,7 +69,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = pybamm.maximum(a, -(b))
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(constant_symbols), 0)
 
         # test keys of variable_symbols
@@ -90,7 +91,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = pybamm.Function(function_test, a)
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(next(iter(constant_symbols.keys())), expr.id)
         self.assertEqual(next(iter(constant_symbols.values())), function_test)
         self.assertEqual(next(iter(variable_symbols.keys())), a.id)
@@ -103,7 +104,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         A = pybamm.Matrix([[1, 2], [3, 4]])
-        pybamm.find_symbols(A, constant_symbols, variable_symbols)
+        pybamm.find_symbols(A, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(next(iter(constant_symbols.keys())), A.id)
         np.testing.assert_allclose(
@@ -114,7 +115,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
-        pybamm.find_symbols(A, constant_symbols, variable_symbols)
+        pybamm.find_symbols(A, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(next(iter(constant_symbols.keys())), A.id)
         np.testing.assert_allclose(
@@ -125,7 +126,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = pybamm.NumpyConcatenation(a, b)
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(next(iter(variable_symbols.keys())), a.id)
         self.assertEqual(list(variable_symbols.keys())[1], b.id)
@@ -139,7 +140,7 @@ class TestEvaluate(TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = pybamm.NumpyConcatenation(a, b)
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(next(iter(variable_symbols.keys())), a.id)
         self.assertEqual(list(variable_symbols.keys())[1], b.id)
@@ -155,12 +156,14 @@ class TestEvaluate(TestCase):
 
         expr = pybamm.concatenation(a, b)
         with self.assertRaises(NotImplementedError):
-            pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+            pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
 
         # test that these nodes throw
         for expr in (pybamm.Variable("a"), pybamm.Parameter("a")):
             with self.assertRaises(NotImplementedError):
-                pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+                pybamm.find_symbols(
+                    expr, constant_symbols, variable_symbols, input_slices
+                )
 
     def test_domain_concatenation(self):
         disc = get_discretisation_for_testing()
@@ -181,7 +184,8 @@ class TestEvaluate(TestCase):
 
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        input_slices = {}
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
         self.assertEqual(next(iter(variable_symbols.keys())), a.id)
         self.assertEqual(list(variable_symbols.keys())[1], b.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
@@ -223,7 +227,7 @@ class TestEvaluate(TestCase):
         expr = pybamm.DomainConcatenation([a, b], mesh)
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
 
         b0_str = f"{var_b}[0:{b0_pts}]"
         a0_str = f"{var_a}[0:{a0_pts}]"
@@ -257,7 +261,8 @@ class TestEvaluate(TestCase):
 
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        input_slices = {}
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols, input_slices)
 
         self.assertEqual(len(constant_symbols), 0)
 
@@ -453,8 +458,15 @@ class TestEvaluate(TestCase):
         # test sparse conversion
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
+        input_slices = {}
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
-        pybamm.find_symbols(A, constant_symbols, variable_symbols, output_jax=True)
+        pybamm.find_symbols(
+            A,
+            constant_symbols,
+            variable_symbols,
+            output_jax=True,
+            input_slices=input_slices,
+        )
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(next(iter(constant_symbols.keys())), A.id)
         np.testing.assert_allclose(
@@ -670,8 +682,8 @@ class TestEvaluate(TestCase):
     def test_evaluator_jax_inputs(self):
         a = pybamm.InputParameter("a")
         expr = a**2
-        evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator(inputs={"a": 2})
+        evaluator = pybamm.EvaluatorJax(expr, inputs=[{"a": 2}])
+        result = evaluator(inputs=np.array([2]))
         self.assertEqual(result, 4)
 
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")

@@ -375,7 +375,10 @@ def find_symbols(
 
 
 def to_python(
-    symbol: pybamm.Symbol, inputs: list[dict], debug=False, output_jax=False
+    symbol: pybamm.Symbol,
+    inputs: list[dict] | None = None,
+    debug=False,
+    output_jax=False,
 ) -> tuple[OrderedDict, str]:
     """
     This function converts an expression tree into a dict of constant input values, and
@@ -386,7 +389,7 @@ def to_python(
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to python code
 
-    inputs: list of dict
+    inputs: list of dict (optional)
         The inputs to the expression tree
 
     debug : bool
@@ -405,6 +408,8 @@ def to_python(
         operations are used
 
     """
+    if inputs is None:
+        inputs = [{}]
     constant_values: OrderedDict = OrderedDict()
     variable_symbols: OrderedDict = OrderedDict()
     input_slices = pybamm.BaseSolver._input_dict_to_slices(inputs[0])
@@ -440,7 +445,7 @@ class EvaluatorPython:
 
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to python code
-    inputs: list of dict
+    inputs: list of dict (optional)
         The inputs to the expression tree
     is_event: bool
         Indicates this symbol is an event expression
@@ -452,10 +457,12 @@ class EvaluatorPython:
     def __init__(
         self,
         symbol: pybamm.Symbol,
-        inputs: list[dict],
+        inputs: list[dict] | None = None,
         is_event: bool = False,
         is_matrix: bool = False,
     ):
+        if inputs is None:
+            inputs = [{}]
         constants, python_str = pybamm.to_python(symbol, inputs, debug=False)
 
         # extract constants in generated function
@@ -577,18 +584,25 @@ class EvaluatorJax:
 
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to python code
-    inputs: list of dict
+    inputs: list of dict (optional)
         The inputs to the model
-    is_event: bool
+    is_event: bool (optional)
         Indicates this symbol is an event expression
 
     """
 
-    def __init__(self, symbol: pybamm.Symbol, inputs: list[dict], is_event: bool):
+    def __init__(
+        self,
+        symbol: pybamm.Symbol,
+        inputs: list[dict] | None = None,
+        is_event: bool = False,
+    ):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
+        if inputs is None:
+            inputs = [{}]
 
         constants, python_str = pybamm.to_python(
             symbol, inputs, debug=False, output_jax=True
@@ -696,10 +710,12 @@ class EvaluatorJax:
         )
 
     def get_jacobian(self):
-        n = len(self._arg_list)
-
         # forward mode autodiff  wrt y, which is argument 1 after arg_list
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
+        n = len(self._arg_list)
+        return self._get_jacfwd(1 + n)
+
+    def _get_jacfwd(self, argnum):
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=argnum)
 
         self._jac_evaluate = jax.jit(
             jacobian_evaluate, static_argnums=self._static_argnums
@@ -711,16 +727,9 @@ class EvaluatorJax:
         return self.jvp
 
     def get_sensitivities(self):
+        # forward mode autodiff  wrt y, which is argument 2 after arg_list
         n = len(self._arg_list)
-
-        # forward mode autodiff wrt inputs, which is argument 2 after arg_list
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=2 + n)
-
-        self._sens_evaluate = jax.jit(
-            jacobian_evaluate, static_argnums=self._static_argnums
-        )
-
-        return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
+        return self._get_jacfwd(2 + n)
 
     def debug(self, t=None, y=None, inputs=None):
         # generated code assumes y is a column vector
@@ -782,24 +791,5 @@ class EvaluatorJaxJacobian:
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
         result = result.reshape(result.shape[0], -1)
-
-        return result
-
-
-class EvaluatorJaxSensitivities:
-    def __init__(self, jac_evaluate, constants):
-        self._jac_evaluate = jac_evaluate
-        self._constants = constants
-
-    def __call__(self, t=None, y=None, inputs=None):
-        """
-        evaluate function
-        """
-        # generated code assumes y is a column vector
-        if y is not None and y.ndim == 1:
-            y = y.reshape(-1, 1)
-
-        # execute code
-        result = self._jac_evaluate(*self._constants, t, y, inputs)
 
         return result

@@ -387,16 +387,15 @@ class TestBaseSolver(TestCase):
                             all_inputs.append((t, y, inputs))
             for t, y, inputs in all_inputs:
                 use_inputs = pybamm.BaseSolver._inputs_to_stacked_vect(
-                    inputs, convert_to_format
+                    [inputs], convert_to_format
                 )
                 sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
-
-                if convert_to_format == "casadi":
-                    sens_a = sens[0]
-                    sens_b = sens[1]
-                else:
-                    sens_a = sens["a"]
-                    sens_b = sens["b"]
+                self.assertEqual(sens.shape, (2, 2))
+                sens_a = sens[:, 0]
+                sens_b = sens[:, 1]
+                if convert_to_format != "casadi":
+                    sens_a = sens_a.reshape(-1, 1)
+                    sens_b = sens_b.reshape(-1, 1)
 
                 np.testing.assert_allclose(
                     sens_a, exact_diff_a(y, inputs["a"], inputs["b"])

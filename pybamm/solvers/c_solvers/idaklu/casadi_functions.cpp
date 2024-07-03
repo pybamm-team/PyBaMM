@@ -52,7 +52,9 @@ CasadiFunctions::CasadiFunctions(
   const np_array_int &jac_times_cjmass_rowvals_arg,
   const np_array_int &jac_times_cjmass_colptrs_arg,
   const int inputs_length, const Function &jac_action,
-  const Function &mass_action, const Function &sens, const Function &events,
+  const Function &mass_action,
+  const Function &sens,
+  const Function &events,
   const int n_s, int n_e, const int n_p,
   const std::vector<Function*>& var_casadi_fcns,
   const std::vector<Function*>& dvar_dy_fcns,
@@ -66,6 +68,7 @@ CasadiFunctions::CasadiFunctions(
     mass_action(mass_action), sens(sens), events(events),
     tmp_state_vector(number_of_states),
     tmp_sparse_jacobian_data(jac_times_cjmass_nnz),
+    tmp_sparse_sens_data(sens.nnz_out()),
     options(options)
 {
   // convert casadi::Function list to CasadiFunction list
@@ -102,4 +105,7 @@ realtype *CasadiFunctions::get_tmp_state_vector() {
 }
 realtype *CasadiFunctions::get_tmp_sparse_jacobian_data() {
   return tmp_sparse_jacobian_data.data();
+}
+realtype *CasadiFunctions::get_tmp_sparse_sens_data() {
+  return tmp_sparse_sens_data.data();
 }
