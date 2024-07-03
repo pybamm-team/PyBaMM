@@ -259,7 +259,7 @@ class BaseStep:
             t = value[:, 0]
             return t[-1]
         else:
-            return 1000 * 3600  # 1000 hours in second
+            return 1000 * 3600  # 1000 hours in seconds
 
     def process_model(self, model, parameter_values):
         new_model = model.new_copy()
