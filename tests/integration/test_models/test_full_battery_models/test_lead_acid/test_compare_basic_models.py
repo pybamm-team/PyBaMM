@@ -1,14 +1,12 @@
 #
 # Compare basic models with full models
 #
-from tests import TestCase
 import pybamm
 
 import numpy as np
-import unittest
 
 
-class TestCompareBasicModels(TestCase):
+class TestCompareBasicModels:
     def test_compare_full(self):
         basic_full = pybamm.lead_acid.BasicFull()
         full = pybamm.lead_acid.Full()
@@ -41,10 +39,3 @@ class TestCompareBasicModels(TestCase):
             )
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

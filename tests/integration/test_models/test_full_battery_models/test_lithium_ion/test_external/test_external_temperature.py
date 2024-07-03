@@ -1,13 +1,11 @@
 #
 # Tests for inputting a temperature profile
 #
-from tests import TestCase
 import pybamm
-import unittest
 import numpy as np
 
 
-class TestInputLumpedTemperature(TestCase):
+class TestInputLumpedTemperature:
     def test_input_lumped_temperature(self):
         model = pybamm.lithium_ion.SPMe()
         parameter_values = model.default_parameter_values
@@ -29,10 +27,3 @@ class TestInputLumpedTemperature(TestCase):
             sim.step(dt, inputs=inputs)  # works
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

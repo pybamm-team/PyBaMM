@@ -1,11 +1,8 @@
 #
 # Test basic model classes
 #
-from tests import TestCase
 import pybamm
-
-import unittest
-
+import pytest
 
 class BaseBasicModelTest:
     def test_with_experiment(self):
@@ -21,31 +18,28 @@ class BaseBasicModelTest:
         sim.solve(calc_esoh=False)
 
 
-class TestBasicSPM(BaseBasicModelTest, TestCase):
+class TestBasicSPM(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = pybamm.lithium_ion.BasicSPM()
 
 
-class TestBasicDFN(BaseBasicModelTest, TestCase):
+class TestBasicDFN(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = pybamm.lithium_ion.BasicDFN()
 
 
-class TestBasicDFNComposite(BaseBasicModelTest, TestCase):
+class TestBasicDFNComposite(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = pybamm.lithium_ion.BasicDFNComposite()
 
 
-class TestBasicDFNHalfCell(BaseBasicModelTest, TestCase):
+class TestBasicDFNHalfCell(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         options = {"working electrode": "positive"}
         self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

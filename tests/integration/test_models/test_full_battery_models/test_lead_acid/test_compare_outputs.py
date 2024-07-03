@@ -1,14 +1,12 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-from tests import TestCase
 import pybamm
 import numpy as np
-import unittest
 from tests import StandardOutputComparison
 
 
-class TestCompareOutputs(TestCase):
+class TestCompareOutputs:
     def test_compare_averages_asymptotics(self):
         """
         Check that the average value of certain variables is constant across submodels
@@ -89,10 +87,3 @@ class TestCompareOutputs(TestCase):
             comparison.test_all(skip_first_timestep=True)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

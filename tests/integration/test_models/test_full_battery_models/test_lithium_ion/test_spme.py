@@ -1,13 +1,12 @@
 #
 # Tests for the lithium-ion SPMe model
 #
-from tests import TestCase
 import pybamm
-import unittest
 from tests import BaseIntegrationTestLithiumIon
+import pytest
 
-
-class TestSPMe(BaseIntegrationTestLithiumIon, TestCase):
+class TestSPMe(BaseIntegrationTestLithiumIon):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = pybamm.lithium_ion.SPMe
 
@@ -16,10 +15,3 @@ class TestSPMe(BaseIntegrationTestLithiumIon, TestCase):
         self.run_basic_processing_test(options)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()
