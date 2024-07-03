@@ -48,10 +48,12 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertIsInstance(current, pybamm.step.Current)
         self.assertEqual(current.value, 1)
         self.assertEqual(str(current), repr(current))
+        self.assertEqual(current.duration, 1000 * 3600)
 
         c_rate = pybamm.step.c_rate(1)
         self.assertIsInstance(c_rate, pybamm.step.CRate)
         self.assertEqual(c_rate.value, 1)
+        self.assertEqual(c_rate.duration, 3600 * 2)
 
         voltage = pybamm.step.voltage(1)
         self.assertIsInstance(voltage, pybamm.step.Voltage)
