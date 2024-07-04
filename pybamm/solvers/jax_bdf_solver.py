@@ -876,17 +876,11 @@ if pybamm.have_jax():
         def arg_to_identity(arg):
             return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
 
-        def arg_dicts_to_values(args):
-            """
-            Note:JAX puts in empty arrays into args for some reason, we remove them here
-            """
-            return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
-
         aug_mass = (
             mass,
             mass,
             onp.array(1.0),
-            *arg_dicts_to_values(tree_map(arg_to_identity, args)),
+            *tree_map(arg_to_identity, args),
         )
 
         def scan_fun(carry, i):

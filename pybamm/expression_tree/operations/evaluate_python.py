@@ -424,6 +424,9 @@ def to_python(
             + "; print(type({0}),np.shape({0}))".format(
                 id_to_python_variable(symbol_id, False)
             )
+            # + "; jax.debug.print(\"{0} = {{x}}\", x={0}.flatten())".format(
+            #    id_to_python_variable(symbol_id, False)
+            # )
             for symbol_id, symbol_line in variable_symbols.items()
         ]
     else:
@@ -523,15 +526,13 @@ class EvaluatorPython:
         else:
             nstates = y.shape[0] // self._ninputs
             nparams = len(inputs) // self._ninputs
-            print("nstates:", nstates)
-            print("nparams:", nparams)
 
             results = [
                 self._evaluate(
                     self._constants,
                     t,
                     y[i * nstates : (i + 1) * nstates],
-                    input[i * nparams : (i + 1) * nparams],
+                    inputs[i * nparams : (i + 1) * nparams],
                 )
                 for i in range(self._ninputs)
             ]
@@ -665,15 +666,19 @@ class EvaluatorJax:
         exec(compiled_function)
 
         # use vmap to vectorize the function over the inputs if ninputs > 1
-        in_axes = ([None] * len(self._arg_list)) + [None, None, 0]
+        in_axes = ([None] * len(self._arg_list)) + [None, 0, 0]
         out_axes = 0
         ninputs = len(inputs)
         if ninputs > 1:
             if is_event:
 
                 def mapped_evaluate_jax_event(*args):
-                    # change inputs to a 2d array for vmap (inputs is the last arg)
-                    args[-1] = args[-1].reshape(ninputs, -1)
+                    # change inputs and y to a 2d array for vmap (inputs is the last arg)
+                    args = (
+                        *args[:-2],
+                        args[-2].reshape(ninputs, -1),
+                        args[-1].reshape(ninputs, -1),
+                    )
 
                     # exectute the mapped function
                     results = jax.vmap(
@@ -685,13 +690,17 @@ class EvaluatorJax:
                     alpha = jax.numpy.log(ninputs) / margin
                     return jax.scipy.special.logsumexp(alpha * results) / alpha
 
-                self._evaluate_jax = mapped_evaluate_jax_event
+                self._mapped_evaluate_jax = mapped_evaluate_jax_event
 
             else:
 
                 def mapped_evaluate_jax(*args):
-                    # change inputs to a 2d array for vmap (inputs is the last arg)
-                    args[-1] = args[-1].reshape(ninputs, -1)
+                    # change inputs and y to a 2d array for vmap (inputs is the last arg)
+                    args = (
+                        *args[:-2],
+                        args[-2].reshape(ninputs, -1),
+                        args[-1].reshape(ninputs, -1),
+                    )
 
                     # exectute the mapped function
                     results = jax.vmap(
@@ -701,11 +710,13 @@ class EvaluatorJax:
                     # reshape to a column vector
                     return results.reshape(-1, 1)
 
-                self._evaluate_jax = mapped_evaluate_jax
+                self._mapped_evaluate_jax = mapped_evaluate_jax
+        else:
+            self._mapped_evaluate_jax = self._evaluate_jax
 
         self._static_argnums = tuple(static_argnums)
         self._jit_evaluate = jax.jit(
-            self._evaluate_jax,  # type:ignore[attr-defined]
+            self._mapped_evaluate_jax,  # type:ignore[attr-defined]
             static_argnums=self._static_argnums,
         )
 
@@ -715,7 +726,7 @@ class EvaluatorJax:
         return self._get_jacfwd(1 + n)
 
     def _get_jacfwd(self, argnum):
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=argnum)
+        jacobian_evaluate = jax.jacfwd(self._mapped_evaluate_jax, argnums=argnum)
 
         self._jac_evaluate = jax.jit(
             jacobian_evaluate, static_argnums=self._static_argnums
@@ -737,7 +748,9 @@ class EvaluatorJax:
             y = y.reshape(-1, 1)
 
         # execute code
-        jaxpr = jax.make_jaxpr(self._evaluate_jax)(*self._constants, t, y, inputs).jaxpr
+        jaxpr = jax.make_jaxpr(self._mapped_evaluate_jax)(
+            *self._constants, t, y, inputs
+        ).jaxpr
         print("invars:", jaxpr.invars)
         print("outvars:", jaxpr.outvars)
         print("constvars:", jaxpr.constvars)

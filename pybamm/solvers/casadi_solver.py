@@ -175,7 +175,9 @@ class CasadiSolver(pybamm.BaseSolver):
             solution = self._solve_for_event(solution, inputs_list)
             solution.check_ys_are_not_too_large()
 
-            return solution.split(model.len_rhs, model.len_alg, inputs_list)
+            return solution.split(
+                model.len_rhs, model.len_alg, inputs_list, is_casadi_solver=True
+            )
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
             # Step-and-check
@@ -314,7 +316,9 @@ class CasadiSolver(pybamm.BaseSolver):
             if bool(model.calculate_sensitivities):
                 solution.sensitivities = True
                 solution.check_ys_are_not_too_large()
-            return solution.split(model.len_rhs, model.len_alg, inputs_list)
+            return solution.split(
+                model.len_rhs, model.len_alg, inputs_list, is_casadi_solver=True
+            )
 
     def _solve_for_event(self, coarse_solution, inputs_list):
         """

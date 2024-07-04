@@ -138,7 +138,7 @@ class Solution:
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
-    def split(self, rhs_len, alg_len, inputs_list):
+    def split(self, rhs_len, alg_len, inputs_list, is_casadi_solver=False):
         """
         split up the concatenated solution into a list of solutions for each input
         the state vector is assumed to have the form:
@@ -151,7 +151,7 @@ class Solution:
         if ninputs == 1:
             return [self]
 
-        if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+        if is_casadi_solver:
             all_ys_split = [
                 [
                     casadi.vertcat(
@@ -179,37 +179,24 @@ class Solution:
                     )
                     for p in range(ninputs)
                 ]
+            else:
+                y_events = [None] * ninputs
         else:
+            state_len = rhs_len + alg_len
             all_ys_split = [
                 [
-                    np.vstack(
-                        [
-                            self.all_ys[i][(p * rhs_len) : (p * rhs_len + rhs_len)],
-                            self.all_ys[i][
-                                (p * alg_len + ninputs * rhs_len) : (
-                                    p * alg_len + ninputs * rhs_len + alg_len
-                                )
-                            ],
-                        ]
-                    )
+                    self.all_ys[i][(p * state_len) : (p * state_len + state_len)]
                     for i in range(len(self.all_ys))
                 ]
                 for p in range(ninputs)
             ]
             if self.y_event is not None:
                 y_events = [
-                    np.vstack(
-                        [
-                            self.y_event[(p * rhs_len) : (p * rhs_len + rhs_len)],
-                            self.y_event[
-                                (p * alg_len + ninputs * rhs_len) : (
-                                    p * alg_len + ninputs * rhs_len + alg_len
-                                )
-                            ],
-                        ]
-                    )
+                    self.y_event[(p * state_len) : (p * state_len + state_len)]
                     for p in range(ninputs)
                 ]
+            else:
+                y_events = [None] * ninputs
 
         ret = [
             type(self)(

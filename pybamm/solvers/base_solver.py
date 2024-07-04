@@ -603,13 +603,7 @@ class BaseSolver:
         )
         y_zero = np.zeros((y0_total_size, 1))
 
-        if model.convert_to_format == "casadi":
-            # stack inputs
-            inputs = casadi.vertcat(
-                *[x for inpts in inputs_list for x in inpts.values()]
-            )
-        else:
-            inputs = inputs_list
+        inputs = self._inputs_to_stacked_vect(inputs_list, model.convert_to_format)
 
         if self.algebraic_solver is True:
             # Don't update model.y0
@@ -1407,7 +1401,6 @@ class BaseSolver:
                 for inputs in inputs_list
                 for x in inputs.values()
             ]
-            print(inputs_list, arrays_to_stack)
             inputs = np.vstack(arrays_to_stack)
         return inputs
 
@@ -1427,75 +1420,6 @@ class BaseSolver:
 
 
 def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs):
-    """
-    This takes a casadi function f and returns a new casadi function that maps f over
-    the provided number of inputs. Some functions (e.g. jacobian action) require an additional
-    vector input v, which is why add_v is provided.
-
-    Parameters
-    ----------
-    name: str
-        name of the new function. This must end in the string "_action" for jacobian action functions,
-        "_jac" for jacobian functions, or "_jacp" for jacp functions.
-    f: casadi.Function
-        function to map
-    vars_for_processing: dict
-        dictionary of variables for processing
-    ninputs: int
-        number of inputs to map over
-    """
-    if f is None:
-        return None
-
-    is_event = "event" in name
-    add_v = name.endswith("_action")
-    matrix_output = name.endswith("_jac") or name.endswith("_jacp")
-
-    nstates = vars_for_processing["y_and_S"].shape[0]
-    nparams = vars_for_processing["p_casadi_stacked"].shape[0]
-
-    parallelisation = "thread"
-    y_and_S_inputs_stacked = casadi.MX.sym("y_and_S_stacked", nstates * ninputs)
-    p_casadi_inputs_stacked = casadi.MX.sym("p_stacked", nparams * ninputs)
-    v_inputs_stacked = casadi.MX.sym("v_stacked", nstates * ninputs)
-
-    y_and_S_2d = y_and_S_inputs_stacked.reshape((nstates, ninputs))
-    p_casadi_2d = p_casadi_inputs_stacked.reshape((nparams, ninputs))
-    v_2d = v_inputs_stacked.reshape((nstates, ninputs))
-
-    t_casadi = vars_for_processing["t_casadi"]
-
-    if add_v:
-        inputs_2d = [t_casadi, y_and_S_2d, p_casadi_2d, v_2d]
-        inputs_stacked = [
-            t_casadi,
-            y_and_S_inputs_stacked,
-            p_casadi_inputs_stacked,
-            v_inputs_stacked,
-        ]
-    else:
-        inputs_2d = [t_casadi, y_and_S_2d, p_casadi_2d]
-        inputs_stacked = [t_casadi, y_and_S_inputs_stacked, p_casadi_inputs_stacked]
-
-    mapped_f = f.map(ninputs, parallelisation)(*inputs_2d)
-    if matrix_output:
-        # for matrix output we need to stack the outputs in a block diagonal matrix
-        splits = [i * nstates for i in range(ninputs + 1)]
-        split = casadi.horzsplit(mapped_f, splits)
-        stack = casadi.diagcat(*split)
-    elif is_event:
-        # Events need to return a scalar, so we combine the vector output
-        # of the mapped function into a scalar output by calculating a smooth max of the vector output.
-        stack = casadi.logsumexp(casadi.transpose(mapped_f), 1e-4)
-    else:
-        # for vector outputs we need to stack them vertically in a single column vector
-        splits = [i for i in range(ninputs + 1)]
-        split = casadi.horzsplit(mapped_f, splits)
-        stack = casadi.vertcat(*split)
-    return casadi.Function(name, inputs_stacked, [stack])
-
-
-def map_func_over_inputs_jax(name, f, vars_for_processing, ninputs):
     """
     This takes a casadi function f and returns a new casadi function that maps f over
     the provided number of inputs. Some functions (e.g. jacobian action) require an additional

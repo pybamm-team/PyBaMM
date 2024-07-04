@@ -88,20 +88,23 @@ class TestJaxBDFSolver(TestCase):
         # Solve
         t_eval = np.linspace(0, 10, 4)
         y0 = model.concatenated_initial_conditions.evaluate().reshape(-1)
-        rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
+
+        rate = 0.1
+        inputs = {"rate": rate}
+        rhs = pybamm.EvaluatorJax(model.concatenated_rhs, inputs=[inputs])
+        inputs_stacked = jax.numpy.array([rate])
 
         def fun(y, t, inputs):
-            return rhs(t=t, y=y, inputs=inputs).reshape(-1)
+            return rhs(t=t, y=y, inputs=inputs_stacked).reshape(-1)
 
         h = 0.0001
-        rate = 0.1
 
         # create a dummy "model" where we calculate the sum of the time series
         @jax.jit
         def solve_bdf(rate):
             return jax.numpy.sum(
                 pybamm.jax_bdf_integrate(
-                    fun, y0, t_eval, {"rate": rate}, rtol=1e-9, atol=1e-9
+                    fun, y0, t_eval, jax.numpy.array([rate]), rtol=1e-9, atol=1e-9
                 )
             )
 
@@ -166,14 +169,14 @@ class TestJaxBDFSolver(TestCase):
         # Solve
         t_eval = np.linspace(0, 10, 80)
         y0 = model.concatenated_initial_conditions.evaluate().reshape(-1)
-        rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
+        inputs = {"rate": 0.1}
+        rhs = pybamm.EvaluatorJax(model.concatenated_rhs, inputs=[inputs])
 
         def fun(y, t, inputs):
             return rhs(t=t, y=y, inputs=inputs).reshape(-1)
 
-        y = pybamm.jax_bdf_integrate(
-            fun, y0, t_eval, {"rate": 0.1}, rtol=1e-9, atol=1e-9
-        )
+        inputs = np.array([[0.1]])
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs, rtol=1e-9, atol=1e-9)
 
         np.testing.assert_allclose(y[:, 0].reshape(-1), np.exp(-0.1 * t_eval))
 

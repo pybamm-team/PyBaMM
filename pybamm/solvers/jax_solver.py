@@ -2,7 +2,6 @@
 # Solver class using Scipy's adaptive time stepper
 #
 import numpy as onp
-import asyncio
 
 import pybamm
 
@@ -148,6 +147,20 @@ class JaxSolver(pybamm.BaseSolver):
         mass = None
         if self.method == "BDF":
             mass = model.mass_matrix.entries.toarray()
+            print("stuff", mass.shape, model.len_rhs, model.len_alg)
+
+        def stack_inputs(inputs: dict | list[dict]):
+            if isinstance(inputs, dict):
+                return jnp.array([x.reshape(-1, 1) for x in inputs.values()])
+            if len(inputs) == 1:
+                return jnp.array([x.reshape(-1, 1) for x in inputs[0].values()])
+            arrays_to_stack = [
+                jnp.array(x).reshape(-1, 1)
+                for inputs in inputs
+                for x in inputs.values()
+            ]
+            print("stacking", len(arrays_to_stack), arrays_to_stack[0].shape)
+            return jnp.vstack(arrays_to_stack)
 
         def rhs_ode(y, t, inputs):
             return (model.rhs_eval(t, y, inputs),)
@@ -162,7 +175,7 @@ class JaxSolver(pybamm.BaseSolver):
                 rhs_ode,
                 y0,
                 t_eval,
-                inputs,
+                stack_inputs(inputs),
                 rtol=self.rtol,
                 atol=self.atol,
                 **self.extra_options,
@@ -174,7 +187,7 @@ class JaxSolver(pybamm.BaseSolver):
                 rhs_dae,
                 y0,
                 t_eval,
-                inputs,
+                stack_inputs(inputs),
                 rtol=self.rtol,
                 atol=self.atol,
                 mass=mass,
@@ -197,7 +210,7 @@ class JaxSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, list[dict], optional
+        inputs_list : list[dict], optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -207,77 +220,13 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
-        if isinstance(inputs, dict):
-            inputs = [inputs]
+        inputs = inputs or [{}]
+
         timer = pybamm.Timer()
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = []
-        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
-        if len(inputs) <= 1 or platform.startswith("cpu"):
-            # cpu execution runs faster when multithreaded
-            async def solve_model_for_inputs():
-                async def solve_model_async(inputs_v):
-                    return self._cached_solves[model](inputs_v)
-
-                coro = []
-                for inputs_v in inputs:
-                    coro.append(asyncio.create_task(solve_model_async(inputs_v)))
-                return await asyncio.gather(*coro)
-
-            y = asyncio.run(solve_model_for_inputs())
-        elif (
-            platform.startswith("gpu")
-            or platform.startswith("tpu")
-            or platform.startswith("metal")
-        ):
-            # gpu execution runs faster when parallelised with vmap
-            # (see also comment below regarding single-program multiple-data
-            #  execution (SPMD) using pmap on multiple XLAs)
-
-            # convert inputs (array of dict) to a dict of arrays for vmap
-            inputs_v = {
-                key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
-            }
-            y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
-        else:
-            # Unknown platform, use serial execution as fallback
-            print(
-                f'Unknown platform requested: "{platform}", '
-                "falling back to serial execution"
-            )
-            for inputs_v in inputs:
-                y.append(self._cached_solves[model](inputs_v))
-
-        # This code block implements single-program multiple-data execution
-        # using pmap across multiple XLAs. It is currently commented out
-        # because it produces bus errors for even moderate-sized models.
-        # It is suspected that this is due to either a bug in JAX, insufficient
-        # sparse matrix support in JAX resulting in high memory usage, or a bug
-        # in the BDF solver.
-        #
-        # This issue on guthub appears related:
-        # https://github.com/google/jax/discussions/13930
-        #
-        #     # Split input list based on the number of available xla devices
-        #     device_count = jax.local_device_count()
-        #     inputs_listoflists = [inputs[x:x + device_count]
-        #                           for x in range(0, len(inputs), device_count)]
-        #     if len(inputs_listoflists) > 1:
-        #         print(f"{len(inputs)} parameter sets were provided, "
-        #               f"but only {device_count} XLA devices are available")
-        #         print(f"Parameter sets split into {len(inputs_listoflists)} "
-        #               "lists for parallel processing")
-        #     y = []
-        #     for k, inputs_list in enumerate(inputs_listoflists):
-        #         if len(inputs_listoflists) > 1:
-        #             print(f" Solving list {k+1} of {len(inputs_listoflists)} "
-        #                   f"({len(inputs_list)} parameter sets)")
-        #         # convert inputs to a dict of arrays for pmap
-        #         inputs_v = {key: jnp.array([dic[key] for dic in inputs_list])
-        #                     for key in inputs_list[0]}
-        #         y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
+        y = self._cached_solves[model](inputs)
 
         integration_time = timer.time()
 
@@ -285,24 +234,14 @@ class JaxSolver(pybamm.BaseSolver):
         y = onp.array(y)
 
         termination = "final time"
-        t_event = None
-        y_event = onp.array(None)
 
-        # Extract solutions from y with their associated input dicts
-        solutions = []
-        for k, inputs_dict in enumerate(inputs):
-            sol = pybamm.Solution(
-                t_eval,
-                jnp.reshape(y[k,], y.shape[1:]),
-                model,
-                inputs_dict,
-                t_event,
-                y_event,
-                termination,
-            )
-            sol.integration_time = integration_time
-            solutions.append(sol)
-
-        if len(solutions) == 1:
-            return solutions[0]
-        return solutions
+        sol = pybamm.Solution(
+            t_eval,
+            y,
+            model,
+            inputs[0],
+            termination=termination,
+            check_solution=False,
+        )
+        sol.integration_time = integration_time
+        return sol.split(model.len_rhs, model.len_alg, inputs)
