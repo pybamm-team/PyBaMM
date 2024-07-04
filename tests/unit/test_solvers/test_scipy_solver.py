@@ -269,7 +269,7 @@ class TestScipySolver(TestCase):
             ninputs = 8
             inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            solutions = solver.solve(model, t_eval, inputs=inputs_list)
             for i in range(ninputs):
                 with self.subTest(i=i):
                     solution = solutions[i]
@@ -311,7 +311,7 @@ class TestScipySolver(TestCase):
                 " sets with discontinuities"
             ),
         ):
-            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            solver.solve(model, t_eval, inputs=inputs_list)
 
     def test_model_solver_multiple_inputs_initial_conditions(self):
         # Create model
@@ -336,48 +336,56 @@ class TestScipySolver(TestCase):
 
             solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
             t_eval = np.linspace(0, 10, 100)
-            ninputs = 2
-            inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+            ninputs = 8
+            for batch_size in [1, 4]:
+                inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
-
-            inputs_stacked = solver._inputs_to_stacked_vect(
-                inputs_list, convert_to_format=convert_to_format
-            )
-
-            # check initial conditions
-            y0 = np.vstack([s.y[:, 0].reshape(-1, 1) for s in solutions])
-            np.testing.assert_allclose(y0, model.y0)
-            y0_fun = model.initial_conditions_eval(t_eval[0], y0, inputs_stacked)
-            np.testing.assert_allclose(y0, y0_fun)
-            for i, inputs in enumerate(inputs_list):
-                n = model.len_rhs
-                y0_slice = y0[i * n : (i + 1) * n]
-                np.testing.assert_allclose(
-                    y0_slice,
-                    2 * inputs["rate"] * np.ones((n, 1)),
-                    err_msg="failed for rate = {}".format(inputs["rate"]),
+                solutions = solver.solve(
+                    model, t_eval, inputs=inputs_list, batch_size=batch_size
                 )
 
-            # check rhs equation
-            rhs_eval = model.rhs_eval(t_eval[0], y0, inputs_stacked)
-            for i, inputs in enumerate(inputs_list):
-                n = model.len_rhs
-                y_slice = rhs_eval[i * n : (i + 1) * n]
-                y0_slice = y0[i * n : (i + 1) * n]
-                np.testing.assert_allclose(
-                    y_slice,
-                    -inputs["rate"] * y0_slice,
-                    err_msg="failed for rate = {}".format(inputs["rate"]),
-                )
+                for i in range(ninputs // batch_size):
+                    batch_inputs = inputs_list[i * batch_size : (i + 1) * batch_size]
+                    inputs_stacked = solver._inputs_to_stacked_vect(
+                        batch_inputs, convert_to_format=convert_to_format
+                    )
+                    batch_solutions = solutions[i * batch_size : (i + 1) * batch_size]
 
-            # check solution
-            for inputs, solution in zip(inputs_list, solutions):
-                np.testing.assert_array_equal(solution.t, t_eval)
-                np.testing.assert_allclose(
-                    solution.y[0],
-                    2 * inputs["rate"] * np.exp(-inputs["rate"] * solution.t),
-                )
+                    # check initial conditions
+                    y0 = np.vstack([s.y[:, 0].reshape(-1, 1) for s in batch_solutions])
+                    np.testing.assert_allclose(y0, model.y0_list[i])
+                    y0_fun = model.initial_conditions_eval(
+                        t_eval[0], y0, inputs_stacked
+                    )
+                    np.testing.assert_allclose(y0, y0_fun)
+                    for i, inputs in enumerate(batch_inputs):
+                        n = model.len_rhs
+                        y0_slice = y0[i * n : (i + 1) * n]
+                        np.testing.assert_allclose(
+                            y0_slice,
+                            2 * inputs["rate"] * np.ones((n, 1)),
+                            err_msg="failed for rate = {}".format(inputs["rate"]),
+                        )
+
+                    # check rhs equation
+                    rhs_eval = model.rhs_eval(t_eval[0], y0, inputs_stacked)
+                    for i, inputs in enumerate(batch_inputs):
+                        n = model.len_rhs
+                        y_slice = rhs_eval[i * n : (i + 1) * n]
+                        y0_slice = y0[i * n : (i + 1) * n]
+                        np.testing.assert_allclose(
+                            y_slice,
+                            -inputs["rate"] * y0_slice,
+                            err_msg="failed for rate = {}".format(inputs["rate"]),
+                        )
+
+                # check solution
+                for inputs, solution in zip(inputs_list, solutions):
+                    np.testing.assert_array_equal(solution.t, t_eval)
+                    np.testing.assert_allclose(
+                        solution.y[0],
+                        2 * inputs["rate"] * np.exp(-inputs["rate"] * solution.t),
+                    )
 
     def test_model_solver_with_event_with_casadi(self):
         # Create model

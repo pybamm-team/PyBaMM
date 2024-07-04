@@ -133,26 +133,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         pybamm.citations.register("Andersson2019")
 
-    def _integrate(self, model, t_eval, inputs_list=None):
-        """
-        Solve a DAE model defined by residuals with initial conditions y0.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : numeric type
-            The times at which to compute the solution
-        inputs_list : list of dict, optional
-            Any input parameters to pass to the model when solving
-        """
-
-        # Record whether there are any symbolic inputs
-        inputs_list = inputs_list or [{}]
-
-        # convert inputs to casadi format
-        inputs = casadi.vertcat(*[x for inputs in inputs_list for x in inputs.values()])
-
+    def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
         if self.mode in ["fast", "fast with events"] or not model.events:
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
@@ -164,22 +145,19 @@ class CasadiSolver(pybamm.BaseSolver):
                 use_event_switch = False
             # Create an integrator with the grid (we just need to do this once)
             self.create_integrator(
-                model, inputs, t_eval, use_event_switch=use_event_switch
+                model, inputs, y0, t_eval, use_event_switch=use_event_switch
             )
-            solution = self._run_integrator(
-                model, model.y0, inputs_list, inputs, t_eval
-            )
+            solution = self._run_integrator(model, y0, inputs_list, inputs, t_eval)
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
             # Note: this is only done for the first solution, is this correct?
-            solution = self._solve_for_event(solution, inputs_list)
+            solution = self._solve_for_event(solution, inputs_list, y0)
             solution.check_ys_are_not_too_large()
 
             return solution.split(
                 model.len_rhs, model.len_alg, inputs_list, is_casadi_solver=True
             )
         elif self.mode in ["safe", "safe without grid"]:
-            y0 = model.y0
             # Step-and-check
             t = t_eval[0]
             t_f = t_eval[-1]
@@ -190,7 +168,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # in "safe without grid" mode,
                 # create integrator once, without grid,
                 # to avoid having to create several times
-                self.create_integrator(model, inputs)
+                self.create_integrator(model, inputs, y0)
                 # Initialize solution
                 solution = pybamm.Solution(
                     np.array([t]),
@@ -238,7 +216,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     if self.mode == "safe":
                         # update integrator with the grid
-                        self.create_integrator(model, inputs, t_window)
+                        self.create_integrator(model, inputs, y0, t_window)
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
@@ -294,7 +272,9 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
                 # Note: this is only done for the first solution, is this correct?
-                current_step_sol = self._solve_for_event(current_step_sol, inputs_list)
+                current_step_sol = self._solve_for_event(
+                    current_step_sol, inputs_list, y0
+                )
                 if solution is None:
                     current_step_sol.solve_time = np.nan
                     solution = current_step_sol
@@ -320,7 +300,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 model.len_rhs, model.len_alg, inputs_list, is_casadi_solver=True
             )
 
-    def _solve_for_event(self, coarse_solution, inputs_list):
+    def _solve_for_event(self, coarse_solution, inputs_list, y0):
         """
         Check if the sign of an event changes, if so find an accurate
         termination point and exit
@@ -450,7 +430,7 @@ class CasadiSolver(pybamm.BaseSolver):
         if self.mode == "safe without grid":
             use_grid = False
         else:
-            self.create_integrator(model, inputs, t_window_event_dense)
+            self.create_integrator(model, inputs, y0, t_window_event_dense)
             use_grid = True
 
         y0 = coarse_solution.y[:, event_idx_lower]
@@ -498,7 +478,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         return solution
 
-    def create_integrator(self, model, inputs, t_eval=None, use_event_switch=False):
+    def create_integrator(self, model, inputs, y0, t_eval=None, use_event_switch=False):
         """
         Method to create a casadi integrator object.
         If t_eval is provided, the integrator uses t_eval to make the grid.
@@ -544,7 +524,6 @@ class CasadiSolver(pybamm.BaseSolver):
             # set up and solve
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
-            y0 = model.y0
 
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
             y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])

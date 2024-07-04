@@ -47,27 +47,11 @@ class AlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_list=None):
-        """
-        Calculate the solution of the algebraic equations through root-finding
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : :class:`numpy.array`, size (k,)
-            The times at which to compute the solution
-        inputs_list: list of dict, optional
-            Any input parameters to pass to the model when solving
-        """
-        inputs_list = inputs_list or [{}]
-        inputs = pybamm.BaseSolver._inputs_to_stacked_vect(
-            inputs_list, model.convert_to_format
-        )
-
-        y0 = model.y0
+    def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
+        if isinstance(inputs, casadi.DM):
+            inputs = inputs.full()
         y0 = y0.flatten()
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged

@@ -94,7 +94,7 @@ class BaseSolver:
         new_solver._model_set_up = {}
         return new_solver
 
-    def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
+    def set_up(self, model, inputs=None, t_eval=None, ics_only=False, batch_size=1):
         """Unpack model, perform checks, and calculate jacobian.
 
         Parameters
@@ -143,37 +143,37 @@ class BaseSolver:
             "initial_conditions",
             vars_for_processing,
             inputs,
+            batch_size=batch_size,
             use_jacobian=False,
         )
         model.initial_conditions_eval = initial_conditions
         model.jacp_initial_conditions_eval = jacp_ic
 
         # evaluate initial condition
-        y0_total_size = len(inputs) * (
+        y0_total_size = batch_size * (
             model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
         )
         y_zero = np.zeros((y0_total_size, 1))
 
-        stacked_inputs = self._inputs_to_stacked_vect(inputs, model.convert_to_format)
-        if model.convert_to_format == "casadi":
-            # stack inputs
-            model.y0 = initial_conditions(0.0, y_zero, stacked_inputs)
-            if jacp_ic is None:
-                model.y0S = None
-            else:
-                model.y0S = jacp_ic(0.0, y_zero, stacked_inputs)
+        # todo: vry wasteful, but can't pass in batched_inputs from upper scope as this would change the signature
+        batched_inputs = [
+            self._inputs_to_stacked_vect(
+                inputs[i * batch_size : (i + 1) * batch_size], model.convert_to_format
+            )
+            for i in range(len(inputs) // batch_size)
+        ]
+
+        model.y0_list = [
+            initial_conditions(0.0, y_zero, inputs) for inputs in batched_inputs
+        ]
+
+        if jacp_ic is None:
+            model.y0S_list = []
         else:
-            model.y0 = initial_conditions(0.0, y_zero, stacked_inputs)
-            if jacp_ic is None:
-                model.y0S = None
-            else:
-                # we are calculating the derivative wrt the inputs
-                # so need to make sure we convert int -> float
-                # This is to satisfy JAX jacfwd function which requires
-                # float inputs
-                if stacked_inputs.dtype == int:
-                    stacked_inputs = stacked_inputs.astype(float)
-                model.y0S = jacp_ic(0.0, y_zero, stacked_inputs)
+            model.y0S_list = [
+                jacp_ic(0.0, y_zero, stacked_inputs)
+                for stacked_inputs in batched_inputs
+            ]
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -189,7 +189,11 @@ class BaseSolver:
         else:
             rhs = model.concatenated_rhs
         rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(
-            rhs, "RHS", vars_for_processing, inputs
+            rhs,
+            "RHS",
+            vars_for_processing,
+            inputs,
+            batch_size=batch_size,
         )
 
         algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
@@ -197,6 +201,7 @@ class BaseSolver:
             "algebraic",
             vars_for_processing,
             inputs,
+            batch_size=batch_size,
         )
 
         # combine rhs and algebraic functions
@@ -219,6 +224,7 @@ class BaseSolver:
             "rhs_algebraic",
             vars_for_processing,
             inputs,
+            batch_size=batch_size,
         )
 
         (
@@ -226,7 +232,7 @@ class BaseSolver:
             terminate_events,
             interpolant_extrapolation_events,
             discontinuity_events,
-        ) = self._set_up_events(model, t_eval, inputs, vars_for_processing)
+        ) = self._set_up_events(model, t_eval, inputs, vars_for_processing, batch_size)
 
         # Add the solver attributes
         model.rhs_eval = rhs
@@ -287,6 +293,7 @@ class BaseSolver:
                     BaseSolver._wrangle_name(key),
                     vars_for_processing,
                     inputs,
+                    batch_size=batch_size,
                     use_jacobian=True,
                     return_jacp_stacked=True,
                 )
@@ -468,7 +475,7 @@ class BaseSolver:
                     np.repeat(model.bounds[1], n_inputs + 1),
                 )
 
-    def _set_up_events(self, model, t_eval, inputs, vars_for_processing):
+    def _set_up_events(self, model, t_eval, inputs, vars_for_processing, batch_size):
         # Check for heaviside and modulo functions in rhs and algebraic and add
         # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
@@ -537,9 +544,10 @@ class BaseSolver:
                     k = 20
                     # address numpy 1.25 deprecation warning: array should have
                     # ndim=0 before conversion
+                    # note: assumes that sign for all batches is the same
                     init_sign = float(
                         np.sign(
-                            event.evaluate(0, model.y0.full(), inputs=inputs)
+                            event.evaluate(0, model.y0_list[0].full(), inputs=inputs)
                         ).item()
                     )
                     # We create a sigmoid for each event which will multiply the
@@ -555,6 +563,7 @@ class BaseSolver:
                         f"event_{n}",
                         vars_for_processing,
                         inputs,
+                        batch_size=batch_size,
                         use_jacobian=False,
                     )[0]
                     # use the actual casadi object as this will go into the rhs
@@ -566,6 +575,7 @@ class BaseSolver:
                     f"event_{n}",
                     vars_for_processing,
                     inputs,
+                    batch_size=batch_size,
                     use_jacobian=False,
                 )[0]
                 if event.event_type == pybamm.EventType.TERMINATION:
@@ -580,7 +590,9 @@ class BaseSolver:
             discontinuity_events,
         )
 
-    def _set_initial_conditions(self, model, time, inputs_list, update_rhs):
+    def _set_initial_conditions(
+        self, model, time, inputs_list, update_rhs, batched_inputs
+    ):
         """
         Set initial conditions for the model. This is skipped if the solver is an
         algebraic solver (since this would make the algebraic solver redundant), and if
@@ -598,49 +610,57 @@ class BaseSolver:
 
         """
 
-        y0_total_size = len(inputs_list) * (
-            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
-        )
+        y0_total_size = model.y0_list[0].shape[0]
         y_zero = np.zeros((y0_total_size, 1))
 
-        inputs = self._inputs_to_stacked_vect(inputs_list, model.convert_to_format)
-
         if self.algebraic_solver is True:
-            # Don't update model.y0
+            # Don't update model.y0_list
             return
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0 = model.initial_conditions_eval(time, y_zero, inputs)
+                y0_list = [
+                    model.initial_conditions_eval(time, y_zero, inputs)
+                    for inputs in batched_inputs
+                ]
             else:
-                # Don't update model.y0
+                # Don't update model.y0_list
                 return
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.initial_conditions_eval(time, y_zero, inputs)
+                y0_from_inputs = [
+                    model.initial_conditions_eval(time, y_zero, inputs)
+                    for inputs in batched_inputs
+                ]
                 # Reuse old solution for algebraic equations
-                y0_from_model = model.y0
+                y0_from_model = model.y0_list
                 len_rhs = model.len_rhs
-                # update model.y0, which is used for initialising the algebraic solver
+                # update model.y0_list, which is used for initialising the algebraic solver
                 if len_rhs == 0:
-                    model.y0 = y0_from_model
-                elif isinstance(y0_from_inputs, casadi.DM):
-                    model.y0 = casadi.vertcat(
-                        y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
-                    )
+                    model.y0_list = y0_from_model
                 else:
-                    model.y0 = np.vstack(
-                        (y0_from_inputs[:len_rhs], y0_from_model[len_rhs:])
-                    )
-            y0 = self.calculate_consistent_state(model, time, inputs_list)
+                    if isinstance(y0_from_inputs, casadi.DM):
+                        for i in range(len(y0_from_inputs)):
+                            model.y0_list[i] = casadi.vertcat(
+                                y0_from_inputs[i][:len_rhs], y0_from_model[i][len_rhs:]
+                            )
+                    else:
+                        for i in range(len(y0_from_inputs)):
+                            model.y0_list[i] = np.vstack(
+                                (
+                                    y0_from_inputs[i][:len_rhs],
+                                    y0_from_model[i][len_rhs:],
+                                )
+                            )
+            y0_list = self.calculate_consistent_state(model, time, inputs_list)
         # Make y0 a function of inputs if doing symbolic with casadi
-        model.y0 = y0
+        model.y0_list = y0_list
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """
         Calculate consistent state for the algebraic equations through
-        root-finding. model.y0 is used as the initial guess for rootfinding
+        root-finding. model.y0_list is used as the initial guess for rootfinding
 
         Parameters
         ----------
@@ -653,14 +673,14 @@ class BaseSolver:
 
         Returns
         -------
-        y0_consistent : array-like, same shape as y0_guess
+        y0_consistent : list of array-like, same shape as y0_guess
             Initial conditions that are consistent with the algebraic equations (roots
             of the algebraic equations). If self.root_method == None then returns
-            model.y0.
+            model.y0_list.
         """
         pybamm.logger.debug("Start calculating consistent states")
         if self.root_method is None:
-            return model.y0
+            return model.y0_list
         try:
             root_sols = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
@@ -674,18 +694,82 @@ class BaseSolver:
             self.check_extrapolation(s, model.events)
             y0s.append(s.all_ys[0])
 
-        if isinstance(y0s[0], casadi.DM):
-            y0 = casadi.horzcat(*y0s)
+        return y0s
+
+    def _integrate(self, model, t_eval, inputs_list, batched_inputs=None):
+        """
+        Solve a DAE model defined by residuals with initial conditions y0.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        t_eval : numeric type
+            The times at which to compute the solution
+        inputs_list : list of dict
+            Any input parameters to pass to the model when solving
+        batched_inputs : list of array
+            batched inputs parameters in list of array form
+        """
+
+        if batched_inputs is not None:
+            nbatches = len(batched_inputs)
+            batch_size = len(inputs_list) // nbatches
         else:
-            y0 = np.hstack(y0s)
-        return y0
+            batch_size = model.batch_size
+            nbatches = len(inputs_list) // batch_size
+
+        # check if we need to recalculate batched_inputs
+        if batched_inputs is None:
+            batched_inputs = [
+                self._inputs_to_stacked_vect(
+                    inputs_list[i * batch_size : (i + 1) * batch_size],
+                    model.convert_to_format,
+                )
+                for i in range(len(inputs_list) // batch_size)
+            ]
+
+        if len(model.y0S_list) == 0:
+            y0S_list = [None] * nbatches
+        else:
+            y0S_list = model.y0S_list
+
+        # todo: make this parallel
+        sols = []
+        for i in range(nbatches):
+            sols += self._integrate_batch(
+                model,
+                t_eval,
+                model.y0_list[i],
+                y0S_list[i],
+                inputs_list[i * batch_size : (i + 1) * batch_size],
+                batched_inputs[i],
+            )
+        return sols
+
+    def _integrate_batch(self, model, t_eval, y0, inputs_list, inputs):
+        """
+        Solve a single batch for the DAE model defined by residuals with initial conditions y0.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        t_eval : numeric type
+            The times at which to compute the solution
+        inputs_list : list of dict, optional
+            Any input parameters to pass to the model when solving
+        inputs : array, optional
+            The input parameters in array form, to pass to the model when solving
+        """
+        raise NotImplementedError
 
     def solve(
         self,
         model,
         t_eval=None,
         inputs=None,
-        nproc=None,
+        batch_size=1,
         calculate_sensitivities=False,
     ):
         """
@@ -703,9 +787,10 @@ class BaseSolver:
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
-        nproc : int, optional
-            Number of processes to use when solving for more than one set of input
-            parameters. Defaults to value returned by "os.cpu_count()".
+        batch_size: int, optional
+            If `n_i` sets of inputs are provided, the solver will batch the solves in
+            groups of `batch_size` when solving. Each batch is solved as a set of `n_s * batch_size`
+            equations, where `n_s` is the number of equations in the model. Defaults to 1.
         calculate_sensitivities : list of str or bool, optional
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
@@ -727,6 +812,13 @@ class BaseSolver:
 
         """
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
+
+        # check that len(inputs) is a multiple of batch_size
+        if isinstance(inputs, list) and len(inputs) % batch_size != 0:
+            raise ValueError(
+                "len(inputs) must be a multiple of batch_size, but "
+                f"len(inputs) = {len(inputs)} and batch_size = {batch_size}"
+            )
 
         # get a list-only version of calculate_sensitivities
         if isinstance(calculate_sensitivities, bool):
@@ -781,25 +873,37 @@ class BaseSolver:
         # a single dict. The remaining of this function is only working
         # with variable "input_list", which is a list of dictionaries.
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
-        inputs_list = inputs if isinstance(inputs, list) else [inputs]
+        if isinstance(inputs, dict):
+            inputs_list = [inputs]
+        else:
+            inputs_list = inputs or [{}]
         model_inputs_list = [
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
-        # Check that calculate_sensitivites have not been updated
+        # Check that calculate_sensitivites or batch size have not been updated
         calculate_sensitivities_list.sort()
         if not hasattr(model, "calculate_sensitivities"):
             model.calculate_sensitivities = []
+        if not hasattr(model, "batch_size"):
+            model.batch_size = batch_size
+
         model.calculate_sensitivities.sort()
-        if calculate_sensitivities_list != model.calculate_sensitivities:
+        sensitivities_changed = (
+            calculate_sensitivities_list != model.calculate_sensitivities
+        )
+        batch_size_changed = model.batch_size != batch_size
+
+        if sensitivities_changed or batch_size_changed:
             self._model_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
             if isinstance(self, pybamm.CasadiSolver):
                 self.integrators.pop(model, None)
 
-        # save sensitivity parameters so we can identify them later on
+        # save sensitivity parameters and batch size so we can identify them later on
         # (FYI: this is used in the Solution class)
         model.calculate_sensitivities = calculate_sensitivities_list
+        model.batch_size = batch_size
 
         # Set up (if not done already)
         timer = pybamm.Timer()
@@ -811,7 +915,7 @@ class BaseSolver:
                     f'"{existing_model.name}". Please create a separate '
                     "solver for this model"
                 )
-            self.set_up(model, model_inputs_list, t_eval)
+            self.set_up(model, model_inputs_list, t_eval, batch_size=batch_size)
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -823,11 +927,19 @@ class BaseSolver:
                     # For an algebraic solver, we don't need to set up the initial
                     # conditions function and we can just evaluate
                     # model.concatenated_initial_conditions
-                    model.y0 = model.concatenated_initial_conditions.evaluate()
+                    model.y0_list = [
+                        model.concatenated_initial_conditions.evaluate()
+                    ] * (len(inputs_list) // batch_size)
                 else:
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
-                    self.set_up(model, model_inputs_list, t_eval, ics_only=True)
+                    self.set_up(
+                        model,
+                        model_inputs_list,
+                        t_eval,
+                        ics_only=True,
+                        batch_size=batch_size,
+                    )
                 self._model_set_up[model]["initial conditions"] = (
                     model.concatenated_initial_conditions
                 )
@@ -835,12 +947,25 @@ class BaseSolver:
         set_up_time = timer.time()
         timer.reset()
 
+        batched_inputs = [
+            self._inputs_to_stacked_vect(
+                inputs_list[i * batch_size : (i + 1) * batch_size],
+                model.convert_to_format,
+            )
+            for i in range(len(inputs_list) // batch_size)
+        ]
+
         self._set_initial_conditions(
-            model, t_eval[0], model_inputs_list, update_rhs=True
+            model,
+            t_eval[0],
+            model_inputs_list,
+            update_rhs=True,
+            batched_inputs=batched_inputs,
         )
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, model_inputs_list)
+        for y0, inputs in zip(model.y0_list, batched_inputs):
+            self._check_events_with_initial_conditions(t_eval, model, y0, inputs)
 
         # Process discontinuities
         (
@@ -852,7 +977,7 @@ class BaseSolver:
         # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
         # consistent state afterwards if a DAE)
-        old_y0 = model.y0
+        old_y0_list = model.y0_list
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.verbose(
@@ -862,6 +987,7 @@ class BaseSolver:
                 model,
                 t_eval[start_index:end_index],
                 model_inputs_list,
+                batched_inputs,
             )
 
             # Setting the solve time for each segment.
@@ -883,9 +1009,9 @@ class BaseSolver:
                 last_state = solutions[0].y[:, -1]
                 # update y0 (for DAE solvers, this updates the initial guess for the
                 # rootfinder)
-                model.y0 = last_state
+                model.y0_list = last_state
                 if len(model.algebraic) > 0:
-                    model.y0 = self.calculate_consistent_state(
+                    model.y0_list = self.calculate_consistent_state(
                         model, t_eval[end_index], model_inputs_list
                     )
         solve_time = timer.time()
@@ -905,7 +1031,7 @@ class BaseSolver:
             solutions[i].solve_time = solve_time
 
         # Restore old y0
-        model.y0 = old_y0
+        model.y0_list = old_y0_list
 
         # Report times
         if len(solutions) == 1:
@@ -999,22 +1125,14 @@ class BaseSolver:
         return start_indices, end_indices, t_eval
 
     @staticmethod
-    def _check_events_with_initial_conditions(t_eval, model, inputs_list):
+    def _check_events_with_initial_conditions(t_eval, model, y0, inputs):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
 
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(
-                *[x for inputs in inputs_list for x in inputs.values()]
-            )
-
         events_eval = [None] * num_terminate_events
         for idx, event in enumerate(model.terminate_events_eval):
-            if model.convert_to_format == "casadi":
-                event_eval = event(t_eval[0], model.y0, inputs)
-            elif model.convert_to_format in ["python", "jax"]:
-                event_eval = event(t=t_eval[0], y=model.y0, inputs=inputs_list)
+            event_eval = event(t_eval[0], y0, inputs)
             events_eval[idx] = event_eval
 
         if model.convert_to_format == "casadi":
@@ -1027,9 +1145,7 @@ class BaseSolver:
                 x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
             ]
             idxs = np.where(events_eval < 0)[0]
-            event_names = [
-                termination_events[idx / len(inputs_list)].name for idx in idxs
-            ]
+            event_names = [termination_events[idx / len(inputs)].name for idx in idxs]
             raise pybamm.SolverError(
                 f"Events {event_names} are non-positive at initial conditions"
             )
@@ -1189,20 +1305,35 @@ class BaseSolver:
 
             model.y0 = casadi.vertcat(*y0s)
 
+        # restrict batch_size to 1 for now
+        batch_size = 1
+        batched_inputs = [
+            self._inputs_to_stacked_vect(
+                model_inputs_list[i * batch_size : (i + 1) * batch_size],
+                model.convert_to_format,
+            )
+            for i in range(len(inputs_list) // batch_size)
+        ]
+
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(
-            model, t_start_shifted, model_inputs_list, update_rhs=False
+            model,
+            t_start_shifted,
+            model_inputs_list,
+            update_rhs=False,
+            batched_inputs=batched_inputs,
         )
 
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, model_inputs_list)
+        for y0, inputs in zip(model.y0_list, batched_inputs):
+            self._check_events_with_initial_conditions(t_eval, model, y0, inputs)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
-        solutions = self._integrate(model, t_eval, model_inputs_list)
+        solutions = self._integrate(model, t_eval, model_inputs_list, batched_inputs)
         for i, s in enumerate(solutions):
             solutions[i].solve_time = timer.time()
 
@@ -1397,7 +1528,7 @@ class BaseSolver:
             )
         else:
             arrays_to_stack = [
-                np.array(x).reshape(-1, 1)
+                np.array(x, dtype=float).reshape(-1, 1)
                 for inputs in inputs_list
                 for x in inputs.values()
             ]
@@ -1493,6 +1624,7 @@ def process(
     name,
     vars_for_processing,
     inputs: list[dict],
+    batch_size,
     use_jacobian=None,
     return_jacp_stacked=None,
 ):
@@ -1539,7 +1671,10 @@ def process(
         i.e. $\\frac{\\partial f}{\\partial y} * v$
 
     """
-    ninputs = len(inputs)
+    if batch_size > 1:
+        inputs_batch = inputs[:batch_size]
+    else:
+        inputs_batch = [inputs[0]]
     is_event = "event" in name
 
     def report(string):
@@ -1554,7 +1689,7 @@ def process(
 
     if model.convert_to_format == "jax":
         report(f"Converting {name} to jax")
-        func = pybamm.EvaluatorJax(symbol, inputs, is_event=is_event)
+        func = pybamm.EvaluatorJax(symbol, inputs_batch, is_event=is_event)
         jacp = None
         if model.calculate_sensitivities:
             report(
@@ -1581,7 +1716,9 @@ def process(
                 f"to parameters {model.calculate_sensitivities}"
             )
             jacp_dict = {
-                p: pybamm.EvaluatorPython(symbol.diff(pybamm.InputParameter(p)), inputs)
+                p: pybamm.EvaluatorPython(
+                    symbol.diff(pybamm.InputParameter(p)), inputs_batch
+                )
                 for p in model.calculate_sensitivities
             }
 
@@ -1597,7 +1734,7 @@ def process(
             report(f"Calculating jacobian for {name}")
             jac = jacobian.jac(symbol, y)
             report(f"Converting jacobian for {name} to python")
-            jac = pybamm.EvaluatorPython(jac, inputs)
+            jac = pybamm.EvaluatorPython(jac, inputs_batch)
             # cannot do jacobian action efficiently for now
             jac_action = None
         else:
@@ -1605,7 +1742,7 @@ def process(
             jac_action = None
 
         report(f"Converting {name} to python")
-        func = pybamm.EvaluatorPython(symbol, inputs, is_event=is_event)
+        func = pybamm.EvaluatorPython(symbol, inputs_batch, is_event=is_event)
 
     else:
         t_casadi = vars_for_processing["t_casadi"]
@@ -1718,6 +1855,7 @@ def process(
             name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
         )
 
+        ninputs = len(inputs_batch)
         if ninputs > 1:
             func = map_func_over_inputs_casadi(name, func, vars_for_processing, ninputs)
             jac = map_func_over_inputs_casadi(

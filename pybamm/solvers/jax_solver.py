@@ -142,8 +142,6 @@ class JaxSolver(pybamm.BaseSolver):
                 " end-time"
             )
 
-        # Initial conditions, make sure they are an 0D array
-        y0 = jnp.array(model.y0).reshape(-1)
         mass = None
         if self.method == "BDF":
             mass = model.mass_matrix.entries.toarray()
@@ -170,7 +168,9 @@ class JaxSolver(pybamm.BaseSolver):
                 [model.rhs_eval(t, y, inputs), model.algebraic_eval(t, y, inputs)]
             )
 
-        def solve_model_rk45(inputs):
+        def solve_model_rk45(y0, inputs):
+            # Initial conditions, make sure they are an 0D array
+            y0 = jnp.array(model.y0).reshape(-1)
             y = odeint(
                 rhs_ode,
                 y0,
@@ -182,7 +182,9 @@ class JaxSolver(pybamm.BaseSolver):
             )
             return jnp.transpose(y)
 
-        def solve_model_bdf(inputs):
+        def solve_model_bdf(y0, inputs):
+            # Initial conditions, make sure they are an 0D array
+            y0 = jnp.array(y0).reshape(-1)
             y = pybamm.jax_bdf_integrate(
                 rhs_dae,
                 y0,
@@ -200,7 +202,10 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
+        raise NotImplementedError()
+
+    def _integrate(self, model, t_eval, inputs_list=None, batched_inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -212,6 +217,7 @@ class JaxSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_list : list[dict], optional
             Any input parameters to pass to the model when solving
+        batched_inputs : list of ndarray, optional
 
         Returns
         -------
@@ -220,13 +226,15 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
-        inputs = inputs or [{}]
+        inputs = inputs_list or [{}]
 
         timer = pybamm.Timer()
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = self._cached_solves[model](inputs)
+        # todo: make this parallel
+        for y0, inputs in zip(model.y0_list, batched_inputs):
+            y = self._cached_solves[model](y0, inputs)
 
         integration_time = timer.time()
 

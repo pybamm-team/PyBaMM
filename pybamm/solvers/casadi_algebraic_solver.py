@@ -37,27 +37,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_list=None):
-        """
-        Calculate the solution of the algebraic equations through root-finding
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : :class:`numpy.array`, size (k,)
-            The times at which to compute the solution
-        inputs_list: list of dict, optional
-            Any input parameters to pass to the model when solving.
-        """
-        # Record whether there are any symbolic inputs
-        inputs_list = inputs_list or [{}]
-
-        # Create casadi objects for the root-finder
-        inputs = casadi.vertcat(*[v for inputs in inputs_list for v in inputs.values()])
-
-        y0 = model.y0
-
+    def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
         # equations will be equal to the initial condition provided. This allows this

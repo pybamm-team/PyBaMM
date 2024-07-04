@@ -47,26 +47,7 @@ class ScipySolver(pybamm.BaseSolver):
         self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")
 
-    def _integrate(self, model, t_eval, inputs_list=None):
-        """
-        Solve a model defined by dydt with initial conditions y0.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : :class:`numpy.array`, size (k,)
-            The times at which to compute the solution
-        inputs_list : list of dict, optional
-            Any input parameters to pass to the model when solving
-
-        Returns
-        -------
-        object
-            An object containing the times and values of the solution, as well as
-            various diagnostic messages.
-
-        """
+    def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
         # Save inputs dictionary, and if necessary convert inputs to a casadi vector
         inputs_list = inputs_list or [{}]
         inputs = pybamm.BaseSolver._inputs_to_stacked_vect(
@@ -76,7 +57,6 @@ class ScipySolver(pybamm.BaseSolver):
         extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
         # Initial conditions
-        y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
