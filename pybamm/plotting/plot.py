@@ -1,6 +1,3 @@
-#
-# Method for creating a 1D plot of pybamm arrays
-#
 import pybamm
 from .quick_plot import ax_min, ax_max
 from pybamm.util import import_optional_dependency
@@ -10,7 +7,8 @@ def plot(x, y, ax=None, show_plot=True, **kwargs):
     """
     Generate a simple 1D plot. Calls `matplotlib.pyplot.plot` with keyword
     arguments 'kwargs'. For a list of 'kwargs' see the
-    `matplotlib plot documentation <https://tinyurl.com/ycblw9bx>`_
+    `matplotlib plot documentation
+    <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html>`_
 
     Parameters
     ----------

@@ -12,7 +12,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybamm"
-version = "24.1"
+version = "24.5rc0"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
@@ -98,9 +98,11 @@ dev = [
     "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
-    # For testing Jupyter notebooks
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
+    "pytest-mock",
+    # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
@@ -109,7 +111,6 @@ dev = [
 jax = ["jax==0.4.27", "jaxlib==0.4.27"]
 # Contains all optional dependencies, except for jax and dev dependencies
 all = [
-    "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
@@ -243,14 +244,22 @@ ignore = [
 "**.ipynb" = ["E402", "E703"]
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
-# NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
 minversion = "6"
-# Use pytest-xdist to run tests in parallel by default, exit with
-# error if not installed
-required_plugins = ["pytest-xdist"]
-addopts = ["-nauto", "-v", "-ra", "--strict-config", "--strict-markers"]
-testpaths = ["docs/source/examples/"]
+required_plugins = [
+    "pytest-xdist",
+    "pytest-mock",
+]
+addopts = [
+    "-nauto",
+    "-v",
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+]
+testpaths = [
+    "docs/source/examples/",
+]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [

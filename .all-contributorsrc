@@ -922,6 +922,24 @@
         "code",
         "infra"
       ]
+    },
+    {
+      "login": "smitasahu2",
+      "name": "Smita Sahu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/57876346?v=4",
+      "profile": "https://github.com/smitasahu2",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "Ubham16",
+      "name": "Ubham16",
+      "avatar_url": "https://avatars.githubusercontent.com/u/173074476?v=4",
+      "profile": "https://github.com/Ubham16",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

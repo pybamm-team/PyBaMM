@@ -82,3 +82,7 @@ class BaseUnitTestLithiumIonHalfCell:
     def test_well_posed_lumped_thermal(self):
         options = {"thermal": "lumped"}
         self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_hom(self):
+        options = {"thermal": "lumped", "heat of mixing": "true"}
+        self.check_well_posedness(options)
