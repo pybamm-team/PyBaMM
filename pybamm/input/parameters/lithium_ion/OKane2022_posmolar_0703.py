@@ -623,7 +623,15 @@ def get_parameter_values():
         "Positive electrode reference concentration for free of deformation [mol.m-3]"
         "": 0.0,
         ##"Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
-        "Positive electrode partial molar volume [m3.mol-1]": 0.5e-6, # updated by Xinlei 2024/7/3
+        "Positive electrode partial molar volume [m3.mol-1]": 7.88e-07, # updated by Xinlei 2024/7/4
+        ## From Yang Tu, Billy Wu, Weilong Ai, Emilio Martínez-Pañeda,
+        # Influence of concentration-dependent material properties on the fracture and debonding of electrode particles with core–shell structure,
+        # Journal of Power Sources,
+        # Volume 603,
+        # 2024,
+        # 234395,
+        # ISSN 0378-7753,
+        # https://doi.org/10.1016/j.jpowsour.2024.234395.
         "Positive electrode volume change": volume_change_Ai2020,
         "Positive electrode initial crack length [m]": 2e-08,
         "Positive electrode initial crack width [m]": 1.5e-08,
@@ -650,7 +658,7 @@ def get_parameter_values():
         "": electrolyte_conductivity_Nyman2008_arrhenius,
         # experiment
         "Reference temperature [K]": 298.15,
-        "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
+        "Total heat transfer coefficient [W.m-2.K-1]": 15.0, ## updated 0704, to fit the tempeature data 
         "Ambient temperature [K]": 298.15,
         "Number of electrodes connected in parallel to make a cell": 1.0,
         "Number of cells connected in series to make a battery": 1.0,
