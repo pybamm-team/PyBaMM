@@ -168,16 +168,18 @@ class Thevenin(pybamm.BaseModel):
                 self.param, self.element_counter, self.options
             )
             self.element_counter += 1
-            
+
     def set_diffusion_submodel(self):
-        if self.options == "false":
-            self.submodels["Diffusion"] = pybamm.equivalent_circuit_elements.NoDiffusion(
-                self.param, self.options
+        if self.options["diffusion element"] == "false":
+            self.submodels["Diffusion"] = (
+                pybamm.equivalent_circuit_elements.NoDiffusion(self.param, self.options)
             )
-        elif self.options == "true":
-            self.submodels["Diffusion"] = pybamm.equivalent_circuit_elements.DiffusionElement(
-                self.param, self.options
-            )            
+        elif self.options["diffusion element"] == "true":
+            self.submodels["Diffusion"] = (
+                pybamm.equivalent_circuit_elements.DiffusionElement(
+                    self.param, self.options
+                )
+            )
 
     def set_thermal_submodel(self):
         self.submodels["Thermal"] = pybamm.equivalent_circuit_elements.ThermalSubModel(
@@ -188,7 +190,7 @@ class Thevenin(pybamm.BaseModel):
         self.submodels["Voltage"] = pybamm.equivalent_circuit_elements.VoltageModel(
             self.param, self.options
         )
-        
+
     def set_submodels(self, build):
         self.set_external_circuit_submodel()
         self.set_ocv_submodel()
@@ -245,30 +247,22 @@ class Thevenin(pybamm.BaseModel):
 
     @property
     def default_var_pts(self):
-        if self.options["diffusion element"] == "true":
-            x = pybamm.SpatialVariable("x ECMD", domain=["ECMD particle"], coord_sys="Cartesian")
-            return {x: 20}
-        else:
-            return {}
+        x = pybamm.SpatialVariable(
+            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
+        )
+        return {x: 20}
 
     @property
     def default_geometry(self):
-        if self.options["diffusion element"] == "true":
-            x = pybamm.SpatialVariable("x ECMD", domain=["ECMD particle"], coord_sys="Cartesian")
-            return {"ECMD particle": {x: {"min": 0, "max": 1}}}
-        else:
-            return {}
+        x = pybamm.SpatialVariable(
+            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
+        )
+        return {"ECMD particle": {x: {"min": 0, "max": 1}}}
 
     @property
     def default_submesh_types(self):
-        if self.options["diffusion element"] == "true":
-            return {"ECMD particle": pybamm.Uniform1DSubMesh}
-        else:
-            return {}
+        return {"ECMD particle": pybamm.Uniform1DSubMesh}
 
     @property
     def default_spatial_methods(self):
-        if self.options["diffusion element"] == "true":
-            return {"ECMD particle": pybamm.FiniteVolume()}
-        else:
-            return {}
+        return {"ECMD particle": pybamm.FiniteVolume()}

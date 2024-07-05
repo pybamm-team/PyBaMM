@@ -2,9 +2,7 @@ import pybamm
 
 pybamm.set_logging_level("INFO")
 
-model = pybamm.equivalent_circuit.Thevenin(
-    # options={"diffusion element": "true"}
-)
+model = pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "true"})
 
 experiment = pybamm.Experiment(
     [

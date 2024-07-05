@@ -20,7 +20,9 @@ class NoDiffusion(pybamm.BaseSubModel):
 
     def get_coupled_variables(self, variables):
         z = pybamm.PrimaryBroadcast(variables["SoC"], "ECMD particle")
-        x = pybamm.SpatialVariable("x ECMD", domain=["ECMD particle"], coord_sys="Cartesian")
+        x = pybamm.SpatialVariable(
+            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
+        )
         z_surf = pybamm.surf(z)
         eta_diffusion = pybamm.Scalar(0)
 
@@ -55,7 +57,9 @@ class DiffusionElement(pybamm.BaseSubModel):
 
     def get_fundamental_variables(self):
         z = pybamm.Variable("Distributed SoC", domain="ECMD particle")
-        x = pybamm.SpatialVariable("x ECMD", domain=["ECMD particle"], coord_sys="Cartesian")
+        x = pybamm.SpatialVariable(
+            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
+        )
         variables = {
             "Distributed SoC": z,
             "x ECMD": x,
@@ -66,7 +70,7 @@ class DiffusionElement(pybamm.BaseSubModel):
         z = variables["Distributed SoC"]
         soc = variables["SoC"]
         z_surf = pybamm.surf(z)
-        eta_diffusion = self.param.ocv(z_surf) - self.param.ocv(soc)
+        eta_diffusion = -(self.param.ocv(z_surf) - self.param.ocv(soc))
 
         variables.update(
             {
@@ -84,12 +88,14 @@ class DiffusionElement(pybamm.BaseSubModel):
 
         # governing equations
         dzdt = pybamm.div(pybamm.grad(z)) / self.param.tau_D
-        self.rhs = {z: dzdt}  
+        self.rhs = {z: dzdt}
 
-        # boundary conditions 
+        # boundary conditions
         lbc = pybamm.Scalar(0)
         rbc = self.param.tau_D * current / (cell_capacity * 3600)
-        self.boundary_conditions = {z: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")}}
+        self.boundary_conditions = {
+            z: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")}
+        }
 
     def set_initial_conditions(self, variables):
         z = variables["Distributed SoC"]
