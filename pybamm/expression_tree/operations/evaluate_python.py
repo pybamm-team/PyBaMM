@@ -545,7 +545,7 @@ class EvaluatorPython:
                 result = scipy.special.logsumexp(alpha * results) / alpha
             elif self._is_matrix:
                 # if a matrix output, concatenate the results in a block diagonal matrix
-                result = scipy.sparse.block_diag(*results, format="csr")
+                result = scipy.sparse.block_diag(results, format="csr")
             else:
                 # otherwise concatenate the results in a column vector
                 result = np.vstack(results)

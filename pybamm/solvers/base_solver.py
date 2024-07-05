@@ -1737,7 +1737,7 @@ def process(
             report(f"Calculating jacobian for {name}")
             jac = jacobian.jac(symbol, y)
             report(f"Converting jacobian for {name} to python")
-            jac = pybamm.EvaluatorPython(jac, inputs_batch)
+            jac = pybamm.EvaluatorPython(jac, inputs_batch, is_matrix=True)
             # cannot do jacobian action efficiently for now
             jac_action = None
         else:

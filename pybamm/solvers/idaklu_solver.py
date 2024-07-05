@@ -3,6 +3,8 @@
 #
 # mypy: ignore-errors
 import casadi
+import scipy
+import scipy.sparse
 import pybamm
 import numpy as np
 import scipy.sparse as sparse
@@ -187,6 +189,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             mass_matrix = model.mass_matrix.entries
 
+        # take care of batch size
+        if model.convert_to_format == "casadi":
+            mass_matrix = casadi.diagcat(*([mass_matrix] * batch_size))
+        elif scipy.sparse.issparse(mass_matrix):
+            mass_matrix = scipy.sparse.block_diag(
+                [mass_matrix] * batch_size, format="csr"
+            )
+        else:
+            mass_matrix = scipy.linalg.block_diag(*([mass_matrix] * batch_size))
+
         # construct residuals function by binding inputs
         if model.convert_to_format == "casadi":
             # TODO: do we need densify here?
@@ -210,14 +222,30 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             p_casadi_stacked = casadi.MX.sym("p_stacked", inputs.shape[0])
 
-            jac_times_cjmass = casadi.Function(
-                "jac_times_cjmass",
-                [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
-                [
-                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked)
-                    - cj_casadi * mass_matrix
-                ],
-            )
+            if batch_size == 1:
+                jac_times_cjmass = casadi.Function(
+                    "jac_times_cjmass",
+                    [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
+                    [
+                        model.jac_rhs_algebraic_eval(
+                            t_casadi, y_casadi, p_casadi_stacked
+                        )
+                        - cj_casadi * mass_matrix
+                    ],
+                )
+            else:
+                # create a casadi function that can be used to evaluate the jacobian
+                # for multiple inputs
+                jac_times_cjmass = casadi.Function(
+                    "jac_times_cjmass",
+                    [t_casadi, y_casadi, p_casadi_stacked, cj_casadi],
+                    [
+                        model.jac_rhs_algebraic_eval(
+                            t_casadi, y_casadi, p_casadi_stacked
+                        )
+                        - cj_casadi * mass_matrix
+                    ],
+                )
 
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
             jac_bw_lower = jac_times_cjmass_sparsity.bw_lower()

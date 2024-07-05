@@ -318,7 +318,6 @@ class TestScipySolver(TestCase):
         formats = ["python", "casadi"]
         if pybamm.have_jax():
             formats.append("jax")
-        formats = ["jax"]
         for convert_to_format in formats:
             print(convert_to_format)
             model = pybamm.BaseModel()

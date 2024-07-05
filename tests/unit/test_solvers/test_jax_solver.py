@@ -109,20 +109,21 @@ class TestJaxSolver(TestCase):
             rate = 0.1
 
             # need to solve the model once to get it set up by the base solver
-            solver.solve(model, t_eval, inputs={"rate": rate})
+            soln = solver.solve(model, t_eval, inputs={"rate": rate})
+            y0 = soln.y[:, 0]
             solve = solver.get_solve(model, t_eval)
 
             # create a dummy "model" where we calculate the sum of the time series
-            def solve_model(rate, solve=solve):
-                return jax.numpy.sum(solve({"rate": rate}))
+            def solve_model(y0, rate, solve=solve):
+                return jax.numpy.sum(solve(y0, {"rate": rate}))
 
             # check answers with finite difference
-            eval_plus = solve_model(rate + h)
-            eval_neg = solve_model(rate - h)
+            eval_plus = solve_model(y0, rate + h)
+            eval_neg = solve_model(y0, rate - h)
             grad_num = (eval_plus - eval_neg) / (2 * h)
 
-            grad_solve = jax.jit(jax.grad(solve_model))
-            grad = grad_solve(rate)
+            grad_solve = jax.jit(jax.grad(solve_model, argnums=1))
+            grad = grad_solve(y0, rate)
 
             self.assertAlmostEqual(grad, grad_num, places=1)
 
@@ -224,14 +225,17 @@ class TestJaxSolver(TestCase):
         ninputs = 8
         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-        solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
-        for i in range(ninputs):
-            with self.subTest(i=i):
-                solution = solutions[i]
-                np.testing.assert_array_equal(solution.t, t_eval)
-                np.testing.assert_allclose(
-                    solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
-                )
+        for j, batch_size in enumerate([1, 4]):
+            solutions = solver.solve(
+                model, t_eval, inputs=inputs_list, batch_size=batch_size
+            )
+            for i in range(ninputs):
+                with self.subTest(i=j * ninputs + i):
+                    solution = solutions[i]
+                    np.testing.assert_array_equal(solution.t, t_eval)
+                    np.testing.assert_allclose(
+                        solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
+                    )
 
     def test_get_solve(self):
         # Create model
@@ -261,13 +265,14 @@ class TestJaxSolver(TestCase):
         with self.assertRaisesRegex(RuntimeError, "Model is not set up for solving"):
             solver.get_solve(model, t_eval)
 
-        solver.solve(model, t_eval, inputs={"rate": 0.1})
+        soln = solver.solve(model, t_eval, inputs={"rate": 0.1})
+        y0 = soln.y[:, 0]
         solver = solver.get_solve(model, t_eval)
-        y = solver({"rate": 0.1})
+        y = solver(y0, {"rate": 0.1})
 
         np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
-        y = solver({"rate": 0.2})
+        y = solver(y0, {"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
 
