@@ -100,8 +100,12 @@ class BaseStep:
                     f"Input function must return a real number output at t = {t0}"
                 )
 
+        # Record whether the step uses the default duration
+        # This will be used by the experiment to check whether the step is feasible
+        self.uses_default_duration = duration is None
+        self.input_duration = duration
         # Set duration
-        if duration is None:
+        if self.uses_default_duration:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
@@ -196,7 +200,7 @@ class BaseStep:
         """
         return self.__class__(
             self.value,
-            duration=self.duration,
+            duration=self.input_duration,
             termination=self.termination,
             period=self.period,
             temperature=self.temperature,

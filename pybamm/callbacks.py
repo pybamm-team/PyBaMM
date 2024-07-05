@@ -77,9 +77,15 @@ class Callback:
         """
         pass
 
-    def on_experiment_infeasible(self, logs):
+    def on_experiment_infeasible_time(self, logs):
         """
-        Called when an experiment simulation is infeasible.
+        Called when an experiment simulation is infeasible due to reaching maximum time.
+        """
+        pass
+
+    def on_experiment_infeasible_event(self, logs):
+        """
+        Called when an experiment simulation is infeasible due to an event.
         """
         pass
 
@@ -226,7 +232,19 @@ class LoggingCallback(Callback):
         error = logs["error"]
         pybamm.logger.error(f"Simulation error: {error}")
 
-    def on_experiment_infeasible(self, logs):
+    def on_experiment_infeasible_time(self, logs):
+        duration = logs["step duration"]
+        cycle_num = logs["cycle number"][0]
+        step_num = logs["step number"][0]
+        operating_conditions = logs["step operating conditions"]
+        self.logger.warning(
+            f"\n\n\tExperiment is infeasible: default duration ({duration} seconds) "
+            f"was reached during '{operating_conditions}'. The returned solution only "
+            f"contains up to step {step_num} of cycle {cycle_num}. "
+            "Please specify a duration in the step instructions."
+        )
+
+    def on_experiment_infeasible_event(self, logs):
         termination = logs["termination"]
         cycle_num = logs["cycle number"][0]
         step_num = logs["step number"][0]

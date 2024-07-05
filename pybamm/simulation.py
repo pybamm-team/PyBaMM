@@ -679,6 +679,7 @@ class Simulation:
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = step_str
+                    logs["step duration"] = step.duration
                     callbacks.on_step_start(logs)
 
                     inputs = {
@@ -768,12 +769,19 @@ class Simulation:
 
                     logs["termination"] = step_solution.termination
                     # Only allow events specified by experiment
-                    if not (
+                    if (
+                        step_termination == "final time"
+                        and step.uses_default_duration is True
+                    ):
+                        callbacks.on_experiment_infeasible_time(logs)
+                        feasible = False
+                        break
+                    elif not (
                         isinstance(step_solution, pybamm.EmptySolution)
                         or step_termination == "final time"
                         or "[experiment]" in step_termination
                     ):
-                        callbacks.on_experiment_infeasible(logs)
+                        callbacks.on_experiment_infeasible_event(logs)
                         feasible = False
                         break
 

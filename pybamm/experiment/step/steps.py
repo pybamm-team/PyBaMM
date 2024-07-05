@@ -159,7 +159,7 @@ class CRate(BaseStepExplicit):
     def default_duration(self, value):
         # "value" is C-rate, so duration is "1 / value" hours in seconds
         # with a 2x safety factor
-        return 1 / value * 3600 * 2
+        return 1 / abs(value) * 3600 * 2
 
 
 def c_rate(value, **kwargs):
