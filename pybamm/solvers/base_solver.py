@@ -696,7 +696,7 @@ class BaseSolver:
 
         return y0s
 
-    def _integrate(self, model, t_eval, inputs_list, batched_inputs=None):
+    def _integrate(self, model, t_eval, inputs_list=None, batched_inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -711,6 +711,7 @@ class BaseSolver:
         batched_inputs : list of array
             batched inputs parameters in list of array form
         """
+        inputs_list = inputs_list or [{}]
 
         if batched_inputs is not None:
             nbatches = len(batched_inputs)
@@ -729,7 +730,7 @@ class BaseSolver:
                 for i in range(len(inputs_list) // batch_size)
             ]
 
-        if len(model.y0S_list) == 0:
+        if not hasattr(model, "y0S_list") or len(model.y0S_list) == 0:
             y0S_list = [None] * nbatches
         else:
             y0S_list = model.y0S_list
@@ -949,7 +950,7 @@ class BaseSolver:
 
         batched_inputs = [
             self._inputs_to_stacked_vect(
-                inputs_list[i * batch_size : (i + 1) * batch_size],
+                model_inputs_list[i * batch_size : (i + 1) * batch_size],
                 model.convert_to_format,
             )
             for i in range(len(inputs_list) // batch_size)
@@ -964,8 +965,8 @@ class BaseSolver:
         )
 
         # Check initial conditions don't violate events
-        for y0, inputs in zip(model.y0_list, batched_inputs):
-            self._check_events_with_initial_conditions(t_eval, model, y0, inputs)
+        for y0, inpts in zip(model.y0_list, batched_inputs):
+            self._check_events_with_initial_conditions(t_eval, model, y0, inpts)
 
         # Process discontinuities
         (
@@ -1190,6 +1191,10 @@ class BaseSolver:
             `model.variables = {}`)
 
         """
+        # restrict batch_size to 1 for now
+        batch_size = 1
+        model.batch_size = batch_size
+
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
         if old_solution is None:
             old_solutions = [pybamm.EmptySolution()] * len(inputs_list)
@@ -1303,10 +1308,8 @@ class BaseSolver:
                         concatenated_initial_conditions.evaluate(0, inputs=inputs)
                     )
 
-            model.y0 = casadi.vertcat(*y0s)
+            model.y0_list = y0s
 
-        # restrict batch_size to 1 for now
-        batch_size = 1
         batched_inputs = [
             self._inputs_to_stacked_vect(
                 model_inputs_list[i * batch_size : (i + 1) * batch_size],

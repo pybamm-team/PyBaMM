@@ -12,7 +12,7 @@ class DummySolver(pybamm.BaseSolver):
         super().__init__()
         self.name = "Dummy solver"
 
-    def _integrate(self, model, t_eval, inputs_list=None):
+    def _integrate(self, model, t_eval, inputs_list=None, batched_inputs=None):
         """
         Solve an empty model.
 

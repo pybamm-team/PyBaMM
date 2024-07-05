@@ -40,10 +40,11 @@ class TestAlgebraicSolver(TestCase):
     def test_simple_root_find(self):
         # Simple system: a single algebraic equation
         class Model(pybamm.BaseModel):
-            y0 = np.array([2])
+            y0_list = [np.array([2])]
             rhs = {}
             jac_algebraic_eval = None
             len_rhs_and_alg = 1
+            batch_size = 1
 
             def __init__(self):
                 super().__init__()
@@ -65,10 +66,11 @@ class TestAlgebraicSolver(TestCase):
 
     def test_root_find_fail(self):
         class Model(pybamm.BaseModel):
-            y0 = np.array([2])
+            y0_list = [np.array([2])]
             rhs = {}
             jac_algebraic_eval = None
             len_rhs_and_alg = 1
+            batch_size = 1
 
             def __init__(self):
                 super().__init__()
@@ -98,9 +100,10 @@ class TestAlgebraicSolver(TestCase):
         b = np.array([0, 7])
 
         class Model(pybamm.BaseModel):
-            y0 = np.zeros(2)
+            y0_list = [np.zeros(2)]
             rhs = {}
             len_rhs_and_alg = 2
+            batch_size = 1
 
             def __init__(self):
                 super().__init__()
