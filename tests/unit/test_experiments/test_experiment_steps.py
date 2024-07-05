@@ -147,19 +147,19 @@ class TestExperimentSteps(unittest.TestCase):
             {
                 "type": "CRate",
                 "value": -1,
-                "duration": 86400,
+                "duration": 7200,
                 "termination": [pybamm.step.VoltageTermination(4.1)],
             },
             {
                 "value": 4.1,
                 "type": "Voltage",
-                "duration": 86400,
+                "duration": 3600 * 1000,
                 "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
                 "type": "Voltage",
-                "duration": 86400,
+                "duration": 3600 * 1000,
                 "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
