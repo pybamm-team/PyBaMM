@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v24.5rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc0) - 2024-05-01
+
 ## Features
 
 - Added functionality to pass in arbitrary functions of time as the argument for a (`pybamm.step`). ([#4222](https://github.com/pybamm-team/PyBaMM/pull/4222))
