@@ -35,17 +35,17 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=vla")
 endif()
 
-# Define options for Suitesparse and SUNDIALS roots
-set(SUNDIALS_ROOT "" CACHE PATH "Suitesparse source location")
-set(SUNDIALS_ROOT "" CACHE PATH "SUNDIALS source location")
+# # Define options for Suitesparse and SUNDIALS roots
+# set(SUNDIALS_ROOT "" CACHE PATH "Suitesparse source location")
+# set(SUNDIALS_ROOT "" CACHE PATH "SUNDIALS source location")
 
-if(SUITESPARSE_ROOT STREQUAL "")
-  set(SUITESPARSE_ROOT ${DEFAULT_LIB_DIR})
-endif()
+# if(SUITESPARSE_ROOT STREQUAL "")
+#   set(SUITESPARSE_ROOT ${DEFAULT_LIB_DIR})
+# endif()
 
-if(SUNDIALS_ROOT STREQUAL "")
-  set(SUITESPARSE_ROOT ${DEFAULT_LIB_DIR})
-endif()
+# if(SUNDIALS_ROOT STREQUAL "")
+#   set(SUITESPARSE_ROOT ${DEFAULT_LIB_DIR})
+# endif()
 
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
@@ -110,7 +110,6 @@ else()
   message("Trying to link against any casadi package apart from the Python one")
   set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
   find_package(casadi CONFIG REQUIRED)
-  message("Found casadi in ${CASADI_DIR}")
 endif()
 
 set_target_properties(
