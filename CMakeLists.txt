@@ -138,3 +138,5 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+
+install(TARGETS idaklu DESTINATION pybamm/solvers)
