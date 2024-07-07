@@ -17,9 +17,13 @@ if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
     CACHE STRING "Vcpkg target triplet")
 endif()
 
-project(idaklu)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(DEFAULT_LIB_DIR "")
+else()
+  set(DEFAULT_LIB_DIR "$ENV(HOME)/.local")
+endif()
 
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+project(idaklu)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,18 +35,29 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=vla")
 endif()
 
+# Define options for Suitesparse and SUNDIALS roots
+set(SUNDIALS_ROOT "" CACHE PATH "Suitesparse source location")
+set(SUNDIALS_ROOT "" CACHE PATH "SUNDIALS source location")
+
+if(SUITESPARSE_ROOT STREQUAL "")
+  set(SUITESPARSE_ROOT ${DEFAULT_LIB_DIR})
+endif()
+
+if(SUNDIALS_ROOT STREQUAL "")
+  set(SUITESPARSE_ROOT ${DEFAULT_LIB_DIR})
+endif()
+
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
-set(PYBIND11_FINDPYTHON ON)
-
+# Add pybind11
 if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
 # The sources list should mirror the list in setup.py
-pybind11_add_module(idaklu
+set(SOURCES
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
   pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
   pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp
@@ -67,14 +82,13 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu.cpp
 )
 
-find_package(OpenBLAS REQUIRED)
-message("OpenBLAS found in ${OpenBLAS_INCLUDE_DIRS}: ${OpenBLAS_LIBRARIES}")
-include_directories(${OpenBLAS_INCLUDE_DIRS})
+pybind11_add_module(idaklu ${SOURCES})
 
-
-if (NOT DEFINED USE_PYTHON_CASADI)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(USE_PYTHON_CASADI FALSE)
+else()
   set(USE_PYTHON_CASADI TRUE)
-endif()
+endif())
 
 # Use importlib to find the casadi path without importing it. This is useful
 # to find the path for the build-time dependency, not the run-time dependency.
@@ -87,13 +101,7 @@ execute_process(
 if (CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found Python casadi path: ${CASADI_DIR}")
-else()
-  message(FATAL_ERROR "Python casadi path not found")
 endif()
-
-set(CMAKE_PREFIX_PATH "${CASADI_DIR}/../../casadi" ${CMAKE_PREFIX_PATH})
-
-message("VCPKG_ROOT_DIR is set to: ${VCPKG_ROOT_DIR}")
 
 if(${USE_PYTHON_CASADI})
   message("Trying to link against Python casadi package")
@@ -102,6 +110,7 @@ else()
   message("Trying to link against any casadi package apart from the Python one")
   set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
   find_package(casadi CONFIG REQUIRED)
+  message("Found casadi in ${CASADI_DIR}")
 endif()
 
 set_target_properties(
@@ -118,11 +127,6 @@ message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
-if(TARGET casadi)
-  target_link_libraries(casadi INTERFACE $(OpenBLAS_LIBRARIES))
-endif()
-
-
 # link suitesparse
 # if using vcpkg, use config mode to
 # find suitesparse. Otherwise, use FindSuiteSparse module
@@ -134,7 +138,3 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
-
-# Python_add_library(idaklu MODULE ${idaklu} WITH_SOABI)
-
-install(TARGETS idaklu DESTINATION pybamm/solvers)
