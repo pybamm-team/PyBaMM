@@ -30,6 +30,11 @@ function extract {
 SUITESPARSE_VERSION=$1
 SUNDIALS_VERSION=$2
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+INSTALL_DIR=$SCRIPT_DIR/../sundials_install
+
+mkdir -p $INSTALL_DIR
+
 SUITESPARSE_ROOT_ADDR=https://github.com/DrTimothyAldenDavis/SuiteSparse/archive
 SUNDIALS_ROOT_ADDR=https://github.com/LLNL/sundials/releases/download/v$SUNDIALS_VERSION
 
@@ -55,7 +60,7 @@ SUITESPARSE_DIR=SuiteSparse-$SUITESPARSE_VERSION
 for dir in SuiteSparse_config AMD COLAMD BTF KLU
 do
     make -C $SUITESPARSE_DIR/$dir library
-    make -C $SUITESPARSE_DIR/$dir install INSTALL=/usr
+    make -C $SUITESPARSE_DIR/$dir install INSTALL=$INSTALL_DIR
 done
 
 ### Compile and install SUNDIALS ###
@@ -69,8 +74,8 @@ yum -y install openblas-devel
 
 mkdir -p build_sundials
 cd build_sundials
-KLU_INCLUDE_DIR=/usr/local/include
-KLU_LIBRARY_DIR=/usr/local/lib
+KLU_INCLUDE_DIR=$INSTALL_DIR/include
+KLU_LIBRARY_DIR=$INSTALL_DIR/lib
 SUNDIALS_DIR=sundials-$SUNDIALS_VERSION
 cmake -DENABLE_LAPACK=ON\
       -DSUNDIALS_INDEX_SIZE=32\
@@ -79,6 +84,6 @@ cmake -DENABLE_LAPACK=ON\
       -DENABLE_OPENMP=ON\
       -DKLU_INCLUDE_DIR=$KLU_INCLUDE_DIR\
       -DKLU_LIBRARY_DIR=$KLU_LIBRARY_DIR\
-      -DCMAKE_INSTALL_PREFIX=/usr\
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR\
       ../$SUNDIALS_DIR
 make install
