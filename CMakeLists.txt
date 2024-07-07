@@ -19,8 +19,10 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(DEFAULT_LIB_DIR "")
+  set(USE_PYTHON_CASADI FALSE)
 else()
   set(DEFAULT_LIB_DIR "$ENV(HOME)/.local")
+  set(USE_PYTHON_CASADI TRUE)
 endif()
 
 project(idaklu)
@@ -71,12 +73,6 @@ set(SOURCES
 )
 
 pybind11_add_module(idaklu ${SOURCES})
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  set(USE_PYTHON_CASADI FALSE)
-else()
-  set(USE_PYTHON_CASADI TRUE)
-endif()
 
 # Use importlib to find the casadi path without importing it. This is useful
 # to find the path for the build-time dependency, not the run-time dependency.
