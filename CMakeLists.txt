@@ -109,7 +109,9 @@ set_target_properties(
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 # Sundials
-set(SUNDIALS_DIR ${PROJECT_SOURCE_DIR}/sundials_installed)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(SUNDIALS_DIR ${PROJECT_SOURCE_DIR}/sundials_installed)
+endif()
 find_package(SUNDIALS REQUIRED)
 message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
@@ -118,7 +120,9 @@ target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 # link suitesparse
 # if using vcpkg, use config mode to
 # find suitesparse. Otherwise, use FindSuiteSparse module
-set(SUITESPARSE_DIR ${PROJECT_SOURCE_DIR}/sundials_installed)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(SUITESPARSE_DIR ${PROJECT_SOURCE_DIR}/sundials_installed)
+endif()
 if(DEFINED VCPKG_ROOT_DIR)
   find_package(SuiteSparse CONFIG REQUIRED)
 else()
