@@ -41,6 +41,7 @@ find_path(SUNDIALS_INCLUDE_DIR
     include
   PATHS
     ${SUNDIALS_ROOT}
+    "~/.local"
   )
 
 set(SUNDIALS_WANT_COMPONENTS
