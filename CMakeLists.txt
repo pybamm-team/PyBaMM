@@ -88,7 +88,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(USE_PYTHON_CASADI FALSE)
 else()
   set(USE_PYTHON_CASADI TRUE)
-endif())
+endif()
 
 # Use importlib to find the casadi path without importing it. This is useful
 # to find the path for the build-time dependency, not the run-time dependency.

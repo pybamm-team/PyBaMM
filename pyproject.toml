@@ -146,7 +146,6 @@ build-dir = "build/{wheel_tag}"
 version = ">=3.13"
 verbose = true
 build-type = "Release"
-targets = ["idaklu"]
 
 [tool.scikit-build.logging]
 level = "INFO"
