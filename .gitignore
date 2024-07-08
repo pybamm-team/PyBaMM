@@ -86,7 +86,7 @@ sundials-*
 SuiteSparse-*
 build_sundials
 KLU_module_deps
-sundials_install/include
+/include
 
 # downloads
 *.gz

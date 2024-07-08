@@ -12,10 +12,10 @@ if sys.platform != "win32":
 else:
     nox.options.sessions = ["pre-commit", "unit"]
 
-
+pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "SUNDIALS_INST": f"{homedir}/.local",
+    "SUNDIALS_INST": f"{pybamm_dir}/sundials_KLU_libs",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
 }

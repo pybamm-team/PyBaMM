@@ -17,7 +17,7 @@ if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
     CACHE STRING "Vcpkg target triplet")
 endif()
 
-set(CUSTOM_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sundials_install)
+set(CUSTOM_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sundials_KLU_libs)
 
 # message("Custom install dir: ${CUSTOM_INSTALL}")
 

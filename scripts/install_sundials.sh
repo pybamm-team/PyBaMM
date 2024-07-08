@@ -31,7 +31,7 @@ SUITESPARSE_VERSION=$1
 SUNDIALS_VERSION=$2
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-INSTALL_DIR=$SCRIPT_DIR/../sundials_install
+INSTALL_DIR=$SCRIPT_DIR/../sundials_KLU_libs
 
 mkdir -p $INSTALL_DIR
 
