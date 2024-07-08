@@ -109,9 +109,6 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
-      - name: Print current directory
-        run: pwd
-
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
@@ -120,7 +117,7 @@ jobs:
             yum -y install openblas-devel lapack-devel &&
             python scripts/install_KLU_Sundials.py
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi scikit-build-core
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH=$PWD/sundials_install auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH=$PWD/sundials_install/lib LD_LIBRARY_PATH=$PWD/sundials_install/include auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
