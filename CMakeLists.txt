@@ -17,7 +17,7 @@ if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
     CACHE STRING "Vcpkg target triplet")
 endif()
 
-# set(CUSTOM_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sundials_install)
+set(CUSTOM_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sundials_install)
 
 # message("Custom install dir: ${CUSTOM_INSTALL}")
 
@@ -113,8 +113,8 @@ set_target_properties(
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 # Sundials
-# set(SUNDIALS_ROOT ${CUSTOM_INSTALL_DIR})
-# message("SUNDIALS_ROOT: ${SUNDIALS_ROOT}")
+set(SUNDIALS_ROOT ${CUSTOM_INSTALL_DIR})
+message("SUNDIALS_ROOT: ${SUNDIALS_ROOT}")
 find_package(SUNDIALS REQUIRED)
 message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
@@ -123,15 +123,15 @@ target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 # link suitesparse
 # if using vcpkg, use config mode to
 # find suitesparse. Otherwise, use FindSuiteSparse module
-# set(SUITESPARSE_ROOT ${CUSTOM_INSTALL_DIR})
-# message("SUITESPARSE_ROOT: ${SUITESPARSE_ROOT}")
+set(SUITESPARSE_ROOT ${CUSTOM_INSTALL_DIR})
+message("SUITESPARSE_ROOT: ${SUITESPARSE_ROOT}")
 if(DEFINED VCPKG_ROOT_DIR)
-  find_package(SuiteSparse CONFIG REQUIRED)
+  find_package(SUITESPARSE CONFIG REQUIRED)
 else()
-  find_package(SuiteSparse REQUIRED)
+  find_package(SUITESPARSE REQUIRED)
   message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
 endif()
-include_directories(${SuiteSparse_INCLUDE_DIRS})
-target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+include_directories(${SUITESPARSE_INCLUDE_DIRS})
+target_link_libraries(idaklu PRIVATE ${SUITESPARSE_LIBRARIES})
 
 install(TARGETS idaklu DESTINATION pybamm/solvers)

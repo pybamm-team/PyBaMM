@@ -89,7 +89,7 @@ foreach(_component ${SUITESPARSE_COMPONENTS})
   #look for library at positions given by the user
   find_library(${_component}_LIBRARY
     NAMES "${_componentLower}"
-    PATHS ${SuiteSparse_ROOT} a
+    PATHS ${SuiteSparse_ROOT}
     PATH_SUFFIXES "lib" "lib32" "lib64" "${_component}" "${_component}/Lib"
     NO_DEFAULT_PATH
   )
