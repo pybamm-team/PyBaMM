@@ -17,13 +17,15 @@ if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
     CACHE STRING "Vcpkg target triplet")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  set(DEFAULT_LIB_DIR "")
-else()
-  set(DEFAULT_LIB_DIR "$ENV(HOME)/.local")
-endif()
+# set(CUSTOM_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sundials_install)
 
-set(CUSTOM_INSTALL_DIR ${PROJECT_SOURCE_DIR}/sundials_requires)
+# message("Custom install dir: ${CUSTOM_INSTALL}")
+
+# if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+#   set(DEFAULT_LIB_DIR "")
+# else()
+#   set(DEFAULT_LIB_DIR ${CUSTOM_INSTALL_DIR})
+# endif()
 
 project(idaklu)
 
@@ -111,7 +113,8 @@ set_target_properties(
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 # Sundials
-set(SUNDIALS_DIR ${CUSTOM_INSTALL_DIR})
+# set(SUNDIALS_ROOT ${CUSTOM_INSTALL_DIR})
+# message("SUNDIALS_ROOT: ${SUNDIALS_ROOT}")
 find_package(SUNDIALS REQUIRED)
 message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
@@ -120,7 +123,8 @@ target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 # link suitesparse
 # if using vcpkg, use config mode to
 # find suitesparse. Otherwise, use FindSuiteSparse module
-set(SUITESPARSE_DIR ${CUSTOM_INSTALL_DIR})
+# set(SUITESPARSE_ROOT ${CUSTOM_INSTALL_DIR})
+# message("SUITESPARSE_ROOT: ${SUITESPARSE_ROOT}")
 if(DEFINED VCPKG_ROOT_DIR)
   find_package(SuiteSparse CONFIG REQUIRED)
 else()

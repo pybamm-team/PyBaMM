@@ -284,7 +284,7 @@ os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
-download_dir = os.path.join(pybamm_dir, "install_KLU_Sundials")
+download_dir = os.path.join(pybamm_dir, "download_KLU_Sundials")
 if not os.path.exists(download_dir):
     os.makedirs(download_dir)
 

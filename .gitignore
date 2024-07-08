@@ -56,7 +56,7 @@ matplotlibrc
 ideas/
 .idea/
 
-# setup.py files
+# setup.py files -> edit
 *.egg-info
 dist/
 
@@ -86,6 +86,7 @@ sundials-*
 SuiteSparse-*
 build_sundials
 KLU_module_deps
+sundials_install/include
 
 # downloads
 *.gz
