@@ -9,11 +9,33 @@ Options::Options(py::dict options)
     : print_stats(options["print_stats"].cast<bool>()),
       jacobian(options["jacobian"].cast<std::string>()),
       preconditioner(options["preconditioner"].cast<std::string>()),
-      linsol_max_iterations(options["linsol_max_iterations"].cast<int>()),
-      linear_solver(options["linear_solver"].cast<std::string>()),
       precon_half_bandwidth(options["precon_half_bandwidth"].cast<int>()),
       precon_half_bandwidth_keep(options["precon_half_bandwidth_keep"].cast<int>()),
-      num_threads(options["num_threads"].cast<int>())
+      num_threads(options["num_threads"].cast<int>()),
+      // IDA main solver
+      max_order_bdf(options["max_order_bdf"].cast<int>()),
+      max_number_steps(options["max_number_steps"].cast<int>()),
+      dt_init(options["dt_init"].cast<double>()),
+      dt_max(options["dt_max"].cast<double>()),
+      max_error_test_failures(options["max_error_test_failures"].cast<int>()),
+      max_nonlinear_iterations(options["max_nonlinear_iterations"].cast<int>()),
+      max_convergence_failures(options["max_convergence_failures"].cast<int>()),
+      nonlinear_convergence_coefficient(options["nonlinear_convergence_coefficient"].cast<double>()),
+      nonlinear_convergence_coefficient_ic(options["nonlinear_convergence_coefficient_ic"].cast<double>()),
+      suppress_algebraic_error(options["suppress_algebraic_error"].cast<sunbooleantype>()),
+      // IDA initial conditions calculation
+      max_number_steps_ic(options["max_number_steps_ic"].cast<int>()),
+      max_number_jacobians_ic(options["max_number_jacobians_ic"].cast<int>()),
+      max_number_iterations_ic(options["max_number_iterations_ic"].cast<int>()),
+      max_linesearch_backtracks_ic(options["max_linesearch_backtracks_ic"].cast<int>()),
+      linesearch_off_ic(options["linesearch_off_ic"].cast<sunbooleantype>()),
+      calc_ic(options["calc_ic"].cast<bool>()),
+      // IDALS linear solver interface
+      linear_solver(options["linear_solver"].cast<std::string>()),
+      linsol_max_iterations(options["linsol_max_iterations"].cast<int>()),
+      linear_solution_scaling(options["linear_solution_scaling"].cast<sunbooleantype>()),
+      epsilon_linear_tolerance(options["epsilon_linear_tolerance"].cast<double>()),
+      increment_factor(options["increment_factor"].cast<double>())
 {
 
     using_sparse_matrix = true;

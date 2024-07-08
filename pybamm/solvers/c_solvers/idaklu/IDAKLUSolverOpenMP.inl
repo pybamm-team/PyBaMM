@@ -63,6 +63,56 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   rtol = RCONST(rel_tol);
   IDASVtolerances(ida_mem, rtol, avtol);
 
+  // Maximum order of the linear multistep method
+  IDASetMaxOrd(ida_mem, RCONST(options.max_order_bdf));
+
+  // Maximum number of steps to be taken by the solver in its attempt to reach
+  // the next output time
+  IDASetMaxNumSteps(ida_mem, RCONST(options.max_number_steps));
+
+  // Initial step size
+  IDASetInitStep(ida_mem, RCONST(options.dt_init));
+
+  // Maximum absolute step size
+  IDASetMaxStep(ida_mem, RCONST(options.dt_max));
+
+  // Maximum number of error test failures in attempting one step
+  IDASetMaxErrTestFails(ida_mem, RCONST(options.max_error_test_failures));
+
+  // Maximum number of nonlinear solver iterations at one step
+  IDASetMaxNonlinIters(ida_mem, RCONST(options.max_nonlinear_iterations));
+
+  // Maximum number of nonlinear solver convergence failures at one step
+  IDASetMaxConvFails(ida_mem, RCONST(options.max_convergence_failures));
+
+  // Safety factor in the nonlinear convergence test
+  IDASetNonlinConvCoef(ida_mem, RCONST( options.nonlinear_convergence_coefficient));
+
+  // Suppress algebraic variables from error test
+  IDASetSuppressAlg(ida_mem, options.suppress_algebraic_error);
+
+  // Positive constant in the Newton iteration convergence test within the initial
+  // condition calculation
+  IDASetNonlinConvCoefIC(ida_mem, RCONST( options.nonlinear_convergence_coefficient_ic));
+
+  // Maximum number of steps allowed when icopt=IDA_YA_YDP_INIT in IDACalcIC
+  IDASetMaxNumStepsIC(ida_mem, RCONST(options.max_number_steps_ic));
+
+  // Maximum number of the approximate Jacobian or preconditioner evaluations
+  // allowed when the Newton iteration appears to be slowly converging
+  IDASetMaxNumJacsIC(ida_mem, RCONST(options.max_number_jacobians_ic));
+
+  // Maximum number of Newton iterations allowed in any one attempt to solve
+  // the initial conditions calculation problem
+  IDASetMaxNumItersIC(ida_mem, RCONST(options.max_number_iterations_ic));
+
+  // Maximum number of linesearch backtracks allowed in any Newton iteration
+  //, when solving the initial conditions calculation problem
+  IDASetMaxBacksIC(ida_mem, RCONST(options.max_linesearch_backtracks_ic));
+
+  // Turn off linesearch
+  IDASetLineSearchOffIC(ida_mem, options.linesearch_off_ic);
+
   // set events
   IDARootInit(ida_mem, number_of_events, events_eval<ExprSet>);
   void *user_data = functions.get();
@@ -165,6 +215,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   for (ii = 0; ii < number_of_states; ii++)
     id_val[ii] = id_np_val[ii];
 
+  // Variable types: differential (1) and algebraic (0)
   IDASetId(ida_mem, id);
 }
 
@@ -265,6 +316,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   auto y0 = y0_np.unchecked<1>();
   auto yp0 = yp0_np.unchecked<1>();
   auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
+  bool sensitivity = number_of_parameters > 0;
 
   if (y0.size() != n_coeffs)
     throw std::domain_error(
@@ -302,13 +354,16 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   IDAReInit(ida_mem, t0, yy, yp);
-  if (number_of_parameters > 0)
+  if (sensitivity)
     IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
 
   // correct initial values
   DEBUG("IDACalcIC");
-  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
-  if (number_of_parameters > 0)
+  int init_type = options.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
+  if (options.calc_ic)
+    IDACalcIC(ida_mem, init_type, t(1));
+
+  if (sensitivity)
     IDAGetSens(ida_mem, &t0, yyS);
 
   realtype tret;

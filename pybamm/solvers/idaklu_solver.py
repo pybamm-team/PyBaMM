@@ -120,13 +120,36 @@ class IDAKLUSolver(pybamm.BaseSolver):
         default_options = {
             "print_stats": False,
             "jacobian": "sparse",
-            "linear_solver": "SUNLinSol_KLU",
             "preconditioner": "BBDP",
-            "linsol_max_iterations": 5,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
             "jax_evaluator": "jax",
+            # IDA main solver
+            "max_order_bdf": 5,
+            "max_number_steps": 500,
+            "dt_init": 0.0,
+            "dt_max": 0.0,
+            "max_error_test_failures": 10,
+            "max_nonlinear_iterations": 4,
+            "max_convergence_failures": 10,
+            "nonlinear_convergence_coefficient": 0.33,
+            "suppress_algebraic_error": False,
+            # IDA initial conditions calculation
+            "nonlinear_convergence_coefficient_ic": 0.0033,
+            "max_number_steps_ic": 5,
+            "max_number_jacobians_ic": 4,
+            "max_number_iterations_ic": 10,
+            "max_linesearch_backtracks_ic": 100,
+            "linesearch_off_ic": False,
+            "init_all_y_ic": False,
+            "calc_ic": True,
+            # IDALS linear solver interface
+            "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 5,
+            "epsilon_linear_tolerance": 0.05,
+            "increment_factor": 1.0,
+            "linear_solution_scaling": True,
         }
         if options is None:
             options = default_options
