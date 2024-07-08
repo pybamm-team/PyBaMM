@@ -224,7 +224,7 @@ void CasadiSolverOpenMP::Initialize() {
   IDASetIncrementFactor(ida_mem, RCONST(options.increment_factor));
 
   // Enable or disable linear solution scaling
-  IDASetLinearSolutionScaling(ida_mem, RCONST(options.linear_solution_scaling));
+  IDASetLinearSolutionScaling(ida_mem, options.linear_solution_scaling);
 }
 
 CasadiSolverOpenMP::~CasadiSolverOpenMP()
