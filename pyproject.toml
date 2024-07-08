@@ -220,7 +220,7 @@ ignore = [
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
 [tool.pytest.ini_options]
-minversion = "6"
+minversion = "8"
 markers = [
       "examples: mark a test as an example test",
 ]
