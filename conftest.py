@@ -5,7 +5,10 @@ import pybamm
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--scripts", action="store_true", default=False, help="execute the example scripts"
+        "--scripts",
+        action="store_true",
+        default=False,
+        help="execute the example scripts",
     )
     parser.addoption(
         "--unit", action="store_true", default=False, help="run unit tests"
