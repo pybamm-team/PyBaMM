@@ -30,6 +30,7 @@ Options::Options(py::dict options)
       max_linesearch_backtracks_ic(options["max_linesearch_backtracks_ic"].cast<int>()),
       linesearch_off_ic(options["linesearch_off_ic"].cast<sunbooleantype>()),
       calc_ic(options["calc_ic"].cast<bool>()),
+      init_all_y_ic(options["init_all_y_ic"].cast<bool>()),
       // IDALS linear solver interface
       linear_solver(options["linear_solver"].cast<std::string>()),
       linsol_max_iterations(options["linsol_max_iterations"].cast<int>()),
