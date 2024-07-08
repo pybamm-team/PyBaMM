@@ -584,8 +584,13 @@ class TestIDAKLUSolver(TestCase):
                         "jacobian": jacobian,
                         "linear_solver": linear_solver,
                         "preconditioner": precon,
+                        "max_num_steps": 10000,
                     }
-                    solver = pybamm.IDAKLUSolver(options=options)
+                    solver = pybamm.IDAKLUSolver(
+                        atol=1e-8,
+                        rtol=1e-8,
+                        options=options,
+                    )
                     if (
                         jacobian == "none"
                         and (linear_solver == "SUNLinSol_Dense")

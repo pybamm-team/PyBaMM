@@ -14,7 +14,7 @@ Options::Options(py::dict options)
       num_threads(options["num_threads"].cast<int>()),
       // IDA main solver
       max_order_bdf(options["max_order_bdf"].cast<int>()),
-      max_number_steps(options["max_number_steps"].cast<int>()),
+      max_num_steps(options["max_num_steps"].cast<int>()),
       dt_init(options["dt_init"].cast<double>()),
       dt_max(options["dt_max"].cast<double>()),
       max_error_test_failures(options["max_error_test_failures"].cast<int>()),
@@ -24,7 +24,7 @@ Options::Options(py::dict options)
       nonlinear_convergence_coefficient_ic(options["nonlinear_convergence_coefficient_ic"].cast<double>()),
       suppress_algebraic_error(options["suppress_algebraic_error"].cast<sunbooleantype>()),
       // IDA initial conditions calculation
-      max_number_steps_ic(options["max_number_steps_ic"].cast<int>()),
+      max_num_steps_ic(options["max_num_steps_ic"].cast<int>()),
       max_number_jacobians_ic(options["max_number_jacobians_ic"].cast<int>()),
       max_number_iterations_ic(options["max_number_iterations_ic"].cast<int>()),
       max_linesearch_backtracks_ic(options["max_linesearch_backtracks_ic"].cast<int>()),

@@ -68,7 +68,7 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
   // Maximum number of steps to be taken by the solver in its attempt to reach
   // the next output time
-  IDASetMaxNumSteps(ida_mem, RCONST(options.max_number_steps));
+  IDASetMaxNumSteps(ida_mem, RCONST(options.max_num_steps));
 
   // Initial step size
   IDASetInitStep(ida_mem, RCONST(options.dt_init));
@@ -96,7 +96,7 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   IDASetNonlinConvCoefIC(ida_mem, RCONST( options.nonlinear_convergence_coefficient_ic));
 
   // Maximum number of steps allowed when icopt=IDA_YA_YDP_INIT in IDACalcIC
-  IDASetMaxNumStepsIC(ida_mem, RCONST(options.max_number_steps_ic));
+  IDASetMaxNumStepsIC(ida_mem, RCONST(options.max_num_steps_ic));
 
   // Maximum number of the approximate Jacobian or preconditioner evaluations
   // allowed when the Newton iteration appears to be slowly converging
