@@ -18,7 +18,7 @@ struct Options {
   int num_threads;
   // IDA main solver
   int max_order_bdf;
-  int max_number_steps;
+  int max_num_steps;
   double dt_init;
   double dt_max;
   int max_error_test_failures;
@@ -28,7 +28,7 @@ struct Options {
   // IDA initial conditions calculation
   sunbooleantype suppress_algebraic_error;
   double nonlinear_convergence_coefficient_ic;
-  int max_number_steps_ic;
+  int max_num_steps_ic;
   int max_number_jacobians_ic;
   int max_number_iterations_ic;
   int max_linesearch_backtracks_ic;
