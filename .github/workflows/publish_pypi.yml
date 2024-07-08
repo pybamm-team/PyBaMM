@@ -120,7 +120,7 @@ jobs:
             yum -y install openblas-devel lapack-devel &&
             python scripts/install_KLU_Sundials.py
           CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi scikit-build-core
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH=$PWD auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH=$PWD/sundials_install auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
