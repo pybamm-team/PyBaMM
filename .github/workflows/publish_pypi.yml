@@ -123,10 +123,10 @@ jobs:
             unzip -d temp_wheel_dir {wheel}
             yum install -y tree
             tree temp_wheel_dir
-            tree $PWD/sundials_KLU_libs
+            tree $PWD
 
-            LD_LIBRARY_PATH=$PWD/sundials_KLU_libs/lib64 
-            LD_LIBRARY_PATH=$PWD/sundials_KLU_libs/include 
+            LD_LIBRARY_PATH=$PWD
+            PATH=$PWD/sundials_KLU_libs
             auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
