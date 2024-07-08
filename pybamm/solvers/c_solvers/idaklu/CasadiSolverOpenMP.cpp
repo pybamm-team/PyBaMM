@@ -66,11 +66,11 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // Maximum order of the linear multistep method
-  IDASetMaxOrd(ida_mem, RCONST(options.max_order_bdf));
+  IDASetMaxOrd(ida_mem, options.max_order_bdf);
 
   // Maximum number of steps to be taken by the solver in its attempt to reach
   // the next output time
-  IDASetMaxNumSteps(ida_mem, RCONST(options.max_num_steps));
+  IDASetMaxNumSteps(ida_mem, options.max_num_steps);
 
   // Initial step size
   IDASetInitStep(ida_mem, RCONST(options.dt_init));
@@ -79,38 +79,38 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
   IDASetMaxStep(ida_mem, RCONST(options.dt_max));
 
   // Maximum number of error test failures in attempting one step
-  IDASetMaxErrTestFails(ida_mem, RCONST(options.max_error_test_failures));
+  IDASetMaxErrTestFails(ida_mem, options.max_error_test_failures);
 
   // Maximum number of nonlinear solver iterations at one step
-  IDASetMaxNonlinIters(ida_mem, RCONST(options.max_nonlinear_iterations));
+  IDASetMaxNonlinIters(ida_mem, options.max_nonlinear_iterations);
 
   // Maximum number of nonlinear solver convergence failures at one step
-  IDASetMaxConvFails(ida_mem, RCONST(options.max_convergence_failures));
+  IDASetMaxConvFails(ida_mem, options.max_convergence_failures);
 
   // Safety factor in the nonlinear convergence test
-  IDASetNonlinConvCoef(ida_mem, RCONST( options.nonlinear_convergence_coefficient));
+  IDASetNonlinConvCoef(ida_mem, RCONST(options.nonlinear_convergence_coefficient));
 
   // Suppress algebraic variables from error test
   IDASetSuppressAlg(ida_mem, options.suppress_algebraic_error);
 
   // Positive constant in the Newton iteration convergence test within the initial
   // condition calculation
-  IDASetNonlinConvCoefIC(ida_mem, RCONST( options.nonlinear_convergence_coefficient_ic));
+  IDASetNonlinConvCoefIC(ida_mem, RCONST(options.nonlinear_convergence_coefficient_ic));
 
   // Maximum number of steps allowed when icopt=IDA_YA_YDP_INIT in IDACalcIC
-  IDASetMaxNumStepsIC(ida_mem, RCONST(options.max_num_steps_ic));
+  IDASetMaxNumStepsIC(ida_mem, options.max_num_steps_ic);
 
   // Maximum number of the approximate Jacobian or preconditioner evaluations
   // allowed when the Newton iteration appears to be slowly converging
-  IDASetMaxNumJacsIC(ida_mem, RCONST(options.max_number_jacobians_ic));
+  IDASetMaxNumJacsIC(ida_mem, options.max_number_jacobians_ic);
 
   // Maximum number of Newton iterations allowed in any one attempt to solve
   // the initial conditions calculation problem
-  IDASetMaxNumItersIC(ida_mem, RCONST(options.max_number_iterations_ic));
+  IDASetMaxNumItersIC(ida_mem, options.max_number_iterations_ic);
 
   // Maximum number of linesearch backtracks allowed in any Newton iteration
   //, when solving the initial conditions calculation problem
-  IDASetMaxBacksIC(ida_mem, RCONST(options.max_linesearch_backtracks_ic));
+  IDASetMaxBacksIC(ida_mem, options.max_linesearch_backtracks_ic);
 
   // Turn off linesearch
   IDASetLineSearchOffIC(ida_mem, options.linesearch_off_ic);
@@ -178,8 +178,9 @@ void CasadiSolverOpenMP::Initialize() {
   // Call after setting the solver
 
   // attach the linear solver
-  if (LS == nullptr)
+  if (LS == nullptr) {
     throw std::invalid_argument("Linear solver not set");
+  }
   IDASetLinearSolver(ida_mem, LS, J);
 
   if (options.preconditioner != "none")
@@ -192,11 +193,11 @@ void CasadiSolverOpenMP::Initialize() {
       options.precon_half_bandwidth_keep, 0.0, residual_casadi_approx, NULL);
   }
 
-  if (options.jacobian == "matrix-free")
+  if (options.jacobian == "matrix-free") {
     IDASetJacTimes(ida_mem, NULL, jtimes_casadi);
-  else if (options.jacobian != "none")
+  } else if (options.jacobian != "none") {
     IDASetJacFn(ida_mem, jacobian_casadi);
-
+  }
   if (number_of_parameters > 0)
   {
     IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
@@ -230,8 +231,9 @@ void CasadiSolverOpenMP::Initialize() {
 CasadiSolverOpenMP::~CasadiSolverOpenMP()
 {
   // Free memory
-  if (number_of_parameters > 0)
-    IDASensFree(ida_mem);
+  if (number_of_parameters > 0) {
+      IDASensFree(ida_mem);
+    }
 
   SUNLinSolFree(LS);
   SUNMatDestroy(J);
@@ -324,15 +326,17 @@ Solution CasadiSolverOpenMP::solve(
   auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
   bool sensitivity = number_of_parameters > 0;
 
-  if (y0.size() != n_coeffs)
+  if (y0.size() != n_coeffs) {
     throw std::domain_error(
       "y0 has wrong size. Expected " + std::to_string(n_coeffs) +
       " but got " + std::to_string(y0.size()));
+  }
 
-  if (yp0.size() != n_coeffs)
+  if (yp0.size() != n_coeffs) {
     throw std::domain_error(
       "yp0 has wrong size. Expected " + std::to_string(n_coeffs) +
       " but got " + std::to_string(yp0.size()));
+  }
 
   // set inputs
   auto p_inputs = inputs.unchecked<2>();
@@ -360,17 +364,19 @@ Solution CasadiSolverOpenMP::solve(
   }
 
   IDAReInit(ida_mem, t0, yy, yp);
-  if (sensitivity)
+  if (sensitivity) {
     IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
+  }
 
   // correct initial values
   DEBUG("IDACalcIC");
   int init_type = options.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
-  if (options.calc_ic)
+  if (options.calc_ic) {
     IDACalcIC(ida_mem, init_type, t(1));
-
-  if (sensitivity)
+  }
+  if (sensitivity) {
     IDAGetSens(ida_mem, &t0, yyS);
+  }
 
   realtype tret;
   realtype t_final = t(number_of_timesteps - 1);
@@ -456,40 +462,45 @@ Solution CasadiSolverOpenMP::solve(
     DEBUG("IDASolve");
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
 
-    if (retval < 0) {
+    if (retval == IDA_TSTOP_RETURN ||
+        retval == IDA_SUCCESS ||
+        retval == IDA_ROOT_RETURN)
+    {
+      if (number_of_parameters > 0)
+        IDAGetSens(ida_mem, &tret, yyS);
+
+      // Evaluate and store results for the time step
+      t_return[t_i] = tret;
+      if (functions->var_casadi_fcns.size() > 0) {
+        // Evaluate casadi functions for each requested variable and store
+        // NOTE: Indexing of yS_return is (time:var:param)
+        CalcVars(y_return, length_of_return_vector, t_i,
+                 &tret, yval, ySval, yS_return, &ySk);
+      } else {
+        // Retain complete copy of the state vector
+        for (int j = 0; j < number_of_states; j++)
+          y_return[t_i * number_of_states + j] = yval[j];
+        for (int j = 0; j < number_of_parameters; j++)
+        {
+          const int base_index =
+            j * number_of_timesteps * number_of_states +
+            t_i * number_of_states;
+          for (int k = 0; k < number_of_states; k++)
+            // NOTE: Indexing of yS_return is (time:param:yvec)
+            yS_return[base_index + k] = ySval[j][k];
+        }
+      }
+      t_i += 1;
+
+      if (retval == IDA_SUCCESS ||
+          retval == IDA_ROOT_RETURN)
+        break;
+    }
+    else
+    {
       // failed
       break;
     }
-
-    if (sensitivity)
-      IDAGetSens(ida_mem, &tret, yyS);
-
-    // Evaluate and store results for the time step
-    t_return[t_i] = tret;
-    if (functions->var_casadi_fcns.size() > 0) {
-      // Evaluate casadi functions for each requested variable and store
-      // NOTE: Indexing of yS_return is (time:var:param)
-      CalcVars(y_return, length_of_return_vector, t_i,
-                &tret, yval, ySval, yS_return, &ySk);
-    } else {
-      // Retain complete copy of the state vector
-      for (int j = 0; j < number_of_states; j++)
-        y_return[t_i * number_of_states + j] = yval[j];
-      for (int j = 0; j < number_of_parameters; j++)
-      {
-        const int base_index =
-          j * number_of_timesteps * number_of_states +
-          t_i * number_of_states;
-        for (int k = 0; k < number_of_states; k++)
-          // NOTE: Indexing of yS_return is (time:param:yvec)
-          yS_return[base_index + k] = ySval[j][k];
-      }
-    }
-    t_i += 1;
-
-    if (retval == IDA_SUCCESS ||
-        retval == IDA_ROOT_RETURN)
-      break;
   }
 
   np_array t_ret = np_array(
