@@ -14,8 +14,7 @@ class TestExamples:
     """
 
     def list_of_files():
-        base_dir = Path.joinpath(ROOT_DIR, "examples", "scripts")
-        file_list = base_dir.rglob("*py")
+        file_list = (ROOT_DIR / "examples" / "scripts").rglob("*.py")
         return file_list
 
     @pytest.mark.parametrize("files", list_of_files())
