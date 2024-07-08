@@ -671,7 +671,7 @@ class Simulation:
 
                     # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
                     if time_stop is not None:
-                        dt = min(dt, time_stop[0] - start_time)
+                        dt = min(dt, time_stop - start_time)
 
                     step_str = str(step)
                     model = self.steps_to_built_models[step.basic_repr()]
@@ -779,7 +779,7 @@ class Simulation:
 
                     if time_stop is not None:
                         max_time = cycle_solution.t[-1]
-                        if max_time >= time_stop[0]:
+                        if max_time >= time_stop:
                             break
 
                     # Increment index for next iteration

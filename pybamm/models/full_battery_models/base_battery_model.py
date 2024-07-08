@@ -633,6 +633,20 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "be 'none': 'particle mechanics', 'loss of active material'"
                 )
 
+        if "true" in options["SEI on cracks"]:
+            sei_on_cr = options["SEI on cracks"]
+            p_mechanics = options["particle mechanics"]
+            if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
+                p_mechanics = (p_mechanics, p_mechanics)
+            if any(
+                sei == "true" and mech != "swelling and cracking"
+                for mech, sei in zip(p_mechanics, sei_on_cr)
+            ):
+                raise pybamm.OptionError(
+                    "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "
+                    "'swelling and cracking'."
+                )
+
         # Check options are valid
         for option, value in options.items():
             if isinstance(value, str) or option in [
