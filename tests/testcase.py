@@ -6,7 +6,7 @@ import unittest
 
 class TestCase(unittest.TestCase):
     """
-    Custom TestCase class for pybamms
+    Custom TestCase class for PyBaMM
     TO BE REMOVED
     """
 
