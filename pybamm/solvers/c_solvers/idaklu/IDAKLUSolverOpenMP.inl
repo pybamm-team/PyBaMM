@@ -217,6 +217,15 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
 
   // Variable types: differential (1) and algebraic (0)
   IDASetId(ida_mem, id);
+
+  // Ratio between linear and nonlinear tolerances
+  IDASetEpsLin(ida_mem, RCONST(options.epsilon_linear_tolerance));
+
+  // Increment factor used in DQ Jv approximation
+  IDASetIncrementFactor(ida_mem, RCONST(options.increment_factor));
+
+  // Enable or disable linear solution scaling
+  IDASetLinearSolutionScaling(ida_mem, RCONST(options.linear_solution_scaling));
 }
 
 template <class ExprSet>
