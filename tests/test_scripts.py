@@ -5,7 +5,7 @@ import pytest
 from pathlib import Path
 
 
-ROOT_DIR = Path(os.path.join(os.path.dirname(__file__), ".."))
+ROOT_DIR = Path(__file__).parent.parent
 
 
 class TestExamples:
