@@ -117,7 +117,7 @@ jobs:
             yum -y install openblas-devel lapack-devel &&
             python scripts/install_KLU_Sundials.py
           CIBW_BEFORE_BUILD_LINUX: |
-            export LD_LIBRARY_PATH=$PWD/sundials_KLU_libs/lib:$PWD/sundials_KLU_libs/include:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$PWD/sundials_KLU_libs/lib/:$PWD/sundials_KLU_libs/include/:$LD_LIBRARY_PATH
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
             python -m pip install cmake casadi scikit-build-core
           CIBW_REPAIR_WHEEL_COMMAND_LINUX:  auditwheel repair -w {dest_dir} {wheel}
@@ -204,20 +204,20 @@ jobs:
             # link libgfortran dylibs and place them in $HOME/.local/lib
             # and then change rpath to $HOME/.local/lib for each of them
             # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
-            mkdir -p $HOME/.local/lib
+            mkdir -p $(pwd)/sundials_KLU_libs/lib
             if [[ $(uname -m) == "x86_64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $HOME/.local/lib/
-                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-                codesign --force --sign - $HOME/.local/lib/$lib
+                cp $lib_dir/$lib $(pwd)/sundials_KLU_libs/lib/
+                install_name_tool -id $(pwd)/sundials_KLU_libs/lib/$lib $(pwd)/sundials_KLU_libs/lib/$lib
+                codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/$lib
               done
             elif [[ $(uname -m) == "arm64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $HOME/.local/lib/
-                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-                codesign --force --sign - $HOME/.local/lib/$lib
+                cp $lib_dir/$lib $(pwd)/sundials_KLU_libs/lib/
+                install_name_tool -id $(pwd)/sundials_KLU_libs/lib/$lib $(pwd)/sundials_KLU_libs/lib/$lib
+                codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/$lib
               done
             fi
 
@@ -233,9 +233,9 @@ jobs:
             fi
 
             # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
-            cp $PREFIX/lib/libomp.dylib $HOME/.local/lib/
-            install_name_tool -id $HOME/.local/lib/libomp.dylib $HOME/.local/lib/libomp.dylib
-            codesign --force --sign - $HOME/.local/lib/libomp.dylib
+            cp $PREFIX/lib/libomp.dylib $(pwd)/sundials_KLU_libs/lib/
+            install_name_tool -id $(pwd)/sundials_KLU_libs/lib/libomp.dylib $(pwd)/sundials_KLU_libs/lib/libomp.dylib
+            codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/libomp.dylib
 
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
