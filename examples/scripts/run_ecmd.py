@@ -3,7 +3,10 @@ import pybamm
 pybamm.set_logging_level("INFO")
 
 model = pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "true"})
+parameter_values = model.default_parameter_values
 
+parameter_values.update({"Diffusion time constant [s]": 580}, check_already_exists=False)
+ 
 experiment = pybamm.Experiment(
     [
         (
@@ -18,6 +21,6 @@ experiment = pybamm.Experiment(
     ]
 )
 
-sim = pybamm.Simulation(model, experiment=experiment)
+sim = pybamm.Simulation(model, experiment=experiment,parameter_values=parameter_values )
 sim.solve()
 sim.plot()

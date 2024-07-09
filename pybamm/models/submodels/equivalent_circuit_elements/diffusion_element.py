@@ -3,7 +3,7 @@ import pybamm
 
 class NoDiffusion(pybamm.BaseSubModel):
     """
-    Open-circuit Voltage (OCV) element for
+    Without Diffusion element for
     equivalent circuits.
 
     Parameters
@@ -37,10 +37,9 @@ class NoDiffusion(pybamm.BaseSubModel):
 
         return variables
 
-
 class DiffusionElement(pybamm.BaseSubModel):
     """
-    Open-circuit Voltage (OCV) element for
+    With Diffusion element for
     equivalent circuits.
 
     Parameters
@@ -92,7 +91,7 @@ class DiffusionElement(pybamm.BaseSubModel):
 
         # boundary conditions
         lbc = pybamm.Scalar(0)
-        rbc = self.param.tau_D * current / (cell_capacity * 3600)
+        rbc = -self.param.tau_D * current / (cell_capacity * 3600)
         self.boundary_conditions = {
             z: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")}
         }

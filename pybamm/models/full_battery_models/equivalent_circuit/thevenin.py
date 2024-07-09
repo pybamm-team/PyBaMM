@@ -62,7 +62,7 @@ class Thevenin(pybamm.BaseModel):
     """
 
     def __init__(
-        self, name="Thevenin Equivalent Circuit Model", options=None, build=True
+        self, name="Thevenin Equivalent Circuit Modelx", options=None, build=True
     ):
         super().__init__(name)
 
