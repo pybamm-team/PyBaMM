@@ -88,7 +88,7 @@ jobs:
           CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: wheels_windows
           path: ./wheelhouse/*.whl
@@ -123,7 +123,7 @@ jobs:
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload wheels for Linux
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: wheels_manylinux
           path: ./wheelhouse/*.whl
@@ -254,7 +254,7 @@ jobs:
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -274,7 +274,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: sdist
           path: ./dist/*.tar.gz
