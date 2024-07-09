@@ -4,7 +4,8 @@ import numbers
 import sys
 import warnings
 import platform
-import multiprocessing as mp
+import asyncio
+
 
 import casadi
 import numpy as np
@@ -39,6 +40,12 @@ class BaseSolver:
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
+    options: dict, optional
+        List of options, defaults are:
+        options = {
+            # Number of threads available for OpenMP
+            "num_threads": 1,
+        }
     """
 
     def __init__(
@@ -50,6 +57,7 @@ class BaseSolver:
         root_tol=1e-6,
         extrap_tol=None,
         output_variables=None,
+        options=None,
     ):
         self.method = method
         self.rtol = rtol
@@ -59,6 +67,17 @@ class BaseSolver:
         self.extrap_tol = extrap_tol or -1e-10
         self.output_variables = [] if output_variables is None else output_variables
         self._model_set_up = {}
+        default_options = {
+            "num_threads": 1,
+        }
+        if options is None:
+            options = default_options
+        else:
+            print("options", options)
+            for key, value in default_options.items():
+                if key not in options:
+                    options[key] = value
+        self._base_options = options
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -145,6 +164,7 @@ class BaseSolver:
             vars_for_processing,
             inputs,
             batch_size=batch_size,
+            nthreads=self._base_options["num_threads"],
             use_jacobian=False,
         )
         model.initial_conditions_eval = initial_conditions
@@ -195,6 +215,7 @@ class BaseSolver:
             vars_for_processing,
             inputs,
             batch_size=batch_size,
+            nthreads=self._base_options["num_threads"],
         )
 
         algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
@@ -203,6 +224,7 @@ class BaseSolver:
             vars_for_processing,
             inputs,
             batch_size=batch_size,
+            nthreads=self._base_options["num_threads"],
         )
 
         # combine rhs and algebraic functions
@@ -226,6 +248,7 @@ class BaseSolver:
             vars_for_processing,
             inputs,
             batch_size=batch_size,
+            nthreads=self._base_options["num_threads"],
         )
 
         (
@@ -295,6 +318,7 @@ class BaseSolver:
                     vars_for_processing,
                     inputs,
                     batch_size=batch_size,
+                    nthreads=self._base_options["num_threads"],
                     use_jacobian=True,
                     return_jacp_stacked=True,
                 )
@@ -565,6 +589,7 @@ class BaseSolver:
                         vars_for_processing,
                         inputs,
                         batch_size=batch_size,
+                        nthreads=self._base_options["num_threads"],
                         use_jacobian=False,
                     )[0]
                     # use the actual casadi object as this will go into the rhs
@@ -577,6 +602,7 @@ class BaseSolver:
                     vars_for_processing,
                     inputs,
                     batch_size=batch_size,
+                    nthreads=self._base_options["num_threads"],
                     use_jacobian=False,
                 )[0]
                 if event.event_type == pybamm.EventType.TERMINATION:
@@ -636,25 +662,28 @@ class BaseSolver:
                 ]
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0_list
-                len_rhs = model.len_rhs
+                len_rhs = model.len_rhs + model.len_rhs_sens
                 # update model.y0_list, which is used for initialising the algebraic solver
                 if len_rhs == 0:
                     model.y0_list = y0_from_model
                 else:
-                    if isinstance(y0_from_inputs, casadi.DM):
-                        for i in range(len(y0_from_inputs)):
-                            model.y0_list[i] = casadi.vertcat(
-                                y0_from_inputs[i][:len_rhs], y0_from_model[i][len_rhs:]
-                            )
-                    else:
-                        for i in range(len(y0_from_inputs)):
-                            model.y0_list[i] = np.vstack(
-                                (
-                                    y0_from_inputs[i][:len_rhs],
-                                    y0_from_model[i][len_rhs:],
-                                )
-                            )
+                    for i in range(len(y0_from_inputs)):
+                        _, y_alg = self._unzip_state_vector(model, y0_from_model[i])
+                        y_diff, _ = self._unzip_state_vector(model, y0_from_inputs[i])
+                        model.y0_list[i] = self._zip_state_vector(model, y_diff, y_alg)
             y0_list = self.calculate_consistent_state(model, time, inputs_list)
+
+            # concatenate batches again
+            nbatches = len(batched_inputs)
+            batch_size = len(inputs_list) // nbatches
+            y0_list_of_list = [
+                y0_list[i * batch_size : (i + 1) * batch_size] for i in range(nbatches)
+            ]
+            if isinstance(y0_list[0], casadi.DM):
+                y0_list = [casadi.vertcat(*y0s) for y0s in y0_list_of_list]
+            else:
+                y0_list = [np.vstack(y0s) for y0s in y0_list_of_list]
+
         # Make y0 a function of inputs if doing symbolic with casadi
         model.y0_list = y0_list
 
@@ -765,29 +794,66 @@ class BaseSolver:
             self._handle_integrate_defaults(model, inputs_list, batched_inputs)
         )
 
-        # todo: make this parallel
-        with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-            model_list = [model] * nbatches
-            t_eval_list = [t_eval] * nbatches
-            y0_list = model.y0_list
-            inputs_list_of_list = [
-                inputs_list[i * batch_size : (i + 1) * batch_size]
-                for i in range(nbatches)
-            ]
-            new_solutions = p.starmap(
-                self._integrate_batch,
-                zip(
-                    model_list,
-                    t_eval_list,
-                    y0_list,
-                    y0S_list,
-                    inputs_list_of_list,
-                    batched_inputs,
-                ),
+        if nbatches == 1:
+            return self._integrate_batch(
+                model,
+                t_eval,
+                model.y0_list[0],
+                y0S_list[0],
+                inputs_list,
+                batched_inputs[0],
             )
-            p.close()
-            p.join()
-        return new_solutions
+
+        # async io is not parallel, but if solve is io bound, it can be faster
+        async def solve_model_batches():
+            async def solve_model_async(y0, y0S, inputs, inputs_array):
+                return self._integrate_batch(
+                    model, t_eval, y0, y0S, inputs, inputs_array
+                )
+
+            coro = []
+            for i in range(nbatches):
+                coro.append(
+                    asyncio.create_task(
+                        solve_model_async(
+                            model.y0_list[i],
+                            y0S_list[i],
+                            inputs_list[i * batch_size : (i + 1) * batch_size],
+                            batched_inputs[i],
+                        )
+                    )
+                )
+            return await asyncio.gather(*coro)
+
+        new_solutions = asyncio.run(solve_model_batches())
+
+        # new_solutions = []
+        # for i in range(nbatches):
+        #    new_solutions.append(self._integrate_batch(model, t_eval, model.y0_list[i], y0S_list[i], inputs_list[i * batch_size : (i + 1) * batch_size], batched_inputs[i]))
+
+        # with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+        #    model_list = [model] * nbatches
+        #    t_eval_list = [t_eval] * nbatches
+        #    y0_list = model.y0_list
+        #    inputs_list_of_list = [
+        #        inputs_list[i * batch_size : (i + 1) * batch_size]
+        #        for i in range(nbatches)
+        #    ]
+        #    new_solutions = p.starmap(
+        #        self._integrate_batch,
+        #        zip(
+        #            model_list,
+        #            t_eval_list,
+        #            y0_list,
+        #            y0S_list,
+        #            inputs_list_of_list,
+        #            batched_inputs,
+        #        ),
+        #    )
+        #    p.close()
+        #    p.join()
+        new_solutions_flat = [sol for sublist in new_solutions for sol in sublist]
+        return new_solutions_flat
 
     def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
         """
@@ -1428,6 +1494,7 @@ class BaseSolver:
         termination_events = [
             x for x in events if x.event_type == pybamm.EventType.TERMINATION
         ]
+
         if solution.termination == "final time":
             return (
                 solution,
@@ -1435,6 +1502,10 @@ class BaseSolver:
             )
         elif solution.termination == "event":
             pybamm.logger.debug("Start post-processing events")
+            if isinstance(solution.y_event, casadi.DM):
+                solution_y_event = solution.y_event.full()
+            else:
+                solution_y_event = solution.y_event
             if solution.closest_event_idx is not None:
                 solution.termination = (
                     f"event: {termination_events[solution.closest_event_idx].name}"
@@ -1446,7 +1517,7 @@ class BaseSolver:
                 for event in termination_events:
                     final_event_values[event.name] = event.expression.evaluate(
                         solution.t_event,
-                        solution.y_event,
+                        solution_y_event,
                         inputs=solution.all_inputs[-1],
                     )
                 termination_event = min(final_event_values, key=final_event_values.get)
@@ -1593,8 +1664,58 @@ class BaseSolver:
             i += inc
         return input_slices
 
+    @staticmethod
+    def _unzip_state_vector(model, y):
+        nstates = (
+            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
+        )
+        len_rhs = model.len_rhs + model.len_rhs_sens
+        batch_size = model.batch_size
 
-def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs):
+        if isinstance(y, casadi.DM):
+            y_diff = casadi.vertcat(
+                *[y[i * nstates : i * nstates + len_rhs] for i in range(batch_size)]
+            )
+            y_alg = casadi.vertcat(
+                *[
+                    y[i * nstates + len_rhs : (i + 1) * nstates]
+                    for i in range(batch_size)
+                ]
+            )
+        else:
+            y_diff = np.vstack(
+                [y[i * nstates : i * nstates + len_rhs] for i in range(batch_size)]
+            )
+            y_alg = np.vstack(
+                [
+                    y[i * nstates + len_rhs : (i + 1) * nstates]
+                    for i in range(batch_size)
+                ]
+            )
+
+        return y_diff, y_alg
+
+    @staticmethod
+    def _zip_state_vector(model, y_diff, y_alg):
+        len_rhs = model.len_rhs + model.len_rhs_sens
+        len_alg = model.len_alg + model.len_alg_sens
+        batch_size = model.batch_size
+        y_diff_list = [
+            y_diff[i * len_rhs : (i + 1) * len_rhs] for i in range(batch_size)
+        ]
+        y_alg_list = [y_alg[i * len_alg : (i + 1) * len_alg] for i in range(batch_size)]
+        if isinstance(y_diff, casadi.DM):
+            y = casadi.vertcat(
+                *[val for pair in zip(y_diff_list, y_alg_list) for val in pair]
+            )
+        else:
+            y = np.vstack(
+                [val for pair in zip(y_diff_list, y_alg_list) for val in pair]
+            )
+        return y
+
+
+def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs, nthreads):
     """
     This takes a casadi function f and returns a new casadi function that maps f over
     the provided number of inputs. Some functions (e.g. jacobian action) require an additional
@@ -1611,6 +1732,8 @@ def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs):
         dictionary of variables for processing
     ninputs: int
         number of inputs to map over
+    nthreads: int
+        number of threads to use
     """
     if f is None:
         return None
@@ -1622,30 +1745,33 @@ def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs):
     nstates = vars_for_processing["y_and_S"].shape[0]
     nparams = vars_for_processing["p_casadi_stacked"].shape[0]
 
-    parallelisation = "thread"
+    if nthreads == 1:
+        parallelisation = "none"
+    else:
+        parallelisation = "thread"
     y_and_S_inputs_stacked = casadi.MX.sym("y_and_S_stacked", nstates * ninputs)
     p_casadi_inputs_stacked = casadi.MX.sym("p_stacked", nparams * ninputs)
     v_inputs_stacked = casadi.MX.sym("v_stacked", nstates * ninputs)
+    t_stacked = casadi.MX.sym("t_stacked", ninputs)
 
     y_and_S_2d = y_and_S_inputs_stacked.reshape((nstates, ninputs))
     p_casadi_2d = p_casadi_inputs_stacked.reshape((nparams, ninputs))
     v_2d = v_inputs_stacked.reshape((nstates, ninputs))
-
-    t_casadi = vars_for_processing["t_casadi"]
+    t_2d = t_stacked.reshape((1, ninputs))
 
     if add_v:
-        inputs_2d = [t_casadi, y_and_S_2d, p_casadi_2d, v_2d]
+        inputs_2d = [t_2d, y_and_S_2d, p_casadi_2d, v_2d]
         inputs_stacked = [
-            t_casadi,
+            t_stacked,
             y_and_S_inputs_stacked,
             p_casadi_inputs_stacked,
             v_inputs_stacked,
         ]
     else:
-        inputs_2d = [t_casadi, y_and_S_2d, p_casadi_2d]
-        inputs_stacked = [t_casadi, y_and_S_inputs_stacked, p_casadi_inputs_stacked]
+        inputs_2d = [t_2d, y_and_S_2d, p_casadi_2d]
+        inputs_stacked = [t_stacked, y_and_S_inputs_stacked, p_casadi_inputs_stacked]
 
-    mapped_f = f.map(ninputs, parallelisation)(*inputs_2d)
+    mapped_f = f.map(ninputs, parallelisation, nthreads)(*inputs_2d)
     if matrix_output:
         # for matrix output we need to stack the outputs in a block diagonal matrix
         splits = [i * nstates for i in range(ninputs + 1)]
@@ -1669,6 +1795,7 @@ def process(
     vars_for_processing,
     inputs: list[dict],
     batch_size,
+    nthreads,
     use_jacobian=None,
     return_jacp_stacked=None,
 ):
@@ -1901,15 +2028,29 @@ def process(
 
         ninputs = len(inputs_batch)
         if ninputs > 1:
-            func = map_func_over_inputs_casadi(name, func, vars_for_processing, ninputs)
+            func = map_func_over_inputs_casadi(
+                name, func, vars_for_processing, ninputs, nthreads
+            )
             jac = map_func_over_inputs_casadi(
-                name + "_jac", jac, vars_for_processing, ninputs
+                name + "_jac",
+                jac,
+                vars_for_processing,
+                ninputs,
+                nthreads,
             )
             jacp = map_func_over_inputs_casadi(
-                name + "_jacp", jacp, vars_for_processing, ninputs
+                name + "_jacp",
+                jacp,
+                vars_for_processing,
+                ninputs,
+                nthreads,
             )
             jac_action = map_func_over_inputs_casadi(
-                name + "_jac_action", jac_action, vars_for_processing, ninputs
+                name + "_jac_action",
+                jac_action,
+                vars_for_processing,
+                ninputs,
+                nthreads,
             )
 
     return func, jac, jacp, jac_action

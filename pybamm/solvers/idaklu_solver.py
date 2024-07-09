@@ -119,6 +119,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
 
+        base_options = {
+            "num_threads": options["num_threads"],
+        }
+
         super().__init__(
             "ida",
             rtol,
@@ -127,6 +131,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             root_tol,
             extrap_tol,
             output_variables,
+            base_options,
         )
         self.name = "IDA KLU solver"
 
@@ -364,12 +369,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 return return_root
 
         # get ids of rhs and algebraic variables
-        if model.convert_to_format == "casadi":
-            rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
-        else:
-            rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
-        alg_ids = np.zeros(nstates - len(rhs_ids))
-        ids = np.concatenate((rhs_ids, alg_ids))
+        ids = np.concatenate(
+            [np.ones(model.len_rhs), np.zeros(model.len_alg)] * batch_size
+        )
 
         number_of_sensitivity_parameters = 0
         if model.jacp_rhs_algebraic_eval is not None:

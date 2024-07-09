@@ -525,9 +525,20 @@ class CasadiSolver(pybamm.BaseSolver):
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
 
-            y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
-            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
-            y_full = casadi.vertcat(y_diff, y_alg)
+            batch_size = model.batch_size
+            len_rhs = model.len_rhs + model.len_rhs_sens
+            len_alg = model.len_alg + model.len_alg_sens
+
+            y_diff_list = [
+                casadi.MX.sym(f"y_diff{i}", len_rhs) for i in range(batch_size)
+            ]
+            y_diff = casadi.vertcat(*y_diff_list)
+            y_alg_list = [
+                casadi.MX.sym(f"y_alg{i}", len_alg) for i in range(batch_size)
+            ]
+            y_alg = casadi.vertcat(*y_alg_list)
+            y_full_list = [val for pair in zip(y_diff_list, y_alg_list) for val in pair]
+            y_full = casadi.vertcat(*y_full_list)
 
             if use_grid is False:
                 time_args = []
@@ -634,23 +645,17 @@ class CasadiSolver(pybamm.BaseSolver):
         else:
             integrator = self.integrators[model]["no grid"]
 
-        len_rhs = model.concatenated_rhs.size * len(inputs_list)
-        len_alg = model.concatenated_algebraic.size * len(inputs_list)
-
-        # Check y0 to see if it includes sensitivities
-        if explicit_sensitivities:
-            num_parameters = model.len_rhs_sens // model.len_rhs
-            len_rhs = len_rhs * (num_parameters + 1)
-            len_alg = len_alg * (num_parameters + 1)
-
-        y0_diff = y0[:len_rhs]
-        y0_alg_exact = y0[len_rhs:]
+        y0_diff, y0_alg_exact = self._unzip_state_vector(model, y0)
+        len_alg = model.len_alg + model.len_alg_sens
+        batch_size = model.batch_size
         if self.perturb_algebraic_initial_conditions and len_alg > 0:
             # Add a tiny perturbation to the algebraic initial conditions
             # For some reason this helps with convergence
             # The actual value of the initial conditions for the algebraic variables
             # doesn't matter
-            y0_alg = y0_alg_exact * (1 + 1e-6 * casadi.DM(np.random.rand(len_alg)))
+            y0_alg = y0_alg_exact * (
+                1 + 1e-6 * casadi.DM(np.random.rand(len_alg * batch_size))
+            )
         else:
             y0_alg = y0_alg_exact
         pybamm.logger.spam("Finished preliminary setup for integrator run")
@@ -667,6 +672,9 @@ class CasadiSolver(pybamm.BaseSolver):
                 casadi_sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
+                casadi_y = self._zip_state_vector(
+                    model, casadi_sol["xf"], casadi_sol["zf"]
+                )
             except RuntimeError as error:
                 # If it doesn't work raise error
                 pybamm.logger.debug(f"Casadi integrator failed with error {error}")
@@ -674,12 +682,7 @@ class CasadiSolver(pybamm.BaseSolver):
             pybamm.logger.debug("Finished casadi integrator")
             integration_time = timer.time()
             # Manually add initial conditions and concatenate
-            x_sol = casadi.horzcat(y0_diff, casadi_sol["xf"])
-            if len_alg > 0:
-                z_sol = casadi.horzcat(y0_alg_exact, casadi_sol["zf"])
-                y_sol = casadi.vertcat(x_sol, z_sol)
-            else:
-                y_sol = x_sol
+            y_sol = casadi.horzcat(y0, casadi_y)
             sol = pybamm.Solution(
                 t_eval,
                 y_sol,
@@ -692,10 +695,9 @@ class CasadiSolver(pybamm.BaseSolver):
             return sol
         else:
             # Repeated calls to the integrator
+            y_sol = y0
             x = y0_diff
             z = y0_alg_exact
-            y_diff = x
-            y_alg = z
             for i in range(len(t_eval) - 1):
                 t_min = t_eval[i]
                 t_max = t_eval[i + 1]
@@ -705,6 +707,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     casadi_sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
                     )
+                    casadi_y = self._zip_state_vector(
+                        model, casadi_sol["xf"], casadi_sol["zf"]
+                    )
                 except RuntimeError as error:
                     # If it doesn't work raise error
                     pybamm.logger.debug(f"Casadi integrator failed with error {error}")
@@ -712,13 +717,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 integration_time = timer.time()
                 x = casadi_sol["xf"]
                 z = casadi_sol["zf"]
-                y_diff = casadi.horzcat(y_diff, x)
-                if not z.is_empty():
-                    y_alg = casadi.horzcat(y_alg, z)
-            if z.is_empty():
-                y_sol = y_diff
-            else:
-                y_sol = casadi.vertcat(y_diff, y_alg)
+                y_sol = casadi.horzcat(y_sol, casadi_y)
 
             sol = pybamm.Solution(
                 t_eval,
