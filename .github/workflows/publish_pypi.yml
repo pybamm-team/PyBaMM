@@ -254,10 +254,10 @@ jobs:
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
-              DYLD_LIBRARY_PATH=$PWD delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+              DYLD_LIBRARY_PATH=$PWD/sundials_KLU_libs/ delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then
               # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
-              DYLD_LIBRARY_PATH=$PWD delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              DYLD_LIBRARY_PATH=$PWD/sundials_KLU_libs/ delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
               for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
             fi
           CIBW_TEST_COMMAND: |
