@@ -37,6 +37,7 @@ class NoDiffusion(pybamm.BaseSubModel):
 
         return variables
 
+
 class DiffusionElement(pybamm.BaseSubModel):
     """
     With Diffusion element for

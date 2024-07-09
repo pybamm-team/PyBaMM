@@ -1,11 +1,17 @@
 import pybamm
 
-model1 = pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "false"})   # Model1: ECM Model definition
-model2 = pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "true"})    # Model2: ECMD Model definition
+model1 = pybamm.equivalent_circuit.Thevenin(
+    options={"diffusion element": "false"}
+)  # Model1: ECM Model definition
+model2 = pybamm.equivalent_circuit.Thevenin(
+    options={"diffusion element": "true"}
+)  # Model2: ECMD Model definition
 
 parameter_values1 = model1.default_parameter_values
 parameter_values2 = model2.default_parameter_values
-parameter_values2.update({"Diffusion time constant [s]": 580}, check_already_exists=False)
+parameter_values2.update(
+    {"Diffusion time constant [s]": 580}, check_already_exists=False
+)
 
 experiment = pybamm.Experiment(
     [
@@ -19,7 +25,6 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-     
 )
 
 models = [
@@ -28,8 +33,12 @@ models = [
 ]
 
 sims = []
-for model, parameter_values in zip([model1, model2], [parameter_values1, parameter_values2]):
-    sim = pybamm.Simulation(model, experiment=experiment, parameter_values=parameter_values)
+for model, parameter_values in zip(
+    [model1, model2], [parameter_values1, parameter_values2]
+):
+    sim = pybamm.Simulation(
+        model, experiment=experiment, parameter_values=parameter_values
+    )
     sim.solve()  # Solve for specific time range (0 to 3600 seconds)
     sims.append(sim)
 
@@ -43,9 +52,8 @@ default_params = model1.default_parameter_values
 nominal_capacity = default_params["Nominal cell capacity [A.h]"]
 print(f"Nominal Cell Capacity (Ah): {nominal_capacity}")
 
-#Second plot to compare SoC and Surface SoC
+# Second plot to compare SoC and Surface SoC
 output_variables = ["SoC", "Surface SoC"]
 
 sim_diffusion = sims[1]  # Assuming model2 is at index 1 in sims list
 sim_diffusion.plot(output_variables=output_variables)
-
