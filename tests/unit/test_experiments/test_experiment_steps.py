@@ -48,7 +48,7 @@ class TestExperimentSteps(unittest.TestCase):
         self.assertIsInstance(current, pybamm.step.Current)
         self.assertEqual(current.value, 1)
         self.assertEqual(str(current), repr(current))
-        self.assertEqual(current.duration, 1000 * 3600)
+        self.assertEqual(current.duration, 24 * 3600)
 
         c_rate = pybamm.step.c_rate(1)
         self.assertIsInstance(c_rate, pybamm.step.CRate)
@@ -153,13 +153,13 @@ class TestExperimentSteps(unittest.TestCase):
             {
                 "value": 4.1,
                 "type": "Voltage",
-                "duration": 3600 * 1000,
+                "duration": 3600 * 24,
                 "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
                 "type": "Voltage",
-                "duration": 3600 * 1000,
+                "duration": 3600 * 24,
                 "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
