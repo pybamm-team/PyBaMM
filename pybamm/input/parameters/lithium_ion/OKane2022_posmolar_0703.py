@@ -564,6 +564,7 @@ def get_parameter_values():
         "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
         "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
         "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
+        #"Nominal cell capacity [A.h]": 4.8, #updated 0709, adjusted to 4.8
         "Nominal cell capacity [A.h]": 5.0,
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
