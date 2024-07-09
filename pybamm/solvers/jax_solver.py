@@ -4,6 +4,7 @@
 import numpy as onp
 
 import pybamm
+import multiprocessing as mp
 
 if pybamm.have_jax():
     import jax
@@ -231,15 +232,18 @@ class JaxSolver(pybamm.BaseSolver):
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
         # todo: make this parallel
+
         solns = []
         batch_size = len(inputs_list) // len(batched_inputs)
-        for i in range(len(batched_inputs)):
+        nbatches = len(batched_inputs)
+
+        def solve_batch(i):
             y0 = model.y0_list[i]
             inputs_sublist = inputs_list[i * batch_size : (i + 1) * batch_size]
             y = self._cached_solves[model](y0, inputs_sublist)
             # convert to a normal numpy array
             y = onp.array(y)
-            solns += pybamm.Solution.from_concatenated_state(
+            return pybamm.Solution.from_concatenated_state(
                 t_eval,
                 y,
                 model,
@@ -247,6 +251,12 @@ class JaxSolver(pybamm.BaseSolver):
                 termination="final time",
                 check_solution=False,
             )
+
+        nproc = None
+        with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+            solns = p.map(solve_batch, range(nbatches))
+        # flatten list of lists
+        solns = [x for xs in solns for x in xs]
 
         integration_time = timer.time()
         for sol in solns:

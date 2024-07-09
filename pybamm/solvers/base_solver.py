@@ -4,6 +4,7 @@ import numbers
 import sys
 import warnings
 import platform
+import multiprocessing as mp
 
 import casadi
 import numpy as np
@@ -696,7 +697,56 @@ class BaseSolver:
 
         return y0s
 
-    def _integrate(self, model, t_eval, inputs_list=None, batched_inputs=None):
+    @staticmethod
+    def _handle_integrate_defaults(
+        model: pybamm.BaseModel,
+        inputs_list: list[dict] | None,
+        batched_inputs: list | None,
+    ) -> tuple[list[dict], list, int, int, list]:
+        """
+        convenience function to handle the default inputs for self._integrate
+
+        Returns
+        -------
+        inputs_list : list of dict
+            The list of inputs to pass to the model when solving
+        batched_inputs : list of array
+            batched inputs parameters in list of array form
+        nbatches : int
+            The number of batches to solve
+        batch_size : int
+            The size of each batch
+        y0S_list : list
+            The list of initial conditions for the sensitivities
+        """
+        inputs_list = inputs_list or [{}]
+
+        if batched_inputs is not None:
+            nbatches = len(batched_inputs)
+            batch_size = len(inputs_list) // nbatches
+        else:
+            batch_size = model.batch_size
+            nbatches = len(inputs_list) // batch_size
+
+        # check if we need to recalculate batched_inputs
+        if batched_inputs is None:
+            batched_inputs = [
+                BaseSolver._inputs_to_stacked_vect(
+                    inputs_list[i * batch_size : (i + 1) * batch_size],
+                    model.convert_to_format,
+                )
+                for i in range(len(inputs_list) // batch_size)
+            ]
+
+        if not hasattr(model, "y0S_list") or len(model.y0S_list) == 0:
+            y0S_list = [None] * nbatches
+        else:
+            y0S_list = model.y0S_list
+        return inputs_list, batched_inputs, nbatches, batch_size, y0S_list
+
+    def _integrate(
+        self, model, t_eval, inputs_list=None, batched_inputs=None, nproc=None
+    ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -711,44 +761,35 @@ class BaseSolver:
         batched_inputs : list of array
             batched inputs parameters in list of array form
         """
-        inputs_list = inputs_list or [{}]
-
-        if batched_inputs is not None:
-            nbatches = len(batched_inputs)
-            batch_size = len(inputs_list) // nbatches
-        else:
-            batch_size = model.batch_size
-            nbatches = len(inputs_list) // batch_size
-
-        # check if we need to recalculate batched_inputs
-        if batched_inputs is None:
-            batched_inputs = [
-                self._inputs_to_stacked_vect(
-                    inputs_list[i * batch_size : (i + 1) * batch_size],
-                    model.convert_to_format,
-                )
-                for i in range(len(inputs_list) // batch_size)
-            ]
-
-        if not hasattr(model, "y0S_list") or len(model.y0S_list) == 0:
-            y0S_list = [None] * nbatches
-        else:
-            y0S_list = model.y0S_list
+        inputs_list, batched_inputs, nbatches, batch_size, y0S_list = (
+            self._handle_integrate_defaults(model, inputs_list, batched_inputs)
+        )
 
         # todo: make this parallel
-        sols = []
-        for i in range(nbatches):
-            sols += self._integrate_batch(
-                model,
-                t_eval,
-                model.y0_list[i],
-                y0S_list[i],
-                inputs_list[i * batch_size : (i + 1) * batch_size],
-                batched_inputs[i],
+        with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+            model_list = [model] * nbatches
+            t_eval_list = [t_eval] * nbatches
+            y0_list = model.y0_list
+            inputs_list_of_list = [
+                inputs_list[i * batch_size : (i + 1) * batch_size]
+                for i in range(nbatches)
+            ]
+            new_solutions = p.starmap(
+                self._integrate_batch,
+                zip(
+                    model_list,
+                    t_eval_list,
+                    y0_list,
+                    y0S_list,
+                    inputs_list_of_list,
+                    batched_inputs,
+                ),
             )
-        return sols
+            p.close()
+            p.join()
+        return new_solutions
 
-    def _integrate_batch(self, model, t_eval, y0, inputs_list, inputs):
+    def _integrate_batch(self, model, t_eval, y0, y0S, inputs_list, inputs):
         """
         Solve a single batch for the DAE model defined by residuals with initial conditions y0.
 
