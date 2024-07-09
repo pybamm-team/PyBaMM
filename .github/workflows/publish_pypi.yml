@@ -117,8 +117,10 @@ jobs:
             yum -y install openblas-devel lapack-devel &&
             python scripts/install_KLU_Sundials.py
           CIBW_BEFORE_BUILD_LINUX: |
-            export LD_LIBRARY_PATH=$PWD/sundials_KLU_libs/lib/:$PWD/sundials_KLU_libs/include/:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$PWD/sundials_KLU_libs/:$LD_LIBRARY_PATH
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+            yum install -y tree
+            tree $PWD/sundials_KLU_libs
             python -m pip install cmake casadi scikit-build-core
           CIBW_REPAIR_WHEEL_COMMAND_LINUX:  auditwheel repair -w {dest_dir} {wheel}
           #   mkdir -p temp_wheel_dir
@@ -204,20 +206,20 @@ jobs:
             # link libgfortran dylibs and place them in $HOME/.local/lib
             # and then change rpath to $HOME/.local/lib for each of them
             # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
-            mkdir -p $(pwd)/sundials_KLU_libs/lib
+            mkdir -p $HOME/.local/lib
             if [[ $(uname -m) == "x86_64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $(pwd)/sundials_KLU_libs/lib/
-                install_name_tool -id $(pwd)/sundials_KLU_libs/lib/$lib $(pwd)/sundials_KLU_libs/lib/$lib
-                codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/$lib
+                cp $lib_dir/$lib $HOME/.local/lib/
+                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
+                codesign --force --sign - $HOME/.local/lib/$lib
               done
             elif [[ $(uname -m) == "arm64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $(pwd)/sundials_KLU_libs/lib/
-                install_name_tool -id $(pwd)/sundials_KLU_libs/lib/$lib $(pwd)/sundials_KLU_libs/lib/$lib
-                codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/$lib
+                cp $lib_dir/$lib $HOME/.local/lib/
+                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
+                codesign --force --sign - $HOME/.local/lib/$lib
               done
             fi
 
@@ -233,9 +235,9 @@ jobs:
             fi
 
             # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
-            cp $PREFIX/lib/libomp.dylib $(pwd)/sundials_KLU_libs/lib/
-            install_name_tool -id $(pwd)/sundials_KLU_libs/lib/libomp.dylib $(pwd)/sundials_KLU_libs/lib/libomp.dylib
-            codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/libomp.dylib
+            cp $PREFIX/lib/libomp.dylib $HOME/.local/lib/
+            install_name_tool -id $HOME/.local/lib/libomp.dylib $HOME/.local/lib/libomp.dylib
+            codesign --force --sign - $HOME/.local/lib/libomp.dylib
 
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
@@ -254,10 +256,10 @@ jobs:
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
-              DYLD_LIBRARY_PATH=$PWD/sundials_KLU_libs/ delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+              DYLD_LIBRARY_PATH=$PWD delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then
               # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
-              DYLD_LIBRARY_PATH=$PWD/sundials_KLU_libs/ delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              DYLD_LIBRARY_PATH=$PWD delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
               for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
             fi
           CIBW_TEST_COMMAND: |
