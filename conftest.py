@@ -30,12 +30,9 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     options = {
         "unit": "unit",
-        "scripts": "examples",
+        "scripts": "scripts",
         "integration": "integration",
     }
-    selected_markers = [
-        marker for option, marker in options.items() if config.getoption(option)
-    ]
 
     for item in items:
         if "unit" in item.nodeid:
@@ -43,13 +40,6 @@ def pytest_collection_modifyitems(config, items):
         elif "integration" in item.nodeid:
             item.add_marker(pytest.mark.integration)
 
-    if "scripts" not in selected_markers:
-        skip_example = pytest.mark.skip(
-            reason="Skipping example tests since --scripts option is not provided"
-        )
-        for item in items:
-            if "scripts" in item.keywords:
-                item.add_marker(skip_example)
 
 
 @pytest.fixture(autouse=True)

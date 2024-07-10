@@ -17,6 +17,6 @@ class TestExamples:
         return file_list
 
     @pytest.mark.parametrize("files", list_of_files())
-    @pytest.mark.examples
+    @pytest.mark.scripts
     def test_example_scripts(self, files):
         runpy.run_path(files)

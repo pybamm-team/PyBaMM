@@ -236,6 +236,7 @@ addopts = [
     "-ra",
     "--strict-config",
     "--strict-markers",
+    "-svrA",
 ]
 testpaths = [
     "tests",

@@ -79,7 +79,7 @@ def run_integration(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "-m", "pytest", "-svra", "-m", "integration")
+    session.run("python", "-m", "pytest", "-m", "integration")
 
 
 @nox.session(name="doctests")
@@ -128,7 +128,7 @@ def run_scripts(session):
     # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
-    session.run("python", "-m", "pytest", "-svra", "--scripts", "tests/test_scripts.py")
+    session.run("python", "-m", "pytest", "-m", "scripts")
 
 
 @nox.session(name="dev")
@@ -159,7 +159,7 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "-m", "pytest", "-svra")
+    session.run("python", "-m", "pytest", "-m", "unit or integration")
 
 
 @nox.session(name="docs")
