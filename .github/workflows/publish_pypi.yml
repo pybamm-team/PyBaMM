@@ -122,7 +122,7 @@ jobs:
             yum install -y tree
             tree {project}/sundials_KLU_libs
             python -m pip install cmake casadi scikit-build-core
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX:  auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH={project}/sundials_KLU_libs auditwheel repair -w {dest_dir} {wheel}
           #   mkdir -p temp_wheel_dir
           #   unzip -d temp_wheel_dir {wheel}
           #   yum install -y tree
