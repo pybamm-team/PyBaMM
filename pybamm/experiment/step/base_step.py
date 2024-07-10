@@ -71,6 +71,8 @@ class BaseStep:
         description=None,
         direction=None,
     ):
+        self.input_duration = duration
+        self.input_value = value
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
@@ -103,7 +105,6 @@ class BaseStep:
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
         self.uses_default_duration = duration is None
-        self.input_duration = duration
         # Set duration
         if self.uses_default_duration:
             duration = self.default_duration(value)
@@ -199,7 +200,7 @@ class BaseStep:
             A copy of the step.
         """
         return self.__class__(
-            self.value,
+            self.input_value,
             duration=self.input_duration,
             termination=self.termination,
             period=self.period,
