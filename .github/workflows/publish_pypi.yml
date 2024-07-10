@@ -317,8 +317,6 @@ jobs:
         if: github.event.inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.TESTPYPI_TOKEN }}
           packages-dir: files/
           repository-url: https://test.pypi.org/legacy/
 
