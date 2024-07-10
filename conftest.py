@@ -41,7 +41,6 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.integration)
 
 
-
 @pytest.fixture(autouse=True)
 # Set the random seed to 42 for all tests
 def set_random_seed():
