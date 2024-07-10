@@ -27,12 +27,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: mark test as an integration test")
 
 
-def pytest_collection_modifyitems(config, items):
-    options = {
-        "unit": "unit",
-        "scripts": "scripts",
-        "integration": "integration",
-    }
+def pytest_collection_modifyitems(items):
 
     for item in items:
         if "unit" in item.nodeid:
