@@ -1638,7 +1638,7 @@ def get_parameter_values():
         "EC partial molar volume [m3.mol-1]": 6.667e-05,
         # experiment
         "Reference temperature [K]": 298.15,
-        "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
+        "Total heat transfer coefficient [W.m-2.K-1]": 15.0,
         "Ambient temperature [K]": 298.15,
         "Number of electrodes connected in parallel to make a cell": 1.0,
         "Number of cells connected in series to make a battery": 1.0,
@@ -1647,7 +1647,7 @@ def get_parameter_values():
         "Open-circuit voltage at 0% SOC [V]": 2.5,
         "Open-circuit voltage at 100% SOC [V]": 4.2,
         #"Initial concentration in negative electrode [mol.m-3]": 28543.0, 
-        "Initial concentration in negative electrode [mol.m-3]": 27500, ## updated Xinlei
+        "Initial concentration in negative electrode [mol.m-3]": 28543, ## updated Xinlei
         "Initial concentration in positive electrode [mol.m-3]": 12729.0,
         "Initial temperature [K]": 298.15,
         # citations
