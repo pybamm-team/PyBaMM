@@ -416,9 +416,15 @@ _type_to_units = {
 
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
-    # If the time is a number, assume it is in seconds
-    if isinstance(time_and_units, numbers.Number) or time_and_units is None:
+    if time_and_units is None:
         return time_and_units
+
+    # If the time is a number, assume it is in seconds
+    if isinstance(time_and_units, numbers.Number):
+        if time_and_units <= 0:
+            raise ValueError("time must be positive")
+        else:
+            return time_and_units
 
     # Split number and units
     units = time_and_units.lstrip("0123456789.- ")

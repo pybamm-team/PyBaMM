@@ -43,6 +43,9 @@ class TestExperimentSteps(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "temperature units"):
             step = pybamm.step.current(1, temperature="298T")
 
+        with self.assertRaisesRegex(ValueError, "time must be positive"):
+            pybamm.step.current(1, duration=0)
+
     def test_specific_steps(self):
         current = pybamm.step.current(1)
         self.assertIsInstance(current, pybamm.step.Current)

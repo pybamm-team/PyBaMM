@@ -768,27 +768,32 @@ class Simulation:
                     callbacks.on_step_end(logs)
 
                     logs["termination"] = step_solution.termination
-                    # Only allow events specified by experiment
-                    if (
-                        step_termination == "final time"
-                        and step.uses_default_duration is True
-                    ):
+
+                    # Check for some cases that would make the experiment end early
+                    if step_termination == "final time" and step.uses_default_duration:
+                        # reached the default duration of a step (typically we should
+                        # reach an event before the default duration)
                         callbacks.on_experiment_infeasible_time(logs)
                         feasible = False
                         break
+
                     elif not (
                         isinstance(step_solution, pybamm.EmptySolution)
                         or step_termination == "final time"
                         or "[experiment]" in step_termination
                     ):
+                        # Step has reached an event that is not specified in the
+                        # experiment
                         callbacks.on_experiment_infeasible_event(logs)
                         feasible = False
                         break
 
-                    if time_stop is not None:
-                        max_time = cycle_solution.t[-1]
-                        if max_time >= time_stop:
-                            break
+                    elif time_stop is not None and logs["experiment time"] >= time_stop:
+                        # reached the time limit of the experiment
+                        break
+
+                    else:
+                        continue
 
                     # Increment index for next iteration
                     idx += 1
