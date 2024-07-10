@@ -793,10 +793,8 @@ class Simulation:
                         break
 
                     else:
-                        continue
-
-                    # Increment index for next iteration
-                    idx += 1
+                        # Increment index for next iteration, then continue
+                        idx += 1
 
                 if save_this_cycle or feasible is False:
                     self._solution = self._solution + cycle_solution
