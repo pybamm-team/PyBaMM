@@ -112,7 +112,8 @@ def install_sundials(download_dir, install_dir):
             OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
         else:
             raise NotImplementedError(
-                f"Unsupported processor architecture: {platform.processor()}. Only 'arm' and 'i386' architectures are supported."
+                f"Unsupported processor architecture: {platform.processor()}. "
+                "Only 'arm' and 'i386' architectures are supported."
             )
 
         # Don't pass the following args to CMake when building wheels. We set a custom
