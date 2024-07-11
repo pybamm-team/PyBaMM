@@ -18,7 +18,7 @@ struct Options {
   int precon_half_bandwidth;
   int precon_half_bandwidth_keep;
   int num_threads;
-  explicit Options(py::dict options);
+  explicit Options(py::dict options, const int nsolvers);
 
 };
 

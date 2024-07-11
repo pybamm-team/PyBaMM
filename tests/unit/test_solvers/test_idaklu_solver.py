@@ -253,6 +253,7 @@ class TestIDAKLUSolver(TestCase):
 
                 # check solution
                 for inputs, solution in zip(inputs_list, solutions):
+                    print("checking input", inputs)
                     np.testing.assert_array_equal(solution.t, t_eval)
                     np.testing.assert_allclose(
                         solution.y[0],

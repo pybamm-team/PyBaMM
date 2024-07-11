@@ -5,7 +5,7 @@
 
 using namespace std::string_literals;
 
-Options::Options(py::dict options)
+Options::Options(py::dict options, const int nsolvers)
     : print_stats(options["print_stats"].cast<bool>()),
       jacobian(options["jacobian"].cast<std::string>()),
       preconditioner(options["preconditioner"].cast<std::string>()),
@@ -13,9 +13,13 @@ Options::Options(py::dict options)
       linear_solver(options["linear_solver"].cast<std::string>()),
       precon_half_bandwidth(options["precon_half_bandwidth"].cast<int>()),
       precon_half_bandwidth_keep(options["precon_half_bandwidth_keep"].cast<int>()),
-      num_threads(options["num_threads"].cast<int>())
+      num_threads(options["num_threads"].cast<int>() / nsolvers)
 {
-
+    // need at least one thread
+    if (num_threads < 1)
+    {
+        num_threads = 1;
+    }
     using_sparse_matrix = true;
     using_banded_matrix = false;
     if (jacobian == "sparse")

@@ -17,6 +17,11 @@ public:
   {
   }
 
+  /**
+   * @brief default Constructor
+   */
+  Solution() = default;
+
   int flag;
   np_array t;
   np_array y;

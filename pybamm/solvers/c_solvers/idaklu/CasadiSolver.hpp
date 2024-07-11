@@ -32,11 +32,19 @@ public:
   /**
    * @brief Abstract solver method that returns a Solution class
    */
-  virtual Solution solve(
-    np_array t_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs) = 0;
+  virtual void solve(
+    const realtype *t,
+    const int number_of_timesteps,
+    const realtype *y0,
+    const realtype *yp0,
+    const realtype *inputs,
+    const int length_of_return_vector,
+    realtype *y_return,
+    realtype *yS_return,
+    realtype *t_return,
+    int &t_i,
+    int &retval
+  ) = 0;
 
   /**
    * Abstract method to initialize the solver, once vectors and solver classes

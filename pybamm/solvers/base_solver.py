@@ -73,7 +73,6 @@ class BaseSolver:
         if options is None:
             options = default_options
         else:
-            print("options", options)
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
@@ -928,15 +927,6 @@ class BaseSolver:
                 f"len(inputs) = {len(inputs)} and batch_size = {batch_size}"
             )
 
-        # get a list-only version of calculate_sensitivities
-        if isinstance(calculate_sensitivities, bool):
-            if calculate_sensitivities:
-                calculate_sensitivities_list = [p for p in inputs.keys()]
-            else:
-                calculate_sensitivities_list = []
-        else:
-            calculate_sensitivities_list = calculate_sensitivities
-
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             if not isinstance(self, pybamm.DummySolver):
@@ -988,6 +978,15 @@ class BaseSolver:
         model_inputs_list = [
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
+
+        # get a list-only version of calculate_sensitivities
+        if isinstance(calculate_sensitivities, bool):
+            if calculate_sensitivities:
+                calculate_sensitivities_list = [p for p in inputs_list[0].keys()]
+            else:
+                calculate_sensitivities_list = []
+        else:
+            calculate_sensitivities_list = calculate_sensitivities
 
         # Check that calculate_sensitivites or batch size have not been updated
         calculate_sensitivities_list.sort()
@@ -1745,10 +1744,13 @@ def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs, nthreads)
     nstates = vars_for_processing["y_and_S"].shape[0]
     nparams = vars_for_processing["p_casadi_stacked"].shape[0]
 
-    if nthreads == 1:
-        parallelisation = "none"
-    else:
+    threads_per_input = nthreads // ninputs
+    if threads_per_input > 1:
+        threads_per_input = 1
+    if threads_per_input > 1:
         parallelisation = "thread"
+    else:
+        parallelisation = "none"
     y_and_S_inputs_stacked = casadi.MX.sym("y_and_S_stacked", nstates * ninputs)
     p_casadi_inputs_stacked = casadi.MX.sym("p_stacked", nparams * ninputs)
     v_inputs_stacked = casadi.MX.sym("v_stacked", nstates * ninputs)
@@ -1771,7 +1773,7 @@ def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs, nthreads)
         inputs_2d = [t_2d, y_and_S_2d, p_casadi_2d]
         inputs_stacked = [t_stacked, y_and_S_inputs_stacked, p_casadi_inputs_stacked]
 
-    mapped_f = f.map(ninputs, parallelisation, nthreads)(*inputs_2d)
+    mapped_f = f.map(ninputs, parallelisation, threads_per_input)(*inputs_2d)
     if matrix_output:
         # for matrix output we need to stack the outputs in a block diagonal matrix
         splits = [i * nstates for i in range(ninputs + 1)]

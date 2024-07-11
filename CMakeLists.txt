@@ -45,6 +45,8 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/idaklu/casadi_solver.hpp
   pybamm/solvers/c_solvers/idaklu/CasadiSolver.cpp
   pybamm/solvers/c_solvers/idaklu/CasadiSolver.hpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolverGroup.cpp
+  pybamm/solvers/c_solvers/idaklu/CasadiSolverGroup.hpp
   pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.cpp
   pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.hpp
   pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.cpp
@@ -94,6 +96,12 @@ set_target_properties(
   INSTALL_RPATH "${CASADI_DIR}"
   INSTALL_RPATH_USE_LINK_PATH TRUE
 )
+
+# openmp
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials

@@ -86,7 +86,7 @@ public:
   std::vector<double *> m_res;
 
 private:
-  const Function &m_func;
+  const Function m_func;
   std::vector<casadi_int> m_iw;
   std::vector<double> m_w;
 };

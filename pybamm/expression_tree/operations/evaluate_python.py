@@ -516,9 +516,10 @@ class EvaluatorPython:
         """
         evaluate function
         """
-        # generated code assumes y is a column vector
+        # generated code assumes y and inputs are column vectors
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
+            inputs = inputs.reshape(-1, 1)
 
         if self._ninputs == 1:
             # nothing to do for a single input

@@ -75,14 +75,39 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
   if (options.preconditioner != "none") {
     precon_type = SUN_PREC_LEFT;
   }
+
+  // allocate temp buffers for output variables
+  size_t max_res_size = 0;  // maximum result size (for common result buffer)
+  size_t max_res_dvar_dy = 0, max_res_dvar_dp = 0;
+  if (functions->var_casadi_fcns.size() > 0) {
+    // return only the requested variables list after computation
+    for (auto& var_fcn : functions->var_casadi_fcns) {
+      max_res_size = std::max(max_res_size, size_t(var_fcn.nnz_out()));
+      for (auto& dvar_fcn : functions->dvar_dy_fcns)
+        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn.nnz_out()));
+      for (auto& dvar_fcn : functions->dvar_dp_fcns)
+        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn.nnz_out()));
+    }
+  }
+
+  res = new realtype[max_res_size];
+  res_dvar_dy = new realtype[max_res_dvar_dy];
+  res_dvar_dp = new realtype[max_res_dvar_dp];
 }
 
 void CasadiSolverOpenMP::AllocateVectors() {
   // Create vectors
-  yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
-  yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
-  avtol = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
-  id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+  if (options.num_threads == 1) {
+    yy = N_VNew_Serial(number_of_states, sunctx);
+    yp = N_VNew_Serial(number_of_states, sunctx);
+    avtol = N_VNew_Serial(number_of_states, sunctx);
+    id = N_VNew_Serial(number_of_states, sunctx);
+  } else {
+    yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    avtol = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+  }
 }
 
 void CasadiSolverOpenMP::SetMatrix() {
@@ -247,36 +272,27 @@ void CasadiSolverOpenMP::CalcVarsSensitivities(
   }
 }
 
-Solution CasadiSolverOpenMP::solve(
-    np_array t_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs
+void CasadiSolverOpenMP::solve(
+    const realtype *t,
+    const int number_of_timesteps,
+    const realtype *y0,
+    const realtype *yp0,
+    const realtype *inputs,
+    const int length_of_return_vector,
+    realtype *y_return,
+    realtype *yS_return,
+    realtype *t_return,
+    int &t_i,
+    int &retval
 )
 {
   DEBUG("CasadiSolver::solve");
 
-  int number_of_timesteps = t_np.request().size;
-  auto t = t_np.unchecked<1>();
-  realtype t0 = RCONST(t(0));
-  auto y0 = y0_np.unchecked<1>();
-  auto yp0 = yp0_np.unchecked<1>();
-  auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
-
-  if (y0.size() != n_coeffs)
-    throw std::domain_error(
-      "y0 has wrong size. Expected " + std::to_string(n_coeffs) +
-      " but got " + std::to_string(y0.size()));
-
-  if (yp0.size() != n_coeffs)
-    throw std::domain_error(
-      "yp0 has wrong size. Expected " + std::to_string(n_coeffs) +
-      " but got " + std::to_string(yp0.size()));
+  realtype t0 = RCONST(t[0]);
 
   // set inputs
-  auto p_inputs = inputs.unchecked<2>();
   for (int i = 0; i < functions->inputs.size(); i++)
-    functions->inputs[i] = p_inputs(i, 0);
+    functions->inputs[i] = inputs[i];
 
   // set initial conditions
   realtype *yval = N_VGetArrayPointer(yy);
@@ -304,68 +320,19 @@ Solution CasadiSolverOpenMP::solve(
 
   // correct initial values
   DEBUG("IDACalcIC");
-  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t[1]);
   if (number_of_parameters > 0)
     IDAGetSens(ida_mem, &t0, yyS);
 
   realtype tret;
-  realtype t_final = t(number_of_timesteps - 1);
+  realtype t_final = t[number_of_timesteps - 1];
 
-  // set return vectors
-  int length_of_return_vector = 0;
-  size_t max_res_size = 0;  // maximum result size (for common result buffer)
-  size_t max_res_dvar_dy = 0, max_res_dvar_dp = 0;
-  if (functions->var_casadi_fcns.size() > 0) {
-    // return only the requested variables list after computation
-    for (auto& var_fcn : functions->var_casadi_fcns) {
-      max_res_size = std::max(max_res_size, size_t(var_fcn.nnz_out()));
-      length_of_return_vector += var_fcn.nnz_out();
-      for (auto& dvar_fcn : functions->dvar_dy_fcns)
-        max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn.nnz_out()));
-      for (auto& dvar_fcn : functions->dvar_dp_fcns)
-        max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn.nnz_out()));
-    }
-  } else {
-    // Return full y state-vector
-    length_of_return_vector = number_of_states;
-  }
-  realtype *t_return = new realtype[number_of_timesteps];
-  realtype *y_return = new realtype[number_of_timesteps *
-                                    length_of_return_vector];
-  realtype *yS_return = new realtype[number_of_parameters *
-                                     number_of_timesteps *
-                                     length_of_return_vector];
 
-  res = new realtype[max_res_size];
-  res_dvar_dy = new realtype[max_res_dvar_dy];
-  res_dvar_dp = new realtype[max_res_dvar_dp];
-
-  py::capsule free_t_when_done(
-    t_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-  py::capsule free_y_when_done(
-    y_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-  py::capsule free_yS_when_done(
-    yS_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
 
   // Initial state (t_i=0)
-  int t_i = 0;
+  t_i = 0;
   size_t ySk = 0;
-  t_return[t_i] = t(t_i);
+  t_return[t_i] = t[t_i];
   if (functions->var_casadi_fcns.size() > 0) {
     // Evaluate casadi functions for each requested variable and store
     CalcVars(y_return, length_of_return_vector, t_i,
@@ -383,11 +350,10 @@ Solution CasadiSolverOpenMP::solve(
   }
 
   // Subsequent states (t_i>0)
-  int retval;
   t_i = 1;
   while (true)
   {
-    realtype t_next = t(t_i);
+    realtype t_next = t[t_i];
     IDASetStopTime(ida_mem, t_next);
     DEBUG("IDASolve");
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
@@ -433,42 +399,6 @@ Solution CasadiSolverOpenMP::solve(
     }
   }
 
-  np_array t_ret = np_array(
-    t_i,
-    &t_return[0],
-    free_t_when_done
-  );
-  np_array y_ret = np_array(
-    t_i * length_of_return_vector,
-    &y_return[0],
-    free_y_when_done
-  );
-  // Note: Ordering of vector is differnet if computing variables vs returning
-  // the complete state vector
-  np_array yS_ret;
-  if (functions->var_casadi_fcns.size() > 0) {
-    yS_ret = np_array(
-      std::vector<ptrdiff_t> {
-        number_of_timesteps,
-        length_of_return_vector,
-        number_of_parameters
-      },
-      &yS_return[0],
-      free_yS_when_done
-    );
-  } else {
-    yS_ret = np_array(
-      std::vector<ptrdiff_t> {
-        number_of_parameters,
-        number_of_timesteps,
-        length_of_return_vector
-      },
-      &yS_return[0],
-      free_yS_when_done
-    );
-  }
-
-  Solution sol(retval, t_ret, y_ret, yS_ret);
 
   if (options.print_stats)
   {
@@ -513,6 +443,4 @@ Solution CasadiSolverOpenMP::solve(
     py::print("\tNumber of nonlinear iterations performed =", nniters);
     py::print("\tNumber of nonlinear convergence failures =", nncfails);
   }
-
-  return sol;
 }

@@ -21,12 +21,14 @@ Function generate_function(const std::string &data)
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
+PYBIND11_MAKE_OPAQUE(std::vector<Solution>);
 
 PYBIND11_MODULE(idaklu, m)
 {
   m.doc() = "sundials solvers"; // optional module docstring
 
   py::bind_vector<std::vector<np_array>>(m, "VectorNdArray");
+  py::bind_vector<std::vector<Solution>>(m, "VectorSolution");
 
   m.def("solve_python", &solve_python,
     "The solve function for python evaluators",
@@ -50,8 +52,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("number_of_sensitivity_parameters"),
     py::return_value_policy::take_ownership);
 
-  py::class_<CasadiSolver>(m, "CasadiSolver")
-  .def("solve", &CasadiSolver::solve,
+  py::class_<CasadiSolverGroup>(m, "CasadiSolverGroup")
+  .def("solve", &CasadiSolverGroup::solve,
     "perform a solve",
     py::arg("t"),
     py::arg("y0"),
@@ -59,8 +61,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
 
-  m.def("create_casadi_solver", &create_casadi_solver,
-    "Create a casadi idaklu solver object",
+  m.def("create_casadi_solver_group", &create_casadi_solver_group,
+    "Create a casadi idaklu solver group object",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),
     py::arg("rhs_alg"),
@@ -83,6 +85,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("dvar_dy_fcns"),
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
+    py::arg("nsolvers"),
     py::return_value_policy::take_ownership);
 
   m.def("generate_function", &generate_function,
