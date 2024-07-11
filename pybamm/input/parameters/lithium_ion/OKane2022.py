@@ -622,8 +622,10 @@ def get_parameter_values():
         "Positive electrode Young's modulus [Pa]": 375000000000.0,
         "Positive electrode reference concentration for free of deformation [mol.m-3]"
         "": 0.0,
-        "Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
-#        "Positive electrode partial molar volume [m3.mol-1]": 3.1e-06,
+        #"Positive electrode partial molar volume [m3.mol-1]": 7.88e-07, # Yang's paper
+        "Positive electrode partial molar volume [m3.mol-1]": 1.25e-05, # original value
+        
+#       "Positive electrode partial molar volume [m3.mol-1]": 3.1e-06,
         "Positive electrode volume change": volume_change_Ai2020,
         "Positive electrode initial crack length [m]": 2e-08,
         "Positive electrode initial crack width [m]": 1.5e-08,
