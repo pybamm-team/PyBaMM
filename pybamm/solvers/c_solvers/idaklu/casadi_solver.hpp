@@ -30,7 +30,7 @@ CasadiSolver *create_casadi_solver(
   const std::vector<Function*>& var_casadi_fcns,
   const std::vector<Function*>& dvar_dy_fcns,
   const std::vector<Function*>& dvar_dp_fcns,
-  py::dict options
+  py::dict py_opts
 );
 
 #endif // PYBAMM_IDAKLU_CREATE_CASADI_SOLVER_HPP

@@ -119,7 +119,7 @@ public:
     const std::vector<Function*>& var_casadi_fcns,
     const std::vector<Function*>& dvar_dy_fcns,
     const std::vector<Function*>& dvar_dp_fcns,
-    const Options& options
+    const SetupOptions& options
   );
 
 public:
@@ -147,7 +147,7 @@ public:
   std::vector<int64_t> jac_times_cjmass_colptrs;
   std::vector<realtype> inputs;
 
-  Options options;
+  SetupOptions options;
 
   realtype *get_tmp_state_vector();
   realtype *get_tmp_sparse_jacobian_data();

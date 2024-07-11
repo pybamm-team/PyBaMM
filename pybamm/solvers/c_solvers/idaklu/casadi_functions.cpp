@@ -57,7 +57,7 @@ CasadiFunctions::CasadiFunctions(
   const std::vector<Function*>& var_casadi_fcns,
   const std::vector<Function*>& dvar_dy_fcns,
   const std::vector<Function*>& dvar_dp_fcns,
-  const Options& options)
+  const SetupOptions& options)
   : number_of_states(n_s), number_of_events(n_e), number_of_parameters(n_p),
     number_of_nnz(jac_times_cjmass_nnz),
     jac_bandwidth_lower(jac_bandwidth_lower), jac_bandwidth_upper(jac_bandwidth_upper),

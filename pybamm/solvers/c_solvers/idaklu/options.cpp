@@ -5,15 +5,14 @@
 
 using namespace std::string_literals;
 
-Options::Options(py::dict options)
-    : print_stats(options["print_stats"].cast<bool>()),
-      jacobian(options["jacobian"].cast<std::string>()),
+SetupOptions::SetupOptions(py::dict &options)
+    : jacobian(options["jacobian"].cast<std::string>()),
       preconditioner(options["preconditioner"].cast<std::string>()),
-      linsol_max_iterations(options["linsol_max_iterations"].cast<int>()),
-      linear_solver(options["linear_solver"].cast<std::string>()),
       precon_half_bandwidth(options["precon_half_bandwidth"].cast<int>()),
       precon_half_bandwidth_keep(options["precon_half_bandwidth_keep"].cast<int>()),
-      num_threads(options["num_threads"].cast<int>())
+      num_threads(options["num_threads"].cast<int>()),
+      linear_solver(options["linear_solver"].cast<std::string>()),
+      linsol_max_iterations(options["linsol_max_iterations"].cast<int>())
 {
 
     using_sparse_matrix = true;
@@ -118,4 +117,33 @@ Options::Options(py::dict options)
     {
         preconditioner = "none";
     }
+}
+
+SolverOptions::SolverOptions(py::dict &options)
+    : print_stats(options["print_stats"].cast<bool>()),
+      // IDA main solver
+      max_order_bdf(options["max_order_bdf"].cast<int>()),
+      max_num_steps(options["max_num_steps"].cast<int>()),
+      dt_init(RCONST(options["dt_init"].cast<double>())),
+      dt_max(RCONST(options["dt_max"].cast<double>())),
+      max_error_test_failures(options["max_error_test_failures"].cast<int>()),
+      max_nonlinear_iterations(options["max_nonlinear_iterations"].cast<int>()),
+      max_convergence_failures(options["max_convergence_failures"].cast<int>()),
+      nonlinear_convergence_coefficient(RCONST(options["nonlinear_convergence_coefficient"].cast<double>())),
+      nonlinear_convergence_coefficient_ic(RCONST(options["nonlinear_convergence_coefficient_ic"].cast<double>())),
+      suppress_algebraic_error(options["suppress_algebraic_error"].cast<sunbooleantype>()),
+      // IDA initial conditions calculation
+      calc_ic(options["calc_ic"].cast<bool>()),
+      init_all_y_ic(options["init_all_y_ic"].cast<bool>()),
+      max_num_steps_ic(options["max_num_steps_ic"].cast<int>()),
+      max_num_jacobians_ic(options["max_num_jacobians_ic"].cast<int>()),
+      max_num_iterations_ic(options["max_num_iterations_ic"].cast<int>()),
+      max_linesearch_backtracks_ic(options["max_linesearch_backtracks_ic"].cast<int>()),
+      linesearch_off_ic(options["linesearch_off_ic"].cast<sunbooleantype>()),
+      // IDALS linear solver interface
+      linear_solution_scaling(options["linear_solution_scaling"].cast<sunbooleantype>()),
+      epsilon_linear_tolerance(RCONST(options["epsilon_linear_tolerance"].cast<double>())),
+      increment_factor(RCONST(options["increment_factor"].cast<double>()))
+{
+
 }

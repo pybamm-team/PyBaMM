@@ -58,7 +58,7 @@ public:
     LS = SUNLinSol_SPBCGS(
       yy,
       precon_type,
-      options.linsol_max_iterations,
+      setup_opts.linsol_max_iterations,
       sunctx
     );
     Initialize();
@@ -77,7 +77,7 @@ public:
     LS = SUNLinSol_SPFGMR(
       yy,
       precon_type,
-      options.linsol_max_iterations,
+      setup_opts.linsol_max_iterations,
       sunctx
     );
     Initialize();
@@ -96,7 +96,7 @@ public:
     LS = SUNLinSol_SPGMR(
       yy,
       precon_type,
-      options.linsol_max_iterations,
+      setup_opts.linsol_max_iterations,
       sunctx
     );
     Initialize();
@@ -115,7 +115,7 @@ public:
     LS = SUNLinSol_SPTFQMR(
       yy,
       precon_type,
-      options.linsol_max_iterations,
+      setup_opts.linsol_max_iterations,
       sunctx
     );
     Initialize();
