@@ -648,7 +648,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = False
 
-
         # 0 = solved for all t_eval
         if sol.flag == 0:
             termination = "final time"
