@@ -43,15 +43,20 @@ class TestExperimentSteps(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "temperature units"):
             step = pybamm.step.current(1, temperature="298T")
 
+        with self.assertRaisesRegex(ValueError, "time must be positive"):
+            pybamm.step.current(1, duration=0)
+
     def test_specific_steps(self):
         current = pybamm.step.current(1)
         self.assertIsInstance(current, pybamm.step.Current)
         self.assertEqual(current.value, 1)
         self.assertEqual(str(current), repr(current))
+        self.assertEqual(current.duration, 24 * 3600)
 
         c_rate = pybamm.step.c_rate(1)
         self.assertIsInstance(c_rate, pybamm.step.CRate)
         self.assertEqual(c_rate.value, 1)
+        self.assertEqual(c_rate.duration, 3600 * 2)
 
         voltage = pybamm.step.voltage(1)
         self.assertIsInstance(voltage, pybamm.step.Voltage)
@@ -145,19 +150,19 @@ class TestExperimentSteps(unittest.TestCase):
             {
                 "type": "CRate",
                 "value": -1,
-                "duration": 86400,
+                "duration": 7200,
                 "termination": [pybamm.step.VoltageTermination(4.1)],
             },
             {
                 "value": 4.1,
                 "type": "Voltage",
-                "duration": 86400,
+                "duration": 3600 * 24,
                 "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
                 "type": "Voltage",
-                "duration": 86400,
+                "duration": 3600 * 24,
                 "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
