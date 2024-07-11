@@ -654,7 +654,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # 2 = found root(s)
         elif sol.flag == 2:
             termination = "event"
-
+        else:
+            raise pybamm.SolverError("idaklu solver failed")
         newsol = pybamm.Solution(
             sol.t,
             np.transpose(y_out),
