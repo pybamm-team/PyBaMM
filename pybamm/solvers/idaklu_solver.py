@@ -648,8 +648,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = False
 
-        if sol.flag not in [0, 2]:
-            raise pybamm.SolverError("idaklu solver failed")
 
         # 0 = solved for all t_eval
         if sol.flag == 0:
