@@ -943,7 +943,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             termination = "event"
         else:
             raise pybamm.SolverError("idaklu solver failed")
-
         newsol = pybamm.Solution(
             sol.t,
             np.transpose(y_out),
