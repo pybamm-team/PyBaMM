@@ -28,9 +28,10 @@ CasadiSolver *create_casadi_solver(
   const std::vector<Function*>& var_casadi_fcns,
   const std::vector<Function*>& dvar_dy_fcns,
   const std::vector<Function*>& dvar_dp_fcns,
-  py::dict options
+  py::dict py_opts
 ) {
-  auto options_cpp = Options(options);
+  auto setup_opts = SetupOptions(py_opts);
+  auto solver_opts = SolverOptions(py_opts);
   auto functions = std::make_unique<CasadiFunctions>(
     rhs_alg,
     jac_times_cjmass,
@@ -50,13 +51,13 @@ CasadiSolver *create_casadi_solver(
     var_casadi_fcns,
     dvar_dy_fcns,
     dvar_dp_fcns,
-    options_cpp
+    setup_opts
   );
 
   CasadiSolver *casadiSolver = nullptr;
 
   // Instantiate solver class
-  if (options_cpp.linear_solver == "SUNLinSol_Dense")
+  if (setup_opts.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
     casadiSolver = new CasadiSolverOpenMP_Dense(
@@ -69,10 +70,11 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_KLU")
+  else if (setup_opts.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
     casadiSolver = new CasadiSolverOpenMP_KLU(
@@ -85,10 +87,11 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_Band")
+  else if (setup_opts.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");
     casadiSolver = new CasadiSolverOpenMP_Band(
@@ -101,10 +104,11 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPBCGS")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
     casadiSolver = new CasadiSolverOpenMP_SPBCGS(
@@ -117,10 +121,11 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPFGMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPFGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
     casadiSolver = new CasadiSolverOpenMP_SPFGMR(
@@ -133,10 +138,11 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPGMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
     casadiSolver = new CasadiSolverOpenMP_SPGMR(
@@ -149,10 +155,11 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPTFQMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPTFQMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
     casadiSolver = new CasadiSolverOpenMP_SPTFQMR(
@@ -165,7 +172,8 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
 

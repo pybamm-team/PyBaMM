@@ -114,8 +114,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # IDA initial conditions calculation
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 5,
-            "max_number_jacobians_ic": 4,
-            "max_number_iterations_ic": 10,
+            "max_num_jacobians_ic": 4,
+            "max_num_iterations_ic": 10,
             "max_linesearch_backtracks_ic": 100,
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
