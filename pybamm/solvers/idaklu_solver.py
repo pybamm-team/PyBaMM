@@ -935,73 +935,72 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = False
 
-        if sol.flag in [0, 2]:
-            # 0 = solved for all t_eval
-            if sol.flag == 0:
-                termination = "final time"
-            # 2 = found root(s)
-            elif sol.flag == 2:
-                termination = "event"
-
-            newsol = pybamm.Solution(
-                sol.t,
-                np.transpose(y_out),
-                model,
-                inputs_dict,
-                np.array([t[-1]]),
-                np.transpose(y_out[-1])[:, np.newaxis],
-                termination,
-                sensitivities=yS_out,
-            )
-            newsol.integration_time = integration_time
-            if self.output_variables:
-                # Populate variables and sensititivies dictionaries directly
-                number_of_samples = sol.y.shape[0] // number_of_timesteps
-                sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-                startk = 0
-                for _, var in enumerate(self.output_variables):
-                    # ExplicitTimeIntegral's are not computed as part of the solver and
-                    # do not need to be converted
-                    if isinstance(
-                        model.variables_and_events[var], pybamm.ExplicitTimeIntegral
-                    ):
-                        continue
-                    if model.convert_to_format == "casadi":
-                        len_of_var = (
-                            self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
-                        )
-                        base_variables = [self._setup["var_fcns"][var]]
-                    elif (
-                        model.convert_to_format == "jax"
-                        and self._options["jax_evaluator"] == "iree"
-                    ):
-                        idx = self.output_variables.index(var)
-                        len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
-                        base_variables = [self._setup["var_idaklu_fcns"][idx]]
-                    else:  # pragma: no cover
-                        raise pybamm.SolverError(
-                            "Unsupported evaluation engine for convert_to_format="
-                            + f"{model.convert_to_format} "
-                            + f"(jax_evaluator={self._options['jax_evaluator']})"
-                        )
-                    newsol._variables[var] = pybamm.ProcessedVariableComputed(
-                        [model.variables_and_events[var]],
-                        base_variables,
-                        [sol.y[:, startk : (startk + len_of_var)]],
-                        newsol,
-                    )
-                    # Add sensitivities
-                    newsol[var]._sensitivities = {}
-                    if model.calculate_sensitivities:
-                        for paramk, param in enumerate(inputs_dict.keys()):
-                            newsol[var].add_sensitivity(
-                                param,
-                                [sol.yS[:, startk : (startk + len_of_var), paramk]],
-                            )
-                    startk += len_of_var
-            return newsol
+        # 0 = solved for all t_eval
+        if sol.flag == 0:
+            termination = "final time"
+        # 2 = found root(s)
+        elif sol.flag == 2:
+            termination = "event"
         else:
             raise pybamm.SolverError("idaklu solver failed")
+
+        newsol = pybamm.Solution(
+            sol.t,
+            np.transpose(y_out),
+            model,
+            inputs_dict,
+            np.array([t[-1]]),
+            np.transpose(y_out[-1])[:, np.newaxis],
+            termination,
+            sensitivities=yS_out,
+        )
+        newsol.integration_time = integration_time
+        if self.output_variables:
+            # Populate variables and sensititivies dictionaries directly
+            number_of_samples = sol.y.shape[0] // number_of_timesteps
+            sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
+            startk = 0
+            for _, var in enumerate(self.output_variables):
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
+                if isinstance(
+                    model.variables_and_events[var], pybamm.ExplicitTimeIntegral
+                ):
+                    continue
+                if model.convert_to_format == "casadi":
+                    len_of_var = (
+                        self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
+                    )
+                    base_variables = [self._setup["var_fcns"][var]]
+                elif (
+                    model.convert_to_format == "jax"
+                    and self._options["jax_evaluator"] == "iree"
+                ):
+                    idx = self.output_variables.index(var)
+                    len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
+                    base_variables = [self._setup["var_idaklu_fcns"][idx]]
+                else:  # pragma: no cover
+                    raise pybamm.SolverError(
+                        "Unsupported evaluation engine for convert_to_format="
+                        + f"{model.convert_to_format} "
+                        + f"(jax_evaluator={self._options['jax_evaluator']})"
+                    )
+                newsol._variables[var] = pybamm.ProcessedVariableComputed(
+                    [model.variables_and_events[var]],
+                    base_variables,
+                    [sol.y[:, startk : (startk + len_of_var)]],
+                    newsol,
+                )
+                # Add sensitivities
+                newsol[var]._sensitivities = {}
+                if model.calculate_sensitivities:
+                    for paramk, param in enumerate(inputs_dict.keys()):
+                        newsol[var].add_sensitivity(
+                            param,
+                            [sol.yS[:, startk : (startk + len_of_var), paramk]],
+                        )
+                startk += len_of_var
+        return newsol
 
     def jaxify(
         self,
