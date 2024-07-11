@@ -67,7 +67,8 @@ public:
   realtype *res = nullptr;
   realtype *res_dvar_dy = nullptr;
   realtype *res_dvar_dp = nullptr;
-  Options options;
+  SetupOptions setup_opts;
+  SolverOptions solver_opts;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -87,7 +88,9 @@ public:
     int jac_bandwidth_lower,
     int jac_bandwidth_upper,
     std::unique_ptr<CasadiFunctions> functions,
-    const Options& options);
+    const SetupOptions &setup_opts,
+    const SolverOptions &solver_opts
+    );
 
   /**
    * @brief Destructor
@@ -142,6 +145,11 @@ public:
    * @brief Allocate memory for matrices (noting appropriate matrix format/types)
    */
   void SetMatrix();
+
+  /**
+   * @brief Apply user-configurable IDA options
+   */
+  void SetSolverOptions();
 };
 
 #endif // PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
