@@ -50,7 +50,6 @@ struct SolverOptions {
   double epsilon_linear_tolerance;
   double increment_factor;
   explicit SolverOptions(py::dict &py_opts);
-
 };
 
 #endif // PYBAMM_OPTIONS_HPP
