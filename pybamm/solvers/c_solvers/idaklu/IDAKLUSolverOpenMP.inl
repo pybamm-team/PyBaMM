@@ -74,7 +74,7 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
   // Specify preconditioner type
   precon_type = SUN_PREC_NONE;
-  if (setup_opts.preconditioner != "none") {
+  if (this->setup_opts.preconditioner != "none") {
     precon_type = SUN_PREC_LEFT;
   }
 }
@@ -337,7 +337,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   auto y0 = y0_np.unchecked<1>();
   auto yp0 = yp0_np.unchecked<1>();
   auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
-  bool sensitivity = number_of_parameters > 0;
+  bool const sensitivity = number_of_parameters > 0;
 
   if (y0.size() != n_coeffs) {
     throw std::domain_error(
@@ -384,7 +384,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   // correct initial values
-  int init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
+  int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
     DEBUG("IDACalcIC");
     IDACalcIC(ida_mem, init_type, t(1));
