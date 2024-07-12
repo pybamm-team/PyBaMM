@@ -151,7 +151,7 @@ public:
   /**
    * @brief Check the return flag for errors
    */
-  void CheckErrors(int& flag);
+  void CheckErrors(int const & flag);
 };
 
 #include "IDAKLUSolverOpenMP.inl"

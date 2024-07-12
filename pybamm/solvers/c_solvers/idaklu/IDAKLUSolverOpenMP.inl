@@ -518,47 +518,44 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     DEBUG("IDASolve");
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
 
-    if (retval == IDA_TSTOP_RETURN ||
+    if (!(retval == IDA_TSTOP_RETURN ||
         retval == IDA_SUCCESS ||
-        retval == IDA_ROOT_RETURN)
-    {
-      if (number_of_parameters > 0) {
-        flag = IDAGetSens(ida_mem, &tret, yyS);
-        CheckErrors(flag);
-      }
-
-      // Evaluate and store results for the time step
-      t_return[t_i] = tret;
-      if (functions->var_fcns.size() > 0) {
-        // Evaluate functions for each requested variable and store
-        // NOTE: Indexing of yS_return is (time:var:param)
-        CalcVars(y_return, length_of_return_vector, t_i,
-                 &tret, yval, ySval, yS_return, &ySk);
-      } else {
-        // Retain complete copy of the state vector
-        for (int j = 0; j < number_of_states; j++)
-          y_return[t_i * number_of_states + j] = yval[j];
-        for (int j = 0; j < number_of_parameters; j++)
-        {
-          const int base_index =
-            j * number_of_timesteps * number_of_states +
-            t_i * number_of_states;
-          for (int k = 0; k < number_of_states; k++)
-            // NOTE: Indexing of yS_return is (time:param:yvec)
-            yS_return[base_index + k] = ySval[j][k];
-        }
-      }
-      t_i += 1;
-
-      if (retval == IDA_SUCCESS ||
-          retval == IDA_ROOT_RETURN)
-        break;
-    }
-    else
-    {
+        retval == IDA_ROOT_RETURN)) {
       // failed
       break;
     }
+
+    if (number_of_parameters > 0) {
+      flag = IDAGetSens(ida_mem, &tret, yyS);
+      CheckErrors(flag);
+    }
+
+    // Evaluate and store results for the time step
+    t_return[t_i] = tret;
+    if (functions->var_fcns.size() > 0) {
+      // Evaluate functions for each requested variable and store
+      // NOTE: Indexing of yS_return is (time:var:param)
+      CalcVars(y_return, length_of_return_vector, t_i,
+                &tret, yval, ySval, yS_return, &ySk);
+    } else {
+      // Retain complete copy of the state vector
+      for (int j = 0; j < number_of_states; j++)
+        y_return[t_i * number_of_states + j] = yval[j];
+      for (int j = 0; j < number_of_parameters; j++)
+      {
+        const int base_index =
+          j * number_of_timesteps * number_of_states +
+          t_i * number_of_states;
+        for (int k = 0; k < number_of_states; k++)
+          // NOTE: Indexing of yS_return is (time:param:yvec)
+          yS_return[base_index + k] = ySval[j][k];
+      }
+    }
+    t_i += 1;
+
+    if (retval == IDA_SUCCESS ||
+        retval == IDA_ROOT_RETURN)
+      break;
   }
 
   np_array t_ret = np_array(
@@ -651,7 +648,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int& flag) {
+void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag) {
   if (flag < 0) {
     auto message = (std::string("IDA failed with flag ") + std::to_string(flag)).c_str();
     py::set_error(PyExc_ValueError, message);
