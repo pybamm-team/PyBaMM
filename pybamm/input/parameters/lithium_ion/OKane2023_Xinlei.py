@@ -1616,7 +1616,8 @@ def get_parameter_values():
         "Positive electrode cracking rate": cracking_rate_Ai2020,
         "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Positive electrode LAM constant exponential term": 2.0,
-        "Positive electrode critical stress [Pa]": 375000000.0,
+        #"Positive electrode critical stress [Pa]": 375000000.0,# original
+        "Positive electrode critical stress [Pa]": 2e9, # increased by Xinlei to reduce LAM_pos
         # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,

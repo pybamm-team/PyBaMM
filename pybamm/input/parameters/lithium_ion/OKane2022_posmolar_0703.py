@@ -570,8 +570,8 @@ def get_parameter_values():
         "Contact resistance [Ohm]": 0,
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
-        "Maximum concentration in negative electrode [mol.m-3]": 33133.0, # 
-        #"Maximum concentration in negative electrode [mol.m-3]": 32544.0, # Okane2023
+        #"Maximum concentration in negative electrode [mol.m-3]": 33133.0, # 
+        "Maximum concentration in negative electrode [mol.m-3]": 32544.0, # Okane2023
         "Negative particle diffusivity [m2.s-1]": graphite_LGM50_diffusivity_Chen2020,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
@@ -604,8 +604,8 @@ def get_parameter_values():
         "Negative electrode critical stress [Pa]": 60000000.0,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
-        #"Maximum concentration in positive electrode [mol.m-3]": 52787.0, # Okane2023
-        "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
+        "Maximum concentration in positive electrode [mol.m-3]": 52787.0, # Okane2023
+        #"Maximum concentration in positive electrode [mol.m-3]": 63104.0,
         "Positive particle diffusivity [m2.s-1]": nmc_LGM50_diffusivity_Chen2020,
         "Positive electrode OCP [V]": nmc_LGM50_ocp_Chen2020,
         "Positive electrode porosity": 0.335,
@@ -625,8 +625,8 @@ def get_parameter_values():
         "Positive electrode Young's modulus [Pa]": 375000000000.0,
         "Positive electrode reference concentration for free of deformation [mol.m-3]"
         "": 0.0,
-        "Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
-        #"Positive electrode partial molar volume [m3.mol-1]": 7.88e-07, # updated by Xinlei 2024/7/4
+        #"Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
+        "Positive electrode partial molar volume [m3.mol-1]": 7.88e-07, # updated by Xinlei 2024/7/4
         ## From Yang Tu, Billy Wu, Weilong Ai, Emilio Martínez-Pañeda,
         # Influence of concentration-dependent material properties on the fracture and debonding of electrode particles with core–shell structure,
         # Journal of Power Sources,
@@ -644,7 +644,8 @@ def get_parameter_values():
         "Positive electrode cracking rate": cracking_rate_Ai2020,
         "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
         "Positive electrode LAM constant exponential term": 2.0,
-        "Positive electrode critical stress [Pa]": 375000000.0,
+        #"Positive electrode critical stress [Pa]": 375000000.0,
+        "Positive electrode critical stress [Pa]": 2e9, # Decreased by Xinlei 0712, to reduce LAM_pos
         # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
@@ -669,10 +670,10 @@ def get_parameter_values():
         "Upper voltage cut-off [V]": 4.2,
         "Open-circuit voltage at 0% SOC [V]": 2.5,
         "Open-circuit voltage at 100% SOC [V]": 4.2,
-        #"Initial concentration in negative electrode [mol.m-3]": 28800.0, # updated to Okane2023
-        "Initial concentration in negative electrode [mol.m-3]": 29866.0,
-        #"Initial concentration in positive electrode [mol.m-3]": 12729.0, # updated to Okane2023
-        "Initial concentration in positive electrode [mol.m-3]": 17038.0,
+        "Initial concentration in negative electrode [mol.m-3]": 28800.0, # updated to Okane2023
+        #"Initial concentration in negative electrode [mol.m-3]": 29866.0,
+        "Initial concentration in positive electrode [mol.m-3]": 12729.0, # updated to Okane2023
+        #"Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
         # citations
         "citations": ["OKane2022", "OKane2020", "Chen2020"],
