@@ -10,10 +10,10 @@ void ModuleParser::parse()
   // Parse module name
   std::regex module_name_regex("module @([^\\s]+)");  // Match until first whitespace
   std::smatch module_name_match;
-  std::regex_search(mlir, module_name_match, module_name_regex);
+  std::regex_search(this->mlir, module_name_match, module_name_regex);
   if (module_name_match.size() == 0) {
     std::cerr << "Could not find module name in module" << std::endl;
-    std::cerr << "Module snippet: " << mlir.substr(0, 1000) << std::endl;
+    std::cerr << "Module snippet: " << this->mlir.substr(0, 1000) << std::endl;
     throw std::runtime_error("Could not find module name in module");
   }
   module_name = module_name_match[1].str();
@@ -25,10 +25,10 @@ void ModuleParser::parse()
   // Isolate 'main' function call signature
   std::regex main_func("public @main\\((.*?)\\) -> \\((.*?)\\)");
   std::smatch match;
-  std::regex_search(mlir, match, main_func);
+  std::regex_search(this->mlir, match, main_func);
   if (match.size() == 0) {
     std::cerr << "Could not find 'main' function in module" << std::endl;
-    std::cerr << "Module snippet: " << mlir.substr(0, 1000) << std::endl;
+    std::cerr << "Module snippet: " << this->mlir.substr(0, 1000) << std::endl;
     throw std::runtime_error("Could not find 'main' function in module");
   }
   std::string main_sig_inputs = match[1].str();
