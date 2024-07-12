@@ -499,7 +499,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         stacklevel=2,
                     )
                     jnpfloat = jnp.float32
-                else:  # pragma: no branch
+                else:  # pragma: no cover
                     jnpfloat = jnp.float64
                     raise pybamm.SolverError(
                         "Demoting expressions to 32-bit is required for MLIR conversion"
