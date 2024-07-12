@@ -133,17 +133,15 @@ SolverOptions::SolverOptions(py::dict &options)
       nonlinear_convergence_coefficient_ic(RCONST(options["nonlinear_convergence_coefficient_ic"].cast<double>())),
       suppress_algebraic_error(options["suppress_algebraic_error"].cast<sunbooleantype>()),
       // IDA initial conditions calculation
+      calc_ic(options["calc_ic"].cast<bool>()),
+      init_all_y_ic(options["init_all_y_ic"].cast<bool>()),
       max_num_steps_ic(options["max_num_steps_ic"].cast<int>()),
       max_num_jacobians_ic(options["max_num_jacobians_ic"].cast<int>()),
       max_num_iterations_ic(options["max_num_iterations_ic"].cast<int>()),
       max_linesearch_backtracks_ic(options["max_linesearch_backtracks_ic"].cast<int>()),
       linesearch_off_ic(options["linesearch_off_ic"].cast<sunbooleantype>()),
-      calc_ic(options["calc_ic"].cast<bool>()),
-      init_all_y_ic(options["init_all_y_ic"].cast<bool>()),
       // IDALS linear solver interface
       linear_solution_scaling(options["linear_solution_scaling"].cast<sunbooleantype>()),
       epsilon_linear_tolerance(RCONST(options["epsilon_linear_tolerance"].cast<double>())),
       increment_factor(RCONST(options["increment_factor"].cast<double>()))
-{
-
-}
+{}
