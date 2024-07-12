@@ -34,13 +34,13 @@ public:
    * @return function name
    */
   const std::string& getFunctionName() const { return function_name; }
-  
+
   /**
    * @brief Get the input shape
    * @return input shape
    */
   const std::vector<std::vector<int>>& getInputShape() const { return input_shape; }
-  
+
   /**
    * @brief Get the output shape
    * @return output shape
