@@ -1254,7 +1254,7 @@ class BaseSolver:
                 x for x in model.events if x.event_type == pybamm.EventType.TERMINATION
             ]
             idxs = np.where(events_eval < 0)[0]
-            event_names = [termination_events[idx / len(inputs)].name for idx in idxs]
+            event_names = [termination_events[idx // len(inputs)].name for idx in idxs]
             raise pybamm.SolverError(
                 f"Events {event_names} are non-positive at initial conditions"
             )

@@ -714,10 +714,10 @@ class Symbol:
         """
         if variable == self:
             eval_shape = self.evaluate_for_shape()
-            if isinstance(eval_shape, numbers.Number):
+            if isinstance(eval_shape, numbers.Number) or len(eval_shape) == 1:
                 return pybamm.Scalar(1)
             else:
-                return pybamm.Vector(np.ones_like(eval_shape), domain=self.domains)
+                return pybamm.Vector(np.ones_like(eval_shape))
         elif any(variable == x for x in self.pre_order()):
             return self._diff(variable)
         elif variable == pybamm.t and self.has_symbol_of_classes(
@@ -726,10 +726,10 @@ class Symbol:
             return self._diff(variable)
         else:
             eval_shape = self.evaluate_for_shape()
-            if isinstance(eval_shape, numbers.Number):
+            if isinstance(eval_shape, numbers.Number) or len(eval_shape) == 1:
                 return pybamm.Scalar(0)
             else:
-                return pybamm.Vector(np.zeros_like(eval_shape), domain=self.domains)
+                return pybamm.Vector(np.zeros_like(eval_shape))
 
     def _diff(self, variable):
         """
