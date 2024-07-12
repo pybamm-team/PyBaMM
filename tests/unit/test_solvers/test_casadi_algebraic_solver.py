@@ -56,6 +56,10 @@ class TestCasadiAlgebraicSolver(TestCase):
             p = casadi.MX.sym("p")
             rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y**2 + 1])
+            len_rhs = 0
+            len_rhs_sens = 0
+            len_alg = 1
+            len_alg_sens = 0
             bounds = (np.array([-np.inf]), np.array([np.inf]))
             interpolant_extrapolation_events_eval = []
             batch_size = 1
@@ -84,6 +88,10 @@ class TestCasadiAlgebraicSolver(TestCase):
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
+            len_rhs = 0
+            len_rhs_sens = 0
+            len_alg = 1
+            len_alg_sens = 0
             rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y**0.5])
             bounds = (np.array([-np.inf]), np.array([np.inf]))

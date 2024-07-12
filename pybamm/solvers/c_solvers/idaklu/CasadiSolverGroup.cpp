@@ -56,14 +56,12 @@ std::vector<Solution> CasadiSolverGroup::solve(np_array t_np, np_array y0_np, np
   const std::size_t solves_per_thread = n_groups / m_solvers.size();
   const std::size_t remainder_solves = n_groups % m_solvers.size();
 
-  const std::size_t nthreads = m_solvers.size();
-
   const realtype *t = t_np.data();
   const realtype *y0 = y0_np.data();
   const realtype *yp0 = yp0_np.data();
   const realtype *inputs_data = inputs.data();
 
-  omp_set_num_threads(nthreads);
+  omp_set_num_threads(m_solvers.size());
   #pragma omp parallel for
   for (int i = 0; i < m_solvers.size(); i++) {
     for (int j = 0; j < solves_per_thread; j++) {

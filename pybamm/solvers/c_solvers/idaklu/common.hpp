@@ -29,6 +29,8 @@
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
+
+// note: we rely on c_style ordering for numpy arrays so don't change this!
 using np_array = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
 using np_array_int = py::array_t<int64_t>;
 

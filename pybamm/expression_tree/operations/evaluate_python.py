@@ -286,6 +286,8 @@ def find_symbols(
         # Index has a different syntax than other univariate operations
         if isinstance(symbol, pybamm.Index):
             symbol_str = f"{children_vars[0]}[{symbol.slice.start}:{symbol.slice.stop}]"
+        elif isinstance(symbol, pybamm.AbsoluteValue):
+            symbol_str = f"{symbol.name}({children_vars[0]})"
         else:
             symbol_str = symbol.name + children_vars[0]
 

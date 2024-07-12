@@ -4,7 +4,9 @@ import numbers
 import sys
 import warnings
 import platform
-import asyncio
+
+# import asyncio
+import multiprocessing as mp
 
 
 import casadi
@@ -772,9 +774,7 @@ class BaseSolver:
             y0S_list = model.y0S_list
         return inputs_list, batched_inputs, nbatches, batch_size, y0S_list
 
-    def _integrate(
-        self, model, t_eval, inputs_list=None, batched_inputs=None, nproc=None
-    ):
+    def _integrate(self, model, t_eval, inputs_list=None, batched_inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -804,53 +804,55 @@ class BaseSolver:
             )
 
         # async io is not parallel, but if solve is io bound, it can be faster
-        async def solve_model_batches():
-            async def solve_model_async(y0, y0S, inputs, inputs_array):
-                return self._integrate_batch(
-                    model, t_eval, y0, y0S, inputs, inputs_array
-                )
+        # async def solve_model_batches():
+        #    async def solve_model_async(y0, y0S, inputs, inputs_array):
+        #        return self._integrate_batch(
+        #            model, t_eval, y0, y0S, inputs, inputs_array
+        #        )
 
-            coro = []
-            for i in range(nbatches):
-                coro.append(
-                    asyncio.create_task(
-                        solve_model_async(
-                            model.y0_list[i],
-                            y0S_list[i],
-                            inputs_list[i * batch_size : (i + 1) * batch_size],
-                            batched_inputs[i],
-                        )
-                    )
-                )
-            return await asyncio.gather(*coro)
+        #    coro = []
+        #    for i in range(nbatches):
+        #        coro.append(
+        #            asyncio.create_task(
+        #                solve_model_async(
+        #                    model.y0_list[i],
+        #                    y0S_list[i],
+        #                    inputs_list[i * batch_size : (i + 1) * batch_size],
+        #                    batched_inputs[i],
+        #                )
+        #            )
+        #        )
+        #    return await asyncio.gather(*coro)
 
-        new_solutions = asyncio.run(solve_model_batches())
+        # new_solutions = asyncio.run(solve_model_batches())
 
         # new_solutions = []
         # for i in range(nbatches):
         #    new_solutions.append(self._integrate_batch(model, t_eval, model.y0_list[i], y0S_list[i], inputs_list[i * batch_size : (i + 1) * batch_size], batched_inputs[i]))
 
-        # with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-        #    model_list = [model] * nbatches
-        #    t_eval_list = [t_eval] * nbatches
-        #    y0_list = model.y0_list
-        #    inputs_list_of_list = [
-        #        inputs_list[i * batch_size : (i + 1) * batch_size]
-        #        for i in range(nbatches)
-        #    ]
-        #    new_solutions = p.starmap(
-        #        self._integrate_batch,
-        #        zip(
-        #            model_list,
-        #            t_eval_list,
-        #            y0_list,
-        #            y0S_list,
-        #            inputs_list_of_list,
-        #            batched_inputs,
-        #        ),
-        #    )
-        #    p.close()
-        #    p.join()
+        threads_per_batch = max(self._base_options["num_threads"] // nbatches, 1)
+        nproc = self._base_options["num_threads"] // threads_per_batch
+        with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+            model_list = [model] * nbatches
+            t_eval_list = [t_eval] * nbatches
+            y0_list = model.y0_list
+            inputs_list_of_list = [
+                inputs_list[i * batch_size : (i + 1) * batch_size]
+                for i in range(nbatches)
+            ]
+            new_solutions = p.starmap(
+                self._integrate_batch,
+                zip(
+                    model_list,
+                    t_eval_list,
+                    y0_list,
+                    y0S_list,
+                    inputs_list_of_list,
+                    batched_inputs,
+                ),
+            )
+            p.close()
+            p.join()
         new_solutions_flat = [sol for sublist in new_solutions for sol in sublist]
         return new_solutions_flat
 
@@ -1700,9 +1702,11 @@ class BaseSolver:
         len_alg = model.len_alg + model.len_alg_sens
         batch_size = model.batch_size
         y_diff_list = [
-            y_diff[i * len_rhs : (i + 1) * len_rhs] for i in range(batch_size)
+            y_diff[i * len_rhs : (i + 1) * len_rhs, :] for i in range(batch_size)
         ]
-        y_alg_list = [y_alg[i * len_alg : (i + 1) * len_alg] for i in range(batch_size)]
+        y_alg_list = [
+            y_alg[i * len_alg : (i + 1) * len_alg, :] for i in range(batch_size)
+        ]
         if isinstance(y_diff, casadi.DM):
             y = casadi.vertcat(
                 *[val for pair in zip(y_diff_list, y_alg_list) for val in pair]
@@ -1744,10 +1748,7 @@ def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs, nthreads)
     nstates = vars_for_processing["y_and_S"].shape[0]
     nparams = vars_for_processing["p_casadi_stacked"].shape[0]
 
-    threads_per_input = nthreads // ninputs
-    if threads_per_input > 1:
-        threads_per_input = 1
-    if threads_per_input > 1:
+    if nthreads > 1:
         parallelisation = "thread"
     else:
         parallelisation = "none"
@@ -1773,7 +1774,7 @@ def map_func_over_inputs_casadi(name, f, vars_for_processing, ninputs, nthreads)
         inputs_2d = [t_2d, y_and_S_2d, p_casadi_2d]
         inputs_stacked = [t_stacked, y_and_S_inputs_stacked, p_casadi_inputs_stacked]
 
-    mapped_f = f.map(ninputs, parallelisation, threads_per_input)(*inputs_2d)
+    mapped_f = f.map(ninputs, parallelisation, nthreads)(*inputs_2d)
     if matrix_output:
         # for matrix output we need to stack the outputs in a block diagonal matrix
         splits = [i * nstates for i in range(ninputs + 1)]
@@ -1849,6 +1850,8 @@ def process(
     else:
         inputs_batch = [inputs[0]]
     is_event = "event" in name
+    nbatches = len(inputs) // batch_size
+    nthreads_per_batch = max(nthreads // nbatches, 1)
 
     def report(string):
         # don't log event conversion
@@ -2028,31 +2031,30 @@ def process(
             name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
         )
 
-        ninputs = len(inputs_batch)
-        if ninputs > 1:
+        if batch_size > 1:
             func = map_func_over_inputs_casadi(
-                name, func, vars_for_processing, ninputs, nthreads
+                name, func, vars_for_processing, batch_size, nthreads_per_batch
             )
             jac = map_func_over_inputs_casadi(
                 name + "_jac",
                 jac,
                 vars_for_processing,
-                ninputs,
-                nthreads,
+                batch_size,
+                nthreads_per_batch,
             )
             jacp = map_func_over_inputs_casadi(
                 name + "_jacp",
                 jacp,
                 vars_for_processing,
-                ninputs,
-                nthreads,
+                batch_size,
+                nthreads_per_batch,
             )
             jac_action = map_func_over_inputs_casadi(
                 name + "_jac_action",
                 jac_action,
                 vars_for_processing,
-                ninputs,
-                nthreads,
+                batch_size,
+                nthreads_per_batch,
             )
 
     return func, jac, jacp, jac_action

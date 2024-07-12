@@ -340,15 +340,16 @@ class TestBroadcasts(TestCase):
         d = b.diff(a)
         self.assertIsInstance(d, pybamm.PrimaryBroadcast)
         self.assertEqual(d.child.evaluate(y=y), 1)
-        # diff of broadcast w.r.t. itself is 1
+        # diff of broadcast w.r.t. itself is a vector of 1
         d = b.diff(b)
-        self.assertIsInstance(d, pybamm.Scalar)
-        self.assertEqual(d.evaluate(y=y), 1)
-        # diff of broadcast of a constant is 0
+        self.assertIsInstance(d, pybamm.Vector)
+        b_size = pybamm.domain_size(["separator"])
+        np.testing.assert_array_equal(d.evaluate(y=y), np.ones((b_size, 1)))
+        # diff of broadcast of a constant is 0 vector
         c = pybamm.PrimaryBroadcast(pybamm.Scalar(4), "separator")
         d = c.diff(a)
-        self.assertIsInstance(d, pybamm.Scalar)
-        self.assertEqual(d.evaluate(y=y), 0)
+        self.assertIsInstance(d, pybamm.Vector)
+        np.testing.assert_array_equal(d.evaluate(y=y), np.zeros((b_size, 1)))
 
     def test_to_from_json_error(self):
         a = pybamm.StateVector(slice(0, 1))

@@ -69,6 +69,12 @@ class CasadiSolver(pybamm.BaseSolver):
         The maximum number of integrators that the solver will retain before
         ejecting past integrators using an LRU methodology. A value of 0 or
         None leaves the number of integrators unbound. Default is 100.
+    options: dict, optional
+        List of options, defaults are:
+        options = {
+            # Number of threads available for OpenMP
+            "num_threads": 1,
+        }
     """
 
     def __init__(
@@ -86,6 +92,7 @@ class CasadiSolver(pybamm.BaseSolver):
         return_solution_if_failed_early=False,
         perturb_algebraic_initial_conditions=None,
         integrators_maxcount=100,
+        options=None,
     ):
         super().__init__(
             "problem dependent",
@@ -94,6 +101,7 @@ class CasadiSolver(pybamm.BaseSolver):
             root_method,
             root_tol,
             extrap_tol,
+            options=options,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode

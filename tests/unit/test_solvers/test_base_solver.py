@@ -128,6 +128,10 @@ class TestBaseSolver(TestCase):
             def __init__(self):
                 self.y0_list = [np.array([2])]
                 self.rhs = {}
+                self.len_rhs = 0
+                self.len_rhs_sens = 0
+                self.len_alg = 1
+                self.len_alg_sens = 0
                 self.jac_algebraic_eval = None
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
@@ -175,7 +179,10 @@ class TestBaseSolver(TestCase):
                 self.convert_to_format = "casadi"
                 self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
                 self.len_rhs = 1
-                self.len_rhs_and_alg = 4
+                self.len_rhs_sens = 0
+                self.len_alg = len(vec) - 1
+                self.len_alg_sens = 0
+
                 self.events = []
                 self.batch_size = 1
 
@@ -222,6 +229,10 @@ class TestBaseSolver(TestCase):
                 self.casadi_algebraic = casadi.Function(
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
+                self.len_rhs = 0
+                self.len_rhs_sens = 0
+                self.len_alg = 1
+                self.len_alg_sens = 0
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
                 self.batch_size = 1

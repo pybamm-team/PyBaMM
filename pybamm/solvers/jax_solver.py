@@ -4,7 +4,8 @@
 import numpy as onp
 
 import pybamm
-import multiprocessing as mp
+import asyncio
+import copy
 
 if pybamm.have_jax():
     import jax
@@ -43,7 +44,7 @@ class JaxSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
-    extra_options : dict, optional
+    options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation
         <https://github.com/google/jax/blob/master/jax/experimental/ode.py>`_
@@ -57,7 +58,7 @@ class JaxSolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=None,
-        extra_options=None,
+        options=None,
     ):
         if not pybamm.have_jax():
             raise ModuleNotFoundError(
@@ -67,15 +68,25 @@ class JaxSolver(pybamm.BaseSolver):
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
         super().__init__(
-            method, rtol, atol, root_method=root_method, extrap_tol=extrap_tol
+            method,
+            rtol,
+            atol,
+            root_method=root_method,
+            extrap_tol=extrap_tol,
+            options=options,
         )
+
         method_options = ["RK45", "BDF"]
         if method not in method_options:
             raise ValueError(f"method must be one of {method_options}")
         self.ode_solver = False
         if method == "RK45":
             self.ode_solver = True
-        self.extra_options = extra_options or {}
+        options = options or {}
+        self.options = copy.copy(options) or {}
+        # remove "num_threads" from options as it is not supported
+        if "num_threads" in self.options:
+            self.options.pop("num_threads", None)
         self.name = f"JAX solver ({method})"
         self._cached_solves = dict()
         pybamm.citations.register("jax2018")
@@ -177,7 +188,7 @@ class JaxSolver(pybamm.BaseSolver):
                 stack_inputs(inputs),
                 rtol=self.rtol,
                 atol=self.atol,
-                **self.extra_options,
+                **self.options,
             )
             return jnp.transpose(y)
 
@@ -192,7 +203,7 @@ class JaxSolver(pybamm.BaseSolver):
                 rtol=self.rtol,
                 atol=self.atol,
                 mass=mass,
-                **self.extra_options,
+                **self.options,
             )
             return jnp.transpose(y)
 
@@ -231,35 +242,99 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        # todo: make this parallel
-
-        solns = []
         batch_size = len(inputs_list) // len(batched_inputs)
         nbatches = len(batched_inputs)
 
-        def solve_batch(i):
-            y0 = model.y0_list[i]
-            inputs_sublist = inputs_list[i * batch_size : (i + 1) * batch_size]
-            y = self._cached_solves[model](y0, inputs_sublist)
-            # convert to a normal numpy array
-            y = onp.array(y)
-            return pybamm.Solution.from_concatenated_state(
-                t_eval,
-                y,
-                model,
-                inputs_sublist,
-                termination="final time",
-                check_solution=False,
+        platform = jax.lib.xla_bridge.get_backend().platform.casefold()
+        if nbatches == 1:
+            y = [self._cached_solves[model](model.y0_list[0], inputs_list)]
+        elif platform.startswith("cpu"):
+            # cpu execution runs faster when multithreaded
+            async def solve_model_for_inputs():
+                async def solve_model_async(y0, inputs_sublist):
+                    return self._cached_solves[model](y0, inputs_sublist)
+
+                coro = []
+                for i in range(nbatches):
+                    y0 = model.y0_list[i]
+                    inputs_sublist = inputs_list[i * batch_size : (i + 1) * batch_size]
+                    coro.append(
+                        asyncio.create_task(solve_model_async(y0, inputs_sublist))
+                    )
+                return await asyncio.gather(*coro)
+
+            y = asyncio.run(solve_model_for_inputs())
+        elif (
+            platform.startswith("gpu")
+            or platform.startswith("tpu")
+            or platform.startswith("metal")
+        ):
+            # gpu execution runs faster when parallelised with vmap
+            # (see also comment below regarding single-program multiple-data
+            #  execution (SPMD) using pmap on multiple XLAs)
+
+            # convert inputs (array of dict) to a dict of arrays for vmap
+            inputs_v = {
+                key: jnp.array([dic[key] for dic in inputs_list])
+                for key in inputs_list[0]
+            }
+            y0 = onp.vstack([model.y0_list[i].flatten() for i in range(nbatches)])
+            y.extend(jax.vmap(self._cached_solves[model])(y0, inputs_v))
+        else:
+            # Unknown platform, use serial execution as fallback
+            print(
+                f'Unknown platform requested: "{platform}", '
+                "falling back to serial execution"
             )
 
-        nproc = None
-        with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-            solns = p.map(solve_batch, range(nbatches))
-        # flatten list of lists
-        solns = [x for xs in solns for x in xs]
+            y = []
+            for y0, inputs_v in zip(model.y0_list, inputs_list):
+                y.append(self._cached_solves[model](y0, inputs_v))
 
+        # This code block implements single-program multiple-data execution
+        # using pmap across multiple XLAs. It is currently commented out
+        # because it produces bus errors for even moderate-sized models.
+        # It is suspected that this is due to either a bug in JAX, insufficient
+        # sparse matrix support in JAX resulting in high memory usage, or a bug
+        # in the BDF solver.
+        #
+        # This issue on guthub appears related:
+        # https://github.com/google/jax/discussions/13930
+        #
+        #     # Split input list based on the number of available xla devices
+        #     device_count = jax.local_device_count()
+        #     inputs_listoflists = [inputs[x:x + device_count]
+        #                           for x in range(0, len(inputs), device_count)]
+        #     if len(inputs_listoflists) > 1:
+        #         print(f"{len(inputs)} parameter sets were provided, "
+        #               f"but only {device_count} XLA devices are available")
+        #         print(f"Parameter sets split into {len(inputs_listoflists)} "
+        #               "lists for parallel processing")
+        #     y = []
+        #     for k, inputs_list in enumerate(inputs_listoflists):
+        #         if len(inputs_listoflists) > 1:
+        #             print(f" Solving list {k+1} of {len(inputs_listoflists)} "
+        #                   f"({len(inputs_list)} parameter sets)")
+        #         # convert inputs to a dict of arrays for pmap
+        #         inputs_v = {key: jnp.array([dic[key] for dic in inputs_list])
+        #                     for key in inputs_list[0]}
+        #         y.extend(jax.pmap(self._cached_solves[model])(inputs_v))
         integration_time = timer.time()
-        for sol in solns:
-            sol.integration_time = integration_time
 
-        return solns
+        termination = "final time"
+        t_event = None
+        y_event = onp.array(None)
+
+        # Extract solutions from y with their associated input dicts
+        solutions = []
+        for i in range(nbatches):
+            state_vec = onp.array(y[i])
+            inputs = inputs_list[i * batch_size : (i + 1) * batch_size]
+            solution_batch = pybamm.Solution.from_concatenated_state(
+                t_eval, state_vec, model, inputs, t_event, y_event, termination
+            )
+            for soln in solution_batch:
+                soln.integration_time = integration_time
+            solutions += solution_batch
+
+        return solutions

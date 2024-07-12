@@ -90,6 +90,7 @@ CasadiSolverOpenMP::CasadiSolverOpenMP(
     }
   }
 
+  // todo: should use std::vector for these...
   res = new realtype[max_res_size];
   res_dvar_dy = new realtype[max_res_dvar_dy];
   res_dvar_dp = new realtype[max_res_dvar_dp];
@@ -261,6 +262,7 @@ void CasadiSolverOpenMP::CalcVarsSensitivities(
     for(int k=0; k<number_of_parameters; k++)
       dens_dvar_dp[k]=0;
     for(int k=0; k<spdp.nnz(); k++)
+      // todo: get_row() will allocate a new array each time, refactor this
       dens_dvar_dp[spdp.get_row()[k]] = res_dvar_dp[k];
     // Calculate sensitivities
     for(int paramk=0; paramk<number_of_parameters; paramk++) {
