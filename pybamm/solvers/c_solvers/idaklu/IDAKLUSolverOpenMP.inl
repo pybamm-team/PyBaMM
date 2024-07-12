@@ -3,29 +3,29 @@
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
-  np_array atol_np,
+  np_array atol_np_input,
   double rel_tol,
-  np_array rhs_alg_id,
-  int number_of_parameters,
-  int number_of_events,
-  int jac_times_cjmass_nnz,
-  int jac_bandwidth_lower,
-  int jac_bandwidth_upper,
+  np_array rhs_alg_id_input,
+  int number_of_parameters_input,
+  int number_of_events_input,
+  int jac_times_cjmass_nnz_input,
+  int jac_bandwidth_lower_input,
+  int jac_bandwidth_upper_input,
   std::unique_ptr<ExprSet> functions_arg,
-  const SetupOptions &setup_opts,
-  const SolverOptions &solver_opts
+  const SetupOptions &setup_input,
+  const SolverOptions &solver_input
 ) :
-  atol_np(atol_np),
-  rhs_alg_id(rhs_alg_id),
-  number_of_states(atol_np.request().size),
-  number_of_parameters(number_of_parameters),
-  number_of_events(number_of_events),
-  jac_times_cjmass_nnz(jac_times_cjmass_nnz),
-  jac_bandwidth_lower(jac_bandwidth_lower),
-  jac_bandwidth_upper(jac_bandwidth_upper),
+  atol_np(atol_np_input),
+  rhs_alg_id(rhs_alg_id_input),
+  number_of_states(atol_np_input.request().size),
+  number_of_parameters(number_of_parameters_input),
+  number_of_events(number_of_events_input),
+  jac_times_cjmass_nnz(jac_times_cjmass_nnz_input),
+  jac_bandwidth_lower(jac_bandwidth_lower_input),
+  jac_bandwidth_upper(jac_bandwidth_upper_input),
   functions(std::move(functions_arg)),
-  setup_opts(setup_opts),
-  solver_opts(solver_opts)
+  setup_opts(setup_input),
+  solver_opts(solver_input)
 {
   // Construction code moved to Initialize() which is called from the
   // (child) IDAKLUSolver_* class constructors.
@@ -90,64 +90,86 @@ void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetSolverOptions() {
+  int flag;
   // Maximum order of the linear multistep method
-  IDASetMaxOrd(ida_mem, solver_opts.max_order_bdf);
+  flag = IDASetMaxOrd(ida_mem, solver_opts.max_order_bdf);
+  CheckErrors(flag);
 
   // Maximum number of steps to be taken by the solver in its attempt to reach
   // the next output time
-  IDASetMaxNumSteps(ida_mem, solver_opts.max_num_steps);
+  flag = IDASetMaxNumSteps(ida_mem, solver_opts.max_num_steps);
+  CheckErrors(flag);
 
   // Initial step size
-  IDASetInitStep(ida_mem, solver_opts.dt_init);
+  flag = IDASetInitStep(ida_mem, solver_opts.dt_init);
+  CheckErrors(flag);
 
   // Maximum absolute step size
-  IDASetMaxStep(ida_mem, solver_opts.dt_max);
+  flag = IDASetMaxStep(ida_mem, solver_opts.dt_max);
+  CheckErrors(flag);
 
   // Maximum number of error test failures in attempting one step
-  IDASetMaxErrTestFails(ida_mem, solver_opts.max_error_test_failures);
+  flag = IDASetMaxErrTestFails(ida_mem, solver_opts.max_error_test_failures);
+  CheckErrors(flag);
 
   // Maximum number of nonlinear solver iterations at one step
-  IDASetMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations);
+  flag = IDASetMaxNonlinIters(ida_mem, solver_opts.max_nonlinear_iterations);
+  CheckErrors(flag);
 
   // Maximum number of nonlinear solver convergence failures at one step
-  IDASetMaxConvFails(ida_mem, solver_opts.max_convergence_failures);
+  flag = IDASetMaxConvFails(ida_mem, solver_opts.max_convergence_failures);
+  CheckErrors(flag);
 
   // Safety factor in the nonlinear convergence test
-  IDASetNonlinConvCoef(ida_mem, solver_opts.nonlinear_convergence_coefficient);
+  flag = IDASetNonlinConvCoef(ida_mem, solver_opts.nonlinear_convergence_coefficient);
+  CheckErrors(flag);
 
   // Suppress algebraic variables from error test
-  IDASetSuppressAlg(ida_mem, solver_opts.suppress_algebraic_error);
+  flag = IDASetSuppressAlg(ida_mem, solver_opts.suppress_algebraic_error);
+  CheckErrors(flag);
 
   // Positive constant in the Newton iteration convergence test within the initial
   // condition calculation
-  IDASetNonlinConvCoefIC(ida_mem, solver_opts.nonlinear_convergence_coefficient_ic);
+  flag = IDASetNonlinConvCoefIC(ida_mem, solver_opts.nonlinear_convergence_coefficient_ic);
+  CheckErrors(flag);
 
   // Maximum number of steps allowed when icopt=IDA_YA_YDP_INIT in IDACalcIC
-  IDASetMaxNumStepsIC(ida_mem, solver_opts.max_num_steps_ic);
+  flag = IDASetMaxNumStepsIC(ida_mem, solver_opts.max_num_steps_ic);
+  CheckErrors(flag);
 
   // Maximum number of the approximate Jacobian or preconditioner evaluations
   // allowed when the Newton iteration appears to be slowly converging
-  IDASetMaxNumJacsIC(ida_mem, solver_opts.max_num_jacobians_ic);
+  flag = IDASetMaxNumJacsIC(ida_mem, solver_opts.max_num_jacobians_ic);
+  CheckErrors(flag);
 
   // Maximum number of Newton iterations allowed in any one attempt to solve
   // the initial conditions calculation problem
-  IDASetMaxNumItersIC(ida_mem, solver_opts.max_num_iterations_ic);
+  flag = IDASetMaxNumItersIC(ida_mem, solver_opts.max_num_iterations_ic);
+  CheckErrors(flag);
 
   // Maximum number of linesearch backtracks allowed in any Newton iteration,
   // when solving the initial conditions calculation problem
-  IDASetMaxBacksIC(ida_mem, solver_opts.max_linesearch_backtracks_ic);
+  flag = IDASetMaxBacksIC(ida_mem, solver_opts.max_linesearch_backtracks_ic);
+  CheckErrors(flag);
 
   // Turn off linesearch
-  IDASetLineSearchOffIC(ida_mem, solver_opts.linesearch_off_ic);
+  flag = IDASetLineSearchOffIC(ida_mem, solver_opts.linesearch_off_ic);
+  CheckErrors(flag);
 
   // Ratio between linear and nonlinear tolerances
-  IDASetEpsLin(ida_mem, solver_opts.epsilon_linear_tolerance);
+  flag = IDASetEpsLin(ida_mem, solver_opts.epsilon_linear_tolerance);
+  CheckErrors(flag);
 
   // Increment factor used in DQ Jv approximation
-  IDASetIncrementFactor(ida_mem, solver_opts.increment_factor);
+  flag = IDASetIncrementFactor(ida_mem, solver_opts.increment_factor);
+  CheckErrors(flag);
 
-  // Enable or disable linear solution scaling
-  IDASetLinearSolutionScaling(ida_mem, solver_opts.linear_solution_scaling);
+  int LS_type = SUNLinSolGetType(LS);
+  if (LS_type == SUNLINEARSOLVER_DIRECT || LS_type == SUNLINEARSOLVER_MATRIX_ITERATIVE) {
+    // Enable or disable linear solution scaling
+    flag = IDASetLinearSolutionScaling(ida_mem, solver_opts.linear_solution_scaling);
+    CheckErrors(flag);
+  }
 }
 
 
@@ -194,38 +216,46 @@ void IDAKLUSolverOpenMP<ExprSet>::SetMatrix() {
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
+  int flag;
   // Call after setting the solver
 
   // attach the linear solver
   if (LS == nullptr) {
     throw std::invalid_argument("Linear solver not set");
   }
-  IDASetLinearSolver(ida_mem, LS, J);
+  flag = IDASetLinearSolver(ida_mem, LS, J);
+  CheckErrors(flag);
 
   if (setup_opts.preconditioner != "none")
   {
     DEBUG("\tsetting IDADDB preconditioner");
     // setup preconditioner
-    IDABBDPrecInit(
+    flag = IDABBDPrecInit(
       ida_mem, number_of_states, setup_opts.precon_half_bandwidth,
       setup_opts.precon_half_bandwidth, setup_opts.precon_half_bandwidth_keep,
       setup_opts.precon_half_bandwidth_keep, 0.0, residual_eval_approx<ExprSet>, NULL);
+      CheckErrors(flag);
   }
 
   if (setup_opts.jacobian == "matrix-free") {
-    IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>);
+    flag = IDASetJacTimes(ida_mem, NULL, jtimes_eval<ExprSet>);
+    CheckErrors(flag);
   } else if (setup_opts.jacobian != "none") {
-    IDASetJacFn(ida_mem, jacobian_eval<ExprSet>);
+    flag = IDASetJacFn(ida_mem, jacobian_eval<ExprSet>);
+    CheckErrors(flag);
   }
 
   if (number_of_parameters > 0)
   {
-    IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
+    flag = IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
                 sensitivities_eval<ExprSet>, yyS, ypS);
-    IDASensEEtolerances(ida_mem);
+                CheckErrors(flag);
+    flag = IDASensEEtolerances(ida_mem);
+    CheckErrors(flag);
   }
 
-  SUNLinSolInitialize(LS);
+  flag = SUNLinSolInitialize(LS);
+  CheckErrors(flag);
 
   auto id_np_val = rhs_alg_id.unchecked<1>();
   realtype *id_val;
@@ -236,18 +266,22 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
     id_val[ii] = id_np_val[ii];
 
   // Variable types: differential (1) and algebraic (0)
-  IDASetId(ida_mem, id);
+  flag = IDASetId(ida_mem, id);
+  CheckErrors(flag);
 }
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP()
 {
+  int flag;
   // Free memory
   if (number_of_parameters > 0) {
       IDASensFree(ida_mem);
-    }
+  }
 
-  SUNLinSolFree(LS);
+  flag = SUNLinSolFree(LS);
+  CheckErrors(flag);
+
   SUNMatDestroy(J);
   N_VDestroy(avtol);
   N_VDestroy(yy);
@@ -331,6 +365,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 {
   DEBUG("IDAKLUSolver::solve");
 
+  int flag;
   int number_of_timesteps = t_np.request().size;
   auto t = t_np.unchecked<1>();
   realtype t0 = RCONST(t(0));
@@ -378,20 +413,25 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
   SetSolverOptions();
 
-  IDAReInit(ida_mem, t0, yy, yp);
+  flag = IDAReInit(ida_mem, t0, yy, yp);
+  CheckErrors(flag);
   if (sensitivity) {
-    IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
+    flag = IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS);
+    CheckErrors(flag);
   }
 
   // correct initial values
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
     DEBUG("IDACalcIC");
+    // Do not throw a warning if the initial conditions calculation fails
+    // as the solver will still run
     IDACalcIC(ida_mem, init_type, t(1));
   }
 
   if (sensitivity) {
-    IDAGetSens(ida_mem, &t0, yyS);
+    flag = IDAGetSens(ida_mem, &t0, yyS);
+    CheckErrors(flag);
   }
 
   realtype tret;
@@ -482,8 +522,10 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
         retval == IDA_SUCCESS ||
         retval == IDA_ROOT_RETURN)
     {
-      if (number_of_parameters > 0)
-        IDAGetSens(ida_mem, &tret, yyS);
+      if (number_of_parameters > 0) {
+        flag = IDAGetSens(ida_mem, &tret, yyS);
+        CheckErrors(flag);
+      }
 
       // Evaluate and store results for the time step
       t_return[t_i] = tret;
@@ -562,7 +604,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     int klast, kcur;
     realtype hinused, hlast, hcur, tcur;
 
-    IDAGetIntegratorStats(
+    flag = IDAGetIntegratorStats(
       ida_mem,
       &nsteps,
       &nrevals,
@@ -575,13 +617,18 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
       &hcur,
       &tcur
     );
+    CheckErrors(flag);
 
     long nniters, nncfails;
-    IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
+    flag = IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
+    CheckErrors(flag);
 
     long int ngevalsBBDP = 0;
     if (setup_opts.using_iterative_solver)
-      IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP);
+    {
+      flag = IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP);
+      CheckErrors(flag);
+    }
 
     py::print("Solver Stats:");
     py::print("\tNumber of steps =", nsteps);
@@ -601,4 +648,13 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   return sol;
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int& flag) {
+  if (flag < 0) {
+    auto message = (std::string("IDA failed with flag ") + std::to_string(flag)).c_str();
+    py::set_error(PyExc_ValueError, message);
+    throw py::error_already_set();
+  }
 }

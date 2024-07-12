@@ -87,7 +87,7 @@ public:
     std::unique_ptr<ExprSet> functions,
     const SetupOptions &setup_opts,
     const SolverOptions &solver_opts
-    );
+  );
 
   /**
    * @brief Destructor
@@ -147,6 +147,11 @@ public:
    * @brief Apply user-configurable IDA options
    */
   void SetSolverOptions();
+
+  /**
+   * @brief Check the return flag for errors
+   */
+  void CheckErrors(int& flag);
 };
 
 #include "IDAKLUSolverOpenMP.inl"

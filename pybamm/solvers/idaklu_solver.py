@@ -128,7 +128,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # IDA main solver
             "max_order_bdf": 5,
             "max_num_steps": 500,
+            # dt_init = 0.0 uses the default
             "dt_init": 0.0,
+            # dt_max = 0.0 uses the default
             "dt_max": 0.0,
             "max_error_test_failures": 10,
             "max_nonlinear_iterations": 4,
