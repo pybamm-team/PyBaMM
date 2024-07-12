@@ -11,7 +11,8 @@
 
 class ModuleParser {
 private:
-  std::string mlir;  // The MLIR code to parse
+  std::string mlir;  // cppcheck-suppress unusedStructMember
+                     // codacy fix: member is referenced as this->mlir in parse()
   std::string module_name;
   std::string function_name;
   std::vector<std::vector<int>> input_shape;
