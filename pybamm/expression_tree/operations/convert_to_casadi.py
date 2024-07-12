@@ -187,7 +187,7 @@ class CasadiConverter:
                         f"Invalid converted_children count: {len(converted_children)}"
                     )
 
-            elif symbol.function.__name__.startswith(  # pragma: no branch
+            elif symbol.function.__name__.startswith(
                 "elementwise_grad_of_"
             ):
                 differentiating_child_idx = int(symbol.function.__name__[-1])

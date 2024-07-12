@@ -229,7 +229,7 @@ def find_symbols(
                         f"{children_vars[0]}.scalar_multiply(1/{children_vars[1]})"
                     )
                 else:
-                    symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"  # pragma: no cover
+                    symbol_str = f"{children_vars[0]}.multiply(1/{children_vars[1]})"
             else:
                 symbol_str = f"{children_vars[0]} / {children_vars[1]}"
 
@@ -310,7 +310,7 @@ def find_symbols(
 
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) == 1:
-                symbol_str = children_vars[0]  # pragma: no cover
+                symbol_str = children_vars[0]
             else:
                 if output_jax:
                     raise NotImplementedError

@@ -807,6 +807,23 @@ class TestIDAKLUSolver(TestCase):
             sol["x_s [m]"].domain = ["current collector"]
             sol["x_s [m]"].initialise_1D()
 
+    def test_bad_jax_evaluator(self):
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = "jax"
+        with self.assertRaises(pybamm.SolverError):
+            pybamm.IDAKLUSolver(
+                options={"jax_evaluator": "bad_evaluator"}
+            )
+
+    def test_bad_jax_evaluator_output_variables(self):
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = "jax"
+        with self.assertRaises(pybamm.SolverError):
+            pybamm.IDAKLUSolver(
+                options={"jax_evaluator": "bad_evaluator"},
+                output_variables=["Terminal voltage [V]"],
+            )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

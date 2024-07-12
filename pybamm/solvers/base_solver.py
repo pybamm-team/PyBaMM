@@ -520,7 +520,7 @@ class BaseSolver:
                         expr = symbol.right
                         num_events = 200
                         if t_eval is not None:
-                            num_events = t_eval[-1] // expr.value  # pragma: no cover
+                            num_events = t_eval[-1] // expr.value
 
                         for i in np.arange(num_events):
                             model.events.append(

@@ -42,7 +42,7 @@ class Function(pybamm.Symbol):
             if isinstance(child, (float, int, np.number)):
                 children[idx] = pybamm.Scalar(child)
 
-        if name is not None:  # pragma: no branch
+        if name is not None:
             self.name = name
         else:
             try:

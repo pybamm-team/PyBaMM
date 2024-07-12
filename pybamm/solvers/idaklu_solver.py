@@ -134,7 +134,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
-        if options["jax_evaluator"] not in ["jax", "iree"]:  # pragma: no cover
+        if options["jax_evaluator"] not in ["jax", "iree"]:
             raise pybamm.SolverError(
                 "Evaluation engine must be 'jax' or 'iree' for IDAKLU solver"
             )
@@ -493,14 +493,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Convert Jax functions to MLIR (also, demote to single precision)
                 idaklu_solver_fcn = idaklu.create_iree_solver
                 pybamm.demote_expressions_to_32bit = True
-                if pybamm.demote_expressions_to_32bit:  # pragma: no cover
+                if pybamm.demote_expressions_to_32bit:
                     warnings.warn(
                         "Demoting expressions to 32-bit for MLIR conversion",
                         stacklevel=2,
                     )
                     jnpfloat = jnp.float32
-                else:
-                    jnpfloat = jnp.float64  # pragma: no cover
+                else:  # pragma: no branch
+                    jnpfloat = jnp.float64
+                    raise pybamm.SolverError(
+                        "Demoting expressions to 32-bit is required for MLIR conversion"
+                        " at this time"
+                    )
 
                 # input arguments (used for lowering)
                 t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnpfloat))
@@ -609,10 +613,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 self.dvar_dy_idaklu_fcns = []
                 self.dvar_dp_idaklu_fcns = []
                 for key in self.output_variables:
-                    if isinstance(
-                        model.variables_and_events[key], pybamm.ExplicitTimeIntegral
-                    ):
-                        continue  # pragma: no cover
                     fcn = self.computed_var_fcns[key]
                     fcn._demote_constants()
                     self.var_idaklu_fcns.append(
