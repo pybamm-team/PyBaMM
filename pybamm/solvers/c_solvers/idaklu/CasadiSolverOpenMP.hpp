@@ -154,7 +154,7 @@ public:
   /**
    * @brief Check the return flag for errors
    */
-  void CheckErrors(int& flag);
+  void CheckErrors(int const & flag);
 };
 
 #endif // PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP

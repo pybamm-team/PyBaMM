@@ -648,7 +648,7 @@ Solution CasadiSolverOpenMP::solve(
   return sol;
 }
 
-void CasadiSolverOpenMP::CheckErrors(int& flag) {
+void CasadiSolverOpenMP::CheckErrors(int const & flag) {
   if (flag < 0) {
     auto message = (std::string("IDA failed with flag ") + std::to_string(flag)).c_str();
     py::set_error(PyExc_ValueError, message);
