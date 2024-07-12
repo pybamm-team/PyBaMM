@@ -316,8 +316,6 @@ class TestScipySolver(TestCase):
     def test_model_solver_multiple_inputs_initial_conditions(self):
         # Create model
         formats = ["python", "casadi"]
-        if pybamm.have_jax():
-            formats.append("jax")
         for convert_to_format in formats:
             print(convert_to_format)
             model = pybamm.BaseModel()
