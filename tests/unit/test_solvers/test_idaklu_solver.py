@@ -199,7 +199,12 @@ class TestIDAKLUSolver(TestCase):
 
             disc = pybamm.Discretisation()
             disc.process_model(model)
-            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            solver = pybamm.IDAKLUSolver(
+                atol=1e-8,
+                rtol=1e-8,
+                output_variables=output_variables,
+                options={"max_num_steps": 10000},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
@@ -516,8 +521,13 @@ class TestIDAKLUSolver(TestCase):
                         "jacobian": jacobian,
                         "linear_solver": linear_solver,
                         "preconditioner": precon,
+                        "max_num_steps": 10000,
                     }
-                    solver = pybamm.IDAKLUSolver(options=options)
+                    solver = pybamm.IDAKLUSolver(
+                        atol=1e-8,
+                        rtol=1e-8,
+                        options=options,
+                    )
                     if (
                         jacobian == "none"
                         and (linear_solver == "SUNLinSol_Dense")
