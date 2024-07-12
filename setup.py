@@ -308,6 +308,8 @@ idaklu_ext = Extension(
         "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp",
         "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp",
         "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp",
         "pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp",
         "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp",

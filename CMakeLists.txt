@@ -69,6 +69,8 @@ if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
     pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp
     pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp
     pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp
+    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp
+    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp
   )
 endif()
 
