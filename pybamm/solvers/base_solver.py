@@ -2,6 +2,7 @@ import copy
 import itertools
 import numbers
 import sys
+from typing import Optional
 import warnings
 import platform
 
@@ -730,8 +731,8 @@ class BaseSolver:
     @staticmethod
     def _handle_integrate_defaults(
         model: pybamm.BaseModel,
-        inputs_list: list[dict] | None,
-        batched_inputs: list | None,
+        inputs_list: Optional[list[dict]],
+        batched_inputs: Optional[list],
     ) -> tuple[list[dict], list, int, int, list]:
         """
         convenience function to handle the default inputs for self._integrate
