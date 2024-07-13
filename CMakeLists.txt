@@ -47,7 +47,8 @@ if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
 
-add_subdirectory(${PYBIND11_DIR})
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(pybind11 CONFIG REQUIRED)
 # The sources list should mirror the list in setup.py
 set(SOURCES
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
@@ -107,6 +108,7 @@ endif()
 set_target_properties(
   idaklu PROPERTIES
   INSTALL_RPATH "${CASADI_DIR}"
+  # try to look into ld_library_paths
   INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 

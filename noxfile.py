@@ -45,20 +45,20 @@ def run_pybamm_requires(session):
     if sys.platform != "win32":
         session.install("cmake", silent=False)
         session.run("python", "scripts/install_KLU_Sundials.py", *session.posargs)
-        if not os.path.exists("./pybind11"):
-            session.run(
-                "git",
-                "clone",
-                "--depth",
-                "1",
-                "--branch",
-                "v2.12.0",
-                "https://github.com/pybind/pybind11.git",
-                "pybind11/",
-                "-c",
-                "advice.detachedHead=false",
-                external=True,
-            )
+        # if not os.path.exists("./pybind11"):
+        #     session.run(
+        #         "git",
+        #         "clone",
+        #         "--depth",
+        #         "1",
+        #         "--branch",
+        #         "v2.12.0",
+        #         "https://github.com/pybind/pybind11.git",
+        #         "pybind11/",
+        #         "-c",
+        #         "advice.detachedHead=false",
+        #         external=True,
+        #     )
     else:
         session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 

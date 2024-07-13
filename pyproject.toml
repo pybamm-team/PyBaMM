@@ -7,6 +7,7 @@ requires = [
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
+    "pybind11",
 ]
 build-backend = "scikit_build_core.build"
 
@@ -110,10 +111,7 @@ dev = [
 # For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
 jax = ["jax==0.4.27", "jaxlib==0.4.27"]
 # Contains all optional dependencies, except for jax and dev dependencies
-all = [
-    "scikit-fem>=8.1.0",
-    "pybamm[examples,plot,cite,bpx,tqdm]",
-]
+all = ["scikit-fem>=8.1.0", "pybamm[examples,plot,cite,bpx,tqdm]"]
 
 [project.scripts]
 pybamm_install_jax = "pybamm.util:install_jax"
@@ -245,20 +243,9 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "6"
-required_plugins = [
-    "pytest-xdist",
-    "pytest-mock",
-]
-addopts = [
-    "-nauto",
-    "-v",
-    "-ra",
-    "--strict-config",
-    "--strict-markers",
-]
-testpaths = [
-    "docs/source/examples/",
-]
+required_plugins = ["pytest-xdist", "pytest-mock"]
+addopts = ["-nauto", "-v", "-ra", "--strict-config", "--strict-markers"]
+testpaths = ["docs/source/examples/"]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
