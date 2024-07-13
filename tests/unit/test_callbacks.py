@@ -81,6 +81,7 @@ class TestCallbacks(TestCase):
             "cycle number": (5, 12),
             "step number": (1, 4),
             "elapsed time": 0.45,
+            "step duration": 1,
             "step operating conditions": "Charge",
             "termination": "event",
         }
@@ -96,9 +97,13 @@ class TestCallbacks(TestCase):
         with open("test_callback.log") as f:
             self.assertIn("Cycle 5/12, step 1/4", f.read())
 
-        callback.on_experiment_infeasible(logs)
+        callback.on_experiment_infeasible_event(logs)
         with open("test_callback.log") as f:
             self.assertIn("Experiment is infeasible: 'event'", f.read())
+
+        callback.on_experiment_infeasible_time(logs)
+        with open("test_callback.log") as f:
+            self.assertIn("Experiment is infeasible: default duration", f.read())
 
         callback.on_experiment_end(logs)
         with open("test_callback.log") as f:
