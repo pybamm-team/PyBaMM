@@ -36,37 +36,37 @@ class Callback:
         """
         Called at the start of an experiment simulation.
         """
-        pass
+        pass  # pragma: no cover
 
     def on_cycle_start(self, logs):
         """
         Called at the start of each cycle in an experiment simulation.
         """
-        pass
+        pass  # pragma: no cover
 
     def on_step_start(self, logs):
         """
         Called at the start of each step in an experiment simulation.
         """
-        pass
+        pass  # pragma: no cover
 
     def on_step_end(self, logs):
         """
         Called at the end of each step in an experiment simulation.
         """
-        pass
+        pass  # pragma: no cover
 
     def on_cycle_end(self, logs):
         """
         Called at the end of each cycle in an experiment simulation.
         """
-        pass
+        pass  # pragma: no cover
 
     def on_experiment_end(self, logs):
         """
         Called at the end of an experiment simulation.
         """
-        pass
+        pass  # pragma: no cover
 
     def on_experiment_error(self, logs):
         """
@@ -75,13 +75,19 @@ class Callback:
         For example, this could be used to send an error alert with a bug report when
         running batch simulations in the cloud.
         """
-        pass
+        pass  # pragma: no cover
 
-    def on_experiment_infeasible(self, logs):
+    def on_experiment_infeasible_time(self, logs):
         """
-        Called when an experiment simulation is infeasible.
+        Called when an experiment simulation is infeasible due to reaching maximum time.
         """
-        pass
+        pass  # pragma: no cover
+
+    def on_experiment_infeasible_event(self, logs):
+        """
+        Called when an experiment simulation is infeasible due to an event.
+        """
+        pass  # pragma: no cover
 
 
 ########################################################################################
@@ -226,7 +232,19 @@ class LoggingCallback(Callback):
         error = logs["error"]
         pybamm.logger.error(f"Simulation error: {error}")
 
-    def on_experiment_infeasible(self, logs):
+    def on_experiment_infeasible_time(self, logs):
+        duration = logs["step duration"]
+        cycle_num = logs["cycle number"][0]
+        step_num = logs["step number"][0]
+        operating_conditions = logs["step operating conditions"]
+        self.logger.warning(
+            f"\n\n\tExperiment is infeasible: default duration ({duration} seconds) "
+            f"was reached during '{operating_conditions}'. The returned solution only "
+            f"contains up to step {step_num} of cycle {cycle_num}. "
+            "Please specify a duration in the step instructions."
+        )
+
+    def on_experiment_infeasible_event(self, logs):
         termination = logs["termination"]
         cycle_num = logs["cycle number"][0]
         step_num = logs["step number"][0]
