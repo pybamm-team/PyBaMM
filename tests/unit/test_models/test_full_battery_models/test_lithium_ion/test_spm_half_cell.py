@@ -10,5 +10,3 @@ class TestSPMHalfCell(BaseUnitTestLithiumIonHalfCell):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = pybamm.lithium_ion.SPM
-
-

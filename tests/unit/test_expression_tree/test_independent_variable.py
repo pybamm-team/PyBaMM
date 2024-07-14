@@ -71,5 +71,3 @@ class TestIndependentVariable:
 
         # Test time
         assert pybamm.t.to_equation() == sympy.Symbol("t")
-
-

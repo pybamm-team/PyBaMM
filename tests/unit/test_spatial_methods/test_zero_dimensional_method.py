@@ -68,4 +68,3 @@ class TestZeroDimensionalSpatialMethod:
             np.testing.assert_array_equal(
                 var_disc.evaluate(y=y), expr_disc.evaluate(y=y)
             )
-

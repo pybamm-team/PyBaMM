@@ -41,5 +41,3 @@ class TestSymbolUnpacker:
         unpacker = pybamm.SymbolUnpacker(pybamm.Parameter)
         unpacked = unpacker.unpack_list_of_symbols([a + b, a - c, b + c])
         assert unpacked == set([b, c])
-
-

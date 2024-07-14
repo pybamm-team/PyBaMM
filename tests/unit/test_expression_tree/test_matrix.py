@@ -6,7 +6,6 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 
-
 class TestMatrix:
     def setup_method(self):
         self.A = np.array([[1, 2, 0], [0, 1, 0], [0, 0, 1]])
@@ -59,5 +58,3 @@ class TestMatrix:
         assert arr.to_json() == json_dict
 
         assert pybamm.Matrix._from_json(json_dict) == arr
-
-

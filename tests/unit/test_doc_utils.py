@@ -58,6 +58,7 @@ class TestDocUtils:
 
         # check that the Extends directive maps to the correct base class
         base_cls_name = f"{getmro(Derived)[1].__module__}.{getmro(Derived)[1].__name__}"
-        assert Derived.__doc__.partition("**Extends:**")[2].strip() == \
-            f":class:`{base_cls_name}`"
-
+        assert (
+            Derived.__doc__.partition("**Extends:**")[2].strip()
+            == f":class:`{base_cls_name}`"
+        )

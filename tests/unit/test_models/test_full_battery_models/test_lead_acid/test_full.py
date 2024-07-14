@@ -53,5 +53,3 @@ class TestLeadAcidFullSideReactions:
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
         assert isinstance(model.default_solver, pybamm.CasadiSolver)
-
-

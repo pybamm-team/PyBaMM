@@ -43,10 +43,14 @@ class TestTimer:
         assert str(pybamm.TimerTime(60.2)) == "1 minute, 0 seconds"
         assert str(pybamm.TimerTime(61)) == "1 minute, 1 second"
         assert str(pybamm.TimerTime(121)) == "2 minutes, 1 second"
-        assert str(pybamm.TimerTime(604800)) == \
-            "1 week, 0 days, 0 hours, 0 minutes, 0 seconds"
-        assert str(pybamm.TimerTime(2 * 604800 + 3 * 3600 + 60 + 4)) == \
-            "2 weeks, 0 days, 3 hours, 1 minute, 4 seconds"
+        assert (
+            str(pybamm.TimerTime(604800))
+            == "1 week, 0 days, 0 hours, 0 minutes, 0 seconds"
+        )
+        assert (
+            str(pybamm.TimerTime(2 * 604800 + 3 * 3600 + 60 + 4))
+            == "2 weeks, 0 days, 3 hours, 1 minute, 4 seconds"
+        )
 
         assert repr(pybamm.TimerTime(1.5)) == "pybamm.TimerTime(1.5)"
 
@@ -65,5 +69,3 @@ class TestTimer:
 
         assert pybamm.TimerTime(1) == pybamm.TimerTime(1)
         assert pybamm.TimerTime(1) != pybamm.TimerTime(2)
-
-

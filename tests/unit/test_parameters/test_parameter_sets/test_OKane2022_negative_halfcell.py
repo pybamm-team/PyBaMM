@@ -30,4 +30,6 @@ class TestOKane2022_graphite_SiOx_halfcell:
         }
 
         for name, value in fun_test.items():
-            assert param.evaluate(param[name](*value[0])) == pytest.approx(value[1], abs=0.0001)
+            assert param.evaluate(param[name](*value[0])) == pytest.approx(
+                value[1], abs=0.0001
+            )

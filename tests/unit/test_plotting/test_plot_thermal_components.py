@@ -38,5 +38,3 @@ class TestPlotThermalComponents:
         sol = sim.solve([0, 3600])
         with pytest.raises(NotImplementedError):
             pybamm.plot_thermal_components(sol)
-
-

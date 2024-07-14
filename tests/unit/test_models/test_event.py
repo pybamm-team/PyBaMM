@@ -67,4 +67,3 @@ class TestEvent:
 
         # check for equal event types
         assert new_event.event_type == event.event_type
-

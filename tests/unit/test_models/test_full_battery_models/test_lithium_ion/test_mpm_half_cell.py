@@ -18,8 +18,10 @@ class TestMPM:
     def test_default_parameter_values(self):
         # check default parameters are added correctly
         model = pybamm.lithium_ion.MPM({"working electrode": "positive"})
-        assert model.default_parameter_values["Positive minimum particle radius [m]"] == \
-            0.0
+        assert (
+            model.default_parameter_values["Positive minimum particle radius [m]"]
+            == 0.0
+        )
 
     def test_lumped_thermal_model_1_d(self):
         options = {"thermal": "lumped", "working electrode": "positive"}
@@ -63,5 +65,3 @@ class TestMPMExternalCircuits:
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
-
-

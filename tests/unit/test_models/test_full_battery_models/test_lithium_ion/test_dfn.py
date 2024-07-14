@@ -1,7 +1,6 @@
 #
 # Tests for the lithium-ion DFN model
 #
-from tests import TestCase
 import pybamm
 import pytest
 from tests import BaseUnitTestLithiumIon
@@ -67,5 +66,3 @@ class TestDFN(BaseUnitTestLithiumIon):
             "intercalation kinetics": "MSMR",
         }
         self.check_well_posedness(options)
-
-

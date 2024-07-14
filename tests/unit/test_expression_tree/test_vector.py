@@ -42,4 +42,3 @@ class TestVector:
             ValueError, match="Entries must have 1 dimension or be column vector"
         ):
             pybamm.Vector(np.ones((4, 5)))
-

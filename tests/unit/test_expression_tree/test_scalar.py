@@ -49,4 +49,3 @@ class TestScalar:
         assert a.to_json() == json_dict
 
         assert pybamm.Scalar._from_json(json_dict) == a
-

@@ -52,5 +52,3 @@ class TestBaseSubModel:
                 options={"particle phases": ("2", "1")},
                 phase="secondary",
             )
-
-

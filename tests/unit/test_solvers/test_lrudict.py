@@ -67,9 +67,9 @@ class TestLRUDict:
         value = 1
         d["a"] = value
         # Access with valid key
-        assert d["a"] == value# checks getitem()
-        assert d.get("a") == value# checks get()
+        assert d["a"] == value  # checks getitem()
+        assert d.get("a") == value  # checks get()
         # Access with invalid key
         with pytest.raises(KeyError):
             _ = d["b"]  # checks getitem()
-        assert d.get("b") is None # checks get()
+        assert d.get("b") is None  # checks get()

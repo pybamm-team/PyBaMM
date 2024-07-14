@@ -40,5 +40,3 @@ class TestSizeDistributionParameters:
         R_test = pybamm.Scalar(1.0)
         values.evaluate(param.n.prim.f_a_dist(R_test))
         values.evaluate(param.p.prim.f_a_dist(R_test))
-
-

@@ -14,6 +14,3 @@ class TestModelInfo:
         model.info("Negative particle diffusivity [m2.s-1]")
 
         model.info("Not a parameter")
-
-
-
