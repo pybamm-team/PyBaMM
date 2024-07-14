@@ -39,7 +39,7 @@ class TestPlot:
         ax_out = pybamm.plot2D(X, Y, Y, ax=ax, show_plot=False)
         assert ax_out == ax
 
-    def test_plot2_d_fail(self):
+    def test_plot2D_fail(self):
         x = pybamm.Array(np.array([0]))
         with pytest.raises(TypeError, match="x must be 'pybamm.Array'"):
             pybamm.plot2D("bad", x, x)
