@@ -1,7 +1,6 @@
 #
 # Tests for the base lead acid model class
 #
-from tests import TestCase
 import pybamm
 import os
 import pytest

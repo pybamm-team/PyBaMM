@@ -5,6 +5,7 @@
 import pybamm
 import pytest
 
+
 class TestSettings:
     def test_simplify(self):
         assert pybamm.settings.simplify
@@ -39,5 +40,3 @@ class TestSettings:
         with pytest.raises(ValueError, match="'soft', or 'smooth'"):
             pybamm.settings.min_max_mode = "unknown"
         pybamm.settings.set_smoothing_parameters("exact")
-
-

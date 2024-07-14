@@ -3,7 +3,6 @@
 #
 import pytest
 import pybamm
-import unittest
 import numpy as np
 
 
@@ -85,5 +84,3 @@ class TestEffectiveResistancePostProcess:
                         processed_var(t=solution_1D.t[5], z=pts)
                     else:
                         processed_var(t=solution_1D.t[5], y=pts, z=pts)
-
-

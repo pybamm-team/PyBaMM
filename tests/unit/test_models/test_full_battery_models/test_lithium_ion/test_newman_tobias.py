@@ -1,7 +1,6 @@
 #
 # Tests for the lithium-ion Newman-Tobias model
 #
-from tests import TestCase
 import pybamm
 import pytest
 from tests import BaseUnitTestLithiumIon
@@ -31,5 +30,3 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
 
     def test_well_posed_composite_diffusion_hysteresis(self):
         pass  # skip this test
-
-

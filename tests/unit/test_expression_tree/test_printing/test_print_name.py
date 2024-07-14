@@ -41,5 +41,3 @@ class TestPrintName:
         # tplus
         t_plus = pybamm.Variable("t_plus")
         assert t_plus.print_name == r"t_{\mathrm{+}}"
-
-

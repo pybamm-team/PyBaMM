@@ -2,7 +2,6 @@
 Tests for the sympy_overrides.py
 """
 
-
 from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 import sympy
 

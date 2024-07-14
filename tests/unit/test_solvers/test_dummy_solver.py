@@ -41,5 +41,3 @@ class TestDummySolver:
         np.testing.assert_array_equal(len(sol.t), t_eval.size * 2 - 2)
         np.testing.assert_array_equal(sol.y, np.zeros((1, sol.t.size)))
         np.testing.assert_array_equal(sol["v"].data, np.ones(sol.t.size))
-
-

@@ -64,4 +64,3 @@ class TestInputParameter:
 
         # from_json
         assert pybamm.InputParameter._from_json(json_dict) == a
-

@@ -13,6 +13,3 @@ class TestSubMesh0D:
         generator = pybamm.SubMesh0D
         mesh = generator(position, None)
         mesh.add_ghost_meshes()
-
-
-

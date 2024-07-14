@@ -81,5 +81,3 @@ class TestPlotVoltageComponents:
         with pytest.raises(ValueError) as error:
             sim.plot_voltage_components()
             assert str(error.exception) == "The simulation has not been solved yet."
-
-

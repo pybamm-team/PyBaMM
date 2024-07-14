@@ -31,5 +31,3 @@ class TestBaseLeadAcidModel:
                     "particle": "MSMR",
                 }
             )
-
-

@@ -25,4 +25,3 @@ class TestGeometricParameters:
         L_x_eval = parameter_values.process_symbol(L_x)
 
         assert (L_n_eval + L_s_eval + L_p_eval).evaluate() == L_x_eval.evaluate()
-

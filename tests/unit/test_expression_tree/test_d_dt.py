@@ -52,5 +52,3 @@ class TestDDT:
 
         with pytest.raises(pybamm.ModelError):
             a = (sv).diff(pybamm.t).diff(pybamm.t)
-
-
