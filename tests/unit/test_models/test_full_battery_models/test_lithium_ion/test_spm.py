@@ -7,7 +7,8 @@ import pytest
 
 
 class TestSPM(BaseUnitTestLithiumIon):
-    def setup_method(self):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
         self.model = pybamm.lithium_ion.SPM
 
     def test_electrolyte_options(self):
