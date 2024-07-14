@@ -23,7 +23,7 @@ class TestMPM:
             == 0.0
         )
 
-    def test_lumped_thermal_model_1_d(self):
+    def test_lumped_thermal_model_1D(self):
         options = {"thermal": "lumped", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
