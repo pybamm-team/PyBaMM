@@ -13,7 +13,7 @@ class TestBaseSubModel:
 
         # None
         submodel = pybamm.BaseSubModel(None, None)
-        assert submodel.domain == None
+        assert submodel.domain is None
 
         # bad string
         with pytest.raises(pybamm.DomainError):
@@ -22,7 +22,7 @@ class TestBaseSubModel:
     def test_phase(self):
         # Without domain
         submodel = pybamm.BaseSubModel(None, None)
-        assert submodel.phase == None
+        assert submodel.phase is None
 
         with pytest.raises(ValueError, match="Phase must be None"):
             pybamm.BaseSubModel(None, None, phase="primary")
@@ -52,5 +52,3 @@ class TestBaseSubModel:
                 options={"particle phases": ("2", "1")},
                 phase="secondary",
             )
-
-
