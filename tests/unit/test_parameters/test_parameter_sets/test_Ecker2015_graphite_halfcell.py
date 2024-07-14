@@ -1,12 +1,11 @@
 #
 # Tests for O'Kane (2022) parameter set
 #
-from tests import TestCase
+import pytest
 import pybamm
-import unittest
 
 
-class TestEcker2015_graphite_halfcell(TestCase):
+class TestEcker2015_graphite_halfcell:
     def test_functions(self):
         param = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
         sto = pybamm.Scalar(0.5)
@@ -33,16 +32,4 @@ class TestEcker2015_graphite_halfcell(TestCase):
         }
 
         for name, value in fun_test.items():
-            self.assertAlmostEqual(
-                param.evaluate(param[name](*value[0])), value[1], places=4
-            )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+            assert param.evaluate(param[name](*value[0])) == pytest.approx(value[1], abs=0.0001)

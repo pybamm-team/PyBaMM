@@ -1,12 +1,11 @@
 import pybamm
-import unittest
-from tests import TestCase
+import pytest
 
 
-class TestSubMesh0D(TestCase):
+class TestSubMesh0D:
     def test_exceptions(self):
         position = {"x": {"position": 0}, "y": {"position": 0}}
-        with self.assertRaises(pybamm.GeometryError):
+        with pytest.raises(pybamm.GeometryError):
             pybamm.SubMesh0D(position)
 
     def test_init(self):
@@ -16,11 +15,4 @@ class TestSubMesh0D(TestCase):
         mesh.add_ghost_meshes()
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
 
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
