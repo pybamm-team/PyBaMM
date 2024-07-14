@@ -19,14 +19,6 @@ endif()
 
 set(CUSTOM_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sundials_KLU_libs)
 
-# message("Custom install dir: ${CUSTOM_INSTALL}")
-
-# if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-#   set(DEFAULT_LIB_DIR "")
-# else()
-#   set(DEFAULT_LIB_DIR ${CUSTOM_INSTALL_DIR})
-# endif()
-
 project(idaklu)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -48,7 +40,7 @@ if(NOT PYBIND11_DIR)
 endif()
 
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
-find_package(pybind11 CONFIG REQUIRED)
+find_package(pybind11 REQUIRED)
 # The sources list should mirror the list in setup.py
 set(SOURCES
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
