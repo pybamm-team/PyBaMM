@@ -221,9 +221,6 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "8"
-markers = [
-      "examples: mark a test as an example test",
-]
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
