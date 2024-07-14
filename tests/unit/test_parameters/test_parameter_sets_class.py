@@ -15,7 +15,7 @@ class TestParameterSets:
             out = pybamm.parameter_sets.Marquis2019
             assert out == "Marquis2019"
 
-        # Expect error for parameter set's that aren't real
+        # Expect an error for parameter sets that aren't real
         with pytest.raises(AttributeError):
             pybamm.parameter_sets.not_a_real_parameter_set
 
