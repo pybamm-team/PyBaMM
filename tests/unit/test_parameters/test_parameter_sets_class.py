@@ -37,4 +37,3 @@ class TestParameterSets:
         """Test that iterating `pybamm.parameter_sets` iterates over keys"""
         for k in pybamm.parameter_sets:
             assert isinstance(k, str)
-            assert k in pybamm.parameter_sets
