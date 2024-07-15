@@ -1,6 +1,7 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+from typing import Union
 import numpy as onp
 
 import pybamm
@@ -166,7 +167,7 @@ class JaxSolver(pybamm.BaseSolver):
                 [model.rhs_eval(t, y, inputs), model.algebraic_eval(t, y, inputs)]
             )
 
-        def stack_inputs(inputs: dict | list[dict]):
+        def stack_inputs(inputs: Union[dict, list[dict]]):
             if isinstance(inputs, dict):
                 return jnp.array([x.reshape(-1, 1) for x in inputs.values()])
             if len(inputs) == 1:
@@ -178,7 +179,7 @@ class JaxSolver(pybamm.BaseSolver):
             ]
             return jnp.vstack(arrays_to_stack)
 
-        def solve_model_rk45(y0, inputs: dict | list[dict]):
+        def solve_model_rk45(y0, inputs: Union[dict, list[dict]]):
             # Initial conditions, make sure they are an 0D array
             y0 = jnp.array(y0).reshape(-1)
             y = odeint(
@@ -192,7 +193,7 @@ class JaxSolver(pybamm.BaseSolver):
             )
             return jnp.transpose(y)
 
-        def solve_model_bdf(y0, inputs: dict | list[dict]):
+        def solve_model_bdf(y0, inputs: Union[dict, list[dict]]):
             # Initial conditions, make sure they are an 0D array
             y0 = jnp.array(y0).reshape(-1)
             y = pybamm.jax_bdf_integrate(
