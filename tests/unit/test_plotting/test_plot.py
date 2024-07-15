@@ -24,7 +24,7 @@ class TestPlot:
         with pytest.raises(TypeError, match="y must be 'pybamm.Array'"):
             pybamm.plot(x, "bad")
 
-    def test_plot2_d(self):
+    def test_plot2D(self):
         x = pybamm.Array(np.array([0, 3, 10]))
         y = pybamm.Array(np.array([6, 16, 78]))
         X, Y = pybamm.meshgrid(x, y)
