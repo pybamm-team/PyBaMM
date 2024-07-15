@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
+
 # [v24.5rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc0) - 2024-05-01
 
 ## Features
