@@ -153,7 +153,6 @@ All code requires testing. We use the [pytest](https://docs.pytest.org/en/latest
 
 We also use it along with the [nbmake](https://github.com/treebeardtech/nbmake) and the [pytest-xdist](https://pypi.org/project/pytest-xdist/) plugins to test the example notebooks.
 
-Warning : PyBaMM is currently in the process of test migration to pytest. We strongly recommend using pytest for any testing outside nox.
 
 If you have `nox` installed, to run unit tests, type
 
