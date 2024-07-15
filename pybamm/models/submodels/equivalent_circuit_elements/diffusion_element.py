@@ -16,6 +16,7 @@ class NoDiffusion(pybamm.BaseSubModel):
 
     def __init__(self, param, options=None):
         super().__init__(param)
+        pybamm.citations.register("Fan2022")        
         self.model_options = options
 
     def get_coupled_variables(self, variables):
