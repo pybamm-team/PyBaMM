@@ -1,4 +1,3 @@
-import numpy as np
 import pybamm
 from .base_step import (
     BaseStepExplicit,
@@ -130,7 +129,7 @@ class Current(BaseStepExplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def current_value(self, variables):
@@ -151,11 +150,16 @@ class CRate(BaseStepExplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def current_value(self, variables):
         return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
+
+    def default_duration(self, value):
+        # "value" is C-rate, so duration is "1 / value" hours in seconds
+        # with a 2x safety factor
+        return 1 / abs(value) * 3600 * 2
 
 
 def c_rate(value, **kwargs):
@@ -201,7 +205,7 @@ class Power(BaseStepImplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def get_parameter_values(self, variables):
@@ -232,7 +236,7 @@ class Resistance(BaseStepImplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def get_parameter_values(self, variables):
@@ -414,24 +418,3 @@ class CustomStepImplicit(BaseStepImplicit):
         return CustomStepImplicit(
             self.current_rhs_function, self.control, **self.kwargs
         )
-
-
-def value_based_charge_or_discharge(step_value):
-    """
-    Determine whether the step is a charge or discharge step based on the value of the
-    step
-    """
-    if isinstance(step_value, np.ndarray):
-        init_curr = step_value[0, 1]
-    elif isinstance(step_value, pybamm.Symbol):
-        inpt = {"start time": 0}
-        init_curr = step_value.evaluate(t=0, inputs=inpt).flatten()[0]
-    else:
-        init_curr = step_value
-    sign = np.sign(init_curr)
-    if sign == 0:
-        return "Rest"
-    elif sign > 0:
-        return "Discharge"
-    else:
-        return "Charge"
