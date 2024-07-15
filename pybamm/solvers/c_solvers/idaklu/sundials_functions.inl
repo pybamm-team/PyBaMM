@@ -1,35 +1,39 @@
-#include "casadi_sundials_functions.hpp"
-#include "casadi_functions.hpp"
+#include "sundials_functions.hpp"
+#include "Expressions/Expressions.hpp"
 #include "common.hpp"
 #include <type_traits>
 
 #define NV_DATA NV_DATA_OMP  // Serial: NV_DATA_S
 
-int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
-                    void *user_data)
+template<class T>
+int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
 {
-  DEBUG("residual_casadi");
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  DEBUG("residual_eval");
+  ExpressionSet<T> *p_python_functions =
+    static_cast<ExpressionSet<T> *>(user_data);
 
-  p_python_functions->rhs_alg.m_arg[0] = &tres;
-  p_python_functions->rhs_alg.m_arg[1] = NV_DATA(yy);
-  p_python_functions->rhs_alg.m_arg[2] = p_python_functions->inputs.data();
-  p_python_functions->rhs_alg.m_res[0] = NV_DATA(rr);
-  p_python_functions->rhs_alg();
+  DEBUG_VECTORn(yy, 100);
+  DEBUG_VECTORn(yp, 100);
+
+  p_python_functions->rhs_alg->m_arg[0] = &tres;
+  p_python_functions->rhs_alg->m_arg[1] = NV_DATA(yy);
+  p_python_functions->rhs_alg->m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->rhs_alg->m_res[0] = NV_DATA(rr);
+  (*p_python_functions->rhs_alg)();
+
+  DEBUG_VECTORn(rr, 100);
 
   realtype *tmp = p_python_functions->get_tmp_state_vector();
-  p_python_functions->mass_action.m_arg[0] = NV_DATA(yp);
-  p_python_functions->mass_action.m_res[0] = tmp;
-  p_python_functions->mass_action();
+  p_python_functions->mass_action->m_arg[0] = NV_DATA(yp);
+  p_python_functions->mass_action->m_res[0] = tmp;
+  (*p_python_functions->mass_action)();
 
   // AXPY: y <- a*x + y
   const int ns = p_python_functions->number_of_states;
-  casadi::casadi_axpy(ns, -1., tmp, NV_DATA(rr));
+  axpy(ns, -1., tmp, NV_DATA(rr));
 
-  //DEBUG_VECTOR(yy);
-  //DEBUG_VECTOR(yp);
-  //DEBUG_VECTOR(rr);
+  DEBUG("mass - rhs");
+  DEBUG_VECTORn(rr, 100);
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
   return 0;
@@ -64,13 +68,14 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 // within user_data.
 //
 // The case where G is mathematically identical to F is allowed.
-int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
+template<class T>
+int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
                            N_Vector yp, N_Vector gval, void *user_data)
 {
-  DEBUG("residual_casadi_approx");
+  DEBUG("residual_eval_approx");
 
   // Just use true residual for now
-  int result = residual_casadi(tt, yy, yp, gval, user_data);
+  int result = residual_eval<T>(tt, yy, yp, gval, user_data);
   return result;
 }
 
@@ -94,32 +99,35 @@ int residual_casadi_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
 //     tmp2 are pointers to memory allocated for variables of type N Vector
 //     which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
-int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+template<class T>
+int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector v, N_Vector Jv, realtype cj, void *user_data,
                   N_Vector tmp1, N_Vector tmp2)
 {
-  DEBUG("jtimes_casadi");
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  DEBUG("jtimes_eval");
+  T *p_python_functions =
+      static_cast<T *>(user_data);
 
   // Jv has ∂F/∂y v
-  p_python_functions->jac_action.m_arg[0] = &tt;
-  p_python_functions->jac_action.m_arg[1] = NV_DATA(yy);
-  p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
-  p_python_functions->jac_action.m_arg[3] = NV_DATA(v);
-  p_python_functions->jac_action.m_res[0] = NV_DATA(Jv);
-  p_python_functions->jac_action();
+  p_python_functions->jac_action->m_arg[0] = &tt;
+  p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
+  p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->jac_action->m_arg[3] = NV_DATA(v);
+  p_python_functions->jac_action->m_res[0] = NV_DATA(Jv);
+  (*p_python_functions->jac_action)();
 
   // tmp has -∂F/∂y˙ v
   realtype *tmp = p_python_functions->get_tmp_state_vector();
-  p_python_functions->mass_action.m_arg[0] = NV_DATA(v);
-  p_python_functions->mass_action.m_res[0] = tmp;
-  p_python_functions->mass_action();
+  p_python_functions->mass_action->m_arg[0] = NV_DATA(v);
+  p_python_functions->mass_action->m_res[0] = tmp;
+  (*p_python_functions->mass_action)();
 
   // AXPY: y <- a*x + y
   // Jv has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
-  casadi::casadi_axpy(ns, -cj, tmp, NV_DATA(Jv));
+  axpy(ns, -cj, tmp, NV_DATA(Jv));
+
+  DEBUG_VECTORn(Jv, 10);
 
   return 0;
 }
@@ -141,14 +149,15 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 //   tmp3 are pointers to memory allocated for variables of type N Vector which
 //   can
 //     be used by IDALsJacFn function as temporary storage or work space.
-int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
+template<class T>
+int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
                     N_Vector resvec, SUNMatrix JJ, void *user_data,
                     N_Vector tempv1, N_Vector tempv2, N_Vector tempv3)
 {
-  DEBUG("jacobian_casadi");
+  DEBUG("jacobian_eval");
 
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  T *p_python_functions =
+      static_cast<T *>(user_data);
 
   // create pointer to jac data, column pointers, and row values
   realtype *jac_data;
@@ -164,16 +173,23 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
     jac_data = SUNDenseMatrix_Data(JJ);
   }
 
+  DEBUG_VECTORn(yy, 100);
+
   // args are t, y, cj, put result in jacobian data matrix
-  p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-  p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);
-  p_python_functions->jac_times_cjmass.m_arg[2] =
+  p_python_functions->jac_times_cjmass->m_arg[0] = &tt;
+  p_python_functions->jac_times_cjmass->m_arg[1] = NV_DATA(yy);
+  p_python_functions->jac_times_cjmass->m_arg[2] =
       p_python_functions->inputs.data();
-  p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-  p_python_functions->jac_times_cjmass.m_res[0] = jac_data;
+  p_python_functions->jac_times_cjmass->m_arg[3] = &cj;
+  p_python_functions->jac_times_cjmass->m_res[0] = jac_data;
+  (*p_python_functions->jac_times_cjmass)();
 
-  p_python_functions->jac_times_cjmass();
-
+  DEBUG("jac_times_cjmass [" << sizeof(jac_data) << "]");
+  DEBUG("t = " << tt);
+  DEBUG_VECTORn(yy, 100);
+  DEBUG("inputs = " << p_python_functions->inputs);
+  DEBUG("cj = " << cj);
+  DEBUG_v(jac_data, 100);
 
   if (p_python_functions->options.using_banded_matrix)
   {
@@ -219,20 +235,12 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
         jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
       }
     } else if (SUNSparseMatrix_SparseType(JJ) == CSR_MAT) {
-      std::vector<realtype> newjac(SUNSparseMatrix_NNZ(JJ));
+      // make a copy so that we can overwrite jac_data as CSR
+      std::vector<realtype> newjac(&jac_data[0], &jac_data[SUNSparseMatrix_NNZ(JJ)]);
       sunindextype *jac_ptrs = SUNSparseMatrix_IndexPointers(JJ);
       sunindextype *jac_vals = SUNSparseMatrix_IndexValues(JJ);
 
-      // args are t, y, cj, put result in jacobian data matrix
-      p_python_functions->jac_times_cjmass.m_arg[0] = &tt;
-      p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA(yy);
-      p_python_functions->jac_times_cjmass.m_arg[2] =
-        p_python_functions->inputs.data();
-      p_python_functions->jac_times_cjmass.m_arg[3] = &cj;
-      p_python_functions->jac_times_cjmass.m_res[0] = newjac.data();
-      p_python_functions->jac_times_cjmass();
-
-      // convert (casadi's) CSC format to CSR
+      // convert CSC format to CSR
       csc_csr<
           std::remove_pointer_t<decltype(p_python_functions->jac_times_cjmass_rowvals.data())>,
           std::remove_pointer_t<decltype(jac_vals)>
@@ -253,18 +261,20 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   return (0);
 }
 
-int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
+template<class T>
+int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
                   void *user_data)
 {
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  DEBUG("events_eval");
+  T *p_python_functions =
+      static_cast<T*>(user_data);
 
   // args are t, y, put result in events_ptr
-  p_python_functions->events.m_arg[0] = &t;
-  p_python_functions->events.m_arg[1] = NV_DATA(yy);
-  p_python_functions->events.m_arg[2] = p_python_functions->inputs.data();
-  p_python_functions->events.m_res[0] = events_ptr;
-  p_python_functions->events();
+  p_python_functions->events->m_arg[0] = &t;
+  p_python_functions->events->m_arg[1] = NV_DATA(yy);
+  p_python_functions->events->m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->events->m_res[0] = events_ptr;
+  (*p_python_functions->events)();
 
   return (0);
 }
@@ -290,52 +300,52 @@ int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 // occurred (in which case idas will attempt to correct),
 // or a negative value if it failed unrecoverably (in which case the integration
 // is halted and IDA SRES FAIL is returned)
-//
-int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
+template<class T>
+int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
                          N_Vector resval, N_Vector *yS, N_Vector *ypS,
                          N_Vector *resvalS, void *user_data, N_Vector tmp1,
                          N_Vector tmp2, N_Vector tmp3)
 {
 
-  DEBUG("sensitivities_casadi");
-  CasadiFunctions *p_python_functions =
-      static_cast<CasadiFunctions *>(user_data);
+  DEBUG("sensitivities_eval");
+  T *p_python_functions =
+      static_cast<T*>(user_data);
 
   const int np = p_python_functions->number_of_parameters;
 
   // args are t, y put result in rr
-  p_python_functions->sens.m_arg[0] = &t;
-  p_python_functions->sens.m_arg[1] = NV_DATA(yy);
-  p_python_functions->sens.m_arg[2] = p_python_functions->inputs.data();
+  p_python_functions->sens->m_arg[0] = &t;
+  p_python_functions->sens->m_arg[1] = NV_DATA(yy);
+  p_python_functions->sens->m_arg[2] = p_python_functions->inputs.data();
   for (int i = 0; i < np; i++)
   {
-    p_python_functions->sens.m_res[i] = NV_DATA(resvalS[i]);
+    p_python_functions->sens->m_res[i] = NV_DATA(resvalS[i]);
   }
   // resvalsS now has (∂F/∂p i )
-  p_python_functions->sens();
+  (*p_python_functions->sens)();
 
   for (int i = 0; i < np; i++)
   {
     // put (∂F/∂y)s i (t) in tmp
     realtype *tmp = p_python_functions->get_tmp_state_vector();
-    p_python_functions->jac_action.m_arg[0] = &t;
-    p_python_functions->jac_action.m_arg[1] = NV_DATA(yy);
-    p_python_functions->jac_action.m_arg[2] = p_python_functions->inputs.data();
-    p_python_functions->jac_action.m_arg[3] = NV_DATA(yS[i]);
-    p_python_functions->jac_action.m_res[0] = tmp;
-    p_python_functions->jac_action();
+    p_python_functions->jac_action->m_arg[0] = &t;
+    p_python_functions->jac_action->m_arg[1] = NV_DATA(yy);
+    p_python_functions->jac_action->m_arg[2] = p_python_functions->inputs.data();
+    p_python_functions->jac_action->m_arg[3] = NV_DATA(yS[i]);
+    p_python_functions->jac_action->m_res[0] = tmp;
+    (*p_python_functions->jac_action)();
 
     const int ns = p_python_functions->number_of_states;
-    casadi::casadi_axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
+    axpy(ns, 1., tmp, NV_DATA(resvalS[i]));
 
     // put -(∂F/∂ ẏ) ṡ i (t) in tmp2
-    p_python_functions->mass_action.m_arg[0] = NV_DATA(ypS[i]);
-    p_python_functions->mass_action.m_res[0] = tmp;
-    p_python_functions->mass_action();
+    p_python_functions->mass_action->m_arg[0] = NV_DATA(ypS[i]);
+    p_python_functions->mass_action->m_res[0] = tmp;
+    (*p_python_functions->mass_action)();
 
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i )
     // AXPY: y <- a*x + y
-    casadi::casadi_axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
+    axpy(ns, -1., tmp, NV_DATA(resvalS[i]));
   }
 
   return 0;
