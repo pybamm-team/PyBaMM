@@ -32,7 +32,7 @@ class TestThevenin(TestCase):
             options = {"number of rc elements": -1}
             model = pybamm.equivalent_circuit.Thevenin(options=options)
             model.check_well_posedness()
-    
+
     def test_diffusion_element(self):
         options = {"diffusion element": "true"}
         model = pybamm.equivalent_circuit.Thevenin(options=options)

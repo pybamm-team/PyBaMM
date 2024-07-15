@@ -352,11 +352,11 @@ class TestCitations(unittest.TestCase):
         pybamm.equivalent_circuit.Thevenin()
         self.assertNotIn("Fan2022", citations._papers_to_cite)
         self.assertNotIn("Fan2022", citations._citation_tags.keys())
-        
+
         pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "true"})
         self.assertIn("Fan2022", citations._papers_to_cite)
         self.assertIn("Fan2022", citations._citation_tags.keys())
-        
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 
