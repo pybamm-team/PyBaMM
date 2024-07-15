@@ -1116,10 +1116,11 @@ class BaseSolver:
 
             if end_index != len(t_eval):
                 # setup for next integration subsection
-                last_state = solutions[0].y[:, -1]
-                # update y0 (for DAE solvers, this updates the initial guess for the
-                # rootfinder)
-                model.y0_list = last_state
+                for i, soln in enumerate(new_solutions):
+                    last_state = soln.y[:, -1]
+                    # update y0 (for DAE solvers, this updates the initial guess for the
+                    # rootfinder)
+                    model.y0_list[i] = last_state
                 if len(model.algebraic) > 0:
                     model.y0_list = self.calculate_consistent_state(
                         model, t_eval[end_index], model_inputs_list
