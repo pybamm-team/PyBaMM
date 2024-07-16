@@ -3,10 +3,9 @@
 #
 import pybamm
 import tests
-import uuid
+import tempfile
 
 import numpy as np
-import os
 
 
 class StandardModelTest:
@@ -141,9 +140,8 @@ class StandardModelTest:
         )
 
     def test_serialisation(self, solver=None, t_eval=None):
-        # Generating unique file names to avoid race conditions when run in parallel.
-        unique_id = uuid.uuid4()
-        file_name = f"test_model_{unique_id}"
+        temp = tempfile.NamedTemporaryFile(prefix=f"test_model")
+        file_name = temp.name
         self.model.save_model(
             file_name, variables=self.model.variables, mesh=self.disc.mesh
         )
@@ -178,8 +176,7 @@ class StandardModelTest:
             np.testing.assert_array_almost_equal(
                 new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
             )
-
-        os.remove(file_name + ".json")
+        temp.close()
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
