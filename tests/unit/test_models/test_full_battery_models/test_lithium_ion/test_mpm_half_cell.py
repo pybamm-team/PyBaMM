@@ -1,12 +1,10 @@
 #
 # Tests for the lithium-ion MPM model
 #
-from tests import TestCase
 import pybamm
-import unittest
 
 
-class TestMPM(TestCase):
+class TestMPM:
     def test_well_posed(self):
         options = {"thermal": "isothermal", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
@@ -20,9 +18,9 @@ class TestMPM(TestCase):
     def test_default_parameter_values(self):
         # check default parameters are added correctly
         model = pybamm.lithium_ion.MPM({"working electrode": "positive"})
-        self.assertEqual(
-            model.default_parameter_values["Positive minimum particle radius [m]"],
-            0.0,
+        assert (
+            model.default_parameter_values["Positive minimum particle radius [m]"]
+            == 0.0
         )
 
     def test_lumped_thermal_model_1D(self):
@@ -44,7 +42,7 @@ class TestMPM(TestCase):
         model.check_well_posedness()
 
 
-class TestMPMExternalCircuits(TestCase):
+class TestMPMExternalCircuits:
     def test_well_posed_voltage(self):
         options = {"operating mode": "voltage", "working electrode": "positive"}
         model = pybamm.lithium_ion.MPM(options)
@@ -67,13 +65,3 @@ class TestMPMExternalCircuits(TestCase):
         }
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
