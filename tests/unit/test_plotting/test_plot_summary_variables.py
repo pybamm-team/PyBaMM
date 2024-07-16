@@ -1,10 +1,8 @@
 import pybamm
-import unittest
 import numpy as np
-from tests import TestCase
 
 
-class TestPlotSummaryVariables(TestCase):
+class TestPlotSummaryVariables:
     def test_plot(self):
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
         parameter_values = pybamm.ParameterValues("Mohtat2020")
@@ -39,11 +37,11 @@ class TestPlotSummaryVariables(TestCase):
         axes = pybamm.plot_summary_variables(sol, show_plot=False)
 
         axes = axes.flatten()
-        self.assertEqual(len(axes), 9)
+        assert len(axes) == 9
 
         for output_var, ax in zip(output_variables, axes):
-            self.assertEqual(ax.get_xlabel(), "Cycle number")
-            self.assertEqual(ax.get_ylabel(), output_var)
+            assert ax.get_xlabel() == "Cycle number"
+            assert ax.get_ylabel() == output_var
 
             cycle_number, var = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(
@@ -56,11 +54,11 @@ class TestPlotSummaryVariables(TestCase):
         )
 
         axes = axes.flatten()
-        self.assertEqual(len(axes), 9)
+        assert len(axes) == 9
 
         for output_var, ax in zip(output_variables, axes):
-            self.assertEqual(ax.get_xlabel(), "Cycle number")
-            self.assertEqual(ax.get_ylabel(), output_var)
+            assert ax.get_xlabel() == "Cycle number"
+            assert ax.get_ylabel() == output_var
 
             cycle_number, var = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(
@@ -73,13 +71,3 @@ class TestPlotSummaryVariables(TestCase):
                 cycle_number, sol.summary_variables["Cycle number"]
             )
             np.testing.assert_array_equal(var, sol.summary_variables[output_var])
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
