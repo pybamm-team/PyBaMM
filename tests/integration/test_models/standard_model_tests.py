@@ -140,7 +140,7 @@ class StandardModelTest:
         )
 
     def test_serialisation(self, solver=None, t_eval=None):
-        temp = tempfile.NamedTemporaryFile(prefix=f"test_model")
+        temp = tempfile.NamedTemporaryFile(prefix="test_model")
         file_name = temp.name
         self.model.save_model(
             file_name, variables=self.model.variables, mesh=self.disc.mesh
