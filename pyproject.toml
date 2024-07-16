@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.1"
+version = "24.5rc0"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -193,6 +193,7 @@ extend-select = [
     "UP",            # pyupgrade
     "YTT",           # flake8-2020
     "TID252",        # relative-imports
+    "S101",          # to identify use of assert statement
 ]
 ignore = [
     "E741",        # Ambiguous variable name
@@ -213,7 +214,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["T20"]
+"tests/*" = ["T20", "S101"]
 "docs/*" = ["T20"]
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]
