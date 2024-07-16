@@ -267,14 +267,12 @@ class Latexify:
         # Split list with new lines
         eqn_new_line = sympy.Symbol(r"\\\\".join(map(custom_print_func, eqn_list)))
 
-        # Return latex of equations
         if self.filename is None:
             if self.newline is True:
                 return eqn_new_line
             else:
                 return eqn_list
 
-        # # Formats - tex
         elif self.filename.endswith(".tex"):  # pragma: no cover
             return sympy.preview(eqn_new_line, outputTexFile=self.filename)
 
@@ -289,7 +287,6 @@ class Latexify:
                     euler=False,
                 )
 
-            # For more dvioptions see https://www.nongnu.org/dvipng/dvipng_4.html
             else:
                 try:
                     return sympy.preview(
