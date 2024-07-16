@@ -116,12 +116,19 @@ dev = [
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
 ]
-# For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
+# For the Jax solver.
+# Note: These must be kept in sync with the versions defined in pybamm/util.py, and
+#       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-# Contains all optional dependencies, except for jax and dev dependencies
+# For MLIR expression evaluation (IDAKLU Solver)
+iree = [
+    # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
+    "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
+]
+# Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
