@@ -10,6 +10,12 @@ import unittest
 from datetime import datetime
 
 
+class ShortDurationCRate(pybamm.step.CRate):
+    def default_duration(self, value):
+        # Set a short default duration for testing early stopping due to infeasible time
+        return 1
+
+
 class TestSimulationExperiment(TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
@@ -271,6 +277,19 @@ class TestSimulationExperiment(TestCase):
 
         # Different callback - this is for coverage on the `Callback` class
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
+
+    def test_run_experiment_infeasible_time(self):
+        experiment = pybamm.Experiment(
+            [ShortDurationCRate(1, termination="2.5V"), "Rest for 1 hour"]
+        )
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sol = sim.solve()
+        self.assertEqual(len(sol.cycles), 1)
+        self.assertEqual(len(sol.cycles[0].steps), 1)
 
     def test_run_experiment_termination_capacity(self):
         # with percent
