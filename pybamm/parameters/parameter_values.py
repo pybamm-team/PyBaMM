@@ -256,7 +256,6 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     ) from err
-            # if no conflicts, update
             if isinstance(value, str):
                 if (
                     value.startswith("[function]")
@@ -269,7 +268,7 @@ class ParameterValues:
                         "or [2D data] is no longer supported. For functions, pass in a "
                         "python function object. For data, pass in a python function "
                         "that returns a pybamm Interpolant object. "
-                        "See https://tinyurl.com/merv43ss for an example with both."
+                        "See the Ai2020 parameter set for an example with both."
                     )
 
                 elif value == "[input]":

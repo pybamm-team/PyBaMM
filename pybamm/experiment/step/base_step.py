@@ -37,7 +37,7 @@ class BaseStep:
     ----------
     value : float
         The value of the step, corresponding to the type of step. Can be a number, a
-        2-tuple (for cccv_ode), or a 2-column array (for drive cycles)
+        2-tuple (for cccv_ode), a 2-column array (for drive cycles), or a 1-argument function of t
     duration : float, optional
         The duration of the step in seconds.
     termination : str or list, optional
@@ -74,8 +74,9 @@ class BaseStep:
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle
-        self.is_drive_cycle = isinstance(value, np.ndarray)
-        if self.is_drive_cycle:
+        is_drive_cycle = isinstance(value, np.ndarray)
+        is_python_function = callable(value)
+        if is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
                     "Drive cycle must be a 2-column array with time in the first column"
@@ -85,6 +86,21 @@ class BaseStep:
             t = value[:, 0]
             if t[0] != 0:
                 raise ValueError("Drive cycle must start at t=0")
+        elif is_python_function:
+            t0 = 0
+            # Check if the function is only a function of t
+            try:
+                value_t0 = value(t0)
+            except TypeError:
+                raise TypeError(
+                    "Input function must have only 1 positional argument for time"
+                ) from None
+
+            # Check if the value at t0 is feasible
+            if not (np.isfinite(value_t0) and np.isscalar(value_t0)):
+                raise ValueError(
+                    f"Input function must return a real number output at t = {t0}"
+                )
 
         # Record whether the step uses the default duration
         # This will be used by the experiment to check whether the step is feasible
@@ -94,30 +110,9 @@ class BaseStep:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
-        # Record all the args for repr and hash
-        self.repr_args = f"{value}, duration={duration}"
-        self.hash_args = f"{value}"
-        if termination:
-            self.repr_args += f", termination={termination}"
-            self.hash_args += f", termination={termination}"
-        if period:
-            self.repr_args += f", period={period}"
-        if temperature:
-            self.repr_args += f", temperature={temperature}"
-            self.hash_args += f", temperature={temperature}"
-        if tags:
-            self.repr_args += f", tags={tags}"
-        if start_time:
-            self.repr_args += f", start_time={start_time}"
-        if description:
-            self.repr_args += f", description={description}"
-        if direction:
-            self.repr_args += f", direction={direction}"
-            self.hash_args += f", direction={direction}"
-
         # If drive cycle, repeat the drive cycle until the end of the experiment,
         # and create an interpolant
-        if self.is_drive_cycle:
+        if is_drive_cycle:
             t_max = self.duration
             if t_max > value[-1, 0]:
                 # duration longer than drive cycle values so loop
@@ -140,9 +135,32 @@ class BaseStep:
                 name="Drive Cycle",
             )
             self.period = np.diff(t).min()
+        elif is_python_function:
+            t = pybamm.t - pybamm.InputParameter("start time")
+            self.value = value(t)
+            self.period = _convert_time_to_seconds(period)
         else:
             self.value = value
             self.period = _convert_time_to_seconds(period)
+
+        if (
+            hasattr(self, "calculate_charge_or_discharge")
+            and self.calculate_charge_or_discharge
+        ):
+            direction = self.value_based_charge_or_discharge()
+        self.direction = direction
+
+        self.repr_args, self.hash_args = self.record_tags(
+            value,
+            duration,
+            termination,
+            period,
+            temperature,
+            tags,
+            start_time,
+            description,
+            direction,
+        )
 
         self.description = description
 
@@ -171,8 +189,6 @@ class BaseStep:
             raise TypeError("`start_time` should be a datetime.datetime object")
         self.next_start_time = None
         self.end_time = None
-
-        self.direction = direction
 
     def copy(self):
         """
@@ -281,6 +297,58 @@ class BaseStep:
                 new_model.events[i] = pybamm.Event(
                     event.name, event.expression + 1, event.event_type
                 )
+
+    def value_based_charge_or_discharge(self):
+        """
+        Determine whether the step is a charge or discharge step based on the value of the
+        step
+        """
+        if isinstance(self.value, pybamm.Symbol):
+            inpt = {"start time": 0}
+            init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
+        else:
+            init_curr = self.value
+        sign = np.sign(init_curr)
+        if sign == 0:
+            return "Rest"
+        elif sign > 0:
+            return "Discharge"
+        else:
+            return "Charge"
+
+    def record_tags(
+        self,
+        value,
+        duration,
+        termination,
+        period,
+        temperature,
+        tags,
+        start_time,
+        description,
+        direction,
+    ):
+        """Record all the args for repr and hash"""
+        repr_args = f"{value}, duration={duration}"
+        hash_args = f"{value}"
+        if termination:
+            repr_args += f", termination={termination}"
+            hash_args += f", termination={termination}"
+        if period:
+            repr_args += f", period={period}"
+        if temperature:
+            repr_args += f", temperature={temperature}"
+            hash_args += f", temperature={temperature}"
+        if tags:
+            repr_args += f", tags={tags}"
+        if start_time:
+            repr_args += f", start_time={start_time}"
+        if description:
+            repr_args += f", description={description}"
+        if direction:
+            repr_args += f", direction={direction}"
+            hash_args += f", direction={direction}"
+        return repr_args, hash_args
 
 
 class BaseStepExplicit(BaseStep):

@@ -1,4 +1,4 @@
-#include "options.hpp"
+#include "Options.hpp"
 #include <iostream>
 #include <stdexcept>
 
