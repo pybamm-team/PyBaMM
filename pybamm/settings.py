@@ -30,7 +30,8 @@ class Settings:
 
     @debug_mode.setter
     def debug_mode(self, value):
-        assert isinstance(value, bool)
+        if not isinstance(value, bool):
+            raise TypeError(f"{value} must be of type bool")
         self._debug_mode = value
 
     @property
@@ -39,7 +40,8 @@ class Settings:
 
     @simplify.setter
     def simplify(self, value):
-        assert isinstance(value, bool)
+        if not isinstance(value, bool):
+            raise TypeError(f"{value} must be of type bool")
         self._simplify = value
 
     def set_smoothing_parameters(self, k):
