@@ -2,13 +2,12 @@
 # Tests particle size distribution parameters are loaded into a parameter set
 # and give expected values
 #
+import pytest
 import pybamm
-import unittest
 import numpy as np
-from tests import TestCase
 
 
-class TestSizeDistributionParameters(TestCase):
+class TestSizeDistributionParameters:
     def test_parameter_values(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
@@ -20,7 +19,7 @@ class TestSizeDistributionParameters(TestCase):
         )
 
         # check negative parameters aren't there yet
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             values["Negative maximum particle radius [m]"]
 
         # now add distribution parameter values for negative electrode
@@ -41,13 +40,3 @@ class TestSizeDistributionParameters(TestCase):
         R_test = pybamm.Scalar(1.0)
         values.evaluate(param.n.prim.f_a_dist(R_test))
         values.evaluate(param.p.prim.f_a_dist(R_test))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

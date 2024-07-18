@@ -82,7 +82,6 @@
       "wget": [],
       "cmake": [],
       "anytree": [],
-      "autograd": [],
       "scikit-fem": [],
       "imageio": [],
       "pybtex": [],

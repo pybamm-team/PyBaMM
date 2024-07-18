@@ -13,7 +13,6 @@ import sympy
 from tests import (
     function_test,
     multi_var_function_test,
-    multi_var_function_cube_test,
 )
 
 
@@ -52,56 +51,11 @@ class TestFunction(TestCase):
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
-        b = pybamm.StateVector(slice(1, 2))
-        y = np.array([5])
         func = pybamm.Function(function_test, a)
-        self.assertEqual(func.diff(a).evaluate(y=y), 2)
-        self.assertEqual(func.diff(func).evaluate(), 1)
-        func = pybamm.sin(a)
-        self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
-        func = pybamm.exp(a)
-        self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
-
-        # multiple variables
-        func = pybamm.Function(multi_var_function_test, 4 * a, 3 * a)
-        self.assertEqual(func.diff(a).evaluate(y=y), 7)
-        func = pybamm.Function(multi_var_function_test, 4 * a, 3 * b)
-        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
-        self.assertEqual(func.diff(b).evaluate(y=np.array([5, 6])), 3)
-        func = pybamm.Function(multi_var_function_cube_test, 4 * a, 3 * b)
-        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
-        self.assertEqual(
-            func.diff(b).evaluate(y=np.array([5, 6])), 3 * 3 * (3 * 6) ** 2
-        )
-
-        # exceptions
-        func = pybamm.Function(
-            multi_var_function_cube_test, 4 * a, 3 * b, derivative="derivative"
-        )
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(
+            NotImplementedError, "Derivative of base Function class is not implemented"
+        ):
             func.diff(a)
-
-    def test_function_of_multiple_variables(self):
-        a = pybamm.Variable("a")
-        b = pybamm.Parameter("b")
-        func = pybamm.Function(multi_var_function_test, a, b)
-        self.assertEqual(func.name, "function (multi_var_function_test)")
-        self.assertEqual(str(func), "multi_var_function_test(a, b)")
-        self.assertEqual(func.children[0].name, a.name)
-        self.assertEqual(func.children[1].name, b.name)
-
-        # test eval and diff
-        a = pybamm.StateVector(slice(0, 1))
-        b = pybamm.StateVector(slice(1, 2))
-        y = np.array([5, 2])
-        func = pybamm.Function(multi_var_function_test, a, b)
-
-        self.assertEqual(func.evaluate(y=y), 7)
-        self.assertEqual(func.diff(a).evaluate(y=y), 1)
-        self.assertEqual(func.diff(b).evaluate(y=y), 1)
-        self.assertEqual(func.diff(func).evaluate(), 1)
 
     def test_exceptions(self):
         a = pybamm.Variable("a", domain="something")
@@ -122,22 +76,24 @@ class TestFunction(TestCase):
         self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test Arcsinh
-        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh("a"))
 
         # Test Arctan
-        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
+        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan("a"))
 
         # Test Exp
-        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp(a))
+        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp("a"))
 
         # Test log
-        self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
+        value = 54.0
+        self.assertEqual(pybamm.Log(value).to_equation(), sympy.log(value))
 
         # Test sinh
-        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh("a"))
 
         # Test Function
-        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
+        value = 10
+        self.assertEqual(pybamm.Function(np.log, value).to_equation(), value)
 
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")

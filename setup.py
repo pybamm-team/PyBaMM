@@ -92,10 +92,14 @@ class CMakeBuild(build_ext):
             use_python_casadi = True
 
         build_type = os.getenv("PYBAMM_CPP_BUILD_TYPE", "RELEASE")
+        idaklu_expr_casadi = os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON")
+        idaklu_expr_iree = os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF")
         cmake_args = [
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DUSE_PYTHON_CASADI={}".format("TRUE" if use_python_casadi else "FALSE"),
+            f"-DPYBAMM_IDAKLU_EXPR_CASADI={idaklu_expr_casadi}",
+            f"-DPYBAMM_IDAKLU_EXPR_IREE={idaklu_expr_iree}",
         ]
         if self.suitesparse_root:
             cmake_args.append(
@@ -291,27 +295,39 @@ idaklu_ext = Extension(
     name="pybamm.solvers.idaklu",
     # The sources list should mirror the list in CMakeLists.txt
     sources=[
-        "pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp",
-        "pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp",
-        "pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp",
-        "pybamm/solvers/c_solvers/idaklu/casadi_solver.hpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiSolver.cpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiSolver.hpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.cpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.hpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.cpp",
-        "pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.hpp",
-        "pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp",
-        "pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp",
-        "pybamm/solvers/c_solvers/idaklu/idaklu_jax.cpp",
-        "pybamm/solvers/c_solvers/idaklu/idaklu_jax.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Expressions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Base/Expression.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSet.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSparsity.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEBaseFunction.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunction.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp",
+        "pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp",
+        "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp",
+        "pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp",
+        "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.inl",
+        "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.hpp",
+        "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.cpp",
+        "pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.hpp",
+        "pybamm/solvers/c_solvers/idaklu/sundials_functions.inl",
+        "pybamm/solvers/c_solvers/idaklu/sundials_functions.hpp",
+        "pybamm/solvers/c_solvers/idaklu/IdakluJax.cpp",
+        "pybamm/solvers/c_solvers/idaklu/IdakluJax.hpp",
         "pybamm/solvers/c_solvers/idaklu/common.hpp",
         "pybamm/solvers/c_solvers/idaklu/python.hpp",
         "pybamm/solvers/c_solvers/idaklu/python.cpp",
-        "pybamm/solvers/c_solvers/idaklu/solution.cpp",
-        "pybamm/solvers/c_solvers/idaklu/solution.hpp",
-        "pybamm/solvers/c_solvers/idaklu/options.hpp",
-        "pybamm/solvers/c_solvers/idaklu/options.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Solution.cpp",
+        "pybamm/solvers/c_solvers/idaklu/Solution.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Options.hpp",
+        "pybamm/solvers/c_solvers/idaklu/Options.cpp",
         "pybamm/solvers/c_solvers/idaklu.cpp",
     ],
 )

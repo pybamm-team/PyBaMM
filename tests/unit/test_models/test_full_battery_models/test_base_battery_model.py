@@ -26,6 +26,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'exchange-current density': 'single' (possible: ['single', 'current sigmoid'])
+'heat of mixing': 'false' (possible: ['false', 'true'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
 'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey', 'MSMR'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
@@ -309,6 +310,10 @@ class TestBaseBatteryModel(TestCase):
         # SEI on cracks
         with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
+        with self.assertRaisesRegex(pybamm.OptionError, "'SEI on cracks' is 'true'"):
+            pybamm.BaseBatteryModel(
+                {"SEI on cracks": "true", "particle mechanics": "swelling only"}
+            )
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
@@ -370,6 +375,15 @@ class TestBaseBatteryModel(TestCase):
                     "dimensionality": 2,
                     "thermal": "x-lumped",
                     "working electrode": "positive",
+                }
+            )
+
+        # thermal heat of mixing
+        with self.assertRaisesRegex(NotImplementedError, "Heat of mixing"):
+            pybamm.BaseBatteryModel(
+                {
+                    "heat of mixing": "true",
+                    "particle size": "distribution",
                 }
             )
 

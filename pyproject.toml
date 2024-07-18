@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.1"
+version = "24.5rc2"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -35,7 +35,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "numpy>=1.23.5",
+    "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
     "casadi>=3.6.5",
     "xarray>=2022.6.0",
@@ -107,21 +107,29 @@ dev = [
     "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
-    # For testing Jupyter notebooks
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
+    "pytest-mock",
+    # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
 ]
-# For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
+# For the Jax solver.
+# Note: These must be kept in sync with the versions defined in pybamm/util.py, and
+#       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-# Contains all optional dependencies, except for jax and dev dependencies
+# For MLIR expression evaluation (IDAKLU Solver)
+iree = [
+    # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
+    "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
+]
+# Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
-    "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
@@ -218,13 +226,11 @@ ignore = [
 "**.ipynb" = ["E402", "E703"]
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
-# NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
 minversion = "6"
-# Use pytest-xdist to run tests in parallel by default, exit with
-# error if not installed
 required_plugins = [
     "pytest-xdist",
+    "pytest-mock",
 ]
 addopts = [
     "-nauto",

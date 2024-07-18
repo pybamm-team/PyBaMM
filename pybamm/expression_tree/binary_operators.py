@@ -113,24 +113,39 @@ class BinaryOperator(pybamm.Symbol):
             right_str = f"{self.right!s}"
         return f"{left_str} {self.name} {right_str}"
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
-        # process children
-        new_left = self.left.new_copy()
-        new_right = self.right.new_copy()
+        if new_children and len(new_children) != 2:
+            raise ValueError(
+                f"Symbol of type {type(self)} must have exactly two children."
+            )
+        children = self._children_for_copying(new_children)
 
-        # make new symbol, ensure domain(s) remain the same
-        out = self._binary_new_copy(new_left, new_right)
+        if not perform_simplifications:
+            out = self.__class__(children[0], children[1])
+        else:
+            # creates a new instance using the overloaded binary operator to perform
+            # additional simplifications, rather than just calling the constructor
+            out = self._binary_new_copy(children[0], children[1])
+
         out.copy_domains(self)
 
         return out
 
     def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
         """
-        Default behaviour for new_copy.
-        This copies the behaviour of `_binary_evaluate`, but since `left` and `right`
-        are symbols creates a new symbol instead of returning a value.
+        Performs the overloaded binary operation on the two symbols `left` and `right`,
+        to create a binary class instance after performing appropriate simplifying
+        checks.
+
+        Default behaviour for _binary_new_copy copies the behaviour of `_binary_evaluate`,
+        but since `left` and `right` are symbols this creates a new symbol instead of
+        returning a value.
         """
         return self._binary_evaluate(left, right)
 
@@ -553,7 +568,10 @@ class Equality(BinaryOperator):
         left: ChildSymbol,
         right: ChildSymbol,
     ):
-        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        """
+        Overwrites `pybamm.BinaryOperator._binary_new_copy()` to return a new instance of
+        `pybamm.Equality` rather than using `binary_evaluate` to return a value.
+        """
         return pybamm.Equality(left, right)
 
 
@@ -822,9 +840,9 @@ def _simplified_binary_broadcast_concatenation(
     """
     # Broadcast commutes with elementwise operators
     if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(operator(left.orphans[0], right))
+        return left.create_copy([operator(left.orphans[0], right)])
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(operator(left, right.orphans[0]))
+        return right.create_copy([operator(left, right.orphans[0])])
 
     # Concatenation commutes with elementwise operators
     # If one of the sides is constant then commute concatenation with the operator
@@ -834,13 +852,11 @@ def _simplified_binary_broadcast_concatenation(
         left, pybamm.ConcatenationVariable
     ):
         if right.evaluates_to_constant_number():
-            return left._concatenation_new_copy(
-                [operator(child, right) for child in left.orphans]
-            )
+            return left.create_copy([operator(child, right) for child in left.orphans])
         elif isinstance(right, pybamm.Concatenation) and not isinstance(
             right, pybamm.ConcatenationVariable
         ):
-            return left._concatenation_new_copy(
+            return left.create_copy(
                 [
                     operator(left_child, right_child)
                     for left_child, right_child in zip(left.orphans, right.orphans)
@@ -850,9 +866,7 @@ def _simplified_binary_broadcast_concatenation(
         right, pybamm.ConcatenationVariable
     ):
         if left.evaluates_to_constant_number():
-            return right._concatenation_new_copy(
-                [operator(left, child) for child in right.orphans]
-            )
+            return right.create_copy([operator(left, child) for child in right.orphans])
     return None
 
 
@@ -974,7 +988,7 @@ def add(left: ChildSymbol, right: ChildSymbol):
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
-            return right._binary_new_copy(left + r_left, r_right)
+            return right.create_copy([left + r_left, r_right])
     if isinstance(left, Subtraction):
         if right == left.right:
             # Simplify (a - b) + b to a
@@ -1047,7 +1061,7 @@ def subtract(
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
-            return right._binary_new_copy(left - r_left, -r_right)
+            return right.create_copy([left - r_left, -r_right])
     elif isinstance(left, Addition):
         if right == left.right:
             # Simplify (b + a) - a to b

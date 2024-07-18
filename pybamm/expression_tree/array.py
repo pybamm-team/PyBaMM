@@ -128,7 +128,11 @@ class Array(pybamm.Symbol):
         jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
         return pybamm.Matrix(jac)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.entries,
@@ -185,7 +189,8 @@ def linspace(start: float, stop: float, num: int = 50, **kwargs) -> pybamm.Array
     """
     Creates a linearly spaced array by calling `numpy.linspace` with keyword
     arguments 'kwargs'. For a list of 'kwargs' see the
-    `numpy linspace documentation <https://tinyurl.com/yc4ne47x>`_
+    `numpy linspace documentation
+    <https://numpy.org/doc/stable/reference/generated/numpy.linspace.html>`_
     """
     return pybamm.Array(np.linspace(start, stop, num, **kwargs))
 
@@ -196,9 +201,8 @@ def meshgrid(
     """
     Return coordinate matrices as from coordinate vectors by calling
     `numpy.meshgrid` with keyword arguments 'kwargs'. For a list of 'kwargs'
-    see the `numpy meshgrid documentation <https://tinyurl.com/y8azewrj>`_
+    see the `numpy meshgrid documentation
+    <https://numpy.org/doc/stable/reference/generated/numpy.meshgrid.html>`_
     """
-    [X, Y] = np.meshgrid(x.entries, y.entries)
-    X = pybamm.Array(X)
-    Y = pybamm.Array(Y)
-    return X, Y
+    [x_grid, y_grid] = np.meshgrid(x.entries, y.entries)
+    return pybamm.Array(x_grid), pybamm.Array(y_grid)

@@ -450,6 +450,7 @@ class SpatialMethod:
             Discretised binary operator
 
         """
+        # Don't want to copy the domains, so use _binary_new_copy
         return bin_op._binary_new_copy(disc_left, disc_right)
 
     def concatenation(self, disc_children):
