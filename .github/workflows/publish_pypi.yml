@@ -118,6 +118,7 @@ jobs:
             python scripts/install_KLU_Sundials.py
             tree {project}/sundials_KLU_libs
             export LD_LIBRARY_PATH={project}/sundials_KLU_libs:$LD_LIBRARY_PATH
+            export PATH={project}/sundials_KLU_libs:$PATH
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           CIBW_BEFORE_BUILD_LINUX: |
             python -m pip install cmake casadi scikit-build-core
