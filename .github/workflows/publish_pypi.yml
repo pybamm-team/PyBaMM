@@ -121,7 +121,7 @@ jobs:
             export PATH={project}/sundials_KLU_libs:$PATH
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           CIBW_BEFORE_BUILD_LINUX: |
-            python -m pip install cmake casadi scikit-build-core pybind[global]
+            python -m pip install cmake casadi scikit-build-core pybind11[global]
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
             auditwheel repair -w {dest_dir} {wheel}
           #   mkdir -p temp_wheel_dir
@@ -254,7 +254,7 @@ jobs:
             python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind[global]
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11[global]
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
