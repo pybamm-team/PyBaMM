@@ -36,7 +36,7 @@ class TestThevenin(TestCase):
     def test_diffusion_element(self):
         options = {"diffusion element": "true"}
         model = pybamm.equivalent_circuit.Thevenin(options=options)
-        model.check_well_posedness()
+        model.check_well_posedness(post_discretisation=True)
 
     def test_calculate_discharge_energy(self):
         options = {"calculate discharge energy": "true"}
