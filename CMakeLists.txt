@@ -40,8 +40,7 @@ if(NOT PYBIND11_DIR)
 endif()
 
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
-# find_package(pybind11 REQUIRED)
-add_subdirectory(${PYBIND11_DIR})
+find_package(pybind11 REQUIRED)
 # The sources list should mirror the list in setup.py
 set(SOURCES
   pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
