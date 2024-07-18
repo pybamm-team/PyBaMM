@@ -1,4 +1,4 @@
-#include "idaklu_jax.hpp"
+#include "IdakluJax.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>

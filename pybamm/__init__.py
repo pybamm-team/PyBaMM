@@ -2,6 +2,9 @@ import sys
 
 from pybamm.version import __version__
 
+# Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
+demote_expressions_to_32bit = False
+
 # Utility classes and methods
 from .util import root_dir
 from .util import Timer, TimerTime, FuzzyDict
@@ -168,7 +171,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
+from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu, have_iree
 
 # Experiments
 from .experiment.experiment import Experiment
