@@ -24,6 +24,6 @@ keywords:
   - "expression tree"
   - "python"
   - "symbolic differentiation"
-version: "24.5rc0"
+version: "24.5rc2"
 repository-code: "https://github.com/pybamm-team/PyBaMM"
 title: "Python Battery Mathematical Modelling (PyBaMM)"
