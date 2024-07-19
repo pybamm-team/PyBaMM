@@ -282,7 +282,8 @@ class Symbol:
 
     @name.setter
     def name(self, value: str):
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise TypeError(f"{value} must be of type str")
         self._name = value
 
     @property
