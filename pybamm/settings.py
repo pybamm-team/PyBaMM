@@ -29,7 +29,7 @@ class Settings:
         return self._debug_mode
 
     @debug_mode.setter
-    def debug_mode(self, value):
+    def debug_mode(self, value: bool):
         if not isinstance(value, bool):
             raise TypeError(f"{value} must be of type bool")
         self._debug_mode = value
@@ -39,7 +39,7 @@ class Settings:
         return self._simplify
 
     @simplify.setter
-    def simplify(self, value):
+    def simplify(self, value: bool):
         if not isinstance(value, bool):
             raise TypeError(f"{value} must be of type bool")
         self._simplify = value
