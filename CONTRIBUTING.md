@@ -151,8 +151,11 @@ The `test_optional_dependencies` function extracts `pybamm` mandatory distributi
 
 All code requires testing. We use the [pytest](https://docs.pytest.org/en/stable/) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-We also use it along with the [nbmake](https://github.com/treebeardtech/nbmake) and the [pytest-xdist](https://pypi.org/project/pytest-xdist/) plugins to test the example notebooks.
+We use following plugins for various needs:
 
+[nbmake](https://github.com/treebeardtech/nbmake&#41) : plugins to test the example notebooks.
+
+[pytest-xdist](https://pypi.org/project/pytest-xdist/&#41) : plugins to run tests in parallel.
 
 If you have `nox` installed, to run unit tests, type
 
