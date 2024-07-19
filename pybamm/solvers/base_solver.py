@@ -256,32 +256,30 @@ class BaseSolver:
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
 
-            # if output_variables specified then convert functions to casadi
-            # expressions for evaluation within the respective solver
-            self.computed_var_fcns = {}
-            self.computed_dvar_dy_fcns = {}
-            self.computed_dvar_dp_fcns = {}
-            for key in self.output_variables:
-                # ExplicitTimeIntegral's are not computed as part of the solver and
-                # do not need to be converted
-                if isinstance(
-                    model.variables_and_events[key], pybamm.ExplicitTimeIntegral
-                ):
-                    continue
-                # Generate Casadi function to calculate variable and derivates
-                # to enable sensitivites to be computed within the solver
-                (
-                    self.computed_var_fcns[key],
-                    self.computed_dvar_dy_fcns[key],
-                    self.computed_dvar_dp_fcns[key],
-                    _,
-                ) = process(
-                    model.variables_and_events[key],
-                    BaseSolver._wrangle_name(key),
-                    vars_for_processing,
-                    use_jacobian=True,
-                    return_jacp_stacked=True,
-                )
+        # if output_variables specified then convert functions to casadi
+        # expressions for evaluation within the respective solver
+        self.computed_var_fcns = {}
+        self.computed_dvar_dy_fcns = {}
+        self.computed_dvar_dp_fcns = {}
+        for key in self.output_variables:
+            # ExplicitTimeIntegral's are not computed as part of the solver and
+            # do not need to be converted
+            if isinstance(model.variables_and_events[key], pybamm.ExplicitTimeIntegral):
+                continue
+            # Generate Casadi function to calculate variable and derivates
+            # to enable sensitivites to be computed within the solver
+            (
+                self.computed_var_fcns[key],
+                self.computed_dvar_dy_fcns[key],
+                self.computed_dvar_dp_fcns[key],
+                _,
+            ) = process(
+                model.variables_and_events[key],
+                BaseSolver._wrangle_name(key),
+                vars_for_processing,
+                use_jacobian=True,
+                return_jacp_stacked=True,
+            )
 
         pybamm.logger.info("Finish solver set-up")
 

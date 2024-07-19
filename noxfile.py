@@ -1,6 +1,8 @@
 import nox
 import os
 import sys
+import warnings
+import platform
 from pathlib import Path
 
 
@@ -13,11 +15,54 @@ else:
     nox.options.sessions = ["pre-commit", "unit"]
 
 
+def set_iree_state():
+    """
+    Check if IREE is enabled and set the environment variable accordingly.
+
+    Returns
+    -------
+    str
+        "ON" if IREE is enabled, "OFF" otherwise.
+
+    """
+    state = "ON" if os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF") == "ON" else "OFF"
+    if state == "ON":
+        if sys.platform == "win32":
+            warnings.warn(
+                (
+                    "IREE is not enabled on Windows yet. "
+                    "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                ),
+                stacklevel=2,
+            )
+            return "OFF"
+        if sys.platform == "darwin":
+            # iree-compiler is currently only available as a wheel on macOS 13 (or
+            # higher) and Python version 3.11
+            mac_ver = int(platform.mac_ver()[0].split(".")[0])
+            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 13:
+                warnings.warn(
+                    (
+                        "IREE is only supported on MacOS 13 (or higher) and Python"
+                        "version 3.11. Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                    ),
+                    stacklevel=2,
+                )
+                return "OFF"
+    return state
+
+
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
+    # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
+    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
+    "PYBAMM_IDAKLU_EXPR_IREE": set_iree_state(),
+    "IREE_INDEX_URL": os.getenv(
+        "IREE_INDEX_URL", "https://iree.dev/pip-release-links.html"
+    ),
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -59,6 +104,29 @@ def run_pybamm_requires(session):
                 "advice.detachedHead=false",
                 external=True,
             )
+        if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
+            "./iree"
+        ):
+            session.run(
+                "git",
+                "clone",
+                "--depth=1",
+                "--recurse-submodules",
+                "--shallow-submodules",
+                "--branch=candidate-20240507.886",
+                "https://github.com/openxla/iree",
+                "iree/",
+                external=True,
+            )
+            with session.chdir("iree"):
+                session.run(
+                    "git",
+                    "submodule",
+                    "update",
+                    "--init",
+                    "--recursive",
+                    external=True,
+                )
     else:
         session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 
@@ -70,6 +138,15 @@ def run_coverage(session):
     session.install("setuptools", silent=False)
     session.install("coverage", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        # See comments in 'dev' session
+        session.install(
+            "-e",
+            ".[iree]",
+            "--find-links",
+            PYBAMM_ENV.get("IREE_INDEX_URL"),
+            silent=False,
+        )
     session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
@@ -104,6 +181,15 @@ def run_unit(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        # See comments in 'dev' session
+        session.install(
+            "-e",
+            ".[iree]",
+            "--find-links",
+            PYBAMM_ENV.get("IREE_INDEX_URL"),
+            silent=False,
+        )
     session.run("python", "-m", "pytest", "-m", "unit")
 
 
@@ -138,6 +224,17 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    components = ["all", "dev", "jax"]
+    args = []
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
+        # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
+        # When upgrading Jax/IREE ensure that the following are compatible with each other:
+        #  - Jax and Jaxlib version [pyproject.toml]
+        #  - IREE repository clone (use the matching nightly candidate) [noxfile.py]
+        #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
+        components.append("iree")
+        args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
     # Temporary fix for Python 3.12 CI. TODO: remove after
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
@@ -148,7 +245,8 @@ def set_dev(session):
         "pip",
         "install",
         "-e",
-        ".[all,dev,jax]",
+        ".[{}]".format(",".join(components)),
+        *args,
         external=True,
     )
 
