@@ -18,6 +18,8 @@ import sympy
 class TestSymbol(TestCase):
     def test_symbol_init(self):
         sym = pybamm.Symbol("a symbol")
+        with self.assertRaises(TypeError):
+            sym.name = 1
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
 
