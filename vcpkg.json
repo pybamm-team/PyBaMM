@@ -7,6 +7,7 @@
       "name": "sundials",
       "default-features": false,
       "features": ["klu"]
-    }
+    },
+    "pybind11"
   ]
 }

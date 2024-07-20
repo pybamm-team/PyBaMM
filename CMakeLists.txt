@@ -39,7 +39,7 @@ if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
-find_package(pybind11 REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
 
 # Check Casadi build flag
 if(NOT DEFINED PYBAMM_IDAKLU_EXPR_CASADI)
