@@ -38,7 +38,7 @@ add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+# find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
 # Check Casadi build flag
