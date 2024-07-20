@@ -2,7 +2,7 @@
 #define PYBAMM_IDAKLU_HPP
 
 #include "common.hpp"
-#include "solution.hpp"
+#include "Solution.hpp"
 #include <functional>
 
 using residual_type = std::function<

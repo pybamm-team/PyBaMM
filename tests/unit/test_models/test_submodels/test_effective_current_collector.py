@@ -1,13 +1,12 @@
 #
 # Tests for the Effective Current Collector Resistance models
 #
-from tests import TestCase
+import pytest
 import pybamm
-import unittest
 import numpy as np
 
 
-class TestEffectiveResistance(TestCase):
+class TestEffectiveResistance:
     def test_well_posed(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
         model.check_well_posedness()
@@ -17,36 +16,34 @@ class TestEffectiveResistance(TestCase):
 
     def test_default_parameters(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
-        self.assertEqual(
-            model.default_parameter_values, pybamm.ParameterValues("Marquis2019")
-        )
+        assert model.default_parameter_values == pybamm.ParameterValues("Marquis2019")
 
     def test_default_geometry(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
-        self.assertTrue("current collector" in model.default_geometry)
-        self.assertNotIn("negative electrode", model.default_geometry)
+        assert "current collector" in model.default_geometry
+        assert "negative electrode" not in model.default_geometry
 
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
-        self.assertTrue("current collector" in model.default_geometry)
-        self.assertNotIn("negative electrode", model.default_geometry)
+        assert "current collector" in model.default_geometry
+        assert "negative electrode" not in model.default_geometry
 
     def test_default_var_pts(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
-        self.assertEqual(model.default_var_pts, {"y": 32, "z": 32})
+        assert model.default_var_pts == {"y": 32, "z": 32}
 
     def test_default_solver(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
-        self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
+        assert isinstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
-        self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
+        assert isinstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
     def test_bad_option(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "Dimension of"):
+        with pytest.raises(pybamm.OptionError, match="Dimension of"):
             pybamm.current_collector.EffectiveResistance({"dimensionality": 10})
 
 
-class TestEffectiveResistancePostProcess(TestCase):
+class TestEffectiveResistancePostProcess:
     def test_get_processed_variables(self):
         # solve cheap SPM to test post-processing (think of an alternative test?)
         models = [
@@ -87,13 +84,3 @@ class TestEffectiveResistancePostProcess(TestCase):
                         processed_var(t=solution_1D.t[5], z=pts)
                     else:
                         processed_var(t=solution_1D.t[5], y=pts, z=pts)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
