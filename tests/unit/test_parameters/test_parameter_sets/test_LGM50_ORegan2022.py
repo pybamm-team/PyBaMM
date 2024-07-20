@@ -1,12 +1,11 @@
 #
 # Tests for LG M50 parameter set loads
 #
-from tests import TestCase
+import pytest
 import pybamm
-import unittest
 
 
-class TestORegan2022(TestCase):
+class TestORegan2022:
     def test_functions(self):
         param = pybamm.ParameterValues("ORegan2022")
         T = pybamm.Scalar(298.15)
@@ -68,16 +67,6 @@ class TestORegan2022(TestCase):
         }
 
         for name, value in fun_test.items():
-            self.assertAlmostEqual(
-                param.evaluate(param[name](*value[0])), value[1], places=4
+            assert param.evaluate(param[name](*value[0])) == pytest.approx(
+                value[1], abs=0.0001
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
