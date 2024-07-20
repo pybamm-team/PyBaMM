@@ -51,6 +51,7 @@ def set_iree_state():
                 return "OFF"
     return state
 
+
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
