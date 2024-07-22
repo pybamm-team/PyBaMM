@@ -81,7 +81,8 @@ jobs:
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
           CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel pybind11
-          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND: exit 0
+            # delvewheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload Windows wheels
@@ -119,8 +120,8 @@ jobs:
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           CIBW_BEFORE_BUILD_LINUX: |
             python -m pip install cmake casadi scikit-build-core pybind11
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: exit 0
+          #   auditwheel repair -w {dest_dir} {wheel}
           #   mkdir -p temp_wheel_dir
           #   unzip -d temp_wheel_dir {wheel}
           #   yum install -y tree
@@ -252,14 +253,14 @@ jobs:
         env:
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
-          CIBW_REPAIR_WHEEL_COMMAND: |
-            if [[ $(uname -m) == "x86_64" ]]; then
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
-            elif [[ $(uname -m) == "arm64" ]]; then
-              # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
-              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
-            fi
+          CIBW_REPAIR_WHEEL_COMMAND: exit 0
+            # if [[ $(uname -m) == "x86_64" ]]; then
+            #   delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+            # elif [[ $(uname -m) == "arm64" ]]; then
+            #   # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
+            #   delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+            #   for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            # fi
           CIBW_TEST_COMMAND: |
             set -e -x
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
