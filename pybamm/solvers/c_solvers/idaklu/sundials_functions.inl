@@ -161,11 +161,11 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 
   // create pointer to jac data, column pointers, and row values
   realtype *jac_data;
-  if (p_python_functions->options.using_sparse_matrix)
+  if (p_python_functions->setup_opts.using_sparse_matrix)
   {
     jac_data = SUNSparseMatrix_Data(JJ);
   }
-  else if (p_python_functions->options.using_banded_matrix) {
+  else if (p_python_functions->setup_opts.using_banded_matrix) {
     jac_data = p_python_functions->get_tmp_sparse_jacobian_data();
   }
   else
@@ -191,7 +191,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   DEBUG("cj = " << cj);
   DEBUG_v(jac_data, 100);
 
-  if (p_python_functions->options.using_banded_matrix)
+  if (p_python_functions->setup_opts.using_banded_matrix)
   {
     // copy data from temporary matrix to the banded matrix
     auto jac_colptrs = p_python_functions->jac_times_cjmass_colptrs.data();
@@ -207,7 +207,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
       }
     }
   }
-  else if (p_python_functions->options.using_sparse_matrix)
+  else if (p_python_functions->setup_opts.using_sparse_matrix)
   {
     if (SUNSparseMatrix_SparseType(JJ) == CSC_MAT)
     {

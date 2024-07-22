@@ -64,7 +64,8 @@ public:
   std::vector<realtype> res;
   std::vector<realtype> res_dvar_dy;
   std::vector<realtype> res_dvar_dp;
-  Options options;
+  SetupOptions setup_opts;
+  SolverOptions solver_opts;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -84,7 +85,9 @@ public:
     int jac_bandwidth_lower,
     int jac_bandwidth_upper,
     std::unique_ptr<ExprSet> functions,
-    const Options& options);
+    const SetupOptions &setup_opts,
+    const SolverOptions &solver_opts
+  );
 
   /**
    * @brief Destructor
@@ -139,6 +142,16 @@ public:
    * @brief Allocate memory for matrices (noting appropriate matrix format/types)
    */
   void SetMatrix();
+
+  /**
+   * @brief Apply user-configurable IDA options
+   */
+  void SetSolverOptions();
+
+  /**
+   * @brief Check the return flag for errors
+   */
+  void CheckErrors(int const & flag);
 };
 
 #include "IDAKLUSolverOpenMP.inl"

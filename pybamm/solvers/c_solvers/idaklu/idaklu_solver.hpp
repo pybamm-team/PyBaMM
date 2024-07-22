@@ -33,9 +33,10 @@ IDAKLUSolver *create_idaklu_solver(
   const std::vector<typename ExprSet::BaseFunctionType*>& var_fcns,
   const std::vector<typename ExprSet::BaseFunctionType*>& dvar_dy_fcns,
   const std::vector<typename ExprSet::BaseFunctionType*>& dvar_dp_fcns,
-  py::dict options
+  py::dict py_opts
 ) {
-  auto options_cpp = Options(options);
+  auto setup_opts = SetupOptions(py_opts);
+  auto solver_opts = SolverOptions(py_opts);
   auto functions = std::make_unique<ExprSet>(
     rhs_alg,
     jac_times_cjmass,
@@ -55,13 +56,13 @@ IDAKLUSolver *create_idaklu_solver(
     var_fcns,
     dvar_dy_fcns,
     dvar_dp_fcns,
-    options_cpp
+    setup_opts
   );
 
   IDAKLUSolver *idakluSolver = nullptr;
 
   // Instantiate solver class
-  if (options_cpp.linear_solver == "SUNLinSol_Dense")
+  if (setup_opts.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
     idakluSolver = new IDAKLUSolverOpenMP_Dense<ExprSet>(
@@ -74,10 +75,11 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_KLU")
+  else if (setup_opts.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
     idakluSolver = new IDAKLUSolverOpenMP_KLU<ExprSet>(
@@ -90,10 +92,11 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_Band")
+  else if (setup_opts.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");
     idakluSolver = new IDAKLUSolverOpenMP_Band<ExprSet>(
@@ -106,10 +109,11 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPBCGS")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
     idakluSolver = new IDAKLUSolverOpenMP_SPBCGS<ExprSet>(
@@ -122,10 +126,11 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPFGMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPFGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
     idakluSolver = new IDAKLUSolverOpenMP_SPFGMR<ExprSet>(
@@ -138,10 +143,11 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPGMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
     idakluSolver = new IDAKLUSolverOpenMP_SPGMR<ExprSet>(
@@ -154,10 +160,11 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPTFQMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPTFQMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
     idakluSolver = new IDAKLUSolverOpenMP_SPTFQMR<ExprSet>(
@@ -170,7 +177,8 @@ IDAKLUSolver *create_idaklu_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
 

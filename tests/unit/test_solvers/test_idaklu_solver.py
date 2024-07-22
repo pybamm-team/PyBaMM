@@ -539,7 +539,7 @@ class TestIDAKLUSolver(TestCase):
 
         np.testing.assert_array_almost_equal(soln.y, soln_banded.y, 5)
 
-    def test_options(self):
+    def test_setup_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -584,8 +584,13 @@ class TestIDAKLUSolver(TestCase):
                         "jacobian": jacobian,
                         "linear_solver": linear_solver,
                         "preconditioner": precon,
+                        "max_num_steps": 10000,
                     }
-                    solver = pybamm.IDAKLUSolver(options=options)
+                    solver = pybamm.IDAKLUSolver(
+                        atol=1e-8,
+                        rtol=1e-8,
+                        options=options,
+                    )
                     if (
                         jacobian == "none"
                         and (linear_solver == "SUNLinSol_Dense")
@@ -613,6 +618,70 @@ class TestIDAKLUSolver(TestCase):
                     else:
                         with self.assertRaises(ValueError):
                             soln = solver.solve(model, t_eval)
+
+    def test_solver_options(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -0.1 * u}
+        model.algebraic = {v: v - u}
+        model.initial_conditions = {u: 1, v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 1)
+        solver = pybamm.IDAKLUSolver()
+        soln_base = solver.solve(model, t_eval)
+
+        options_success = {
+            "max_order_bdf": 4,
+            "max_num_steps": 490,
+            "dt_init": 0.01,
+            "dt_max": 1000.9,
+            "max_error_test_failures": 11,
+            "max_nonlinear_iterations": 5,
+            "max_convergence_failures": 11,
+            "nonlinear_convergence_coefficient": 1.0,
+            "suppress_algebraic_error": True,
+            "nonlinear_convergence_coefficient_ic": 0.01,
+            "max_num_steps_ic": 6,
+            "max_num_jacobians_ic": 5,
+            "max_num_iterations_ic": 11,
+            "max_linesearch_backtracks_ic": 101,
+            "linesearch_off_ic": True,
+            "init_all_y_ic": False,
+            "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 6,
+            "epsilon_linear_tolerance": 0.06,
+            "increment_factor": 0.99,
+            "linear_solution_scaling": False,
+        }
+
+        # test everything works
+        for option in options_success:
+            options = {option: options_success[option]}
+            solver = pybamm.IDAKLUSolver(options=options)
+            soln = solver.solve(model, t_eval)
+
+            np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
+
+        options_fail = {
+            "max_order_bdf": -1,
+            "max_num_steps_ic": -1,
+            "max_num_jacobians_ic": -1,
+            "max_num_iterations_ic": -1,
+            "max_linesearch_backtracks_ic": -1,
+            "epsilon_linear_tolerance": -1.0,
+            "increment_factor": -1.0,
+        }
+
+        # test that the solver throws a warning
+        for option in options_fail:
+            options = {option: options_fail[option]}
+            solver = pybamm.IDAKLUSolver(options=options)
+
+            with self.assertRaises(ValueError):
+                solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
         # Construct a model and solve for all variables, then test
