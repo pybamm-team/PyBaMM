@@ -56,8 +56,7 @@ matplotlibrc
 ideas/
 .idea/
 
-# setup.py files -> edit
-*.egg-info
+# distribution files
 dist/
 
 # coverage

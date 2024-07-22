@@ -47,9 +47,6 @@ jobs:
           with open(output_file, "a", encoding="utf-8") as output_stream:
               output_stream.write(f"count={num_cpus}\n")
 
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
-
       - name: Install vcpkg on Windows
         run: |
           cd C:\
@@ -83,7 +80,7 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel pybind11[global]
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 

@@ -52,10 +52,9 @@ def set_iree_state():
     return state
 
 
-pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
+pybamm_dir = Path(__file__).parent.parent.resolve()
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "SUNDIALS_INST": f"{pybamm_dir}/sundials_KLU_libs",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
     # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)

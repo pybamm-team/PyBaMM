@@ -79,7 +79,7 @@ if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
 endif()
 
 # The complete (all dependencies) sources list should be mirrored in setup.py
-set(SOURCES
+pybind11_add_module(idaklu
   # pybind11 interface
   pybamm/solvers/c_solvers/idaklu.cpp
   # IDAKLU solver (SUNDIALS)
@@ -108,10 +108,7 @@ set(SOURCES
   pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp
   # IDAKLU expressions - concrete implementations
   ${IDAKLU_EXPR_CASADI_SOURCE_FILES}
-  ${IDAKLU_EXPR_IREE_SOURCE_FILES}
-)
-
-pybind11_add_module(idaklu ${SOURCES})
+  ${IDAKLU_EXPR_IREE_SOURCE_FILES})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(USE_PYTHON_CASADI FALSE)
@@ -144,7 +141,6 @@ endif()
 set_target_properties(
   idaklu PROPERTIES
   INSTALL_RPATH "${CASADI_DIR}"
-  # try to look into ld_library_paths
   INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 

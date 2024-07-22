@@ -1,12 +1,13 @@
 [build-system]
 requires = [
-    "scikit-build-core>=0.9",
+    "scikit-build-core>=0.9.8",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.5; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
+    # TODO: check if just pybind11 works or not
     "pybind11[global]",
 ]
 build-backend = "scikit_build_core.build"
@@ -149,7 +150,7 @@ ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 
 [tool.scikit-build]
-minimum-version = "0.8"
+minimum-version = "0.9"
 build-dir = "build/{wheel_tag}"
 # install.components = ["python", "docs", "examples"]
 
@@ -282,11 +283,6 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["pybamm"]
 concurrency = ["multiprocessing"]
-
-[tool.repo-review]
-ignore = [
-    "PP003", # list wheel as a build-dep
-]
 
 [tool.mypy]
 ignore_missing_imports = true
