@@ -40,17 +40,17 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
   // create the vector of initial values
   AllocateVectors();
-  if (number_of_parameters > 0)
-  {
+  if (number_of_parameters > 0) {
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
     ypS = N_VCloneVectorArray(number_of_parameters, yp);
   }
   // set initial values
   realtype *atval = N_VGetArrayPointer(avtol);
-  for (int i = 0; i < number_of_states; i++)
+  for (int i = 0; i < number_of_states; i++) {
     atval[i] = atol[i];
-  for (int is = 0; is < number_of_parameters; is++)
-  {
+  }
+
+  for (int is = 0; is < number_of_parameters; is++) {
     N_VConst(RCONST(0.0), yyS[is]);
     N_VConst(RCONST(0.0), ypS[is]);
   }
@@ -158,8 +158,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetSolverOptions() {
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetMatrix() {
   // Create Matrix object
-  if (setup_opts.jacobian == "sparse")
-  {
+  if (setup_opts.jacobian == "sparse") {
     DEBUG("\tsetting sparse matrix");
     J = SUNSparseMatrix(
       number_of_states,
@@ -168,8 +167,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetMatrix() {
       CSC_MAT,
       sunctx
     );
-  }
-  else if (setup_opts.jacobian == "banded") {
+  } else if (setup_opts.jacobian == "banded") {
     DEBUG("\tsetting banded matrix");
     J = SUNBandMatrix(
       number_of_states,
@@ -177,22 +175,19 @@ void IDAKLUSolverOpenMP<ExprSet>::SetMatrix() {
       jac_bandwidth_lower,
       sunctx
     );
-  } else if (setup_opts.jacobian == "dense" || setup_opts.jacobian == "none")
-  {
+  } else if (setup_opts.jacobian == "dense" || setup_opts.jacobian == "none") {
     DEBUG("\tsetting dense matrix");
     J = SUNDenseMatrix(
       number_of_states,
       number_of_states,
       sunctx
     );
-  }
-  else if (setup_opts.jacobian == "matrix-free")
-  {
+  } else if (setup_opts.jacobian == "matrix-free") {
     DEBUG("\tsetting matrix-free");
     J = NULL;
-  }
-  else
+  } else {
     throw std::invalid_argument("Unsupported matrix requested");
+  }
 }
 
 template <class ExprSet>
@@ -205,8 +200,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   }
   CheckErrors(IDASetLinearSolver(ida_mem, LS, J));
 
-  if (setup_opts.preconditioner != "none")
-  {
+  if (setup_opts.preconditioner != "none") {
     DEBUG("\tsetting IDADDB preconditioner");
     // setup preconditioner
     CheckErrors(IDABBDPrecInit(
@@ -221,8 +215,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
     CheckErrors(IDASetJacFn(ida_mem, jacobian_eval<ExprSet>));
   }
 
-  if (number_of_parameters > 0)
-  {
+  if (number_of_parameters > 0) {
     CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
       sensitivities_eval<ExprSet>, yyS, ypS));
     CheckErrors(IDASensEEtolerances(ida_mem));
@@ -235,18 +228,19 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   id_val = N_VGetArrayPointer(id);
 
   int ii;
-  for (ii = 0; ii < number_of_states; ii++)
+  for (ii = 0; ii < number_of_states; ii++) {
     id_val[ii] = id_np_val[ii];
+  }
 
   // Variable types: differential (1) and algebraic (0)
   CheckErrors(IDASetId(ida_mem, id));
 }
 
 template <class ExprSet>
-IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP()
-{
+IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
+  bool sensitivity = number_of_parameters > 0;
   // Free memory
-  if (number_of_parameters > 0) {
+  if (sensitivity) {
       IDASensFree(ida_mem);
   }
 
@@ -258,8 +252,7 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP()
   N_VDestroy(yp);
   N_VDestroy(id);
 
-  if (number_of_parameters > 0)
-  {
+  if (sensitivity) {
     N_VDestroyVectorArray(yyS, number_of_parameters);
     N_VDestroyVectorArray(ypS, number_of_parameters);
   }
@@ -285,8 +278,9 @@ void IDAKLUSolverOpenMP<ExprSet>::CalcVars(
   for (auto& var_fcn : functions->var_fcns) {
     (*var_fcn)({tret, yval, functions->inputs.data()}, {&res[0]});
     // store in return vector
-    for (size_t jj=0; jj<var_fcn->nnz_out(); jj++)
+    for (size_t jj=0; jj<var_fcn->nnz_out(); jj++) {
       y_return[t_i*length_of_return_vector + j++] = res[jj];
+    }
   }
   // calculate sensitivities
   CalcVarsSensitivities(tret, yval, ySval, yS_return, ySk);
@@ -311,15 +305,18 @@ void IDAKLUSolverOpenMP<ExprSet>::CalcVarsSensitivities(
     (*dvar_dy)({tret, yval, functions->inputs.data()}, {&res_dvar_dy[0]});
     // Calculate dvar/dp and convert to dense array for indexing
     (*dvar_dp)({tret, yval, functions->inputs.data()}, {&res_dvar_dp[0]});
-    for(int k=0; k<number_of_parameters; k++)
+    for (int k=0; k<number_of_parameters; k++) {
       dens_dvar_dp[k]=0;
-    for(int k=0; k<dvar_dp->nnz_out(); k++)
+    }
+    for (int k=0; k<dvar_dp->nnz_out(); k++) {
       dens_dvar_dp[dvar_dp->get_row()[k]] = res_dvar_dp[k];
+    }
     // Calculate sensitivities
-    for(int paramk=0; paramk<number_of_parameters; paramk++) {
+    for (int paramk=0; paramk<number_of_parameters; paramk++) {
       yS_return[*ySk] = dens_dvar_dp[paramk];
-      for(int spk=0; spk<dvar_dy->nnz_out(); spk++)
+      for (int spk=0; spk<dvar_dy->nnz_out(); spk++) {
         yS_return[*ySk] += res_dvar_dy[spk] * ySval[paramk][dvar_dy->get_col()[spk]];
+      }
       (*ySk)++;
     }
   }
@@ -357,8 +354,9 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // set inputs
   auto p_inputs = inputs.unchecked<2>();
-  for (int i = 0; i < functions->inputs.size(); i++)
+  for (int i = 0; i < functions->inputs.size(); i++) {
     functions->inputs[i] = p_inputs(i, 0);
+  }
 
   // set initial conditions
   realtype *yval = N_VGetArrayPointer(yy);
@@ -374,8 +372,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     }
   }
 
-  for (int i = 0; i < number_of_states; i++)
-  {
+  for (int i = 0; i < number_of_states; i++) {
     yval[i] = y0[i];
     ypval[i] = yp0[i];
   }
@@ -412,10 +409,12 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     for (auto& var_fcn : functions->var_fcns) {
       max_res_size = std::max(max_res_size, size_t(var_fcn->out_shape(0)));
       length_of_return_vector += var_fcn->nnz_out();
-      for (auto& dvar_fcn : functions->dvar_dy_fcns)
+      for (auto& dvar_fcn : functions->dvar_dy_fcns) {
         max_res_dvar_dy = std::max(max_res_dvar_dy, size_t(dvar_fcn->out_shape(0)));
-      for (auto& dvar_fcn : functions->dvar_dp_fcns)
+      }
+      for (auto& dvar_fcn : functions->dvar_dp_fcns) {
         max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn->out_shape(0)));
+      }
     }
   } else {
     // Return full y state-vector
@@ -464,21 +463,21 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
              &tret, yval, ySval, yS_return, &ySk);
   } else {
     // Retain complete copy of the state vector
-    for (int j = 0; j < number_of_states; j++)
+    for (int j = 0; j < number_of_states; j++) {
       y_return[j] = yval[j];
-    for (int j = 0; j < number_of_parameters; j++)
-    {
+    }
+    for (int j = 0; j < number_of_parameters; j++) {
       const int base_index = j * number_of_timesteps * number_of_states;
-      for (int k = 0; k < number_of_states; k++)
+      for (int k = 0; k < number_of_states; k++) {
         yS_return[base_index + k] = ySval[j][k];
+      }
     }
   }
 
   // Subsequent states (t_i>0)
   int retval;
   t_i = 1;
-  while (true)
-  {
+  while (true) {
     realtype t_next = t(t_i);
     IDASetStopTime(ida_mem, t_next);
     DEBUG("IDASolve");
@@ -491,7 +490,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
       break;
     }
 
-    if (number_of_parameters > 0) {
+    if (sensitivity) {
       CheckErrors(IDAGetSens(ida_mem, &tret, yyS));
     }
 
@@ -504,23 +503,24 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
                 &tret, yval, ySval, yS_return, &ySk);
     } else {
       // Retain complete copy of the state vector
-      for (int j = 0; j < number_of_states; j++)
+      for (int j = 0; j < number_of_states; j++) {
         y_return[t_i * number_of_states + j] = yval[j];
-      for (int j = 0; j < number_of_parameters; j++)
-      {
+      }
+      for (int j = 0; j < number_of_parameters; j++) {
         const int base_index =
           j * number_of_timesteps * number_of_states +
           t_i * number_of_states;
-        for (int k = 0; k < number_of_states; k++)
+        for (int k = 0; k < number_of_states; k++) {
           // NOTE: Indexing of yS_return is (time:param:yvec)
           yS_return[base_index + k] = ySval[j][k];
+        }
       }
     }
     t_i += 1;
 
-    if (retval == IDA_SUCCESS ||
-        retval == IDA_ROOT_RETURN)
+    if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN) {
       break;
+    }
   }
 
   np_array t_ret = np_array(
@@ -560,8 +560,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
   Solution sol(retval, t_ret, y_ret, yS_ret);
 
-  if (solver_opts.print_stats)
-  {
+  if (solver_opts.print_stats) {
     long nsteps, nrevals, nlinsetups, netfails;
     int klast, kcur;
     realtype hinused, hlast, hcur, tcur;
@@ -584,8 +583,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     CheckErrors(IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails));
 
     long int ngevalsBBDP = 0;
-    if (setup_opts.using_iterative_solver)
-    {
+    if (setup_opts.using_iterative_solver) {
       CheckErrors(IDABBDPrecGetNumGfnEvals(ida_mem, &ngevalsBBDP));
     }
 

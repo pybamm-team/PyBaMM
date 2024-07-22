@@ -144,6 +144,4 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       linear_solution_scaling(py_opts["linear_solution_scaling"].cast<sunbooleantype>()),
       epsilon_linear_tolerance(RCONST(py_opts["epsilon_linear_tolerance"].cast<double>())),
       increment_factor(RCONST(py_opts["increment_factor"].cast<double>()))
-{
-
-}
+{}
