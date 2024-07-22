@@ -8,7 +8,7 @@ requires = [
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
     # TODO: check if just pybind11 works or not
-    "pybind11[global]",
+    "pybind11",
 ]
 build-backend = "scikit_build_core.build"
 
