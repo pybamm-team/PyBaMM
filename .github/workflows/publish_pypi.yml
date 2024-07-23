@@ -317,7 +317,7 @@ jobs:
         if: github.event.inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: files/
+          packages-dir: artifacts/
           repository-url: https://test.pypi.org/legacy/
 
   open_failure_issue:
