@@ -37,6 +37,11 @@ class TestUtil:
                 "Positive particle diffusivity [m2.s-1]": 6,
             }
         )
+        d2 = pybamm.FuzzyDict(
+            {
+                "Positive electrode diffusivity [m2.s-1]": 6,
+            }
+        )
         assert d["test"] == 1
         with pytest.raises(KeyError, match="'test3' not found. Best matches are "):
             d.__getitem__("test3")
@@ -55,6 +60,16 @@ class TestUtil:
 
         with pytest.raises(KeyError, match="Upper voltage"):
             d.__getitem__("Open-circuit voltage at 100% SOC [V]")
+
+        assert (
+            d2["Positive particle diffusivity [m2.s-1]"]
+            == d["Positive particle diffusivity [m2.s-1]"]
+        )
+
+        assert (
+            d2["Positive electrode diffusivity [m2.s-1]"]
+            == d["Positive electrode diffusivity [m2.s-1]"]
+        )
 
         with pytest.warns(DeprecationWarning):
             assert (
