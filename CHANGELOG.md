@@ -1,6 +1,6 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-# [v24.5rc0](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc0) - 2024-05-01
+# [v24.5rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc2) - 2024-07-12
 
 ## Features
 
