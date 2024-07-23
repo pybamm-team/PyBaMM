@@ -660,7 +660,7 @@ class TestIDAKLUSolver(TestCase):
         # test everything works
         for option in options_success:
             options = {option: options_success[option]}
-            solver = pybamm.IDAKLUSolver(options=options)
+            solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval)
 
             np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)

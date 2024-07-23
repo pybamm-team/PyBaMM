@@ -4,7 +4,7 @@
 
 ## Features
 
-- Added additional user-configurable options to the (`IDAKLUSolver`). ([#4249](https://github.com/pybamm-team/PyBaMM/pull/4249))
+- Added additional user-configurable options to the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added functionality to pass in arbitrary functions of time as the argument for a (`pybamm.step`). ([#4222](https://github.com/pybamm-team/PyBaMM/pull/4222))
 - Added new parameters `"f{pref]Initial inner SEI on cracks thickness [m]"` and `"f{pref]Initial outer SEI on cracks thickness [m]"`, instead of hardcoding these to `L_inner_0 / 10000` and `L_outer_0 / 10000`. ([#4168](https://github.com/pybamm-team/PyBaMM/pull/4168))
 - Added `pybamm.DataLoader` class to fetch data files from [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0) and store it under local cache. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))

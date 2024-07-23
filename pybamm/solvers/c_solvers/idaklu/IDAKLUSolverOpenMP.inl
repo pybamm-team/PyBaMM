@@ -388,8 +388,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
     DEBUG("IDACalcIC");
-    // Do not throw a warning if the initial conditions calculation fails
-    // as the solver will still run
+    // IDACalcIC will throw a warning if it fails to find initial conditions
     IDACalcIC(ida_mem, init_type, t(1));
   }
 

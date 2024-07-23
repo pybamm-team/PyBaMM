@@ -75,29 +75,83 @@ class IDAKLUSolver(pybamm.BaseSolver):
         .. code-block:: python
 
             options = {
-                # print statistics of the solver after every solve
+                # Print statistics of the solver after every solve
                 "print_stats": False,
-                # jacobian form, can be "none", "dense",
-                # "banded", "sparse", "matrix-free"
-                "jacobian": "sparse",
-                # name of sundials linear solver to use options are: "SUNLinSol_KLU",
-                # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
-                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
-                "linear_solver": "SUNLinSol_KLU",
-                # preconditioner for iterative solvers, can be "none", "BBDP"
-                "preconditioner": "BBDP",
-                # for iterative linear solvers, max number of iterations
-                "linsol_max_iterations": 5,
-                # for iterative linear solver preconditioner, bandwidth of
-                # approximate jacobian
-                "precon_half_bandwidth": 5,
-                # for iterative linear solver preconditioner, bandwidth of
-                # approximate jacobian that is kept
-                "precon_half_bandwidth_keep": 5,
                 # Number of threads available for OpenMP
                 "num_threads": 1,
                 # Evaluation engine to use for jax, can be 'jax'(native) or 'iree'
                 "jax_evaluator": "jax",
+                ## Linear solver interface
+                # name of sundials linear solver to use options are: "SUNLinSol_KLU",
+                # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
+                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
+                "linear_solver": "SUNLinSol_KLU",
+                # Jacobian form, can be "none", "dense",
+                # "banded", "sparse", "matrix-free"
+                "jacobian": "sparse",
+                # Preconditioner for iterative solvers, can be "none", "BBDP"
+                "preconditioner": "BBDP",
+                # For iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian
+                "precon_half_bandwidth": 5,
+                # For iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian that is kept
+                "precon_half_bandwidth_keep": 5,
+                # For iterative linear solvers, max number of iterations
+                "linsol_max_iterations": 5,
+                # Ratio between linear and nonlinear tolerances
+                "epsilon_linear_tolerance": 0.05,
+                # Increment factor used in DQ Jacobian-vector product approximation
+                "increment_factor": 1.0,
+                # Enable or disable linear solution scaling
+                "linear_solution_scaling": True,
+                ## Main solver
+                # Maximum order of the linear multistep method
+                "max_order_bdf": 5,
+                # Maximum number of steps to be taken by the solver in its attempt to
+                # reach the next output time.
+                # Note: this value differs from the IDA default of 500
+                "max_num_steps": 100000,
+                # Initial step size. The solver default is used if this is left at 0.0
+                "dt_init": 0.0,
+                # Maximum absolute step size. The solver default is used if this is
+                # left at 0.0
+                "dt_max": 0.0,
+                # Maximum number of error test failures in attempting one step
+                "max_error_test_failures": 10,
+                # Maximum number of nonlinear solver iterations at one step
+                "max_nonlinear_iterations": 4,
+                # Maximum number of nonlinear solver convergence failures at one step
+                "max_convergence_failures": 10,
+                # Safety factor in the nonlinear convergence test
+                "nonlinear_convergence_coefficient": 0.33,
+                # Suppress algebraic variables from error test
+                "suppress_algebraic_error": False,
+                ## Initial conditions calculation
+                # Positive constant in the Newton iteration convergence test within the
+                # initial condition calculation
+                "nonlinear_convergence_coefficient_ic": 0.0033,
+                # Maximum number of steps allowed when `init_all_y_ic = False`
+                "max_num_steps_ic": 5,
+                # Maximum number of the approximate Jacobian or preconditioner evaluations
+                # allowed when the Newton iteration appears to be slowly converging
+                # Note: this value differs from the IDA default of 4
+                "max_num_jacobians_ic": 40,
+                # Maximum number of Newton iterations allowed in any one attempt to solve
+                # the initial conditions calculation problem
+                # Note: this value differs from the IDA default of 10
+                "max_num_iterations_ic": 100,
+                # Maximum number of linesearch backtracks allowed in any Newton iteration,
+                # when solving the initial conditions calculation problem
+                "max_linesearch_backtracks_ic": 100,
+                # Turn off linesearch
+                "linesearch_off_ic": False,
+                # How to calculate the initial conditions.
+                # "True": calculate all y0 given ydot0
+                # "False": calculate y_alg0 and ydot_diff0 given y_diff0
+                "init_all_y_ic": False,
+                # Calculate consistent initial conditions
+                "calc_ic": True,
             }
 
         Note: These options only have an effect if model.convert_to_format == 'casadi'
@@ -107,7 +161,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        rtol=1e-6,
+        rtol=1e-4,
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
@@ -125,17 +179,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
             "jax_evaluator": "jax",
-            # IDA main solver
+            "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 5,
+            "epsilon_linear_tolerance": 0.05,
+            "increment_factor": 1.0,
+            "linear_solution_scaling": True,
             "max_order_bdf": 5,
-            "max_num_steps": 500,
-            "dt_init": 0.0,  # The solver default is used if this is left at zero
-            "dt_max": 0.0,  # The solver default is used if this is left at zero
+            "max_num_steps": 100000,
+            "dt_init": 0.0,
+            "dt_max": 0.0,
             "max_error_test_failures": 10,
-            "max_nonlinear_iterations": 4,
-            "max_convergence_failures": 10,
+            "max_nonlinear_iterations": 40,
+            "max_convergence_failures": 100,
             "nonlinear_convergence_coefficient": 0.33,
             "suppress_algebraic_error": False,
-            # IDA initial conditions calculation
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 5,
             "max_num_jacobians_ic": 4,
@@ -144,12 +201,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
             "calc_ic": True,
-            # IDALS linear solver interface
-            "linear_solver": "SUNLinSol_KLU",
-            "linsol_max_iterations": 5,
-            "epsilon_linear_tolerance": 0.05,
-            "increment_factor": 1.0,
-            "linear_solution_scaling": True,
         }
         if options is None:
             options = default_options
