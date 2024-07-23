@@ -57,14 +57,22 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError as error:
-            if "particle diffusivity" in key:
-                warn(
-                    f"The parameter '{key.replace('particle', 'electrode')}' "
-                    f"has been renamed to '{key}'",
-                    DeprecationWarning,
-                    stacklevel=2,
+            if "electrode diffusivity" in key or "particle diffusivity" in key:
+                old_term, new_term = (
+                    ("electrode", "particle")
+                    if "electrode diffusivity" in key
+                    else ("particle", "electrode")
                 )
-                return super().__getitem__(key.replace("particle", "electrode"))
+                alternative_key = key.replace(old_term, new_term)
+
+                if old_term == "electrode":
+                    warn(
+                        f"The parameter '{alternative_key}' has been renamed to '{key}' and will be removed in a future release. Using '{key}'",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+
+                return super().__getitem__(alternative_key)
             if key in ["Negative electrode SOC", "Positive electrode SOC"]:
                 domain = key.split(" ")[0]
                 raise KeyError(
