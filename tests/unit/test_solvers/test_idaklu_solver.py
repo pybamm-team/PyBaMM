@@ -241,6 +241,8 @@ class TestIDAKLUSolver(TestCase):
                 disc = pybamm.Discretisation()
                 disc.process_model(model)
                 solver = pybamm.IDAKLUSolver(
+                    rtol=1e-6,
+                    atol=1e-6,
                     root_method=root_method,
                     output_variables=output_variables,
                     options={"jax_evaluator": "iree"} if form == "iree" else {},
