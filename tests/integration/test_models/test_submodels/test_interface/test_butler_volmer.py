@@ -5,7 +5,6 @@ import pytest
 import pybamm
 from tests import get_discretisation_for_testing
 
-import unittest
 import numpy as np
 
 
@@ -357,15 +356,12 @@ class TestButlerVolmer:
         j_n_FD = parameter_values.process_symbol(
             (j_n(delta_phi + h) - j_n(delta_phi - h)) / (2 * h)
         )
-        assert j_n_diff.evaluate(inputs={"delta_phi": 0.5}) \
-            / j_n_FD.evaluate(inputs={"delta_phi": 0.5}) == pytest.approx(
-            1,
-            abs=1e-05)
+        assert j_n_diff.evaluate(inputs={"delta_phi": 0.5}) / j_n_FD.evaluate(
+            inputs={"delta_phi": 0.5}
+        ) == pytest.approx(1, abs=1e-05)
         j_p_FD = parameter_values.process_symbol(
             (j_p(delta_phi + h) - j_p(delta_phi - h)) / (2 * h)
         )
-        assert j_p_diff.evaluate(inputs={"delta_phi": 0.5}) \
-            / j_p_FD.evaluate(inputs={"delta_phi": 0.5}) == pytest.approx(
-            1,
-            abs=1e-05)
-
+        assert j_p_diff.evaluate(inputs={"delta_phi": 0.5}) / j_p_FD.evaluate(
+            inputs={"delta_phi": 0.5}
+        ) == pytest.approx(1, abs=1e-05)

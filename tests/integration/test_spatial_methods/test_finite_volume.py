@@ -384,5 +384,3 @@ class TestUpwindDownwind:
         np.testing.assert_array_almost_equal(
             solution["u"].entries, solution["analytical"].entries, decimal=2
         )
-
-

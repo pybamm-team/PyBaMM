@@ -121,5 +121,3 @@ class TestDFNWithSizeDistribution:
         # compare
         np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=12)
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=12)
-
-
