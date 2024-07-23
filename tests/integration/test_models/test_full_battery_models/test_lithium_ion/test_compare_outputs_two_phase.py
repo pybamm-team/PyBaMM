@@ -3,11 +3,9 @@
 #
 import pybamm
 import numpy as np
-import unittest
-from tests import TestCase
 
 
-class TestCompareOutputsTwoPhase(TestCase):
+class TestCompareOutputsTwoPhase:
     def compare_outputs_two_phase_graphite_graphite(self, model_class):
         """
         Check that a two-phase graphite-graphite model gives the same results as a
@@ -159,7 +157,7 @@ class TestCompareOutputsTwoPhase(TestCase):
             )
 
         # More silicon means longer sim
-        self.assertLess(sol[0]["Time [s]"].data[-1], sol[1]["Time [s]"].data[-1])
+        assert sol[0]["Time [s]"].data[-1] < sol[1]["Time [s]"].data[-1]
 
     def test_compare_SPM_silicon_graphite(self):
         model_class = pybamm.lithium_ion.SPM
@@ -172,12 +170,3 @@ class TestCompareOutputsTwoPhase(TestCase):
     def test_compare_DFN_silicon_graphite(self):
         model_class = pybamm.lithium_ion.DFN
         self.compare_outputs_two_phase_silicon_graphite(model_class)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

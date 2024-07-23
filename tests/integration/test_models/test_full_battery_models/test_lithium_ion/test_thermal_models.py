@@ -4,11 +4,9 @@
 #
 import pybamm
 import numpy as np
-import unittest
-from tests import TestCase
 
 
-class TestThermal(TestCase):
+class TestThermal:
     def test_consistent_cooling(self):
         "Test the cooling is consistent between the 1D, 1+1D and 2+1D SPMe models"
 
@@ -101,7 +99,7 @@ class TestThermal(TestCase):
         def err(a, b):
             return np.max(np.abs(a - b)) / np.max(np.abs(a))
 
-        self.assertGreater(1e-5, err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"]))
+        assert 1e-5 > err(solutions["SPMe 1+1D"], solutions["SPMe 2+1D"])
 
     def test_lumped_contact_resistance(self):
         # Test that the heating with contact resistance is greater than without
@@ -152,11 +150,3 @@ class TestThermal(TestCase):
         np.testing.assert_array_less(avg_cell_temp[1:], avg_cell_temp_cr[1:])
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
