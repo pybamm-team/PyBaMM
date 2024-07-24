@@ -2,11 +2,7 @@
 
 ## Features
 
-- Added additional user-configurable options to the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
-
-## Breaking changes
-
-- Changed the default `rtol` to `1e-4` in the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
+- Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 
 # [v24.5rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc2) - 2024-07-12
 
