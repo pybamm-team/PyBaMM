@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
+
 # [v24.5rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc2) - 2024-07-12
 
 ## Features

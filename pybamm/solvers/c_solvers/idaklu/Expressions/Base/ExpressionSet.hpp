@@ -31,7 +31,7 @@ public:
     const int n_s,
     const int n_e,
     const int n_p,
-    const Options& options)
+    const SetupOptions& options)
       : number_of_states(n_s),
         number_of_events(n_e),
         number_of_parameters(n_p),
@@ -46,7 +46,7 @@ public:
         events(events),
         tmp_state_vector(number_of_states),
         tmp_sparse_jacobian_data(jac_times_cjmass_nnz),
-        options(options)
+        setup_opts(options)
       {};
 
   int number_of_states;
@@ -73,7 +73,7 @@ public:
   std::vector<int64_t> jac_times_cjmass_colptrs;  // cppcheck-suppress unusedStructMember
   std::vector<realtype> inputs;  // cppcheck-suppress unusedStructMember
 
-  Options options;
+  SetupOptions setup_opts;
 
   virtual realtype *get_tmp_state_vector() = 0;
   virtual realtype *get_tmp_sparse_jacobian_data() = 0;
