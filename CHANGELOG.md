@@ -1,10 +1,17 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added additional user-configurable options to the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
+
+## Breaking changes
+
+- Changed the default `rtol` to `1e-4` in the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
+
 # [v24.5rc2](https://github.com/pybamm-team/PyBaMM/tree/v24.5rc2) - 2024-07-12
 
 ## Features
 
-- Added additional user-configurable options to the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added functionality to pass in arbitrary functions of time as the argument for a (`pybamm.step`). ([#4222](https://github.com/pybamm-team/PyBaMM/pull/4222))
 - Added new parameters `"f{pref]Initial inner SEI on cracks thickness [m]"` and `"f{pref]Initial outer SEI on cracks thickness [m]"`, instead of hardcoding these to `L_inner_0 / 10000` and `L_outer_0 / 10000`. ([#4168](https://github.com/pybamm-team/PyBaMM/pull/4168))
 - Added `pybamm.DataLoader` class to fetch data files from [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0) and store it under local cache. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
@@ -54,7 +61,6 @@
 
 ## Breaking changes
 
-- Changed the the default `rtol` to `1e-4` in the (`IDAKLUSolver`). ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Functions that are created using `pybamm.Function(function_object, children)` can no longer be differentiated symbolically (e.g. to compute the Jacobian). This should affect no users, since function derivatives for all "standard" functions are explicitly implemented ([#4196](https://github.com/pybamm-team/PyBaMM/pull/4196))
 - Removed data files under `pybamm/input` and released them in a separate repository upstream at [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0). Note that data files under `pybamm/input/parameters` have not been removed. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
 - Removed `check_model` argument from `Simulation.solve`. To change the `check_model` option, use `Simulation(..., discretisation_kwargs={"check_model": False})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
