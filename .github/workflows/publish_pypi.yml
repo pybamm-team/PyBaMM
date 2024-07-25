@@ -125,7 +125,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             python -m pip install cmake casadi scikit-build-core pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            export LD_LIBRARY_PATH={project}/sundials_KLU_libs:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH="$PWD/project/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH"
             auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
