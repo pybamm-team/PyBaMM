@@ -121,20 +121,11 @@ jobs:
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           CIBW_BEFORE_BUILD_LINUX: |
             python -m pip install cmake casadi scikit-build-core pybind11
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
-          #   auditwheel repair -w {dest_dir} {wheel}
-          #   mkdir -p temp_wheel_dir
-          #   unzip -d temp_wheel_dir {wheel}
-          #   yum install -y tree
-          #   tree temp_wheel_dir
-          #   tree $PWD/sundials_KLU_libs
-
-          #   LD_LIBRARY_PATH=$PWD/sundials_KLU_libs
-          #   PATH=$PWD/sundials_KLU_libs
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
-            python -c "import pybamm;"
-          # python -c "import pybamm; print(pybamm.IDAKLUSolver())"
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4.3.4
