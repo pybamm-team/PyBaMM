@@ -168,8 +168,9 @@ jobs:
         run: python -m pip install cibuildwheel
 
       - name: Build wheels on macOS
-        shell: bash
-        run: |
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_ALL: |
             set -e -x
 
             # Set LLVM-OpenMP URL
@@ -249,26 +250,20 @@ jobs:
             export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
             export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
 
-            # cibuildwheel not recognising its environment variable, so set manually
-            export CIBUILDWHEEL="1"
-
             python scripts/install_KLU_Sundials.py
-            python -m cibuildwheel --output-dir wheelhouse
-        env:
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
-          CIBW_REPAIR_WHEEL_COMMAND: ""
-            # if [[ $(uname -m) == "x86_64" ]]; then
-            #   delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
-            # elif [[ $(uname -m) == "arm64" ]]; then
-            #   # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
-            #   delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
-            #   for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
-            # fi
+          CIBW_REPAIR_WHEEL_COMMAND: |
+            if [[ $(uname -m) == "x86_64" ]]; then
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+            elif [[ $(uname -m) == "arm64" ]]; then
+              # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            fi
           CIBW_TEST_COMMAND: |
             set -e -x
-            python -c "import pybamm;"
-          # python -c "import pybamm; print(pybamm.IDAKLUSolver())"
+            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
       - name: Copy .dylib files for local testing
         run: cp {project}/sundials_KLU_libs/*.dylib wheelhouse/
