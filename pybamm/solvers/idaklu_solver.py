@@ -75,29 +75,83 @@ class IDAKLUSolver(pybamm.BaseSolver):
         .. code-block:: python
 
             options = {
-                # print statistics of the solver after every solve
+                # Print statistics of the solver after every solve
                 "print_stats": False,
-                # jacobian form, can be "none", "dense",
-                # "banded", "sparse", "matrix-free"
-                "jacobian": "sparse",
-                # name of sundials linear solver to use options are: "SUNLinSol_KLU",
-                # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
-                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
-                "linear_solver": "SUNLinSol_KLU",
-                # preconditioner for iterative solvers, can be "none", "BBDP"
-                "preconditioner": "BBDP",
-                # for iterative linear solvers, max number of iterations
-                "linsol_max_iterations": 5,
-                # for iterative linear solver preconditioner, bandwidth of
-                # approximate jacobian
-                "precon_half_bandwidth": 5,
-                # for iterative linear solver preconditioner, bandwidth of
-                # approximate jacobian that is kept
-                "precon_half_bandwidth_keep": 5,
                 # Number of threads available for OpenMP
                 "num_threads": 1,
                 # Evaluation engine to use for jax, can be 'jax'(native) or 'iree'
                 "jax_evaluator": "jax",
+                ## Linear solver interface
+                # name of sundials linear solver to use options are: "SUNLinSol_KLU",
+                # "SUNLinSol_Dense", "SUNLinSol_Band", "SUNLinSol_SPBCGS",
+                # "SUNLinSol_SPFGMR", "SUNLinSol_SPGMR", "SUNLinSol_SPTFQMR",
+                "linear_solver": "SUNLinSol_KLU",
+                # Jacobian form, can be "none", "dense",
+                # "banded", "sparse", "matrix-free"
+                "jacobian": "sparse",
+                # Preconditioner for iterative solvers, can be "none", "BBDP"
+                "preconditioner": "BBDP",
+                # For iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian
+                "precon_half_bandwidth": 5,
+                # For iterative linear solver preconditioner, bandwidth of
+                # approximate jacobian that is kept
+                "precon_half_bandwidth_keep": 5,
+                # For iterative linear solvers, max number of iterations
+                "linsol_max_iterations": 5,
+                # Ratio between linear and nonlinear tolerances
+                "epsilon_linear_tolerance": 0.05,
+                # Increment factor used in DQ Jacobian-vector product approximation
+                "increment_factor": 1.0,
+                # Enable or disable linear solution scaling
+                "linear_solution_scaling": True,
+                ## Main solver
+                # Maximum order of the linear multistep method
+                "max_order_bdf": 5,
+                # Maximum number of steps to be taken by the solver in its attempt to
+                # reach the next output time.
+                # Note: this value differs from the IDA default of 500
+                "max_num_steps": 100000,
+                # Initial step size. The solver default is used if this is left at 0.0
+                "dt_init": 0.0,
+                # Maximum absolute step size. The solver default is used if this is
+                # left at 0.0
+                "dt_max": 0.0,
+                # Maximum number of error test failures in attempting one step
+                "max_error_test_failures": 10,
+                # Maximum number of nonlinear solver iterations at one step
+                "max_nonlinear_iterations": 4,
+                # Maximum number of nonlinear solver convergence failures at one step
+                "max_convergence_failures": 10,
+                # Safety factor in the nonlinear convergence test
+                "nonlinear_convergence_coefficient": 0.33,
+                # Suppress algebraic variables from error test
+                "suppress_algebraic_error": False,
+                ## Initial conditions calculation
+                # Positive constant in the Newton iteration convergence test within the
+                # initial condition calculation
+                "nonlinear_convergence_coefficient_ic": 0.0033,
+                # Maximum number of steps allowed when `init_all_y_ic = False`
+                "max_num_steps_ic": 5,
+                # Maximum number of the approximate Jacobian or preconditioner evaluations
+                # allowed when the Newton iteration appears to be slowly converging
+                # Note: this value differs from the IDA default of 4
+                "max_num_jacobians_ic": 40,
+                # Maximum number of Newton iterations allowed in any one attempt to solve
+                # the initial conditions calculation problem
+                # Note: this value differs from the IDA default of 10
+                "max_num_iterations_ic": 100,
+                # Maximum number of linesearch backtracks allowed in any Newton iteration,
+                # when solving the initial conditions calculation problem
+                "max_linesearch_backtracks_ic": 100,
+                # Turn off linesearch
+                "linesearch_off_ic": False,
+                # How to calculate the initial conditions.
+                # "True": calculate all y0 given ydot0
+                # "False": calculate y_alg0 and ydot_diff0 given y_diff0
+                "init_all_y_ic": False,
+                # Calculate consistent initial conditions
+                "calc_ic": True,
             }
 
         Note: These options only have an effect if model.convert_to_format == 'casadi'
@@ -107,7 +161,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        rtol=1e-6,
+        rtol=1e-4,
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
@@ -120,13 +174,33 @@ class IDAKLUSolver(pybamm.BaseSolver):
         default_options = {
             "print_stats": False,
             "jacobian": "sparse",
-            "linear_solver": "SUNLinSol_KLU",
             "preconditioner": "BBDP",
-            "linsol_max_iterations": 5,
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
             "jax_evaluator": "jax",
+            "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 5,
+            "epsilon_linear_tolerance": 0.05,
+            "increment_factor": 1.0,
+            "linear_solution_scaling": True,
+            "max_order_bdf": 5,
+            "max_num_steps": 100000,
+            "dt_init": 0.0,
+            "dt_max": 0.0,
+            "max_error_test_failures": 10,
+            "max_nonlinear_iterations": 40,
+            "max_convergence_failures": 100,
+            "nonlinear_convergence_coefficient": 0.33,
+            "suppress_algebraic_error": False,
+            "nonlinear_convergence_coefficient_ic": 0.0033,
+            "max_num_steps_ic": 5,
+            "max_num_jacobians_ic": 4,
+            "max_num_iterations_ic": 10,
+            "max_linesearch_backtracks_ic": 100,
+            "linesearch_off_ic": False,
+            "init_all_y_ic": False,
+            "calc_ic": True,
         }
         if options is None:
             options = default_options
@@ -912,73 +986,71 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             yS_out = False
 
-        if sol.flag in [0, 2]:
-            # 0 = solved for all t_eval
-            if sol.flag == 0:
-                termination = "final time"
-            # 2 = found root(s)
-            elif sol.flag == 2:
-                termination = "event"
-
-            newsol = pybamm.Solution(
-                sol.t,
-                np.transpose(y_out),
-                model,
-                inputs_dict,
-                np.array([t[-1]]),
-                np.transpose(y_out[-1])[:, np.newaxis],
-                termination,
-                sensitivities=yS_out,
-            )
-            newsol.integration_time = integration_time
-            if self.output_variables:
-                # Populate variables and sensititivies dictionaries directly
-                number_of_samples = sol.y.shape[0] // number_of_timesteps
-                sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
-                startk = 0
-                for _, var in enumerate(self.output_variables):
-                    # ExplicitTimeIntegral's are not computed as part of the solver and
-                    # do not need to be converted
-                    if isinstance(
-                        model.variables_and_events[var], pybamm.ExplicitTimeIntegral
-                    ):
-                        continue
-                    if model.convert_to_format == "casadi":
-                        len_of_var = (
-                            self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
-                        )
-                        base_variables = [self._setup["var_fcns"][var]]
-                    elif (
-                        model.convert_to_format == "jax"
-                        and self._options["jax_evaluator"] == "iree"
-                    ):
-                        idx = self.output_variables.index(var)
-                        len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
-                        base_variables = [self._setup["var_idaklu_fcns"][idx]]
-                    else:  # pragma: no cover
-                        raise pybamm.SolverError(
-                            "Unsupported evaluation engine for convert_to_format="
-                            + f"{model.convert_to_format} "
-                            + f"(jax_evaluator={self._options['jax_evaluator']})"
-                        )
-                    newsol._variables[var] = pybamm.ProcessedVariableComputed(
-                        [model.variables_and_events[var]],
-                        base_variables,
-                        [sol.y[:, startk : (startk + len_of_var)]],
-                        newsol,
-                    )
-                    # Add sensitivities
-                    newsol[var]._sensitivities = {}
-                    if model.calculate_sensitivities:
-                        for paramk, param in enumerate(inputs_dict.keys()):
-                            newsol[var].add_sensitivity(
-                                param,
-                                [sol.yS[:, startk : (startk + len_of_var), paramk]],
-                            )
-                    startk += len_of_var
-            return newsol
+        # 0 = solved for all t_eval
+        if sol.flag == 0:
+            termination = "final time"
+        # 2 = found root(s)
+        elif sol.flag == 2:
+            termination = "event"
         else:
             raise pybamm.SolverError("idaklu solver failed")
+        newsol = pybamm.Solution(
+            sol.t,
+            np.transpose(y_out),
+            model,
+            inputs_dict,
+            np.array([t[-1]]),
+            np.transpose(y_out[-1])[:, np.newaxis],
+            termination,
+            sensitivities=yS_out,
+        )
+        newsol.integration_time = integration_time
+        if self.output_variables:
+            # Populate variables and sensititivies dictionaries directly
+            number_of_samples = sol.y.shape[0] // number_of_timesteps
+            sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
+            startk = 0
+            for var in self.output_variables:
+                # ExplicitTimeIntegral's are not computed as part of the solver and
+                # do not need to be converted
+                if isinstance(
+                    model.variables_and_events[var], pybamm.ExplicitTimeIntegral
+                ):
+                    continue
+                if model.convert_to_format == "casadi":
+                    len_of_var = (
+                        self._setup["var_fcns"][var](0.0, 0.0, 0.0).sparsity().nnz()
+                    )
+                    base_variables = [self._setup["var_fcns"][var]]
+                elif (
+                    model.convert_to_format == "jax"
+                    and self._options["jax_evaluator"] == "iree"
+                ):
+                    idx = self.output_variables.index(var)
+                    len_of_var = self._setup["var_idaklu_fcns"][idx].nnz
+                    base_variables = [self._setup["var_idaklu_fcns"][idx]]
+                else:  # pragma: no cover
+                    raise pybamm.SolverError(
+                        "Unsupported evaluation engine for convert_to_format="
+                        + f"{model.convert_to_format} "
+                        + f"(jax_evaluator={self._options['jax_evaluator']})"
+                    )
+                newsol._variables[var] = pybamm.ProcessedVariableComputed(
+                    [model.variables_and_events[var]],
+                    base_variables,
+                    [sol.y[:, startk : (startk + len_of_var)]],
+                    newsol,
+                )
+                # Add sensitivities
+                newsol[var]._sensitivities = {}
+                if model.calculate_sensitivities:
+                    for paramk, param in enumerate(inputs_dict.keys()):
+                        newsol[var].add_sensitivity(
+                            param,
+                            [sol.yS[:, startk : (startk + len_of_var), paramk]],
+                        )
+                startk += len_of_var
+        return newsol
 
     def jaxify(
         self,
