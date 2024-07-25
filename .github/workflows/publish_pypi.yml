@@ -270,6 +270,9 @@ jobs:
             python -c "import pybamm;"
           # python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
+      - name: Copy .dylib files for local testing
+        run: cp {project}/sundials_KLU_libs/*.dylib wheelhouse/
+
       - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4.3.4
         with:
