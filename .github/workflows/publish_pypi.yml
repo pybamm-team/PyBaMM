@@ -295,7 +295,10 @@ jobs:
 
   publish_pypi:
     # This job is only of value to PyBaMM and would always be skipped in forks
-    if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'release') &&
+      github.repository == 'pybamm-team/PyBaMM'
     name: Upload package to PyPI
     needs: [
       build_manylinux_wheels,
