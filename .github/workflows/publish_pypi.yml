@@ -277,7 +277,7 @@ jobs:
         uses: actions/upload-artifact@v4.3.4
         with:
           name: wheels_${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          path: ./wheelhouse/*
           if-no-files-found: error
 
   build_sdist:
