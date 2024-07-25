@@ -109,7 +109,7 @@ jobs:
           python-version: 3.11
 
       - name: Build wheels on Linux
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@v2.19.1
         with:
           package-dir: .
           output-dir: wheelhouse
@@ -123,15 +123,13 @@ jobs:
 
             tree $PWD/sundials_KLU_libs
 
-            export LD_LIBRARY_PATH={project}/sundials_KLU_libs:$LD_LIBRARY_PATH
-            export PATH={project}/sundials_KLU_libs/:$PATH
+            export LD_LIBRARY_PATH={project}/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH
+            export PATH={project}/sundials_KLU_libs/lib64/:$PATH
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 
             python -m pip install cmake casadi scikit-build-core pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            export PATH={project}/sundials_KLU_libs/lib64/:$PATH
-            export LD_LIBRARY_PATH={project}/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH
-            auditwheel repair -w {dest_dir} {wheel}
+            LD_LIBRARY_PATH={project}/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
