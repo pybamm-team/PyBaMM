@@ -190,24 +190,23 @@ jobs:
               export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
             fi
 
-            # link libgfortran dylibs and place them in $HOME/.local/lib
-            # and then change rpath to $HOME/.local/lib for each of them
+            # link libgfortran dylibs and place them in {project}/sundials_KLU_libs/lib/
+            # and then change rpath to {project}/sundials_KLU_libs/lib/ for each of them
             # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
 
-            mkdir -p {project}/sundials_KLU_libs/
             mkdir -p {project}/sundials_KLU_libs/lib/
 
             if [[ $(uname -m) == "x86_64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib {project}/sundials_KLU_libs/
+                cp $lib_dir/$lib {project}/sundials_KLU_libs/lib/
                 install_name_tool -id {project}/sundials_KLU_libs/$lib {project}/sundials_KLU_libs/$lib
                 codesign --force --sign - {project}/sundials_KLU_libs/$lib
               done
             elif [[ $(uname -m) == "arm64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib {project}/sundials_KLU_libs/
+                cp $lib_dir/$lib {project}/sundials_KLU_libs/lib/
                 install_name_tool -id {project}/sundials_KLU_libs/$lib {project}/sundials_KLU_libs/$lib
                 codesign --force --sign - {project}/sundials_KLU_libs/$lib
               done
@@ -224,7 +223,7 @@ jobs:
               PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev"
             fi
 
-            # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
+            # Copy libomp.dylib from PREFIX to {project}/sundials_KLU_libs/lib/, needed for wheel repair
             cp $PREFIX/lib/libomp.dylib {project}/sundials_KLU_libs/lib/
             install_name_tool -id {project}/sundials_KLU_libs/lib/libomp.dylib {project}/sundials_KLU_libs/lib/libomp.dylib
             codesign --force --sign - {project}/sundials_KLU_libs/lib/libomp.dylib
@@ -241,6 +240,8 @@ jobs:
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
             export LD_LIBRARY_PATH={project}/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
+            echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then
