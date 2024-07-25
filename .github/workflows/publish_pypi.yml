@@ -212,7 +212,10 @@ jobs:
             # link libgfortran dylibs and place them in $HOME/.local/lib
             # and then change rpath to $HOME/.local/lib for each of them
             # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
+
             mkdir -p {project}/sundials_KLU_libs/
+            mkdir -p {project}/sundials_KLU_libs/lib/
+
             if [[ $(uname -m) == "x86_64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
@@ -241,9 +244,9 @@ jobs:
             fi
 
             # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
-            cp $PREFIX/lib/libomp.dylib {project}/sundials_KLU_libs/
-            install_name_tool -id {project}/sundials_KLU_libs/libomp.dylib {project}/sundials_KLU_libs/libomp.dylib
-            codesign --force --sign - {project}/sundials_KLU_libs/libomp.dylib
+            cp $PREFIX/lib/libomp.dylib {project}/sundials_KLU_libs/lib/
+            install_name_tool -id {project}/sundials_KLU_libs/lib/libomp.dylib {project}/sundials_KLU_libs/lib/libomp.dylib
+            codesign --force --sign - {project}/sundials_KLU_libs/lib/libomp.dylib
 
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
@@ -256,7 +259,7 @@ jobs:
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
-            export LD_LIBRARY_PATH={project}/sundials_KLU_libs/:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH={project}/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then
@@ -268,14 +271,11 @@ jobs:
             set -e -x
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
-      - name: Copy .dylib files for local testing
-        run: cp {project}/sundials_KLU_libs/*.dylib wheelhouse/
-
       - name: Upload wheels for macOS (amd64, arm64)
         uses: actions/upload-artifact@v4.3.4
         with:
           name: wheels_${{ matrix.os }}
-          path: ./wheelhouse/*
+          path: ./wheelhouse/*.whl
           if-no-files-found: error
 
   build_sdist:
