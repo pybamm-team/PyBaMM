@@ -115,17 +115,22 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_BEFORE_ALL_LINUX: |
+          CIBW_BEFORE_BUILD_LINUX: |
+            set -e -x
+
             yum -y install openblas-devel lapack-devel tree
             python scripts/install_KLU_Sundials.py
+
             tree $PWD/sundials_KLU_libs
+
             export LD_LIBRARY_PATH={project}/sundials_KLU_libs:$LD_LIBRARY_PATH
-            export PATH={project}/sundials_KLU_libs:$PATH
+            export PATH={project}/sundials_KLU_libs/:$PATH
             echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-          CIBW_BEFORE_BUILD_LINUX: |
+
             python -m pip install cmake casadi scikit-build-core pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            export LD_LIBRARY_PATH="$PWD/project/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH"
+            export PATH={project}/sundials_KLU_libs/lib64/:$PATH
+            export LD_LIBRARY_PATH={project}/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH
             auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
