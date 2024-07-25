@@ -118,6 +118,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             set -e -x
 
+            yum update -y
             yum -y install openblas-devel lapack-devel tree
             python scripts/install_KLU_Sundials.py
 
