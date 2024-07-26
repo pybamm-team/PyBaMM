@@ -237,7 +237,7 @@ required_plugins = [
 ]
 addopts = [
     "-nauto",
-    "-vrA",
+    "-vra",
     "--strict-config",
     "--strict-markers",
 ]
