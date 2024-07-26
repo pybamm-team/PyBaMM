@@ -102,7 +102,6 @@ class BatchStudy:
         self,
         t_eval=None,
         solver=None,
-        check_model=True,
         save_at_cycles=None,
         calc_esoh=True,
         starting_solution=None,
@@ -158,7 +157,6 @@ class BatchStudy:
                 sol = sim.solve(
                     t_eval,
                     solver,
-                    check_model,
                     save_at_cycles,
                     calc_esoh,
                     starting_solution,
@@ -196,7 +194,8 @@ class BatchStudy:
             Name of the generated GIF file.
 
         """
-
+        if not hasattr(self, "sims"):
+            raise ValueError("The simulations have not been solved yet.")
         if self.quick_plot is None:
             self.quick_plot = pybamm.QuickPlot(self.sims)
 

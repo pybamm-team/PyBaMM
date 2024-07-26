@@ -1,6 +1,7 @@
 #
 # Calculate the Jacobian of a symbol
 #
+from __future__ import annotations
 import pybamm
 
 
@@ -18,11 +19,15 @@ class Jacobian:
         whether or not the Jacobian clears the domain (default True)
     """
 
-    def __init__(self, known_jacs=None, clear_domain=True):
+    def __init__(
+        self,
+        known_jacs: dict[pybamm.Symbol, pybamm.Symbol] | None = None,
+        clear_domain: bool = True,
+    ):
         self._known_jacs = known_jacs or {}
         self._clear_domain = clear_domain
 
-    def jac(self, symbol, variable):
+    def jac(self, symbol: pybamm.Symbol, variable: pybamm.Symbol) -> pybamm.Symbol:
         """
         This function recurses down the tree, computing the Jacobian using
         the Jacobians defined in classes derived from pybamm.Symbol. E.g. the
@@ -52,7 +57,7 @@ class Jacobian:
             self._known_jacs[symbol] = jac
             return jac
 
-    def _jac(self, symbol, variable):
+    def _jac(self, symbol: pybamm.Symbol, variable: pybamm.Symbol):
         """See :meth:`Jacobian.jac()`."""
 
         if isinstance(symbol, pybamm.BinaryOperator):
@@ -64,12 +69,12 @@ class Jacobian:
             jac = symbol._binary_jac(left_jac, right_jac)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            child_jac = self.jac(symbol.child, variable)
+            child_jac = self.jac(symbol.child, variable)  # type: ignore[has-type]
             # _unary_jac defined in derived classes for specific rules
             jac = symbol._unary_jac(child_jac)
 
         elif isinstance(symbol, pybamm.Function):
-            children_jacs = [None] * len(symbol.children)
+            children_jacs: list[None | pybamm.Symbol] = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 children_jacs[i] = self.jac(child, variable)
             # _function_jac defined in function class
@@ -85,10 +90,10 @@ class Jacobian:
         else:
             try:
                 jac = symbol._jac(variable)
-            except NotImplementedError:
+            except NotImplementedError as error:
                 raise NotImplementedError(
                     f"Cannot calculate Jacobian of symbol of type '{type(symbol)}'"
-                )
+                ) from error
 
         # Jacobian by default removes the domain(s)
         if self._clear_domain:

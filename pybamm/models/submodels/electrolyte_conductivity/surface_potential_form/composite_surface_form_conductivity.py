@@ -3,7 +3,9 @@
 #
 import pybamm
 
-from ..composite_conductivity import Composite
+from pybamm.models.submodels.electrolyte_conductivity.composite_conductivity import (
+    Composite,
+)
 
 
 class BaseModel(Composite):
@@ -97,6 +99,10 @@ class CompositeDifferential(BaseModel):
     def set_rhs(self, variables):
         domain = self.domain
 
+        a = variables[
+            f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
+        ]
+
         sum_a_j = variables[
             f"Sum of x-averaged {domain} electrode volumetric "
             "interfacial current densities [A.m-3]"
@@ -114,7 +120,7 @@ class CompositeDifferential(BaseModel):
 
         C_dl = self.domain_param.C_dl(T)
 
-        self.rhs[delta_phi] = 1 / C_dl * (sum_a_j_av - sum_a_j)
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
 
 
 class CompositeAlgebraic(BaseModel):

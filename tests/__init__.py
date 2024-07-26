@@ -32,10 +32,17 @@ from .shared import (
     get_discretisation_for_testing,
     get_p2d_discretisation_for_testing,
     get_size_distribution_disc_for_testing,
+    function_test,
+    multi_var_function_test,
+    multi_var_function_cube_test,
     get_1p1d_discretisation_for_testing,
     get_2p1d_discretisation_for_testing,
     get_unit_2p1D_mesh_for_testing,
     get_cylindrical_discretisation_for_testing,
     get_base_model_with_battery_geometry,
+    get_required_distribution_deps,
+    get_optional_distribution_deps,
+    get_present_optional_import_deps,
+    no_internet_connection,
 )
 from .testcase import TestCase

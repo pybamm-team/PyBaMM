@@ -2,7 +2,7 @@
 # Base class for convection submodels in the through-cell direction
 #
 import pybamm
-from ..base_convection import BaseModel
+from pybamm.models.submodels.convection.base_convection import BaseModel
 
 
 class BaseThroughCellModel(BaseModel):

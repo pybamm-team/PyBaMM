@@ -38,16 +38,6 @@ else:
         Please consult installation instructions on GitHub.
         """
     )
-if pybamm.have_scikits_odes():
-    scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-    solutions.append(scikits_sol)
-else:
-    pybamm.logger.error(
-        """
-        Cannot solve model with Scikits DAE solver as solver is not installed.
-        Please consult installation instructions on GitHub.
-        """
-    )
 
 # plot
 plot = pybamm.QuickPlot(solutions)

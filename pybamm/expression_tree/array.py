@@ -1,11 +1,13 @@
 #
 # NumpyArray class
 #
+from __future__ import annotations
 import numpy as np
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
+import sympy
 
 
 class Array(pybamm.Symbol):
@@ -36,13 +38,13 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries,
-        name=None,
-        domain=None,
-        auxiliary_domains=None,
-        domains=None,
-        entries_string=None,
-    ):
+        entries: np.ndarray | list[float] | csr_matrix,
+        name: str | None = None,
+        domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
+        entries_string: str | None = None,
+    ) -> None:
         # if
         if isinstance(entries, list):
             entries = np.array(entries)
@@ -59,8 +61,6 @@ class Array(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
         if isinstance(snippet["entries"], dict):
             matrix = csr_matrix(
                 (
@@ -73,13 +73,11 @@ class Array(pybamm.Symbol):
         else:
             matrix = snippet["entries"]
 
-        instance.__init__(
+        return cls(
             matrix,
             name=snippet["name"],
             domains=snippet["domains"],
         )
-
-        return instance
 
     @property
     def entries(self):
@@ -100,7 +98,7 @@ class Array(pybamm.Symbol):
         return self._entries_string
 
     @entries_string.setter
-    def entries_string(self, value):
+    def entries_string(self, value: None | tuple):
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
         # Slightly different syntax for sparse and non-sparse matrices
@@ -110,10 +108,10 @@ class Array(pybamm.Symbol):
             entries = self._entries
             if issparse(entries):
                 dct = entries.__dict__
-                self._entries_string = ["shape", str(dct["_shape"])]
+                entries_string = ["shape", str(dct["_shape"])]
                 for key in ["data", "indices", "indptr"]:
-                    self._entries_string += [key, dct[key].tobytes()]
-                self._entries_string = tuple(self._entries_string)
+                    entries_string += [key, dct[key].tobytes()]
+                self._entries_string = tuple(entries_string)
                 # self._entries_string = str(entries.__dict__)
             else:
                 self._entries_string = (entries.tobytes(),)
@@ -124,13 +122,17 @@ class Array(pybamm.Symbol):
             (self.__class__, self.name, *self.entries_string, *tuple(self.domain))
         )
 
-    def _jac(self, variable):
+    def _jac(self, variable) -> pybamm.Matrix:
         """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
         jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
         return pybamm.Matrix(jac)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.entries,
@@ -139,7 +141,13 @@ class Array(pybamm.Symbol):
             entries_string=self.entries_string,
         )
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._entries
 
@@ -147,9 +155,8 @@ class Array(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
-    def to_equation(self):
+    def to_equation(self) -> sympy.Array:
         """Returns the value returned by the node when evaluated."""
-        sympy = have_optional_dependency("sympy")
         entries_list = self.entries.tolist()
         return sympy.Array(entries_list)
 
@@ -178,7 +185,7 @@ class Array(pybamm.Symbol):
         return json_dict
 
 
-def linspace(start, stop, num=50, **kwargs):
+def linspace(start: float, stop: float, num: int = 50, **kwargs) -> pybamm.Array:
     """
     Creates a linearly spaced array by calling `numpy.linspace` with keyword
     arguments 'kwargs'. For a list of 'kwargs' see the
@@ -187,7 +194,9 @@ def linspace(start, stop, num=50, **kwargs):
     return pybamm.Array(np.linspace(start, stop, num, **kwargs))
 
 
-def meshgrid(x, y, **kwargs):
+def meshgrid(
+    x: pybamm.Array, y: pybamm.Array, **kwargs
+) -> tuple[pybamm.Array, pybamm.Array]:
     """
     Return coordinate matrices as from coordinate vectors by calling
     `numpy.meshgrid` with keyword arguments 'kwargs'. For a list of 'kwargs'

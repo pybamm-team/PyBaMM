@@ -67,6 +67,76 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_isothermal_heat_source_hom(self):
+        options = {
+            "calculate heat source for isothermal models": "true",
+            "thermal": "isothermal",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_2plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_model_1D_hom(self):
+        options = {"thermal": "lumped", "heat of mixing": "true"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_x_full_thermal_model_hom(self):
+        options = {
+            "thermal": "x-full",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_1plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal_2plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_thermal_1plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "x-lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_thermal_2plus1D_hom(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "x-lumped",
+            "heat of mixing": "true",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_contact_resistance(self):
         options = {"contact resistance": "true"}
         self.check_well_posedness(options)
@@ -350,6 +420,44 @@ class BaseUnitTestLithiumIon:
         options = {"operating mode": external_circuit_function}
         self.check_well_posedness(options)
 
+    def test_well_posed_external_circuit_function_1plus1D(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Voltage [V]"]
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "operating mode": external_circuit_function,
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_function_2plus1D(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Voltage [V]"]
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "operating mode": external_circuit_function,
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_particle_phases(self):
         options = {"particle phases": "2"}
         self.check_well_posedness(options)
@@ -360,12 +468,20 @@ class BaseUnitTestLithiumIon:
         options = {"particle phases": ("1", "2")}
         self.check_well_posedness(options)
 
+    def test_well_posed_particle_phases_thermal(self):
+        options = {"particle phases": "2", "thermal": "lumped"}
+        self.check_well_posedness(options)
+
     def test_well_posed_particle_phases_sei(self):
         options = {"particle phases": "2", "SEI": "ec reaction limited"}
         self.check_well_posedness(options)
 
     def test_well_posed_current_sigmoid_ocp(self):
         options = {"open-circuit potential": "current sigmoid"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_wycisk_ocp(self):
+        options = {"open-circuit potential": "Wycisk"}
         self.check_well_posedness(options)
 
     def test_well_posed_msmr(self):
@@ -388,6 +504,38 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_psd(self):
         options = {"particle size": "distribution", "surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_Bruggeman(self):
+        options = {"transport efficiency": "Bruggeman"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_ordered_packing(self):
+        options = {"transport efficiency": "ordered packing"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_overlapping_spheres(self):
+        options = {"transport efficiency": "overlapping spheres"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_random_overlapping_cylinders(self):
+        options = {"transport efficiency": "random overlapping cylinders"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_heterogeneous_catalyst(self):
+        options = {"transport efficiency": "heterogeneous catalyst"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_cation_exchange_membrane(self):
+        options = {"transport efficiency": "cation-exchange membrane"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_hyperbola(self):
+        options = {"transport efficiency": "hyperbola of revolution"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_transport_efficiency_tortuosity_factor(self):
+        options = {"transport efficiency": "tortuosity factor"}
         self.check_well_posedness(options)
 
     def test_well_posed_composite_kinetic_hysteresis(self):

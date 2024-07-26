@@ -1,0 +1,34 @@
+# Automatically request reviews from maintainers
+
+# Package
+/pybamm/discretisations/ @martinjrobins @rtimms @valentinsulzer
+/pybamm/experiment/ @brosaplanella @martinjrobins @rtimms @valentinsulzer @TomTranter
+/pybamm/expression_tree/ @martinjrobins @rtimms @valentinsulzer
+/pybamm/geometry/ @martinjrobins @rtimms @valentinsulzer
+/pybamm/input/ @brosaplanella @DrSOKane @rtimms @valentinsulzer @TomTranter @kratman
+/pybamm/meshes/ @martinjrobins @rtimms @valentinsulzer @rtimms
+/pybamm/models/ @brosaplanella @DrSOKane @rtimms @valentinsulzer @TomTranter @rtimms
+/pybamm/parameters/ @brosaplanella @DrSOKane @rtimms @valentinsulzer @TomTranter @rtimms  @kratman
+/pybamm/plotting/ @martinjrobins @rtimms @Saransh-cpp @valentinsulzer @rtimms  @kratman @agriyakhetarpal
+/pybamm/solvers/ @martinjrobins @rtimms @valentinsulzer @TomTranter @rtimms
+/pybamm/spatial_methods/ @martinjrobins @rtimms @valentinsulzer @rtimms
+/pybamm/* @pybamm-team/maintainers # the files directly under /pybamm/, will not recurse
+
+# CI/CD workflows
+/.github/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
+
+# Benchmarks
+/benchmarks/ @brosaplanella @Saransh-cpp @agriyakhetarpal @arjxn-py
+
+# Documentation
+/docs/ @kratman @arjxn-py @agriyakhetarpal @Saransh-cpp
+
+# Example scripts
+/examples/ @kratman @agriyakhetarpal @Saransh-cpp
+
+# Installation and other scripts
+/scripts/ @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
+
+# Files in the root directory
+/* @martinjrobins @Saransh-cpp @agriyakhetarpal @kratman @arjxn-py
+/CHANGELOG.md # no owner (almost every PR edits the CHANGELOG)

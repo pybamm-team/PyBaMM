@@ -342,12 +342,12 @@ class SpectralVolume(pybamm.FiniteVolume):
                 sub_matrix[i * d, i * (d + 1) : (i + 1) * (d + 1)] = (
                     f * sub_matrix_raw[i * (d + 1), i * (d + 1) : (i + 1) * (d + 1)]
                 )
-                sub_matrix[
-                    i * d + 1 : (i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)
-                ] = sub_matrix_raw[
-                    i * (d + 1) + 1 : (i + 1) * (d + 1) - 1,
-                    i * (d + 1) : (i + 1) * (d + 1),
-                ]
+                sub_matrix[i * d + 1 : (i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)] = (
+                    sub_matrix_raw[
+                        i * (d + 1) + 1 : (i + 1) * (d + 1) - 1,
+                        i * (d + 1) : (i + 1) * (d + 1),
+                    ]
+                )
                 sub_matrix[(i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)] = (
                     f * sub_matrix_raw[i * (d + 1) + d, i * (d + 1) : (i + 1) * (d + 1)]
                 )
@@ -391,7 +391,11 @@ class SpectralVolume(pybamm.FiniteVolume):
         e = np.zeros(n - 1)
         e[d - 1 :: d] = 1 / submesh.d_nodes[d - 1 :: d]
         sub_matrix = vstack(
-            [np.zeros(n), diags([-e, e], [0, 1], shape=(n - 1, n)), np.zeros(n)]
+            [
+                np.zeros((1, n)),
+                diags([-e, e], [0, 1], shape=(n - 1, n)),
+                np.zeros((1, n)),
+            ]
         )
 
         # number of repeats

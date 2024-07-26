@@ -1,10 +1,13 @@
 #
 # Scalar class
 #
+from __future__ import annotations
 import numpy as np
+import sympy
+from typing import Literal
 
 import pybamm
-from pybamm.util import have_optional_dependency
+from pybamm.type_definitions import Numeric
 
 
 class Scalar(pybamm.Symbol):
@@ -21,7 +24,11 @@ class Scalar(pybamm.Symbol):
 
     """
 
-    def __init__(self, value, name=None):
+    def __init__(
+        self,
+        value: Numeric,
+        name: str | None = None,
+    ) -> None:
         # set default name if not provided
         self.value = value
         if name is None:
@@ -31,11 +38,7 @@ class Scalar(pybamm.Symbol):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        instance = cls.__new__(cls)
-
-        instance.__init__(snippet["value"], name=snippet["name"])
-
-        return instance
+        return cls(snippet["value"], name=snippet["name"])
 
     def __str__(self):
         return str(self.value)
@@ -60,25 +63,36 @@ class Scalar(pybamm.Symbol):
         # indistinguishable by class and name alone
         self._id = hash((self.__class__, str(self.value)))
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def _base_evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value
 
-    def _jac(self, variable):
+    def _jac(self, variable: pybamm.Variable) -> pybamm.Scalar:
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children=None,
+        perform_simplifications=True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
+        if new_children is not None:
+            raise ValueError("Cannot create a copy of a scalar with new children")
         return Scalar(self.value, self.name)
 
-    def is_constant(self):
+    def is_constant(self) -> Literal[True]:
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
-        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:

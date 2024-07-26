@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix, coo_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
-from pybamm.util import have_optional_dependency
+import sympy
 
 
 class TestSymbol(TestCase):
@@ -122,7 +122,7 @@ class TestSymbol(TestCase):
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
         # special cases
-        self.assertEqual(-(-a), a)
+        self.assertEqual(-(-a), a)  # noqa: B002
         self.assertEqual(-(a - b), b - a)
         self.assertEqual(abs(abs(a)), abs(a))
 
@@ -169,8 +169,12 @@ class TestSymbol(TestCase):
 
     def test_symbol_create_copy(self):
         a = pybamm.Symbol("a")
-        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
-            a.create_copy()
+        new_a = a.create_copy()
+        self.assertEqual(new_a, a)
+
+        b = pybamm.Symbol("b")
+        new_b = b.create_copy(new_children=[a])
+        self.assertEqual(new_b, pybamm.Symbol("b", children=[a]))
 
     def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed
@@ -485,7 +489,6 @@ class TestSymbol(TestCase):
             (y1 + y2).test_shape()
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
         self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
     def test_numpy_array_ufunc(self):

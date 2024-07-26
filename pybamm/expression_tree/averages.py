@@ -1,6 +1,8 @@
 #
 # Classes and methods for averaging
 #
+from __future__ import annotations
+from typing import Callable
 import pybamm
 
 
@@ -14,13 +16,20 @@ class _BaseAverage(pybamm.Integral):
         The child node
     """
 
-    def __init__(self, child, name, integration_variable):
+    def __init__(
+        self,
+        child: pybamm.Symbol,
+        name: str,
+        integration_variable: (
+            list[pybamm.IndependentVariable] | pybamm.IndependentVariable
+        ),
+    ) -> None:
         super().__init__(child, integration_variable)
         self.name = name
 
 
 class XAverage(_BaseAverage):
-    def __init__(self, child):
+    def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
         elif all(n in child.domain[0] for n in ["positive", "particle"]):
@@ -30,56 +39,110 @@ class XAverage(_BaseAverage):
         integration_variable = x
         super().__init__(child, "x-average", integration_variable)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return x_average(child)
+    def _unary_new_copy(
+        self, child: pybamm.Symbol, perform_simplifications: bool = True
+    ):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`x_average` to perform checks before
+        creating an XAverage object.
+        """
+        if perform_simplifications:
+            return x_average(child)
+        else:
+            return XAverage(child)
 
 
 class YZAverage(_BaseAverage):
-    def __init__(self, child):
+    def __init__(self, child: pybamm.Symbol) -> None:
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        integration_variable = [y, z]
+        integration_variable: list[pybamm.IndependentVariable] = [y, z]
         super().__init__(child, "yz-average", integration_variable)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return yz_average(child)
+    def _unary_new_copy(
+        self, child: pybamm.Symbol, perform_simplifications: bool = True
+    ):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`yz_average` to perform checks before
+        creating an YZAverage object.
+        """
+        if perform_simplifications:
+            return yz_average(child)
+        else:
+            return YZAverage(child)
 
 
 class ZAverage(_BaseAverage):
-    def __init__(self, child):
-        integration_variable = [pybamm.standard_spatial_vars.z]
+    def __init__(self, child: pybamm.Symbol) -> None:
+        integration_variable: list[pybamm.IndependentVariable] = [
+            pybamm.standard_spatial_vars.z
+        ]
         super().__init__(child, "z-average", integration_variable)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return z_average(child)
+    def _unary_new_copy(
+        self, child: pybamm.Symbol, perform_simplifications: bool = True
+    ):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`z_average` to perform checks before
+        creating an ZAverage object.
+        """
+        if perform_simplifications:
+            return z_average(child)
+        else:
+            return ZAverage(child)
 
 
 class RAverage(_BaseAverage):
-    def __init__(self, child):
-        integration_variable = [pybamm.SpatialVariable("r", child.domain)]
+    def __init__(self, child: pybamm.Symbol) -> None:
+        integration_variable: list[pybamm.IndependentVariable] = [
+            pybamm.SpatialVariable("r", child.domain)
+        ]
         super().__init__(child, "r-average", integration_variable)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return r_average(child)
+    def _unary_new_copy(
+        self, child: pybamm.Symbol, perform_simplifications: bool = True
+    ):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`r_average` to perform checks before
+        creating an RAverage object.
+        """
+        if perform_simplifications:
+            return r_average(child)
+        else:
+            return RAverage(child)
 
 
 class SizeAverage(_BaseAverage):
-    def __init__(self, child, f_a_dist):
+    def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
         R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
-        integration_variable = [R]
+        integration_variable: list[pybamm.IndependentVariable] = [R]
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return size_average(child, f_a_dist=self.f_a_dist)
+    def _unary_new_copy(
+        self, child: pybamm.Symbol, perform_simplifications: bool = True
+    ):
+        """
+        Creates a new copy of the operator with the child `child`.
+
+        Uses the convenience function :meth:`size_average` to perform checks before
+        creating an SizeAverage object.
+        """
+        if perform_simplifications:
+            return size_average(child, f_a_dist=self.f_a_dist)
+        else:
+            return SizeAverage(child, f_a_dist=self.f_a_dist)
 
 
-def x_average(symbol):
+def x_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     """
     Convenience function for creating an average in the x-direction.
 
@@ -168,7 +231,7 @@ def x_average(symbol):
         return XAverage(symbol)
 
 
-def z_average(symbol):
+def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     """
     Convenience function for creating an average in the z-direction.
 
@@ -205,7 +268,7 @@ def z_average(symbol):
         return ZAverage(symbol)
 
 
-def yz_average(symbol):
+def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     """
     Convenience function for creating an average in the y-z-direction.
 
@@ -239,11 +302,11 @@ def yz_average(symbol):
         return YZAverage(symbol)
 
 
-def xyz_average(symbol):
+def xyz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     return yz_average(x_average(symbol))
 
 
-def r_average(symbol):
+def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     """
     Convenience function for creating an average in the r-direction.
 
@@ -286,7 +349,9 @@ def r_average(symbol):
         return RAverage(symbol)
 
 
-def size_average(symbol, f_a_dist=None):
+def size_average(
+    symbol: pybamm.Symbol, f_a_dist: pybamm.Symbol | None = None
+) -> pybamm.Symbol:
     """Convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
@@ -339,7 +404,10 @@ def size_average(symbol, f_a_dist=None):
         return SizeAverage(symbol, f_a_dist)
 
 
-def _sum_of_averages(symbol, average_function):
+def _sum_of_averages(
+    symbol: pybamm.Addition | pybamm.Subtraction,
+    average_function: Callable[[pybamm.Symbol], pybamm.Symbol],
+):
     if isinstance(symbol, pybamm.Addition):
         return average_function(symbol.left) + average_function(symbol.right)
     elif isinstance(symbol, pybamm.Subtraction):

@@ -71,7 +71,7 @@ class SEIGrowth(BaseModel):
 
         L_inner, L_outer = Ls
 
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         if SEI_option.startswith("ec reaction limited"):
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
@@ -83,7 +83,7 @@ class SEIGrowth(BaseModel):
         param = self.param
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         T = variables[f"{Domain} electrode temperature [K]"]
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
@@ -134,8 +134,7 @@ class SEIGrowth(BaseModel):
         elif SEI_option == "electron-migration limited":
             # Scott Marquis thesis (eq. 5.94)
             eta_inner = delta_phi - phase_param.U_inner
-            j_sei = phase_param.kappa_inner * eta_inner / L_sei_inner
-
+            j_sei = (eta_inner < 0) * phase_param.kappa_inner * eta_inner / L_sei_inner
         elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)
             j_sei = -(
@@ -257,7 +256,7 @@ class SEIGrowth(BaseModel):
         )
 
         # we have to add the spreading rate to account for cracking
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         if SEI_option.startswith("ec reaction limited"):
             self.rhs = {L_outer: -dLdt_SEI_outer + spreading_outer}
         else:
@@ -285,7 +284,7 @@ class SEIGrowth(BaseModel):
         else:
             L_inner_0 = self.phase_param.L_inner_0
             L_outer_0 = self.phase_param.L_outer_0
-        SEI_option = getattr(self.options, domain)["SEI"]
+        SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
         if SEI_option.startswith("ec reaction limited"):
             self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:

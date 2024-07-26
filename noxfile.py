@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 # Options to modify nox behaviour
+nox.options.default_venv_backend = "virtualenv"
 nox.options.reuse_existing_virtualenvs = True
 if sys.platform != "win32":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
@@ -16,6 +17,7 @@ homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
+    "PYTHONIOENCODING": "utf-8",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -38,17 +40,23 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="pybamm-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS: the SuiteSparse and SUNDIALS libraries."""
+    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
-        session.install("wget", "cmake", silent=False)
-        session.run("python", "scripts/install_KLU_Sundials.py")
+        session.install("cmake", silent=False)
+        session.run("python", "scripts/install_KLU_Sundials.py", *session.posargs)
         if not os.path.exists("./pybind11"):
             session.run(
                 "git",
                 "clone",
+                "--depth",
+                "1",
+                "--branch",
+                "v2.12.0",
                 "https://github.com/pybind/pybind11.git",
                 "pybind11/",
+                "-c",
+                "advice.detachedHead=false",
                 external=True,
             )
     else:
@@ -59,55 +67,28 @@ def run_pybamm_requires(session):
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("coverage", silent=False)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
     session.install("setuptools", silent=False)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
-        else:
-            session.install("-e", ".[all,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
-        else:
-            session.install("-e", ".[all,jax]", silent=False)
-    session.run("coverage", "run", "run-tests.py", "--nosub")
-    session.run("coverage", "combine")
-    session.run("coverage", "xml")
+    session.install("coverage", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
 @nox.session(name="integration")
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
     session.install("setuptools", silent=False)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
-        else:
-            session.install("-e", ".[all,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
-        else:
-            session.install("-e", ".[all,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--integration")
 
 
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
+    # TODO: Temporary fix for Python 3.12 CI.
+    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
     session.run("python", "run-tests.py", "--doctest")
 
 
@@ -115,20 +96,8 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
     session.install("setuptools", silent=False)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
-        else:
-            session.install("-e", ".[all,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
-        else:
-            session.install("-e", ".[all,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--unit")
 
 
@@ -136,9 +105,6 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
@@ -153,7 +119,7 @@ def run_scripts(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all]", silent=False)
+    session.install("-e", ".[all,dev]", silent=False)
     session.run("python", "run-tests.py", "--scripts")
 
 
@@ -168,68 +134,23 @@ def set_dev(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.run(python, "-m", "pip", "install", "setuptools", external=True)
-    if sys.platform == "linux":
-        if sys.version_info > (3, 12):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
-        else:
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax,odes]",
-                external=True,
-            )
-    else:
-        if sys.version_info < (3, 9):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev]",
-                external=True,
-            )
-        else:
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
+    session.run(
+        python,
+        "-m",
+        "pip",
+        "install",
+        "-e",
+        ".[all,dev,jax]",
+        external=True,
+    )
 
 
 @nox.session(name="tests")
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
     session.install("setuptools", silent=False)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,jax]", silent=False)
-        else:
-            session.install("-e", ".[all,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all]", silent=False)
-        else:
-            session.install("-e", ".[all,jax]", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--all")
 
 
@@ -237,11 +158,10 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    session.install("-e", ".[all,docs]", silent=False)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
+    # TODO: Temporary fix for Python 3.12 CI.
+    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
+    session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:
@@ -255,11 +175,11 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
     # Runs in CI only, treating warnings as errors
+    # Run in single-threaded mode, see
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1643
     else:
         session.run(
             "sphinx-build",
-            "-j",
-            "auto",
             "-b",
             "html",
             "-W",

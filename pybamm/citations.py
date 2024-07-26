@@ -7,11 +7,10 @@ import pybamm
 import os
 import warnings
 from sys import _getframe
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class Citations:
-
     """Entry point to citations management.
     This object may be used to record BibTeX citation information and then register that
     a particular citation is relevant for a particular simulation.
@@ -39,14 +38,8 @@ class Citations:
         # Dict mapping citation tags for use when registering citations
         self._citation_tags = dict()
 
-        # store citation error
-        self._citation_err_msg = None
-
-        try:
-            self.read_citations()
-            self._reset()
-        except Exception as e:  # pragma: no cover
-            self._citation_err_msg = e
+        self.read_citations()
+        self._reset()
 
     def _reset(self):
         """Reset citations to default only (only for testing purposes)"""
@@ -60,12 +53,12 @@ class Citations:
         self.register("Sulzer2021")
         self.register("Harris2020")
 
+    @staticmethod
     def _caller_name():
         """
         Returns the qualified name of classes that call :meth:`register` internally.
         Gets cached in order to reduce the number of calls.
         """
-        # Attributed to https://stackoverflow.com/a/53490973
         caller_name = _getframe().f_back.f_back.f_locals["self"].__class__.__qualname__
         return caller_name
 
@@ -73,29 +66,41 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        parse_file = have_optional_dependency("pybtex.database", "parse_file")
-        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
-        bib_data = parse_file(citations_file, bib_format="bibtex")
-        for key, entry in bib_data.entries.items():
-            self._add_citation(key, entry)
+        try:
+            parse_file = import_optional_dependency("pybtex.database", "parse_file")
+            citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
+            bib_data = parse_file(citations_file, bib_format="bibtex")
+            for key, entry in bib_data.entries.items():
+                self._add_citation(key, entry)
+        except ModuleNotFoundError:  # pragma: no cover
+            pybamm.logger.warning(
+                "Citations could not be read because the 'pybtex' library is not installed. "
+                "Install 'pybamm[cite]' to enable citation reading."
+            )
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
 
-        Entry = have_optional_dependency("pybtex.database", "Entry")
-        # Check input types are correct
-        if not isinstance(key, str) or not isinstance(entry, Entry):
-            raise TypeError()
+        try:
+            Entry = import_optional_dependency("pybtex.database", "Entry")
+            # Check input types are correct
+            if not isinstance(key, str) or not isinstance(entry, Entry):
+                raise TypeError()
 
-        # Warn if overwriting a previous citation
-        new_citation = entry.to_string("bibtex")
-        if key in self._all_citations and new_citation != self._all_citations[key]:
-            warnings.warn(f"Replacing citation for {key}")
+            # Warn if overwriting a previous citation
+            new_citation = entry.to_string("bibtex")
+            if key in self._all_citations and new_citation != self._all_citations[key]:
+                warnings.warn(f"Replacing citation for {key}", stacklevel=2)
 
-        # Add to database
-        self._all_citations[key] = new_citation
+            # Add to database
+            self._all_citations[key] = new_citation
+        except ModuleNotFoundError:  # pragma: no cover
+            pybamm.logger.warning(
+                f"Could not add citation for '{key}' because the 'pybtex' library is not installed. "
+                "Install 'pybamm[cite]' to enable adding citations."
+            )
 
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
@@ -122,23 +127,22 @@ class Citations:
             - The citation key for an entry in `pybamm/CITATIONS.bib` or
             - A BibTeX formatted citation
         """
-        if self._citation_err_msg is None:
-            # Check if citation is a known key
-            if key in self._all_citations:
-                self._papers_to_cite.add(key)
-                # Add citation tags for the key for verbose output, but
-                # don't if they already exist in _citation_tags dict
-                if key not in self._citation_tags:
-                    try:
-                        caller = Citations._caller_name()
-                        self._add_citation_tag(key, entry=caller)
-                        # Don't add citation tags if the citation is registered manually
-                    except KeyError:  # pragma: no cover
-                        pass
-            else:
-                # If citation is unknown, parse it later with pybtex
-                self._unknown_citations.add(key)
-                return
+        # Check if citation is a known key
+        if key in self._all_citations:
+            self._papers_to_cite.add(key)
+            # Add citation tags for the key for verbose output, but
+            # don't if they already exist in _citation_tags dict
+            if key not in self._citation_tags:
+                try:
+                    caller = Citations._caller_name()
+                    self._add_citation_tag(key, entry=caller)
+                    # Don't add citation tags if the citation is registered manually
+                except KeyError:  # pragma: no cover
+                    pass
+        else:
+            # If citation is unknown, parse it later with pybtex
+            self._unknown_citations.add(key)
+            return
 
     def _parse_citation(self, key):
         """
@@ -150,24 +154,32 @@ class Citations:
         key: str
             A BibTeX formatted citation
         """
-        PybtexError = have_optional_dependency("pybtex.scanner", "PybtexError")
-        parse_string = have_optional_dependency("pybtex.database", "parse_string")
         try:
-            # Parse string as a bibtex citation, and check that a citation was found
-            bib_data = parse_string(key, bib_format="bibtex")
-            if not bib_data.entries:
-                raise PybtexError("no entries found")
+            PybtexError = import_optional_dependency("pybtex.scanner", "PybtexError")
+            parse_string = import_optional_dependency("pybtex.database", "parse_string")
+            try:
+                # Parse string as a bibtex citation, and check that a citation was found
+                bib_data = parse_string(key, bib_format="bibtex")
+                if not bib_data.entries:
+                    raise PybtexError("no entries found")
 
-            # Add and register all citations
-            for key, entry in bib_data.entries.items():
-                # Add to _all_citations dictionary
-                self._add_citation(key, entry)
-                # Add to _papers_to_cite set
-                self._papers_to_cite.add(key)
-                return
-        except PybtexError:
-            # Unable to parse / unknown key
-            raise KeyError(f"Not a bibtex citation or known citation: {key}")
+                # Add and register all citations
+                for key, entry in bib_data.entries.items():
+                    # Add to _all_citations dictionary
+                    self._add_citation(key, entry)
+                    # Add to _papers_to_cite set
+                    self._papers_to_cite.add(key)
+                    return
+            except PybtexError as error:
+                # Unable to parse / unknown key
+                raise KeyError(
+                    f"Not a bibtex citation or known citation: {key}"
+                ) from error
+        except ModuleNotFoundError:  # pragma: no cover
+            pybamm.logger.warning(
+                f"Could not parse citation for '{key}' because the 'pybtex' library is not installed. "
+                "Install 'pybamm[cite]' to enable citation parsing."
+            )
 
     def _tag_citations(self):
         """Prints the citation tags for the citations that have been registered
@@ -218,60 +230,57 @@ class Citations:
         """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
-        pybtex = have_optional_dependency("pybtex")
         try:
-            for key in self._unknown_citations:
-                self._parse_citation(key)
-        except KeyError:  # pragma: no cover
-            warnings.warn(
-                message=f'\nCitation with key "{key}" is invalid. Please try again\n',
-                category=UserWarning,
-            )
-            # delete the invalid citation from the set
-            self._unknown_citations.remove(key)
+            pybtex = import_optional_dependency("pybtex")
+            try:
+                for key in self._unknown_citations:
+                    self._parse_citation(key)
+            except KeyError:  # pragma: no cover
+                warnings.warn(
+                    message=f'\nCitation with key "{key}" is invalid. Please try again\n',
+                    category=UserWarning,
+                    stacklevel=2,
+                )
+                # delete the invalid citation from the set
+                self._unknown_citations.remove(key)
 
-        if output_format == "text":
-            citations = pybtex.format_from_strings(
-                self._cited, style="plain", output_backend="plaintext"
-            )
-        elif output_format == "bibtex":
-            citations = "\n".join(self._cited)
-        else:
-            raise pybamm.OptionError(
-                f"Output format {output_format} not recognised."
-                "It should be 'text' or 'bibtex'."
-            )
+            if output_format == "text":
+                citations = pybtex.format_from_strings(
+                    self._cited, style="plain", output_backend="plaintext"
+                )
+            elif output_format == "bibtex":
+                citations = "\n".join(self._cited)
+            else:
+                raise pybamm.OptionError(
+                    f"Output format {output_format} not recognised."
+                    "It should be 'text' or 'bibtex'."
+                )
 
-        if filename is None:
-            print(citations)
-            if verbose:
-                self._tag_citations()  # pragma: no cover
-        else:
-            with open(filename, "w") as f:
-                f.write(citations)
+            if filename is None:
+                print(citations)
+                if verbose:
+                    self._tag_citations()  # pragma: no cover
+            else:
+                with open(filename, "w") as f:
+                    f.write(citations)
+        except ModuleNotFoundError:  # pragma: no cover
+            pybamm.logger.warning(
+                "Could not print citations because the 'pybtex' library is not installed. "
+                "Please, install 'pybamm[cite]' to print citations."
+            )
 
 
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
-    if citations._citation_err_msg is not None:
-        raise ImportError(
-            f"Citations could not be registered. If you are on Google Colab - "
-            "pybtex does not work with Google Colab due to a known bug - "
-            "https://bitbucket.org/pybtex-devs/pybtex/issues/148/. "
-            "Please manually cite all the references."
-            "\nError encountered -\n"
-            f"{citations._citation_err_msg}"
-        )
-    else:
-        if verbose:  # pragma: no cover
-            if filename is not None:  # pragma: no cover
-                raise Exception(
-                    "Verbose output is available only for the terminal and not for printing to files",
-                )
-            else:
-                citations.print(filename, output_format, verbose=True)
+    if verbose:  # pragma: no cover
+        if filename is not None:  # pragma: no cover
+            raise Exception(
+                "Verbose output is available only for the terminal and not for printing to files",
+            )
         else:
-            pybamm.citations.print(filename, output_format)
+            citations.print(filename, output_format, verbose=True)
+    else:
+        pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()

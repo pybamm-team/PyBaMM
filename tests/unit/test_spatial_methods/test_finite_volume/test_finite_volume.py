@@ -410,11 +410,11 @@ class TestFiniteVolume(TestCase):
         y_test = 2 * np.ones_like(nodes)
         np.testing.assert_array_equal(
             disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([5, 0.5]), 2 * np.ones(n - 1)])[:, np.newaxis],
+            np.concatenate([np.array([8]), 2 * np.ones(n)])[:, np.newaxis],
         )
         np.testing.assert_array_equal(
             disc_downwind.evaluate(y=y_test),
-            np.concatenate([2 * np.ones(n - 1), np.array([1.5, 3])])[:, np.newaxis],
+            np.concatenate([2 * np.ones(n), np.array([4])])[:, np.newaxis],
         )
 
         # Remove boundary conditions and check error is raised
@@ -574,6 +574,51 @@ class TestFiniteVolume(TestCase):
 
         y = np.arange(n)[:, np.newaxis]
         self.assertEqual(evaluate_at_disc.evaluate(y=y), y[idx])
+
+    def test_inner(self):
+        # standard
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+        }
+
+        var = pybamm.Variable("var", domain="negative particle")
+        grad_var = pybamm.grad(var)
+        inner = pybamm.inner(grad_var, grad_var)
+
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.set_variable_slices([var])
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        inner_disc = disc.process_symbol(inner)
+
+        self.assertIsInstance(inner_disc, pybamm.Inner)
+        self.assertIsInstance(inner_disc.left, pybamm.MatrixMultiplication)
+        self.assertIsInstance(inner_disc.right, pybamm.MatrixMultiplication)
+
+        n = mesh["negative particle"].npts
+        y = np.ones(n)[:, np.newaxis]
+        np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n, 1)))
+        mesh = get_mesh_for_testing()
+
+        # with secondary broadcast
+        grad_var = pybamm.grad(pybamm.SecondaryBroadcast(var, "negative electrode"))
+        inner = pybamm.inner(grad_var, grad_var)
+
+        inner_disc = disc.process_symbol(inner)
+
+        self.assertIsInstance(inner_disc, pybamm.Inner)
+        self.assertIsInstance(inner_disc.left, pybamm.MatrixMultiplication)
+        self.assertIsInstance(inner_disc.right, pybamm.MatrixMultiplication)
+
+        m = mesh["negative electrode"].npts
+        np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n * m, 1)))
 
 
 if __name__ == "__main__":

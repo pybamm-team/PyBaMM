@@ -1,6 +1,8 @@
 #
 # Convert a PyBaMM expression tree to a CasADi expression tree
 #
+from __future__ import annotations
+
 import pybamm
 import casadi
 import numpy as np
@@ -13,7 +15,14 @@ class CasadiConverter:
 
         pybamm.citations.register("Andersson2019")
 
-    def convert(self, symbol, t, y, y_dot, inputs):
+    def convert(
+        self,
+        symbol: pybamm.Symbol,
+        t: casadi.MX,
+        y: casadi.MX,
+        y_dot: casadi.MX,
+        inputs: dict | None,
+    ) -> casadi.MX:
         """
         This function recurses down the tree, converting the PyBaMM expression tree to
         a CasADi expression tree
@@ -148,15 +157,31 @@ class CasadiConverter:
                     )
 
                 if len(converted_children) == 1:
-                    return casadi.interpolant(
-                        "LUT", solver, symbol.x, symbol.y.flatten()
-                    )(*converted_children)
+                    if solver == "linear":
+                        test = casadi.MX.interpn_linear(
+                            symbol.x, symbol.y.flatten(), converted_children
+                        )
+                        if test.shape[0] == 1 and test.shape[1] > 1:
+                            # for some reason, pybamm.Interpolant always returns a column vector, so match that
+                            test = test.T
+                        return test
+                    else:
+                        return casadi.interpolant(
+                            "LUT", solver, symbol.x, symbol.y.flatten()
+                        )(*converted_children)
                 elif len(converted_children) in [2, 3]:
-                    LUT = casadi.interpolant(
-                        "LUT", solver, symbol.x, symbol.y.ravel(order="F")
-                    )
-                    res = LUT(casadi.hcat(converted_children).T).T
-                    return res
+                    if solver == "linear":
+                        return casadi.MX.interpn_linear(
+                            symbol.x,
+                            symbol.y.ravel(order="F"),
+                            converted_children,
+                        )
+                    else:
+                        LUT = casadi.interpolant(
+                            "LUT", solver, symbol.x, symbol.y.ravel(order="F")
+                        )
+                        res = LUT(casadi.hcat(converted_children).T).T
+                        return res
                 else:  # pragma: no cover
                     raise ValueError(
                         f"Invalid converted_children count: {len(converted_children)}"
@@ -206,8 +231,8 @@ class CasadiConverter:
 
         else:
             raise TypeError(
-                """
-                Cannot convert symbol of type '{}' to CasADi. Symbols must all be
+                f"""
+                Cannot convert symbol of type '{type(symbol)}' to CasADi. Symbols must all be
                 'linear algebra' at this stage.
-                """.format(type(symbol))
+                """
             )

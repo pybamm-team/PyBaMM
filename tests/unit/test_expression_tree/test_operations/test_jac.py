@@ -10,10 +10,6 @@ from scipy.sparse import eye
 from tests import get_mesh_for_testing
 
 
-def test_multi_var_function(arg1, arg2):
-    return arg1 + arg2
-
-
 class TestJacobian(TestCase):
     def test_variable_is_statevector(self):
         a = pybamm.Symbol("a")
@@ -215,12 +211,6 @@ class TestJacobian(TestCase):
         func = pybamm.Sin(const)
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy)
-
-        # several children
-        func = pybamm.Function(test_multi_var_function, 2 * y, 3 * y)
-        jacobian = np.diag(5 * np.ones(4))
-        dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
     def test_index(self):
         vec = pybamm.StateVector(slice(0, 5))

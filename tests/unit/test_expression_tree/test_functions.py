@@ -9,19 +9,11 @@ import numpy as np
 from scipy import special
 
 import pybamm
-from pybamm.util import have_optional_dependency
-
-
-def test_function(arg):
-    return arg + arg
-
-
-def test_multi_var_function(arg1, arg2):
-    return arg1 + arg2
-
-
-def test_multi_var_function_cube(arg1, arg2):
-    return arg1 + arg2**3
+import sympy
+from tests import (
+    function_test,
+    multi_var_function_test,
+)
 
 
 class TestFunction(TestCase):
@@ -31,16 +23,16 @@ class TestFunction(TestCase):
         self.assertIsInstance(log.children[0], pybamm.Scalar)
         self.assertEqual(log.evaluate(), np.log(10))
 
-        summ = pybamm.Function(test_multi_var_function, 1, 2)
+        summ = pybamm.Function(multi_var_function_test, 1, 2)
         self.assertIsInstance(summ.children[0], pybamm.Scalar)
         self.assertIsInstance(summ.children[1], pybamm.Scalar)
         self.assertEqual(summ.evaluate(), 3)
 
     def test_function_of_one_variable(self):
         a = pybamm.Symbol("a")
-        funca = pybamm.Function(test_function, a)
-        self.assertEqual(funca.name, "function (test_function)")
-        self.assertEqual(str(funca), "test_function(a)")
+        funca = pybamm.Function(function_test, a)
+        self.assertEqual(funca.name, "function (function_test)")
+        self.assertEqual(str(funca), "function_test(a)")
         self.assertEqual(funca.children[0].name, a.name)
 
         b = pybamm.Scalar(1)
@@ -59,69 +51,23 @@ class TestFunction(TestCase):
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
-        b = pybamm.StateVector(slice(1, 2))
-        y = np.array([5])
-        func = pybamm.Function(test_function, a)
-        self.assertEqual(func.diff(a).evaluate(y=y), 2)
-        self.assertEqual(func.diff(func).evaluate(), 1)
-        func = pybamm.sin(a)
-        self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
-        func = pybamm.exp(a)
-        self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
-
-        # multiple variables
-        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * a)
-        self.assertEqual(func.diff(a).evaluate(y=y), 7)
-        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * b)
-        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
-        self.assertEqual(func.diff(b).evaluate(y=np.array([5, 6])), 3)
-        func = pybamm.Function(test_multi_var_function_cube, 4 * a, 3 * b)
-        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
-        self.assertEqual(
-            func.diff(b).evaluate(y=np.array([5, 6])), 3 * 3 * (3 * 6) ** 2
-        )
-
-        # exceptions
-        func = pybamm.Function(
-            test_multi_var_function_cube, 4 * a, 3 * b, derivative="derivative"
-        )
-        with self.assertRaises(ValueError):
+        func = pybamm.Function(function_test, a)
+        with self.assertRaisesRegex(
+            NotImplementedError, "Derivative of base Function class is not implemented"
+        ):
             func.diff(a)
-
-    def test_function_of_multiple_variables(self):
-        a = pybamm.Variable("a")
-        b = pybamm.Parameter("b")
-        func = pybamm.Function(test_multi_var_function, a, b)
-        self.assertEqual(func.name, "function (test_multi_var_function)")
-        self.assertEqual(str(func), "test_multi_var_function(a, b)")
-        self.assertEqual(func.children[0].name, a.name)
-        self.assertEqual(func.children[1].name, b.name)
-
-        # test eval and diff
-        a = pybamm.StateVector(slice(0, 1))
-        b = pybamm.StateVector(slice(1, 2))
-        y = np.array([5, 2])
-        func = pybamm.Function(test_multi_var_function, a, b)
-
-        self.assertEqual(func.evaluate(y=y), 7)
-        self.assertEqual(func.diff(a).evaluate(y=y), 1)
-        self.assertEqual(func.diff(b).evaluate(y=y), 1)
-        self.assertEqual(func.diff(func).evaluate(), 1)
 
     def test_exceptions(self):
         a = pybamm.Variable("a", domain="something")
         b = pybamm.Variable("b", domain="something else")
         with self.assertRaises(pybamm.DomainError):
-            pybamm.Function(test_multi_var_function, a, b)
+            pybamm.Function(multi_var_function_test, a, b)
 
     def test_function_unnamed(self):
         fun = pybamm.Function(np.cos, pybamm.t)
         self.assertEqual(fun.name, "function (cos)")
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
         a = pybamm.Symbol("a", domain="test")
 
         # Test print_name
@@ -130,26 +76,28 @@ class TestFunction(TestCase):
         self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test Arcsinh
-        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh("a"))
 
         # Test Arctan
-        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
+        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan("a"))
 
         # Test Exp
-        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp(a))
+        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp("a"))
 
         # Test log
-        self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
+        value = 54.0
+        self.assertEqual(pybamm.Log(value).to_equation(), sympy.log(value))
 
         # Test sinh
-        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh("a"))
 
         # Test Function
-        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
+        value = 10
+        self.assertEqual(pybamm.Function(np.log, value).to_equation(), value)
 
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")
-        funca = pybamm.Function(test_function, a)
+        funca = pybamm.Function(function_test, a)
 
         with self.assertRaises(NotImplementedError):
             funca.to_json()
@@ -501,6 +449,49 @@ class TestSpecificFunctions(TestCase):
             )
             / h,
             places=5,
+        )
+
+
+class TestNonObjectFunctions(TestCase):
+    def test_normal_pdf(self):
+        x = pybamm.InputParameter("x")
+        mu = pybamm.InputParameter("mu")
+        sigma = pybamm.InputParameter("sigma")
+        fun = pybamm.normal_pdf(x, mu, sigma)
+        self.assertEqual(
+            fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}), 1 / np.sqrt(2 * np.pi)
+        )
+        self.assertEqual(
+            fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}),
+            1 / np.sqrt(2 * np.pi) / 10,
+        )
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}), 0)
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}), 0)
+        self.assertGreater(
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2}),
+        )
+        self.assertGreater(
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2}),
+        )
+
+    def test_normal_cdf(self):
+        x = pybamm.InputParameter("x")
+        mu = pybamm.InputParameter("mu")
+        sigma = pybamm.InputParameter("sigma")
+        fun = pybamm.normal_cdf(x, mu, sigma)
+        self.assertEqual(fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}), 0.5)
+        self.assertEqual(fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}), 0.5)
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}), 1)
+        self.assertAlmostEqual(fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}), 0)
+        self.assertGreater(
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2}),
+        )
+        self.assertLess(
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}),
+            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2}),
         )
 
 

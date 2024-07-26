@@ -5,7 +5,7 @@ import pybamm
 from .meshes import SubMesh
 import numpy as np
 
-from pybamm.util import have_optional_dependency
+from pybamm.util import import_optional_dependency
 
 
 class ScikitSubMesh2D(SubMesh):
@@ -27,7 +27,7 @@ class ScikitSubMesh2D(SubMesh):
     """
 
     def __init__(self, edges, coord_sys, tabs):
-        skfem = have_optional_dependency("skfem")
+        skfem = import_optional_dependency("skfem")
         self.edges = edges
         self.nodes = dict.fromkeys(["y", "z"])
         for var in self.nodes.keys():
@@ -92,10 +92,8 @@ class ScikitSubMesh2D(SubMesh):
         # check coordinate system agrees
         if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
             raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
+                f"""spatial variables should have the same coordinate system,
+                but have coordinate systems {spatial_vars[0].coord_sys} and {spatial_vars[1].coord_sys}"""
             )
         return spatial_vars, tabs
 
@@ -362,11 +360,9 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
             # check that npts equals number of user-supplied edges
             if npts[var.name] != len(edges[var.name]):
                 raise pybamm.GeometryError(
-                    """User-suppled edges has should have length npts but has length {}.
-                     Number of points (npts) for variable {} in
-                     domain {} is {}.""".format(
-                        len(edges[var.name]), var.name, var.domain, npts[var.name]
-                    )
+                    f"""User-suppled edges has should have length npts but has length {len(edges[var.name])}.
+                     Number of points (npts) for variable {var.name} in
+                     domain {var.domain} is {npts[var.name]}."""
                 )
 
             # check end points of edges agree with spatial_lims

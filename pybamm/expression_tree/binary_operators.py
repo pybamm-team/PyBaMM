@@ -1,24 +1,32 @@
 #
 # Binary operator classes
 #
+from __future__ import annotations
 import numbers
 
 import numpy as np
+import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
 
 import pybamm
-from pybamm.util import have_optional_dependency
+
+from typing import Callable, cast
+
+# create type alias(s)
+from pybamm.type_definitions import ChildSymbol, ChildValue, Numeric
 
 
-def _preprocess_binary(left, right):
-    if isinstance(left, numbers.Number):
+def _preprocess_binary(
+    left: ChildSymbol, right: ChildSymbol
+) -> tuple[pybamm.Symbol, pybamm.Symbol]:
+    if isinstance(left, (float, int, np.number)):
         left = pybamm.Scalar(left)
     elif isinstance(left, np.ndarray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
-    if isinstance(right, numbers.Number):
+    if isinstance(right, (float, int, np.number)):
         right = pybamm.Scalar(right)
     elif isinstance(right, np.ndarray):
         if right.ndim > 1:
@@ -28,9 +36,7 @@ def _preprocess_binary(left, right):
     # Check both left and right are pybamm Symbols
     if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
         raise NotImplementedError(
-            """BinaryOperator not implemented for symbols of type {} and {}""".format(
-                type(left), type(right)
-            )
+            f"""BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"""
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
@@ -60,8 +66,10 @@ class BinaryOperator(pybamm.Symbol):
         rhs child node (converted to :class:`Scalar` if Number)
     """
 
-    def __init__(self, name, left, right):
-        left, right = _preprocess_binary(left, right)
+    def __init__(
+        self, name: str, left_child: ChildSymbol, right_child: ChildSymbol
+    ) -> None:
+        left, right = _preprocess_binary(left_child, right_child)
 
         domains = self.get_children_domains([left, right])
         super().__init__(name, children=[left, right], domains=domains)
@@ -105,28 +113,49 @@ class BinaryOperator(pybamm.Symbol):
             right_str = f"{self.right!s}"
         return f"{left_str} {self.name} {right_str}"
 
-    def create_copy(self):
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
-        # process children
-        new_left = self.left.new_copy()
-        new_right = self.right.new_copy()
+        if new_children and len(new_children) != 2:
+            raise ValueError(
+                f"Symbol of type {type(self)} must have exactly two children."
+            )
+        children = self._children_for_copying(new_children)
 
-        # make new symbol, ensure domain(s) remain the same
-        out = self._binary_new_copy(new_left, new_right)
+        if not perform_simplifications:
+            out = self.__class__(children[0], children[1])
+        else:
+            # creates a new instance using the overloaded binary operator to perform
+            # additional simplifications, rather than just calling the constructor
+            out = self._binary_new_copy(children[0], children[1])
+
         out.copy_domains(self)
 
         return out
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(self, left: ChildSymbol, right: ChildSymbol):
         """
-        Default behaviour for new_copy.
-        This copies the behaviour of `_binary_evaluate`, but since `left` and `right`
-        are symbols creates a new symbol instead of returning a value.
+        Performs the overloaded binary operation on the two symbols `left` and `right`,
+        to create a binary class instance after performing appropriate simplifying
+        checks.
+
+        Default behaviour for _binary_new_copy copies the behaviour of `_binary_evaluate`,
+        but since `left` and `right` are symbols this creates a new symbol instead of
+        returning a value.
         """
         return self._binary_evaluate(left, right)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+    def evaluate(
+        self,
+        t: float | None = None,
+        y: np.ndarray | None = None,
+        y_dot: np.ndarray | None = None,
+        inputs: dict | str | None = None,
+    ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         left = self.left.evaluate(t, y, y_dot, inputs)
         right = self.right.evaluate(t, y, y_dot, inputs)
@@ -148,7 +177,7 @@ class BinaryOperator(pybamm.Symbol):
             f"{self.__class__} does not implement _binary_evaluate."
         )
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
@@ -164,7 +193,6 @@ class BinaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        sympy = have_optional_dependency("sympy")
         if self.print_name is not None:
             return sympy.Symbol(self.print_name)
         else:
@@ -188,11 +216,15 @@ class Power(BinaryOperator):
     A node in the expression tree representing a `**` power operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("**", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
         base, exponent = self.orphans
@@ -217,7 +249,11 @@ class Power(BinaryOperator):
                 right * left_jac + left * pybamm.log(left) * right_jac
             )
 
-    def _binary_evaluate(self, left, right):
+    def _binary_evaluate(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
@@ -229,19 +265,23 @@ class Addition(BinaryOperator):
     A node in the expression tree representing an addition operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("+", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) + self.right.diff(variable)
 
-    def _binary_jac(self, left_jac, right_jac):
+    def _binary_jac(self, left_jac: ChildValue, right_jac: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac + right_jac
 
-    def _binary_evaluate(self, left, right):
+    def _binary_evaluate(self, left: ChildValue, right: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
 
@@ -251,12 +291,16 @@ class Subtraction(BinaryOperator):
     A node in the expression tree representing a subtraction operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("-", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) - self.right.diff(variable)
 
@@ -264,7 +308,7 @@ class Subtraction(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac - right_jac
 
-    def _binary_evaluate(self, left, right):
+    def _binary_evaluate(self, left: ChildValue, right: ChildValue):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
 
@@ -276,12 +320,16 @@ class Multiplication(BinaryOperator):
     matrix multiplication (e.g. scipy.sparse.coo.coo_matrix)
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("*", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply product rule
         left, right = self.orphans
@@ -313,7 +361,11 @@ class MatrixMultiplication(BinaryOperator):
     A node in the expression tree representing a matrix multiplication operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("@", left, right)
 
@@ -348,7 +400,6 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
         left = sympy.Matrix(left)
         right = sympy.Matrix(right)
         return left * right
@@ -359,11 +410,15 @@ class Division(BinaryOperator):
     A node in the expression tree representing a division operator.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("/", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply quotient rule
         top, bottom = self.orphans
@@ -403,11 +458,15 @@ class Inner(BinaryOperator):
     by a particular discretisation.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("inner product", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply product rule
         left, right = self.orphans
@@ -435,18 +494,22 @@ class Inner(BinaryOperator):
         else:
             return left * right
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.inner(left, right)
 
-    def _evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension: str) -> bool:
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
-def inner(left, right):
+def inner(left_child, right_child):
     """Return inner product of two symbols."""
-    left, right = _preprocess_binary(left, right)
+    left, right = _preprocess_binary(left_child, right_child)
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
         return pybamm.zeros_like(right)
@@ -472,7 +535,11 @@ class Equality(BinaryOperator):
     nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
     """
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("==", left, right)
 
@@ -496,8 +563,15 @@ class Equality(BinaryOperator):
         else:
             return int(left == right)
 
-    def _binary_new_copy(self, left, right):
-        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
+        """
+        Overwrites `pybamm.BinaryOperator._binary_new_copy()` to return a new instance of
+        `pybamm.Equality` rather than using `binary_evaluate` to return a value.
+        """
         return pybamm.Equality(left, right)
 
 
@@ -518,7 +592,12 @@ class _Heaviside(BinaryOperator):
     DISCONTINUITY event will automatically be added by the solver.
     """
 
-    def __init__(self, name, left, right):
+    def __init__(
+        self,
+        name: str,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__(name, left, right)
 
@@ -549,7 +628,11 @@ class _Heaviside(BinaryOperator):
 class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("<=", left, right)
 
@@ -567,7 +650,11 @@ class EqualHeaviside(_Heaviside):
 class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         super().__init__("<", left, right)
 
     def __str__(self):
@@ -584,10 +671,14 @@ class NotEqualHeaviside(_Heaviside):
 class Modulo(BinaryOperator):
     """Calculates the remainder of an integer division."""
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         super().__init__("%", left, right)
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
         left, right = self.orphans
@@ -622,14 +713,18 @@ class Modulo(BinaryOperator):
 class Minimum(BinaryOperator):
     """Returns the smaller of two objects."""
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         super().__init__("minimum", left, right)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return f"minimum({self.left!s}, {self.right!s})"
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         left, right = self.orphans
         return (left <= right) * left.diff(variable) + (left > right) * right.diff(
@@ -646,27 +741,34 @@ class Minimum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.minimum(left, right)
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
         return sympy.Min(left, right)
 
 
 class Maximum(BinaryOperator):
     """Returns the greater of two objects."""
 
-    def __init__(self, left, right):
+    def __init__(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         super().__init__("maximum", left, right)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return f"maximum({self.left!s}, {self.right!s})"
 
-    def _diff(self, variable):
+    def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         left, right = self.orphans
         return (left >= right) * left.diff(variable) + (left < right) * right.diff(
@@ -683,20 +785,26 @@ class Maximum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
-    def _binary_new_copy(self, left, right):
+    def _binary_new_copy(
+        self,
+        left: ChildSymbol,
+        right: ChildSymbol,
+    ):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.maximum(left, right)
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        sympy = have_optional_dependency("sympy")
         return sympy.Max(left, right)
 
 
-def _simplify_elementwise_binary_broadcasts(left, right):
-    left, right = _preprocess_binary(left, right)
+def _simplify_elementwise_binary_broadcasts(
+    left_child: ChildSymbol,
+    right_child: ChildSymbol,
+) -> tuple[pybamm.Symbol, pybamm.Symbol]:
+    left, right = _preprocess_binary(left_child, right_child)
 
-    def unpack_broadcast_recursive(symbol):
+    def unpack_broadcast_recursive(symbol: pybamm.Symbol) -> pybamm.Symbol:
         if isinstance(symbol, pybamm.Broadcast):
             if symbol.child.domain == []:
                 return symbol.orphans[0]
@@ -721,16 +829,20 @@ def _simplify_elementwise_binary_broadcasts(left, right):
     return left, right
 
 
-def _simplified_binary_broadcast_concatenation(left, right, operator):
+def _simplified_binary_broadcast_concatenation(
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
+    operator: Callable,
+) -> pybamm.Broadcast | None:
     """
     Check if there are concatenations or broadcasts that we can commute the operator
     with
     """
     # Broadcast commutes with elementwise operators
     if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(operator(left.orphans[0], right))
+        return left.create_copy([operator(left.orphans[0], right)])
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(operator(left, right.orphans[0]))
+        return right.create_copy([operator(left, right.orphans[0])])
 
     # Concatenation commutes with elementwise operators
     # If one of the sides is constant then commute concatenation with the operator
@@ -740,13 +852,11 @@ def _simplified_binary_broadcast_concatenation(left, right, operator):
         left, pybamm.ConcatenationVariable
     ):
         if right.evaluates_to_constant_number():
-            return left._concatenation_new_copy(
-                [operator(child, right) for child in left.orphans]
-            )
+            return left.create_copy([operator(child, right) for child in left.orphans])
         elif isinstance(right, pybamm.Concatenation) and not isinstance(
             right, pybamm.ConcatenationVariable
         ):
-            return left._concatenation_new_copy(
+            return left.create_copy(
                 [
                     operator(left_child, right_child)
                     for left_child, right_child in zip(left.orphans, right.orphans)
@@ -756,12 +866,14 @@ def _simplified_binary_broadcast_concatenation(left, right, operator):
         right, pybamm.ConcatenationVariable
     ):
         if left.evaluates_to_constant_number():
-            return right._concatenation_new_copy(
-                [operator(left, child) for child in right.orphans]
-            )
+            return right.create_copy([operator(left, child) for child in right.orphans])
+    return None
 
 
-def simplified_power(left, right):
+def simplified_power(
+    left: ChildSymbol,
+    right: ChildSymbol,
+):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Check for Concatenations and Broadcasts
@@ -803,7 +915,7 @@ def simplified_power(left, right):
     return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
 
-def add(left, right):
+def add(left: ChildSymbol, right: ChildSymbol):
     """
     Note
     ----
@@ -876,7 +988,7 @@ def add(left, right):
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a + (b +- c) to (a + b) +- c if (a + b) is constant
             r_left, r_right = right.orphans
-            return right._binary_new_copy(left + r_left, r_right)
+            return right.create_copy([left + r_left, r_right])
     if isinstance(left, Subtraction):
         if right == left.right:
             # Simplify (a - b) + b to a
@@ -891,7 +1003,10 @@ def add(left, right):
     return pybamm.simplify_if_constant(Addition(left, right))
 
 
-def subtract(left, right):
+def subtract(
+    left: ChildSymbol,
+    right: ChildSymbol,
+):
     """
     Note
     ----
@@ -946,7 +1061,7 @@ def subtract(left, right):
         if isinstance(right, (Addition, Subtraction)) and right.left.is_constant():
             # Simplify a - (b +- c) to (a - b) -+ c if (a - b) is constant
             r_left, r_right = right.orphans
-            return right._binary_new_copy(left - r_left, -r_right)
+            return right.create_copy([left - r_left, -r_right])
     elif isinstance(left, Addition):
         if right == left.right:
             # Simplify (b + a) - a to b
@@ -973,7 +1088,10 @@ def subtract(left, right):
     return pybamm.simplify_if_constant(Subtraction(left, right))
 
 
-def multiply(left, right):
+def multiply(
+    left: ChildSymbol,
+    right: ChildSymbol,
+):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # Move constant to always be on the left
@@ -1098,7 +1216,10 @@ def multiply(left, right):
     return Multiplication(left, right)
 
 
-def divide(left, right):
+def divide(
+    left: ChildSymbol,
+    right: ChildSymbol,
+):
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
 
     # anything divided by zero raises error
@@ -1169,8 +1290,11 @@ def divide(left, right):
     return pybamm.simplify_if_constant(Division(left, right))
 
 
-def matmul(left, right):
-    left, right = _preprocess_binary(left, right)
+def matmul(
+    left_child: ChildSymbol,
+    right_child: ChildSymbol,
+):
+    left, right = _preprocess_binary(left_child, right_child)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(MatrixMultiplication(left, right))
 
@@ -1228,16 +1352,19 @@ def matmul(left, right):
     return pybamm.simplify_if_constant(MatrixMultiplication(left, right))
 
 
-def minimum(left, right):
+def minimum(
+    left: ChildSymbol,
+    right: ChildSymbol,
+) -> pybamm.Symbol:
     """
     Returns the smaller of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.min`, which returns min function of child.
     """
     # Check for Concatenations and Broadcasts
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
-    out = _simplified_binary_broadcast_concatenation(left, right, minimum)
-    if out is not None:
-        return out
+    concat_out = _simplified_binary_broadcast_concatenation(left, right, minimum)
+    if concat_out is not None:
+        return concat_out
 
     mode = pybamm.settings.min_max_mode
     k = pybamm.settings.min_max_smoothing
@@ -1252,16 +1379,19 @@ def minimum(left, right):
     return pybamm.simplify_if_constant(out)
 
 
-def maximum(left, right):
+def maximum(
+    left: ChildSymbol,
+    right: ChildSymbol,
+):
     """
     Returns the larger of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.max`, which returns max function of child.
     """
     # Check for Concatenations and Broadcasts
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
-    out = _simplified_binary_broadcast_concatenation(left, right, maximum)
-    if out is not None:
-        return out
+    concat_out = _simplified_binary_broadcast_concatenation(left, right, maximum)
+    if concat_out is not None:
+        return concat_out
 
     mode = pybamm.settings.min_max_mode
     k = pybamm.settings.min_max_smoothing
@@ -1276,15 +1406,15 @@ def maximum(left, right):
     return pybamm.simplify_if_constant(out)
 
 
-def _heaviside(left, right, equal):
+def _heaviside(left: ChildSymbol, right: ChildSymbol, equal):
     """return a :class:`EqualHeaviside` object, or a smooth approximation."""
     # Check for Concatenations and Broadcasts
     left, right = _simplify_elementwise_binary_broadcasts(left, right)
-    out = _simplified_binary_broadcast_concatenation(
+    concat_out = _simplified_binary_broadcast_concatenation(
         left, right, functools.partial(_heaviside, equal=equal)
     )
-    if out is not None:
-        return out
+    if concat_out is not None:
+        return concat_out
 
     if (
         left.is_constant()
@@ -1307,15 +1437,19 @@ def _heaviside(left, right, equal):
     # (i.e. no need for smoothing)
     if k == "exact" or (left.is_constant() and right.is_constant()):
         if equal is True:
-            out = pybamm.EqualHeaviside(left, right)
+            out: pybamm.EqualHeaviside = pybamm.EqualHeaviside(left, right)
         else:
-            out = pybamm.NotEqualHeaviside(left, right)
+            out: pybamm.NotEqualHeaviside = pybamm.NotEqualHeaviside(left, right)  # type: ignore[no-redef]
     else:
         out = pybamm.sigmoid(left, right, k)
     return pybamm.simplify_if_constant(out)
 
 
-def softminus(left, right, k):
+def softminus(
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
+    k: float,
+):
     """
     Softminus approximation to the minimum function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=10.
@@ -1323,7 +1457,11 @@ def softminus(left, right, k):
     return pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k
 
 
-def softplus(left, right, k):
+def softplus(
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
+    k: float,
+):
     """
     Softplus approximation to the maximum function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_smoothing`. The recommended value is k=10.
@@ -1349,7 +1487,11 @@ def smooth_max(left, right, k):
     return (pybamm.sqrt((left - right) ** 2 + sigma) + (left + right)) / 2
 
 
-def sigmoid(left, right, k):
+def sigmoid(
+    left: pybamm.Symbol,
+    right: pybamm.Symbol,
+    k: float,
+):
     """
     Sigmoidal approximation to the heaviside function. k is the smoothing parameter,
     set by `pybamm.settings.heaviside_smoothing`. The recommended value is k=10.
@@ -1359,7 +1501,11 @@ def sigmoid(left, right, k):
     return (1 + pybamm.tanh(k * (right - left))) / 2
 
 
-def source(left, right, boundary=False):
+def source(
+    left: Numeric | pybamm.Symbol,
+    right: pybamm.Symbol,
+    boundary=False,
+):
     """
     A convenience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
@@ -1375,7 +1521,7 @@ def source(left, right, boundary=False):
     Parameters
     ----------
 
-    left : :class:`Symbol`
+    left : :class:`Symbol`, numeric
         The left child node, which represents the expression for the source term.
     right : :class:`Symbol`
         The right child node. This is the symbol whose boundary conditions are
@@ -1389,6 +1535,9 @@ def source(left, right, boundary=False):
     # Broadcast if left is number
     if isinstance(left, numbers.Number):
         left = pybamm.PrimaryBroadcast(left, "current collector")
+
+    # force type cast for mypy
+    left = cast(pybamm.Symbol, left)
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

@@ -1,8 +1,10 @@
 #
 # Write a symbol to python
 #
+from __future__ import annotations
 import numbers
 from collections import OrderedDict
+from numpy.typing import ArrayLike
 
 import numpy as np
 import scipy.sparse
@@ -38,7 +40,9 @@ class JaxCooMatrix:
         where x is the number of rows, and y the number of columns of the matrix
     """
 
-    def __init__(self, row, col, data, shape):
+    def __init__(
+        self, row: ArrayLike, col: ArrayLike, data: ArrayLike, shape: tuple[int, int]
+    ):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
@@ -68,7 +72,7 @@ class JaxCooMatrix:
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
         return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
 
-    def scalar_multiply(self, b):
+    def scalar_multiply(self, b: float):
         """
         multiply of matrix with a scalar b
 
@@ -91,7 +95,7 @@ class JaxCooMatrix:
         return self.dot_product(b)
 
 
-def create_jax_coo_matrix(value):
+def create_jax_coo_matrix(value: scipy.sparse):
     """
     Creates a JaxCooMatrix from a scipy.sparse matrix
 
@@ -131,7 +135,12 @@ def is_scalar(arg):
         return np.all(np.array(arg.shape) == 1)
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
+def find_symbols(
+    symbol: pybamm.Symbol,
+    constant_symbols: OrderedDict,
+    variable_symbols: OrderedDict,
+    output_jax=False,
+):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -353,15 +362,15 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
 
     else:
         raise NotImplementedError(
-            "Conversion to python not implemented for a symbol of type '{}'".format(
-                type(symbol)
-            )
+            f"Conversion to python not implemented for a symbol of type '{type(symbol)}'"
         )
 
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False, output_jax=False):
+def to_python(
+    symbol: pybamm.Symbol, debug=False, output_jax=False
+) -> tuple[OrderedDict, str]:
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -387,17 +396,15 @@ def to_python(symbol, debug=False, output_jax=False):
         operations are used
 
     """
-    constant_values = OrderedDict()
-    variable_symbols = OrderedDict()
+    constant_values: OrderedDict = OrderedDict()
+    variable_symbols: OrderedDict = OrderedDict()
     find_symbols(symbol, constant_values, variable_symbols, output_jax)
 
     line_format = "{} = {}"
 
     if debug:  # pragma: no cover
         variable_lines = [
-            "print('{}'); ".format(
-                line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
-            )
+            f"print('{line_format.format(id_to_python_variable(symbol_id, False), symbol_line)}'); "
             + line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
             + "; print(type({0}),np.shape({0}))".format(
                 id_to_python_variable(symbol_id, False)
@@ -427,7 +434,7 @@ class EvaluatorPython:
 
     """
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: pybamm.Symbol):
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
         # extract constants in generated function
@@ -519,7 +526,7 @@ class EvaluatorJax:
 
     """
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: pybamm.Symbol):
         if not pybamm.have_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
@@ -585,7 +592,8 @@ class EvaluatorJax:
 
         self._static_argnums = tuple(static_argnums)
         self._jit_evaluate = jax.jit(
-            self._evaluate_jax, static_argnums=self._static_argnums
+            self._evaluate_jax,  # type:ignore[attr-defined]
+            static_argnums=self._static_argnums,
         )
 
     def get_jacobian(self):

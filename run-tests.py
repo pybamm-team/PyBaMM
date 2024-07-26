@@ -6,12 +6,11 @@
 # (see https://github.com/pints-team/pints)
 #
 import os
-import shutil
 import pybamm
 import sys
 import argparse
-import unittest
 import subprocess
+import pytest
 
 
 def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
@@ -36,12 +35,10 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         # currently activated virtual environment
         interpreter = sys.executable
     if executable is False:
-        suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-        result = unittest.TextTestRunner(verbosity=2).run(suite)
-        ret = int(not result.wasSuccessful())
+        ret = pytest.main(["-v", tests])
     else:
-        print(f"Running {folder} tests with executable '{interpreter}'")
-        cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
+        print(f"Running {folder} tests with executable {interpreter}")
+        cmd = [interpreter, "-m", "pytest", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
@@ -63,32 +60,21 @@ def run_doc_tests():
     Checks if the documentation can be built, runs any doctests (currently not
     used).
     """
-    print("Checking if docs can be built.")
+    print("Checking for doctests.")
     try:
         subprocess.run(
             [
-                "sphinx-build",
-                "-j",
-                "auto",
-                "-b",
-                "doctest",
-                "docs",
-                "docs/build/html",
-                "-W",
-                "--keep-going",
+                f"{sys.executable}",
+                "-m",
+                "pytest",
+                "--doctest-plus",
+                "pybamm",
             ],
             check=True,
         )
     except subprocess.CalledProcessError as e:
         print(f"FAILED with exit code {e.returncode}")
         sys.exit(e.returncode)
-    finally:
-        # Regardless of whether the doctests pass or fail, attempt to remove the built files.
-        print("Deleting built files.")
-        try:
-            shutil.rmtree("docs/build/html/.doctrees/")
-        except Exception as e:
-            print(f"Error deleting built files: {e}")
 
 
 def run_scripts(executable="python"):
@@ -148,7 +134,7 @@ def test_script(path, executable="python"):
 
     # Tell matplotlib not to produce any figures
     env = dict(os.environ)
-    env["MPLBACKEND"] = "Template"
+    env["MPLBACKEND"] = "Agg"
 
     # Run in subprocess
     cmd = [executable, path]
@@ -243,7 +229,6 @@ if __name__ == "__main__":
         metavar="python",
         help="Give the name of the Python interpreter if it is not 'python'",
     )
-
     # Parse!
     args = parser.parse_args()
 

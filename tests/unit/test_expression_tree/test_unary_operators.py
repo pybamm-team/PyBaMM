@@ -7,9 +7,11 @@ import unittest.mock as mock
 
 import numpy as np
 from scipy.sparse import diags
+import sympy
+from sympy.vector.operators import Divergence as sympy_Divergence
+from sympy.vector.operators import Gradient as sympy_Gradient
 
 import pybamm
-from pybamm.util import have_optional_dependency
 
 
 class TestUnaryOperators(TestCase):
@@ -220,6 +222,14 @@ class TestUnaryOperators(TestCase):
         a = pybamm.PrimaryBroadcast(pybamm.Variable("a"), "test domain")
         grad = pybamm.grad(a)
         self.assertEqual(grad, pybamm.PrimaryBroadcastToEdges(0, "test domain"))
+
+        # gradient of a secondary broadcast moves the secondary out of the gradient
+        a = pybamm.Symbol("a", domain="test domain")
+        a_broad = pybamm.SecondaryBroadcast(a, "another domain")
+        grad = pybamm.grad(a_broad)
+        self.assertEqual(
+            grad, pybamm.SecondaryBroadcast(pybamm.grad(a), "another domain")
+        )
 
         # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
@@ -678,12 +688,6 @@ class TestUnaryOperators(TestCase):
         self.assertFalse((2 * a).is_constant())
 
     def test_to_equation(self):
-        sympy = have_optional_dependency("sympy")
-        sympy_Divergence = have_optional_dependency(
-            "sympy.vector.operators", "Divergence"
-        )
-        sympy_Gradient = have_optional_dependency("sympy.vector.operators", "Gradient")
-
         a = pybamm.Symbol("a", domain="negative particle")
         b = pybamm.Symbol("b", domain="current collector")
         c = pybamm.Symbol("c", domain="test")
@@ -695,10 +699,11 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.Symbol("test"))
 
         # Test Negate
-        self.assertEqual(pybamm.Negate(4).to_equation(), -4.0)
+        value = 4
+        self.assertEqual(pybamm.Negate(value).to_equation(), -value)
 
         # Test AbsoluteValue
-        self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
+        self.assertEqual(pybamm.AbsoluteValue(-value).to_equation(), value)
 
         # Test Gradient
         self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
@@ -706,7 +711,7 @@ class TestUnaryOperators(TestCase):
         # Test Divergence
         self.assertEqual(
             pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
-            sympy_Divergence(sympy_Gradient(a)),
+            sympy_Divergence(sympy_Gradient("a")),
         )
 
         # Test BoundaryValue
@@ -736,7 +741,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.child, pybamm.Parameter("param"))
         self.assertEqual(expr.initial_condition, pybamm.Scalar(1))
         self.assertEqual(expr.name, "explicit time integral")
-        self.assertEqual(expr.new_copy(), expr)
+        self.assertEqual(expr.create_copy(), expr)
         self.assertFalse(expr.is_constant())
 
     def test_to_from_json(self):

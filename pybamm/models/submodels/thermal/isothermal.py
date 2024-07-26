@@ -18,8 +18,8 @@ class Isothermal(BaseThermal):
         A dictionary of options to be passed to the model.
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, options=None, x_average=False):
+        super().__init__(param, options=options, x_average=x_average)
 
     def get_fundamental_variables(self):
         # Set the x-averaged temperature to the ambient temperature, which can be
@@ -73,6 +73,8 @@ class Isothermal(BaseThermal):
                 "Total heating [W]",
                 "Negative current collector Ohmic heating [W.m-3]",
                 "Positive current collector Ohmic heating [W.m-3]",
+                "Lumped total cooling [W.m-3]",
+                "Lumped total cooling [W]",
             ]:
                 # All variables are zero
                 variables.update({var: zero})

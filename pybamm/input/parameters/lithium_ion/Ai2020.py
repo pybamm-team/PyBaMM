@@ -549,6 +549,8 @@ def get_parameter_values():
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Initial inner SEI thickness [m]": 2.5e-09,
         "Initial outer SEI thickness [m]": 2.5e-09,
+        "Initial inner SEI on cracks thickness [m]": 2.5e-13,  # avoid division by zero
+        "Initial outer SEI on cracks thickness [m]": 2.5e-13,  # avoid division by zero
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -582,7 +584,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 100.0,
         "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
-        "Negative electrode diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
+        "Negative particle diffusivity [m2.s-1]": graphite_diffusivity_Dualfoil1998,
         "Negative electrode OCP [V]": graphite_ocp_Enertech_Ai2020,
         "Negative electrode porosity": 0.33,
         "Negative electrode active material volume fraction": 0.61,
@@ -617,7 +619,7 @@ def get_parameter_values():
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 10.0,
         "Maximum concentration in positive electrode [mol.m-3]": 49943.0,
-        "Positive electrode diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
+        "Positive particle diffusivity [m2.s-1]": lico2_diffusivity_Dualfoil1998,
         "Positive electrode OCP [V]": lico2_ocp_Ai2020,
         "Positive electrode porosity": 0.32,
         "Positive electrode active material volume fraction": 0.62,

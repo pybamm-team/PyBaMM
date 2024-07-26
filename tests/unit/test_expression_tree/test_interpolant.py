@@ -45,15 +45,6 @@ class TestInterpolant(TestCase):
                 (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
             )
 
-    def test_warnings(self):
-        with self.assertWarnsRegex(Warning, "cubic spline"):
-            pybamm.Interpolant(
-                np.linspace(0, 1, 10),
-                np.ones(10),
-                pybamm.Symbol("a"),
-                interpolator="cubic spline",
-            )
-
     def test_interpolation(self):
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
@@ -79,6 +70,11 @@ class TestInterpolant(TestCase):
             np.testing.assert_array_equal(
                 interp.evaluate(y=np.array([2]))[:, 0], np.array([np.nan])
             )
+
+    def test_interpolation_float(self):
+        x = np.linspace(0, 1, 200)
+        interp = pybamm.Interpolant(x, 2 * x, 0.5)
+        self.assertEqual(interp.evaluate(), 1)
 
     def test_interpolation_1_x_2d_y(self):
         x = np.linspace(0, 1, 200)
@@ -137,7 +133,7 @@ class TestInterpolant(TestCase):
         # check also works for cubic
         interp = pybamm.Interpolant(x_in, data, (var1, var2), interpolator="cubic")
         value = interp.evaluate(y=np.array([1, 5]))
-        np.testing.assert_equal(value, f(1, 5))
+        np.testing.assert_almost_equal(value, f(1, 5), decimal=3)
 
         # Test raising error if data is not 2D
         data_3d = np.zeros((11, 22, 33))
@@ -235,7 +231,7 @@ class TestInterpolant(TestCase):
             x_in, data, (var1, var2, var3), interpolator="cubic"
         )
         value = interp.evaluate(y=np.array([1, 5, 8]))
-        np.testing.assert_equal(value, f(1, 5, 8))
+        np.testing.assert_almost_equal(value, f(1, 5, 8), decimal=3)
 
         # Test raising error if data is not 3D
         data_4d = np.zeros((11, 22, 33, 5))
@@ -330,12 +326,26 @@ class TestInterpolant(TestCase):
                 decimal=3,
             )
 
+        # test 2D interpolation diff fails
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.01))
+        xx, yy = np.meshgrid(x[0], x[1], indexing="ij")
+        z = np.sin(xx**2 + yy**2)
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        # linear
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "differentiation not implemented for functions with more than one child",
+        ):
+            interp.diff(var1)
+
     def test_processing(self):
         x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
         interp = pybamm.Interpolant(x, 2 * x, y)
 
-        self.assertEqual(interp, interp.new_copy())
+        self.assertEqual(interp, interp.create_copy())
 
     def test_to_from_json(self):
         x = np.linspace(0, 1, 10)
@@ -373,6 +383,7 @@ class TestInterpolant(TestCase):
             ],
             "interpolator": "linear",
             "extrapolate": True,
+            "_num_derivatives": 0,
         }
 
         # check correct writing to json

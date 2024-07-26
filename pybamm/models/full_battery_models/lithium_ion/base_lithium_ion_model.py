@@ -181,7 +181,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-    def set_summary_variables(self):
+    def set_default_summary_variables(self):
         """
         Sets the default summary variables.
         """
@@ -248,6 +248,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                     ocp_model = ocp_submodels.SingleOpenCircuitPotential
                 elif ocp_option == "current sigmoid":
                     ocp_model = ocp_submodels.CurrentSigmoidOpenCircuitPotential
+                elif ocp_option == "Wycisk":
+                    pybamm.citations.register("Wycisk2022")
+                    ocp_model = ocp_submodels.WyciskOpenCircuitPotential
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(
@@ -318,10 +321,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
                 if len(phases) > 1:
-                    self.submodels[
-                        f"{domain} total sei on cracks"
-                    ] = pybamm.sei.TotalSEI(
-                        self.param, domain, self.options, cracks=True
+                    self.submodels[f"{domain} total sei on cracks"] = (
+                        pybamm.sei.TotalSEI(
+                            self.param, domain, self.options, cracks=True
+                        )
                     )
 
     def set_lithium_plating_submodel(self):
@@ -331,18 +334,23 @@ class BaseModel(pybamm.BaseBatteryModel):
             if domain != "separator":
                 domain = domain.split()[0].lower()
                 lithium_plating_opt = getattr(self.options, domain)["lithium plating"]
-                if lithium_plating_opt == "none":
-                    self.submodels[
-                        f"{domain} lithium plating"
-                    ] = pybamm.lithium_plating.NoPlating(
-                        self.param, domain, self.options
-                    )
-                else:
-                    x_average = self.options["x-average side reactions"] == "true"
-                    self.submodels[
-                        f"{domain} lithium plating"
-                    ] = pybamm.lithium_plating.Plating(
-                        self.param, domain, x_average, self.options
+                phases = self.options.phases[domain]
+                for phase in phases:
+                    if lithium_plating_opt == "none":
+                        submodel = pybamm.lithium_plating.NoPlating(
+                            self.param, domain, self.options, phase
+                        )
+                    else:
+                        x_average = self.options["x-average side reactions"] == "true"
+                        submodel = pybamm.lithium_plating.Plating(
+                            self.param, domain, x_average, self.options, phase
+                        )
+                    self.submodels[f"{domain} {phase} lithium plating"] = submodel
+                if len(phases) > 1:
+                    self.submodels[f"{domain} total lithium plating"] = (
+                        pybamm.lithium_plating.TotalLithiumPlating(
+                            self.param, domain, self.options
+                        )
                     )
 
     def set_total_interface_submodel(self):
@@ -356,26 +364,26 @@ class BaseModel(pybamm.BaseBatteryModel):
                 domain = domain.split()[0].lower()
                 crack = getattr(self.options, domain)["particle mechanics"]
                 if crack == "none":
-                    self.submodels[
-                        f"{domain} particle mechanics"
-                    ] = pybamm.particle_mechanics.NoMechanics(
-                        self.param, domain, options=self.options, phase="primary"
+                    self.submodels[f"{domain} particle mechanics"] = (
+                        pybamm.particle_mechanics.NoMechanics(
+                            self.param, domain, options=self.options, phase="primary"
+                        )
                     )
                 elif crack == "swelling only":
-                    self.submodels[
-                        f"{domain} particle mechanics"
-                    ] = pybamm.particle_mechanics.SwellingOnly(
-                        self.param, domain, options=self.options, phase="primary"
+                    self.submodels[f"{domain} particle mechanics"] = (
+                        pybamm.particle_mechanics.SwellingOnly(
+                            self.param, domain, options=self.options, phase="primary"
+                        )
                     )
                 elif crack == "swelling and cracking":
-                    self.submodels[
-                        f"{domain} particle mechanics"
-                    ] = pybamm.particle_mechanics.CrackPropagation(
-                        self.param,
-                        domain,
-                        self.x_average,
-                        options=self.options,
-                        phase="primary",
+                    self.submodels[f"{domain} particle mechanics"] = (
+                        pybamm.particle_mechanics.CrackPropagation(
+                            self.param,
+                            domain,
+                            self.x_average,
+                            options=self.options,
+                            phase="primary",
+                        )
                     )
 
     def set_active_material_submodel(self):
@@ -396,9 +404,9 @@ class BaseModel(pybamm.BaseBatteryModel):
 
                 # Submodel for the total active material, summing up each phase
                 if len(phases) > 1:
-                    self.submodels[
-                        f"{domain} total active material"
-                    ] = pybamm.active_material.Total(self.param, domain, self.options)
+                    self.submodels[f"{domain} total active material"] = (
+                        pybamm.active_material.Total(self.param, domain, self.options)
+                    )
 
     def set_porosity_submodel(self):
         if (
@@ -427,41 +435,45 @@ class BaseModel(pybamm.BaseBatteryModel):
                 and self.options["surface form"] == "false"
             ):
                 # only symmetric Butler-Volmer can be inverted
-                self.submodels[
-                    f"{domain} electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalExplicit(
-                    self.param, domain, self.options
+                self.submodels[f"{domain} electrode potential"] = (
+                    pybamm.electrode.ohm.LithiumMetalExplicit(
+                        self.param, domain, self.options
+                    )
                 )
-                self.submodels[
-                    f"{domain} electrode interface"
-                ] = pybamm.kinetics.InverseButlerVolmer(
-                    self.param, domain, "lithium metal plating", self.options
+                self.submodels[f"{domain} electrode interface"] = (
+                    pybamm.kinetics.InverseButlerVolmer(
+                        self.param, domain, "lithium metal plating", self.options
+                    )
                 )  # assuming symmetric reaction for now so we can take the inverse
-                self.submodels[
-                    f"{domain} electrode interface current"
-                ] = pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
-                    self.param, domain, "lithium metal plating", self.options
+                self.submodels[f"{domain} electrode interface current"] = (
+                    pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
+                        self.param, domain, "lithium metal plating", self.options
+                    )
                 )
             else:
-                self.submodels[
-                    f"{domain} electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
-                    self.param, domain, self.options
+                self.submodels[f"{domain} electrode potential"] = (
+                    pybamm.electrode.ohm.LithiumMetalSurfaceForm(
+                        self.param, domain, self.options
+                    )
                 )
                 neg_intercalation_kinetics = self.get_intercalation_kinetics(domain)
-                self.submodels[
-                    f"{domain} electrode interface"
-                ] = neg_intercalation_kinetics(
-                    self.param, domain, "lithium metal plating", self.options, "primary"
+                self.submodels[f"{domain} electrode interface"] = (
+                    neg_intercalation_kinetics(
+                        self.param,
+                        domain,
+                        "lithium metal plating",
+                        self.options,
+                        "primary",
+                    )
                 )
 
     def set_convection_submodel(self):
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
+        self.submodels["transverse convection"] = (
+            pybamm.convection.transverse.NoConvection(self.param, self.options)
+        )
+        self.submodels["through-cell convection"] = (
+            pybamm.convection.through_cell.NoConvection(self.param, self.options)
+        )
 
     def insert_reference_electrode(self, position=None):
         """

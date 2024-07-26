@@ -1,6 +1,3 @@
-#
-# Base solver class
-#
 import copy
 import itertools
 from scipy.sparse import block_diag
@@ -8,12 +5,14 @@ import multiprocessing as mp
 import numbers
 import sys
 import warnings
+import platform
 
 import casadi
 import numpy as np
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
+from pybamm import ParameterValues
 
 
 class BaseSolver:
@@ -51,7 +50,7 @@ class BaseSolver:
         root_method=None,
         root_tol=1e-6,
         extrap_tol=None,
-        output_variables=[],
+        output_variables=None,
     ):
         self.method = method
         self.rtol = rtol
@@ -59,7 +58,7 @@ class BaseSolver:
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
-        self.output_variables = output_variables
+        self.output_variables = [] if output_variables is None else output_variables
         self._model_set_up = {}
 
         # Defaults, can be overwritten by specific solver
@@ -68,6 +67,7 @@ class BaseSolver:
         self.algebraic_solver = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
+        self._mp_context = self.get_platform_context(platform.system())
 
     @property
     def root_method(self):
@@ -339,7 +339,7 @@ class BaseSolver:
                 raise pybamm.DiscretisationError(
                     "Cannot automatically discretise model, "
                     f"model should be discretised before solving ({e})"
-                )
+                ) from e
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
@@ -357,7 +357,8 @@ class BaseSolver:
             )
             model.convert_to_format = "casadi"
 
-    def _get_vars_for_processing(self, model, inputs, calculate_sensitivities_explicit):
+    @staticmethod
+    def _get_vars_for_processing(model, inputs, calculate_sensitivities_explicit):
         vars_for_processing = {
             "model": model,
             "calculate_sensitivities_explicit": calculate_sensitivities_explicit,
@@ -412,8 +413,9 @@ class BaseSolver:
 
             return vars_for_processing
 
+    @staticmethod
     def _set_up_model_sensitivities_inplace(
-        self, model, inputs, calculate_sensitivities_explicit
+        model, inputs, calculate_sensitivities_explicit
     ):
         """
         Set up model attributes related to sensitivities.
@@ -499,16 +501,15 @@ class BaseSolver:
                 model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, _Heaviside):
-                    found_t = False
+                    expr = None
                     if symbol.right == pybamm.t:
                         expr = symbol.left
-                        found_t = True
-                    elif symbol.left == pybamm.t:
-                        expr = symbol.right
-                        found_t = True
+                    else:
+                        if symbol.left == pybamm.t:
+                            expr = symbol.right
 
                     # Update the events if the heaviside function depended on t
-                    if found_t:
+                    if expr is not None:
                         model.events.append(
                             pybamm.Event(
                                 str(symbol),
@@ -519,12 +520,11 @@ class BaseSolver:
                 elif isinstance(symbol, pybamm.Modulo):
                     if symbol.left == pybamm.t:
                         expr = symbol.right
-                        if t_eval is None:
-                            N_events = 200
-                        else:
-                            N_events = t_eval[-1] // expr.value
+                        num_events = 200
+                        if t_eval is not None:
+                            num_events = t_eval[-1] // expr.value
 
-                        for i in np.arange(N_events):
+                        for i in np.arange(num_events):
                             model.events.append(
                                 pybamm.Event(
                                     str(symbol),
@@ -532,6 +532,8 @@ class BaseSolver:
                                     pybamm.EventType.DISCONTINUITY,
                                 )
                             )
+                else:
+                    pass
 
         casadi_switch_events = []
         terminate_events = []
@@ -684,7 +686,9 @@ class BaseSolver:
         try:
             root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
-            raise pybamm.SolverError(f"Could not find consistent states: {e.args[0]}")
+            raise pybamm.SolverError(
+                f"Could not find consistent states: {e.args[0]}"
+            ) from e
         pybamm.logger.debug("Found consistent states")
 
         self.check_extrapolation(root_sol, model.events)
@@ -709,16 +713,16 @@ class BaseSolver:
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions. All calls to solve must pass in the same model or
             an error is raised
-        t_eval : numeric type
-            The times (in seconds) at which to compute the solution
+        t_eval : None, list or ndarray, optional
+            The times (in seconds) at which to compute the solution. Defaults to None.
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
-        calculate_sensitivities : list of str or bool
-            If true, solver calculates sensitivities of all input parameters.
+        calculate_sensitivities : list of str or bool, optional
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
 
@@ -824,7 +828,7 @@ class BaseSolver:
                 )
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
-            # not depend on input parameters. Thefore only `model_inputs[0]`
+            # not depend on input parameters. Therefore, only `model_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, model_inputs_list[0], t_eval)
@@ -844,9 +848,9 @@ class BaseSolver:
                     # If the new initial conditions are different
                     # and cannot be evaluated directly, set up again
                     self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-                self._model_set_up[model][
-                    "initial conditions"
-                ] = model.concatenated_initial_conditions
+                self._model_set_up[model]["initial conditions"] = (
+                    model.concatenated_initial_conditions
+                )
 
         set_up_time = timer.time()
         timer.reset()
@@ -892,10 +896,7 @@ class BaseSolver:
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.verbose(
-                "Calling solver for {} < t < {}".format(
-                    t_eval[start_index],
-                    t_eval[end_index - 1],
-                )
+                f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
             ninputs = len(model_inputs_list)
             if ninputs == 1:
@@ -914,7 +915,7 @@ class BaseSolver:
                         model_inputs_list,
                     )
                 else:
-                    with mp.Pool(processes=nproc) as p:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
                         new_solutions = p.starmap(
                             self._integrate,
                             zip(
@@ -972,24 +973,13 @@ class BaseSolver:
         if len(solutions) == 1:
             pybamm.logger.info(f"Finish solving {model.name} ({termination})")
             pybamm.logger.info(
-                (
-                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
-                    "Total time: {}"
-                ).format(
-                    solutions[0].set_up_time,
-                    solutions[0].solve_time,
-                    solutions[0].integration_time,
-                    solutions[0].total_time,
-                )
+                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time} (of which integration time: {solutions[0].integration_time}), "
+                f"Total time: {solutions[0].total_time}"
             )
         else:
             pybamm.logger.info(f"Finish solving {model.name} for all inputs")
             pybamm.logger.info(
-                ("Set-up time: {}, Solve time: {}, Total time: {}").format(
-                    solutions[0].set_up_time,
-                    solutions[0].solve_time,
-                    solutions[0].total_time,
-                )
+                f"Set-up time: {solutions[0].set_up_time}, Solve time: {solutions[0].solve_time}, Total time: {solutions[0].total_time}"
             )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
@@ -1010,8 +1000,9 @@ class BaseSolver:
         else:
             return solutions
 
-    def _get_discontinuity_start_end_indices(self, model, inputs, t_eval):
-        if model.discontinuity_events_eval == []:
+    @staticmethod
+    def _get_discontinuity_start_end_indices(model, inputs, t_eval):
+        if not model.discontinuity_events_eval:
             pybamm.logger.verbose("No discontinuity events found")
             return [0], [len(t_eval)], t_eval
 
@@ -1050,7 +1041,7 @@ class BaseSolver:
             )
 
         # insert time points around discontinuities in t_eval
-        # keep track of sub sections to integrate by storing start and end indices
+        # keep track of subsections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
         eps = sys.float_info.epsilon
@@ -1069,7 +1060,8 @@ class BaseSolver:
 
         return start_indices, end_indices, t_eval
 
-    def _check_events_with_initial_conditions(self, t_eval, model, inputs_dict):
+    @staticmethod
+    def _check_events_with_initial_conditions(t_eval, model, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1102,7 +1094,8 @@ class BaseSolver:
         old_solution,
         model,
         dt,
-        npts=2,
+        t_eval=None,
+        npts=None,
         inputs=None,
         save=True,
     ):
@@ -1120,14 +1113,15 @@ class BaseSolver:
             initial_conditions
         dt : numeric type
             The timestep (in seconds) over which to step the solution
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
+        t_eval : list or numpy.ndarray, optional
+            An array of times at which to return the solution during the step
+            (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
+            By default, the solution is returned at t0 and t0 + dt.
+        npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        save : bool
-            Turn on to store the solution of all previous timesteps
-
+        save : bool, optional
+            Save solution with all previous timesteps. Defaults to True.
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1161,10 +1155,28 @@ class BaseSolver:
                 f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
             )
 
+        # Raise deprecation warning for npts and convert it to t_eval
+        if npts is not None:
+            warnings.warn(
+                "The 'npts' parameter is deprecated, use 't_eval' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            t_eval = np.linspace(0, dt, npts)
+
+        if t_eval is not None:
+            # Checking if t_eval lies within range
+            if t_eval[0] != 0 or t_eval[-1] != dt:
+                raise pybamm.SolverError(
+                    "Elements inside array t_eval must lie in the closed interval 0 to dt"
+                )
+
+        else:
+            t_eval = np.array([0, dt])
+
         t_start = old_solution.t[-1]
+        t_eval = t_start + t_eval
         t_end = t_start + dt
-        # Calculate t_eval
-        t_eval = np.linspace(t_start, t_end, npts)
 
         if t_start == 0:
             t_start_shifted = t_start
@@ -1248,15 +1260,8 @@ class BaseSolver:
         # Report times
         pybamm.logger.verbose(f"Finish stepping {model.name} ({termination})")
         pybamm.logger.verbose(
-            (
-                "Set-up time: {}, Step time: {} (of which integration time: {}), "
-                "Total time: {}"
-            ).format(
-                solution.set_up_time,
-                solution.solve_time,
-                solution.integration_time,
-                solution.total_time,
-            )
+            f"Set-up time: {solution.set_up_time}, Step time: {solution.solve_time} (of which integration time: {solution.integration_time}), "
+            f"Total time: {solution.total_time}"
         )
 
         # Return solution
@@ -1265,7 +1270,8 @@ class BaseSolver:
         else:
             return old_solution + solution
 
-    def get_termination_reason(self, solution, events):
+    @staticmethod
+    def get_termination_reason(solution, events):
         """
         Identify the cause for termination. In particular, if the solver terminated
         due to an event, (try to) pinpoint which event was responsible. If an event
@@ -1375,8 +1381,9 @@ class BaseSolver:
                         f"While solving {name} extrapolation occurred "
                         f"for {extrap_events}",
                         pybamm.SolverWarning,
+                        stacklevel=2,
                     )
-                    # Add the event dictionaryto the solution object
+                    # Add the event dictionary to the solution object
                     solution.extrap_events = extrap_events
                 elif self._on_extrapolation == "error":
                     raise pybamm.SolverError(
@@ -1386,9 +1393,19 @@ class BaseSolver:
                         "outside these bounds."
                     )
 
-    def _set_up_model_inputs(self, model, inputs):
+    def get_platform_context(self, system_type: str):
+        # Set context for parallel processing depending on the platform
+        if system_type.lower() in ["linux", "darwin"]:
+            return "fork"
+        return "spawn"
+
+    @staticmethod
+    def _set_up_model_inputs(model, inputs):
         """Set up input parameters"""
-        inputs = inputs or {}
+        if inputs is None:
+            inputs = {}
+        else:
+            inputs = ParameterValues.check_parameter_values(inputs)
 
         # Go through all input parameters that can be found in the model
         # Only keep the ones that are actually used in the model
@@ -1434,21 +1451,21 @@ def process(
     jac: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxJacobian` or
             :class:`casadi.Function`
-        evaluator for the Jacobian $\frac{\partial f}{\partial y}$
+        evaluator for the Jacobian $\\frac{\\partial f}{\\partial y}$
         of the function given by `symbol`
 
     jacp: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJaxSensitivities` or
             :class:`casadi.Function`
         evaluator for the parameter sensitivities
-        $\frac{\partial f}{\partial p}$
+        $\frac{\\partial f}{\\partial p}$
         of the function given by `symbol`
 
     jac_action: :class:`pybamm.EvaluatorPython` or
             :class:`pybamm.EvaluatorJax` or
             :class:`casadi.Function`
         evaluator for product of the Jacobian with a vector $v$,
-        i.e. $\frac{\partial f}{\partial y} * v$
+        i.e. $\\frac{\\partial f}{\\partial y} * v$
     """
 
     def report(string):

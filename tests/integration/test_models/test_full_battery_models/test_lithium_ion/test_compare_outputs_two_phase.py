@@ -31,7 +31,7 @@ class TestCompareOutputsTwoPhase(TestCase):
             "Maximum concentration in negative electrode [mol.m-3]",
             "Initial concentration in negative electrode [mol.m-3]",
             "Negative particle radius [m]",
-            "Negative electrode diffusivity [m2.s-1]",
+            "Negative particle diffusivity [m2.s-1]",
             "Negative electrode exchange-current density [A.m-2]",
         ]:
             parameter_values_two_phase.update(
@@ -144,9 +144,9 @@ class TestCompareOutputsTwoPhase(TestCase):
         )
 
         sim = pybamm.Simulation(model, parameter_values=param)
-        t_eval = np.linspace(0, 9000, 1000)
-        sol1 = sim.solve(t_eval, inputs={"x": 0.01})
-        sol2 = sim.solve(t_eval, inputs={"x": 0.1})
+        t_eval = np.linspace(0, 8000, 1000)
+        inputs = [{"x": 0.01}, {"x": 0.1}]
+        sol = sim.solve(t_eval, inputs=inputs)
 
         # Starting values should be close
         for var in [
@@ -155,11 +155,11 @@ class TestCompareOutputsTwoPhase(TestCase):
             "Average negative secondary particle concentration",
         ]:
             np.testing.assert_allclose(
-                sol1[var].data[:20], sol2[var].data[:20], rtol=1e-2
+                sol[0][var].data[:20], sol[1][var].data[:20], rtol=1e-2
             )
 
         # More silicon means longer sim
-        self.assertLess(sol1["Time [s]"].data[-1], sol2["Time [s]"].data[-1])
+        self.assertLess(sol[0]["Time [s]"].data[-1], sol[1]["Time [s]"].data[-1])
 
     def test_compare_SPM_silicon_graphite(self):
         model_class = pybamm.lithium_ion.SPM
