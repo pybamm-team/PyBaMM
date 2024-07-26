@@ -236,11 +236,9 @@ required_plugins = [
 ]
 addopts = [
     "-nauto",
-    "-v",
-    "-ra",
+    "-vrA",
     "--strict-config",
     "--strict-markers",
-    "-svrA",
 ]
 testpaths = [
     "tests",
