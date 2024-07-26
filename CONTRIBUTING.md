@@ -173,7 +173,7 @@ pytest -m unit
 
 Every new feature should have its own test. To create ones, have a look at the `test` directory and see if there's a test for a similar method. Copy-pasting this is a good way to start.
 
-Next, add some simple (and speedy!) tests of your main features. If these run without exceptions that's a good start! Next, check the output of your methods using  [assert statement](https://docs.pytest.org/en/7.1.x/how-to/assert.html).
+Next, add some simple (and speedy!) tests of your main features. If these run without exceptions that's a good start! Next, check the output of your methods using [assert statements](https://docs.pytest.org/en/7.1.x/how-to/assert.html).
 
 ### Running more tests
 
