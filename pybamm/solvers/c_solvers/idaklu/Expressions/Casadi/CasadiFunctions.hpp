@@ -76,7 +76,7 @@ public:
     const std::vector<BaseFunctionType*>& var_fcns,
     const std::vector<BaseFunctionType*>& dvar_dy_fcns,
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
-    const Options& options
+    const SetupOptions& setup_opts
   ) :
     rhs_alg_casadi(rhs_alg),
     jac_times_cjmass_casadi(jac_times_cjmass),
@@ -98,7 +98,7 @@ public:
       static_cast<Expression*>(&sens_casadi),
       static_cast<Expression*>(&events_casadi),
       n_s, n_e, n_p,
-      options)
+      setup_opts)
   {
     // convert BaseFunctionType list to CasadiFunction list
     // NOTE: You must allocate ALL std::vector elements before taking references
