@@ -19,10 +19,12 @@ class BaseIntegrationTestLithiumIon:
     def test_sensitivities(self):
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
+        rtol = 1e-6
+        atol = 1e-6
         if pybamm.have_idaklu():
-            solver = pybamm.IDAKLUSolver()
+            solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         else:
-            solver = pybamm.CasadiSolver()
+            solver = pybamm.CasadiSolver(rtol=rtol, atol=atol)
         modeltest = tests.StandardModelTest(
             model, parameter_values=param, solver=solver
         )

@@ -59,7 +59,7 @@ public:
     const std::vector<BaseFunctionType*>& var_fcns,
     const std::vector<BaseFunctionType*>& dvar_dy_fcns,
     const std::vector<BaseFunctionType*>& dvar_dp_fcns,
-    const Options& options
+    const SetupOptions& setup_opts
   ) :
     iree_init_status(iree_init()),
     rhs_alg_iree(rhs_alg),
@@ -82,7 +82,7 @@ public:
       static_cast<Expression*>(&sens_iree),
       static_cast<Expression*>(&events_iree),
       n_s, n_e, n_p,
-      options)
+      setup_opts)
   {
     // convert BaseFunctionType list to IREEFunction list
     // NOTE: You must allocate ALL std::vector elements before taking references
