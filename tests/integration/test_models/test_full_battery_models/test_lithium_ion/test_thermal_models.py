@@ -148,5 +148,3 @@ class TestThermal:
         # with contact resistance is higher than without contact resistance
         # skip the first entry because they are the same due to initial conditions
         np.testing.assert_array_less(avg_cell_temp[1:], avg_cell_temp_cr[1:])
-
-

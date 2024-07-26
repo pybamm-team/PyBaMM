@@ -122,5 +122,3 @@ class TestMPM:
         # compare
         np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
-
-

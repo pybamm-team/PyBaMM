@@ -47,5 +47,3 @@ class TestSolution:
             step_solution["Voltage [V]"](solution.t[:-1]),
             decimal=4,
         )
-
-

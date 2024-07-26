@@ -109,5 +109,3 @@ class TestExchangeCurrentDensity:
         # should evaluate to vectors with the right shape
         assert j0_n.evaluate(y=y).shape == (mesh["negative electrode"].npts, 1)
         assert j0_p.evaluate(y=y).shape == (mesh["positive electrode"].npts, 1)
-
-

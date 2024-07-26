@@ -87,5 +87,3 @@ class TestIDAKLUSolver:
 
             # solve
             solver.solve(model_disc, t_eval)
-
-
