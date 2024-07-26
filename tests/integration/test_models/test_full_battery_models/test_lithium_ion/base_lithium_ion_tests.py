@@ -3,11 +3,10 @@
 #
 import pybamm
 import tests
-from tests import TestCase
 import numpy as np
 
 
-class BaseIntegrationTestLithiumIon(TestCase):
+class BaseIntegrationTestLithiumIon:
     def run_basic_processing_test(self, options, **kwargs):
         model = self.model(options)
         modeltest = tests.StandardModelTest(model, **kwargs)
