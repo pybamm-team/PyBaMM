@@ -34,6 +34,11 @@ class TestUtil:
                 "SEI current": 3,
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
+                "Positive particle diffusivity [m2.s-1]": 6,
+            }
+        )
+        d2 = pybamm.FuzzyDict(
+            {
                 "Positive electrode diffusivity [m2.s-1]": 6,
             }
         )
@@ -55,6 +60,16 @@ class TestUtil:
 
         with pytest.raises(KeyError, match="Upper voltage"):
             d.__getitem__("Open-circuit voltage at 100% SOC [V]")
+
+        assert (
+            d2["Positive particle diffusivity [m2.s-1]"]
+            == d["Positive particle diffusivity [m2.s-1]"]
+        )
+
+        assert (
+            d2["Positive electrode diffusivity [m2.s-1]"]
+            == d["Positive electrode diffusivity [m2.s-1]"]
+        )
 
         with pytest.warns(DeprecationWarning):
             assert (
