@@ -81,7 +81,11 @@ def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
-    if "CI" in os.environ and sys.version_info[:2] == (3, 12) and sys.platform == "linux":
+    if (
+        "CI" in os.environ
+        and sys.version_info[:2] == (3, 12)
+        and sys.platform == "linux"
+    ):
         session.install("pytest-github-actions-annotate-failures")
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "run-tests.py", "--integration")
