@@ -816,6 +816,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 def fcn(*args):
                     return fcn_inner(*args)[coo.row, coo.col]
+
             elif coo.nnz != iree_fcn.numel:
                 iree_fcn.nnz = iree_fcn.numel
                 iree_fcn.col = list(range(iree_fcn.numel))
@@ -1000,7 +1001,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             model,
             inputs_dict,
             np.array([t[-1]]),
-            np.transpose(y_out[-1])[:, np.newaxis],
+            np.transpose(sol.y_term)[:, np.newaxis],
             termination,
             sensitivities=yS_out,
         )

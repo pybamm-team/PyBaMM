@@ -905,16 +905,6 @@ class TestIDAKLUSolver(TestCase):
         sol = sim.solve(np.linspace(0, 3600, 1000))
         self.assertEqual(sol.termination, "event: Minimum voltage [V]")
 
-        sim2 = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            solver=pybamm.IDAKLUSolver(output_variables=["Cell temperature [K]"]),
-        )
-        with self.assertRaisesRegex(
-            ValueError, "cannot be calculated using the current output variables"
-        ):
-            sim2.solve(np.linspace(0, 3600, 1000))
-
         # create an event that doesn't require the state vector
         eps_p = model.variables["Positive electrode porosity"]
         model.events.append(
