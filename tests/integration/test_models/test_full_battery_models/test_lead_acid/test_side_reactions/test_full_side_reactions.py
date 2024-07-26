@@ -1,15 +1,13 @@
 #
 # Tests for the lead-acid Full model
 #
-from tests import TestCase
 import pybamm
 import tests
 
-import unittest
 import numpy as np
 
 
-class TestLeadAcidFullSideReactions(TestCase):
+class TestLeadAcidFullSideReactions:
     def test_basic_processing(self):
         options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)
@@ -45,12 +43,3 @@ class TestLeadAcidFullSideReactions(TestCase):
         parameter_values.update({"Current function [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

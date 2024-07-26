@@ -1,27 +1,25 @@
 #
 # Tests Event class
 #
-from tests import TestCase
 import pybamm
 import numpy as np
-import unittest
 
 
-class TestEvent(TestCase):
+class TestEvent:
     def test_event(self):
         expression = pybamm.Scalar(1)
         event = pybamm.Event("my event", expression)
 
-        self.assertEqual(event.name, "my event")
-        self.assertEqual(event.__str__(), "my event")
-        self.assertEqual(event.expression, expression)
-        self.assertEqual(event.event_type, pybamm.EventType.TERMINATION)
+        assert event.name == "my event"
+        assert event.__str__() == "my event"
+        assert event.expression == expression
+        assert event.event_type == pybamm.EventType.TERMINATION
 
     def test_expression_evaluate(self):
         # Test t
         expression = pybamm.t
         event = pybamm.Event("my event", expression)
-        self.assertEqual(event.evaluate(t=1), 1)
+        assert event.evaluate(t=1) == 1
 
         # Test y
         sv = pybamm.StateVector(slice(0, 10))
@@ -46,7 +44,7 @@ class TestEvent(TestCase):
 
         for event_type in event_types:
             event = pybamm.Event("my event", pybamm.Scalar(1), event_type)
-            self.assertEqual(event.event_type, event_type)
+            assert event.event_type == event_type
 
     def test_to_from_json(self):
         expression = pybamm.Scalar(1)
@@ -58,24 +56,14 @@ class TestEvent(TestCase):
         }
 
         event_ser_json = event.to_json()
-        self.assertEqual(event_ser_json, event_json)
+        assert event_ser_json == event_json
 
         event_json["expression"] = expression
 
         new_event = pybamm.Event._from_json(event_json)
 
         # check for equal expressions
-        self.assertEqual(new_event.expression, event.expression)
+        assert new_event.expression == event.expression
 
         # check for equal event types
-        self.assertEqual(new_event.event_type, event.event_type)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert new_event.event_type == event.event_type
