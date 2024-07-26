@@ -54,9 +54,9 @@ def set_iree_state():
 
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
+    "MPLBACKEND": "Agg",
     # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
     "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
     "PYBAMM_IDAKLU_EXPR_IREE": set_iree_state(),
@@ -156,7 +156,7 @@ def run_integration(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--integration")
+    session.run("python", "-m", "pytest", "-m", "integration")
 
 
 @nox.session(name="doctests")
@@ -166,7 +166,13 @@ def run_doctests(session):
     # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
-    session.run("python", "run-tests.py", "--doctest")
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "--doctest-plus",
+        "pybamm",
+    )
 
 
 @nox.session(name="unit")
@@ -184,7 +190,7 @@ def run_unit(session):
             PYBAMM_ENV.get("IREE_INDEX_URL"),
             silent=False,
         )
-    session.run("python", "run-tests.py", "--unit")
+    session.run("python", "-m", "pytest", "-m", "unit")
 
 
 @nox.session(name="examples")
@@ -194,7 +200,9 @@ def run_examples(session):
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
-    session.run("pytest", "--nbmake", *notebooks_to_test, external=True)
+    session.run(
+        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
+    )
 
 
 @nox.session(name="scripts")
@@ -206,7 +214,7 @@ def run_scripts(session):
     # is fixed
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
-    session.run("python", "run-tests.py", "--scripts")
+    session.run("python", "-m", "pytest", "-m", "scripts")
 
 
 @nox.session(name="dev")
@@ -249,7 +257,7 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--all")
+    session.run("python", "-m", "pytest", "-m", "unit or integration")
 
 
 @nox.session(name="docs")
