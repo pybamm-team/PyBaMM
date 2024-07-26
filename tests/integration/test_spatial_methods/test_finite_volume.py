@@ -6,12 +6,13 @@ from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
+    TestCase,
 )
 
 import numpy as np
 
 
-class TestFiniteVolumeConvergence:
+class TestFiniteVolumeConvergence(TestCase):
     def test_grad_div_broadcast(self):
         # create mesh and discretisation
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}

@@ -4,11 +4,11 @@
 import pytest
 import pybamm
 from tests import get_discretisation_for_testing
-
+from tests import TestCase
 import numpy as np
 
 
-class TestButlerVolmer:
+class TestButlerVolmer(TestCase):
     def setup_method(self):
         self.delta_phi_s_n = pybamm.Variable(
             "surface potential difference [V]",

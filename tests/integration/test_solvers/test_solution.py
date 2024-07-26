@@ -3,9 +3,10 @@
 #
 import pybamm
 import numpy as np
+from tests import TestCase
 
 
-class TestSolution:
+class TestSolution(TestCase):
     def test_append(self):
         model = pybamm.lithium_ion.SPMe()
         # create geometry

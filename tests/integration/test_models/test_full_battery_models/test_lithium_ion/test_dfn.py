@@ -6,9 +6,10 @@ import tests
 import numpy as np
 from tests import BaseIntegrationTestLithiumIon
 import pytest
+from tests import TestCase
 
 
-class TestDFN(BaseIntegrationTestLithiumIon):
+class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN

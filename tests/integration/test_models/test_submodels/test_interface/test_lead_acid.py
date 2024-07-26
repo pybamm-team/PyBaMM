@@ -4,9 +4,10 @@
 import pybamm
 from tests import get_discretisation_for_testing
 import pytest
+from tests import TestCase
 
 
-class TestMainReaction:
+class TestMainReaction(TestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         c_e_n = pybamm.Variable(

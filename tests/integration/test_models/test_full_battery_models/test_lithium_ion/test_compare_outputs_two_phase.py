@@ -3,9 +3,10 @@
 #
 import pybamm
 import numpy as np
+from tests import TestCase
 
 
-class TestCompareOutputsTwoPhase:
+class TestCompareOutputsTwoPhase(TestCase):
     def compare_outputs_two_phase_graphite_graphite(self, model_class):
         """
         Check that a two-phase graphite-graphite model gives the same results as a
