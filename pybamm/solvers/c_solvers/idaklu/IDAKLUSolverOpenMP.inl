@@ -425,6 +425,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
                                      length_of_return_vector];
+  realtype *yterm_return = new realtype[number_of_states];
 
   res.resize(max_res_size);
   res_dvar_dy.resize(max_res_dvar_dy);
@@ -446,6 +447,13 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   );
   py::capsule free_yS_when_done(
     yS_return,
+    [](void *f) {
+      realtype *vect = reinterpret_cast<realtype *>(f);
+      delete[] vect;
+    }
+  );
+  py::capsule free_yterm_when_done(
+    yterm_return,
     [](void *f) {
       realtype *vect = reinterpret_cast<realtype *>(f);
       delete[] vect;
@@ -518,6 +526,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     t_i += 1;
 
     if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN) {
+      yterm_return = yval; // store final state slice
       break;
     }
   }
@@ -532,7 +541,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     &y_return[0],
     free_y_when_done
   );
-  // Note: Ordering of vector is differnet if computing variables vs returning
+  // Note: Ordering of vector is different if computing variables vs returning
   // the complete state vector
   np_array yS_ret;
   if (functions->var_fcns.size() > 0) {
@@ -556,8 +565,13 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
       free_yS_when_done
     );
   }
+  np_array y_term = np_array(
+    number_of_states,
+    &yterm_return[0],
+    free_yterm_when_done
+  );
 
-  Solution sol(retval, t_ret, y_ret, yS_ret);
+  Solution sol(retval, t_ret, y_ret, yS_ret, y_term);
 
   if (solver_opts.print_stats) {
     long nsteps, nrevals, nlinsetups, netfails;
