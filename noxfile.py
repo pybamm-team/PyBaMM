@@ -137,6 +137,9 @@ def run_coverage(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("coverage", silent=False)
+    # Using plugin here since coverage runs unit tests on linux with latest python version.
+    if "CI" in os.environ:
+        session.install("pytest-github-actions-annotate-failures")
     session.install("-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
@@ -155,6 +158,12 @@ def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
+    if (
+        "CI" in os.environ
+        and sys.version_info[:2] == (3, 12)
+        and sys.platform == "linux"
+    ):
+        session.install("pytest-github-actions-annotate-failures")
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "integration")
 
