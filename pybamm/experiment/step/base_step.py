@@ -71,6 +71,8 @@ class BaseStep:
         description=None,
         direction=None,
     ):
+        self.input_duration = duration
+        self.input_value = value
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
@@ -100,8 +102,11 @@ class BaseStep:
                     f"Input function must return a real number output at t = {t0}"
                 )
 
+        # Record whether the step uses the default duration
+        # This will be used by the experiment to check whether the step is feasible
+        self.uses_default_duration = duration is None
         # Set duration
-        if duration is None:
+        if self.uses_default_duration:
             duration = self.default_duration(value)
         self.duration = _convert_time_to_seconds(duration)
 
@@ -195,8 +200,8 @@ class BaseStep:
             A copy of the step.
         """
         return self.__class__(
-            self.value,
-            duration=self.duration,
+            self.input_value,
+            duration=self.input_duration,
             termination=self.termination,
             period=self.period,
             temperature=self.temperature,
@@ -259,7 +264,7 @@ class BaseStep:
             t = value[:, 0]
             return t[-1]
         else:
-            return 24 * 3600  # 24 hours in seconds
+            return 24 * 3600  # one day in seconds
 
     def process_model(self, model, parameter_values):
         new_model = model.new_copy()
@@ -411,9 +416,15 @@ _type_to_units = {
 
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
-    # If the time is a number, assume it is in seconds
-    if isinstance(time_and_units, numbers.Number) or time_and_units is None:
+    if time_and_units is None:
         return time_and_units
+
+    # If the time is a number, assume it is in seconds
+    if isinstance(time_and_units, numbers.Number):
+        if time_and_units <= 0:
+            raise ValueError("time must be positive")
+        else:
+            return time_and_units
 
     # Split number and units
     units = time_and_units.lstrip("0123456789.- ")

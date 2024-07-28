@@ -60,7 +60,9 @@ class LossActiveMaterial(BaseModel):
         domain, Domain = self.domain_Domain
 
         deps_solid_dt = 0
-        lam_option = getattr(self.options, self.domain)["loss of active material"]
+        lam_option = getattr(getattr(self.options, domain), self.phase)[
+            "loss of active material"
+        ]
         if "stress" in lam_option:
             # obtain the rate of loss of active materials (LAM) by stress
             # This is loss of active material model by mechanical effects

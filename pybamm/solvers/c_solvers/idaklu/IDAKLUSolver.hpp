@@ -1,33 +1,27 @@
 #ifndef PYBAMM_IDAKLU_CASADI_SOLVER_HPP
 #define PYBAMM_IDAKLU_CASADI_SOLVER_HPP
 
-#include <casadi/casadi.hpp>
-using Function = casadi::Function;
-
-#include "casadi_functions.hpp"
 #include "common.hpp"
-#include "options.hpp"
-#include "solution.hpp"
-#include "sundials_legacy_wrapper.hpp"
+#include "Solution.hpp"
 
 /**
  * Abstract base class for solutions that can use different solvers and vector
  * implementations.
  * @brief An abstract base class for the Idaklu solver
  */
-class CasadiSolver
+class IDAKLUSolver
 {
 public:
 
   /**
    * @brief Default constructor
    */
-  CasadiSolver() = default;
+  IDAKLUSolver() = default;
 
   /**
    * @brief Default destructor
    */
-  ~CasadiSolver() = default;
+  ~IDAKLUSolver() = default;
 
   /**
    * @brief Abstract solver method that returns a Solution class

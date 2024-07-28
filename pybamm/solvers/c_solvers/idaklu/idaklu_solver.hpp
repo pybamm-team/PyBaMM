@@ -1,37 +1,43 @@
-#include "casadi_solver.hpp"
-#include "CasadiSolver.hpp"
-#include "CasadiSolverOpenMP_solvers.hpp"
-#include "casadi_sundials_functions.hpp"
-#include "common.hpp"
+#ifndef PYBAMM_CREATE_IDAKLU_SOLVER_HPP
+#define PYBAMM_CREATE_IDAKLU_SOLVER_HPP
+
+#include "IDAKLUSolverOpenMP_solvers.hpp"
 #include <idas/idas.h>
 #include <memory>
 
-CasadiSolver *create_casadi_solver(
+/**
+ * Creates a concrete solver given a linear solver, as specified in
+ * options_cpp.linear_solver.
+ * @brief Create a concrete solver given a linear solver
+ */
+template<class ExprSet>
+IDAKLUSolver *create_idaklu_solver(
   int number_of_states,
   int number_of_parameters,
-  const Function &rhs_alg,
-  const Function &jac_times_cjmass,
+  const typename ExprSet::BaseFunctionType &rhs_alg,
+  const typename ExprSet::BaseFunctionType &jac_times_cjmass,
   const np_array_int &jac_times_cjmass_colptrs,
   const np_array_int &jac_times_cjmass_rowvals,
   const int jac_times_cjmass_nnz,
   const int jac_bandwidth_lower,
   const int jac_bandwidth_upper,
-  const Function &jac_action,
-  const Function &mass_action,
-  const Function &sens,
-  const Function &events,
+  const typename ExprSet::BaseFunctionType &jac_action,
+  const typename ExprSet::BaseFunctionType &mass_action,
+  const typename ExprSet::BaseFunctionType &sens,
+  const typename ExprSet::BaseFunctionType &events,
   const int number_of_events,
   np_array rhs_alg_id,
   np_array atol_np,
   double rel_tol,
   int inputs_length,
-  const std::vector<Function*>& var_casadi_fcns,
-  const std::vector<Function*>& dvar_dy_fcns,
-  const std::vector<Function*>& dvar_dp_fcns,
-  py::dict options
+  const std::vector<typename ExprSet::BaseFunctionType*>& var_fcns,
+  const std::vector<typename ExprSet::BaseFunctionType*>& dvar_dy_fcns,
+  const std::vector<typename ExprSet::BaseFunctionType*>& dvar_dp_fcns,
+  py::dict py_opts
 ) {
-  auto options_cpp = Options(options);
-  auto functions = std::make_unique<CasadiFunctions>(
+  auto setup_opts = SetupOptions(py_opts);
+  auto solver_opts = SolverOptions(py_opts);
+  auto functions = std::make_unique<ExprSet>(
     rhs_alg,
     jac_times_cjmass,
     jac_times_cjmass_nnz,
@@ -47,19 +53,19 @@ CasadiSolver *create_casadi_solver(
     number_of_states,
     number_of_events,
     number_of_parameters,
-    var_casadi_fcns,
+    var_fcns,
     dvar_dy_fcns,
     dvar_dp_fcns,
-    options_cpp
+    setup_opts
   );
 
-  CasadiSolver *casadiSolver = nullptr;
+  IDAKLUSolver *idakluSolver = nullptr;
 
   // Instantiate solver class
-  if (options_cpp.linear_solver == "SUNLinSol_Dense")
+  if (setup_opts.linear_solver == "SUNLinSol_Dense")
   {
     DEBUG("\tsetting SUNLinSol_Dense linear solver");
-    casadiSolver = new CasadiSolverOpenMP_Dense(
+    idakluSolver = new IDAKLUSolverOpenMP_Dense<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -69,13 +75,14 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_KLU")
+  else if (setup_opts.linear_solver == "SUNLinSol_KLU")
   {
     DEBUG("\tsetting SUNLinSol_KLU linear solver");
-    casadiSolver = new CasadiSolverOpenMP_KLU(
+    idakluSolver = new IDAKLUSolverOpenMP_KLU<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -85,13 +92,14 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_Band")
+  else if (setup_opts.linear_solver == "SUNLinSol_Band")
   {
     DEBUG("\tsetting SUNLinSol_Band linear solver");
-    casadiSolver = new CasadiSolverOpenMP_Band(
+    idakluSolver = new IDAKLUSolverOpenMP_Band<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -101,13 +109,14 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPBCGS")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPBCGS")
   {
     DEBUG("\tsetting SUNLinSol_SPBCGS_linear solver");
-    casadiSolver = new CasadiSolverOpenMP_SPBCGS(
+    idakluSolver = new IDAKLUSolverOpenMP_SPBCGS<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -117,13 +126,14 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPFGMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPFGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPFGMR_linear solver");
-    casadiSolver = new CasadiSolverOpenMP_SPFGMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPFGMR<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -133,13 +143,14 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPGMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPGMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-    casadiSolver = new CasadiSolverOpenMP_SPGMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPGMR<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -149,13 +160,14 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
-  else if (options_cpp.linear_solver == "SUNLinSol_SPTFQMR")
+  else if (setup_opts.linear_solver == "SUNLinSol_SPTFQMR")
   {
     DEBUG("\tsetting SUNLinSol_SPGMR solver");
-    casadiSolver = new CasadiSolverOpenMP_SPTFQMR(
+    idakluSolver = new IDAKLUSolverOpenMP_SPTFQMR<ExprSet>(
       atol_np,
       rel_tol,
       rhs_alg_id,
@@ -165,13 +177,16 @@ CasadiSolver *create_casadi_solver(
       jac_bandwidth_lower,
       jac_bandwidth_upper,
       std::move(functions),
-      options_cpp
+      setup_opts,
+      solver_opts
      );
   }
 
-  if (casadiSolver == nullptr) {
+  if (idakluSolver == nullptr) {
     throw std::invalid_argument("Unsupported solver requested");
   }
 
-  return casadiSolver;
+  return idakluSolver;
 }
+
+#endif // PYBAMM_CREATE_IDAKLU_SOLVER_HPP

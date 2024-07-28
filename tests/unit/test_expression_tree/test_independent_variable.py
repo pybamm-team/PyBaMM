@@ -1,87 +1,73 @@
 #
 # Tests for the Parameter class
 #
-from tests import TestCase
-import unittest
-
+import pytest
 
 import pybamm
 import sympy
 
 
-class TestIndependentVariable(TestCase):
+class TestIndependentVariable:
     def test_variable_init(self):
         a = pybamm.IndependentVariable("a")
-        self.assertEqual(a.name, "a")
-        self.assertEqual(a.domain, [])
+        assert a.name == "a"
+        assert a.domain == []
         a = pybamm.IndependentVariable("a", domain=["test"])
-        self.assertEqual(a.domain[0], "test")
+        assert a.domain[0] == "test"
         a = pybamm.IndependentVariable("a", domain="test")
-        self.assertEqual(a.domain[0], "test")
-        with self.assertRaises(TypeError):
+        assert a.domain[0] == "test"
+        with pytest.raises(TypeError):
             pybamm.IndependentVariable("a", domain=1)
 
     def test_time(self):
         t = pybamm.Time()
-        self.assertEqual(t.name, "time")
-        self.assertEqual(t.evaluate(4), 4)
-        with self.assertRaises(ValueError):
+        assert t.name == "time"
+        assert t.evaluate(4) == 4
+        with pytest.raises(ValueError):
             t.evaluate(None)
 
         t = pybamm.t
-        self.assertEqual(t.name, "time")
-        self.assertEqual(t.evaluate(4), 4)
-        with self.assertRaises(ValueError):
+        assert t.name == "time"
+        assert t.evaluate(4) == 4
+        with pytest.raises(ValueError):
             t.evaluate(None)
 
-        self.assertEqual(t.evaluate_for_shape(), 0)
+        assert t.evaluate_for_shape() == 0
 
     def test_spatial_variable(self):
         x = pybamm.SpatialVariable("x", "negative electrode")
-        self.assertEqual(x.name, "x")
-        self.assertFalse(x.evaluates_on_edges("primary"))
+        assert x.name == "x"
+        assert not x.evaluates_on_edges("primary")
         y = pybamm.SpatialVariable("y", "separator")
-        self.assertEqual(y.name, "y")
+        assert y.name == "y"
         z = pybamm.SpatialVariable("z", "positive electrode")
-        self.assertEqual(z.name, "z")
+        assert z.name == "z"
         r = pybamm.SpatialVariable("r", "negative particle")
-        self.assertEqual(r.name, "r")
-        with self.assertRaises(NotImplementedError):
+        assert r.name == "r"
+        with pytest.raises(NotImplementedError):
             x.evaluate()
 
-        with self.assertRaisesRegex(ValueError, "domain must be"):
+        with pytest.raises(ValueError, match="domain must be"):
             pybamm.SpatialVariable("x", [])
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             pybamm.SpatialVariable("r_n", ["positive particle"])
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             pybamm.SpatialVariable("r_p", ["negative particle"])
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             pybamm.SpatialVariable("x", ["negative particle"])
 
     def test_spatial_variable_edge(self):
         x = pybamm.SpatialVariableEdge("x", "negative electrode")
-        self.assertEqual(x.name, "x")
-        self.assertTrue(x.evaluates_on_edges("primary"))
+        assert x.name == "x"
+        assert x.evaluates_on_edges("primary")
 
     def test_to_equation(self):
         # Test print_name
         func = pybamm.IndependentVariable("a")
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+        assert func.to_equation() == sympy.Symbol("test")
 
-        self.assertEqual(
-            pybamm.IndependentVariable("a").to_equation(), sympy.Symbol("a")
-        )
+        assert pybamm.IndependentVariable("a").to_equation() == sympy.Symbol("a")
 
         # Test time
-        self.assertEqual(pybamm.t.to_equation(), sympy.Symbol("t"))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert pybamm.t.to_equation() == sympy.Symbol("t")

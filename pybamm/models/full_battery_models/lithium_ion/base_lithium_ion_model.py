@@ -265,9 +265,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                 reaction_loc = "x-average"
             else:
                 reaction_loc = "full electrode"
-            sei_option = getattr(self.options, domain)["SEI"]
             phases = self.options.phases[domain]
             for phase in phases:
+                sei_option = getattr(getattr(self.options, domain), phase)["SEI"]
                 if sei_option == "none":
                     submodel = pybamm.sei.NoSEI(self.param, domain, self.options, phase)
                 elif sei_option == "constant":
@@ -333,9 +333,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
-                lithium_plating_opt = getattr(self.options, domain)["lithium plating"]
                 phases = self.options.phases[domain]
                 for phase in phases:
+                    lithium_plating_opt = getattr(getattr(self.options, domain), phase)[
+                        "lithium plating"
+                    ]
                     if lithium_plating_opt == "none":
                         submodel = pybamm.lithium_plating.NoPlating(
                             self.param, domain, self.options, phase
