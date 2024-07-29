@@ -1121,7 +1121,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             y0S = np.concatenate([y0S[k] for k in inputs_dict_keys])
         elif isinstance(y0S, casadi.DM):
             y0S = (y0S,)
-        y0S = (x.full() for x in y0S)
+
+        if isinstance(y0S[0], casadi.DM):
+            y0S = (x.full() for x in y0S)
         y0S = [x.flatten() for x in y0S]
 
         y0full = np.concatenate([y0, *y0S])
