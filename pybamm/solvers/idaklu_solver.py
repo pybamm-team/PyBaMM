@@ -1085,7 +1085,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self, y0, ydot0, model, time, inputs_dict
     ):
         """
-        Calculate the sensitivity initial conditions of y0 and ydot0 for the solver.
+        Extend the consistent initialization to include the sensitivty equations
 
         Parameters
         ----------
