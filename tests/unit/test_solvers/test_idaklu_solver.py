@@ -883,7 +883,6 @@ class TestIDAKLUSolver(TestCase):
                 root_method=root_method,
                 atol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
                 rtol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
-                root_tol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
                 options=options,
             )
             sol_all = solver_all.solve(
@@ -898,7 +897,6 @@ class TestIDAKLUSolver(TestCase):
                 root_method=root_method,
                 atol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
                 rtol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
-                root_tol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
                 options=options,
                 output_variables=output_variables,
             )
