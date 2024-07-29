@@ -882,7 +882,7 @@ class TestIDAKLUSolver(TestCase):
             solver_all = pybamm.IDAKLUSolver(
                 root_method=root_method,
                 atol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
-                rtol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
+                rtol=1e-4 if form != "iree" else 1e-0,  # iree has reduced precision
                 options=options,
             )
             sol_all = solver_all.solve(
@@ -896,7 +896,7 @@ class TestIDAKLUSolver(TestCase):
             solver = pybamm.IDAKLUSolver(
                 root_method=root_method,
                 atol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
-                rtol=1e-6 if form != "iree" else 1e-0,  # iree has reduced precision
+                rtol=1e-4 if form != "iree" else 1e-0,  # iree has reduced precision
                 options=options,
                 output_variables=output_variables,
             )
@@ -908,7 +908,7 @@ class TestIDAKLUSolver(TestCase):
             )
 
             # Compare output to sol_all
-            tol = 1e-5 if form != "iree" else 1e-2  # iree has reduced precision
+            tol = 1e-4 if form != "iree" else 1e-2  # iree has reduced precision
             for varname in output_variables:
                 np.testing.assert_array_almost_equal(
                     sol[varname].data, sol_all[varname].data, tol

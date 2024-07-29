@@ -1106,14 +1106,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
 
         inputs_dict = inputs_dict or {}
-        # stack inputs
-        if inputs_dict:
-            inputs_dict_keys = list(inputs_dict.keys())  # save order
-            # arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            # inputs = np.vstack(arrays_to_stack)
-        else:
-            # inputs = np.array([[]])
-            inputs_dict_keys = []
+        inputs_dict_keys = list(inputs_dict.keys())
 
         y0S = model.y0S
 

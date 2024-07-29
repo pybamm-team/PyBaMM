@@ -440,6 +440,9 @@ class BaseSolver:
             model.len_rhs_sens = 0
             model.len_alg_sens = 0
 
+        has_mass_matrix = model.mass_matrix is not None
+        has_mass_matrix_inv = model.mass_matrix_inv is not None
+
         # if we will change the equations to include the explicit sensitivity
         # equations, then we also need to update the mass matrix and bounds.
         # First, we reset the mass matrix and bounds back to their original form
@@ -449,11 +452,8 @@ class BaseSolver:
                 model.bounds[0][: model.len_rhs_and_alg],
                 model.bounds[1][: model.len_rhs_and_alg],
             )
-        if (
-            model.mass_matrix is not None
-            and model.mass_matrix.shape[0] > model.len_rhs_and_alg
-        ):
-            if model.mass_matrix_inv is not None:
+        if has_mass_matrix and model.mass_matrix.shape[0] > model.len_rhs_and_alg:
+            if has_mass_matrix_inv:
                 model.mass_matrix_inv = pybamm.Matrix(
                     model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
                 )
@@ -475,22 +475,16 @@ class BaseSolver:
             )
 
         # if we have a mass matrix, we need to extend it
-        if (
-            model.mass_matrix is None
-            or model.mass_matrix.shape[0] != model.len_rhs_and_alg
-        ):
-            return
+        def extend_mass_matrix(M):
+            M_extend = [M.entries] * (num_parameters + 1)
+            M_extend_pybamm = pybamm.Matrix(block_diag(M_extend, format="csr"))
+            return M_extend_pybamm
 
-        if model.mass_matrix_inv is not None:
-            model.mass_matrix_inv = pybamm.Matrix(
-                block_diag(
-                    [model.mass_matrix_inv.entries] * (num_parameters + 1),
-                    format="csr",
-                )
-            )
-        model.mass_matrix = pybamm.Matrix(
-            block_diag([model.mass_matrix.entries] * (num_parameters + 1), format="csr")
-        )
+        if has_mass_matrix:
+            model.mass_matrix = extend_mass_matrix(model.mass_matrix)
+
+        if has_mass_matrix_inv:
+            model.mass_matrix_inv = extend_mass_matrix(model.mass_matrix_inv)
 
     def _set_up_events(self, model, t_eval, inputs, vars_for_processing):
         # Check for heaviside and modulo functions in rhs and algebraic and add
@@ -511,6 +505,8 @@ class BaseSolver:
                     elif symbol.left == pybamm.t:
                         expr = symbol.right
                     else:
+                        # Heaviside function does not contain pybamm.t as an argument.
+                        # Do not create an event
                         continue
 
                     model.events.append(
@@ -523,10 +519,7 @@ class BaseSolver:
 
                 elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
                     expr = symbol.right
-                    if t_eval is None:
-                        num_events = 200
-                    else:
-                        num_events = t_eval[-1] // expr.value
+                    num_events = 200 if (t_eval is None) else (t_eval[-1] // expr.value)
 
                     for i in np.arange(num_events):
                         model.events.append(
@@ -1352,8 +1345,6 @@ class BaseSolver:
                 pybamm.SolverWarning,
                 stacklevel=2,
             )
-        else:
-            pass
 
     def _check_empty_model(self, model):
         # Make sure model isn't empty
