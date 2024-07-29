@@ -970,8 +970,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if self.output_variables:
             # Substitute empty vectors for state vector 'y'
             y_out = np.zeros((number_of_timesteps * number_of_states, 0))
+            y_event = sol.y_term
         else:
             y_out = sol.y.reshape((number_of_timesteps, number_of_states))
+            y_event = y_out[-1]
 
         # return sensitivity solution, we need to flatten yS to
         # (#timesteps * #states (where t is changing the quickest),)
@@ -1001,7 +1003,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             model,
             inputs_dict,
             np.array([t[-1]]),
-            np.transpose(sol.y_term)[:, np.newaxis],
+            np.transpose(y_event)[:, np.newaxis],
             termination,
             sensitivities=yS_out,
         )

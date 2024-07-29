@@ -396,7 +396,6 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
     std::vector<double> t_return(number_of_timesteps);
     std::vector<double> y_return(number_of_timesteps * number_of_states);
     std::vector<double> yS_return(number_of_parameters * number_of_timesteps * number_of_states);
-    std::vector<double> yterm_return(number_of_states);
 
     t_return[0] = t(0);
     for (int j = 0; j < number_of_states; j++)
@@ -450,11 +449,6 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
             }
             t_i += 1;
             if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN) {
-                // Store the final state vector
-                for (int j = 0; j < number_of_states; j++)
-                {
-                    yterm_return[j] = yval[j];
-                }
                 break;
             }
 
@@ -484,7 +478,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
                           std::vector<ptrdiff_t> {number_of_parameters, number_of_timesteps, number_of_states},
                           &yS_return[0]
                       );
-    np_array yterm_ret = np_array(number_of_states, &yterm_return[0]);
+    np_array yterm_ret = np_array(0);
 
     Solution sol(retval, t_ret, y_ret, yS_ret, yterm_ret);
 

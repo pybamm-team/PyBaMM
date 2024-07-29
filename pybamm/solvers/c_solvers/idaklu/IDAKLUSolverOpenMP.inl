@@ -401,6 +401,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // set return vectors
   int length_of_return_vector = 0;
+  int length_of_final_sv_slice = 0;
   size_t max_res_size = 0;  // maximum result size (for common result buffer)
   size_t max_res_dvar_dy = 0, max_res_dvar_dp = 0;
   if (functions->var_fcns.size() > 0) {
@@ -414,6 +415,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
       for (auto& dvar_fcn : functions->dvar_dp_fcns) {
         max_res_dvar_dp = std::max(max_res_dvar_dp, size_t(dvar_fcn->out_shape(0)));
       }
+      length_of_final_sv_slice = number_of_states;
     }
   } else {
     // Return full y state-vector
@@ -425,7 +427,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   realtype *yS_return = new realtype[number_of_parameters *
                                      number_of_timesteps *
                                      length_of_return_vector];
-  realtype *yterm_return = new realtype[number_of_states];
+  realtype *yterm_return = new realtype[length_of_final_sv_slice];
 
   res.resize(max_res_size);
   res_dvar_dy.resize(max_res_dvar_dy);
@@ -526,7 +528,10 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     t_i += 1;
 
     if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN) {
-      yterm_return = yval; // store final state slice
+      if (functions->var_fcns.size() > 0) {
+        // store final state slice if outout variables are specified
+        yterm_return = yval;
+      }
       break;
     }
   }
@@ -566,7 +571,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     );
   }
   np_array y_term = np_array(
-    number_of_states,
+    length_of_final_sv_slice,
     &yterm_return[0],
     free_yterm_when_done
   );
