@@ -123,9 +123,9 @@ class BaseSolver:
             model.calculate_sensitivities = []
 
         # see if we need to form the explicit sensitivity equations
-        calculate_sensitivities_explicit = False
-        if model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver):
-            calculate_sensitivities_explicit = True
+        calculate_sensitivities_explicit = (
+            model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver)
+        )
 
         self._set_up_model_sensitivities_inplace(
             model, inputs, calculate_sensitivities_explicit
@@ -145,33 +145,8 @@ class BaseSolver:
         model.initial_conditions_eval = initial_conditions
         model.jacp_initial_conditions_eval = jacp_ic
 
-        # evaluate initial condition
-        y0_total_size = (
-            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
-        )
-        y_zero = np.zeros((y0_total_size, 1))
-        if model.convert_to_format == "casadi":
-            # stack inputs
-            inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
-            model.y0 = initial_conditions(0.0, y_zero, inputs_casadi)
-            if jacp_ic is None:
-                model.y0S = None
-            else:
-                model.y0S = jacp_ic(0.0, y_zero, inputs_casadi)
-        else:
-            model.y0 = initial_conditions(0.0, y_zero, inputs)
-            if jacp_ic is None:
-                model.y0S = None
-            else:
-                # we are calculating the derivative wrt the inputs
-                # so need to make sure we convert int -> float
-                # This is to satisfy JAX jacfwd function which requires
-                # float inputs
-                inputs_float = {
-                    key: float(value) if isinstance(value, int) else value
-                    for key, value in inputs.items()
-                }
-                model.y0S = jacp_ic(0.0, y_zero, inputs_float)
+        # set initial conditions
+        self._set_initial_conditions(model, 0.0, inputs)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -282,6 +257,37 @@ class BaseSolver:
             )
 
         pybamm.logger.info("Finish solver set-up")
+
+    def _set_initial_conditions(self, model, time, inputs):
+        len_tot = model.len_rhs_and_alg + model.len_rhs_sens + model.len_alg_sens
+        y_zero = np.zeros((len_tot, 1))
+
+        casadi_format = model.convert_to_format == "casadi"
+        if casadi_format:
+            # stack inputs
+            inputs_y0_ics = casadi.vertcat(*[x for x in inputs.values()])
+        else:
+            inputs_y0_ics = inputs
+
+        model.y0 = model.initial_conditions_eval(time, y_zero, inputs_y0_ics)
+
+        if model.jacp_initial_conditions_eval is None:
+            model.y0S = None
+            return
+
+        if casadi_format:
+            inputs_jacp_ics = inputs_y0_ics
+        else:
+            # we are calculating the derivative wrt the inputs
+            # so need to make sure we convert int -> float
+            # This is to satisfy JAX jacfwd function which requires
+            # float inputs
+            inputs_jacp_ics = {
+                key: float(value) if isinstance(value, int) else value
+                for key, value in inputs.items()
+            }
+
+        model.y0S = model.jacp_initial_conditions_eval(time, y_zero, inputs_jacp_ics)
 
     @classmethod
     def _wrangle_name(cls, name: str) -> str:
@@ -458,33 +464,33 @@ class BaseSolver:
             )
 
         # now we can extend them by the number of sensitivity parameters
-        # if needed
-        if calculate_sensitivities_explicit:
-            if model.len_rhs != 0:
-                n_inputs = model.len_rhs_sens // model.len_rhs
-            elif model.len_alg != 0:
-                n_inputs = model.len_alg_sens // model.len_alg
-            if model.bounds[0].shape[0] == model.len_rhs_and_alg:
-                model.bounds = (
-                    np.repeat(model.bounds[0], n_inputs + 1),
-                    np.repeat(model.bounds[1], n_inputs + 1),
+        # if necessary
+        if not calculate_sensitivities_explicit:
+            return
+
+        if model.bounds[0].shape[0] == model.len_rhs_and_alg:
+            model.bounds = (
+                np.repeat(model.bounds[0], num_parameters + 1),
+                np.repeat(model.bounds[1], num_parameters + 1),
+            )
+
+        # if we have a mass matrix, we need to extend it
+        if (
+            model.mass_matrix is None
+            or model.mass_matrix.shape[0] != model.len_rhs_and_alg
+        ):
+            return
+
+        if model.mass_matrix_inv is not None:
+            model.mass_matrix_inv = pybamm.Matrix(
+                block_diag(
+                    [model.mass_matrix_inv.entries] * (num_parameters + 1),
+                    format="csr",
                 )
-            if (
-                model.mass_matrix is not None
-                and model.mass_matrix.shape[0] == model.len_rhs_and_alg
-            ):
-                if model.mass_matrix_inv is not None:
-                    model.mass_matrix_inv = pybamm.Matrix(
-                        block_diag(
-                            [model.mass_matrix_inv.entries] * (n_inputs + 1),
-                            format="csr",
-                        )
-                    )
-                model.mass_matrix = pybamm.Matrix(
-                    block_diag(
-                        [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
-                    )
-                )
+            )
+        model.mass_matrix = pybamm.Matrix(
+            block_diag([model.mass_matrix.entries] * (num_parameters + 1), format="csr")
+        )
 
     def _set_up_events(self, model, t_eval, inputs, vars_for_processing):
         # Check for heaviside and modulo functions in rhs and algebraic and add
@@ -493,45 +499,45 @@ class BaseSolver:
         # but also accounts for the fact that t might be dimensional
         # Only do this for DAE models as ODE models can deal with discontinuities
         # fine
+
         if len(model.algebraic) > 0:
             for symbol in itertools.chain(
                 model.concatenated_rhs.pre_order(),
                 model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, _Heaviside):
-                    expr = None
                     if symbol.right == pybamm.t:
                         expr = symbol.left
+                    elif symbol.left == pybamm.t:
+                        expr = symbol.right
                     else:
-                        if symbol.left == pybamm.t:
-                            expr = symbol.right
+                        continue
 
-                    # Update the events if the heaviside function depended on t
-                    if expr is not None:
+                    model.events.append(
+                        pybamm.Event(
+                            str(symbol),
+                            expr,
+                            pybamm.EventType.DISCONTINUITY,
+                        )
+                    )
+
+                elif isinstance(symbol, pybamm.Modulo) and symbol.left == pybamm.t:
+                    expr = symbol.right
+                    if t_eval is None:
+                        num_events = 200
+                    else:
+                        num_events = t_eval[-1] // expr.value
+
+                    for i in np.arange(num_events):
                         model.events.append(
                             pybamm.Event(
                                 str(symbol),
-                                expr,
+                                expr * pybamm.Scalar(i + 1),
                                 pybamm.EventType.DISCONTINUITY,
                             )
                         )
-                elif isinstance(symbol, pybamm.Modulo):
-                    if symbol.left == pybamm.t:
-                        expr = symbol.right
-                        num_events = 200
-                        if t_eval is not None:
-                            num_events = t_eval[-1] // expr.value
-
-                        for i in np.arange(num_events):
-                            model.events.append(
-                                pybamm.Event(
-                                    str(symbol),
-                                    expr * pybamm.Scalar(i + 1),
-                                    pybamm.EventType.DISCONTINUITY,
-                                )
-                            )
                 else:
-                    pass
+                    continue
 
         casadi_switch_events = []
         terminate_events = []
@@ -542,40 +548,37 @@ class BaseSolver:
                 # discontinuity events are evaluated before the solver is called,
                 # so don't need to process them
                 discontinuity_events.append(event)
-            elif event.event_type == pybamm.EventType.SWITCH:
-                if (
-                    isinstance(self, pybamm.CasadiSolver)
-                    and self.mode == "fast with events"
-                    and model.algebraic != {}
-                ):
-                    # Save some events to casadi_switch_events for the 'fast with
-                    # events' mode of the casadi solver
-                    # We only need to do this if the model is a DAE model
-                    # see #1082
-                    k = 20
-                    # address numpy 1.25 deprecation warning: array should have
-                    # ndim=0 before conversion
-                    init_sign = float(
-                        np.sign(
-                            event.evaluate(0, model.y0.full(), inputs=inputs)
-                        ).item()
-                    )
-                    # We create a sigmoid for each event which will multiply the
-                    # rhs. Doing * 2 - 1 ensures that when the event is crossed,
-                    # the sigmoid is zero. Hence the rhs is zero and the solution
-                    # stays constant for the rest of the simulation period
-                    # We can then cut off the part after the event was crossed
-                    event_sigmoid = (
-                        pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
-                    )
-                    event_casadi = process(
-                        event_sigmoid,
-                        f"event_{n}",
-                        vars_for_processing,
-                        use_jacobian=False,
-                    )[0]
-                    # use the actual casadi object as this will go into the rhs
-                    casadi_switch_events.append(event_casadi)
+            elif event.event_type == pybamm.EventType.SWITCH and (
+                isinstance(self, pybamm.CasadiSolver)
+                and self.mode == "fast with events"
+                and model.algebraic != {}
+            ):
+                # Save some events to casadi_switch_events for the 'fast with
+                # events' mode of the casadi solver
+                # We only need to do this if the model is a DAE model
+                # see #1082
+                k = 20
+                # address numpy 1.25 deprecation warning: array should have
+                # ndim=0 before conversion
+                init_sign = float(
+                    np.sign(event.evaluate(0, model.y0.full(), inputs=inputs)).item()
+                )
+                # We create a sigmoid for each event which will multiply the
+                # rhs. Doing * 2 - 1 ensures that when the event is crossed,
+                # the sigmoid is zero. Hence the rhs is zero and the solution
+                # stays constant for the rest of the simulation period
+                # We can then cut off the part after the event was crossed
+                event_sigmoid = (
+                    pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
+                )
+                event_casadi = process(
+                    event_sigmoid,
+                    f"event_{n}",
+                    vars_for_processing,
+                    use_jacobian=False,
+                )[0]
+                # use the actual casadi object as this will go into the rhs
+                casadi_switch_events.append(event_casadi)
             else:
                 # use the function call
                 event_call = process(
@@ -596,9 +599,9 @@ class BaseSolver:
             discontinuity_events,
         )
 
-    def _set_initial_conditions(self, model, time, inputs_dict, update_rhs):
+    def _set_consistent_initialization(self, model, time, inputs_dict):
         """
-        Set initial conditions for the model. This is skipped if the solver is an
+        Set initialized states for the model. This is skipped if the solver is an
         algebraic solver (since this would make the algebraic solver redundant), and if
         the model doesn't have any algebraic equations (since there are no initial
         conditions to be calculated in this case).
@@ -607,6 +610,8 @@ class BaseSolver:
         ----------
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
+        time : numeric type
+            The time at which to calculate the initial conditions
         inputs_dict : dict
             Any input parameters to pass to the model when solving
         update_rhs : bool
@@ -614,48 +619,12 @@ class BaseSolver:
 
         """
 
-        y0_total_size = (
-            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
-        )
-        y_zero = np.zeros((y0_total_size, 1))
-
-        if model.convert_to_format == "casadi":
-            # stack inputs
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
-        else:
-            inputs = inputs_dict
-
-        if self.algebraic_solver is True:
+        if self.algebraic_solver or model.len_alg == 0:
             # Don't update model.y0
             return
-        elif len(model.algebraic) == 0:
-            if update_rhs is True:
-                # Recalculate initial conditions for the rhs equations
-                y0 = model.initial_conditions_eval(time, y_zero, inputs)
-            else:
-                # Don't update model.y0
-                return
-        else:
-            if update_rhs is True:
-                # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.initial_conditions_eval(time, y_zero, inputs)
-                # Reuse old solution for algebraic equations
-                y0_from_model = model.y0
-                len_rhs = model.len_rhs
-                # update model.y0, which is used for initialising the algebraic solver
-                if len_rhs == 0:
-                    model.y0 = y0_from_model
-                elif isinstance(y0_from_inputs, casadi.DM):
-                    model.y0 = casadi.vertcat(
-                        y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
-                    )
-                else:
-                    model.y0 = np.vstack(
-                        (y0_from_inputs[:len_rhs], y0_from_model[len_rhs:])
-                    )
-            y0 = self.calculate_consistent_state(model, time, inputs_dict)
-        # Make y0 a function of inputs if doing symbolic with casadi
-        model.y0 = y0
+
+        # Calculate consistent states for the algebraic equations
+        model.y0 = self.calculate_consistent_state(model, time, inputs_dict)
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """
@@ -667,7 +636,7 @@ class BaseSolver:
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
         time : float
-            The time at which to calculate the states
+            The time at which to calculate the initial conditions
         inputs: dict, optional
             Any input parameters to pass to the model when solving
 
@@ -751,24 +720,14 @@ class BaseSolver:
             calculate_sensitivities_list = calculate_sensitivities
 
         # Make sure model isn't empty
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
-            if not isinstance(self, pybamm.DummySolver):
-                # check for a discretised model without original parameters
-                if not (
-                    model.concatenated_rhs is not None
-                    or model.concatenated_algebraic is not None
-                ):
-                    raise pybamm.ModelError(
-                        "Cannot solve empty model, use `pybamm.DummySolver` instead"
-                    )
+        self._check_empty_model(model)
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
         if t_eval is None:
-            if self.algebraic_solver is True:
-                t_eval = np.array([0])
-            else:
+            if self.algebraic_solver is False:
                 raise ValueError("t_eval cannot be None")
+            t_eval = np.array([0])
 
         # If t_eval is provided as [t0, tf] return the solution at 100 points
         elif isinstance(t_eval, list):
@@ -799,11 +758,32 @@ class BaseSolver:
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
+        # (Re-)calculate consistent initialization
+        # Assuming initial conditions do not depend on input parameters
+        # when len(inputs_list) > 1, only `model_inputs_list[0]`
+        # is passed to `_set_consistent_initialization`.
+        # See https://github.com/pybamm-team/PyBaMM/pull/1261
+        if len(inputs_list) > 1:
+            all_inputs_names = set(
+                itertools.chain.from_iterable(
+                    [model_inputs.keys() for model_inputs in model_inputs_list]
+                )
+            )
+            initial_conditions_node_names = set(
+                [it.name for it in model.concatenated_initial_conditions.pre_order()]
+            )
+            if all_inputs_names.issubset(initial_conditions_node_names):
+                raise pybamm.SolverError(
+                    "Input parameters cannot appear in expression "
+                    "for initial conditions."
+                )
+
         # Check that calculate_sensitivites have not been updated
         calculate_sensitivities_list.sort()
-        if not hasattr(model, "calculate_sensitivities"):
+        if hasattr(model, "calculate_sensitivities"):
+            model.calculate_sensitivities.sort()
+        else:
             model.calculate_sensitivities = []
-        model.calculate_sensitivities.sort()
         if calculate_sensitivities_list != model.calculate_sensitivities:
             self._model_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
@@ -816,6 +796,7 @@ class BaseSolver:
 
         # Set up (if not done already)
         timer = pybamm.Timer()
+        # Set the initial conditions
         if model not in self._model_set_up:
             if len(self._model_set_up) > 0:
                 existing_model = next(iter(self._model_set_up))
@@ -833,52 +814,34 @@ class BaseSolver:
             self._model_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
+        elif (
+            self._model_set_up[model]["initial conditions"]
+            != model.concatenated_initial_conditions
+        ):
+            if self.algebraic_solver:
+                # For an algebraic solver, we don't need to set up the initial
+                # conditions function and we can just evaluate
+                # model.concatenated_initial_conditions
+                model.y0 = model.concatenated_initial_conditions.evaluate()
+            else:
+                # If the new initial conditions are different
+                # and cannot be evaluated directly, set up again
+                self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
+            self._model_set_up[model]["initial conditions"] = (
+                model.concatenated_initial_conditions
+            )
         else:
-            ics_set_up = self._model_set_up[model]["initial conditions"]
-            # Check that initial conditions have not been updated
-            if ics_set_up != model.concatenated_initial_conditions:
-                if self.algebraic_solver is True:
-                    # For an algebraic solver, we don't need to set up the initial
-                    # conditions function and we can just evaluate
-                    # model.concatenated_initial_conditions
-                    model.y0 = model.concatenated_initial_conditions.evaluate()
-                else:
-                    # If the new initial conditions are different
-                    # and cannot be evaluated directly, set up again
-                    self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-                self._model_set_up[model]["initial conditions"] = (
-                    model.concatenated_initial_conditions
-                )
+            # Set the standard initial conditions
+            self._set_initial_conditions(model, t_eval[0], model_inputs_list[0])
+
+        # Solve for the consistent initialization
+        self._set_consistent_initialization(model, t_eval[0], model_inputs_list[0])
 
         set_up_time = timer.time()
         timer.reset()
 
-        # (Re-)calculate consistent initial conditions
-        # Assuming initial conditions do not depend on input parameters
-        # when len(inputs_list) > 1, only `model_inputs_list[0]`
-        # is passed to `_set_initial_conditions`.
-        # See https://github.com/pybamm-team/PyBaMM/pull/1261
-        if len(inputs_list) > 1:
-            all_inputs_names = set(
-                itertools.chain.from_iterable(
-                    [model_inputs.keys() for model_inputs in model_inputs_list]
-                )
-            )
-            initial_conditions_node_names = set(
-                [it.name for it in model.concatenated_initial_conditions.pre_order()]
-            )
-            if all_inputs_names.issubset(initial_conditions_node_names):
-                raise pybamm.SolverError(
-                    "Input parameters cannot appear in expression "
-                    "for initial conditions."
-                )
-
-        self._set_initial_conditions(
-            model, t_eval[0], model_inputs_list[0], update_rhs=True
-        )
-
         # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, model_inputs_list[0])
+        self._check_events_with_initialization(t_eval, model, model_inputs_list[0])
 
         # Process discontinuities
         (
@@ -904,26 +867,25 @@ class BaseSolver:
                     model_inputs_list[0],
                 )
                 new_solutions = [new_solution]
+            elif model.convert_to_format == "jax":
+                # Jax can parallelize over the inputs efficiently
+                new_solutions = self._integrate(
+                    model,
+                    t_eval[start_index:end_index],
+                    model_inputs_list,
+                )
             else:
-                if model.convert_to_format == "jax":
-                    # Jax can parallelize over the inputs efficiently
-                    new_solutions = self._integrate(
-                        model,
-                        t_eval[start_index:end_index],
-                        model_inputs_list,
+                with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+                    new_solutions = p.starmap(
+                        self._integrate,
+                        zip(
+                            [model] * ninputs,
+                            [t_eval[start_index:end_index]] * ninputs,
+                            model_inputs_list,
+                        ),
                     )
-                else:
-                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-                        new_solutions = p.starmap(
-                            self._integrate,
-                            zip(
-                                [model] * ninputs,
-                                [t_eval[start_index:end_index]] * ninputs,
-                                model_inputs_list,
-                            ),
-                        )
-                        p.close()
-                        p.join()
+                    p.close()
+                    p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -1059,7 +1021,7 @@ class BaseSolver:
         return start_indices, end_indices, t_eval
 
     @staticmethod
-    def _check_events_with_initial_conditions(t_eval, model, inputs_dict):
+    def _check_events_with_initialization(t_eval, model, inputs_dict):
         num_terminate_events = len(model.terminate_events_eval)
         if num_terminate_events == 0:
             return
@@ -1140,11 +1102,7 @@ class BaseSolver:
             return old_solution
 
         # Make sure model isn't empty
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
-            if not isinstance(self, pybamm.DummySolver):
-                raise pybamm.ModelError(
-                    "Cannot step empty model, use `pybamm.DummySolver` instead"
-                )
+        self._check_empty_model(model)
 
         # Make sure dt is greater than the offset
         step_start_offset = pybamm.settings.step_start_offset
@@ -1161,16 +1119,14 @@ class BaseSolver:
                 stacklevel=2,
             )
             t_eval = np.linspace(0, dt, npts)
-
-        if t_eval is not None:
-            # Checking if t_eval lies within range
-            if t_eval[0] != 0 or t_eval[-1] != dt:
-                raise pybamm.SolverError(
-                    "Elements inside array t_eval must lie in the closed interval 0 to dt"
-                )
-
-        else:
+        elif t_eval is None:
             t_eval = np.array([0, dt])
+        elif t_eval[0] != 0 or t_eval[-1] != dt:
+            raise pybamm.SolverError(
+                "Elements inside array t_eval must lie in the closed interval 0 to dt"
+            )
+        else:
+            pass
 
         t_start = old_solution.t[-1]
         t_eval = t_start + t_eval
@@ -1192,9 +1148,8 @@ class BaseSolver:
         # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
 
-        first_step_this_model = False
-        if model not in self._model_set_up:
-            first_step_this_model = True
+        first_step_this_model = model not in self._model_set_up
+        if first_step_this_model:
             if len(self._model_set_up) > 0:
                 existing_model = next(iter(self._model_set_up))
                 raise RuntimeError(
@@ -1217,27 +1172,22 @@ class BaseSolver:
             if not first_step_this_model:
                 # reset y0 to original initial conditions
                 self.set_up(model, model_inputs, ics_only=True)
+        elif old_solution.all_models[-1] == model:
+            # initialize with old solution
+            model.y0 = old_solution.all_ys[-1][:, -1]
         else:
-            if old_solution.all_models[-1] == model:
-                # initialize with old solution
-                model.y0 = old_solution.all_ys[-1][:, -1]
-            else:
-                _, concatenated_initial_conditions = model.set_initial_conditions_from(
-                    old_solution, return_type="ics"
-                )
-                model.y0 = concatenated_initial_conditions.evaluate(
-                    0, inputs=model_inputs
-                )
+            _, concatenated_initial_conditions = model.set_initial_conditions_from(
+                old_solution, return_type="ics"
+            )
+            model.y0 = concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
 
         set_up_time = timer.time()
 
-        # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(
-            model, t_start_shifted, model_inputs, update_rhs=False
-        )
+        # (Re-)calculate consistent initialization
+        self._set_consistent_initialization(model, t_start_shifted, model_inputs)
 
-        # Check initial conditions don't violate events
-        self._check_events_with_initial_conditions(t_eval, model, model_inputs)
+        # Check consistent initialization doesn't violate events
+        self._check_events_with_initialization(t_eval, model, model_inputs)
 
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
@@ -1293,52 +1243,53 @@ class BaseSolver:
                 solution,
                 "the solver successfully reached the end of the integration interval",
             )
-        elif solution.termination == "event":
-            pybamm.logger.debug("Start post-processing events")
-            if solution.closest_event_idx is not None:
-                solution.termination = (
-                    f"event: {termination_events[solution.closest_event_idx].name}"
-                )
-            else:
-                # Get final event value
-                final_event_values = {}
 
-                for event in termination_events:
-                    final_event_values[event.name] = event.expression.evaluate(
-                        solution.t_event,
-                        solution.y_event,
-                        inputs=solution.all_inputs[-1],
-                    )
-                termination_event = min(final_event_values, key=final_event_values.get)
+        # solution.termination == "event":
+        pybamm.logger.debug("Start post-processing events")
+        if solution.closest_event_idx is not None:
+            solution.termination = (
+                f"event: {termination_events[solution.closest_event_idx].name}"
+            )
+        else:
+            # Get final event value
+            final_event_values = {}
 
-                # Check that it's actually an event
-                if final_event_values[termination_event] > 0.1:  # pragma: no cover
-                    # Hard to test this
-                    raise pybamm.SolverError(
-                        "Could not determine which event was triggered "
-                        "(possibly due to NaNs)"
-                    )
-                # Add the event to the solution object
-                solution.termination = f"event: {termination_event}"
-            # Update t, y and inputs to include event time and state
-            # Note: if the final entry of t is equal to the event time we skip
-            # this (having duplicate entries causes an error later in ProcessedVariable)
-            if solution.t_event != solution.all_ts[-1][-1]:
-                event_sol = pybamm.Solution(
+            for event in termination_events:
+                final_event_values[event.name] = event.expression.evaluate(
                     solution.t_event,
                     solution.y_event,
-                    solution.all_models[-1],
-                    solution.all_inputs[-1],
-                    solution.t_event,
-                    solution.y_event,
-                    solution.termination,
+                    inputs=solution.all_inputs[-1],
                 )
-                event_sol.solve_time = 0
-                event_sol.integration_time = 0
-                solution = solution + event_sol
+            termination_event = min(final_event_values, key=final_event_values.get)
 
-            pybamm.logger.debug("Finish post-processing events")
-            return solution, solution.termination
+            # Check that it's actually an event
+            if final_event_values[termination_event] > 0.1:  # pragma: no cover
+                # Hard to test this
+                raise pybamm.SolverError(
+                    "Could not determine which event was triggered "
+                    "(possibly due to NaNs)"
+                )
+            # Add the event to the solution object
+            solution.termination = f"event: {termination_event}"
+        # Update t, y and inputs to include event time and state
+        # Note: if the final entry of t is equal to the event time we skip
+        # this (having duplicate entries causes an error later in ProcessedVariable)
+        if solution.t_event != solution.all_ts[-1][-1]:
+            event_sol = pybamm.Solution(
+                solution.t_event,
+                solution.y_event,
+                solution.all_models[-1],
+                solution.all_inputs[-1],
+                solution.t_event,
+                solution.y_event,
+                solution.termination,
+            )
+            event_sol.solve_time = 0
+            event_sol.integration_time = 0
+            solution = solution + event_sol
+
+        pybamm.logger.debug("Finish post-processing events")
+        return solution, solution.termination
 
     def check_extrapolation(self, solution, events):
         """
@@ -1356,40 +1307,65 @@ class BaseSolver:
         """
         extrap_events = []
 
-        if any(
-            event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+        # Add the event dictionary to the solution object
+        solution.extrap_events = extrap_events
+
+        # first pass: check if any events are extrapolation events
+        if all(
+            event.event_type != pybamm.EventType.INTERPOLANT_EXTRAPOLATION
             for event in events
         ):
-            last_state = solution.last_state
-            t = last_state.all_ts[0][0]
-            y = last_state.all_ys[0][:, 0]
-            inputs = last_state.all_inputs[0]
+            # no extrapolation events to check
+            return
 
-            if isinstance(y, casadi.DM):
-                y = y.full()
-            for event in events:
-                if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                    if event.expression.evaluate(t, y, inputs=inputs) < self.extrap_tol:
-                        extrap_events.append(event.name)
+        # second pass: check if the extrapolation events are within the tolerance
+        last_state = solution.last_state
+        t = last_state.all_ts[0][0]
+        y = last_state.all_ys[0][:, 0]
+        inputs = last_state.all_inputs[0]
 
-            if any(extrap_events):
-                if self._on_extrapolation == "warn":
-                    name = solution.all_models[-1].name
-                    warnings.warn(
-                        f"While solving {name} extrapolation occurred "
-                        f"for {extrap_events}",
-                        pybamm.SolverWarning,
-                        stacklevel=2,
-                    )
-                    # Add the event dictionary to the solution object
-                    solution.extrap_events = extrap_events
-                elif self._on_extrapolation == "error":
-                    raise pybamm.SolverError(
-                        "Solver failed because the following "
-                        f"interpolation bounds were exceeded: {extrap_events}. "
-                        "You may need to provide additional interpolation points "
-                        "outside these bounds."
-                    )
+        if isinstance(y, casadi.DM):
+            y = y.full()
+
+        for event in events:
+            if (
+                event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                and event.expression.evaluate(t, y, inputs=inputs) < self.extrap_tol
+            ):
+                extrap_events.append(event.name)
+
+        if len(extrap_events) == 0:
+            # no extrapolation events are within the tolerance
+            return
+
+        if self._on_extrapolation == "error":
+            raise pybamm.SolverError(
+                "Solver failed because the following "
+                f"interpolation bounds were exceeded: {extrap_events}. "
+                "You may need to provide additional interpolation points "
+                "outside these bounds."
+            )
+        elif self._on_extrapolation == "warn":
+            name = solution.all_models[-1].name
+            warnings.warn(
+                f"While solving {name} extrapolation occurred " f"for {extrap_events}",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+        else:
+            pass
+
+    def _check_empty_model(self, model):
+        # Make sure model isn't empty
+        if (
+            (len(model.rhs) == 0 and len(model.algebraic) == 0)
+            and model.concatenated_rhs is None
+            and model.concatenated_algebraic is None
+            and not isinstance(self, pybamm.DummySolver)
+        ):
+            raise pybamm.ModelError(
+                "Cannot simulate an empty model, use `pybamm.DummySolver` instead"
+            )
 
     def get_platform_context(self, system_type: str):
         # Set context for parallel processing depending on the platform
@@ -1411,10 +1387,10 @@ class BaseSolver:
         inputs_in_model = {}
         for input_param in model.input_parameters:
             name = input_param.name
-            if name in inputs:
-                inputs_in_model[name] = inputs[name]
-            else:
+            if name not in inputs:
                 raise pybamm.SolverError(f"No value provided for input '{name}'")
+            inputs_in_model[name] = inputs[name]
+
         inputs = inputs_in_model
 
         ordered_inputs_names = list(inputs.keys())
