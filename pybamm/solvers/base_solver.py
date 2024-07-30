@@ -509,7 +509,7 @@ class BaseSolver:
                     else:
                         # Heaviside function does not contain pybamm.t as an argument.
                         # Do not create an event
-                        continue
+                        continue  # pragma: no cover
 
                     model.events.append(
                         pybamm.Event(

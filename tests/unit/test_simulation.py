@@ -591,7 +591,7 @@ class TestSimulation(TestCase):
             current = (
                 1 * (t >= 0) * (t <= 1000)
                 - 0.5 * (1000 < t) * (t <= 2000)
-                + 0.5 * (2000 < t) * ((t - 1) > 0)
+                + 0.5 * (2000 < t)
             )
             return current
 
