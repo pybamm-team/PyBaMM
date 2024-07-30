@@ -187,5 +187,6 @@ PYBIND11_MODULE(idaklu, m)
     .def_readwrite("t", &Solution::t)
     .def_readwrite("y", &Solution::y)
     .def_readwrite("yS", &Solution::yS)
+    .def_readwrite("y_term", &Solution::y_term)
     .def_readwrite("flag", &Solution::flag);
 }
