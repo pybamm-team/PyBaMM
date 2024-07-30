@@ -120,9 +120,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # Maximum number of error test failures in attempting one step
                 "max_error_test_failures": 10,
                 # Maximum number of nonlinear solver iterations at one step
-                "max_nonlinear_iterations": 4,
+                # Note: this value differs from the IDA default of 4
+                "max_nonlinear_iterations": 40,
                 # Maximum number of nonlinear solver convergence failures at one step
-                "max_convergence_failures": 10,
+                # Note: this value differs from the IDA default of 10
+                "max_convergence_failures": 100,
                 # Safety factor in the nonlinear convergence test
                 "nonlinear_convergence_coefficient": 0.33,
                 # Suppress algebraic variables from error test
@@ -132,7 +134,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 # initial condition calculation
                 "nonlinear_convergence_coefficient_ic": 0.0033,
                 # Maximum number of steps allowed when `init_all_y_ic = False`
-                "max_num_steps_ic": 5,
+                # Note: this value differs from the IDA default of 5
+                "max_num_steps_ic": 50,
                 # Maximum number of the approximate Jacobian or preconditioner evaluations
                 # allowed when the Newton iteration appears to be slowly converging
                 # Note: this value differs from the IDA default of 4
@@ -194,9 +197,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "nonlinear_convergence_coefficient": 0.33,
             "suppress_algebraic_error": False,
             "nonlinear_convergence_coefficient_ic": 0.0033,
-            "max_num_steps_ic": 5,
-            "max_num_jacobians_ic": 4,
-            "max_num_iterations_ic": 10,
+            "max_num_steps_ic": 50,
+            "max_num_jacobians_ic": 40,
+            "max_num_iterations_ic": 100,
             "max_linesearch_backtracks_ic": 100,
             "linesearch_off_ic": False,
             "init_all_y_ic": False,
@@ -1013,9 +1016,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # calculate the time derivatives of the differential equations
         # for semi-explicit DAEs
-        calc_ydot0 = model.mass_matrix_inv is not None
-        if model.len_rhs > 0 and calc_ydot0:
-            ydot0 = self._rhs_dot_consistent_initialization(model, time, inputs_dict)
+        if model.len_rhs > 0:
+            ydot0 = self._rhs_dot_consistent_initialization(
+                y0, model, time, inputs_dict
+            )
         else:
             ydot0 = np.zeros_like(y0)
 
@@ -1037,7 +1041,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model.y0full = y0full
         model.ydot0full = ydot0full
 
-    def _rhs_dot_consistent_initialization(self, model, time, inputs_dict):
+    def _rhs_dot_consistent_initialization(self, y0, model, time, inputs_dict):
         """
         Compute the consistent initialization of ydot0 for the differential terms
         for the solver. If we have a semi-explicit DAE, we can explicitly solve
@@ -1045,6 +1049,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         Parameters
         ----------
+        y0 : :class:`numpy.array`
+            The initial values of the state vector.
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
         time : numeric type
@@ -1063,11 +1069,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = np.array([[]])
 
-        y0 = model.y0
-        if isinstance(y0, casadi.DM):
-            y0 = y0.full()
-        y0 = y0.flatten()
-
         ydot0 = np.zeros_like(y0)
         # calculate the time derivatives of the differential equations
         input_eval = inputs if casadi_format else inputs_dict
@@ -1079,7 +1080,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         rhs0 = rhs_alg0[: model.len_rhs]
 
-        # for the differential terms, ydot = M^-1 * (rhs)
+        # for the differential terms, ydot = -M^-1 * (rhs)
         ydot0[: model.len_rhs] = model.mass_matrix_inv.entries @ rhs0
 
         return ydot0
@@ -1096,6 +1097,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The initial values of the state vector.
         ydot0 : :class:`numpy.array`
             The initial values of the time derivatives of the state vector.
+        time : numeric type
+            The time at which to calculate the initial conditions.
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
         inputs_dict : dict
@@ -1108,12 +1111,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             and self._options["jax_evaluator"] == "iree"
         )
 
-        inputs_dict = inputs_dict or {}
-        inputs_dict_keys = list(inputs_dict.keys())
-
         y0S = model.y0S
 
         if jax_iree_format:
+            inputs_dict = inputs_dict or {}
+            inputs_dict_keys = list(inputs_dict.keys())
             y0S = np.concatenate([y0S[k] for k in inputs_dict_keys])
         elif isinstance(y0S, casadi.DM):
             y0S = (y0S,)

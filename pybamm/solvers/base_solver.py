@@ -443,6 +443,9 @@ class BaseSolver:
         has_mass_matrix = model.mass_matrix is not None
         has_mass_matrix_inv = model.mass_matrix_inv is not None
 
+        if not has_mass_matrix:
+            return
+
         # if we will change the equations to include the explicit sensitivity
         # equations, then we also need to update the mass matrix and bounds.
         # First, we reset the mass matrix and bounds back to their original form
@@ -452,15 +455,12 @@ class BaseSolver:
                 model.bounds[0][: model.len_rhs_and_alg],
                 model.bounds[1][: model.len_rhs_and_alg],
             )
-        if has_mass_matrix and model.mass_matrix.shape[0] > model.len_rhs_and_alg:
-            if has_mass_matrix_inv:
-                model.mass_matrix_inv = pybamm.Matrix(
-                    model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
-                )
-            model.mass_matrix = pybamm.Matrix(
-                model.mass_matrix.entries[
-                    : model.len_rhs_and_alg, : model.len_rhs_and_alg
-                ]
+        model.mass_matrix = pybamm.Matrix(
+            model.mass_matrix.entries[: model.len_rhs_and_alg, : model.len_rhs_and_alg]
+        )
+        if has_mass_matrix_inv:
+            model.mass_matrix_inv = pybamm.Matrix(
+                model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
             )
 
         # now we can extend them by the number of sensitivity parameters
@@ -480,8 +480,10 @@ class BaseSolver:
             M_extend_pybamm = pybamm.Matrix(block_diag(M_extend, format="csr"))
             return M_extend_pybamm
 
-        if has_mass_matrix:
             model.mass_matrix = extend_mass_matrix(model.mass_matrix)
+            model.mass_matrix = extend_mass_matrix(model.mass_matrix)
+
+        model.mass_matrix = extend_mass_matrix(model.mass_matrix)
 
         if has_mass_matrix_inv:
             model.mass_matrix_inv = extend_mass_matrix(model.mass_matrix_inv)

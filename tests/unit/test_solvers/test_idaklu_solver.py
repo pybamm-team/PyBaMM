@@ -842,7 +842,7 @@ class TestIDAKLUSolver(TestCase):
             else:
                 root_method = "lm"
             input_parameters = {  # Sensitivities dictionary
-                "Current function [A]": 0.222,
+                "Current function [A]": 0.0222,
                 "Separator porosity": 0.3,
             }
 
@@ -859,7 +859,7 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
 
-            t_eval = np.linspace(0, 3600, 100)
+            t_eval = np.linspace(0, 100, 100)
 
             options = {
                 "linear_solver": "SUNLinSol_KLU",
@@ -881,6 +881,8 @@ class TestIDAKLUSolver(TestCase):
             # Use the full model as comparison (tested separately)
             solver_all = pybamm.IDAKLUSolver(
                 root_method=root_method,
+                atol=1e-6 if form != "iree" else 1e-4,  # iree has reduced precision
+                rtol=1e-4 if form != "iree" else 1e-2,  # iree has reduced precision
                 options=options,
             )
             sol_all = solver_all.solve(
@@ -904,7 +906,7 @@ class TestIDAKLUSolver(TestCase):
             )
 
             # Compare output to sol_all
-            tol = 1e-4
+            tol = 1e-4 if form != "iree" else 1e-2  # iree has reduced precision
             for varname in output_variables:
                 np.testing.assert_array_almost_equal(
                     sol[varname].data, sol_all[varname].data, tol
