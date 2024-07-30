@@ -1,4 +1,5 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
 - Replaced rounded faraday constant with its exact value in `bpx.py` for better comparison between different tools
 
 ## Features
