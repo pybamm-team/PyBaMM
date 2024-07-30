@@ -240,7 +240,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
     c_e = pybamm_dict["Initial concentration in electrolyte [mol.m-3]"]
-    F = 96485.3321233100184
+    F = pybamm.constants.F.value
 
     def _exchange_current_density(c_e, c_s_surf, c_s_max, T, k_ref, Ea):
         return (
