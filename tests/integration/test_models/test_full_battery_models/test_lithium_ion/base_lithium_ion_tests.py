@@ -132,6 +132,8 @@ class BaseIntegrationTestLithiumIon:
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+        solver = pybamm.CasadiSolver(atol=1e-14, rtol=1e-14)
+
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
@@ -140,7 +142,9 @@ class BaseIntegrationTestLithiumIon:
             },
             check_already_exists=False,
         )
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        self.run_basic_processing_test(
+            options, parameter_values=parameter_values, solver=solver
+        )
 
     def test_kinetics_linear(self):
         options = {"intercalation kinetics": "linear"}

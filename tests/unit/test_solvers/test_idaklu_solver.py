@@ -346,6 +346,46 @@ class TestIDAKLUSolver(TestCase):
                 2 * dyda_ida[0:200:2], d2uda, decimal=decimal
             )
 
+    def test_ida_roberts_consistent_initialization(self):
+        # this test implements a python version of the ida Roberts
+        # example provided in sundials
+        # see sundials ida examples pdf
+        for form in ["python", "casadi", "jax", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            model = pybamm.BaseModel()
+            model.convert_to_format = "jax" if form == "iree" else form
+            u = pybamm.Variable("u")
+            v = pybamm.Variable("v")
+            model.rhs = {u: 0.1 * v}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u: 0, v: 2}
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
+
+            # Set up and  model consistently initializate the model
+            solver.set_up(model)
+            t0 = 0.0
+            solver._set_consistent_initialization(model, t0, inputs_dict={})
+
+            # u(t0) = 0, v(t0) = 1
+            np.testing.assert_array_almost_equal(model.y0full, [0, 1])
+            # u'(t0) = 0.1 * v(t0) = 0.1
+            # Since v is algebraic, the initial derivative is set to 0
+            np.testing.assert_array_almost_equal(model.ydot0full, [0.1, 0])
+
     def test_sensitivities_with_events(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -819,7 +859,7 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
 
-            t_eval = np.linspace(0, 3600, 100)
+            t_eval = np.linspace(0, 100, 100)
 
             options = {
                 "linear_solver": "SUNLinSol_KLU",
@@ -892,6 +932,36 @@ class TestIDAKLUSolver(TestCase):
                 options={"jax_evaluator": "bad_evaluator"},
                 output_variables=["Terminal voltage [V]"],
             )
+
+    def test_with_output_variables_and_event_termination(self):
+        model = pybamm.lithium_ion.DFN()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
+        )
+        sol = sim.solve(np.linspace(0, 3600, 1000))
+        self.assertEqual(sol.termination, "event: Minimum voltage [V]")
+
+        # create an event that doesn't require the state vector
+        eps_p = model.variables["Positive electrode porosity"]
+        model.events.append(
+            pybamm.Event(
+                "Zero positive electrode porosity cut-off",
+                pybamm.min(eps_p),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+
+        sim3 = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
+        )
+        sol3 = sim3.solve(np.linspace(0, 3600, 1000))
+        self.assertEqual(sol3.termination, "event: Minimum voltage [V]")
 
 
 if __name__ == "__main__":
