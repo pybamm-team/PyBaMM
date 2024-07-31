@@ -26,7 +26,7 @@ RUN conda init --all
 SHELL ["conda", "run", "-n", "pybamm", "/bin/bash", "-c"]
 RUN conda install -y pip
 
-RUN pip install --upgrade --user pip setuptools wheel wget
+RUN pip install --upgrade --user pip scikit-build-core wget
 RUN pip install cmake
 
 RUN python scripts/install_KLU_Sundials.py && \
