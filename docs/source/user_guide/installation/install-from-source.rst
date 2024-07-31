@@ -83,7 +83,7 @@ If you are running windows, you can simply skip this section and jump to :ref:`p
 	  nox -s pybamm-requires
 
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
-Both libraries are installed in ``~/.local``.
+Both libraries are installed in ``PyBaMM/sundials_KLU_libs``.
 
 For users requiring more control over the installation process, the ``pybamm-requires`` session supports additional command-line arguments:
 
@@ -123,7 +123,7 @@ PyBaMM ships with a Python script that automates points 2. and 3. You can run it
 This script supports optional arguments for custom installations:
 
 - ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
-  By default, they are installed in ``~/.local``.
+  By default, they are installed in ``PyBaMM/sundials_KLU_libs``.
 
   Example:
 
