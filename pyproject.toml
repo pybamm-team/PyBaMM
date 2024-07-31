@@ -14,7 +14,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybamm"
-version = "24.5rc2"
+version = "24.5"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{ name = "The PyBaMM Team", email = "pybamm@pybamm.org" }]
@@ -257,10 +257,22 @@ ignore = [
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
 [tool.pytest.ini_options]
-minversion = "6"
-required_plugins = ["pytest-xdist", "pytest-mock"]
-addopts = ["-nauto", "-v", "-ra", "--strict-config", "--strict-markers"]
-testpaths = ["docs/source/examples/"]
+minversion = "8"
+# Use pytest-xdist to run tests in parallel by default, exit with
+# error if not installed
+required_plugins = [
+    "pytest-xdist",
+    "pytest-mock",
+]
+addopts = [
+    "-nauto",
+    "-vra",
+    "--strict-config",
+    "--strict-markers",
+]
+testpaths = [
+    "tests",
+]
 console_output_style = "progress"
 xfail_strict = true
 filterwarnings = [
