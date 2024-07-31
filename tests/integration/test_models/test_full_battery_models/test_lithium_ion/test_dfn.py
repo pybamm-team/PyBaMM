@@ -11,7 +11,7 @@ from tests import TestCase
 
 class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup(self):
         self.model = pybamm.lithium_ion.DFN
 
     def test_particle_distribution_in_x(self):

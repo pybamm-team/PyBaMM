@@ -9,7 +9,7 @@ from tests import TestCase
 
 class TestMainReaction(TestCase):
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup(self):
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
             domain=["negative electrode"],

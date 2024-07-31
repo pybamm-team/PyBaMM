@@ -10,7 +10,7 @@ import numpy as np
 
 class TestExchangeCurrentDensity(TestCase):
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup(self):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
         c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])

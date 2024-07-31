@@ -1,15 +1,16 @@
 #
 # Tests for the electrode-electrolyte interface equations
 #
-import pytest
+from tests import TestCase
 import pybamm
 from tests import get_discretisation_for_testing
-from tests import TestCase
+
+import unittest
 import numpy as np
 
 
 class TestButlerVolmer(TestCase):
-    def setup_method(self):
+    def setUp(self):
         self.delta_phi_s_n = pybamm.Variable(
             "surface potential difference [V]",
             ["negative electrode"],
@@ -72,7 +73,7 @@ class TestButlerVolmer(TestCase):
             "reaction source terms [A.m-3]": 1,
         }
 
-    def teardown_method(self):
+    def tearDown(self):
         del self.variables
         del self.c_e_n
         del self.c_e_p
@@ -113,12 +114,12 @@ class TestButlerVolmer(TestCase):
         ]
 
         # negative electrode Butler-Volmer is Multiplication
-        assert isinstance(j_n, pybamm.Multiplication)
-        assert j_n.domain == ["negative electrode"]
+        self.assertIsInstance(j_n, pybamm.Multiplication)
+        self.assertEqual(j_n.domain, ["negative electrode"])
 
         # positive electrode Butler-Volmer is Multiplication
-        assert isinstance(j_p, pybamm.Multiplication)
-        assert j_p.domain == ["positive electrode"]
+        self.assertIsInstance(j_p, pybamm.Multiplication)
+        self.assertEqual(j_p.domain, ["positive electrode"])
 
     def test_set_parameters(self):
         param = pybamm.LithiumIonParameters()
@@ -158,9 +159,9 @@ class TestButlerVolmer(TestCase):
         j_p = parameter_values.process_symbol(j_p)
         # Test
         for x in j_n.pre_order():
-            assert not isinstance(x, pybamm.Parameter)
+            self.assertNotIsInstance(x, pybamm.Parameter)
         for x in j_p.pre_order():
-            assert not isinstance(x, pybamm.Parameter)
+            self.assertNotIsInstance(x, pybamm.Parameter)
 
     def test_discretisation(self):
         param = pybamm.LithiumIonParameters()
@@ -218,13 +219,17 @@ class TestButlerVolmer(TestCase):
             [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
         )
         y = np.concatenate([submesh**2, submesh**3, submesh**4])
-        assert j_n.evaluate(None, y).shape == (mesh["negative electrode"].npts, 1)
-        assert j_p.evaluate(None, y).shape == (mesh["positive electrode"].npts, 1)
+        self.assertEqual(
+            j_n.evaluate(None, y).shape, (mesh["negative electrode"].npts, 1)
+        )
+        self.assertEqual(
+            j_p.evaluate(None, y).shape, (mesh["positive electrode"].npts, 1)
+        )
 
         # test concatenated butler-volmer
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh[whole_cell]
-        assert j.evaluate(None, y).shape == (whole_cell_mesh.npts, 1)
+        self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh.npts, 1))
 
     def test_diff_c_e_lead_acid(self):
         # With intercalation
@@ -356,12 +361,27 @@ class TestButlerVolmer(TestCase):
         j_n_FD = parameter_values.process_symbol(
             (j_n(delta_phi + h) - j_n(delta_phi - h)) / (2 * h)
         )
-        assert j_n_diff.evaluate(inputs={"delta_phi": 0.5}) / j_n_FD.evaluate(
-            inputs={"delta_phi": 0.5}
-        ) == pytest.approx(1, abs=1e-05)
+        self.assertAlmostEqual(
+            j_n_diff.evaluate(inputs={"delta_phi": 0.5})
+            / j_n_FD.evaluate(inputs={"delta_phi": 0.5}),
+            1,
+            places=5,
+        )
         j_p_FD = parameter_values.process_symbol(
             (j_p(delta_phi + h) - j_p(delta_phi - h)) / (2 * h)
         )
-        assert j_p_diff.evaluate(inputs={"delta_phi": 0.5}) / j_p_FD.evaluate(
-            inputs={"delta_phi": 0.5}
-        ) == pytest.approx(1, abs=1e-05)
+        self.assertAlmostEqual(
+            j_p_diff.evaluate(inputs={"delta_phi": 0.5})
+            / j_p_FD.evaluate(inputs={"delta_phi": 0.5}),
+            1,
+            places=5,
+        )
+
+
+if __name__ == "__main__":
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    unittest.main()
