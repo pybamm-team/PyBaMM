@@ -154,9 +154,9 @@ All code requires testing. We use the [pytest](https://docs.pytest.org/en/stable
 
 We use following plugins for various needs:
 
-[nbmake](https://github.com/treebeardtech/nbmake&#41) : plugins to test the example notebooks.
+[nbmake](https://github.com/treebeardtech/nbmake/) : plugins to test the example notebooks.
 
-[pytest-xdist](https://pypi.org/project/pytest-xdist/&#41) : plugins to run tests in parallel.
+[pytest-xdist](https://pypi.org/project/pytest-xdist/) : plugins to run tests in parallel.
 
 If you have `nox` installed, to run unit tests, type
 
