@@ -186,10 +186,10 @@ html_context.update(
 )
 
 # Set canonical URL from the Read the Docs Domain
-html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "")
+html_baseurl = os.getenv("READTHEDOCS_CANONICAL_URL", "")
 
 # Tell Jinja2 templates the build is running on Read the Docs
-if os.environ.get("READTHEDOCS", "") == "True":
+if os.getenv("READTHEDOCS") == "True":
     html_context["READTHEDOCS"] = True
 
 # -- Options for HTMLHelp output ---------------------------------------------
