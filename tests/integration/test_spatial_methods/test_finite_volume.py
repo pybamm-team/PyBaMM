@@ -373,7 +373,7 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
     return solver.solve(model, [0, 1])
 
 
-class TestUpwindDownwind:
+class TestUpwindDownwind(TestCase):
     def test_upwind(self):
         solution = solve_advection_equation("upwind")
         np.testing.assert_array_almost_equal(
