@@ -478,8 +478,9 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
                           std::vector<ptrdiff_t> {number_of_parameters, number_of_timesteps, number_of_states},
                           &yS_return[0]
                       );
+    np_array yterm_ret = np_array(0);
 
-    Solution sol(retval, t_ret, y_ret, yS_ret);
+    Solution sol(retval, t_ret, y_ret, yS_ret, yterm_ret);
 
     return sol;
 }
