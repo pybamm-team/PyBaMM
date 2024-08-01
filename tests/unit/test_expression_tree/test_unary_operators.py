@@ -698,10 +698,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.Symbol("test"))
 
         # Test Negate
-        self.assertEqual(pybamm.Negate(4).to_equation(), -4.0)
+        value = 4
+        self.assertEqual(pybamm.Negate(value).to_equation(), -value)
 
         # Test AbsoluteValue
-        self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
+        self.assertEqual(pybamm.AbsoluteValue(-value).to_equation(), value)
 
         # Test Gradient
         self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
@@ -709,7 +710,7 @@ class TestUnaryOperators(unittest.TestCase):
         # Test Divergence
         self.assertEqual(
             pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
-            sympy_Divergence(sympy_Gradient(a)),
+            sympy_Divergence(sympy_Gradient("a")),
         )
 
         # Test BoundaryValue

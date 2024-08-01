@@ -1,15 +1,13 @@
 #
 # Tests for the lead-acid Full model
 #
-
 import pybamm
 import tests
 
-import unittest
 import numpy as np
 
 
-class TestLeadAcidFull(unittest.TestCase):
+class TestLeadAcidFull:
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.Full(options)
@@ -56,7 +54,7 @@ class TestLeadAcidFull(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
 
-class TestLeadAcidFullSurfaceForm(unittest.TestCase):
+class TestLeadAcidFullSurfaceForm:
     def test_basic_processing_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
@@ -88,12 +86,3 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

@@ -76,22 +76,24 @@ class TestFunction(unittest.TestCase):
         self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test Arcsinh
-        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh("a"))
 
         # Test Arctan
-        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
+        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan("a"))
 
         # Test Exp
-        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp(a))
+        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp("a"))
 
         # Test log
-        self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
+        value = 54.0
+        self.assertEqual(pybamm.Log(value).to_equation(), sympy.log(value))
 
         # Test sinh
-        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh("a"))
 
         # Test Function
-        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
+        value = 10
+        self.assertEqual(pybamm.Function(np.log, value).to_equation(), value)
 
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")

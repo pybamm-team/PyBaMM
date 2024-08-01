@@ -671,7 +671,7 @@ class Simulation:
 
                     # if dt + starttime is larger than time_stop, set dt to time_stop - starttime
                     if time_stop is not None:
-                        dt = min(dt, time_stop[0] - start_time)
+                        dt = min(dt, time_stop - start_time)
 
                     step_str = str(step)
                     model = self.steps_to_built_models[step.basic_repr()]
@@ -679,6 +679,7 @@ class Simulation:
 
                     logs["step number"] = (step_num, cycle_length)
                     logs["step operating conditions"] = step_str
+                    logs["step duration"] = step.duration
                     callbacks.on_step_start(logs)
 
                     inputs = {
@@ -767,23 +768,33 @@ class Simulation:
                     callbacks.on_step_end(logs)
 
                     logs["termination"] = step_solution.termination
-                    # Only allow events specified by experiment
-                    if not (
+
+                    # Check for some cases that would make the experiment end early
+                    if step_termination == "final time" and step.uses_default_duration:
+                        # reached the default duration of a step (typically we should
+                        # reach an event before the default duration)
+                        callbacks.on_experiment_infeasible_time(logs)
+                        feasible = False
+                        break
+
+                    elif not (
                         isinstance(step_solution, pybamm.EmptySolution)
                         or step_termination == "final time"
                         or "[experiment]" in step_termination
                     ):
-                        callbacks.on_experiment_infeasible(logs)
+                        # Step has reached an event that is not specified in the
+                        # experiment
+                        callbacks.on_experiment_infeasible_event(logs)
                         feasible = False
                         break
 
-                    if time_stop is not None:
-                        max_time = cycle_solution.t[-1]
-                        if max_time >= time_stop[0]:
-                            break
+                    elif time_stop is not None and logs["experiment time"] >= time_stop:
+                        # reached the time limit of the experiment
+                        break
 
-                    # Increment index for next iteration
-                    idx += 1
+                    else:
+                        # Increment index for next iteration, then continue
+                        idx += 1
 
                 if save_this_cycle or feasible is False:
                     self._solution = self._solution + cycle_solution

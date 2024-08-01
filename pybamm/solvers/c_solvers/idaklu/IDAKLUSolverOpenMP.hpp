@@ -1,14 +1,10 @@
-#ifndef PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
-#define PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
+#ifndef PYBAMM_IDAKLU_SOLVEROPENMP_HPP
+#define PYBAMM_IDAKLU_SOLVEROPENMP_HPP
 
-#include "CasadiSolver.hpp"
-#include <casadi/casadi.hpp>
-using Function = casadi::Function;
-
-#include "casadi_functions.hpp"
+#include "IDAKLUSolver.hpp"
 #include "common.hpp"
-#include "options.hpp"
-#include "solution.hpp"
+#include "Options.hpp"
+#include "Solution.hpp"
 #include "sundials_legacy_wrapper.hpp"
 
 /**
@@ -40,7 +36,8 @@ using Function = casadi::Function;
  *   19. Destroy objects
  *   20. (N/A) Finalize MPI
  */
-class CasadiSolverOpenMP : public CasadiSolver
+template <class ExprSet>
+class IDAKLUSolverOpenMP : public IDAKLUSolver
 {
   // NB: cppcheck-suppress unusedStructMember is used because codacy reports
   //     these members as unused even though they are important in child
@@ -63,11 +60,12 @@ public:
   int jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
-  std::unique_ptr<CasadiFunctions> functions;
-  realtype *res = nullptr;
-  realtype *res_dvar_dy = nullptr;
-  realtype *res_dvar_dp = nullptr;
-  Options options;
+  std::unique_ptr<ExprSet> functions;
+  std::vector<realtype> res;
+  std::vector<realtype> res_dvar_dy;
+  std::vector<realtype> res_dvar_dp;
+  SetupOptions setup_opts;
+  SolverOptions solver_opts;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -77,7 +75,7 @@ public:
   /**
    * @brief Constructor
    */
-  CasadiSolverOpenMP(
+  IDAKLUSolverOpenMP(
     np_array atol_np,
     double rel_tol,
     np_array rhs_alg_id,
@@ -86,18 +84,20 @@ public:
     int jac_times_cjmass_nnz,
     int jac_bandwidth_lower,
     int jac_bandwidth_upper,
-    std::unique_ptr<CasadiFunctions> functions,
-    const Options& options);
+    std::unique_ptr<ExprSet> functions,
+    const SetupOptions &setup_opts,
+    const SolverOptions &solver_opts
+  );
 
   /**
    * @brief Destructor
    */
-  ~CasadiSolverOpenMP();
+  ~IDAKLUSolverOpenMP();
 
   /**
-   * Evaluate casadi functions (including sensitivies) for each requested
+   * Evaluate functions (including sensitivies) for each requested
    * variable and store
-   * @brief Evaluate casadi functions
+   * @brief Evaluate functions
    */
   void CalcVars(
     realtype *y_return,
@@ -110,7 +110,7 @@ public:
     size_t *ySk);
 
   /**
-   * @brief Evaluate casadi functions for sensitivities
+   * @brief Evaluate functions for sensitivities
    */
   void CalcVarsSensitivities(
     realtype *tret,
@@ -142,6 +142,18 @@ public:
    * @brief Allocate memory for matrices (noting appropriate matrix format/types)
    */
   void SetMatrix();
+
+  /**
+   * @brief Apply user-configurable IDA options
+   */
+  void SetSolverOptions();
+
+  /**
+   * @brief Check the return flag for errors
+   */
+  void CheckErrors(int const & flag);
 };
 
-#endif // PYBAMM_IDAKLU_CASADISOLVEROPENMP_HPP
+#include "IDAKLUSolverOpenMP.inl"
+
+#endif // PYBAMM_IDAKLU_SOLVEROPENMP_HPP

@@ -100,10 +100,6 @@ class Solution:
 
         self.sensitivities = sensitivities
 
-        self._t_event = t_event
-        self._y_event = y_event
-        self._termination = termination
-
         # Check no ys are too large
         if check_solution:
             self.check_ys_are_not_too_large()

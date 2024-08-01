@@ -9,14 +9,7 @@ from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
-    if symbol in bcs:
-        if bcs[symbol][side][1] == form:
-            return True
-        else:
-            return False
-
-    else:
-        return False
+    return (symbol in bcs) and (bcs[symbol][side][1] == form)
 
 
 class Discretisation:
@@ -614,15 +607,14 @@ class Discretisation:
         for var in sorted_model_variables:
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
-                mass_list.append(1.0)
-                mass_inv_list.append(1.0)
+                mass = 1.0
+                mass_inv = 1.0
             else:
                 mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
-                mass_list.append(mass)
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
                     (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
@@ -630,11 +622,13 @@ class Discretisation:
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to
                     # compute the inverse
-                    mass_inv_list.append(mass)
+                    mass_inv = mass
                 else:
                     # inverse is more efficient in csc format
                     mass_inv = inv(csc_matrix(mass))
-                    mass_inv_list.append(mass_inv)
+
+            mass_list.append(mass)
+            mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -645,14 +639,21 @@ class Discretisation:
 
         # Create block diagonal (sparse) mass matrix (if model is not empty)
         # and inverse (if model has odes)
-        if len(model.rhs) + len(model.algebraic) > 0:
+        N_rhs = len(model.rhs)
+        N_alg = len(model.algebraic)
+
+        has_mass_matrix = N_rhs > 0 or N_alg > 0
+        has_mass_matrix_inv = N_rhs > 0
+
+        if has_mass_matrix:
             mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
-            if len(model.rhs) > 0:
-                mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
-            else:
-                mass_matrix_inv = None
         else:
-            mass_matrix, mass_matrix_inv = None, None
+            mass_matrix = None
+
+        if has_mass_matrix_inv:
+            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        else:
+            mass_matrix_inv = None
 
         return mass_matrix, mass_matrix_inv
 
