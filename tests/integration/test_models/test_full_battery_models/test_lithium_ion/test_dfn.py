@@ -36,7 +36,7 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
         self.run_basic_processing_test({}, parameter_values=param)
 
 
-class TestDFNWithSizeDistribution:
+class TestDFNWithSizeDistribution(TestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         params = pybamm.ParameterValues("Marquis2019")
