@@ -44,8 +44,8 @@ jobs:
           asv machine --machine "GitHubRunner"
           asv run --machine "GitHubRunner" NEW --show-stderr -v
         env:
+          # TODO: test this
           SUNDIALS_INST: sundials_KLU_libs/
-          # TODO: Need to update these 
           LD_LIBRARY_PATH: $HOME/.local/lib
 
       - name: Upload results as artifact
