@@ -24,8 +24,9 @@ from .basic_dfn_composite import BasicDFNComposite
 from .Yang2017 import Yang2017
 from .mpm import MPM
 from .msmr import MSMR
+from .tanks_in_series import TanksInSeries
 
 __all__ = ['Yang2017', 'base_lithium_ion_model', 'basic_dfn',
            'basic_dfn_composite', 'basic_dfn_half_cell', 'basic_spm', 'dfn',
            'electrode_soh', 'electrode_soh_half_cell', 'mpm', 'msmr',
-           'newman_tobias', 'spm', 'spme']
+           'newman_tobias', 'spm', 'spme', 'tanks_in_series']
