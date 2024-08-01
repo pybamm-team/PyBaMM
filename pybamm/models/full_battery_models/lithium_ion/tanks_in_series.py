@@ -27,12 +27,8 @@ class TanksInSeries(BaseModel):
 
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
-        c_s_n = pybamm.Variable(
-            "X-averaged negative particle concentration [mol.m-3]"
-        )
-        c_s_p = pybamm.Variable(
-            "X-averaged positive particle concentration [mol.m-3]"
-        )
+        c_s_n = pybamm.Variable("X-averaged negative particle concentration [mol.m-3]")
+        c_s_p = pybamm.Variable("X-averaged positive particle concentration [mol.m-3]")
 
         c_e_n = pybamm.Variable(
             "X-averaged negative electrolyte concentration [mol.m-3]"
@@ -51,23 +47,12 @@ class TanksInSeries(BaseModel):
             "X-averaged positive particle surface concentration [mol.m-3]"
         )
 
-        q_ave_n = pybamm.Variable(
-            "X-averaged negative particle concentration gradient"
-        )
-        q_ave_p = pybamm.Variable(
-            "X-averaged positive particle concentration gradient"
-        )
+        q_ave_n = pybamm.Variable("X-averaged negative particle concentration gradient")
+        q_ave_p = pybamm.Variable("X-averaged positive particle concentration gradient")
 
-        phi_e_n = pybamm.Variable(
-            "X-averaged negative electrolyte potential [V]"
-        )
-        phi_e_s = pybamm.Variable(
-            "X-averaged separator electrolyte potential [V]"
-        )
-        phi_e_p = pybamm.Variable(
-            "X-averaged positive electrolyte potential [V]"
-        )
-
+        phi_e_n = pybamm.Variable("X-averaged negative electrolyte potential [V]")
+        phi_e_s = pybamm.Variable("X-averaged separator electrolyte potential [V]")
+        phi_e_p = pybamm.Variable("X-averaged positive electrolyte potential [V]")
 
         phi_s_p = pybamm.Variable("X-averaged positive electrode potential [V]")
         phi_s_n = pybamm.Variable("X-averaged negative electrode potential [V]")
@@ -93,16 +78,16 @@ class TanksInSeries(BaseModel):
         sto_surf_n = c_surf_ave_n / param.n.prim.c_max
         j0_n = param.n.prim.j0(c_e_n, c_surf_ave_n, T)
         eta_n = phi_s_n - phi_e_n - param.n.prim.U(sto_surf_n, T)
-        alpha_n = 0.5 # param.n.alpha_bv
+        alpha_n = 0.5  # param.n.alpha_bv
         Feta_RT_n = param.F * eta_n / (param.R * T)
-        j_n = j0_n*(np.exp((1-alpha_n)*Feta_RT_n)-np.exp(-alpha_n*Feta_RT_n))
+        j_n = j0_n * (np.exp((1 - alpha_n) * Feta_RT_n) - np.exp(-alpha_n * Feta_RT_n))
 
         sto_surf_p = c_surf_ave_p / param.p.prim.c_max
         j0_p = param.p.prim.j0(c_e_p, c_surf_ave_p, T)
         eta_p = phi_s_p - phi_e_p - param.p.prim.U(sto_surf_p, T)
-        alpha_p = 0.5 # param.p.alpha_bv
+        alpha_p = 0.5  # param.p.alpha_bv
         Feta_RT_p = param.F * eta_p / (param.R * T)
-        j_p = j0_p*(np.exp((1-alpha_p)*Feta_RT_p)-np.exp(-alpha_p*Feta_RT_p))
+        j_p = j0_p * (np.exp((1 - alpha_p) * Feta_RT_p) - np.exp(-alpha_p * Feta_RT_p))
 
         ######################
         # State of Charge
@@ -122,22 +107,22 @@ class TanksInSeries(BaseModel):
         # Particle spatially discretized with 3-parameter model
         # based on biquadratic profile for particle concentration
 
-        self.rhs[c_s_n] = -3*j_n/param.n.prim.R_typ
-        self.rhs[c_s_p] = -3*j_p/param.p.prim.R_typ
+        self.rhs[c_s_n] = -3 * j_n / param.n.prim.R_typ
+        self.rhs[c_s_p] = -3 * j_p / param.p.prim.R_typ
 
         self.initial_conditions[c_s_n] = pybamm.x_average(param.n.prim.c_init)
         self.initial_conditions[c_s_p] = pybamm.x_average(param.p.prim.c_init)
 
         # Discretized Particle Concentration Gradient
-        q_ave_n = pybamm.Variable(
-            "X-averaged negative particle concentration gradient"
+        q_ave_n = pybamm.Variable("X-averaged negative particle concentration gradient")
+        q_ave_p = pybamm.Variable("X-averaged positive particle concentration gradient")
+
+        self.rhs[q_ave_n] = (
+            -30 * param.n.prim.D(c_s_n, T) * q_ave_n - 45 / 2 * j_n / param.n.prim.R_typ
         )
-        q_ave_p = pybamm.Variable(
-            "X-averaged positive particle concentration gradient"
+        self.rhs[q_ave_p] = (
+            -30 * param.p.prim.D(c_s_p, T) * q_ave_p - 45 / 2 * j_p / param.p.prim.R_typ
         )
-        
-        self.rhs[q_ave_n] = -30*param.n.prim.D(c_s_n, T)*q_ave_n - 45/2*j_n/param.n.prim.R_typ
-        self.rhs[q_ave_p] = -30*param.p.prim.D(c_s_p, T)*q_ave_p - 45/2*j_p/param.p.prim.R_typ
 
         self.initial_conditions[q_ave_n] = pybamm.Scalar(0)
         self.initial_conditions[q_ave_p] = pybamm.Scalar(0)
@@ -147,25 +132,38 @@ class TanksInSeries(BaseModel):
         ######################
 
         # 12: boundary between positive electrode and separator
-        c_12 = (eps_p**param.p.b_e/param.p.L*c_e_p+eps_sep**param.s.b_e/param.s.L*c_e_s)/(eps_p**param.p.b_e/param.p.L+eps_sep**param.s.b_e/param.s.L)
+        c_12 = (
+            eps_p**param.p.b_e / param.p.L * c_e_p
+            + eps_sep**param.s.b_e / param.s.L * c_e_s
+        ) / (eps_p**param.p.b_e / param.p.L + eps_sep**param.s.b_e / param.s.L)
         # 23: boundary between separator and negative electrode
-        c_23 = (eps_n**param.n.b_e/param.n.L*c_e_n+eps_sep**param.s.b_e/param.s.L*c_e_s)/(eps_n**param.n.b_e/param.n.L+eps_sep**param.s.b_e/param.s.L)
-        
+        c_23 = (
+            eps_n**param.n.b_e / param.n.L * c_e_n
+            + eps_sep**param.s.b_e / param.s.L * c_e_s
+        ) / (eps_n**param.n.b_e / param.n.L + eps_sep**param.s.b_e / param.s.L)
+
         # Grouped thickness/porosity variables
         # positive electrode and separator
-        leps12 = param.p.L/eps_p**param.p.b_e+param.s.L/eps_sep**param.s.b_e
+        leps12 = param.p.L / eps_p**param.p.b_e + param.s.L / eps_sep**param.s.b_e
         # negative electrode and separator
-        leps23 = param.n.L/eps_n**param.n.b_e+param.s.L/eps_sep**param.s.b_e
+        leps23 = param.n.L / eps_n**param.n.b_e + param.s.L / eps_sep**param.s.b_e
 
         ######################
         # Electrolyte concentration
         ######################
 
-        self.rhs[c_e_n] = -2*param.D_e(c_23, T)*(c_e_n-c_e_s)/leps23/(eps_n*param.n.L)-\
-            (1-param.t_plus(c_e_n, T))*iapp/param.F/eps_n/param.n.L
-        self.rhs[c_e_s] = (-2*param.D_e(c_12, T)*(c_e_s-c_e_p)/leps12+2*param.D_e(c_23, T)*(c_e_n-c_e_s)/leps23)/(eps_sep*param.s.L)
-        self.rhs[c_e_p] = -2*param.D_e(c_12, T)*(c_e_s-c_e_p)/leps12/(eps_p*param.p.L)-\
-            (1-param.t_plus(c_e_p, T))*iapp/param.F/eps_p/param.p.L
+        self.rhs[c_e_n] = (
+            -2 * param.D_e(c_23, T) * (c_e_n - c_e_s) / leps23 / (eps_n * param.n.L)
+            - (1 - param.t_plus(c_e_n, T)) * iapp / param.F / eps_n / param.n.L
+        )
+        self.rhs[c_e_s] = (
+            -2 * param.D_e(c_12, T) * (c_e_s - c_e_p) / leps12
+            + 2 * param.D_e(c_23, T) * (c_e_n - c_e_s) / leps23
+        ) / (eps_sep * param.s.L)
+        self.rhs[c_e_p] = (
+            -2 * param.D_e(c_12, T) * (c_e_s - c_e_p) / leps12 / (eps_p * param.p.L)
+            - (1 - param.t_plus(c_e_p, T)) * iapp / param.F / eps_p / param.p.L
+        )
 
         self.initial_conditions[c_e_n] = param.c_e_init
         self.initial_conditions[c_e_s] = param.c_e_init
@@ -179,11 +177,23 @@ class TanksInSeries(BaseModel):
         # Average Surface Concentration
         ######################
 
-        self.algebraic[c_surf_ave_p] = j_p + 35*param.p.prim.D(c_s_p, T)/param.p.prim.R_typ*(c_surf_ave_p-c_s_p)\
-            - 8*param.p.prim.D(c_s_p, T)*q_ave_p
-        self.algebraic[c_surf_ave_n] = j_n + 35*param.n.prim.D(c_s_n, T)/param.n.prim.R_typ*(c_surf_ave_n-c_s_n)\
-            - 8*param.n.prim.D(c_s_n, T)*q_ave_n
-        
+        self.algebraic[c_surf_ave_p] = (
+            j_p
+            + 35
+            * param.p.prim.D(c_s_p, T)
+            / param.p.prim.R_typ
+            * (c_surf_ave_p - c_s_p)
+            - 8 * param.p.prim.D(c_s_p, T) * q_ave_p
+        )
+        self.algebraic[c_surf_ave_n] = (
+            j_n
+            + 35
+            * param.n.prim.D(c_s_n, T)
+            / param.n.prim.R_typ
+            * (c_surf_ave_n - c_s_n)
+            - 8 * param.n.prim.D(c_s_n, T) * q_ave_n
+        )
+
         self.initial_conditions[c_surf_ave_p] = param.p.prim.c_init
         self.initial_conditions[c_surf_ave_n] = param.n.prim.c_init
 
@@ -191,11 +201,38 @@ class TanksInSeries(BaseModel):
         # Current in the electrolyte
         ######################
 
-        self.algebraic[phi_e_p] = -iapp - 2*param.kappa_e(c_12, T)*(phi_e_s-phi_e_p)/leps12\
-            + 4*param.R*T*param.F*param.chi(c_12, T)/2*param.kappa_e(c_12, T)/c_12*(c_e_s-c_e_p)/leps12
-        self.algebraic[phi_e_n] = -iapp - 2*param.kappa_e(c_23, T)*(phi_e_n-phi_e_s)/leps23\
-            + 4*param.R*T/param.F*param.chi(c_23, T)/2*param.kappa_e(c_23, T)/c_23*(c_e_n-c_e_s)/leps23
-        self.algebraic[phi_e_s] = (eps_p**param.p.b_e/param.p.L*phi_e_p+eps_sep**param.s.b_e/param.s.L*phi_e_s)*leps12
+        self.algebraic[phi_e_p] = (
+            -iapp
+            - 2 * param.kappa_e(c_12, T) * (phi_e_s - phi_e_p) / leps12
+            + 4
+            * param.R
+            * T
+            * param.F
+            * param.chi(c_12, T)
+            / 2
+            * param.kappa_e(c_12, T)
+            / c_12
+            * (c_e_s - c_e_p)
+            / leps12
+        )
+        self.algebraic[phi_e_n] = (
+            -iapp
+            - 2 * param.kappa_e(c_23, T) * (phi_e_n - phi_e_s) / leps23
+            + 4
+            * param.R
+            * T
+            / param.F
+            * param.chi(c_23, T)
+            / 2
+            * param.kappa_e(c_23, T)
+            / c_23
+            * (c_e_n - c_e_s)
+            / leps23
+        )
+        self.algebraic[phi_e_s] = (
+            eps_p**param.p.b_e / param.p.L * phi_e_p
+            + eps_sep**param.s.b_e / param.s.L * phi_e_s
+        ) * leps12
 
         self.initial_conditions[phi_e_p] = pybamm.Scalar(0)
         self.initial_conditions[phi_e_n] = pybamm.Scalar(0)
@@ -205,8 +242,8 @@ class TanksInSeries(BaseModel):
         # Current in the solid
         ######################
 
-        self.algebraic[phi_s_p] = -iapp/param.F/a_p/param.p.L + j_p
-        self.algebraic[phi_s_n] = iapp/param.F/a_n/param.n.L + j_n
+        self.algebraic[phi_s_p] = -iapp / param.F / a_p / param.p.L + j_p
+        self.algebraic[phi_s_n] = iapp / param.F / a_n / param.n.L + j_n
 
         self.initial_conditions[phi_s_p] = param.ocv_init
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
