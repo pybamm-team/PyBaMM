@@ -318,7 +318,7 @@ def solve_laplace_equation(coord_sys="cartesian"):
     return solver.solve(model)
 
 
-class TestFiniteVolumeLaplacian:
+class TestFiniteVolumeLaplacian(TestCase):
     def test_laplacian_cartesian(self):
         solution = solve_laplace_equation(coord_sys="cartesian")
         np.testing.assert_array_almost_equal(
