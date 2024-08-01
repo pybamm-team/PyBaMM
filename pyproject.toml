@@ -179,6 +179,8 @@ build-type = "Release"
 if.any.env.BUILD_IDAKLU = true
 if.any.env.CIBUILDWHEEL = true
 wheel.cmake = true
+if.platform_system = "$linux"
+wheel.cmake = false
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
