@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "scikit-build-core>=0.9.8",
+    "scikit-build-core>=0.9.9",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.5; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
@@ -152,17 +152,12 @@ MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_paramet
 [tool.scikit-build]
 minimum-version = "0.9"
 build-dir = "build/{wheel_tag}"
-# install.components = ["python", "docs", "examples"]
-
-[tool.scikit-build.cmake]
-version = ">=3.13"
-verbose = true
-build-type = "Release"
 
 [tool.scikit-build.logging]
 level = "INFO"
 
 [tool.scikit-build.wheel]
+cmake = false
 expand-macos-universal-tags = true
 
 [tool.scikit-build.sdist]
@@ -175,35 +170,15 @@ include = [
     "pybamm/plotting/mplstyle",
 ]
 
-# graft pybamm
-# include CITATION.cff
-# prune tests
+[tool.scikit-build.cmake]
+version = ">=3.13"
+verbose = true
+build-type = "Release"
 
-# exclude CHANGELOG.md CODE-OF-CONDUCT.md CONTRIBUTING.md all_contributors.md
-# include CMakeLists.txt
-
-# global-exclude __pycache__ *.py[cod] .venv
-
-
-# [tool.setuptools]
-# include-package-data = true
-
-# # List of files to include as package data. These are mainly the parameter CSV files in
-# # the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
-# # README.md files, and specific .txt files inside the pybamm/ directory are also included.
-# # These are specified to be included in the SDist through MANIFEST.in.
-# [tool.setuptools.package-data]
-# pybamm = [
-#     "*.txt",
-#     "*.md",
-#     "*.csv",
-#     "*.py",
-#     "pybamm/CITATIONS.bib",
-#     "pybamm/plotting/mplstyle",
-# ]
-
-# [tool.setuptools.packages.find]
-# include = ["pybamm", "pybamm.*"]
+[[tool.scikit-build.overrides]]
+if.any.env.BUILD_IDAKLU = true
+if.any.env.CIBUILDWHEEL = true
+wheel.cmake = true
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
