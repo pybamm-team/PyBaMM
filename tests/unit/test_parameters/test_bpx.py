@@ -1,7 +1,7 @@
 #
 # Tests for the create_from_bpx function
 #
-from tests import TestCase
+
 
 import tempfile
 import unittest
@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 
-class TestBPX(TestCase):
+class TestBPX(unittest.TestCase):
     def setUp(self):
         self.base = {
             "Header": {

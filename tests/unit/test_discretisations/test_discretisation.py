@@ -1,7 +1,7 @@
 #
 # Tests for the base model class
 #
-from tests import TestCase
+
 import pybamm
 
 import numpy as np
@@ -18,7 +18,7 @@ from scipy.sparse import block_diag, csc_matrix
 from scipy.sparse.linalg import inv
 
 
-class TestDiscretise(TestCase):
+class TestDiscretise(unittest.TestCase):
     def test_concatenate_in_order(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")

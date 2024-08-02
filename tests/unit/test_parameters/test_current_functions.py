@@ -1,7 +1,7 @@
 #
 # Tests for current input functions
 #
-from tests import TestCase
+
 import pybamm
 import numbers
 import unittest
@@ -11,7 +11,7 @@ import pytest
 from tests import no_internet_connection
 
 
-class TestCurrentFunctions(TestCase):
+class TestCurrentFunctions(unittest.TestCase):
     def test_constant_current(self):
         # test simplify
         param = pybamm.electrical_parameters

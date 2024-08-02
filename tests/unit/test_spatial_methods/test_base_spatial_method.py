@@ -1,7 +1,7 @@
 #
 # Test for the base Spatial Method class
 #
-from tests import TestCase
+
 import numpy as np
 import pybamm
 import unittest
@@ -12,7 +12,7 @@ from tests import (
 )
 
 
-class TestSpatialMethod(TestCase):
+class TestSpatialMethod(unittest.TestCase):
     def test_basics(self):
         mesh = get_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod()
