@@ -10,7 +10,7 @@ class TestThevenin(TestCase):
     def test_standard_model(self):
         model = pybamm.equivalent_circuit.Thevenin()
         model.check_well_posedness()
-        
+
     def test_default_properties(self):
         model = pybamm.equivalent_circuit.Thevenin()
         x = model.variables["x ECMD"]
@@ -18,7 +18,7 @@ class TestThevenin(TestCase):
         # test var_pts
         default_var_pts = model.default_var_pts
         self.assertEqual(default_var_pts, {x: 20})
-        
+
     def test_changing_number_of_rcs(self):
         options = {"number of rc elements": 0}
         model = pybamm.equivalent_circuit.Thevenin(options=options)
