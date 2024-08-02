@@ -174,8 +174,7 @@ pybamm = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["pybamm", "pybamm.*"]
-
+where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]

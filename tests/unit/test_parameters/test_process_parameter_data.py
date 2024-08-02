@@ -13,7 +13,7 @@ import unittest
 class TestProcessParameterData(TestCase):
     def test_process_1D_data(self):
         name = "lico2_ocv_example"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_1D_data(name, path)
         self.assertEqual(processed[0], name)
         self.assertIsInstance(processed[1], tuple)
@@ -22,7 +22,7 @@ class TestProcessParameterData(TestCase):
 
     def test_process_2D_data(self):
         name = "lico2_diffusivity_Dualfoil1998_2D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_2D_data(name, path)
         self.assertEqual(processed[0], name)
         self.assertIsInstance(processed[1], tuple)
@@ -32,7 +32,7 @@ class TestProcessParameterData(TestCase):
 
     def test_process_2D_data_csv(self):
         name = "data_for_testing_2D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_2D_data_csv(name, path)
 
         self.assertEqual(processed[0], name)
@@ -43,7 +43,7 @@ class TestProcessParameterData(TestCase):
 
     def test_process_3D_data_csv(self):
         name = "data_for_testing_3D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_3D_data_csv(name, path)
 
         self.assertEqual(processed[0], name)
