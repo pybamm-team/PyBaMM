@@ -47,8 +47,12 @@ class TanksInSeries(BaseModel):
             "X-averaged positive particle surface concentration [mol.m-3]"
         )
 
-        q_ave_n = pybamm.Variable("X-averaged negative particle concentration gradient [mol.m-4]")
-        q_ave_p = pybamm.Variable("X-averaged positive particle concentration gradient [mol.m-4]")
+        q_ave_n = pybamm.Variable(
+            "X-averaged negative particle concentration gradient [mol.m-4]"
+        )
+        q_ave_p = pybamm.Variable(
+            "X-averaged positive particle concentration gradient [mol.m-4]"
+        )
 
         phi_e_n = pybamm.Variable("X-averaged negative electrolyte potential [V]")
         phi_e_s = pybamm.Variable("X-averaged separator electrolyte potential [V]")
