@@ -5,7 +5,7 @@
 #  by the idaklu solver, and does not possesses any capability to calculate
 #  values itself since it does not have access to the full state vector
 #
-from tests import TestCase
+
 import casadi
 import pybamm
 import tests
@@ -68,7 +68,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariableComputed(TestCase):
+class TestProcessedVariableComputed(unittest.TestCase):
     def test_processed_variable_0D(self):
         # without space
         y = pybamm.StateVector(slice(0, 1))

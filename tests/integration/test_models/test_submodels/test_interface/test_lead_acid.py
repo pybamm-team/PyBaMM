@@ -1,13 +1,13 @@
 #
 # Tests for the electrode-electrolyte interface equations for lead-acid models
 #
-from tests import TestCase
+
 import pybamm
 from tests import get_discretisation_for_testing
 import unittest
 
 
-class TestMainReaction(TestCase):
+class TestMainReaction(unittest.TestCase):
     def setUp(self):
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration [mol.m-3]",
