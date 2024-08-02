@@ -8,12 +8,19 @@ import pytest
 
 class TestSettings:
     def test_simplify(self):
+        with pytest.raises(TypeError):
+            pybamm.settings.simplify = "Not Bool"
+
         assert pybamm.settings.simplify
 
         pybamm.settings.simplify = False
         assert not pybamm.settings.simplify
 
         pybamm.settings.simplify = True
+
+    def test_debug_mode(self):
+        with pytest.raises(TypeError):
+            pybamm.settings.debug_mode = "Not bool"
 
     def test_smoothing_parameters(self):
         assert pybamm.settings.min_max_mode == "exact"

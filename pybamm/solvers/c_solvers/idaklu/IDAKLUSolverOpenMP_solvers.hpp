@@ -61,7 +61,7 @@ public:
     Base::LS = SUNLinSol_SPBCGS(
       Base::yy,
       Base::precon_type,
-      Base::options.linsol_max_iterations,
+      Base::setup_opts.linsol_max_iterations,
       Base::sunctx
     );
     Base::Initialize();
@@ -81,7 +81,7 @@ public:
     Base::LS = SUNLinSol_SPFGMR(
       Base::yy,
       Base::precon_type,
-      Base::options.linsol_max_iterations,
+      Base::setup_opts.linsol_max_iterations,
       Base::sunctx
     );
     Base::Initialize();
@@ -101,7 +101,7 @@ public:
     Base::LS = SUNLinSol_SPGMR(
       Base::yy,
       Base::precon_type,
-      Base::options.linsol_max_iterations,
+      Base::setup_opts.linsol_max_iterations,
       Base::sunctx
     );
     Base::Initialize();
@@ -121,7 +121,7 @@ public:
     Base::LS = SUNLinSol_SPTFQMR(
       Base::yy,
       Base::precon_type,
-      Base::options.linsol_max_iterations,
+      Base::setup_opts.linsol_max_iterations,
       Base::sunctx
     );
     Base::Initialize();

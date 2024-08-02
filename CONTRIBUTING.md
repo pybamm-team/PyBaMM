@@ -149,9 +149,13 @@ The `test_optional_dependencies` function extracts `pybamm` mandatory distributi
 
 ## Testing
 
-All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
+All code requires testing. We use the [pytest](https://docs.pytest.org/en/stable/) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-We also use [pytest](https://docs.pytest.org/en/latest/) along with the [nbmake](https://github.com/treebeardtech/nbmake) and the [pytest-xdist](https://pypi.org/project/pytest-xdist/) plugins to test the example notebooks.
+We use following plugins for various needs:
+
+[nbmake](https://github.com/treebeardtech/nbmake/) : plugins to test the example notebooks.
+
+[pytest-xdist](https://pypi.org/project/pytest-xdist/) : plugins to run tests in parallel.
 
 If you have `nox` installed, to run unit tests, type
 
@@ -162,14 +166,14 @@ nox -s unit
 else, type
 
 ```bash
-python run-tests.py --unit
+pytest -m unit
 ```
 
 ### Writing tests
 
 Every new feature should have its own test. To create ones, have a look at the `test` directory and see if there's a test for a similar method. Copy-pasting this is a good way to start.
 
-Next, add some simple (and speedy!) tests of your main features. If these run without exceptions that's a good start! Next, check the output of your methods using any of these [assert methods](https://docs.python.org/3.3/library/unittest.html#assert-methods).
+Next, add some simple (and speedy!) tests of your main features. If these run without exceptions that's a good start! Next, check the output of your methods using [assert statements](https://docs.pytest.org/en/7.1.x/how-to/assert.html).
 
 ### Running more tests
 
@@ -193,7 +197,7 @@ nox -s examples
 Alternatively, you may use `pytest` directly with the `--nbmake` flag:
 
 ```bash
-pytest --nbmake
+pytest --nbmake docs/source/examples/
 ```
 
 which runs all the notebooks in the `docs/source/examples/notebooks/` folder in parallel by default, using the `pytest-xdist` plugin.
@@ -245,19 +249,19 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 1. Run individual test scripts instead of the whole test suite:
 
    ```bash
-   python tests/unit/path/to/test
+   pytest tests/unit/path/to/test
    ```
 
    You can also run an individual test from a particular script, e.g.
 
    ```bash
-   python tests/unit/test_quick_plot.py TestQuickPlot.test_failure
+   pytest tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model
    ```
 
    If you want to run several, but not all, the tests from a script, you can restrict which tests are run from a particular script by using the skipping decorator:
 
    ```python
-   @unittest.skip("")
+   @pytest.mark.skip("")
    def test_bit_of_code(self):
        ...
    ```
