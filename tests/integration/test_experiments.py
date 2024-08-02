@@ -1,13 +1,13 @@
 #
 # Test some experiments
 #
-from tests import TestCase
+
 import pybamm
 import numpy as np
 import unittest
 
 
-class TestExperiments(TestCase):
+class TestExperiments(unittest.TestCase):
     def test_discharge_rest_charge(self):
         experiment = pybamm.Experiment(
             [

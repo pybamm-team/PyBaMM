@@ -1,7 +1,7 @@
 #
 # Tests for the serialisation class
 #
-from tests import TestCase
+
 import json
 import os
 import unittest
@@ -86,7 +86,7 @@ def mesh_var_dict():
     return mesh, mesh_json
 
 
-class TestSerialiseModels(TestCase):
+class TestSerialiseModels(unittest.TestCase):
     def test_user_defined_model_recreaction(self):
         # Start with a base model
         model = pybamm.BaseModel()
@@ -146,7 +146,7 @@ class TestSerialiseModels(TestCase):
         os.remove("heat_equation.json")
 
 
-class TestSerialise(TestCase):
+class TestSerialise(unittest.TestCase):
     # test the symbol encoder
 
     def test_symbol_encoder_symbol(self):

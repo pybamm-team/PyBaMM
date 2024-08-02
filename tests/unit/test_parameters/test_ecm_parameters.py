@@ -1,7 +1,7 @@
 #
 # Tests for the equivalent circuit parameters
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
@@ -33,7 +33,7 @@ values = {
 parameter_values = pybamm.ParameterValues(values)
 
 
-class TestEcmParameters(TestCase):
+class TestEcmParameters(unittest.TestCase):
     def test_init_parameters(self):
         param = pybamm.EcmParameters()
 

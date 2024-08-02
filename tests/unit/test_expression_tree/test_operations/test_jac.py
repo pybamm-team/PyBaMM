@@ -1,7 +1,7 @@
 #
 # Tests for the jacobian methods
 #
-from tests import TestCase
+
 import pybamm
 
 import numpy as np
@@ -10,7 +10,7 @@ from scipy.sparse import eye
 from tests import get_mesh_for_testing
 
 
-class TestJacobian(TestCase):
+class TestJacobian(unittest.TestCase):
     def test_variable_is_statevector(self):
         a = pybamm.Symbol("a")
         with self.assertRaisesRegex(

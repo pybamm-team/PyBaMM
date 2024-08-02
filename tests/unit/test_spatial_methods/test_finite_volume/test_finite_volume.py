@@ -1,7 +1,7 @@
 #
 # Tests for the Finite Volume Method
 #
-from tests import TestCase
+
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -13,7 +13,7 @@ from scipy.sparse import kron, eye
 import unittest
 
 
-class TestFiniteVolume(TestCase):
+class TestFiniteVolume(unittest.TestCase):
     def test_node_to_edge_to_node(self):
         # Create discretisation
         mesh = get_mesh_for_testing()
