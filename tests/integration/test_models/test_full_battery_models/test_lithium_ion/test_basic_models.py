@@ -42,3 +42,9 @@ class TestBasicDFNHalfCell(BaseBasicModelTest):
     def setUp(self):
         options = {"working electrode": "positive"}
         self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)
+
+
+class TestTanksInSeries(BaseBasicModelTest):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.model = pybamm.lithium_ion.TanksInSeries()
