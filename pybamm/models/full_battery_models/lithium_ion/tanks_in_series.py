@@ -47,8 +47,8 @@ class TanksInSeries(BaseModel):
             "X-averaged positive particle surface concentration [mol.m-3]"
         )
 
-        q_ave_n = pybamm.Variable("X-averaged negative particle concentration gradient")
-        q_ave_p = pybamm.Variable("X-averaged positive particle concentration gradient")
+        q_ave_n = pybamm.Variable("X-averaged negative particle concentration gradient [mol.m-4]")
+        q_ave_p = pybamm.Variable("X-averaged positive particle concentration gradient [mol.m-4]")
 
         phi_e_n = pybamm.Variable("X-averaged negative electrolyte potential [V]")
         phi_e_s = pybamm.Variable("X-averaged separator electrolyte potential [V]")
@@ -61,10 +61,6 @@ class TanksInSeries(BaseModel):
         eps_p = pybamm.Parameter("Positive electrode porosity")
         eps_n = pybamm.Parameter("Negative electrode porosity")
         eps_sep = pybamm.Parameter("Separator porosity")
-
-        # Active material volume fraction (eps + eps_s + eps_inactive = 1)
-        # eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
-        # eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Isothermal model with constant temperature
         T = param.T_init
@@ -110,12 +106,8 @@ class TanksInSeries(BaseModel):
         self.rhs[c_s_n] = -3 * j_n / param.n.prim.R_typ
         self.rhs[c_s_p] = -3 * j_p / param.p.prim.R_typ
 
-        self.initial_conditions[c_s_n] = pybamm.x_average(param.n.prim.c_init)
-        self.initial_conditions[c_s_p] = pybamm.x_average(param.p.prim.c_init)
-
-        # Discretized Particle Concentration Gradient
-        q_ave_n = pybamm.Variable("X-averaged negative particle concentration gradient")
-        q_ave_p = pybamm.Variable("X-averaged positive particle concentration gradient")
+        self.initial_conditions[c_s_n] = param.n.prim.c_init_av
+        self.initial_conditions[c_s_p] = param.p.prim.c_init_av
 
         self.rhs[q_ave_n] = (
             -30 * param.n.prim.D(c_s_n, T) * q_ave_n - 45 / 2 * j_n / param.n.prim.R_typ
@@ -194,40 +186,25 @@ class TanksInSeries(BaseModel):
             - 8 * param.n.prim.D(c_s_n, T) * q_ave_n
         )
 
-        self.initial_conditions[c_surf_ave_p] = param.p.prim.c_init
-        self.initial_conditions[c_surf_ave_n] = param.n.prim.c_init
+        self.initial_conditions[c_surf_ave_p] = param.p.prim.c_init_av
+        self.initial_conditions[c_surf_ave_n] = param.n.prim.c_init_av
 
         ######################
         # Current in the electrolyte
         ######################
 
+        RT_F = param.R * T / param.F
+        elec_thermo_p = param.chi(c_12, T) / 2 * param.kappa_e(c_12, T)
         self.algebraic[phi_e_p] = (
             -iapp
             - 2 * param.kappa_e(c_12, T) * (phi_e_s - phi_e_p) / leps12
-            + 4
-            * param.R
-            * T
-            * param.F
-            * param.chi(c_12, T)
-            / 2
-            * param.kappa_e(c_12, T)
-            / c_12
-            * (c_e_s - c_e_p)
-            / leps12
+            + 4 * RT_F * elec_thermo_p / c_12 * (c_e_s - c_e_p) / leps12
         )
+        elec_thermo_n = param.chi(c_23, T) / 2 * param.kappa_e(c_23, T)
         self.algebraic[phi_e_n] = (
             -iapp
             - 2 * param.kappa_e(c_23, T) * (phi_e_n - phi_e_s) / leps23
-            + 4
-            * param.R
-            * T
-            / param.F
-            * param.chi(c_23, T)
-            / 2
-            * param.kappa_e(c_23, T)
-            / c_23
-            * (c_e_n - c_e_s)
-            / leps23
+            + 4 * RT_F * elec_thermo_n / c_23 * (c_e_n - c_e_s) / leps23
         )
         self.algebraic[phi_e_s] = (
             eps_p**param.p.b_e / param.p.L * phi_e_p
@@ -267,8 +244,8 @@ class TanksInSeries(BaseModel):
             "X-averaged positive particle concentration [mol.m-3]": c_s_p,
             "X-averaged negative particle surface concentration [mol.m-3]": c_surf_ave_n,
             "X-averaged positive particle surface concentration [mol.m-3]": c_surf_ave_p,
-            "X-averaged negative particle concentration gradient": q_ave_n,
-            "X-averaged positive particle concentration gradient": q_ave_p,
+            "X-averaged negative particle concentration gradient [mol.m-4]": q_ave_n,
+            "X-averaged positive particle concentration gradient [mol.m-4]": q_ave_p,
             "X-averaged positive electrolyte potential [V]": phi_e_p,
             "X-averaged negative electrolyte potential [V]": phi_e_n,
             "X-averaged separator electrolyte potential [V]": phi_e_s,
