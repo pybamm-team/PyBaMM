@@ -1,14 +1,14 @@
 #
 # Tests for the surface formulation
 #
-from tests import TestCase
+
 import pybamm
 import numpy as np
 import unittest
 from tests import StandardOutputComparison
 
 
-class TestCompareOutputs(TestCase):
+class TestCompareOutputs(unittest.TestCase):
     def test_compare_outputs_surface_form(self):
         # load models
         options = [

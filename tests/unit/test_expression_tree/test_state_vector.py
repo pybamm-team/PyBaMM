@@ -1,7 +1,7 @@
 #
 # Tests for the State Vector class
 #
-from tests import TestCase
+
 import pybamm
 import numpy as np
 
@@ -9,7 +9,7 @@ import unittest
 import unittest.mock as mock
 
 
-class TestStateVector(TestCase):
+class TestStateVector(unittest.TestCase):
     def test_evaluate(self):
         sv = pybamm.StateVector(slice(0, 10))
         y = np.linspace(0, 2, 19)
@@ -97,7 +97,7 @@ class TestStateVector(TestCase):
         pybamm.settings.debug_mode = original_debug_mode
 
 
-class TestStateVectorDot(TestCase):
+class TestStateVectorDot(unittest.TestCase):
     def test_evaluate(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
         y_dot = np.linspace(0, 2, 19)

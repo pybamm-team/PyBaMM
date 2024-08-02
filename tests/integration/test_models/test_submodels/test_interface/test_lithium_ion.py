@@ -1,7 +1,7 @@
 #
 # Tests for the electrode-electrolyte interface equations for lithium-ion models
 #
-from tests import TestCase
+
 import pybamm
 from tests import get_discretisation_for_testing
 
@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 
 
-class TestExchangeCurrentDensity(TestCase):
+class TestExchangeCurrentDensity(unittest.TestCase):
     def setUp(self):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
