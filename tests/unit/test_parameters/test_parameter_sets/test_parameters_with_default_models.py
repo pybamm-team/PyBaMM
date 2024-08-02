@@ -1,12 +1,12 @@
 #
 # Tests each parameter set with the standard model associated with that parameter set
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestParameterValuesWithModel(TestCase):
+class TestParameterValuesWithModel(unittest.TestCase):
     def test_parameter_values_with_model(self):
         param_to_model = {
             "Ai2020": pybamm.lithium_ion.DFN(

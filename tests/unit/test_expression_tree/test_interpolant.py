@@ -1,7 +1,7 @@
 #
 # Tests for the Function classes
 #
-from tests import TestCase
+
 import pybamm
 
 import unittest
@@ -9,7 +9,7 @@ import unittest.mock as mock
 import numpy as np
 
 
-class TestInterpolant(TestCase):
+class TestInterpolant(unittest.TestCase):
     def test_errors(self):
         with self.assertRaisesRegex(ValueError, "x1"):
             pybamm.Interpolant(np.ones(10), np.ones(11), pybamm.Symbol("a"))

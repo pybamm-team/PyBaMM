@@ -1,7 +1,7 @@
 #
 # Test for the scikit-fem Finite Element Mesh class
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 import numpy as np
@@ -25,7 +25,7 @@ def get_param():
     )
 
 
-class TestScikitFiniteElement2DSubMesh(TestCase):
+class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = get_param()
         geometry = pybamm.battery_geometry(
@@ -284,7 +284,7 @@ class TestScikitFiniteElement2DSubMesh(TestCase):
             np.testing.assert_array_equal(x, y)
 
 
-class TestScikitFiniteElementChebyshev2DSubMesh(TestCase):
+class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = get_param()
 
@@ -347,7 +347,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(TestCase):
             pybamm.ScikitChebyshev2DSubMesh(lims, None)
 
 
-class TestScikitExponential2DSubMesh(TestCase):
+class TestScikitExponential2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = get_param()
 
@@ -416,7 +416,7 @@ class TestScikitExponential2DSubMesh(TestCase):
             pybamm.ScikitExponential2DSubMesh(None, None, side="bottom")
 
 
-class TestScikitUser2DSubMesh(TestCase):
+class TestScikitUser2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = get_param()
 

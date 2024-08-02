@@ -2,13 +2,13 @@
 # Tests for the Broadcast class
 #
 import unittest
-from tests import TestCase
+from tests import assert_domain_equal
 import numpy as np
 
 import pybamm
 
 
-class TestBroadcasts(TestCase):
+class TestBroadcasts(unittest.TestCase):
     def test_primary_broadcast(self):
         a = pybamm.Symbol("a")
         broad_a = pybamm.PrimaryBroadcast(a, ["negative electrode"])
@@ -24,7 +24,7 @@ class TestBroadcasts(TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         broad_a = pybamm.PrimaryBroadcast(a, ["negative particle"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             broad_a.domains,
             {
                 "primary": ["negative particle"],
@@ -41,7 +41,7 @@ class TestBroadcasts(TestCase):
             },
         )
         broad_a = pybamm.PrimaryBroadcast(a, ["negative particle"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             broad_a.domains,
             {
                 "primary": ["negative particle"],
@@ -83,7 +83,7 @@ class TestBroadcasts(TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         broad_a = pybamm.SecondaryBroadcast(a, ["negative electrode"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             broad_a.domains,
             {
                 "primary": ["negative particle"],
@@ -93,7 +93,7 @@ class TestBroadcasts(TestCase):
         )
         self.assertTrue(broad_a.broadcasts_to_nodes)
         broadbroad_a = pybamm.SecondaryBroadcast(broad_a, ["negative particle size"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             broadbroad_a.domains,
             {
                 "primary": ["negative particle"],
@@ -140,7 +140,7 @@ class TestBroadcasts(TestCase):
             },
         )
         broad_a = pybamm.TertiaryBroadcast(a, "negative electrode")
-        self.assertDomainEqual(
+        assert_domain_equal(
             broad_a.domains,
             {
                 "primary": ["negative particle"],
@@ -269,7 +269,7 @@ class TestBroadcasts(TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         broad_a = pybamm.SecondaryBroadcastToEdges(a, ["negative electrode"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             broad_a.domains,
             {
                 "primary": ["negative particle"],
@@ -290,7 +290,7 @@ class TestBroadcasts(TestCase):
             },
         )
         broad_a = pybamm.TertiaryBroadcastToEdges(a, ["negative electrode"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             broad_a.domains,
             {
                 "primary": ["negative particle"],
