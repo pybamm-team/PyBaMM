@@ -66,7 +66,7 @@ class TanksInSeries(BaseModel):
         T = param.T_init
 
         # Current density
-        iapp = param.current_density_with_time
+        iapp = -param.current_density_with_time
         a_n = 3 * param.n.prim.epsilon_s_av / param.n.prim.R_typ
         a_p = 3 * param.p.prim.epsilon_s_av / param.p.prim.R_typ
 
@@ -153,8 +153,8 @@ class TanksInSeries(BaseModel):
             + 2 * param.D_e(c_23, T) * (c_e_n - c_e_s) / leps23
         ) / (eps_sep * param.s.L)
         self.rhs[c_e_p] = (
-            -2 * param.D_e(c_12, T) * (c_e_s - c_e_p) / leps12 / (eps_p * param.p.L)
-            - (1 - param.t_plus(c_e_p, T)) * iapp / param.F / eps_p / param.p.L
+            2 * param.D_e(c_12, T) * (c_e_s - c_e_p) / leps12 / (eps_p * param.p.L)
+            + (1 - param.t_plus(c_e_p, T)) * iapp / param.F / eps_p / param.p.L
         )
 
         self.initial_conditions[c_e_n] = param.c_e_init
