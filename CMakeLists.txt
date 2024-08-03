@@ -48,8 +48,8 @@ set(IDAKLU_EXPR_CASADI_SOURCE_FILES "")
 if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON" )
   add_compile_definitions(CASADI_ENABLE)
   set(IDAKLU_EXPR_CASADI_SOURCE_FILES
-    pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
-    pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
   )
 endif()
 

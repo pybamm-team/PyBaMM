@@ -169,8 +169,8 @@ pybamm = [
     "*.md",
     "*.csv",
     "*.py",
-    "pybamm/CITATIONS.bib",
-    "pybamm/plotting/mplstyle",
+    "src/pybamm/CITATIONS.bib",
+    "src/pybamm/plotting/mplstyle",
 ]
 
 [tool.setuptools.packages.find]
@@ -263,7 +263,7 @@ log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
-source = ["pybamm"]
+source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
 
 [tool.repo-review]
