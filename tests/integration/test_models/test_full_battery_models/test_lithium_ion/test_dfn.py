@@ -38,7 +38,7 @@ class TestDFN(BaseIntegrationTestLithiumIon, TestCase):
 
 class TestDFNWithSizeDistribution(TestCase):
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup(self):
         params = pybamm.ParameterValues("Marquis2019")
         self.params = pybamm.get_size_distribution_parameters(params)
 
