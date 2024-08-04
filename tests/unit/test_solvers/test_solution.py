@@ -2,7 +2,7 @@
 # Tests for the Solution class
 #
 import os
-from tests import TestCase
+
 import json
 import pybamm
 import unittest
@@ -13,7 +13,7 @@ from tests import get_discretisation_for_testing
 from tempfile import TemporaryDirectory
 
 
-class TestSolution(TestCase):
+class TestSolution(unittest.TestCase):
     def test_init(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))

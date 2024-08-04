@@ -1,12 +1,12 @@
 #
 # Tests for O'Kane (2022) parameter set
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestEcker2015(TestCase):
+class TestEcker2015(unittest.TestCase):
     def test_functions(self):
         param = pybamm.ParameterValues("Ecker2015")
         sto = pybamm.Scalar(0.5)

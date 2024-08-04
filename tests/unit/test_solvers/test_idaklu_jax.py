@@ -1,7 +1,7 @@
 #
 # Tests for the KLU-Jax interface class
 #
-from tests import TestCase
+
 from parameterized import parameterized
 
 import pybamm
@@ -87,7 +87,7 @@ if pybamm.have_idaklu() and pybamm.have_jax():
     pybamm.have_idaklu() and pybamm.have_jax(),
     "Both IDAKLU and JAX are available",
 )
-class TestIDAKLUJax_NoJax(TestCase):
+class TestIDAKLUJax_NoJax(unittest.TestCase):
     def test_instantiate_fails(self):
         with self.assertRaises(ModuleNotFoundError):
             pybamm.IDAKLUJax([], [], [])
@@ -97,7 +97,7 @@ class TestIDAKLUJax_NoJax(TestCase):
     not pybamm.have_idaklu() or not pybamm.have_jax(),
     "IDAKLU Solver and/or JAX are not available",
 )
-class TestIDAKLUJax(TestCase):
+class TestIDAKLUJax(unittest.TestCase):
     # Initialisation tests
 
     def test_initialise_twice(self):

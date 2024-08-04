@@ -1,4 +1,3 @@
-from tests import TestCase
 import casadi
 import pybamm
 import unittest
@@ -7,7 +6,7 @@ from scipy.optimize import least_squares
 import tests
 
 
-class TestCasadiAlgebraicSolver(TestCase):
+class TestCasadiAlgebraicSolver(unittest.TestCase):
     def test_algebraic_solver_init(self):
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-4)
         self.assertEqual(solver.tol, 1e-4)
@@ -171,7 +170,7 @@ class TestCasadiAlgebraicSolver(TestCase):
         np.testing.assert_array_equal(solution.y, -7)
 
 
-class TestCasadiAlgebraicSolverSensitivity(TestCase):
+class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input(self):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var")

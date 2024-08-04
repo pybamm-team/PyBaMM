@@ -1,7 +1,7 @@
 #
 # Tests for the jacobian methods for two-dimensional objects
 #
-from tests import TestCase
+
 import pybamm
 
 import numpy as np
@@ -12,7 +12,7 @@ from tests import (
 )
 
 
-class TestJacobian(TestCase):
+class TestJacobian(unittest.TestCase):
     def test_linear(self):
         y = pybamm.StateVector(slice(0, 8))
         u = pybamm.StateVector(slice(0, 2), slice(4, 6))
