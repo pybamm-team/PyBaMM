@@ -208,7 +208,7 @@ const std::vector<expr_int>& IREEFunction::get_row() {
   return m_func.row;
 }
 
-cosnt std::vector<expr_int>& IREEFunction::get_col() {
+const std::vector<expr_int>& IREEFunction::get_col() {
   DEBUG("IreeFunction get_col" << m_func.col.size());
   return m_func.col;
 }
