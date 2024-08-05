@@ -1,7 +1,7 @@
 #
 # Tests for the electrode-electrolyte interface equations
 #
-from tests import TestCase
+
 import pybamm
 from tests import get_discretisation_for_testing
 
@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 
 
-class TestButlerVolmer(TestCase):
+class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
         self.delta_phi_s_n = pybamm.Variable(
             "surface potential difference [V]",

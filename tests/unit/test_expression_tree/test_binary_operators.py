@@ -1,7 +1,7 @@
 #
 # Tests for the Binary Operator classes
 #
-from tests import TestCase
+
 import unittest
 import unittest.mock as mock
 
@@ -19,7 +19,7 @@ EMPTY_DOMAINS = {
 }
 
 
-class TestBinaryOperators(TestCase):
+class TestBinaryOperators(unittest.TestCase):
     def test_binary_operator(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

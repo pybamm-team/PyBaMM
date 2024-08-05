@@ -2,7 +2,6 @@
 Tests for the latexify.py
 """
 
-from tests import TestCase
 import os
 import platform
 import unittest
@@ -11,7 +10,7 @@ import uuid
 import pybamm
 
 
-class TestLatexify(TestCase):
+class TestLatexify(unittest.TestCase):
     def test_latexify(self):
         model_dfn = pybamm.lithium_ion.DFN()
         func_dfn = str(model_dfn.latexify())

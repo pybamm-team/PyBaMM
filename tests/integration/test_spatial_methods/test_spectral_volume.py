@@ -1,7 +1,7 @@
 #
 # Test for the operator class
 #
-from tests import TestCase
+
 import pybamm
 
 import numpy as np
@@ -76,7 +76,7 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
 
 
-class TestSpectralVolumeConvergence(TestCase):
+class TestSpectralVolumeConvergence(unittest.TestCase):
     def test_grad_div_broadcast(self):
         # create mesh and discretisation
         spatial_methods = {"macroscale": pybamm.SpectralVolume()}

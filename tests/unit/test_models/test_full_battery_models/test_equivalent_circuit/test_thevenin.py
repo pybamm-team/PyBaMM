@@ -1,16 +1,16 @@
 #
 # Tests for the Thevenin equivalant circuit model
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestThevenin(TestCase):
+class TestThevenin(unittest.TestCase):
     def test_standard_model(self):
         model = pybamm.equivalent_circuit.Thevenin()
         model.check_well_posedness()
-        
+
     def test_default_properties(self):
         model = pybamm.equivalent_circuit.Thevenin()
         x = model.variables["x ECMD"]

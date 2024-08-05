@@ -1,7 +1,7 @@
 #
 # Tests for the parameter processing functions
 #
-from tests import TestCase
+
 
 import os
 import numpy as np
@@ -10,7 +10,7 @@ import pybamm
 import unittest
 
 
-class TestProcessParameterData(TestCase):
+class TestProcessParameterData(unittest.TestCase):
     def test_process_1D_data(self):
         name = "lico2_ocv_example"
         path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
