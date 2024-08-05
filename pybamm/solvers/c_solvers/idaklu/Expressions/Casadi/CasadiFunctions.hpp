@@ -41,8 +41,8 @@ public:
 private:
   std::vector<expr_int> m_iw;  // cppcheck-suppress unusedStructMember
   std::vector<double> m_w;  // cppcheck-suppress unusedStructMember
-  std::vector<expr_int> m_rows;
-  std::vector<expr_int> m_cols;
+  std::vector<expr_int> m_rows;  // cppcheck-suppress unusedStructMember
+  std::vector<expr_int> m_cols;  // cppcheck-suppress unusedStructMember
 };
 
 /**
