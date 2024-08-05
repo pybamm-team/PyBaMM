@@ -65,12 +65,12 @@ if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
   add_compile_definitions(IREE_ENABLE)
   # Source file list
   set(IDAKLU_EXPR_IREE_SOURCE_FILES
-    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp
-    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp
-    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp
-    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp
-    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp
-    pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp
   )
 endif()
 
