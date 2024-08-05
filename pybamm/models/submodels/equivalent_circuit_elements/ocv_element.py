@@ -56,7 +56,7 @@ class OCVElement(pybamm.BaseSubModel):
 
     def set_events(self, variables):
         soc = variables["SoC"]
-        self.events = [
+        self.events += [
             pybamm.Event("Minimum SoC", soc),
             pybamm.Event("Maximum SoC", 1 - soc),
         ]
