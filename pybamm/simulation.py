@@ -243,7 +243,7 @@ class Simulation:
                     initial_soc, param=param, inplace=False, options=options
                 )
             )
-            # elif options["working electrode"] == "positive":
+        elif options["working electrode"] == "positive":
             self._parameter_values = (
                 self._unprocessed_parameter_values.set_initial_stoichiometry_half_cell(
                     initial_soc,
