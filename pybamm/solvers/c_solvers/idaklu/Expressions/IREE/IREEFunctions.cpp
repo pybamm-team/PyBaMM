@@ -203,12 +203,12 @@ expr_int IREEFunction::nnz_out() {
   return m_func.nnz;
 }
 
-std::vector<expr_int> IREEFunction::get_row() {
+const std::vector<expr_int>& IREEFunction::get_row() {
   DEBUG("IreeFunction get_row" << m_func.row.size());
   return m_func.row;
 }
 
-std::vector<expr_int> IREEFunction::get_col() {
+cosnt std::vector<expr_int>& IREEFunction::get_col() {
   DEBUG("IreeFunction get_col" << m_func.col.size());
   return m_func.col;
 }

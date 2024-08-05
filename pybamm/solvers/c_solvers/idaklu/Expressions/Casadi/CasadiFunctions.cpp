@@ -19,6 +19,12 @@ CasadiFunction::CasadiFunction(const BaseFunctionType &f) : Expression(), m_func
   m_res.resize(sz_res, nullptr);
   m_iw.resize(sz_iw, 0);
   m_w.resize(sz_w, 0);
+
+  if (m_func.n_out() > 0) {
+    casadi::Sparsity casadi_sparsity = m_func.sparsity_out(0);
+    m_rows = casadi_sparsity.get_row();
+    m_cols = casadi_sparsity.get_col();
+  }
 }
 
 // only call this once m_arg and m_res have been set appropriately
@@ -45,24 +51,14 @@ expr_int CasadiFunction::nnz_out() {
   return static_cast<expr_int>(m_func.nnz_out());
 }
 
-std::vector<expr_int> CasadiFunction::get_row() {
-  return get_row(0);
-}
-
-std::vector<expr_int> CasadiFunction::get_row(expr_int ind) {
+const std::vector<expr_int>& CasadiFunction::get_row() {
   DEBUG("CasadiFunction get_row(): " << m_func.name());
-  casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
-  return casadi_sparsity.get_row();
+  return m_rows;
 }
 
-std::vector<expr_int> CasadiFunction::get_col() {
-  return get_col(0);
-}
-
-std::vector<expr_int> CasadiFunction::get_col(expr_int ind) {
+const std::vector<expr_int>& CasadiFunction::get_col() {
   DEBUG("CasadiFunction get_col(): " << m_func.name());
-  casadi::Sparsity casadi_sparsity = m_func.sparsity_out(ind);
-  return casadi_sparsity.get_col();
+  return m_cols;
 }
 
 void CasadiFunction::operator()(const std::vector<realtype*>& inputs,
