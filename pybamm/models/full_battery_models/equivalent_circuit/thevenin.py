@@ -30,6 +30,9 @@ class Thevenin(pybamm.BaseModel):
                 throughput capacity in addition to discharge capacity. Must be one of
                 "true" or "false". "false" is the default, since calculating discharge
                 energy can be computationally expensive for simple models like SPM.
+            * "diffusion element" : str
+                Whether to include the diffusion element to the model. Must be one of
+                "true" or "false". "false" is the default.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -73,6 +76,7 @@ class Thevenin(pybamm.BaseModel):
     def set_options(self, extra_options=None):
         possible_options = {
             "calculate discharge energy": ["false", "true"],
+            "diffusion element": ["false", "true"],
             "operating mode": OperatingModes("current"),
             "number of rc elements": NaturalNumberOption(1),
         }
@@ -165,6 +169,18 @@ class Thevenin(pybamm.BaseModel):
             )
             self.element_counter += 1
 
+    def set_diffusion_submodel(self):
+        if self.options["diffusion element"] == "false":
+            self.submodels["Diffusion"] = (
+                pybamm.equivalent_circuit_elements.NoDiffusion(self.param, self.options)
+            )
+        elif self.options["diffusion element"] == "true":
+            self.submodels["Diffusion"] = (
+                pybamm.equivalent_circuit_elements.DiffusionElement(
+                    self.param, self.options
+                )
+            )
+
     def set_thermal_submodel(self):
         self.submodels["Thermal"] = pybamm.equivalent_circuit_elements.ThermalSubModel(
             self.param, self.options
@@ -180,6 +196,7 @@ class Thevenin(pybamm.BaseModel):
         self.set_ocv_submodel()
         self.set_resistor_submodel()
         self.set_rc_submodels()
+        self.set_diffusion_submodel()
         self.set_thermal_submodel()
         self.set_voltage_submodel()
 
@@ -227,3 +244,25 @@ class Thevenin(pybamm.BaseModel):
                 "Irreversible heat generation [W]",
             ],
         ]
+
+    @property
+    def default_var_pts(self):
+        x = pybamm.SpatialVariable(
+            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
+        )
+        return {x: 20}
+
+    @property
+    def default_geometry(self):
+        x = pybamm.SpatialVariable(
+            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
+        )
+        return {"ECMD particle": {x: {"min": 0, "max": 1}}}
+
+    @property
+    def default_submesh_types(self):
+        return {"ECMD particle": pybamm.Uniform1DSubMesh}
+
+    @property
+    def default_spatial_methods(self):
+        return {"ECMD particle": pybamm.FiniteVolume()}
