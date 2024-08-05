@@ -1,14 +1,14 @@
 #
 # Test for making copies
 #
-from tests import TestCase
+
 import numpy as np
 import pybamm
 import unittest
 from tests import get_mesh_for_testing
 
 
-class TestCopy(TestCase):
+class TestCopy(unittest.TestCase):
     def test_symbol_create_copy(self):
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")

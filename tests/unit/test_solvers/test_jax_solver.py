@@ -1,7 +1,7 @@
 import pybamm
 import unittest
 from tests import get_mesh_for_testing
-from tests import TestCase
+
 import sys
 import numpy as np
 
@@ -10,7 +10,7 @@ if pybamm.have_jax():
 
 
 @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
-class TestJaxSolver(TestCase):
+class TestJaxSolver(unittest.TestCase):
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()

@@ -1,7 +1,7 @@
 #
 # Tests for the base model class
 #
-from tests import TestCase
+
 import os
 import platform
 import subprocess  # nosec
@@ -16,7 +16,7 @@ from numpy import testing
 import pybamm
 
 
-class TestBaseModel(TestCase):
+class TestBaseModel(unittest.TestCase):
     def test_rhs_set_get(self):
         model = pybamm.BaseModel()
         rhs = {
