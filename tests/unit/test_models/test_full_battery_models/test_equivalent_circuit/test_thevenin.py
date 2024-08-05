@@ -16,9 +16,17 @@ class TestThevenin(TestCase):
         x = model.variables["x ECMD"]
 
         # test var_pts
-        default_var_pts = model.default_var_pts
-        self.assertEqual(default_var_pts, {x: 20})
+        self.assertEqual(model.default_var_pts, {x: 20})
         
+        # test geometry
+        self.assertEqual(model.default_geometry, {"ECMD particle": {x: {"min": 0, "max": 1}}})
+        
+        # test spatial methods
+        self.assertIsInstance(model.default_spatial_methods["ECMD particle"], pybamm.FiniteVolume)
+ 
+        # test submesh types
+        self.assertEqual(model.default_submesh_types, {"ECMD particle": pybamm.Uniform1DSubMesh})
+
     def test_changing_number_of_rcs(self):
         options = {"number of rc elements": 0}
         model = pybamm.equivalent_circuit.Thevenin(options=options)
