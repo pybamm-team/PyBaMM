@@ -1,7 +1,7 @@
 #
 # Tests for the Base Parameter Values class
 #
-from tests import TestCase
+
 
 import os
 import unittest
@@ -19,7 +19,7 @@ from pybamm.expression_tree.exceptions import OptionError
 import casadi
 
 
-class TestParameterValues(TestCase):
+class TestParameterValues(unittest.TestCase):
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})

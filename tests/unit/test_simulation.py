@@ -1,7 +1,7 @@
 import pybamm
 import numpy as np
 import pandas as pd
-from tests import TestCase
+
 import os
 import sys
 import unittest
@@ -12,7 +12,7 @@ from scipy.integrate import cumulative_trapezoid
 from tests import no_internet_connection
 
 
-class TestSimulation(TestCase):
+class TestSimulation(unittest.TestCase):
     def test_simple_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")

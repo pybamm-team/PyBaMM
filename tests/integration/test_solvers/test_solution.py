@@ -1,13 +1,13 @@
 #
 # Tests for the Solution class
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 import numpy as np
 
 
-class TestSolution(TestCase):
+class TestSolution(unittest.TestCase):
     def test_append(self):
         model = pybamm.lithium_ion.SPMe()
         # create geometry

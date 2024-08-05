@@ -3,7 +3,8 @@
 #
 import unittest
 import unittest.mock as mock
-from tests import TestCase
+from tests import assert_domain_equal
+
 
 import numpy as np
 
@@ -12,7 +13,7 @@ import sympy
 from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
-class TestConcatenations(TestCase):
+class TestConcatenations(unittest.TestCase):
     def test_base_concatenation(self):
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
@@ -81,7 +82,7 @@ class TestConcatenations(TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         conc = pybamm.concatenation(a, b)
-        self.assertDomainEqual(
+        assert_domain_equal(
             conc.domains,
             {
                 "primary": ["negative electrode", "separator", "positive electrode"],
@@ -158,7 +159,7 @@ class TestConcatenations(TestCase):
         concat = pybamm.concatenation(a, b, c)
         self.assertIsInstance(concat, pybamm.FullBroadcast)
         self.assertEqual(concat.orphans[0], pybamm.Scalar(0))
-        self.assertDomainEqual(
+        assert_domain_equal(
             concat.domains,
             {
                 "primary": ["negative electrode", "separator", "positive electrode"],

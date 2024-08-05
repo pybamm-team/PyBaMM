@@ -1,7 +1,7 @@
 #
 # Test for the operator class
 #
-from tests import TestCase
+
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -13,7 +13,7 @@ import numpy as np
 import unittest
 
 
-class TestFiniteVolumeConvergence(TestCase):
+class TestFiniteVolumeConvergence(unittest.TestCase):
     def test_grad_div_broadcast(self):
         # create mesh and discretisation
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -319,7 +319,7 @@ def solve_laplace_equation(coord_sys="cartesian"):
     return solver.solve(model)
 
 
-class TestFiniteVolumeLaplacian(TestCase):
+class TestFiniteVolumeLaplacian(unittest.TestCase):
     def test_laplacian_cartesian(self):
         solution = solve_laplace_equation(coord_sys="cartesian")
         np.testing.assert_array_almost_equal(
@@ -374,7 +374,7 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
     return solver.solve(model, [0, 1])
 
 
-class TestUpwindDownwind(TestCase):
+class TestUpwindDownwind(unittest.TestCase):
     def test_upwind(self):
         solution = solve_advection_equation("upwind")
         np.testing.assert_array_almost_equal(

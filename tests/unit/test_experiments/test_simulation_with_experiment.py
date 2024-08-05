@@ -1,7 +1,6 @@
 #
 # Test setting up a simulation with an experiment
 #
-from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -16,7 +15,7 @@ class ShortDurationCRate(pybamm.step.CRate):
         return 1
 
 
-class TestSimulationExperiment(TestCase):
+class TestSimulationExperiment(unittest.TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
