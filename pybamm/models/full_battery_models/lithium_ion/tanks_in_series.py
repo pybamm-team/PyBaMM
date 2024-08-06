@@ -3,7 +3,6 @@
 #
 import pybamm
 from .base_lithium_ion_model import BaseModel
-import numpy as np
 
 
 class TanksInSeries(BaseModel):
@@ -116,10 +115,12 @@ class TanksInSeries(BaseModel):
         self.initial_conditions[c_s_p] = param.p.prim.c_init_av
 
         self.rhs[q_ave_n] = (
-            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * j_n / param.n.prim.R_typ
+            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2
+            - 45 / 2 * j_n / param.n.prim.R_typ
         )
         self.rhs[q_ave_p] = (
-            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * j_p / param.p.prim.R_typ
+            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2
+            - 45 / 2 * j_p / param.p.prim.R_typ
         )
 
         self.initial_conditions[q_ave_n] = pybamm.Scalar(0)
@@ -266,7 +267,7 @@ class TanksInSeries(BaseModel):
             "Positive overpotential": eta_p,
             "Negative overpotential": eta_n,
             "Negative pore wall flux": j_n,
-            "Positive pore wall flux": j_p
+            "Positive pore wall flux": j_p,
         }
 
         # Events specify points at which a solution should terminate
