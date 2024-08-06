@@ -255,6 +255,8 @@ jobs:
             export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
             export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/include/:$LD_LIBRARY_PATH
             echo "$LD_LIBRARY_PATH"
+            brew install tree
+            tree $(pwd)/sundials_KLU_libs
 
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
