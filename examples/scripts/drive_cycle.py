@@ -5,7 +5,7 @@ import pybamm
 import pandas as pd
 import os
 
-os.chdir(pybamm.__path__[0] + "/..")
+os.chdir(pybamm.__path__[0] + "/.." + "/..")
 
 pybamm.set_logging_level("INFO")
 
