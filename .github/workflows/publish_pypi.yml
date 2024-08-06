@@ -252,7 +252,8 @@ jobs:
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
-            export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/libsuitesparseconfig.6.0.3.dylib:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/libsuitesparseconfig.6.dylib:$LD_LIBRARY_PATH
             echo "$LD_LIBRARY_PATH"
             brew install tree
             tree $(pwd)/sundials_KLU_libs/lib/
