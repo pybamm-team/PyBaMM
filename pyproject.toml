@@ -174,8 +174,8 @@ verbose = true
 build-type = "Release"
 
 [[tool.scikit-build.overrides]]
-if.any.env.BUILD_IDAKLU = "ON"
-if.any.env.CIBUILDWHEEL = "ON"
+if.any.env.BUILD_IDAKLU = true
+if.any.env.CIBUILDWHEEL = true
 wheel.cmake = true
 
 [tool.ruff]
