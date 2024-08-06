@@ -7,7 +7,6 @@ requires = [
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
-    # TODO: check if just pybind11 works or not
     "pybind11",
 ]
 build-backend = "scikit_build_core.build"
@@ -158,7 +157,6 @@ level = "INFO"
 
 [tool.scikit-build.wheel]
 cmake = false
-expand-macos-universal-tags = true
 
 [tool.scikit-build.sdist]
 include = [
@@ -176,8 +174,8 @@ verbose = true
 build-type = "Release"
 
 [[tool.scikit-build.overrides]]
-if.any.env.BUILD_IDAKLU = true
-if.any.env.CIBUILDWHEEL = true
+if.any.env.BUILD_IDAKLU = "ON"
+if.any.env.CIBUILDWHEEL = "ON"
 wheel.cmake = true
 
 [tool.ruff]

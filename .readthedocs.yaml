@@ -27,7 +27,6 @@ build:
     # Altered PDF build and upload job
     # This also runs on PR builds, but does not upload the PDF
     post_build:
-      - export BUILD_IDAKLU=OFF
       - mkdir --parents $READTHEDOCS_OUTPUT/pdf/
       # Generate LaTeX files in docs/build/ and doctrees in docs/_build/doctrees, skipping notebooks
       - python -m sphinx -T -E -b latex -d docs/_build/doctrees -D language=en docs docs/build/

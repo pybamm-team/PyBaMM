@@ -33,7 +33,7 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          python -m pip install --upgrade pip scikit-build-cire  wget cmake casadi numpy
+          python -m pip install --upgrade pip scikit-build-core wget cmake casadi numpy
           python -m pip install asv[virtualenv]
 
       - name: Install SuiteSparse and SUNDIALS
@@ -43,10 +43,6 @@ jobs:
         run: |
           asv machine --machine "GitHubRunner"
           asv run --machine "GitHubRunner" NEW --show-stderr -v
-        env:
-          # TODO: test this
-          SUNDIALS_INST: sundials_KLU_libs/
-          LD_LIBRARY_PATH: $HOME/.local/lib
 
       - name: Upload results as artifact
         uses: actions/upload-artifact@v4.3.5

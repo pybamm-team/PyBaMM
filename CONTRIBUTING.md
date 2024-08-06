@@ -55,7 +55,7 @@ You now have everything you need to start making changes!
 ### C. Merging your changes with PyBaMM
 
 10. [Test your code!](#testing)
-11. PyBaMM has online documentation at <http://docs.pybamm.org/>. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
+11. PyBaMM has online documentation at https://docs.pybamm.org/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
 13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
 14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
@@ -375,7 +375,7 @@ These docstrings can be fairly simple, but can also make use of [reStructuredTex
 
 In addition, we write a (very) small bit of documentation in separate reStructuredText files in the `docs` directory. Most of what these files do is simply import docstrings from the source code. But they also do things like add tables and indexes. If you've added a new class to a module, search the `docs` directory for that module's `.rst` file and add your class (in alphabetical order) to its index. If you've added a whole new module, copy-paste another module's file and add a link to your new file in the appropriate `index.rst` file.
 
-Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs` can be converted to HTML, PDF, and other formats. In particular, we use it to generate the documentation on <http://docs.pybamm.org/>
+Using [Sphinx](http://www.sphinx-doc.org/en/stable/), the documentation in `docs` can be converted to HTML, PDF, and other formats. In particular, we use it to generate the documentation on https://docs.pybamm.org/.
 
 ### Building the documentation
 
@@ -419,13 +419,12 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ### Installation
 
-Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/) and [scikit-build-core](https://scikit-build-core.readthedocs.io/en/latest/getting_started.html). It uses `CMake` to compile C++ extensions using [`pybind11`](https://pybind11.readthedocs.io/en/stable/) and [`casadi`](https://web.casadi.org/). The installation process is described in detail in the [source installation](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) page and is configured through the `CMakeLists.txt` file.
+Installation of PyBaMM and its dependencies is handled via [pip](https://pip.pypa.io/en/stable/) and [scikit-build-core](https://scikit-build-core.readthedocs.io/en/stable/getting_started.html). It uses `CMake` to compile C++ extensions using [`pybind11`](https://pybind11.readthedocs.io/en/stable/) and [`casadi`](https://web.casadi.org/). The installation process is described in detail in the [source installation](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) page and is configured through the `CMakeLists.txt` file.
 
 Configuration files:
 
 ```
 pyproject.toml
-.gitignore
 ```
 
 Note: `pyproject.toml` and `.gitignore` are used to include and exclude non-Python files and auxiliary package data for PyBaMM when distributing it. If a file is mentioned in `.gitignore`, it will not be included in the source distribution (SDist) by `scikit-build-core`, and subsequently not be included in the binary distribution (wheel).
@@ -445,7 +444,7 @@ Configuration files for various GitHub actions workflow can be found in `.github
 
 ### Codecov
 
-Code coverage (how much of our code is actually seen by the (linux) unit tests) is tested using [Codecov](https://docs.codecov.io/), a report is visible on <https://codecov.io/gh/pybamm-team/PyBaMM>.
+Code coverage (how much of our code is actually seen by the (linux) unit tests) is tested using [Codecov](https://docs.codecov.io/), a report is visible on https://codecov.io/gh/pybamm-team/PyBaMM.
 
 Configuration files:
 
@@ -455,7 +454,7 @@ Configuration files:
 
 ### Read the Docs
 
-Documentation is built using <https://readthedocs.org/> and published on <http://docs.pybamm.org/>.
+Documentation is built using https://readthedocs.org/ and published on http://docs.pybamm.org/.
 
 ### Google Colab
 
