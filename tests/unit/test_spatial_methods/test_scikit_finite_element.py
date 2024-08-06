@@ -1,14 +1,14 @@
 #
 # Test for the operator class
 #
-from tests import TestCase
+
 import pybamm
 from tests import get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
 import numpy as np
 import unittest
 
 
-class TestScikitFiniteElement(TestCase):
+class TestScikitFiniteElement(unittest.TestCase):
     def test_not_implemented(self):
         mesh = get_2p1d_mesh_for_testing(include_particles=False)
         spatial_method = pybamm.ScikitFiniteElement()

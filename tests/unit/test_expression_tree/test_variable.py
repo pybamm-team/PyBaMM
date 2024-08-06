@@ -1,7 +1,7 @@
 #
 # Tests for the Variable class
 #
-from tests import TestCase
+
 import unittest
 
 import numpy as np
@@ -10,7 +10,7 @@ import pybamm
 import sympy
 
 
-class TestVariable(TestCase):
+class TestVariable(unittest.TestCase):
     def test_variable_init(self):
         a = pybamm.Variable("a")
         self.assertEqual(a.name, "a")
@@ -69,7 +69,7 @@ class TestVariable(TestCase):
             func.to_json()
 
 
-class TestVariableDot(TestCase):
+class TestVariableDot(unittest.TestCase):
     def test_variable_init(self):
         a = pybamm.VariableDot("a'")
         self.assertEqual(a.name, "a'")
