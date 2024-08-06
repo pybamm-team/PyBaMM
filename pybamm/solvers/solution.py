@@ -10,6 +10,7 @@ import pybamm
 import pandas as pd
 from scipy.io import savemat
 from functools import cached_property
+from typing import List
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -76,6 +77,7 @@ class Solution:
         termination="final time",
         sensitivities=False,
         check_solution=True,
+        tags=None,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -118,6 +120,15 @@ class Solution:
         # initialize empty variables and data
         self._variables = pybamm.FuzzyDict()
         self.data = pybamm.FuzzyDict()
+
+        # initialize the tags, setting default if none
+        if tags is None:
+            tags = [""]
+        self.tags = tags
+
+        # initialize cycle and step attributes
+        self.cycle = None
+        self.step = None
 
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
@@ -626,6 +637,7 @@ class Solution:
         if cycles_and_steps and len(self.cycles) > 0:
             data_short_names["Cycle"] = np.array([])
             data_short_names["Step"] = np.array([])
+            data_short_names["Tags"] = np.array([])
             for i, cycle in enumerate(self.cycles):
                 data_short_names["Cycle"] = np.concatenate(
                     [data_short_names["Cycle"], i * np.ones_like(cycle.t)]
@@ -633,6 +645,9 @@ class Solution:
                 for j, step in enumerate(cycle.steps):
                     data_short_names["Step"] = np.concatenate(
                         [data_short_names["Step"], j * np.ones_like(step.t)]
+                    )
+                    data_short_names["Tags"] = np.concatenate(
+                        [data_short_names["Tags"], [";".join(step.tags)] * len(step.t)]
                     )
 
         return data_short_names
@@ -840,6 +855,23 @@ class Solution:
             show_plot=show_plot,
             **kwargs_fill,
         )
+
+    def search_tags(self, tags: str | List[str]):
+        """
+        Search for the tag in the solution and return the corresponding solution steps
+        """
+        if isinstance(tags, str):
+            tag = [tags]
+        elif not isinstance(tags, list):
+            raise TypeError("tags should be a string or a list of strings")
+
+        steps = []
+        for cycle in self.cycles:
+            for step in cycle.steps:
+                for tag in tags:
+                    if tag in step.tags:
+                        steps.append(step)
+        return steps
 
 
 class EmptySolution:

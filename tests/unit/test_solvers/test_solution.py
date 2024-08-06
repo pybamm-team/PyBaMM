@@ -359,6 +359,65 @@ class TestSolution(unittest.TestCase):
             data["Step"], np.concatenate([np.zeros(50), np.ones(50)])
         )
 
+    def test_get_data_cycles_steps_tags(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                (
+                    pybamm.step.string(
+                        "Discharge at 1C until 3.3V",
+                        tags=["tag1"],
+                    )
+                ),
+                (pybamm.step.string("Charge at 2C until 4.0V", tags=["tag2"]),),
+            ]
+            * 2,
+            period="1 hour",
+        )
+        sim = pybamm.Simulation(
+            model=model,
+            experiment=experiment,
+        )
+        solution = sim.solve()
+        data_dict = solution.get_data_dict(["Terminal voltage [V]", "Time [s]"])
+        np.testing.assert_array_equal(
+            data_dict["Tags"],
+            ["tag1", "tag1", "tag2", "tag2", "tag1", "tag1", "tag1", "tag2", "tag2"],
+        )
+
+        assert solution.cycles[0].cycle == 1
+        assert solution.cycles[1].cycle == 2
+        assert solution.cycles[2].cycle == 3
+        assert solution.cycles[3].cycle == 4
+        assert solution.cycles[0].steps[0].step == 1
+
+    def test_get_data_cycles_steps_empty_tags(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                (pybamm.step.string("Discharge at 1C until 3.3V")),
+                (pybamm.step.string("Charge at 2C until 4.0V")),
+            ]
+            * 2,
+            period="1 hour",
+        )
+        sim = pybamm.Simulation(
+            model=model,
+            experiment=experiment,
+        )
+        solution = sim.solve()
+        data_dict = solution.get_data_dict(["Terminal voltage [V]", "Time [s]"])
+        np.testing.assert_array_equal(
+            data_dict["Tags"],
+            ["", "", "", "", "", "", "", "", ""],
+        )
+
+        assert solution.cycles[0].cycle == 1
+        assert solution.cycles[1].cycle == 2
+        assert solution.cycles[2].cycle == 3
+        assert solution.cycles[3].cycle == 4
+        assert solution.cycles[0].steps[0].step == 1
+
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry

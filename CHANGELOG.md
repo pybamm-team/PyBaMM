@@ -40,6 +40,7 @@
 - Added `WyciskOpenCircuitPotential` for differential capacity hysteresis state open-circuit potential submodel ([#3593](https://github.com/pybamm-team/PyBaMM/pull/3593))
 - Transport efficiency submodel has new options from the literature relating to different tortuosity factor models and also a new option called "tortuosity factor" for specifying the value or function directly as parameters ([#3437](https://github.com/pybamm-team/PyBaMM/pull/3437))
 - Heat of mixing source term can now be included into thermal models ([#2837](https://github.com/pybamm-team/PyBaMM/pull/2837))
+- Added additional functionality for `Experiment` tags, including sorting and filtering by tag with `Solution.search_tags()`, and default export of tags when calling `Solution.get_data_dict()` ([#4177](https://github.com/pybamm-team/PyBaMM/issues/4177))
 
 ## Bug Fixes
 
