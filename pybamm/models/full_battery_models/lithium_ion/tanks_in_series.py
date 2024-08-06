@@ -80,14 +80,16 @@ class TanksInSeries(BaseModel):
         eta_n = phi_s_n - phi_e_n - param.n.prim.U(sto_surf_n, T)
         alpha_n = 0.5  # param.n.alpha_bv
         Feta_RT_n = param.F * eta_n / (param.R * T)
-        j_n = j0_n * (np.exp((1 - alpha_n) * Feta_RT_n) - np.exp(-alpha_n * Feta_RT_n))
+        # j_n = j0_n * (np.exp((1 - alpha_n) * Feta_RT_n) - np.exp(-alpha_n * Feta_RT_n))
+        j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
 
         sto_surf_p = c_surf_ave_p / param.p.prim.c_max
         j0_p = param.p.prim.j0(c_e_p, c_surf_ave_p, T)
         eta_p = phi_s_p - phi_e_p - param.p.prim.U(sto_surf_p, T)
         alpha_p = 0.5  # param.p.alpha_bv
         Feta_RT_p = param.F * eta_p / (param.R * T)
-        j_p = j0_p * (np.exp((1 - alpha_p) * Feta_RT_p) - np.exp(-alpha_p * Feta_RT_p))
+        # j_p = j0_p * (np.exp((1 - alpha_p) * Feta_RT_p) - np.exp(-alpha_p * Feta_RT_p))
+        j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
 
         ######################
         # State of Charge
@@ -114,10 +116,10 @@ class TanksInSeries(BaseModel):
         self.initial_conditions[c_s_p] = param.p.prim.c_init_av
 
         self.rhs[q_ave_n] = (
-            -30 * param.n.prim.D(c_s_n, T) * q_ave_n - 45 / 2 * j_n / param.n.prim.R_typ
+            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * j_n / param.n.prim.R_typ
         )
         self.rhs[q_ave_p] = (
-            -30 * param.p.prim.D(c_s_p, T) * q_ave_p - 45 / 2 * j_p / param.p.prim.R_typ
+            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * j_p / param.p.prim.R_typ
         )
 
         self.initial_conditions[q_ave_n] = pybamm.Scalar(0)
@@ -176,18 +178,18 @@ class TanksInSeries(BaseModel):
         self.algebraic[c_surf_ave_p] = (
             j_p
             + 35
-            * param.p.prim.D(c_s_p, T)
+            * param.p.prim.D(c_surf_ave_p, T)
             / param.p.prim.R_typ
             * (c_surf_ave_p - c_s_p)
-            - 8 * param.p.prim.D(c_s_p, T) * q_ave_p
+            - 8 * param.p.prim.D(c_surf_ave_p, T) * q_ave_p
         )
         self.algebraic[c_surf_ave_n] = (
             j_n
             + 35
-            * param.n.prim.D(c_s_n, T)
+            * param.n.prim.D(c_surf_ave_n, T)
             / param.n.prim.R_typ
             * (c_surf_ave_n - c_s_n)
-            - 8 * param.n.prim.D(c_s_n, T) * q_ave_n
+            - 8 * param.n.prim.D(c_surf_ave_n, T) * q_ave_n
         )
 
         self.initial_conditions[c_surf_ave_p] = param.p.prim.c_init_av
@@ -202,18 +204,18 @@ class TanksInSeries(BaseModel):
         self.algebraic[phi_e_p] = (
             -iapp
             - 2 * param.kappa_e(c_12, T) * (phi_e_s - phi_e_p) / leps12
-            + 4 * RT_F * elec_thermo_p / c_12 * (c_e_s - c_e_p) / leps12
+            + 2 * param.chiRT_over_Fc(c_12, T) * (c_e_s - c_e_p) / leps12
         )
         elec_thermo_n = param.chi(c_23, T) / 2 * param.kappa_e(c_23, T)
         self.algebraic[phi_e_n] = (
             -iapp
             - 2 * param.kappa_e(c_23, T) * (phi_e_n - phi_e_s) / leps23
-            + 4 * RT_F * elec_thermo_n / c_23 * (c_e_n - c_e_s) / leps23
+            + 2 * param.chiRT_over_Fc(c_23, T) * (c_e_n - c_e_s) / leps23
         )
         self.algebraic[phi_e_s] = (
             eps_p**param.p.b_e / param.p.L * phi_e_p
             + eps_sep**param.s.b_e / param.s.L * phi_e_s
-        ) * leps12
+        )
 
         self.initial_conditions[phi_e_p] = pybamm.Scalar(0)
         self.initial_conditions[phi_e_n] = pybamm.Scalar(0)
@@ -261,6 +263,10 @@ class TanksInSeries(BaseModel):
             "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,
+            "Positive overpotential": eta_p,
+            "Negative overpotential": eta_n,
+            "Negative pore wall flux": j_n,
+            "Positive pore wall flux": j_p
         }
 
         # Events specify points at which a solution should terminate
