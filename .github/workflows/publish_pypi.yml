@@ -254,6 +254,8 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND: |
             export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/libsuitesparseconfig.6.0.3.dylib:$LD_LIBRARY_PATH
             export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/libsuitesparseconfig.6.dylib:$LD_LIBRARY_PATH
+            export PATH=$(pwd)/sundials_KLU_libs/lib/:$PATH
+            echo "$PATH"
             echo "$LD_LIBRARY_PATH"
             brew install tree
             tree $(pwd)/sundials_KLU_libs/lib/
