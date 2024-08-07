@@ -90,11 +90,11 @@ If you want to build the PyBaMM Docker image locally from the PyBaMM source code
 
       docker run -it pybamm
 
-5. Activate PyBaMM development environment inside docker container using:
+5. Activate PyBaMM development virtual environment inside docker container using:
 
 .. code-block:: bash
 
-      conda activate pybamm
+      source /home/pybamm/venv/bin/activate
 
 .. note::
 
