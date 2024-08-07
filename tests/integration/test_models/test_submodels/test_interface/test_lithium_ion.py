@@ -3,12 +3,11 @@
 #
 import pybamm
 from tests import get_discretisation_for_testing
-from tests import TestCase
 import pytest
 import numpy as np
 
 
-class TestExchangeCurrentDensity(TestCase):
+class TestExchangeCurrentDensity:
     @pytest.fixture(autouse=True)
     def setup(self):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])

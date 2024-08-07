@@ -1,11 +1,10 @@
 import pytest
 import pybamm
 import numpy as np
-from tests import TestCase
 
 
 @pytest.mark.skipif(not pybamm.have_idaklu(), reason="idaklu solver is not installed")
-class TestIDAKLUSolver(TestCase):
+class TestIDAKLUSolver:
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()
         geometry = model.default_geometry

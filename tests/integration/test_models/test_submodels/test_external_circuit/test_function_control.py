@@ -3,10 +3,8 @@
 #
 import numpy as np
 import pybamm
-from tests import TestCase
 
-
-class TestFunctionControl(TestCase):
+class TestFunctionControl:
     def test_constant_current(self):
         def constant_current(variables):
             I = variables["Current [A]"]

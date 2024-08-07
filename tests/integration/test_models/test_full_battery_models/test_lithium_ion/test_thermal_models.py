@@ -4,10 +4,8 @@
 #
 import pybamm
 import numpy as np
-from tests import TestCase
 
-
-class TestThermal(TestCase):
+class TestThermal:
     def test_consistent_cooling(self):
         "Test the cooling is consistent between the 1D, 1+1D and 2+1D SPMe models"
 

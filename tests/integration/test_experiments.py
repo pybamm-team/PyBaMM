@@ -3,10 +3,8 @@
 #
 import pybamm
 import numpy as np
-from tests import TestCase
 
-
-class TestExperiments(TestCase):
+class TestExperiments:
     def test_discharge_rest_charge(self):
         experiment = pybamm.Experiment(
             [
