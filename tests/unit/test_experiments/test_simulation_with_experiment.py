@@ -1,7 +1,6 @@
 #
 # Test setting up a simulation with an experiment
 #
-from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -10,7 +9,13 @@ import unittest
 from datetime import datetime
 
 
-class TestSimulationExperiment(TestCase):
+class ShortDurationCRate(pybamm.step.CRate):
+    def default_duration(self, value):
+        # Set a short default duration for testing early stopping due to infeasible time
+        return 1
+
+
+class TestSimulationExperiment(unittest.TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
@@ -272,6 +277,19 @@ class TestSimulationExperiment(TestCase):
         # Different callback - this is for coverage on the `Callback` class
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
 
+    def test_run_experiment_infeasible_time(self):
+        experiment = pybamm.Experiment(
+            [ShortDurationCRate(1, termination="2.5V"), "Rest for 1 hour"]
+        )
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        sol = sim.solve()
+        self.assertEqual(len(sol.cycles), 1)
+        self.assertEqual(len(sol.cycles[0].steps), 1)
+
     def test_run_experiment_termination_capacity(self):
         # with percent
         experiment = pybamm.Experiment(
@@ -347,6 +365,60 @@ class TestSimulationExperiment(TestCase):
         # Only two cycles should be completed, only 2nd cycle should go below 4V
         np.testing.assert_array_less(4, np.min(sol.cycles[0]["Voltage [V]"].data))
         np.testing.assert_array_less(np.min(sol.cycles[1]["Voltage [V]"].data), 4)
+        self.assertEqual(len(sol.cycles), 2)
+
+    def test_run_experiment_termination_time_min(self):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
+            ]
+            * 5,
+            termination="25 min",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        # Test with calc_esoh=False here
+        sol = sim.solve(calc_esoh=False)
+        # Only two cycles should be completed, only 2nd cycle should go below 4V
+        np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1500)
+        np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1500)
+        self.assertEqual(len(sol.cycles), 2)
+
+    def test_run_experiment_termination_time_s(self):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
+            ]
+            * 5,
+            termination="1500 s",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        # Test with calc_esoh=False here
+        sol = sim.solve(calc_esoh=False)
+        # Only two cycles should be completed, only 2nd cycle should go below 4V
+        np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1500)
+        np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1500)
+        self.assertEqual(len(sol.cycles), 2)
+
+    def test_run_experiment_termination_time_h(self):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
+            ]
+            * 5,
+            termination="0.5 h",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        # Test with calc_esoh=False here
+        sol = sim.solve(calc_esoh=False)
+        # Only two cycles should be completed, only 2nd cycle should go below 4V
+        np.testing.assert_array_less(np.max(sol.cycles[0]["Time [s]"].data), 1800)
+        np.testing.assert_array_equal(np.max(sol.cycles[1]["Time [s]"].data), 1800)
         self.assertEqual(len(sol.cycles), 2)
 
     def test_save_at_cycles(self):

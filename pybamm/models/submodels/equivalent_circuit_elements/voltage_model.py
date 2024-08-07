@@ -30,7 +30,9 @@ class VoltageModel(pybamm.BaseSubModel):
         for i in range(number_of_elements):
             overpotential += variables[f"Element-{i} overpotential [V]"]
 
-        voltage = ocv + overpotential
+        diffusion_overpotential = variables["Diffusion overpotential [V]"]
+
+        voltage = ocv + overpotential + diffusion_overpotential
 
         # Power and Resistance
         current = variables["Current [A]"]

@@ -1,6 +1,7 @@
 import pybamm
 import os
-import pickle
+import json
+import numpy as np
 import scipy.interpolate as interp
 
 # change working directory to the root of pybamm
@@ -16,10 +17,12 @@ C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
+data_loader = pybamm.DataLoader()
 comsol_results_path = pybamm.get_parameters_filepath(
-    f"input/comsol_results/comsol_{C_rate}C.pickle"
+    f"{data_loader.get_data(f'comsol_{C_rate}C.json')}"
 )
-comsol_variables = pickle.load(open(comsol_results_path, "rb"))
+
+comsol_variables = json.load(open(comsol_results_path))
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -53,13 +56,13 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
 # solve model at comsol times
-time = comsol_variables["time"]
+time = np.array(comsol_variables["time"])
 pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
 
 
 # Make Comsol 'model' for comparison
 whole_cell = ["negative electrode", "separator", "positive electrode"]
-comsol_t = comsol_variables["time"]
+comsol_t = np.array(comsol_variables["time"])
 L_x = param.evaluate(pybamm_model.param.L_x)
 
 
@@ -69,13 +72,13 @@ def get_interp_fun(variable_name, domain):
     :class:`pybamm.QuickPlot` (interpolate in space to match edges, and then create
     function to interpolate in time)
     """
-    variable = comsol_variables[variable_name]
+    variable = np.array(comsol_variables[variable_name])
     if domain == ["negative electrode"]:
-        comsol_x = comsol_variables["x_n"]
+        comsol_x = np.array(comsol_variables["x_n"])
     elif domain == ["positive electrode"]:
-        comsol_x = comsol_variables["x_p"]
+        comsol_x = np.array(comsol_variables["x_p"])
     elif domain == whole_cell:
-        comsol_x = comsol_variables["x"]
+        comsol_x = np.array(comsol_variables["x"])
 
     # Make sure to use dimensional space
     pybamm_x = mesh[domain].nodes
@@ -95,7 +98,9 @@ comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
 comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
 comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
-comsol_voltage = pybamm.Interpolant(comsol_t, comsol_variables["voltage"], pybamm.t)
+comsol_voltage = pybamm.Interpolant(
+    comsol_t, np.array(comsol_variables["voltage"]), pybamm.t
+)
 
 comsol_voltage.mesh = None
 comsol_voltage.secondary_mesh = None

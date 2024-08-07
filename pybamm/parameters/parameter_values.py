@@ -5,6 +5,7 @@ import numpy as np
 import pybamm
 import numbers
 from pprint import pformat
+from warnings import warn
 from collections import defaultdict
 
 
@@ -64,7 +65,10 @@ class ParameterValues:
                 values.pop("chemistry", None)
                 self.update(values, check_already_exists=False)
             else:
-                raise ValueError("Invalid Parameter Value")
+                valid_sets = "\n".join(pybamm.parameter_sets.keys())
+                raise ValueError(
+                    f"'{values}' is not a valid parameter set. Parameter set must be one of:\n{valid_sets}"
+                )
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -229,7 +233,7 @@ class ParameterValues:
         if not isinstance(values, dict):
             values = values._dict_items
         # check parameter values
-        self.check_parameter_values(values)
+        values = self.check_parameter_values(values)
         # update
         for name, value in values.items():
             # check for conflicts
@@ -252,7 +256,6 @@ class ParameterValues:
                         + "sure you want to update this parameter, use "
                         + "param.update({{name: value}}, check_already_exists=False)"
                     ) from err
-            # if no conflicts, update
             if isinstance(value, str):
                 if (
                     value.startswith("[function]")
@@ -265,7 +268,7 @@ class ParameterValues:
                         "or [2D data] is no longer supported. For functions, pass in a "
                         "python function object. For data, pass in a python function "
                         "that returns a pybamm Interpolant object. "
-                        "See https://tinyurl.com/merv43ss for an example with both."
+                        "See the Ai2020 parameter set for an example with both."
                     )
 
                 elif value == "[input]":
@@ -389,8 +392,9 @@ class ParameterValues:
         )
         return parameter_values
 
-    def check_parameter_values(self, values):
-        for param in values:
+    @staticmethod
+    def check_parameter_values(values):
+        for param in list(values.keys()):
             if "propotional term" in param:
                 raise ValueError(
                     f"The parameter '{param}' has been renamed to "
@@ -402,6 +406,16 @@ class ParameterValues:
                 raise ValueError(
                     f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
                 )
+            if "electrode diffusivity" in param:
+                new_param = param.replace("electrode", "particle")
+                warn(
+                    f"The parameter '{param}' has been renamed to '{new_param}'",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                values[new_param] = values.get(param)
+
+        return values
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
@@ -712,21 +726,10 @@ class ParameterValues:
             # Process again just to be sure
             return self.process_symbol(function_out)
 
-        elif isinstance(symbol, pybamm.BinaryOperator):
-            # process children
-            new_left = self.process_symbol(symbol.left)
-            new_right = self.process_symbol(symbol.right)
-            # make new symbol, ensure domain remains the same
-            new_symbol = symbol._binary_new_copy(new_left, new_right)
-            new_symbol.copy_domains(symbol)
-            return new_symbol
-
         # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
-            new_symbol = symbol._unary_new_copy(new_child)
-            # ensure domain remains the same
-            new_symbol.copy_domains(symbol)
+            new_symbol = symbol.create_copy(new_children=[new_child])
             # x_average can sometimes create a new symbol with electrode thickness
             # parameters, so we process again to make sure these parameters are set
             if isinstance(symbol, pybamm.XAverage) and not isinstance(
@@ -747,15 +750,14 @@ class ParameterValues:
                     new_symbol.position = new_symbol_position
             return new_symbol
 
-        # Functions
-        elif isinstance(symbol, pybamm.Function):
+        # Functions, BinaryOperators & Concatenations
+        elif (
+            isinstance(symbol, pybamm.Function)
+            or isinstance(symbol, pybamm.Concatenation)
+            or isinstance(symbol, pybamm.BinaryOperator)
+        ):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._function_new_copy(new_children)
-
-        # Concatenations
-        elif isinstance(symbol, pybamm.Concatenation):
-            new_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._concatenation_new_copy(new_children)
+            return symbol.create_copy(new_children)
 
         # Variables: update scale
         elif isinstance(symbol, pybamm.Variable):

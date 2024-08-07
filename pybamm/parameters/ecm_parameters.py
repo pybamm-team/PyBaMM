@@ -4,6 +4,7 @@ import pybamm
 class EcmParameters:
     def __init__(self):
         self.cell_capacity = pybamm.Parameter("Cell capacity [A.h]")
+        self.tau_D = pybamm.Parameter("Diffusion time constant [s]")
 
         self._set_current_parameters()
         self._set_voltage_parameters()

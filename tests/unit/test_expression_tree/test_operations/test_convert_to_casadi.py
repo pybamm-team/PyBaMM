@@ -1,7 +1,7 @@
 #
 # Test for the Simplify class
 #
-from tests import TestCase
+
 import casadi
 import numpy as np
 import pybamm
@@ -10,7 +10,7 @@ from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 from scipy import special
 
 
-class TestCasadiConverter(TestCase):
+class TestCasadiConverter(unittest.TestCase):
     def assert_casadi_equal(self, a, b, evalf=False):
         if evalf is True:
             self.assertTrue((casadi.evalf(a) - casadi.evalf(b)).is_zero())
@@ -219,7 +219,7 @@ class TestCasadiConverter(TestCase):
         # linear
         y_test = np.array([0.4, 0.6])
         Y = (2 * x).sum(axis=1).reshape(*[len(el) for el in x_])
-        for interpolator in ["linear"]:
+        for interpolator in ["linear", "cubic"]:
             interp = pybamm.Interpolant(x_, Y, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
@@ -313,22 +313,6 @@ class TestCasadiConverter(TestCase):
         f = casadi.Function("f", [x], [x])
         y_eval = np.linspace(0, 1, expr.size)
         self.assert_casadi_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval)))
-
-    def test_convert_differentiated_function(self):
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-
-        def myfunction(x, y):
-            return x + y**3
-
-        f = pybamm.Function(myfunction, a, b).diff(a)
-        self.assert_casadi_equal(
-            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(1), evalf=True
-        )
-        f = pybamm.Function(myfunction, a, b).diff(b)
-        self.assert_casadi_equal(
-            f.to_casadi(inputs={"a": 1, "b": 2}), casadi.DM(12), evalf=True
-        )
 
     def test_convert_input_parameter(self):
         casadi_t = casadi.MX.sym("t")

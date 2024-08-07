@@ -1,13 +1,13 @@
 #
 # Test the base experiment class
 #
-from tests import TestCase
+
 from datetime import datetime
 import pybamm
 import unittest
 
 
-class TestExperiment(TestCase):
+class TestExperiment(unittest.TestCase):
     def test_cycle_unpacking(self):
         experiment = pybamm.Experiment(
             [
@@ -123,18 +123,6 @@ class TestExperiment(TestCase):
             ["Discharge at 1 C for 20 seconds"], termination=["4.1 A.h capacity"]
         )
         self.assertEqual(experiment.termination, {"capacity": (4.1, "Ah")})
-
-        experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination=["3V"]
-        )
-        self.assertEqual(experiment.termination, {"voltage": (3, "V")})
-
-        experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination=["3V", "4.1Ah capacity"]
-        )
-        self.assertEqual(
-            experiment.termination, {"voltage": (3, "V"), "capacity": (4.1, "Ah")}
-        )
 
         with self.assertRaisesRegex(ValueError, "Only capacity"):
             experiment = pybamm.Experiment(

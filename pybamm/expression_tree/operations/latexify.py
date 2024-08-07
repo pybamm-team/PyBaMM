@@ -38,16 +38,16 @@ class Latexify:
     >>> model = pybamm.lithium_ion.SPM()
 
     This will returns all model equations in png
-    >>> model.latexify("equations.png")
+    >>> model.latexify("equations.png") # doctest: +SKIP
 
     This will return all the model equations in latex
-    >>> model.latexify()
+    >>> model.latexify() # doctest: +SKIP
 
     This will return the list of all the model equations
-    >>> model.latexify(newline=False)
+    >>> model.latexify(newline=False) # doctest: +SKIP
 
     This will return first five model equations
-    >>> model.latexify(newline=False)[1:5]
+    >>> model.latexify(newline=False)[1:5] # doctest: +SKIP
     """
 
     def __init__(self, model, filename: str | None = None, newline: bool = True):
@@ -79,7 +79,7 @@ class Latexify:
         for _, rng in self.model.default_geometry[var.domain[-1]].items():
             rng_max = get_rng_min_max_name(rng, "max")
 
-        geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
+        geo_latex = rf"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)
 
         return geo
@@ -267,14 +267,12 @@ class Latexify:
         # Split list with new lines
         eqn_new_line = sympy.Symbol(r"\\\\".join(map(custom_print_func, eqn_list)))
 
-        # Return latex of equations
         if self.filename is None:
             if self.newline is True:
                 return eqn_new_line
             else:
                 return eqn_list
 
-        # # Formats - tex
         elif self.filename.endswith(".tex"):  # pragma: no cover
             return sympy.preview(eqn_new_line, outputTexFile=self.filename)
 
@@ -289,7 +287,6 @@ class Latexify:
                     euler=False,
                 )
 
-            # For more dvioptions see https://www.nongnu.org/dvipng/dvipng_4.html
             else:
                 try:
                     return sympy.preview(

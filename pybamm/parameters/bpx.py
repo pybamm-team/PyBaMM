@@ -240,7 +240,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
     # (cs/cs_max) * (1-cs/cs_max))
     c_e = pybamm_dict["Initial concentration in electrolyte [mol.m-3]"]
-    F = 96485
+    F = pybamm.constants.F.value
 
     def _exchange_current_density(c_e, c_s_surf, c_s_max, T, k_ref, Ea):
         return (
@@ -336,21 +336,16 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 0.0,
             )
             pybamm_dict[
-                phase_domain_pre_name.replace("electrode", "particle")
-                + "diffusivity activation energy [J.mol-1]"
+                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             ] = Ea_D
             D_ref = pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"]
 
             if callable(D_ref):
-                pybamm_dict[
-                    phase_domain_pre_name.replace("electrode", "particle")
-                    + "diffusivity [m2.s-1]"
-                ] = partial(_diffusivity, D_ref=D_ref, Ea=Ea_D)
+                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                    _diffusivity, D_ref=D_ref, Ea=Ea_D
+                )
             elif isinstance(D_ref, tuple):
-                pybamm_dict[
-                    phase_domain_pre_name.replace("electrode", "particle")
-                    + "diffusivity [m2.s-1]"
-                ] = partial(
+                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
                     _diffusivity,
                     D_ref=partial(
                         _interpolant_func, name=D_ref[0], x=D_ref[1][0], y=D_ref[1][1]
@@ -358,10 +353,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                     Ea=Ea_D,
                 )
             else:
-                pybamm_dict[
-                    phase_domain_pre_name.replace("electrode", "particle")
-                    + "diffusivity [m2.s-1]"
-                ] = partial(_diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True)
+                pybamm_dict[phase_domain_pre_name + "diffusivity [m2.s-1]"] = partial(
+                    _diffusivity, D_ref=D_ref, Ea=Ea_D, constant=True
+                )
 
     # electrolyte
     Ea_D_e = pybamm_dict.get(

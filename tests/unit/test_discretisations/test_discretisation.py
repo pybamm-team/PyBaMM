@@ -1,7 +1,7 @@
 #
 # Tests for the base model class
 #
-from tests import TestCase
+
 import pybamm
 
 import numpy as np
@@ -18,7 +18,7 @@ from scipy.sparse import block_diag, csc_matrix
 from scipy.sparse.linalg import inv
 
 
-class TestDiscretise(TestCase):
+class TestDiscretise(unittest.TestCase):
     def test_concatenate_in_order(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
@@ -1074,23 +1074,6 @@ class TestDiscretise(TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
             disc.check_tab_conditions(b, bcs)
 
-    def test_process_with_no_check(self):
-        # create model
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c = pybamm.Variable("c", domain=whole_cell)
-        N = pybamm.grad(c)
-        model = pybamm.BaseModel()
-        model.rhs = {c: pybamm.div(N)}
-        model.initial_conditions = {c: pybamm.Scalar(3)}
-        model.boundary_conditions = {
-            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
-        }
-        model.variables = {"c": c, "N": N}
-
-        # create discretisation
-        disc = get_discretisation_for_testing()
-        disc.process_model(model, check_model=False)
-
     def test_mass_matrix_inverse(self):
         # get mesh
         mesh = get_2p1d_mesh_for_testing(ypts=5, zpts=5)
@@ -1229,6 +1212,38 @@ class TestDiscretise(TestCase):
     def test_independent_rhs(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
+        # Include a concatenation for the test
+        c_n = pybamm.Variable("c_n", ["negative electrode"])
+        c_s = pybamm.Variable("c_s", ["separator"])
+        c = pybamm.concatenation(c_n, c_s)
+
+        model = pybamm.BaseModel()
+        model.rhs = {a: b, b: 0, c: -c}
+        model.initial_conditions = {a: 0, b: 1, c: 1}
+        # test edge case where variable appears twice with different names
+        model.variables = {"a": a, "a again": a}
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
+        disc = pybamm.Discretisation(
+            mesh, spatial_methods, remove_independent_variables_from_rhs=True
+        )
+        disc.process_model(model)
+        self.assertEqual(len(model.rhs), 2)
+        self.assertEqual(model.variables["a"], model.variables["a again"])
+
+    def test_independent_rhs_one_equation(self):
+        # Test that if there is only one equation, it is not removed
+        a = pybamm.Variable("a")
+        model = pybamm.BaseModel()
+        model.rhs = {a: 0}
+        model.initial_conditions = {a: 0}
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
+        disc.process_model(model)
+        self.assertEqual(len(model.rhs), 1)
+
+    def test_independent_rhs_with_event(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
         c = pybamm.Variable("c")
         model = pybamm.BaseModel()
         model.rhs = {a: b, b: c, c: -c}
@@ -1237,9 +1252,10 @@ class TestDiscretise(TestCase):
             b: pybamm.Scalar(1),
             c: pybamm.Scalar(1),
         }
-        disc = pybamm.Discretisation()
+        model.events = [pybamm.Event("a=1", a - 1)]
+        disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
         disc.process_model(model)
-        self.assertEqual(len(model.rhs), 2)
+        self.assertEqual(len(model.rhs), 3)
 
 
 if __name__ == "__main__":

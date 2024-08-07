@@ -1,6 +1,3 @@
-#
-# Method for creating a filled contour plot of pybamm arrays
-#
 import pybamm
 from .quick_plot import ax_min, ax_max
 from pybamm.util import import_optional_dependency
@@ -10,7 +7,8 @@ def plot2D(x, y, z, ax=None, show_plot=True, **kwargs):
     """
     Generate a simple 2D plot. Calls `matplotlib.pyplot.contourf` with keyword
     arguments 'kwargs'.  For a list of 'kwargs' see the
-    `matplotlib contourf documentation <https://tinyurl.com/y8mnadtn>`_
+    `matplotlib contourf documentation
+    <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html>`_
 
     Parameters
     ----------

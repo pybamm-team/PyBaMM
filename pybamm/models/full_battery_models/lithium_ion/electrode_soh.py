@@ -112,8 +112,8 @@ class _ElectrodeSOH(_BaseElectrodeSOH):
         Up = param.p.prim.U
         T_ref = param.T_ref
 
-        V_max = param.ocp_soc_100_dimensional
-        V_min = param.ocp_soc_0_dimensional
+        V_max = param.ocp_soc_100
+        V_min = param.ocp_soc_0
         Q_n = pybamm.InputParameter("Q_n")
         Q_p = pybamm.InputParameter("Q_p")
 
@@ -202,6 +202,7 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         x_n = param.n.prim.x
         x_p = param.p.prim.x
 
+        T = param.T_ref
         V_max = param.voltage_high_cut
         V_min = param.voltage_low_cut
         Q_n = pybamm.InputParameter("Q_n")
@@ -221,21 +222,21 @@ class _ElectrodeSOHMSMR(_BaseElectrodeSOH):
         if "Un_0" in solve_for:
             Un_0 = pybamm.Variable("Un(x_0)")
             Up_0 = V_min + Un_0
-            x_0 = x_n(Un_0)
-            y_0 = x_p(Up_0)
+            x_0 = x_n(Un_0, T)
+            y_0 = x_p(Up_0, T)
 
         # Define variables for 100% state of charge
         # TODO: thermal effects (include dU/dT)
         if "Un_100" in solve_for:
             Un_100 = pybamm.Variable("Un(x_100)")
             Up_100 = V_max + Un_100
-            x_100 = x_n(Un_100)
-            y_100 = x_p(Up_100)
+            x_100 = x_n(Un_100, T)
+            y_100 = x_p(Up_100, T)
         else:
             Un_100 = pybamm.InputParameter("Un(x_100)")
             Up_100 = pybamm.InputParameter("Up(y_100)")
-            x_100 = x_n(Un_100)
-            y_100 = x_p(Up_100)
+            x_100 = x_n(Un_100, T)
+            y_100 = x_p(Up_100, T)
 
         # Define equations for 100% state of charge
         if "Un_100" in solve_for:
@@ -579,12 +580,8 @@ class ElectrodeSOHSolver:
 
         # Parameterize the OCP functions
         if self.OCV_function is None:
-            self.V_max = self.parameter_values.evaluate(
-                self.param.ocp_soc_100_dimensional
-            )
-            self.V_min = self.parameter_values.evaluate(
-                self.param.ocp_soc_0_dimensional
-            )
+            self.V_max = self.parameter_values.evaluate(self.param.ocp_soc_100)
+            self.V_min = self.parameter_values.evaluate(self.param.ocp_soc_0)
             if self.options["open-circuit potential"] == "MSMR":
                 # will solve for potentials at the sto limits, so no need
                 # to store a function
@@ -672,8 +669,8 @@ class ElectrodeSOHSolver:
 
         if isinstance(initial_value, str) and initial_value.endswith("V"):
             V_init = float(initial_value[:-1])
-            V_min = parameter_values.evaluate(param.ocp_soc_0_dimensional)
-            V_max = parameter_values.evaluate(param.ocp_soc_100_dimensional)
+            V_min = parameter_values.evaluate(param.ocp_soc_0)
+            V_max = parameter_values.evaluate(param.ocp_soc_100)
 
             if not V_min <= V_init <= V_max:
                 raise ValueError(
@@ -686,20 +683,20 @@ class ElectrodeSOHSolver:
             soc = pybamm.Variable("soc")
             x = x_0 + soc * (x_100 - x_0)
             y = y_0 - soc * (y_0 - y_100)
+            T_ref = parameter_values["Reference temperature [K]"]
             if self.options["open-circuit potential"] == "MSMR":
                 xn = param.n.prim.x
                 xp = param.p.prim.x
                 Up = pybamm.Variable("Up")
                 Un = pybamm.Variable("Un")
-                soc_model.algebraic[Up] = x - xn(Un)
-                soc_model.algebraic[Un] = y - xp(Up)
+                soc_model.algebraic[Up] = x - xn(Un, T_ref)
+                soc_model.algebraic[Un] = y - xp(Up, T_ref)
                 soc_model.initial_conditions[Un] = 0
                 soc_model.initial_conditions[Up] = V_max
                 soc_model.algebraic[soc] = Up - Un - V_init
             else:
                 Up = param.p.prim.U
                 Un = param.n.prim.U
-                T_ref = parameter_values["Reference temperature [K]"]
                 soc_model.algebraic[soc] = Up(y, T_ref) - Un(x, T_ref) - V_init
             # initial guess for soc linearly interpolates between 0 and 1
             # based on V linearly interpolating between V_max and V_min
@@ -1055,14 +1052,15 @@ def _get_msmr_potential_model(parameter_values, param):
     V_min = param.voltage_low_cut
     x_n = param.n.prim.x
     x_p = param.p.prim.x
+    T = param.T_ref
     model = pybamm.BaseModel()
     Un = pybamm.Variable("Un")
     Up = pybamm.Variable("Up")
     x = pybamm.InputParameter("x")
     y = pybamm.InputParameter("y")
     model.algebraic = {
-        Un: x_n(Un) - x,
-        Up: x_p(Up) - y,
+        Un: x_n(Un, T) - x,
+        Up: x_p(Up, T) - y,
     }
     model.initial_conditions = {
         Un: 1 - x,

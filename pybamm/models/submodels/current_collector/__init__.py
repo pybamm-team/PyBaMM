@@ -10,3 +10,6 @@ from .potential_pair import (
     PotentialPair1plus1D,
     PotentialPair2plus1D,
 )
+
+__all__ = ['base_current_collector', 'effective_resistance_current_collector',
+           'homogeneous_current_collector', 'potential_pair']

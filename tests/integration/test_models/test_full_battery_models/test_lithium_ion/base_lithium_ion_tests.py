@@ -20,10 +20,12 @@ class BaseIntegrationTestLithiumIon:
     def test_sensitivities(self):
         model = self.model()
         param = pybamm.ParameterValues("Ecker2015")
+        rtol = 1e-6
+        atol = 1e-6
         if pybamm.have_idaklu():
-            solver = pybamm.IDAKLUSolver()
+            solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         else:
-            solver = pybamm.CasadiSolver()
+            solver = pybamm.CasadiSolver(rtol=rtol, atol=atol)
         modeltest = tests.StandardModelTest(
             model, parameter_values=param, solver=solver
         )
@@ -131,6 +133,8 @@ class BaseIntegrationTestLithiumIon:
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+        solver = pybamm.CasadiSolver(atol=1e-14, rtol=1e-14)
+
         parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
@@ -139,7 +143,9 @@ class BaseIntegrationTestLithiumIon:
             },
             check_already_exists=False,
         )
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
+        self.run_basic_processing_test(
+            options, parameter_values=parameter_values, solver=solver
+        )
 
     def test_kinetics_linear(self):
         options = {"intercalation kinetics": "linear"}

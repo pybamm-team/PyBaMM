@@ -5,6 +5,7 @@ import pybamm
 from scipy.sparse import eye
 import sys
 import re
+import socket
 
 if sys.version_info < (3, 10):
     import importlib_metadata
@@ -254,6 +255,18 @@ def get_size_distribution_disc_for_testing(xpts=None, rpts=10, Rpts=10, zpts=15)
     )
 
 
+def function_test(arg):
+    return arg + arg
+
+
+def multi_var_function_test(arg1, arg2):
+    return arg1 + arg2
+
+
+def multi_var_function_cube_test(arg1, arg2):
+    return arg1 + arg2**3
+
+
 def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
     return get_discretisation_for_testing(
         mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts),
@@ -315,3 +328,20 @@ def get_present_optional_import_deps(package_name, optional_distribution_deps=No
         if any(dep in optional_distribution_deps for dep in distribution_pkgs):
             present_optional_import_deps.add(import_pkg)
     return present_optional_import_deps
+
+
+def no_internet_connection():
+    try:
+        host = socket.gethostbyname("www.github.com")
+        conn = socket.create_connection((host, 80), 2)
+        conn.close()
+        return False
+    except socket.gaierror:
+        return True
+
+
+def assert_domain_equal(a, b):
+    "Check that two domains are equal, ignoring empty domains"
+    a_dict = {k: v for k, v in a.items() if v != []}
+    b_dict = {k: v for k, v in b.items() if v != []}
+    assert a_dict == b_dict

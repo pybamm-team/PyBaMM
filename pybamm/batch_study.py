@@ -102,7 +102,6 @@ class BatchStudy:
         self,
         t_eval=None,
         solver=None,
-        check_model=True,
         save_at_cycles=None,
         calc_esoh=True,
         starting_solution=None,
@@ -158,7 +157,6 @@ class BatchStudy:
                 sol = sim.solve(
                     t_eval,
                     solver,
-                    check_model,
                     save_at_cycles,
                     calc_esoh,
                     starting_solution,

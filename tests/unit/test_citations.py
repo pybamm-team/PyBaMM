@@ -345,6 +345,18 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Verbrugge2017", citations._papers_to_cite)
         self.assertIn("Verbrugge2017", citations._citation_tags.keys())
 
+    def test_thevenin(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        pybamm.equivalent_circuit.Thevenin()
+        self.assertNotIn("Fan2022", citations._papers_to_cite)
+        self.assertNotIn("Fan2022", citations._citation_tags.keys())
+
+        pybamm.equivalent_circuit.Thevenin(options={"diffusion element": "true"})
+        self.assertIn("Fan2022", citations._papers_to_cite)
+        self.assertIn("Fan2022", citations._citation_tags.keys())
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 
@@ -408,19 +420,6 @@ class TestCitations(unittest.TestCase):
         pybamm.AlgebraicSolver()
         self.assertIn("Virtanen2020", citations._papers_to_cite)
         self.assertIn("Virtanen2020", citations._citation_tags.keys())
-
-        if pybamm.have_scikits_odes():
-            citations._reset()
-            self.assertNotIn("Malengier2018", citations._papers_to_cite)
-            pybamm.ScikitsOdeSolver()
-            self.assertIn("Malengier2018", citations._papers_to_cite)
-            self.assertIn("Malengier2018", citations._citation_tags.keys())
-
-            citations._reset()
-            self.assertNotIn("Malengier2018", citations._papers_to_cite)
-            pybamm.ScikitsDaeSolver()
-            self.assertIn("Malengier2018", citations._papers_to_cite)
-            self.assertIn("Malengier2018", citations._citation_tags.keys())
 
         if pybamm.have_idaklu():
             citations._reset()

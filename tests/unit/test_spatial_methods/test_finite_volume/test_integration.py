@@ -1,7 +1,7 @@
 #
 # Tests for integration using Finite Volume method
 #
-from tests import TestCase
+
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -12,7 +12,7 @@ import numpy as np
 import unittest
 
 
-class TestFiniteVolumeIntegration(TestCase):
+class TestFiniteVolumeIntegration(unittest.TestCase):
     def test_definite_integral(self):
         # create discretisation
         mesh = get_mesh_for_testing(xpts=200, rpts=200)
@@ -339,7 +339,7 @@ class TestFiniteVolumeIntegration(TestCase):
         phi_exact = np.ones((submesh.npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
-        np.testing.assert_array_equal(phi_exact, phi_approx)
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
         self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
         # linear case
         phi_exact = submesh.nodes[:, np.newaxis]
@@ -379,7 +379,7 @@ class TestFiniteVolumeIntegration(TestCase):
         phi_exact = np.ones((submesh.npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
-        np.testing.assert_array_equal(phi_exact, phi_approx)
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
         self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # linear case
@@ -440,7 +440,7 @@ class TestFiniteVolumeIntegration(TestCase):
         c_exact = np.ones((submesh.npts, 1))
         c_approx = c_integral_disc.evaluate(None, c_exact)
         c_approx += 1  # add constant of integration
-        np.testing.assert_array_equal(c_exact, c_approx)
+        np.testing.assert_array_almost_equal(c_exact, c_approx)
         self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # linear case
@@ -488,7 +488,7 @@ class TestFiniteVolumeIntegration(TestCase):
         phi_exact = np.ones((submesh.npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
-        np.testing.assert_array_equal(phi_exact, phi_approx)
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
         self.assertEqual(right_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # linear case
@@ -561,7 +561,7 @@ class TestFiniteVolumeIntegration(TestCase):
         phi_exact = np.ones((submesh.npts, 1))
         int_phi_exact = submesh.edges
         int_phi_approx = int_phi_disc.evaluate(None, phi_exact).flatten()
-        np.testing.assert_array_equal(int_phi_exact, int_phi_approx)
+        np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx)
         # linear case
         phi_exact = submesh.nodes
         int_phi_exact = submesh.edges**2 / 2

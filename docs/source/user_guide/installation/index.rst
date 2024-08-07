@@ -45,10 +45,10 @@ It can be installed using ``pip`` or ``conda``, or from source.
 Optional solvers
 ----------------
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
-*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`_.
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver>`_.
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <gnu-linux-mac.html#optional-jaxsolver>`_.
+*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see `Optional - IREE / MLIR Support <gnu-linux-mac.html#optional-iree-mlir-support>`_.
 
 Dependencies
 ------------
@@ -70,6 +70,7 @@ Package                                                             Minimum supp
 `SymPy <https://docs.sympy.org/latest/index.html>`__                1.9.3
 `typing-extensions <https://pypi.org/project/typing-extensions/>`__ 4.10.0
 `pandas <https://pypi.org/project/pandas/>`__                       1.5.0
+`pooch <https://www.fatiando.org/pooch/>`__                         1.8.1
 =================================================================== ==========================
 
 .. _install.optional_dependencies:
@@ -144,9 +145,10 @@ Dependency                                                                      
 `pre-commit <https://pre-commit.com/index.html>`__                               \-                 dev                For managing and maintaining multi-language pre-commit hooks.
 `ruff <https://beta.ruff.rs/docs/>`__                                            \-                 dev                For code formatting.
 `nox <https://nox.thea.codes/en/stable/>`__                                      \-                 dev                For running testing sessions in multiple environments.
-`coverage <https://coverage.readthedocs.io/en/>`__                               \-                 dev                For calculating coverage of tests.
+`pytest-cov <https://pytest-cov.readthedocs.io/en/stable/>`__                    \-                 dev                For calculating test coverage.
 `parameterized <https://github.com/wolever/parameterized>`__                     \-                 dev                For test parameterization.
-`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running Jupyter notebooks tests.
+`pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running the test suites.
+`pytest-doctestplus <https://github.com/scientific-python/pytest-doctestplus>`__ \-                 dev                For running doctests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
 ================================================================================ ================== ================== =============================================================
@@ -204,22 +206,16 @@ Dependency                                                                Minimu
 `jaxlib <https://pypi.org/project/jaxlib/>`__                             0.4.20             jax                Support library for JAX
 ========================================================================= ================== ================== =======================
 
-.. _install.odes_dependencies:
+IREE dependencies
+^^^^^^^^^^^^^^^^^^
 
-odes dependencies
-^^^^^^^^^^^^^^^^^
+Installable with ``pip install "pybamm[iree]"`` (requires ``jax`` dependencies to be installed).
 
-Installable with ``pip install "pybamm[odes]"``
-
-======================================================================================================================================= ================== ================== =============================
-Dependency                                                                                                                              Minimum Version    pip extra          Notes
-======================================================================================================================================= ================== ================== =============================
-`scikits.odes <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`__     \-                 odes               For scikits ODE & DAE solvers
-======================================================================================================================================= ================== ================== =============================
-
-.. note::
-
-   Before running ``pip install "pybamm[odes]"``, make sure to install ``scikits.odes`` build-time requirements as described `here <https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver>`_ .
+========================================================================= ================== ================== =======================
+Dependency                                                                Minimum Version    pip extra          Notes
+========================================================================= ================== ================== =======================
+`iree-compiler <https://iree.dev/>`__                                     20240507.886       iree               IREE compiler
+========================================================================= ================== ================== =======================
 
 Full installation guide
 -----------------------

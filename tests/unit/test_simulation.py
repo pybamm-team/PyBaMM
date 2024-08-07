@@ -1,15 +1,18 @@
 import pybamm
 import numpy as np
 import pandas as pd
-from tests import TestCase
+
 import os
 import sys
 import unittest
 import uuid
+import pytest
 from tempfile import TemporaryDirectory
+from scipy.integrate import cumulative_trapezoid
+from tests import no_internet_connection
 
 
-class TestSimulation(TestCase):
+class TestSimulation(unittest.TestCase):
     def test_simple_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
@@ -69,8 +72,10 @@ class TestSimulation(TestCase):
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         # test solve without check
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sol = sim.solve(t_eval=[0, 600], check_model=False)
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(), discretisation_kwargs={"check_model": False}
+        )
+        sol = sim.solve(t_eval=[0, 600])
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             # skip test for scalar variables (e.g. discharge capacity)
@@ -82,6 +87,19 @@ class TestSimulation(TestCase):
             sim.solve(save_at_cycles=2)
         with self.assertRaisesRegex(ValueError, "starting_solution"):
             sim.solve(starting_solution=sol)
+
+    def test_solve_remove_independent_variables_from_rhs(self):
+        sim = pybamm.Simulation(
+            pybamm.lithium_ion.SPM(),
+            discretisation_kwargs={"remove_independent_variables_from_rhs": True},
+        )
+        sol = sim.solve([0, 600])
+        t = sol["Time [s]"].data
+        I = sol["Current [A]"].data
+        q = sol["Discharge capacity [A.h]"].data
+        np.testing.assert_array_almost_equal(
+            q, cumulative_trapezoid(I, t, initial=0) / 3600
+        )
 
     def test_solve_non_battery_model(self):
         model = pybamm.BaseModel()
@@ -170,6 +188,10 @@ class TestSimulation(TestCase):
             sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
         )
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_solve_with_initial_soc(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
@@ -186,8 +208,9 @@ class TestSimulation(TestCase):
         self.assertEqual(sim._built_initial_soc, 0.8)
 
         # test with drive cycle
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
+            data_loader.get_data("US06.csv"),
             comment="#",
             header=None,
         ).to_numpy()
@@ -342,6 +365,49 @@ class TestSimulation(TestCase):
             sim.solution.all_inputs[1]["Current function [A]"], 2
         )
 
+    def test_time_varying_input_function(self):
+        tf = 20.0
+
+        def oscillating(t):
+            return 3.6 + 0.1 * np.sin(2 * np.pi * t / tf)
+
+        model = pybamm.lithium_ion.SPM()
+
+        operating_modes = {
+            "Current [A]": pybamm.step.current,
+            "C-rate": pybamm.step.c_rate,
+            "Voltage [V]": pybamm.step.voltage,
+            "Power [W]": pybamm.step.power,
+        }
+        for name in operating_modes:
+            operating_mode = operating_modes[name]
+            step = operating_mode(oscillating, duration=tf / 2)
+            experiment = pybamm.Experiment([step, step], period=f"{tf / 100} seconds")
+
+            solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+            sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+            sim.solve()
+            for sol in sim.solution.sub_solutions:
+                t0 = sol.t[0]
+                np.testing.assert_array_almost_equal(
+                    sol[name].entries, np.array(oscillating(sol.t - t0))
+                )
+
+            # check improper inputs
+            for x in (np.nan, np.inf):
+
+                def f(t, x=x):
+                    return x + t
+
+                with self.assertRaises(ValueError):
+                    operating_mode(f)
+
+            def g(t, y):
+                return t
+
+            with self.assertRaises(TypeError):
+                operating_mode(g)
+
     def test_save_load(self):
         with TemporaryDirectory() as dir_name:
             test_name = os.path.join(dir_name, "tests.pickle")
@@ -479,14 +545,17 @@ class TestSimulation(TestCase):
             sim.plot(show_plot=False)
             sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
+    @pytest.mark.skipif(
+        no_internet_connection(),
+        reason="Network not available to download files from registry",
+    )
     def test_drive_cycle_interpolant(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
         # Import drive cycle from file
+        data_loader = pybamm.DataLoader()
         drive_cycle = pd.read_csv(
-            pybamm.get_parameters_filepath(
-                os.path.join("input", "drive_cycles", "US06.csv")
-            ),
+            pybamm.get_parameters_filepath(data_loader.get_data("US06.csv")),
             comment="#",
             skip_blank_lines=True,
             header=None,

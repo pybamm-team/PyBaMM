@@ -1,7 +1,3 @@
-#
-# Tests for the Casadi Solver class
-#
-from tests import TestCase
 import pybamm
 import unittest
 import numpy as np
@@ -9,7 +5,7 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
 
 
-class TestCasadiSolver(TestCase):
+class TestCasadiSolver(unittest.TestCase):
     def test_bad_mode(self):
         with self.assertRaisesRegex(ValueError, "invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
@@ -539,8 +535,53 @@ class TestCasadiSolver(TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
             solver.solve(model, t_eval=[0, 1])
 
+    def test_modulo_non_smooth_events(self):
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
 
-class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
+        a = 0.6
+        discontinuities = (np.arange(3) + 1) * a
+
+        model.rhs = {var1: pybamm.Modulo(pybamm.t, a)}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 0, var2: 0}
+        model.events = [
+            pybamm.Event("var1 = 0.55", pybamm.min(0.55 - var1)),
+            pybamm.Event("var2 = 1.2", pybamm.min(1.2 - var2)),
+        ]
+        for discontinuity in discontinuities:
+            model.events.append(
+                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity))
+            )
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        step_solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        dt = 0.05
+        time = 0
+        end_time = 3
+        step_solution = None
+        while time < end_time:
+            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            time += dt
+        np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
+        np.testing.assert_array_less(step_solution.y[-1, :-1], 1.2)
+        np.testing.assert_equal(step_solution.t_event[0], step_solution.t[-1])
+        np.testing.assert_array_equal(
+            step_solution.y_event[:, 0], step_solution.y.full()[:, -1]
+        )
+        var1_soln = (step_solution.t % a) ** 2 / 2 + a**2 / 2 * (step_solution.t // a)
+        var2_soln = 2 * var1_soln
+        np.testing.assert_array_almost_equal(
+            step_solution.y.full()[0], var1_soln, decimal=4
+        )
+        np.testing.assert_array_almost_equal(
+            step_solution.y.full()[-1], var2_soln, decimal=4
+        )
+
+
+class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -921,7 +962,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
         )
 
 
-class TestCasadiSolverDAEsWithForwardSensitivityEquations(TestCase):
+class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()

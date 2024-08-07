@@ -1,12 +1,12 @@
 #
 # Tests for the lithium-ion MPM model
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestMPM(TestCase):
+class TestMPM(unittest.TestCase):
     def test_well_posed(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
@@ -116,8 +116,15 @@ class TestMPM(TestCase):
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
+    def test_wycisk_ocp(self):
+        options = {
+            "open-circuit potential": "Wycisk",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
 
-class TestMPMExternalCircuits(TestCase):
+
+class TestMPMExternalCircuits(unittest.TestCase):
     def test_well_posed_voltage(self):
         options = {"operating mode": "voltage"}
         model = pybamm.lithium_ion.MPM(options)
@@ -139,7 +146,7 @@ class TestMPMExternalCircuits(TestCase):
         model.check_well_posedness()
 
 
-class TestMPMWithSEI(TestCase):
+class TestMPMWithSEI(unittest.TestCase):
     def test_reaction_limited_not_implemented(self):
         options = {"SEI": "reaction limited"}
         with self.assertRaises(NotImplementedError):
@@ -169,7 +176,7 @@ class TestMPMWithSEI(TestCase):
             pybamm.lithium_ion.MPM(options)
 
 
-class TestMPMWithMechanics(TestCase):
+class TestMPMWithMechanics(unittest.TestCase):
     def test_well_posed_negative_cracking_not_implemented(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         with self.assertRaises(NotImplementedError):
@@ -191,7 +198,7 @@ class TestMPMWithMechanics(TestCase):
             pybamm.lithium_ion.MPM(options)
 
 
-class TestMPMWithPlating(TestCase):
+class TestMPMWithPlating(unittest.TestCase):
     def test_well_posed_reversible_plating_not_implemented(self):
         options = {"lithium plating": "reversible"}
         with self.assertRaises(NotImplementedError):

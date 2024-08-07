@@ -2,40 +2,43 @@
 Tests for the batch_study.py
 """
 
-from tests import TestCase
 import os
 import pybamm
 import unittest
 from tempfile import TemporaryDirectory
 
-spm = pybamm.lithium_ion.SPM()
-spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
-casadi_safe = pybamm.CasadiSolver(mode="safe")
-casadi_fast = pybamm.CasadiSolver(mode="fast")
-exp1 = pybamm.Experiment([("Discharge at C/5 for 10 minutes", "Rest for 1 hour")])
-exp2 = pybamm.Experiment([("Discharge at C/20 for 10 minutes", "Rest for 1 hour")])
 
-bs_false_only_models = pybamm.BatchStudy(
-    models={"SPM": spm, "SPM uniform": spm_uniform}
-)
-bs_true_only_models = pybamm.BatchStudy(
-    models={"SPM": spm, "SPM uniform": spm_uniform}, permutations=True
-)
-bs_false = pybamm.BatchStudy(
-    models={"SPM": spm, "SPM uniform": spm_uniform},
-    solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
-    experiments={"exp1": exp1, "exp2": exp2},
-)
-bs_true = pybamm.BatchStudy(
-    models={"SPM": spm, "SPM uniform": spm_uniform},
-    solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
-    experiments={"exp2": exp2},
-    permutations=True,
-)
-
-
-class TestBatchStudy(TestCase):
+class TestBatchStudy(unittest.TestCase):
     def test_solve(self):
+        spm = pybamm.lithium_ion.SPM()
+        spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
+        casadi_safe = pybamm.CasadiSolver(mode="safe")
+        casadi_fast = pybamm.CasadiSolver(mode="fast")
+        exp1 = pybamm.Experiment(
+            [("Discharge at C/5 for 10 minutes", "Rest for 1 hour")]
+        )
+        exp2 = pybamm.Experiment(
+            [("Discharge at C/20 for 10 minutes", "Rest for 1 hour")]
+        )
+
+        bs_false_only_models = pybamm.BatchStudy(
+            models={"SPM": spm, "SPM uniform": spm_uniform}
+        )
+        bs_true_only_models = pybamm.BatchStudy(
+            models={"SPM": spm, "SPM uniform": spm_uniform}, permutations=True
+        )
+        bs_false = pybamm.BatchStudy(
+            models={"SPM": spm, "SPM uniform": spm_uniform},
+            solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
+            experiments={"exp1": exp1, "exp2": exp2},
+        )
+        bs_true = pybamm.BatchStudy(
+            models={"SPM": spm, "SPM uniform": spm_uniform},
+            solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
+            experiments={"exp2": exp2},
+            permutations=True,
+        )
+
         # Tests for exceptions
         for name in pybamm.BatchStudy.INPUT_LIST:
             with self.assertRaises(ValueError):
@@ -96,7 +99,12 @@ class TestBatchStudy(TestCase):
                 ValueError, "The simulations have not been solved yet."
             ):
                 pybamm.BatchStudy(
-                    models={"SPM": spm, "SPM uniform": spm_uniform}
+                    models={
+                        "SPM": pybamm.lithium_ion.SPM(),
+                        "SPM uniform": pybamm.lithium_ion.SPM(
+                            {"particle": "uniform profile"}
+                        ),
+                    }
                 ).create_gif()
             bs.solve([0, 10])
 

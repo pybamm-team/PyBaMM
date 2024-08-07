@@ -14,8 +14,9 @@ from functools import cached_property
 
 class NumpyEncoder(json.JSONEncoder):
     """
-    Numpy serialiser helper class that converts numpy arrays to a list
-    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    Numpy serialiser helper class that converts numpy arrays to a list.
+    Numpy arrays cannot be directly converted to JSON, so the arrays are
+    converted to python list objects before encoding.
     """
 
     def default(self, obj):
@@ -98,10 +99,6 @@ class Solution:
             self.all_inputs = all_inputs
 
         self.sensitivities = sensitivities
-
-        self._t_event = t_event
-        self._y_event = y_event
-        self._termination = termination
 
         # Check no ys are too large
         if check_solution:
@@ -934,33 +931,11 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
-    # Measured capacity variables
-    if "Discharge capacity [A.h]" in model.variables:
-        Q = cycle_solution["Discharge capacity [A.h]"].data
-        min_Q, max_Q = np.min(Q), np.max(Q)
-
-        cycle_summary_variables.update(
-            {
-                "Minimum measured discharge capacity [A.h]": min_Q,
-                "Maximum measured discharge capacity [A.h]": max_Q,
-                "Measured capacity [A.h]": max_Q - min_Q,
-            }
-        )
-
-    # Voltage variables
-    if "Battery voltage [V]" in model.variables:
-        V = cycle_solution["Battery voltage [V]"].data
-        min_V, max_V = np.min(V), np.max(V)
-
-        cycle_summary_variables.update(
-            {"Minimum voltage [V]": min_V, "Maximum voltage [V]": max_V}
-        )
-
-    # Degradation variables
-    degradation_variables = model.summary_variables
+    # Summary variables
+    summary_variables = model.summary_variables
     first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
-    for var in degradation_variables:
+    for var in summary_variables:
         data_first = first_state[var].data
         data_last = last_state[var].data
         cycle_summary_variables[var] = data_last[0]
@@ -974,6 +949,8 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
         esoh_solver is not None
         and isinstance(model, pybamm.lithium_ion.BaseModel)
         and model.options.electrode_types["negative"] == "porous"
+        and "Negative electrode capacity [A.h]" in model.variables
+        and "Positive electrode capacity [A.h]" in model.variables
     ):
         Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = last_state["Positive electrode capacity [A.h]"].data[0]

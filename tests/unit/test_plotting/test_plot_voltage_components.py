@@ -1,11 +1,13 @@
+import pytest
 import pybamm
-import unittest
 import numpy as np
-from tests import TestCase
 import matplotlib.pyplot as plt
+from matplotlib import use
+
+use("Agg")
 
 
-class TestPlotVoltageComponents(TestCase):
+class TestPlotVoltageComponents:
     def test_plot_with_solution(self):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
@@ -20,7 +22,7 @@ class TestPlotVoltageComponents(TestCase):
 
         _, ax = plt.subplots()
         _, ax_out = pybamm.plot_voltage_components(sol, ax=ax, show_legend=True)
-        self.assertEqual(ax_out, ax)
+        assert ax_out == ax
 
     def test_plot_with_simulation(self):
         model = pybamm.lithium_ion.SPM()
@@ -37,7 +39,7 @@ class TestPlotVoltageComponents(TestCase):
 
         _, ax = plt.subplots()
         _, ax_out = pybamm.plot_voltage_components(sim, ax=ax, show_legend=True)
-        self.assertEqual(ax_out, ax)
+        assert ax_out == ax
 
     def test_plot_from_solution(self):
         model = pybamm.lithium_ion.SPM()
@@ -53,7 +55,7 @@ class TestPlotVoltageComponents(TestCase):
 
         _, ax = plt.subplots()
         _, ax_out = sol.plot_voltage_components(ax=ax, show_legend=True)
-        self.assertEqual(ax_out, ax)
+        assert ax_out == ax
 
     def test_plot_from_simulation(self):
         model = pybamm.lithium_ion.SPM()
@@ -70,25 +72,12 @@ class TestPlotVoltageComponents(TestCase):
 
         _, ax = plt.subplots()
         _, ax_out = sim.plot_voltage_components(ax=ax, show_legend=True)
-        self.assertEqual(ax_out, ax)
+        assert ax_out == ax
 
     def test_plot_without_solution(self):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
-        with self.assertRaises(ValueError) as error:
+        with pytest.raises(ValueError) as error:
             sim.plot_voltage_components()
-
-        self.assertEqual(
-            str(error.exception), "The simulation has not been solved yet."
-        )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+            assert str(error.exception) == "The simulation has not been solved yet."

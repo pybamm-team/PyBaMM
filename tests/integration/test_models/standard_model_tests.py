@@ -3,9 +3,9 @@
 #
 import pybamm
 import tests
+import tempfile
 
 import numpy as np
-import os
 
 
 class StandardModelTest:
@@ -140,11 +140,13 @@ class StandardModelTest:
         )
 
     def test_serialisation(self, solver=None, t_eval=None):
+        temp = tempfile.NamedTemporaryFile(prefix="test_model")
+        file_name = temp.name
         self.model.save_model(
-            "test_model", variables=self.model.variables, mesh=self.disc.mesh
+            file_name, variables=self.model.variables, mesh=self.disc.mesh
         )
 
-        new_model = pybamm.load_model("test_model.json")
+        new_model = pybamm.load_model(file_name + ".json")
 
         # create new solver for re-created model
         if solver is not None:
@@ -174,8 +176,7 @@ class StandardModelTest:
             np.testing.assert_array_almost_equal(
                 new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
             )
-
-        os.remove("test_model.json")
+        temp.close()
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False

@@ -3,12 +3,14 @@
 #
 from __future__ import annotations
 import numbers
+import warnings
 
 import numpy as np
 import sympy
 from scipy.sparse import csr_matrix, issparse
 from functools import cached_property
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Sequence
 
 import pybamm
 from pybamm.util import import_optional_dependency
@@ -280,7 +282,8 @@ class Symbol:
 
     @name.setter
     def name(self, value: str):
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise TypeError(f"{value} must be of type str")
         self._name = value
 
     @property
@@ -644,7 +647,7 @@ class Symbol:
         elif isinstance(self, pybamm.Broadcast):
             # Move negation inside the broadcast
             # Apply recursively
-            return self._unary_new_copy(-self.orphans[0])
+            return self.create_copy([-self.orphans[0]])
         elif isinstance(self, pybamm.Subtraction):
             # negation flips the subtraction
             return self.right - self.left
@@ -664,7 +667,7 @@ class Symbol:
             # Move absolute value inside the broadcast
             # Apply recursively
             abs_self_not_broad = abs(self.orphans[0])
-            return self._unary_new_copy(abs_self_not_broad)
+            return self.create_copy([abs_self_not_broad])
         else:
             k = pybamm.settings.abs_smoothing
             # Return exact approximation if that is the setting or the outcome is a
@@ -951,23 +954,49 @@ class Symbol:
         """
         return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
 
-    def create_copy(self):
+    def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
+        """
+        Gets existing children for a symbol being copied if they aren't provided.
+        """
+        if children is None:
+            children = [child.create_copy() for child in self.children]
+        return children
+
+    def create_copy(
+        self,
+        new_children: list[pybamm.Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
         """
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
         copy.deepcopy(), which is slow.
-        """
-        raise NotImplementedError(
-            f"""method self.new_copy() not implemented
-            for symbol {self!s} of type {type(self)}"""
-        )
 
-    def new_copy(self):
+        If new_children are provided, they are used instead of the existing children.
+
+        If `perform_simplifications` = True, some classes (e.g. `BinaryOperator`,
+        `UnaryOperator`, `Concatenation`) will perform simplifications and error checks
+        based on the new children before copying the symbol. This may result in a
+        different symbol being returned than the one copied.
+
+        Turning off this behaviour to ensure the symbol remains unchanged is
+        discouraged.
         """
-        Returns `create_copy` with added attributes
-        """
-        obj = self.create_copy()
-        obj._print_name = self.print_name
-        return obj
+        children = self._children_for_copying(new_children)
+        return self.__class__(self.name, children, domains=self.domains)
+
+    def new_copy(
+        self,
+        new_children: list[Symbol] | None = None,
+        perform_simplifications: bool = True,
+    ):
+        """ """
+        warnings.warn(
+            "The 'new_copy' function for expression tree symbols is deprecated, use "
+            "'create_copy' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.create_copy(new_children, perform_simplifications)
 
     @cached_property
     def size(self):

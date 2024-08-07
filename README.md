@@ -12,9 +12,10 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5334/jors.309.svg)](https://doi.org/10.5334/jors.309)
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pybamm-team/PyBaMM/badge)](https://scorecard.dev/viewer/?uri=github.com/pybamm-team/PyBaMM)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-77-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-89-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -128,9 +129,8 @@ conda install -c conda-forge pybamm
 
 ### Optional solvers
 
-Following GNU/Linux and macOS solvers are optionally available:
+The following solvers are optionally available:
 
-- [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-scikits-odes-solver).
 - [jax](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)-based solver, see [the documentation](https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver).
 
 ## 📖 Citing PyBaMM
@@ -170,7 +170,8 @@ If you'd like to help us develop PyBaMM by adding new methods, writing documenta
 
 ## 📫 Get in touch
 
-For any questions, comments, suggestions or bug reports, please see the [contact page](https://www.pybamm.org/contact).
+For any questions, comments, suggestions or bug reports, please see the
+[contact page](https://www.pybamm.org/community).
 
 ## 📃 License
 

@@ -1,14 +1,14 @@
 #
 # Test for adding ghost nodes in finite volumes class
 #
-from tests import TestCase
+
 import pybamm
 from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
 import numpy as np
 import unittest
 
 
-class TestGhostNodes(TestCase):
+class TestGhostNodes(unittest.TestCase):
     def test_add_ghost_nodes(self):
         # Set up
 
@@ -52,6 +52,8 @@ class TestGhostNodes(TestCase):
         bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
+        with self.assertRaisesRegex(ValueError, "No boundary conditions"):
+            sp_meth.add_ghost_nodes(var, discretised_symbol, {})
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             sp_meth.add_neumann_values(var, discretised_symbol, bcs, var.domain)
 

@@ -2,7 +2,7 @@
 # Tests for the Unary Operator classes
 #
 import unittest
-from tests import TestCase
+
 import unittest.mock as mock
 
 import numpy as np
@@ -10,11 +10,12 @@ from scipy.sparse import diags
 import sympy
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
+from tests import assert_domain_equal
 
 import pybamm
 
 
-class TestUnaryOperators(TestCase):
+class TestUnaryOperators(unittest.TestCase):
     def test_unary_operator(self):
         a = pybamm.Symbol("a", domain=["test"])
         un = pybamm.UnaryOperator("unary test", a)
@@ -223,6 +224,14 @@ class TestUnaryOperators(TestCase):
         grad = pybamm.grad(a)
         self.assertEqual(grad, pybamm.PrimaryBroadcastToEdges(0, "test domain"))
 
+        # gradient of a secondary broadcast moves the secondary out of the gradient
+        a = pybamm.Symbol("a", domain="test domain")
+        a_broad = pybamm.SecondaryBroadcast(a, "another domain")
+        grad = pybamm.grad(a_broad)
+        self.assertEqual(
+            grad, pybamm.SecondaryBroadcast(pybamm.grad(a), "another domain")
+        )
+
         # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)
@@ -282,7 +291,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(inta.name, "integral dx ['negative electrode']")
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable[0], x)
-        self.assertDomainEqual(inta.domains, {})
+        assert_domain_equal(inta.domains, {})
         # space integral with secondary domain
         a_sec = pybamm.Symbol(
             "a",
@@ -291,7 +300,7 @@ class TestUnaryOperators(TestCase):
         )
         x = pybamm.SpatialVariable("x", ["negative electrode"])
         inta_sec = pybamm.Integral(a_sec, x)
-        self.assertDomainEqual(inta_sec.domains, {"primary": ["current collector"]})
+        assert_domain_equal(inta_sec.domains, {"primary": ["current collector"]})
         # space integral with tertiary domain
         a_tert = pybamm.Symbol(
             "a",
@@ -303,7 +312,7 @@ class TestUnaryOperators(TestCase):
         )
         x = pybamm.SpatialVariable("x", ["negative electrode"])
         inta_tert = pybamm.Integral(a_tert, x)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_tert.domains,
             {"primary": ["current collector"], "secondary": ["some extra domain"]},
         )
@@ -318,7 +327,7 @@ class TestUnaryOperators(TestCase):
             },
         )
         inta_quat = pybamm.Integral(a_quat, x)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_quat.domains,
             {
                 "primary": ["current collector"],
@@ -331,16 +340,16 @@ class TestUnaryOperators(TestCase):
         y = pybamm.SpatialVariable("y", ["current collector"])
         # without a tertiary domain
         inta_sec_y = pybamm.Integral(a_sec, y)
-        self.assertDomainEqual(inta_sec_y.domains, {"primary": ["negative electrode"]})
+        assert_domain_equal(inta_sec_y.domains, {"primary": ["negative electrode"]})
         # with a tertiary domain
         inta_tert_y = pybamm.Integral(a_tert, y)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_tert_y.domains,
             {"primary": ["negative electrode"], "secondary": ["some extra domain"]},
         )
         # with a quaternary domain
         inta_quat_y = pybamm.Integral(a_quat, y)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_quat_y.domains,
             {
                 "primary": ["negative electrode"],
@@ -352,13 +361,13 @@ class TestUnaryOperators(TestCase):
         # space integral *in* tertiary domain
         z = pybamm.SpatialVariable("z", ["some extra domain"])
         inta_tert_z = pybamm.Integral(a_tert, z)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_tert_z.domains,
             {"primary": ["negative electrode"], "secondary": ["current collector"]},
         )
         # with a quaternary domain
         inta_quat_z = pybamm.Integral(a_quat, z)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_quat_z.domains,
             {
                 "primary": ["negative electrode"],
@@ -370,7 +379,7 @@ class TestUnaryOperators(TestCase):
         # space integral *in* quaternary domain
         Z = pybamm.SpatialVariable("Z", ["another extra domain"])
         inta_quat_Z = pybamm.Integral(a_quat, Z)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_quat_Z.domains,
             {
                 "primary": ["negative electrode"],
@@ -397,7 +406,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(inta.integration_variable[0], x)
         self.assertEqual(inta.domain, ["negative electrode"])
         inta_sec = pybamm.IndefiniteIntegral(a_sec, x)
-        self.assertDomainEqual(
+        assert_domain_equal(
             inta_sec.domains,
             {"primary": ["negative electrode"], "secondary": ["current collector"]},
         )
@@ -548,7 +557,7 @@ class TestUnaryOperators(TestCase):
         a = pybamm.Symbol("a", domain="some domain")
         delta_a = pybamm.DeltaFunction(a, "left", "another domain")
         self.assertEqual(delta_a.side, "left")
-        self.assertDomainEqual(
+        assert_domain_equal(
             delta_a.domains,
             {"primary": ["another domain"], "secondary": ["some domain"]},
         )
@@ -587,7 +596,7 @@ class TestUnaryOperators(TestCase):
         boundary_a = pybamm.boundary_value(a, "right")
         self.assertIsInstance(boundary_a, pybamm.BoundaryValue)
         self.assertEqual(boundary_a.side, "right")
-        self.assertDomainEqual(boundary_a.domains, {})
+        assert_domain_equal(boundary_a.domains, {})
         # test with secondary domain
         a_sec = pybamm.Symbol(
             "a",
@@ -595,9 +604,7 @@ class TestUnaryOperators(TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         boundary_a_sec = pybamm.boundary_value(a_sec, "right")
-        self.assertDomainEqual(
-            boundary_a_sec.domains, {"primary": ["current collector"]}
-        )
+        assert_domain_equal(boundary_a_sec.domains, {"primary": ["current collector"]})
         # test with secondary domain and tertiary domain
         a_tert = pybamm.Symbol(
             "a",
@@ -605,7 +612,7 @@ class TestUnaryOperators(TestCase):
             auxiliary_domains={"secondary": "current collector", "tertiary": "bla"},
         )
         boundary_a_tert = pybamm.boundary_value(a_tert, "right")
-        self.assertDomainEqual(
+        assert_domain_equal(
             boundary_a_tert.domains,
             {"primary": ["current collector"], "secondary": ["bla"]},
         )
@@ -621,7 +628,7 @@ class TestUnaryOperators(TestCase):
         )
         boundary_a_quat = pybamm.boundary_value(a_quat, "right")
         self.assertEqual(boundary_a_quat.domain, ["current collector"])
-        self.assertDomainEqual(
+        assert_domain_equal(
             boundary_a_quat.domains,
             {
                 "primary": ["current collector"],
@@ -691,10 +698,11 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.Symbol("test"))
 
         # Test Negate
-        self.assertEqual(pybamm.Negate(4).to_equation(), -4.0)
+        value = 4
+        self.assertEqual(pybamm.Negate(value).to_equation(), -value)
 
         # Test AbsoluteValue
-        self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
+        self.assertEqual(pybamm.AbsoluteValue(-value).to_equation(), value)
 
         # Test Gradient
         self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
@@ -702,7 +710,7 @@ class TestUnaryOperators(TestCase):
         # Test Divergence
         self.assertEqual(
             pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
-            sympy_Divergence(sympy_Gradient(a)),
+            sympy_Divergence(sympy_Gradient("a")),
         )
 
         # Test BoundaryValue
@@ -732,7 +740,7 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(expr.child, pybamm.Parameter("param"))
         self.assertEqual(expr.initial_condition, pybamm.Scalar(1))
         self.assertEqual(expr.name, "explicit time integral")
-        self.assertEqual(expr.new_copy(), expr)
+        self.assertEqual(expr.create_copy(), expr)
         self.assertFalse(expr.is_constant())
 
     def test_to_from_json(self):

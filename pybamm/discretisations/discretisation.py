@@ -9,14 +9,7 @@ from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
-    if symbol in bcs:
-        if bcs[symbol][side][1] == form:
-            return True
-        else:
-            return False
-
-    else:
-        return False
+    return (symbol in bcs) and (bcs[symbol][side][1] == form)
 
 
 class Discretisation:
@@ -26,14 +19,32 @@ class Discretisation:
     Parameters
     ----------
     mesh : pybamm.Mesh
-            contains all submeshes to be used on each domain
+        contains all submeshes to be used on each domain
     spatial_methods : dict
-            a dictionary of the spatial methods to be used on each
-            domain. The keys correspond to the model domains and the
-            values to the spatial method.
+        a dictionary of the spatial methods to be used on each
+        domain. The keys correspond to the model domains and the
+        values to the spatial method.
+    check_model : bool, optional
+            If True, model checks are performed after discretisation. For large
+            systems these checks can be slow, so can be skipped by setting this
+            option to False. When developing, testing or debugging it is recommended
+            to leave this option as True as it may help to identify any errors.
+            Default is True.
+    remove_independent_variables_from_rhs : bool, optional
+        If True, model checks to see whether any variables from the RHS are used
+        in any other equation. If a variable meets all of the following criteria
+        (not used anywhere in the model, len(rhs)>1), then the variable
+        is moved to be explicitly integrated when called by the solution object.
+        Default is False.
     """
 
-    def __init__(self, mesh=None, spatial_methods=None):
+    def __init__(
+        self,
+        mesh=None,
+        spatial_methods=None,
+        check_model=True,
+        remove_independent_variables_from_rhs=False,
+    ):
         self._mesh = mesh
         if mesh is None:
             self._spatial_methods = {}
@@ -60,6 +71,10 @@ class Discretisation:
         self._bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
+        self._check_model_flag = check_model
+        self._remove_independent_variables_from_rhs_flag = (
+            remove_independent_variables_from_rhs
+        )
 
     @property
     def mesh(self):
@@ -90,13 +105,7 @@ class Discretisation:
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(
-        self,
-        model,
-        inplace=True,
-        check_model=True,
-        remove_independent_variables_from_rhs=True,
-    ):
+    def process_model(self, model, inplace=True):
         """
         Discretise a model. Currently inplace, could be changed to return a new model.
 
@@ -108,18 +117,6 @@ class Discretisation:
         inplace : bool, optional
             If True, discretise the model in place. Otherwise, return a new
             discretised model. Default is True.
-        check_model : bool, optional
-            If True, model checks are performed after discretisation. For large
-            systems these checks can be slow, so can be skipped by setting this
-            option to False. When developing, testing or debugging it is recommended
-            to leave this option as True as it may help to identify any errors.
-            Default is True.
-        remove_independent_variables_from_rhs : bool, optional
-            If True, model checks to see whether any variables from the RHS are used
-            in any other equation. If a variable meets all of the following criteria
-            (not used anywhere in the model, len(rhs)>1), then the variable
-            is moved to be explicitly integrated when called by the solution object.
-            Default is True.
 
         Returns
         -------
@@ -158,7 +155,7 @@ class Discretisation:
         # set variables (we require the full variable not just id)
 
         # Search Equations for Independence
-        if remove_independent_variables_from_rhs:
+        if self._remove_independent_variables_from_rhs_flag:
             model = self.remove_independent_variables_from_rhs(model)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         # Find those RHS's that are constant
@@ -240,7 +237,7 @@ class Discretisation:
         model_disc._geometry = getattr(self.mesh, "_geometry", None)
 
         # Check that resulting model makes sense
-        if check_model:
+        if self._check_model_flag:
             pybamm.logger.verbose(f"Performing model checks for {model.name}")
             self.check_model(model_disc)
 
@@ -610,15 +607,14 @@ class Discretisation:
         for var in sorted_model_variables:
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
-                mass_list.append(1.0)
-                mass_inv_list.append(1.0)
+                mass = 1.0
+                mass_inv = 1.0
             else:
                 mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
-                mass_list.append(mass)
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
                     (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
@@ -626,11 +622,13 @@ class Discretisation:
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to
                     # compute the inverse
-                    mass_inv_list.append(mass)
+                    mass_inv = mass
                 else:
                     # inverse is more efficient in csc format
                     mass_inv = inv(csc_matrix(mass))
-                    mass_inv_list.append(mass_inv)
+
+            mass_list.append(mass)
+            mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -641,14 +639,21 @@ class Discretisation:
 
         # Create block diagonal (sparse) mass matrix (if model is not empty)
         # and inverse (if model has odes)
-        if len(model.rhs) + len(model.algebraic) > 0:
+        N_rhs = len(model.rhs)
+        N_alg = len(model.algebraic)
+
+        has_mass_matrix = N_rhs > 0 or N_alg > 0
+        has_mass_matrix_inv = N_rhs > 0
+
+        if has_mass_matrix:
             mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
-            if len(model.rhs) > 0:
-                mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
-            else:
-                mass_matrix_inv = None
         else:
-            mass_matrix, mass_matrix_inv = None, None
+            mass_matrix = None
+
+        if has_mass_matrix_inv:
+            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        else:
+            mass_matrix_inv = None
 
         return mass_matrix, mass_matrix_inv
 
@@ -754,7 +759,7 @@ class Discretisation:
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
                 return pybamm.simplify_if_constant(
-                    symbol._binary_new_copy(disc_left, disc_right)
+                    symbol.create_copy(new_children=[disc_left, disc_right])
                 )
             else:
                 return spatial_method.process_binary_operators(
@@ -866,11 +871,11 @@ class Discretisation:
                 # After discretisation, we can make the symbol constant
                 return disc_child
             else:
-                return symbol._unary_new_copy(disc_child)
+                return symbol.create_copy(new_children=[disc_child])
 
         elif isinstance(symbol, pybamm.Function):
             disc_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._function_new_copy(disc_children)
+            return symbol.create_copy(disc_children)
 
         elif isinstance(symbol, pybamm.VariableDot):
             # Add symbol's reference and multiply by the symbol's scale
@@ -1103,6 +1108,7 @@ class Discretisation:
             # only check children of variables, this will skip the variable itself
             # and catch any other cases
             + [child for var in model.variables.values() for child in var.children]
+            + [event.expression for event in model.events]
         )
         all_vars_in_eqns = unpacker.unpack_list_of_symbols(eqns_to_check)
         all_vars_in_eqns = [var.name for var in all_vars_in_eqns]
@@ -1122,6 +1128,7 @@ class Discretisation:
                     # in variables twice under different names
                     for key in model.variables:
                         if model.variables[key] == var:
+                            print("here")
                             model.variables[key] = model.variables[var.name]
                     del model.rhs[var]
                     del model.initial_conditions[var]

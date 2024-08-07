@@ -1,7 +1,3 @@
-#
-# Public functions to create steps for use in an experiment.
-#
-import numpy as np
 import pybamm
 from .base_step import (
     BaseStepExplicit,
@@ -11,13 +7,13 @@ from .base_step import (
 )
 
 
-def string(string, **kwargs):
+def string(text, **kwargs):
     """
     Create a step from a string.
 
     Parameters
     ----------
-    string : str
+    text : str
         The string to parse. Each operating condition should
         be of the form "Do this for this long" or "Do this until this happens". For
         example, "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge
@@ -34,41 +30,41 @@ def string(string, **kwargs):
     :class:`pybamm.step.BaseStep`
         A step parsed from the string.
     """
-    if not isinstance(string, str):
+    if not isinstance(text, str):
         raise TypeError("Input to step.string() must be a string")
 
-    if "oC" in string:
+    if "oC" in text:
         raise ValueError(
             "Temperature must be specified as a keyword argument "
             "instead of in the string"
         )
 
     # Save the original string
-    description = string
+    description = text
 
     # extract period
-    if "period)" in string:
+    if "period)" in text:
         if "period" in kwargs:
             raise ValueError(
                 "Period cannot be specified both as a keyword argument "
                 "and in the string"
             )
-        string, period_full = string.split(" (")
+        text, period_full = text.split(" (")
         period, _ = period_full.split(" period)")
         kwargs["period"] = period
     # extract termination condition based on "until" keyword
-    if "until" in string:
+    if "until" in text:
         # e.g. "Charge at 4 A until 3.8 V"
-        string, termination = string.split(" until ")
+        text, termination = text.split(" until ")
         # sometimes we use "or until" instead of "until", so remove "or"
-        string = string.replace(" or", "")
+        text = text.replace(" or", "")
     else:
         termination = None
 
     # extract duration based on "for" keyword
-    if "for" in string:
+    if "for" in text:
         # e.g. "Charge at 4 A for 3 hours"
-        string, duration = string.split(" for ")
+        text, duration = text.split(" for ")
     else:
         duration = None
 
@@ -79,10 +75,10 @@ def string(string, **kwargs):
         )
 
     # read remaining instruction
-    if string.startswith("Rest"):
+    if text.startswith("Rest"):
         step_class = Current
         value = 0
-    elif string.startswith("Run"):
+    elif text.startswith("Run"):
         raise ValueError(
             "Simulating drive cycles with 'Run' has been deprecated. Use the "
             "pybamm.step.current/voltage/power/c_rate/resistance() functions "
@@ -92,7 +88,7 @@ def string(string, **kwargs):
         # split by what is before and after "at"
         # e.g. "Charge at 4 A" -> ["Charge", "4 A"]
         # e.g. "Discharge at C/2" -> ["Discharge", "C/2"]
-        instruction, value_string = string.split(" at ")
+        instruction, value_string = text.split(" at ")
         if instruction == "Charge":
             sign = -1
         elif instruction in ["Discharge", "Hold"]:
@@ -133,7 +129,7 @@ class Current(BaseStepExplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def current_value(self, variables):
@@ -154,11 +150,16 @@ class CRate(BaseStepExplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def current_value(self, variables):
         return self.value * pybamm.Parameter("Nominal cell capacity [A.h]")
+
+    def default_duration(self, value):
+        # "value" is C-rate, so duration is "1 / value" hours in seconds
+        # with a 2x safety factor
+        return 1 / abs(value) * 3600 * 2
 
 
 def c_rate(value, **kwargs):
@@ -204,7 +205,7 @@ class Power(BaseStepImplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def get_parameter_values(self, variables):
@@ -235,7 +236,7 @@ class Resistance(BaseStepImplicit):
     """
 
     def __init__(self, value, **kwargs):
-        kwargs["direction"] = value_based_charge_or_discharge(value)
+        self.calculate_charge_or_discharge = True
         super().__init__(value, **kwargs)
 
     def get_parameter_values(self, variables):
@@ -417,24 +418,3 @@ class CustomStepImplicit(BaseStepImplicit):
         return CustomStepImplicit(
             self.current_rhs_function, self.control, **self.kwargs
         )
-
-
-def value_based_charge_or_discharge(step_value):
-    """
-    Determine whether the step is a charge or discharge step based on the value of the
-    step
-    """
-    if isinstance(step_value, np.ndarray):
-        init_curr = step_value[0, 1]
-    elif isinstance(step_value, pybamm.Symbol):
-        inpt = {"start time": 0}
-        init_curr = step_value.evaluate(t=0, inputs=inpt).flatten()[0]
-    else:
-        init_curr = step_value
-    sign = np.sign(init_curr)
-    if sign == 0:
-        return "Rest"
-    elif sign > 0:
-        return "Discharge"
-    else:
-        return "Charge"

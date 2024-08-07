@@ -46,7 +46,6 @@ release = version
 extensions = [
     # Sphinx extensions
     "sphinx.ext.autodoc",
-    "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
@@ -73,10 +72,6 @@ extensions = [
 napoleon_use_rtype = True
 napoleon_google_docstring = False
 
-doctest_global_setup = """
-from docs import *
-import pybamm
-"""
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -181,13 +176,21 @@ htmlhelp_basename = "pybamm"
 html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
 
 # For edit button
-html_context = {
-    "github_user": "pybamm-team",
-    "github_repo": "pybamm",
-    "github_version": "develop",
-    "doc_path": "docs/",
-}
+html_context.update(
+    {
+        "github_user": "pybamm-team",
+        "github_repo": "pybamm",
+        "github_version": "develop",
+        "doc_path": "docs/",
+    }
+)
 
+# Set canonical URL from the Read the Docs Domain
+html_baseurl = os.getenv("READTHEDOCS_CANONICAL_URL", "")
+
+# Tell Jinja2 templates the build is running on Read the Docs
+if os.getenv("READTHEDOCS") == "True":
+    html_context["READTHEDOCS"] = True
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
@@ -366,6 +369,27 @@ env.doc2path(env.docname, base=None) %}
             <a href="{{ github_download_url | e }}/docs/{{ doc_path | e }}"
             target="_blank" download>
             download this notebook</a> and run it offline.
+        </p>
+    </div>
+
+"""
+
+if os.environ.get("READTHEDOCS_VERSION") == "latest":
+    # append another admonition to warn about unreleased features
+    # note: this needs to be appended with a newline and correct dedentation
+    nbsphinx_prolog += r"""
+
+    <div class="admonition attention">
+        <p class="admonition-title">
+            Attention
+        </p>
+        <p>
+            You are viewing this notebook on the latest version of the documentation,
+            where these notebooks may not be compatible with the stable release of
+            PyBaMM since they can contain features that are not yet released.
+            We recommend viewing these notebooks from the stable version of the documentation. To install the latest version of PyBaMM that is compatible with the latest notebooks,
+            <a href="https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html\#full-installation-guide
+            ">build PyBaMM from source</a>.
         </p>
     </div>
 

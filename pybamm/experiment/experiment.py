@@ -20,7 +20,7 @@ class Experiment:
     ----------
     operating_conditions : list[str]
         List of strings representing the operating conditions.
-    period : string, optional
+    period : str, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
     temperature: float, optional
@@ -57,7 +57,6 @@ class Experiment:
             if not isinstance(cycle, tuple):
                 cycle = (cycle,)
             cycles.append(cycle)
-
         self.cycles = cycles
         self.cycle_lengths = [len(cycle) for cycle in cycles]
 
@@ -170,6 +169,26 @@ class Experiment:
             elif term.endswith("V"):
                 end_discharge_V = term.split("V")[0]
                 termination_dict["voltage"] = (float(end_discharge_V), "V")
+            elif any(
+                [
+                    term.endswith(key)
+                    for key in [
+                        "hour",
+                        "hours",
+                        "h",
+                        "hr",
+                        "minute",
+                        "minutes",
+                        "m",
+                        "min",
+                        "second",
+                        "seconds",
+                        "s",
+                        "sec",
+                    ]
+                ]
+            ):
+                termination_dict["time"] = _convert_time_to_seconds(term)
             else:
                 raise ValueError(
                     "Only capacity or voltage can be provided as a termination reason, "

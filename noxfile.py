@@ -1,6 +1,8 @@
 import nox
 import os
 import sys
+import warnings
+import platform
 from pathlib import Path
 
 
@@ -13,11 +15,54 @@ else:
     nox.options.sessions = ["pre-commit", "unit"]
 
 
+def set_iree_state():
+    """
+    Check if IREE is enabled and set the environment variable accordingly.
+
+    Returns
+    -------
+    str
+        "ON" if IREE is enabled, "OFF" otherwise.
+
+    """
+    state = "ON" if os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF") == "ON" else "OFF"
+    if state == "ON":
+        if sys.platform == "win32":
+            warnings.warn(
+                (
+                    "IREE is not enabled on Windows yet. "
+                    "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                ),
+                stacklevel=2,
+            )
+            return "OFF"
+        if sys.platform == "darwin":
+            # iree-compiler is currently only available as a wheel on macOS 13 (or
+            # higher) and Python version 3.11
+            mac_ver = int(platform.mac_ver()[0].split(".")[0])
+            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 13:
+                warnings.warn(
+                    (
+                        "IREE is only supported on MacOS 13 (or higher) and Python"
+                        "version 3.11. Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                    ),
+                    stacklevel=2,
+                )
+                return "OFF"
+    return state
+
+
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "SUNDIALS_INST": f"{homedir}/.local",
     "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
-    "PIP_NO_BINARY": "scikits.odes",
+    "PYTHONIOENCODING": "utf-8",
+    "MPLBACKEND": "Agg",
+    # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
+    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
+    "PYBAMM_IDAKLU_EXPR_IREE": set_iree_state(),
+    "IREE_INDEX_URL": os.getenv(
+        "IREE_INDEX_URL", "https://iree.dev/pip-release-links.html"
+    ),
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -49,10 +94,39 @@ def run_pybamm_requires(session):
             session.run(
                 "git",
                 "clone",
+                "--depth",
+                "1",
+                "--branch",
+                "v2.12.0",
                 "https://github.com/pybind/pybind11.git",
                 "pybind11/",
+                "-c",
+                "advice.detachedHead=false",
                 external=True,
             )
+        if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON" and not os.path.exists(
+            "./iree"
+        ):
+            session.run(
+                "git",
+                "clone",
+                "--depth=1",
+                "--recurse-submodules",
+                "--shallow-submodules",
+                "--branch=candidate-20240507.886",
+                "https://github.com/openxla/iree",
+                "iree/",
+                external=True,
+            )
+            with session.chdir("iree"):
+                session.run(
+                    "git",
+                    "submodule",
+                    "update",
+                    "--init",
+                    "--recursive",
+                    external=True,
+                )
     else:
         session.error("nox -s pybamm-requires is only available on Linux & macOS.")
 
@@ -61,97 +135,83 @@ def run_pybamm_requires(session):
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
+    session.install("setuptools", silent=False)
     session.install("coverage", silent=False)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("coverage", "run", "run-tests.py", "--nosub")
-    session.run("coverage", "combine")
-    session.run("coverage", "xml")
+    # Using plugin here since coverage runs unit tests on linux with latest python version.
+    if "CI" in os.environ:
+        session.install("pytest-github-actions-annotate-failures")
+    session.install("-e", ".[all,dev,jax]", silent=False)
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        # See comments in 'dev' session
+        session.install(
+            "-e",
+            ".[iree]",
+            "--find-links",
+            PYBAMM_ENV.get("IREE_INDEX_URL"),
+            silent=False,
+        )
+    session.run("pytest", "--cov=pybamm", "--cov-report=xml", "tests/unit")
 
 
 @nox.session(name="integration")
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--integration")
+    session.install("setuptools", silent=False)
+    if (
+        "CI" in os.environ
+        and sys.version_info[:2] == (3, 12)
+        and sys.platform == "linux"
+    ):
+        session.install("pytest-github-actions-annotate-failures")
+    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.run("python", "-m", "pytest", "-m", "integration")
 
 
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.install("-e", ".[all,docs]", silent=False)
-    session.run("python", "run-tests.py", "--doctest")
+    # TODO: Temporary fix for Python 3.12 CI.
+    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+    session.install("setuptools", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "--doctest-plus",
+        "pybamm",
+    )
 
 
 @nox.session(name="unit")
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--unit")
+    session.install("setuptools", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        # See comments in 'dev' session
+        session.install(
+            "-e",
+            ".[iree]",
+            "--find-links",
+            PYBAMM_ENV.get("IREE_INDEX_URL"),
+            silent=False,
+        )
+    session.run("python", "-m", "pytest", "-m", "unit")
 
 
 @nox.session(name="examples")
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
+    session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
-    session.run("pytest", "--nbmake", *notebooks_to_test, external=True)
+    session.run(
+        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
+    )
 
 
 @nox.session(name="scripts")
@@ -162,8 +222,8 @@ def run_scripts(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all]", silent=False)
-    session.run("python", "run-tests.py", "--scripts")
+    session.install("-e", ".[all,dev]", silent=False)
+    session.run("python", "-m", "pytest", "-m", "scripts")
 
 
 @nox.session(name="dev")
@@ -173,93 +233,49 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    components = ["all", "dev", "jax"]
+    args = []
+    if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
+        # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
+        # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
+        # When upgrading Jax/IREE ensure that the following are compatible with each other:
+        #  - Jax and Jaxlib version [pyproject.toml]
+        #  - IREE repository clone (use the matching nightly candidate) [noxfile.py]
+        #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
+        components.append("iree")
+        args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
     # Temporary fix for Python 3.12 CI. TODO: remove after
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.run(python, "-m", "pip", "install", "setuptools", external=True)
-    if sys.platform == "linux":
-        if sys.version_info > (3, 12):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax,odes]",
-                external=True,
-            )
-    else:
-        if sys.version_info < (3, 9):
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev]",
-                external=True,
-            )
-        else:
-            session.run(
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-e",
-                ".[all,dev,jax]",
-                external=True,
-            )
+    session.run(
+        python,
+        "-m",
+        "pip",
+        "install",
+        "-e",
+        ".[{}]".format(",".join(components)),
+        *args,
+        external=True,
+    )
 
 
 @nox.session(name="tests")
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        if sys.version_info > (3, 12):
-            session.install("-e", ".[all,dev,jax]", silent=False)
-        else:
-            session.run_always(
-                sys.executable,
-                "-m",
-                "pip",
-                "cache",
-                "remove",
-                "scikits.odes",
-                external=True,
-            )
-            session.install("-e", ".[all,dev,jax,odes]", silent=False)
-    else:
-        if sys.version_info < (3, 9):
-            session.install("-e", ".[all,dev]", silent=False)
-        else:
-            session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "run-tests.py", "--all")
+    session.install("setuptools", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
+    session.run("python", "-m", "pytest", "-m", "unit or integration")
 
 
 @nox.session(name="docs")
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
+    # TODO: Temporary fix for Python 3.12 CI.
+    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+    session.install("setuptools", silent=False)
     session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development

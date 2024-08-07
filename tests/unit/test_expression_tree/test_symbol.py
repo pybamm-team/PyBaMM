@@ -1,7 +1,7 @@
 #
 # Test for the Symbol class
 #
-from tests import TestCase
+
 import os
 import unittest
 import unittest.mock as mock
@@ -15,9 +15,11 @@ from pybamm.expression_tree.binary_operators import _Heaviside
 import sympy
 
 
-class TestSymbol(TestCase):
+class TestSymbol(unittest.TestCase):
     def test_symbol_init(self):
         sym = pybamm.Symbol("a symbol")
+        with self.assertRaises(TypeError):
+            sym.name = 1
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
 
@@ -169,8 +171,12 @@ class TestSymbol(TestCase):
 
     def test_symbol_create_copy(self):
         a = pybamm.Symbol("a")
-        with self.assertRaisesRegex(NotImplementedError, "method self.new_copy()"):
-            a.create_copy()
+        new_a = a.create_copy()
+        self.assertEqual(new_a, a)
+
+        b = pybamm.Symbol("b")
+        new_b = b.create_copy(new_children=[a])
+        self.assertEqual(new_b, pybamm.Symbol("b", children=[a]))
 
     def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed
@@ -514,7 +520,7 @@ class TestSymbol(TestCase):
         self.assertEqual(pybamm.Symbol._from_json(json_dict), symp)
 
 
-class TestIsZero(TestCase):
+class TestIsZero(unittest.TestCase):
     def test_is_scalar_zero(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(2)

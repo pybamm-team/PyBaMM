@@ -102,7 +102,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 reactions.
             * "open-circuit potential" : str
                 Sets the model for the open circuit potential. Can be "single"
-                (default), "current sigmoid", or "MSMR". If "MSMR" then the "particle"
+                (default), "current sigmoid", "Wycisk", or "MSMR". If "MSMR" then the "particle"
                 option must also be "MSMR". A 2-tuple can be provided for different
                 behaviour in negative and positive electrodes.
             * "operating mode" : str
@@ -238,6 +238,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
+            "heat of mixing": ["false", "true"],
             "hydrolysis": ["false", "true"],
             "intercalation kinetics": [
                 "symmetric Butler-Volmer",
@@ -263,7 +264,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress and reaction-driven",
             ],
             "number of MSMR reactions": ["none"],
-            "open-circuit potential": ["single", "current sigmoid", "MSMR"],
+            "open-circuit potential": ["single", "current sigmoid", "MSMR", "Wycisk"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -305,6 +306,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
+            "transport efficiency": [
+                "Bruggeman",
+                "ordered packing",
+                "hyperbola of revolution",
+                "overlapping spheres",
+                "tortuosity factor",
+                "random overlapping cylinders",
+                "heterogeneous catalyst",
+                "cation-exchange membrane",
+            ],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
@@ -502,6 +513,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
+            if options["heat of mixing"] != "false":
+                raise NotImplementedError(
+                    "Heat of mixing submodels do not yet support particle-size "
+                    "distributions."
+                )
             if options["lithium plating"] != "none":
                 raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
@@ -609,14 +625,26 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 and options["particle"] == "Fickian diffusion"
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
-                and options["lithium plating"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
                     "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', "
-                    "'loss of active material', 'lithium plating'"
+                    "be 'none': 'particle mechanics', 'loss of active material'"
+                )
+
+        if "true" in options["SEI on cracks"]:
+            sei_on_cr = options["SEI on cracks"]
+            p_mechanics = options["particle mechanics"]
+            if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
+                p_mechanics = (p_mechanics, p_mechanics)
+            if any(
+                sei == "true" and mech != "swelling and cracking"
+                for mech, sei in zip(p_mechanics, sei_on_cr)
+            ):
+                raise pybamm.OptionError(
+                    "If 'SEI on cracks' is 'true' then 'particle mechanics' must be "
+                    "'swelling and cracking'."
                 )
 
         # Check options are valid
@@ -813,47 +841,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             options=properties["options"], name=properties["name"] + "_saved"
         )
 
-        # Initialise model with stored variables that have already been discretised
-        instance._concatenated_rhs = properties["concatenated_rhs"]
-        instance._concatenated_algebraic = properties["concatenated_algebraic"]
-        instance._concatenated_initial_conditions = properties[
-            "concatenated_initial_conditions"
-        ]
-
-        instance.len_rhs = instance.concatenated_rhs.size
-        instance.len_alg = instance.concatenated_algebraic.size
-        instance.len_rhs_and_alg = instance.len_rhs + instance.len_alg
-
-        instance.bounds = properties["bounds"]
-        instance.events = properties["events"]
-        instance.mass_matrix = properties["mass_matrix"]
-        instance.mass_matrix_inv = properties["mass_matrix_inv"]
-
-        # add optional properties not required for model to solve
-        if properties["variables"]:
-            instance._variables = pybamm.FuzzyDict(properties["variables"])
-
-            # assign meshes to each variable
-            for var in instance._variables.values():
-                if var.domain != []:
-                    var.mesh = properties["mesh"][var.domain]
-                else:
-                    var.mesh = None
-
-                if var.domains["secondary"] != []:
-                    var.secondary_mesh = properties["mesh"][var.domains["secondary"]]
-                else:
-                    var.secondary_mesh = None
-
-            instance._geometry = pybamm.Geometry(properties["geometry"])
-        else:
-            # Delete the default variables which have not been discretised
-            instance._variables = pybamm.FuzzyDict({})
-
-        # Model has already been discretised
-        instance.is_discretised = True
-
-        return instance
+        return cls.generic_deserialise(instance, properties)
 
     @property
     def default_geometry(self):
@@ -1162,16 +1150,99 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.param, self.options["operating mode"], self.options
             )
         self.submodels["external circuit"] = model
+        self.submodels["discharge and throughput variables"] = (
+            pybamm.external_circuit.DischargeThroughput(self.param, self.options)
+        )
 
     def set_transport_efficiency_submodels(self):
-        self.submodels["electrolyte transport efficiency"] = (
-            pybamm.transport_efficiency.Bruggeman(
-                self.param, "Electrolyte", self.options
+        if self.options["transport efficiency"] == "Bruggeman":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.Bruggeman(
+                    self.param, "Electrolyte", self.options
+                )
             )
-        )
-        self.submodels["electrode transport efficiency"] = (
-            pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
-        )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.Bruggeman(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "tortuosity factor":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.TortuosityFactor(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.TortuosityFactor(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "ordered packing":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.OrderedPacking(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.OrderedPacking(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "hyperbola of revolution":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.HyperbolaOfRevolution(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.HyperbolaOfRevolution(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "overlapping spheres":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.OverlappingSpheres(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.OverlappingSpheres(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "random overlapping cylinders":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.RandomOverlappingCylinders(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.RandomOverlappingCylinders(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "heterogeneous catalyst":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.HeterogeneousCatalyst(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.HeterogeneousCatalyst(
+                    self.param, "Electrode", self.options
+                )
+            )
+        elif self.options["transport efficiency"] == "cation-exchange membrane":
+            self.submodels["electrolyte transport efficiency"] = (
+                pybamm.transport_efficiency.CationExchangeMembrane(
+                    self.param, "Electrolyte", self.options
+                )
+            )
+            self.submodels["electrode transport efficiency"] = (
+                pybamm.transport_efficiency.CationExchangeMembrane(
+                    self.param, "Electrode", self.options
+                )
+            )
 
     def set_thermal_submodel(self):
         if self.options["thermal"] == "isothermal":
@@ -1189,7 +1260,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.pouch_cell.OneDimensionalX
 
-        self.submodels["thermal"] = thermal_submodel(self.param, self.options)
+        x_average = getattr(self, "x_average", False)
+        self.submodels["thermal"] = thermal_submodel(
+            self.param, self.options, x_average
+        )
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in ["uniform"]:

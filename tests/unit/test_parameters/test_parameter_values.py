@@ -1,7 +1,7 @@
 #
 # Tests for the Base Parameter Values class
 #
-from tests import TestCase
+
 
 import os
 import unittest
@@ -19,7 +19,7 @@ from pybamm.expression_tree.exceptions import OptionError
 import casadi
 
 
-class TestParameterValues(TestCase):
+class TestParameterValues(unittest.TestCase):
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
@@ -43,7 +43,7 @@ class TestParameterValues(TestCase):
             pybamm.ParameterValues(None, chemistry="lithium-ion")
 
         # junk param values rejected
-        with self.assertRaisesRegex(ValueError, "Invalid Parameter Value"):
+        with self.assertRaisesRegex(ValueError, "'Junk' is not a valid parameter set."):
             pybamm.ParameterValues("Junk")
 
     def test_repr(self):
