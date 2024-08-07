@@ -89,7 +89,7 @@ class TestUtil:
             assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
 
     @pytest.mark.skipif(not pybamm.have_jax(), reason="JAX is not installed")
-    def test_is_jax_compatible():
+    def test_is_jax_compatible(self):
         assert pybamm.is_jax_compatible()
 
     def test_git_commit_info(self):
