@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 
+
 class TestSolution:
     def test_append(self):
         model = pybamm.lithium_ion.SPMe()

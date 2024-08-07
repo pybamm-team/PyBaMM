@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 
+
 class TestExperiments:
     def test_discharge_rest_charge(self):
         experiment = pybamm.Experiment(
