@@ -1,4 +1,5 @@
 FROM python:3.12-slim-bullseye
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /
 
@@ -23,12 +24,11 @@ ENV LD_LIBRARY_PATH=/home/pybamm/.local/lib
 
 # Create a virtual environment
 ENV VIRTUAL_ENV=/home/pybamm/venv
-RUN python3.12 -m venv $VIRTUAL_ENV
+RUN uv venv $VIRTUAL_ENV
+RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN pip install uv
 RUN uv pip install --upgrade setuptools wheel wget cmake
-RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 
 RUN python scripts/install_KLU_Sundials.py && \
 rm -rf pybind11 && \
