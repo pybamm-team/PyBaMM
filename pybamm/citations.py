@@ -73,10 +73,7 @@ class Citations:
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
-                "Citations could not be read because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable citation reading."
-            )
+            pass
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
