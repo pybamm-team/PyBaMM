@@ -22,7 +22,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc libopenblas-dev lapack-devel
+          sudo apt install gfortran gcc libopenblas-dev liblapack-dev
 
       - name: Install python dependencies
         env:
