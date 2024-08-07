@@ -32,7 +32,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN uv pip install --upgrade cmake casadi scikit-build-core pybind11
 
 RUN python scripts/install_KLU_Sundials.py
-RUN mkdir -p sundials_KLU_libs/lib64/ 
+RUN mkdir -p sundials_KLU_libs/lib64/
 ENV LD_LIBRARY_PATH="/home/pybamm/PyBaMM/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH"
 ENV PATH="/home/pybamm/PyBaMM/sundials_KLU_libs/lib64/:$PATH"
 
@@ -41,5 +41,5 @@ RUN uv pip install -e ".[all,dev,docs,jax]" --verbose
 RUN echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 RUN python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
-RUN 
+RUN
 ENTRYPOINT ["/bin/bash"]
