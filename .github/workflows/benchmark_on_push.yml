@@ -30,7 +30,9 @@ jobs:
           python -m pip install asv[virtualenv]
 
       - name: Install SuiteSparse and SUNDIALS
-        run: python scripts/install_KLU_Sundials.py
+        run: |
+          export BUILD_IDAKLU=ON
+          python scripts/install_KLU_Sundials.py
 
       - name: Fetch base branch
         run: |
