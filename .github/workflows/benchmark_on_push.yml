@@ -22,15 +22,22 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc libopenblas-dev
+          sudo apt install gfortran gcc libopenblas-dev lapack-devel
 
       - name: Install python dependencies
+        env:
+          BUILD_IDAKLU: "ON"
         run: |
           python -m pip install --upgrade pip scikit-build-core wget cmake casadi numpy
           python -m pip install asv[virtualenv]
 
       - name: Install SuiteSparse and SUNDIALS
-        run: python scripts/install_KLU_Sundials.py
+        run: |
+          python scripts/install_KLU_Sundials.py
+          mkdir -p $(pwd)/sundials_KLU_libs/lib64/
+          export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH
+          export PATH=$(pwd)/sundials_KLU_libs/lib64/:$PATH
+          echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 
       - name: Fetch base branch
         run: |
@@ -46,6 +53,8 @@ jobs:
           fi
 
       - name: Run benchmarks
+        env:
+          BUILD_IDAKLU: "ON"
         run: |
           asv machine --machine "GitHubRunner"
           # Get IDs of branch and PR commits
