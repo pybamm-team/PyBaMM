@@ -2,6 +2,7 @@ name: Run benchmarks on push
 on:
   push:
     branches: [main, develop]
+  workflow_dispatch:
 
 concurrency:
   # Cancel intermediate builds always
