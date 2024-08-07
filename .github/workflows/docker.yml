@@ -25,12 +25,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build docker images
-        run: docker buildx build \
-            --file scripts/Dockerfile \
-            --tag pybamm/pybamm:latest \
-            --push \
-            --platform linux/amd64,linux/arm64 \
-            .
+        run: |
+          docker build -t pybamm:latest -f scripts/Dockerfile .
 
       - name: List built image(s)
         run: docker images
