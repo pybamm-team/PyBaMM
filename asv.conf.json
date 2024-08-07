@@ -27,7 +27,6 @@
     "/bin/rm -rf pybind11",
     "python -m pip install build scikit-build-core",
     "python scripts/install_KLU_Sundials.py",
-    "export BUILD_IDAKLU=ON",
     "python -m build --wheel -o {build_cache_dir} {build_dir}"
   ],
   "build_cache_dir": ".asv/cache",
@@ -92,7 +91,8 @@
       "matplotlib": []
     },
     "env": {
-      "LD_LIBRARY_PATH": "/home/runner/.local/lib"
+      "LD_LIBRARY_PATH": "/home/runner/.local/lib",
+      "BUILD_IDAKLU": "ON"
     }
   }
 
