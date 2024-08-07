@@ -338,6 +338,38 @@ class TestSimulation(unittest.TestCase):
             sim.solution.all_inputs[0]["Current function [A]"], 1
         )
 
+    def test_solve_with_sensitivities(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        h = 1e-6
+        sol1 = sim.solve(
+            t_eval=[0, 600],
+            inputs={"Current function [A]": 1},
+            calculate_sensitivities=True,
+        )
+
+        # check that the sensitivities are stored
+        self.assertTrue("Current function [A]" in sol1.sensitivities)
+
+        sol2 = sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1 + h})
+
+        # check that the sensitivities are not stored
+        self.assertFalse("Current function [A]" in sol2.sensitivities)
+
+        # check that the sensitivities are roughly correct
+        np.testing.assert_array_almost_equal(
+            sol1["Terminal voltage [V]"].entries
+            + h
+            * sol1["Terminal voltage [V]"]
+            .sensitivities["Current function [A]"]
+            .full()
+            .flatten(),
+            sol2["Terminal voltage [V]"].entries,
+            decimal=5,
+        )
+
     def test_step_with_inputs(self):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
