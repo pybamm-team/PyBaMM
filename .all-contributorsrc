@@ -950,6 +950,16 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "pipliggins",
+      "name": "Pip Liggins",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55396775?v=4",
+      "profile": "https://github.com/pipliggins",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
