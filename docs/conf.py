@@ -288,7 +288,7 @@ intersphinx_mapping = {
 
 # -- sphinxcontrib-bibtex configuration --------------------------------------
 
-bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_bibfiles = ["../src/pybamm/CITATIONS.bib"]
 bibtex_style = "unsrt"
 bibtex_footbibliography_header = """.. rubric:: References"""
 bibtex_reference_style = "author_year"

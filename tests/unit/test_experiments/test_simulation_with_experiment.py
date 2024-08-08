@@ -485,6 +485,7 @@ class TestSimulationExperiment(unittest.TestCase):
         # Load negative electrode OCP data
         filename = os.path.join(
             pybamm.root_dir(),
+            "src",
             "pybamm",
             "input",
             "parameters",
@@ -499,6 +500,7 @@ class TestSimulationExperiment(unittest.TestCase):
         # Load positive electrode OCP data
         filename = os.path.join(
             pybamm.root_dir(),
+            "src",
             "pybamm",
             "input",
             "parameters",
