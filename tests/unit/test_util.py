@@ -83,7 +83,7 @@ class TestUtil:
                 pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
             )
 
-        package_dir = os.path.join(pybamm.root_dir(), "pybamm")
+        package_dir = os.path.join(pybamm.root_dir(), "src", "pybamm")
         with tempfile.NamedTemporaryFile("w", dir=package_dir) as tempfile_obj:
             path = os.path.join(package_dir, tempfile_obj.name)
             assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
