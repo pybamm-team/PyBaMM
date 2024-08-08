@@ -218,7 +218,7 @@ class Simulation:
         A method to set the parameters in the model and the associated geometry.
         """
 
-        if self.model_with_set_params:
+        if self._model_with_set_params:
             return
 
         self._model_with_set_params = self._parameter_values.process_model(
@@ -235,7 +235,7 @@ class Simulation:
             self.steps_to_built_models = None
             self.steps_to_built_solvers = None
 
-        options = self.model.options
+        options = self._model.options
         param = self._model.param
         if options["open-circuit potential"] == "MSMR":
             self._parameter_values = (
@@ -287,7 +287,7 @@ class Simulation:
         if initial_soc is not None:
             self.set_initial_soc(initial_soc, inputs=inputs)
 
-        if self.built_model:
+        if self._built_model:
             return
         elif self._model.is_discretised:
             self._model_with_set_params = self._model
@@ -486,7 +486,7 @@ class Simulation:
                         )
 
             self._solution = solver.solve(
-                self.built_model, t_eval, inputs=inputs, **kwargs
+                self._built_model, t_eval, inputs=inputs, **kwargs
             )
 
         elif self.operating_mode == "with experiment":
@@ -875,17 +875,17 @@ class Simulation:
                 if feasible is False:
                     break
 
-            if self.solution is not None and len(all_cycle_solutions) > 0:
-                self.solution.cycles = all_cycle_solutions
-                self.solution.set_summary_variables(all_summary_variables)
-                self.solution.all_first_states = all_first_states
+            if self._solution is not None and len(all_cycle_solutions) > 0:
+                self._solution.cycles = all_cycle_solutions
+                self._solution.set_summary_variables(all_summary_variables)
+                self._solution.all_first_states = all_first_states
 
             callbacks.on_experiment_end(logs)
 
             # record initial_start_time of the solution
-            self.solution.initial_start_time = initial_start_time
+            self._solution.initial_start_time = initial_start_time
 
-        return self.solution
+        return self._solution
 
     def run_padding_rest(self, kwargs, rest_time, step_solution, inputs):
         model = self.steps_to_built_models["Rest for padding"]
@@ -951,7 +951,7 @@ class Simulation:
 
         self._solution = solver.step(
             starting_solution,
-            self.built_model,
+            self._built_model,
             dt,
             t_eval=t_eval,
             save=save,
@@ -959,7 +959,7 @@ class Simulation:
             **kwargs,
         )
 
-        return self.solution
+        return self._solution
 
     def _get_esoh_solver(self, calc_esoh):
         if (
@@ -1019,7 +1019,7 @@ class Simulation:
             Name of the generated GIF file.
 
         """
-        if self.solution is None:
+        if self._solution is None:
             raise ValueError("The simulation has not been solved yet.")
         if self.quick_plot is None:
             self.quick_plot = pybamm.QuickPlot(self._solution)
@@ -1128,14 +1128,14 @@ class Simulation:
             be available when the model is read back in and solved.
         variables: bool
             The discretised variables. Not required to solve a model, but if false
-            tools will not be availble. Will automatically save meshes as well, required
+            tools will not be available. Will automatically save meshes as well, required
             for plotting tools.
         filename: str, optional
             The desired name of the JSON file. If no name is provided, one will be
             created based on the model name, and the current datetime.
         """
-        mesh = self.mesh if (mesh or variables) else None
-        variables = self.built_model.variables if variables else None
+        mesh = self._mesh if (mesh or variables) else None
+        variables = self._built_model.variables if variables else None
 
         if self.operating_mode == "with experiment":
             raise NotImplementedError(
@@ -1144,9 +1144,9 @@ class Simulation:
                 """
             )
 
-        if self.built_model:
+        if self._built_model:
             Serialise().save_model(
-                self.built_model, filename=filename, mesh=mesh, variables=variables
+                self._built_model, filename=filename, mesh=mesh, variables=variables
             )
         else:
             raise NotImplementedError(
@@ -1183,11 +1183,11 @@ class Simulation:
             Keyword arguments, passed to ax.fill_between.
 
         """
-        if self.solution is None:
+        if self._solution is None:
             raise ValueError("The simulation has not been solved yet.")
 
         return pybamm.plot_voltage_components(
-            self.solution,
+            self._solution,
             ax=ax,
             show_legend=show_legend,
             split_by_electrode=split_by_electrode,
