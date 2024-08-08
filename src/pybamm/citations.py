@@ -8,6 +8,7 @@ import os
 import warnings
 from sys import _getframe
 from pybamm.util import import_optional_dependency
+import sysconfig
 
 
 class Citations:
@@ -68,9 +69,7 @@ class Citations:
         """
         try:
             parse_file = import_optional_dependency("pybtex.database", "parse_file")
-            citations_file = os.path.join(
-                pybamm.root_dir(), "site-packages", "pybamm", "CITATIONS.bib"
-            )
+            citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
             bib_data = parse_file(citations_file, bib_format="bibtex")
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
