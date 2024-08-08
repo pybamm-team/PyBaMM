@@ -38,7 +38,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
 4. [Install](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
-5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
+5. [Test](#testing) if your installation worked, using pytest: `$ pytest -m unit`.
 
 You now have everything you need to start making changes!
 
@@ -407,7 +407,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/CITATIONS.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")

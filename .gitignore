@@ -14,8 +14,8 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!pybamm/CITATIONS.bib
-!pybamm/input/**/*.csv
+!src/pybamm/CITATIONS.bib
+!src/pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png
 

@@ -162,7 +162,7 @@ def run_doctests(session):
         "-m",
         "pytest",
         "--doctest-plus",
-        "pybamm",
+        "src",
     )
 
 
