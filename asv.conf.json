@@ -26,9 +26,7 @@
   "build_command": [
     "python -m pip install --upgrade pip build scikit-build-core cmake casadi",
     "python scripts/install_KLU_Sundials.py",
-    "pip install -e .",
-    "python -m build --wheel -o {build_cache_dir} {build_dir}",
-    "python -c 'import pybamm; print(pybamm.IDAKLUSolver())'"
+    "python -m build --wheel -o {build_cache_dir} {build_dir}"
   ],
   "build_cache_dir": ".asv/cache",
   "build_dir": ".asv/build",
@@ -93,6 +91,7 @@
     },
     "env": {
       "LD_LIBRARY_PATH": "sundials_KLU_libs/lib64/",
+      "PATH": "sundials_KLU_libs/lib64/",
       "BUILD_IDAKLU": "ON"
     }
   }
