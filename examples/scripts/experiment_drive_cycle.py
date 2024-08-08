@@ -3,7 +3,6 @@
 #
 import pybamm
 import pandas as pd
-import os
 
 
 pybamm.set_logging_level("INFO")

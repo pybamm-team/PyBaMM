@@ -8,7 +8,6 @@ import os
 import warnings
 from sys import _getframe
 from pybamm.util import import_optional_dependency
-import sysconfig
 
 
 class Citations:
