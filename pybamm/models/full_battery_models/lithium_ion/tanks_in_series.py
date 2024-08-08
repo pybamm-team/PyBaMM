@@ -82,6 +82,7 @@ class TanksInSeries(BaseModel):
         Feta_RT_n = param.F * eta_n / (param.R * T)
         # j_n = j0_n * (np.exp((1 - alpha_n) * Feta_RT_n) - np.exp(-alpha_n * Feta_RT_n))
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
+        pore_wall_flux_n = j_n/param.F
 
         sto_surf_p = c_surf_ave_p / param.p.prim.c_max
         j0_p = param.p.prim.j0(c_e_p, c_surf_ave_p, T)
@@ -90,6 +91,7 @@ class TanksInSeries(BaseModel):
         Feta_RT_p = param.F * eta_p / (param.R * T)
         # j_p = j0_p * (np.exp((1 - alpha_p) * Feta_RT_p) - np.exp(-alpha_p * Feta_RT_p))
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
+        pore_wall_flux_p = j_p/param.F
 
         ######################
         # State of Charge
@@ -109,17 +111,21 @@ class TanksInSeries(BaseModel):
         # Particle spatially discretized with 3-parameter model
         # based on biquadratic profile for particle concentration
 
-        self.rhs[c_s_n] = -3 * j_n / param.n.prim.R_typ
-        self.rhs[c_s_p] = -3 * j_p / param.p.prim.R_typ
+        # self.rhs[c_s_n] = -3 * j_n / param.n.prim.R_typ
+        self.rhs[c_s_n] = -3 * pore_wall_flux_n / param.n.prim.R_typ
+        # self.rhs[c_s_p] = -3 * j_p / param.p.prim.R_typ
+        self.rhs[c_s_p] = -3 * pore_wall_flux_p / param.p.prim.R_typ
 
         self.initial_conditions[c_s_n] = param.n.prim.c_init_av
         self.initial_conditions[c_s_p] = param.p.prim.c_init_av
 
         self.rhs[q_ave_n] = (
-            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * j_n / param.n.prim.R_typ
+            # -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * j_n / param.n.prim.R_typ
+            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * pore_wall_flux_n / param.n.prim.R_typ
         )
         self.rhs[q_ave_p] = (
-            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * j_p / param.p.prim.R_typ
+            # -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * j_p / param.p.prim.R_typ
+            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * pore_wall_flux_p / param.p.prim.R_typ
         )
 
         self.initial_conditions[q_ave_n] = pybamm.Scalar(0)
@@ -176,20 +182,22 @@ class TanksInSeries(BaseModel):
         ######################
 
         self.algebraic[c_surf_ave_p] = (
-            j_p
+            # j_p
+            pore_wall_flux_p
             + 35
-            * param.p.prim.D(c_surf_ave_p, T)
+            * param.p.prim.D(c_s_p, T)
             / param.p.prim.R_typ
             * (c_surf_ave_p - c_s_p)
-            - 8 * param.p.prim.D(c_surf_ave_p, T) * q_ave_p
+            - 8 * param.p.prim.D(c_s_p, T) * q_ave_p
         )
         self.algebraic[c_surf_ave_n] = (
-            j_n
+            # j_n
+            pore_wall_flux_n
             + 35
-            * param.n.prim.D(c_surf_ave_n, T)
+            * param.n.prim.D(c_s_n, T)
             / param.n.prim.R_typ
             * (c_surf_ave_n - c_s_n)
-            - 8 * param.n.prim.D(c_surf_ave_n, T) * q_ave_n
+            - 8 * param.n.prim.D(c_s_n, T) * q_ave_n
         )
 
         self.initial_conditions[c_surf_ave_p] = param.p.prim.c_init_av
@@ -225,8 +233,10 @@ class TanksInSeries(BaseModel):
         # Current in the solid
         ######################
 
-        self.algebraic[phi_s_p] = -iapp / param.F / a_p / param.p.L + j_p
-        self.algebraic[phi_s_n] = iapp / param.F / a_n / param.n.L + j_n
+        # self.algebraic[phi_s_p] = -iapp / param.F / a_p / param.p.L + j_p
+        self.algebraic[phi_s_p] = -iapp / param.F / a_p / param.p.L + pore_wall_flux_p
+        # self.algebraic[phi_s_n] = iapp / param.F / a_n / param.n.L + j_n
+        self.algebraic[phi_s_n] = iapp / param.F / a_n / param.n.L + pore_wall_flux_n
 
         self.initial_conditions[phi_s_p] = param.ocv_init
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
@@ -265,8 +275,11 @@ class TanksInSeries(BaseModel):
             "Discharge capacity [A.h]": Q,
             "Positive overpotential": eta_p,
             "Negative overpotential": eta_n,
-            "Negative pore wall flux": j_n,
-            "Positive pore wall flux": j_p
+            "Negative pore wall flux": pore_wall_flux_n,
+            "Positive pore wall flux": pore_wall_flux_p,
+            "Positive exchange current density": j0_p,
+            "Negative exchange current density": j0_n,
+            
         }
 
         # Events specify points at which a solution should terminate
