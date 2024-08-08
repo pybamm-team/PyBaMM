@@ -7,6 +7,7 @@ import numpy as np
 from tests import BaseIntegrationTestLithiumIon
 import pytest
 
+
 class TestDFN(BaseIntegrationTestLithiumIon):
     @pytest.fixture(autouse=True)
     def setup(self):

@@ -5,6 +5,7 @@ import pybamm
 from tests import get_discretisation_for_testing
 import pytest
 
+
 class TestMainReaction:
     @pytest.fixture(autouse=True)
     def setup(self):

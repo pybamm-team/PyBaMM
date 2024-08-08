@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 
+
 class TestCompareOutputsTwoPhase:
     def compare_outputs_two_phase_graphite_graphite(self, model_class):
         """
