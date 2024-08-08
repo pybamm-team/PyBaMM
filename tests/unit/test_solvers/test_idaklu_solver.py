@@ -964,7 +964,6 @@ class TestIDAKLUSolver(unittest.TestCase):
         self.assertEqual(sol3.termination, "event: Minimum voltage [V]")
 
     def test_python_idaklu_deprecation_errors(self):
-
         for form in ["python", "", "jax"]:
             if form == "jax" and not pybamm.have_jax():
                 continue
@@ -988,7 +987,6 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             if form == "python":
-
                 with self.assertRaisesRegex(
                     pybamm.SolverError,
                     "Unsupported option for convert_to_format=python",
