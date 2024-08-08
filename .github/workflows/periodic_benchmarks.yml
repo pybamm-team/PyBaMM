@@ -48,7 +48,7 @@ jobs:
           LD_LIBRARY_PATH: $HOME/.local/lib
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v4.3.5
         with:
           name: asv_periodic_results
           path: results
