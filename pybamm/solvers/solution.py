@@ -151,30 +151,7 @@ class Solution:
                 model, ys, ts, inputs
             )
 
-    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
-        """
-        given a model and a solution y, extracts the sensitivities
-
-        Parameters
-        --------
-        model : :class:`pybamm.BaseModel`
-            A model that has been already setup by this base solver
-        y: ndarray
-            The solution of the full explicit sensitivity equations
-        t_eval: ndarray
-            The evaluation times
-        inputs: dict
-            parameter inputs
-
-        Returns
-        -------
-        y: ndarray
-            The solution of the ode/dae in model
-        sensitivities: dict of (string: ndarray)
-            A dictionary of parameter names, and the corresponding solution of
-            the sensitivity equations
-        """
-
+    def _extract_sensitivity_matrix(self, model, y):
         n_states = model.len_rhs_and_alg
         n_rhs = model.len_rhs
         n_alg = model.len_alg
@@ -185,7 +162,6 @@ class Solution:
             n_p = model.len_alg_sens // model.len_alg
         len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
 
-        n_t = len(t_eval)
         # y gets the part of the solution vector that correspond to the
         # actual ODE/DAE solution
 
@@ -211,6 +187,8 @@ class Solution:
             y_full = y.full()
         else:
             y_full = y
+
+        n_t = y.shape[1]
         ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
         alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
         # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
@@ -220,6 +198,40 @@ class Solution:
         full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
             n_t * n_states, n_p
         )
+
+        y_dae = np.vstack(
+            [
+                y[: model.len_rhs, :],
+                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
+            ]
+        )
+        return y_dae, full_sens_matrix
+
+    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
+        """
+        given a model and a solution y, extracts the sensitivities
+
+        Parameters
+        --------
+        model : :class:`pybamm.BaseModel`
+            A model that has been already setup by this base solver
+        y: ndarray
+            The solution of the full explicit sensitivity equations
+        t_eval: ndarray
+            The evaluation times
+        inputs: dict
+            parameter inputs
+
+        Returns
+        -------
+        y: ndarray
+            The solution of the ode/dae in model
+        sensitivities: dict of (string: ndarray)
+            A dictionary of parameter names, and the corresponding solution of
+            the sensitivity equations
+        """
+
+        y_dae, full_sens_matrix = self._extract_sensitivity_matrix(model, y)
 
         # Save the full sensitivity matrix
         sensitivity = {"all": full_sens_matrix}
@@ -234,12 +246,6 @@ class Solution:
             sensitivity[name] = full_sens_matrix[:, start:end]
             start = end
 
-        y_dae = np.vstack(
-            [
-                y[: model.len_rhs, :],
-                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
-            ]
-        )
         return y_dae, sensitivity
 
     @property
@@ -410,7 +416,11 @@ class Solution:
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
-
+        new_sol._sensitivities = {}
+        n_states = self.all_models[-1].len_rhs_and_alg
+        if isinstance(self._sensitivities, dict):
+            for key in self._sensitivities:
+                new_sol._sensitivities[key] = self.sensitivities[key][:, -n_states:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
         new_sol.set_up_time = 0

@@ -370,6 +370,30 @@ class TestSimulation(unittest.TestCase):
             decimal=5,
         )
 
+    def test_solve_with_sensitivities_and_experiment(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        input_param_name = "Negative electrode active material volume fraction"
+        input_param_value = 0.6
+        param.update({input_param_name: "[input]"})
+        exp = pybamm.Experiment(
+            [
+                "Discharge at 1C until 3.6V",
+                "Rest for 1 hour",
+                "Charge at 1C until 4.2V",
+                "Hold at 4.2V until C/50",
+            ]
+        )
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
+
+        sol1 = sim.solve(
+            inputs={input_param_name: input_param_value},
+            calculate_sensitivities=True,
+        )
+
+        # check that the sensitivities are stored
+        self.assertTrue(input_param_name in sol1.sensitivities)
+
     def test_step_with_inputs(self):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()

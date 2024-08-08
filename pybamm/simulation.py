@@ -183,6 +183,28 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         parameter_values = self._parameter_values.copy()
+
+        # some parameters are used to control the experiment, and should not be
+        # input parameters
+        restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
+        for step in self.experiment.steps:
+            if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
+                restrict_list.update(step.get_parameter_values([]).keys())
+            elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
+                restrict_list.update(["Current function [A]"])
+        print(parameter_values)
+        for key in restrict_list:
+            try:
+                param = parameter_values[key]
+                if isinstance(param, pybamm.InputParameter):
+                    raise pybamm.ModelError(
+                        f"Cannot use '{key}' as an input parameter in this experiment. "
+                        f"This experiment is controlled via the following parameters: {restrict_list}. "
+                        f"None of these parameters are able to be input parameters."
+                    )
+            except KeyError:
+                pass
+
         # Set the initial temperature to be the temperature of the first step
         # We can set this globally for all steps since any subsequent steps will either
         # start at the temperature at the end of the previous step (if non-isothermal

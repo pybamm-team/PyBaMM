@@ -657,6 +657,33 @@ class BaseSolver:
         y0 = root_sol.all_ys[0]
         return y0
 
+    def _solve_process_calculate_sensitivities_arg(
+        inputs, model, calculate_sensitivities
+    ):
+        # get a list-only version of calculate_sensitivities
+        if isinstance(calculate_sensitivities, bool):
+            if calculate_sensitivities:
+                calculate_sensitivities_list = [p for p in inputs.keys()]
+            else:
+                calculate_sensitivities_list = []
+        else:
+            calculate_sensitivities_list = calculate_sensitivities
+
+        calculate_sensitivities_list.sort()
+        if not hasattr(model, "calculate_sensitivities"):
+            model.calculate_sensitivities = []
+
+        # Check that calculate_sensitivites have not been updated
+        sensitivities_have_changed = (
+            calculate_sensitivities_list != model.calculate_sensitivities
+        )
+
+        # save sensitivity parameters so we can identify them later on
+        # (FYI: this is used in the Solution class)
+        model.calculate_sensitivities = calculate_sensitivities_list
+
+        return calculate_sensitivities_list, sensitivities_have_changed
+
     def solve(
         self,
         model,
@@ -705,15 +732,6 @@ class BaseSolver:
         """
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
 
-        # get a list-only version of calculate_sensitivities
-        if isinstance(calculate_sensitivities, bool):
-            if calculate_sensitivities:
-                calculate_sensitivities_list = [p for p in inputs.keys()]
-            else:
-                calculate_sensitivities_list = []
-        else:
-            calculate_sensitivities_list = calculate_sensitivities
-
         # Make sure model isn't empty
         self._check_empty_model(model)
 
@@ -753,6 +771,12 @@ class BaseSolver:
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
+        calculate_sensitivities_list, sensitivities_have_changed = (
+            BaseSolver._solve_process_calculate_sensitivities_arg(
+                model_inputs_list[0], model, calculate_sensitivities
+            )
+        )
+
         # (Re-)calculate consistent initialization
         # Assuming initial conditions do not depend on input parameters
         # when len(inputs_list) > 1, only `model_inputs_list[0]`
@@ -773,13 +797,8 @@ class BaseSolver:
                     "for initial conditions."
                 )
 
-        # Check that calculate_sensitivites have not been updated
-        calculate_sensitivities_list.sort()
-        if hasattr(model, "calculate_sensitivities"):
-            model.calculate_sensitivities.sort()
-        else:
-            model.calculate_sensitivities = []
-        if calculate_sensitivities_list != model.calculate_sensitivities:
+        # if any setup configuration has changed, we need to re-set up
+        if sensitivities_have_changed:
             self._model_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
             if isinstance(self, pybamm.CasadiSolver):
@@ -1053,6 +1072,7 @@ class BaseSolver:
         npts=None,
         inputs=None,
         save=True,
+        calculate_sensitivities=False,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1077,6 +1097,11 @@ class BaseSolver:
             Any input parameters to pass to the model when solving
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
+        calculate_sensitivities : list of str or bool, optional
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+            If only a subset of sensitivities are required, can also pass a
+            list of input parameter names
+
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1143,8 +1168,15 @@ class BaseSolver:
         # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
 
+        # process calculate_sensitivities argument
+        calculate_sensitivities_list, sensitivities_have_changed = (
+            BaseSolver._solve_process_calculate_sensitivities_arg(
+                model_inputs, model, calculate_sensitivities
+            )
+        )
+
         first_step_this_model = model not in self._model_set_up
-        if first_step_this_model:
+        if first_step_this_model or sensitivities_have_changed:
             if len(self._model_set_up) > 0:
                 existing_model = next(iter(self._model_set_up))
                 raise RuntimeError(
@@ -1169,8 +1201,15 @@ class BaseSolver:
                 self.set_up(model, model_inputs, ics_only=True)
         elif old_solution.all_models[-1] == model:
             # initialize with old solution
-            model.y0 = old_solution.all_ys[-1][:, -1]
+            y0, y0S = old_solution._extract_explicit_sensitivities(
+                old_solution.all_ys[-1][:, -1]
+            )
+            print("y0.shape", y0.shape)
+            print("y0S.shape", y0S.shape)
+            model.y0 = y0
+            model.y0S = y0S
         else:
+            # todo: this does not play well with explicit sensitivity calculations (returns the wrong y0)
             _, concatenated_initial_conditions = model.set_initial_conditions_from(
                 old_solution, return_type="ics"
             )
