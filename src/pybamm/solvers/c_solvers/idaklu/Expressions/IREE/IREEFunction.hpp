@@ -27,8 +27,8 @@ public:
   expr_int out_shape(int k) override;
   expr_int nnz() override;
   expr_int nnz_out() override;
-  std::vector<expr_int> get_col() override;
-  std::vector<expr_int> get_row() override;
+  const std::vector<expr_int>& get_col() override;
+  const std::vector<expr_int>& get_row() override;
 
   /*
    * @brief Evaluate the MLIR function
