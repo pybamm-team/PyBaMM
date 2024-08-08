@@ -3,7 +3,6 @@
 #
 import pybamm
 from .base_lithium_ion_model import BaseModel
-import numpy as np
 
 
 class TanksInSeries(BaseModel):
@@ -78,20 +77,20 @@ class TanksInSeries(BaseModel):
         sto_surf_n = c_surf_ave_n / param.n.prim.c_max
         j0_n = param.n.prim.j0(c_e_n, c_surf_ave_n, T)
         eta_n = phi_s_n - phi_e_n - param.n.prim.U(sto_surf_n, T)
-        alpha_n = 0.5  # param.n.alpha_bv
+        # alpha_n = 0.5  # param.n.alpha_bv
         Feta_RT_n = param.F * eta_n / (param.R * T)
         # j_n = j0_n * (np.exp((1 - alpha_n) * Feta_RT_n) - np.exp(-alpha_n * Feta_RT_n))
         j_n = 2 * j0_n * pybamm.sinh(param.n.prim.ne / 2 * Feta_RT_n)
-        pore_wall_flux_n = j_n/param.F
+        pore_wall_flux_n = j_n / param.F
 
         sto_surf_p = c_surf_ave_p / param.p.prim.c_max
         j0_p = param.p.prim.j0(c_e_p, c_surf_ave_p, T)
         eta_p = phi_s_p - phi_e_p - param.p.prim.U(sto_surf_p, T)
-        alpha_p = 0.5  # param.p.alpha_bv
+        # alpha_p = 0.5  # param.p.alpha_bv
         Feta_RT_p = param.F * eta_p / (param.R * T)
         # j_p = j0_p * (np.exp((1 - alpha_p) * Feta_RT_p) - np.exp(-alpha_p * Feta_RT_p))
         j_p = 2 * j0_p * pybamm.sinh(param.p.prim.ne / 2 * Feta_RT_p)
-        pore_wall_flux_p = j_p/param.F
+        pore_wall_flux_p = j_p / param.F
 
         ######################
         # State of Charge
@@ -121,11 +120,13 @@ class TanksInSeries(BaseModel):
 
         self.rhs[q_ave_n] = (
             # -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * j_n / param.n.prim.R_typ
-            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2 - 45 / 2 * pore_wall_flux_n / param.n.prim.R_typ
+            -30 * param.n.prim.D(c_s_n, T) * q_ave_n / param.n.prim.R_typ**2
+            - 45 / 2 * pore_wall_flux_n / param.n.prim.R_typ
         )
         self.rhs[q_ave_p] = (
             # -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * j_p / param.p.prim.R_typ
-            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2 - 45 / 2 * pore_wall_flux_p / param.p.prim.R_typ
+            -30 * param.p.prim.D(c_s_p, T) * q_ave_p / param.p.prim.R_typ**2
+            - 45 / 2 * pore_wall_flux_p / param.p.prim.R_typ
         )
 
         self.initial_conditions[q_ave_n] = pybamm.Scalar(0)
@@ -207,14 +208,14 @@ class TanksInSeries(BaseModel):
         # Current in the electrolyte
         ######################
 
-        RT_F = param.R * T / param.F
-        elec_thermo_p = param.chi(c_12, T) / 2 * param.kappa_e(c_12, T)
+        # RT_F = param.R * T / param.F
+        # elec_thermo_p = param.chi(c_12, T) / 2 * param.kappa_e(c_12, T)
         self.algebraic[phi_e_p] = (
             -iapp
             - 2 * param.kappa_e(c_12, T) * (phi_e_s - phi_e_p) / leps12
             + 2 * param.chiRT_over_Fc(c_12, T) * (c_e_s - c_e_p) / leps12
         )
-        elec_thermo_n = param.chi(c_23, T) / 2 * param.kappa_e(c_23, T)
+        # elec_thermo_n = param.chi(c_23, T) / 2 * param.kappa_e(c_23, T)
         self.algebraic[phi_e_n] = (
             -iapp
             - 2 * param.kappa_e(c_23, T) * (phi_e_n - phi_e_s) / leps23
@@ -279,7 +280,6 @@ class TanksInSeries(BaseModel):
             "Positive pore wall flux": pore_wall_flux_p,
             "Positive exchange current density": j0_p,
             "Negative exchange current density": j0_n,
-            
         }
 
         # Events specify points at which a solution should terminate
