@@ -267,6 +267,12 @@ class BasicDFN(BaseModel):
             "Battery voltage [V]": voltage * num_cells,
             "Time [s]": pybamm.t,
             "Discharge capacity [A.h]": Q,
+            "Negative overpotential": eta_n,
+            "Positive overpotential": eta_p,
+            "Negative pore wall flux": j_n,
+            "Positive pore wall flux": j_p,
+            "Positive exchange current density": j0_p,
+            "Negative exchange current density": j0_n,
         }
         # Events specify points at which a solution should terminate
         self.events += [
