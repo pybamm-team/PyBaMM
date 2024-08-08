@@ -180,7 +180,7 @@ def run_doctests(session):
         "-m",
         "pytest",
         "--doctest-plus",
-        "src/pybamm",
+        "src",
     )
 
 
