@@ -24,7 +24,9 @@ def update_version():
     )
 
     # pybamm/version.py
-    with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
+    with open(
+        os.path.join(pybamm.root_dir(), "src", "pybamm", "version.py"), "r+"
+    ) as file:
         output = file.read()
         replace_version = re.sub(
             '(?<=__version__ = ")(.+)(?=")', release_version, output
