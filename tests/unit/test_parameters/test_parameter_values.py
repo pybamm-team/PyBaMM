@@ -674,8 +674,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_interpolant_3D_from_csv(self):
         name = "data_for_testing_3D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
-
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_3D_data_csv(name, path)
         parameter_values = pybamm.ParameterValues({"interpolation": processed})
 
@@ -719,8 +718,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_interpolant_2D_from_csv(self):
         name = "data_for_testing_2D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
-
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_2D_data_csv(name, path)
         parameter_values = pybamm.ParameterValues({"interpolation": processed})
 
