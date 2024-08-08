@@ -10,6 +10,8 @@
 *.hidden
 *.pkl
 
+workspace
+
 # don't ignore important .txt and .csv files
 !requirements*
 !LICENSE.txt
