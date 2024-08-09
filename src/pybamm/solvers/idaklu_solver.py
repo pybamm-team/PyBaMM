@@ -775,12 +775,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ydot0full,
                 inputs,
             )
-        else:
-            # warnings.warn(
-            #     "The python idaklu solver is deprecated and will be removed.",
-            #     DeprecationWarning,
-            #     stacklevel=2,
-            # )
+        else:  # pragma: no cover
+            # Shouldn't ever reach this point
             raise pybamm.SolverError("The python idaklu solver is no longer supported")
         integration_time = timer.time()
 
