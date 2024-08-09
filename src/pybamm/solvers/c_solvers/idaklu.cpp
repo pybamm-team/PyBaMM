@@ -11,7 +11,6 @@
 #include "idaklu/idaklu_solver.hpp"
 #include "idaklu/IdakluJax.hpp"
 #include "idaklu/common.hpp"
-#include "idaklu/python.hpp"
 #include "idaklu/Expressions/Casadi/CasadiFunctions.hpp"
 
 #ifdef IREE_ENABLE
@@ -33,28 +32,6 @@ PYBIND11_MODULE(idaklu, m)
   m.doc() = "sundials solvers"; // optional module docstring
 
   py::bind_vector<std::vector<np_array>>(m, "VectorNdArray");
-
-  m.def("solve_python", &solve_python,
-    "The solve function for python evaluators",
-    py::arg("t"),
-    py::arg("y0"),
-    py::arg("yp0"),
-    py::arg("res"),
-    py::arg("jac"),
-    py::arg("sens"),
-    py::arg("get_jac_data"),
-    py::arg("get_jac_row_vals"),
-    py::arg("get_jac_col_ptr"),
-    py::arg("nnz"),
-    py::arg("events"),
-    py::arg("number_of_events"),
-    py::arg("use_jacobian"),
-    py::arg("rhs_alg_id"),
-    py::arg("atol"),
-    py::arg("rtol"),
-    py::arg("inputs"),
-    py::arg("number_of_sensitivity_parameters"),
-    py::return_value_policy::take_ownership);
 
   py::class_<IDAKLUSolver>(m, "IDAKLUSolver")
   .def("solve", &IDAKLUSolver::solve,
