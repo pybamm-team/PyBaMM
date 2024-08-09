@@ -29,6 +29,7 @@
 *__pycache__/
 *.cache
 .ipynb_checkpoints/
+.pytest_cache
 
 # Sphinx build files
 docs/_build/
@@ -55,8 +56,7 @@ matplotlibrc
 ideas/
 .idea/
 
-# setup.py files
-*.egg-info
+# distribution files
 dist/
 
 # coverage
@@ -85,6 +85,7 @@ sundials-*
 SuiteSparse-*
 build_sundials
 KLU_module_deps
+sundials_KLU_libs/include
 
 # downloads
 *.gz

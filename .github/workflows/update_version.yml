@@ -48,7 +48,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install wheel
+          pip install scikit-build-core
           pip install --editable ".[all]"
 
       # update all the version strings and add CHANGELOG headings
