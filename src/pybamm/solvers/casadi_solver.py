@@ -478,7 +478,7 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
-            sensitivities=bool(model.calculate_sensitivities),
+            sensitivities=False,
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time

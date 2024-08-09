@@ -444,23 +444,27 @@ class ProcessedVariable:
         dvar_dp_func = casadi.Function(
             "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
         )
-        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
+        all_S_var = []
+        for ts, ys, dy_dp in zip(
+            self.all_ts, self.all_ys, self.solution_sensitivities["all"]
+        ):
             for idx, t in enumerate(ts):
                 u = ys[:, idx]
                 next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
                 next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if index == 0 and idx == 0:
+                if idx == 0:
                     dvar_dy_eval = next_dvar_dy_eval
                     dvar_dp_eval = next_dvar_dp_eval
                 else:
                     dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
                     dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
-        # Compute sensitivity
-        dy_dp = self.solution_sensitivities["all"]
-        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+            # Compute sensitivity
+            S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+            all_S_var.append(S_var)
 
-        sensitivities = {"all": S_var}
+        S_var = casadi.vertcat(*all_S_var)
+        sensitivities = {"all": all_S_var}
 
         # Add the individual sensitivity
         start = 0

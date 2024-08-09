@@ -384,7 +384,10 @@ class TestSimulation(unittest.TestCase):
                 "Hold at 4.2V until C/50",
             ]
         )
-        sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
+        solver = pybamm.IDAKLUSolver()
+        sim = pybamm.Simulation(
+            model, parameter_values=param, experiment=exp, solver=solver
+        )
 
         sol1 = sim.solve(
             inputs={input_param_name: input_param_value},

@@ -2,6 +2,7 @@
 # Solution class
 #
 import casadi
+import copy
 import json
 import numbers
 import numpy as np
@@ -98,7 +99,18 @@ class Solution:
         else:
             self.all_inputs = all_inputs
 
-        self.sensitivities = sensitivities
+        if isinstance(sensitivities, bool):
+            self._sensitivities = sensitivities
+        elif isinstance(sensitivities, dict):
+            self._sensitivities = {}
+            for key, value in sensitivities.items():
+                if isinstance(value, list):
+                    self._sensitivities[key] = value
+                else:
+                    self._sensitivities[key] = [value]
+
+        else:
+            raise TypeError("sensitivities arg needs to be a bool or dict")
 
         # Check no ys are too large
         if check_solution:
@@ -134,22 +146,27 @@ class Solution:
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
+    def has_sensitivities(self) -> bool:
+        if isinstance(self._sensitivities, bool):
+            return self._sensitivities
+        elif isinstance(self._sensitivities, dict):
+            return True
+
     def extract_explicit_sensitivities(self):
-        # if we got here, we haven't set y yet
-        self.set_y()
+        self._sensitivities = {}
 
-        # extract sensitivities from full y solution
-        self._y, self._sensitivities = self._extract_explicit_sensitivities(
-            self.all_models[0], self.y, self.t, self.all_inputs[0]
-        )
-
-        # make sure we remove all sensitivities from all_ys
+        # extract sensitivities from each sub-solution
         for index, (model, ys, ts, inputs) in enumerate(
             zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
         ):
-            self._all_ys[index], _ = self._extract_explicit_sensitivities(
+            self._all_ys[index], sens_segment = self._extract_explicit_sensitivities(
                 model, ys, ts, inputs
             )
+            for key, value in sens_segment.items():
+                if key in self._sensitivities:
+                    self._sensitivities[key] = self._sensitivities[key] + [value]
+                else:
+                    self._sensitivities[key] = [value]
 
     def _extract_sensitivity_matrix(self, model, y):
         n_states = model.len_rhs_and_alg
@@ -198,6 +215,10 @@ class Solution:
         full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
             n_t * n_states, n_p
         )
+
+        # convert back to casadi (todo: this is not very efficient, should refactor
+        # to avoid this)
+        full_sens_matrix = casadi.DM(full_sens_matrix)
 
         y_dae = np.vstack(
             [
@@ -405,6 +426,13 @@ class Solution:
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
+        if isinstance(self._sensitivities, bool):
+            sensitivities = self._sensitivities
+        elif isinstance(self._sensitivities, dict):
+            sensitivities = {}
+            n_states = self.all_models[-1].len_rhs_and_alg
+            for key in self._sensitivities:
+                sensitivities[key] = self.sensitivities[key][-1][-n_states:, :]
         new_sol = Solution(
             self.all_ts[-1][-1:],
             self.all_ys[-1][:, -1:],
@@ -413,14 +441,10 @@ class Solution:
             self.t_event,
             self.y_event,
             self.termination,
+            sensitivities=sensitivities,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
-        new_sol._sensitivities = {}
-        n_states = self.all_models[-1].len_rhs_and_alg
-        if isinstance(self._sensitivities, dict):
-            for key in self._sensitivities:
-                new_sol._sensitivities[key] = self.sensitivities[key][:, -n_states:]
         new_sol.solve_time = 0
         new_sol.integration_time = 0
         new_sol.set_up_time = 0
@@ -768,6 +792,27 @@ class Solution:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
 
+        # sensitivities can be:
+        # - bool if not using sensitivities or using explicit sensitivities which still
+        #   need to be extracted
+        # - dict if sensitivities are provided as a dict of {parameter: sensitivities}
+        # both self and other should have the same type of sensitivities
+        if isinstance(self._sensitivities, bool) and isinstance(
+            other._sensitivities, bool
+        ):
+            sensitivities = self._sensitivities or other._sensitivities
+        elif isinstance(self._sensitivities, dict) and isinstance(
+            other._sensitivities, dict
+        ):
+            sensitivities = self._sensitivities
+            for key in other._sensitivities:
+                if key in sensitivities:
+                    sensitivities[key] = sensitivities[key] + other._sensitivities[key]
+                else:
+                    sensitivities[key] = other._sensitivities[key]
+        else:
+            raise ValueError("Sensitivities must be of the same type")
+
         new_sol = Solution(
             all_ts,
             all_ys,
@@ -776,7 +821,7 @@ class Solution:
             other.t_event,
             other.y_event,
             other.termination,
-            bool(self.sensitivities),
+            sensitivities=sensitivities,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -797,12 +842,14 @@ class Solution:
     def copy(self):
         new_sol = self.__class__(
             self.all_ts,
-            self.all_ys,
+            # need to copy y in case it is modified by extract explicit sensitivities
+            [copy.copy(y) for y in self.all_ys],
             self.all_models,
             self.all_inputs,
             self.t_event,
             self.y_event,
             self.termination,
+            self._sensitivities,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -912,6 +959,7 @@ def make_cycle_solution(
         sum_sols.t_event,
         sum_sols.y_event,
         sum_sols.termination,
+        sum_sols.sensitivities,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions

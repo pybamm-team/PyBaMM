@@ -1063,6 +1063,88 @@ class BaseSolver:
                 f"Events {event_names} are non-positive at initial conditions"
             )
 
+    def _set_sens_initial_conditions_from(
+        self, solution: pybamm.Solution, model: pybamm.BaseModel
+    ) -> tuple:
+        """
+        A restricted version of BaseModel.set_initial_conditions_from that only extracts the
+        sensitivities from a solution object, and only for a model that has been descretised.
+        This is used when setting the initial conditions for a sensitivity model.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution to use to initialize the model
+
+        model: :class:`pybamm.BaseModel`
+            The model whose sensitivities to set
+
+        Returns
+        -------
+
+        initial_conditions : tuple of ndarray
+            The initial conditions for the sensitivities, each element of the tuple
+            corresponds to an input parameter
+        """
+        if not solution.has_sensitivities():
+            raise ValueError(
+                "Solution object must have sensitivities to set sensitivities"
+            )
+        if not model.is_discretised:
+            raise ValueError("Model must be discretised to set sensitivities")
+        ninputs = len(model.calculate_sensitivities)
+        initial_conditions = tuple([] for _ in range(ninputs))
+        solution = solution.last_state
+        for var in model.initial_conditions:
+            if isinstance(var, pybamm.Variable):
+                try:
+                    final_state = solution[var.name]
+                except KeyError as e:
+                    raise pybamm.ModelError(
+                        f"key {e.args[0] } not found in solution provided"
+                    ) from e
+                final_state = final_state.sensitivities
+                final_state_eval = tuple(
+                    final_state[key] for key in model.calculate_sensitivities
+                )
+            else:
+                raise NotImplementedError("Variable must have type 'Variable'")
+
+            for i in range(ninputs):
+                initial_conditions[i].append(final_state_eval[i])
+
+        # Also update the concatenated initial conditions if the model is already
+        # discretised
+        # Unpack slices for sorting
+        y_slices = {var: slce for var, slce in model.y_slices.items()}
+        slices = []
+        for symbol in model.initial_conditions.keys():
+            if isinstance(symbol, pybamm.Concatenation):
+                # must append the slice for the whole concatenation, so that
+                # equations get sorted correctly
+                slices.append(
+                    slice(
+                        y_slices[symbol.children[0]][0].start,
+                        y_slices[symbol.children[-1]][0].stop,
+                    )
+                )
+            else:
+                slices.append(y_slices[symbol][0])
+
+        # sort equations according to slices
+        if isinstance(initial_conditions[0], casadi.DM):
+            concatenated_initial_conditions = [
+                casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
+                for init in initial_conditions
+            ]
+        else:
+            concatenated_initial_conditions = [
+                np.vstack([eq for _, eq in sorted(zip(slices, init))])
+                for init in initial_conditions
+            ]
+
+        return concatenated_initial_conditions
+
     def step(
         self,
         old_solution,
@@ -1195,25 +1277,50 @@ class BaseSolver:
         ):
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
+        using_sensitivities = len(model.calculate_sensitivities) > 0
+
         if isinstance(old_solution, pybamm.EmptySolution):
             if not first_step_this_model:
                 # reset y0 to original initial conditions
                 self.set_up(model, model_inputs, ics_only=True)
         elif old_solution.all_models[-1] == model:
-            # initialize with old solution
-            y0, y0S = old_solution._extract_explicit_sensitivities(
-                old_solution.all_ys[-1][:, -1]
-            )
-            print("y0.shape", y0.shape)
-            print("y0S.shape", y0S.shape)
-            model.y0 = y0
-            model.y0S = y0S
+            if using_sensitivities:
+                # initialize with old solution
+                y0, y0S = old_solution._extract_explicit_sensitivities(
+                    old_solution.all_ys[-1][:, -1]
+                )
+                model.y0 = y0
+                model.y0S = y0S
+            else:
+                model.y0 = old_solution.all_ys[-1][:, -1]
         else:
             # todo: this does not play well with explicit sensitivity calculations (returns the wrong y0)
             _, concatenated_initial_conditions = model.set_initial_conditions_from(
                 old_solution, return_type="ics"
             )
             model.y0 = concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
+            if using_sensitivities:
+                model.y0S = self._set_sens_initial_conditions_from(old_solution, model)
+
+        # hopefully we'll get rid of explicit sensitivities soon so we can remove this
+        explicit_sensitivities = model.len_rhs_sens > 0 or model.len_alg_sens > 0
+        if (
+            explicit_sensitivities
+            and using_sensitivities
+            and not isinstance(old_solution, pybamm.EmptySolution)
+        ):
+            y0_list = []
+            if model.len_rhs > 0:
+                y0_list.append(model.y0[: model.len_rhs])
+                for s in model.y0S:
+                    y0_list.append(s[: model.len_rhs])
+            if model.len_alg > 0:
+                y0_list.append(model.y0[model.len_rhs :])
+                for s in model.y0S:
+                    y0_list.append(s[model.len_rhs :])
+            model.y0 = casadi.vertcat(*y0_list)
+
+        print(model.y0, type(model.y0))
 
         set_up_time = timer.time()
 

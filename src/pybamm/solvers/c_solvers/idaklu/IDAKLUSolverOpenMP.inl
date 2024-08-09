@@ -393,7 +393,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   if (sensitivity) {
-    CheckErrors(IDAGetSens(ida_mem, &t0, yyS));
+    CheckErrors(IDAGetSensDky(ida_mem, t0, 0, yyS));
   }
 
   realtype tret;
@@ -500,7 +500,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     if (sensitivity) {
-      CheckErrors(IDAGetSens(ida_mem, &tret, yyS));
+      CheckErrors(IDAGetSensDky(ida_mem, tret, 0, yyS));
     }
 
     // Evaluate and store results for the time step
