@@ -770,7 +770,7 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
     A node in the expression tree representing an indefinite integral operator.
 
     .. math::
-        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
+        I = \\int_{x_{\text{min}}}^{x}\\!f(u)\\,du
 
     where :math:`u\\in\\text{domain}` which can represent either a
     spatial or temporal variable.

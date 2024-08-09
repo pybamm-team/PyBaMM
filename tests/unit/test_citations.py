@@ -225,16 +225,6 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Subramanian2005", citations._papers_to_cite)
         self.assertIn("Subramanian2005", citations._citation_tags.keys())
 
-    def test_brosaplanella_2021(self):
-        # Test that calling relevant bits of code adds the right paper to citations
-        citations = pybamm.citations
-
-        citations._reset()
-        self.assertNotIn("BrosaPlanella2021", citations._papers_to_cite)
-        pybamm.electrolyte_conductivity.Integrated(None)
-        self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
-        self.assertIn("BrosaPlanella2021", citations._citation_tags.keys())
-
     def test_brosaplanella_2022(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations

@@ -63,8 +63,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
             * "electrolyte conductivity" : str
-                Can be "default" (default), "full", "leading order", "composite" or
-                "integrated".
+                Can be "default" (default), "full", "leading order", "composite".
             * "exchange-current density" : str
                 Sets the model for the exchange-current density. Can be "single"
                 (default) or "current sigmoid". A 2-tuple can be provided for different
@@ -235,7 +234,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "full",
                 "leading order",
                 "composite",
-                "integrated",
             ],
             "exchange-current density": ["single", "current sigmoid"],
             "heat of mixing": ["false", "true"],
@@ -941,7 +939,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             if options["electrolyte conductivity"] not in [
                 "default",
                 "composite",
-                "integrated",
             ]:
                 raise pybamm.OptionError(
                     "electrolyte conductivity '{}' not suitable for SPMe".format(
