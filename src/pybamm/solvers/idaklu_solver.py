@@ -411,15 +411,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     )
                 ],
             )
-        elif self._options["jax_evaluator"] == "jax":
-
-            def rootfn(t, y, inputs):
-                new_inputs = inputs_to_dict(inputs)
-                return_root = np.array(
-                    [event(t, y, new_inputs) for event in model.terminate_events_eval]
-                ).reshape(-1)
-
-                return return_root
 
         # get ids of rhs and algebraic variables
         if model.convert_to_format == "casadi":
