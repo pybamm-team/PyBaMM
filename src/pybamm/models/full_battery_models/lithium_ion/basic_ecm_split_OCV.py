@@ -44,13 +44,13 @@ class ECMsplitOCV(BaseModel):
         # Capacity in each electrode
         # TODO specify capcity for negative and positive electrodes
         # may be user-defined
-        q_n = 1 # Ah
-        q_p = 1 # Ah
+        q_n = 1  # Ah
+        q_p = 1  # Ah
         Qn = q_n
         Qp = q_p
 
         # State of charge electrode equations
-        self.rhs[c_n] = - I / Qn / 3600
+        self.rhs[c_n] = -I / Qn / 3600
         self.rhs[c_p] = I / Qp / 3600
         self.initial_conditions[c_n] = param.n.prim.c_init_av / param.n.prim.c_max
         self.initial_conditions[c_p] = param.p.prim.c_init_av / param.p.prim.c_max
