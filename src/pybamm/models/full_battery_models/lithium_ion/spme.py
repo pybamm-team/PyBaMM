@@ -61,12 +61,6 @@ class SPMe(SPM):
                         self.param, options=self.options
                     )
                 )
-            elif self.options["electrolyte conductivity"] == "integrated":
-                self.submodels["electrolyte conductivity"] = (
-                    pybamm.electrolyte_conductivity.Integrated(
-                        self.param, options=self.options
-                    )
-                )
         if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
