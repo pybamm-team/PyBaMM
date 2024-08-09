@@ -29,10 +29,8 @@ public:
   expr_int out_shape(int k) override;
   expr_int nnz() override;
   expr_int nnz_out() override;
-  std::vector<expr_int> get_row() override;
-  std::vector<expr_int> get_row(expr_int ind);
-  std::vector<expr_int> get_col() override;
-  std::vector<expr_int> get_col(expr_int ind);
+  const std::vector<expr_int>& get_row() override;
+  const std::vector<expr_int>& get_col() override;
 
 public:
   /*
@@ -43,6 +41,8 @@ public:
 private:
   std::vector<expr_int> m_iw;  // cppcheck-suppress unusedStructMember
   std::vector<double> m_w;  // cppcheck-suppress unusedStructMember
+  std::vector<expr_int> m_rows;  // cppcheck-suppress unusedStructMember
+  std::vector<expr_int> m_cols;  // cppcheck-suppress unusedStructMember
 };
 
 /**
