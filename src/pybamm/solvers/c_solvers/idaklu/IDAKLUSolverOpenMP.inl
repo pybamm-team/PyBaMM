@@ -297,7 +297,7 @@ void IDAKLUSolverOpenMP<ExprSet>::CalcVarsSensitivities(
   DEBUG("IDAKLUSolver::CalcVarsSensitivities");
   // Calculate sensitivities
   std::vector<realtype> dens_dvar_dp = std::vector<realtype>(number_of_parameters, 0);
-  for (size_t dvar_k=0; dvar_k<functions->dvar_dy_fcns.size(); dvar_k++) {
+  for (size_t dvar_k = 0; dvar_k < functions->dvar_dy_fcns.size(); dvar_k++) {
     // Isolate functions
     Expression* dvar_dy = functions->dvar_dy_fcns[dvar_k];
     Expression* dvar_dp = functions->dvar_dp_fcns[dvar_k];
@@ -306,15 +306,15 @@ void IDAKLUSolverOpenMP<ExprSet>::CalcVarsSensitivities(
     // Calculate dvar/dp and convert to dense array for indexing
     (*dvar_dp)({tret, yval, functions->inputs.data()}, {&res_dvar_dp[0]});
     for (int k=0; k<number_of_parameters; k++) {
-      dens_dvar_dp[k]=0;
+      dens_dvar_dp[k] = 0;
     }
     for (int k=0; k<dvar_dp->nnz_out(); k++) {
       dens_dvar_dp[dvar_dp->get_row()[k]] = res_dvar_dp[k];
     }
     // Calculate sensitivities
-    for (int paramk=0; paramk<number_of_parameters; paramk++) {
+    for (int paramk = 0; paramk < number_of_parameters; paramk++) {
       yS_return[*ySk] = dens_dvar_dp[paramk];
-      for (int spk=0; spk<dvar_dy->nnz_out(); spk++) {
+      for (int spk = 0; spk < dvar_dy->nnz_out(); spk++) {
         yS_return[*ySk] += res_dvar_dy[spk] * ySval[paramk][dvar_dy->get_col()[spk]];
       }
       (*ySk)++;
