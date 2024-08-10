@@ -273,10 +273,10 @@ def print_citations(filename=None, output_format="text", verbose=False):
         import_optional_dependency("pybtex")
     except ImportError:
         raise ImportError(
-            "Citations could not be read because the 'pybtex' library is not installed. " 
+            "Citations could not be read because the 'pybtex' library is not installed. "
             "Install 'pybamm[cite]' to enable citation reading."
         )
-    
+
     if verbose:  # pragma: no cover
         if filename is not None:  # pragma: no cover
             raise Exception(
