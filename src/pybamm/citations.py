@@ -275,13 +275,13 @@ def print_citations(filename=None, output_format="text", verbose=False):
         raise ImportError(
             "Citations could not be read because the 'pybtex' library is not installed. "
             "Install 'pybamm[cite]' to enable citation reading."
-        )
+        ) from None
 
     if verbose:  # pragma: no cover
         if filename is not None:  # pragma: no cover
             raise Exception(
-                "Verbose output is available only for the terminal and not for printing to files",
-            )
+                "Verbose output is available only for the terminal and not for printing to files"
+            ) from None
         else:
             pybamm.citations.print(filename, output_format, verbose=True)
     else:
