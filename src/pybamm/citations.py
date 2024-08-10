@@ -68,15 +68,12 @@ class Citations:
         """
         try:
             parse_file = import_optional_dependency("pybtex.database", "parse_file")
-            citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
+            citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
             bib_data = parse_file(citations_file, bib_format="bibtex")
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
-                "Citations could not be read because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable citation reading."
-            )
+            pass
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
@@ -272,15 +269,20 @@ class Citations:
 
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
+    try:
+        import_optional_dependency("pybtex")
+    except ImportError:
+        raise ImportError(
+            "Citations could not be read because the 'pybtex' library is not installed. " 
+            "Install 'pybamm[cite]' to enable citation reading."
+        )
+    
     if verbose:  # pragma: no cover
         if filename is not None:  # pragma: no cover
             raise Exception(
                 "Verbose output is available only for the terminal and not for printing to files",
             )
         else:
-            citations.print(filename, output_format, verbose=True)
+            pybamm.citations.print(filename, output_format, verbose=True)
     else:
         pybamm.citations.print(filename, output_format)
-
-
-citations = Citations()
