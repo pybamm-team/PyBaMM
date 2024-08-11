@@ -14,12 +14,12 @@ class TestExperimentSteps:
         assert step.value == 1
         assert step.duration == 3600
         assert step.termination == []
-        assert step.period == None
-        assert step.temperature == None
+        assert step.period is None
+        assert step.temperature is None
         assert step.tags == []
-        assert step.start_time == None
-        assert step.end_time == None
-        assert step.next_start_time == None
+        assert step.start_time is None
+        assert step.end_time is None
+        assert step.next_start_time is None
 
         step = pybamm.step.voltage(
             1,
