@@ -4,7 +4,6 @@
 import pytest
 
 import pybamm
-import unittest
 import os
 from pybamm import callbacks
 
@@ -115,5 +114,3 @@ class TestCallbacks:
         callback.on_experiment_start(logs)
         with open("test_callback.log") as f:
             assert f.read() == ""
-
-

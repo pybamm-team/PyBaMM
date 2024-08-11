@@ -432,5 +432,3 @@ class TestCitations:
         pybamm.JaxSolver()
         assert "jax2018" in citations._papers_to_cite
         assert "jax2018" in citations._citation_tags.keys()
-
-

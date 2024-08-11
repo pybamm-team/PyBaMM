@@ -6,7 +6,6 @@ import pytest
 import pybamm
 
 import numpy as np
-import unittest
 from tests import (
     get_mesh_for_testing,
     get_discretisation_for_testing,
@@ -94,8 +93,11 @@ class TestDiscretise:
         variables = [c, d, jn]
         disc.set_variable_slices(variables)
 
-        assert disc.y_slices == \
-            {c: [slice(0, 100)], d: [slice(100, 200)], jn: [slice(200, 240)]}
+        assert disc.y_slices == {
+            c: [slice(0, 100)],
+            d: [slice(100, 200)],
+            jn: [slice(200, 240)],
+        }
         np.testing.assert_array_equal(
             disc.bounds[0], [-np.inf] * 100 + [0] * 100 + [-np.inf] * 40
         )
@@ -115,15 +117,14 @@ class TestDiscretise:
         j = pybamm.concatenation(jn, js, jp)
         variables = [c, d, j]
         disc.set_variable_slices(variables)
-        assert disc.y_slices == \
-            {
-                c: [slice(0, 100)],
-                d: [slice(100, 200)],
-                jn: [slice(200, 240)],
-                js: [slice(240, 265)],
-                jp: [slice(265, 300)],
-                j: [slice(200, 300)],
-            }
+        assert disc.y_slices == {
+            c: [slice(0, 100)],
+            d: [slice(100, 200)],
+            jn: [slice(200, 240)],
+            js: [slice(240, 265)],
+            jp: [slice(265, 300)],
+            j: [slice(200, 300)],
+        }
         np.testing.assert_array_equal(
             disc.bounds[0], [-np.inf] * 100 + [0] * 100 + [-np.inf] * 100
         )
@@ -256,12 +257,10 @@ class TestDiscretise:
 
         disc.y_slices = {var1: [slice(53)], var2: [slice(53, 106)]}
         exp_disc = disc.process_symbol(expression)
-        assert exp_disc == \
-            (5.0 * (3.0 ** pybamm.StateVector(slice(53, 106)))) \
-            / (
-                (-4.0 + pybamm.StateVector(slice(0, 53))) \
-                + pybamm.StateVector(slice(53, 106)) \
-            )
+        assert exp_disc == (5.0 * (3.0 ** pybamm.StateVector(slice(53, 106)))) / (
+            (-4.0 + pybamm.StateVector(slice(0, 53)))
+            + pybamm.StateVector(slice(53, 106))
+        )
 
     def test_discretise_spatial_operator(self):
         # create discretisation
@@ -824,8 +823,10 @@ class TestDiscretise:
         assert isinstance(broad_disc, pybamm.MatrixMultiplication)
         assert isinstance(broad_disc.children[0], pybamm.Matrix)
         assert isinstance(broad_disc.children[1], pybamm.StateVector)
-        assert broad_disc.shape == \
-            (mesh["separator"].npts * mesh["current collector"].npts, 1)
+        assert broad_disc.shape == (
+            mesh["separator"].npts * mesh["current collector"].npts,
+            1,
+        )
         y_test = np.linspace(0, 1, mesh["current collector"].npts)
         np.testing.assert_array_equal(
             broad_disc.evaluate(y=y_test),
@@ -838,8 +839,10 @@ class TestDiscretise:
         assert isinstance(broad_to_edges_disc, pybamm.MatrixMultiplication)
         assert isinstance(broad_to_edges_disc.children[0], pybamm.Matrix)
         assert isinstance(broad_to_edges_disc.children[1], pybamm.StateVector)
-        assert broad_to_edges_disc.shape == \
-            ((mesh["separator"].npts + 1) * mesh["current collector"].npts, 1)
+        assert broad_to_edges_disc.shape == (
+            (mesh["separator"].npts + 1) * mesh["current collector"].npts,
+            1,
+        )
         y_test = np.linspace(0, 1, mesh["current collector"].npts)
         np.testing.assert_array_equal(
             broad_to_edges_disc.evaluate(y=y_test),
@@ -858,8 +861,10 @@ class TestDiscretise:
         assert isinstance(broad_disc, pybamm.MatrixMultiplication)
         assert isinstance(broad_disc.children[0], pybamm.Matrix)
         assert isinstance(broad_disc.children[1], pybamm.StateVector)
-        assert broad_disc.shape == \
-            (mesh["negative particle"].npts * mesh["negative electrode"].npts, 1)
+        assert broad_disc.shape == (
+            mesh["negative particle"].npts * mesh["negative electrode"].npts,
+            1,
+        )
         broad = pybamm.SecondaryBroadcast(var, "negative electrode")
 
         # test broadcast to edges
@@ -869,8 +874,10 @@ class TestDiscretise:
         assert isinstance(broad_to_edges_disc, pybamm.MatrixMultiplication)
         assert isinstance(broad_to_edges_disc.children[0], pybamm.Matrix)
         assert isinstance(broad_to_edges_disc.children[1], pybamm.StateVector)
-        assert broad_to_edges_disc.shape == \
-            (mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1), 1)
+        assert broad_to_edges_disc.shape == (
+            mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1),
+            1,
+        )
 
     def test_tertiary_broadcast_3_d(self):
         disc = get_1p1d_discretisation_for_testing()
@@ -887,13 +894,12 @@ class TestDiscretise:
         assert isinstance(broad_disc, pybamm.MatrixMultiplication)
         assert isinstance(broad_disc.children[0], pybamm.Matrix)
         assert isinstance(broad_disc.children[1], pybamm.StateVector)
-        assert broad_disc.shape == \
-            (
-                mesh["negative particle"].npts \
-                * mesh["negative electrode"].npts \
-                * mesh["current collector"].npts,
-                1,
-            )
+        assert broad_disc.shape == (
+            mesh["negative particle"].npts
+            * mesh["negative electrode"].npts
+            * mesh["current collector"].npts,
+            1,
+        )
 
         # test broadcast to edges
         broad_to_edges = pybamm.TertiaryBroadcastToEdges(var, "current collector")
@@ -902,13 +908,12 @@ class TestDiscretise:
         assert isinstance(broad_to_edges_disc, pybamm.MatrixMultiplication)
         assert isinstance(broad_to_edges_disc.children[0], pybamm.Matrix)
         assert isinstance(broad_to_edges_disc.children[1], pybamm.StateVector)
-        assert broad_to_edges_disc.shape == \
-            (
-                mesh["negative particle"].npts \
-                * mesh["negative electrode"].npts \
-                * (mesh["current collector"].npts + 1),
-                1,
-            )
+        assert broad_to_edges_disc.shape == (
+            mesh["negative particle"].npts
+            * mesh["negative electrode"].npts
+            * (mesh["current collector"].npts + 1),
+            1,
+        )
 
     def test_concatenation(self):
         a = pybamm.Parameter("a")
@@ -1167,7 +1172,8 @@ class TestDiscretise:
             disc.check_model(model)
         model.initial_conditions = {var: pybamm.Vector([1, 1, 1])}
         with pytest.raises(
-            pybamm.ModelError, match="rhs and initial conditions must have the same shape"
+            pybamm.ModelError,
+            match="rhs and initial conditions must have the same shape",
         ):
             disc.check_model(model)
         model.rhs = {}
@@ -1233,4 +1239,3 @@ class TestDiscretise:
         disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
         disc.process_model(model)
         assert len(model.rhs) == 3
-

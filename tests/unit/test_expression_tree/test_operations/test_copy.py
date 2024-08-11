@@ -151,8 +151,9 @@ class TestCopy:
             assert new_symbol == symbol_w
             assert new_symbol.print_name == symbol_w.print_name
 
-        assert pybamm.div(pybamm.grad(v_n)).create_copy(new_children=[pybamm.grad(w_n)]) == \
-            pybamm.div(pybamm.grad(w_n))
+        assert pybamm.div(pybamm.grad(v_n)).create_copy(
+            new_children=[pybamm.grad(w_n)]
+        ) == pybamm.div(pybamm.grad(w_n))
 
         v_s = pybamm.Variable("v", "separator")
         mesh = get_mesh_for_testing()
@@ -171,8 +172,9 @@ class TestCopy:
             assert new_symbol == symbol_s
             assert new_symbol.print_name == symbol_s.print_name
 
-        assert pybamm.NumpyConcatenation(a, b, v_s).create_copy(new_children=[b, a, v_n]) == \
-            pybamm.NumpyConcatenation(b, a, v_n)
+        assert pybamm.NumpyConcatenation(a, b, v_s).create_copy(
+            new_children=[b, a, v_n]
+        ) == pybamm.NumpyConcatenation(b, a, v_n)
 
         v_n_2D = pybamm.Variable(
             "v",
@@ -190,13 +192,14 @@ class TestCopy:
         mat_b = pybamm.Matrix([[5, 6], [7, 8]])
 
         assert pybamm.TertiaryBroadcast(v_n_2D, "current collector").create_copy(
-                new_children=[w_n_2D] \
-            ) == \
-            pybamm.TertiaryBroadcast(w_n_2D, "current collector")
-        assert pybamm.Index(vec, 1).create_copy(new_children=[vec_b]) == \
-            pybamm.Index(vec_b, 1)
-        assert pybamm.SparseStack(mat, mat).create_copy(new_children=[mat_b, mat_b]) == \
-            pybamm.SparseStack(mat_b, mat_b)
+            new_children=[w_n_2D]
+        ) == pybamm.TertiaryBroadcast(w_n_2D, "current collector")
+        assert pybamm.Index(vec, 1).create_copy(new_children=[vec_b]) == pybamm.Index(
+            vec_b, 1
+        )
+        assert pybamm.SparseStack(mat, mat).create_copy(
+            new_children=[mat_b, mat_b]
+        ) == pybamm.SparseStack(mat_b, mat_b)
 
     def test_create_copy_new_children_binary_error(self):
         a = pybamm.Parameter("a")
@@ -217,17 +220,19 @@ class TestCopy:
             (a + b).create_copy(new_children=[a, b])
 
         assert pybamm.Addition(a, b).create_copy() == pybamm.Scalar(7)
-        assert pybamm.Addition(a, b).create_copy(perform_simplifications=False) == \
-            pybamm.Addition(a, b)
+        assert pybamm.Addition(a, b).create_copy(
+            perform_simplifications=False
+        ) == pybamm.Addition(a, b)
 
         c = pybamm.Scalar(4)
         d = pybamm.Scalar(8)
 
-        assert pybamm.Addition(a, b).create_copy(new_children=[c, d]) == pybamm.Scalar(12)
+        assert pybamm.Addition(a, b).create_copy(new_children=[c, d]) == pybamm.Scalar(
+            12
+        )
         assert pybamm.Addition(a, b).create_copy(
-                new_children=[c, d], perform_simplifications=False \
-            ) == \
-            pybamm.Addition(c, d)
+            new_children=[c, d], perform_simplifications=False
+        ) == pybamm.Addition(c, d)
 
     def test_create_copy_new_children_unary_error(self):
         vec = pybamm.Vector([1, 2, 3, 4, 5])
@@ -255,28 +260,29 @@ class TestCopy:
                 pybamm.Sign(b),
             ],
         ):
-            assert symbol_a.create_copy(new_children=[b], perform_simplifications=False) == \
-                symbol_b
+            assert (
+                symbol_a.create_copy(new_children=[b], perform_simplifications=False)
+                == symbol_b
+            )
 
         v_n = pybamm.Variable("v", "negative electrode")
         w_n = pybamm.Variable("w", "negative electrode")
 
         assert pybamm.grad(v_n).create_copy(
-                new_children=[w_n], perform_simplifications=False \
-            ) == \
-            pybamm.Gradient(w_n)
+            new_children=[w_n], perform_simplifications=False
+        ) == pybamm.Gradient(w_n)
 
         assert pybamm.div(pybamm.grad(v_n)).create_copy(
-                new_children=[pybamm.grad(w_n)], perform_simplifications=False \
-            ) == \
-            pybamm.Divergence(pybamm.grad(w_n))
+            new_children=[pybamm.grad(w_n)], perform_simplifications=False
+        ) == pybamm.Divergence(pybamm.grad(w_n))
 
         var = pybamm.Variable("var", domain="test")
         ible = pybamm.Variable("ible", domain="test")
         left_extrap = pybamm.BoundaryValue(var, "left")
 
-        assert left_extrap.create_copy(new_children=[ible], perform_simplifications=False) == \
-            pybamm.BoundaryValue(ible, "left")
+        assert left_extrap.create_copy(
+            new_children=[ible], perform_simplifications=False
+        ) == pybamm.BoundaryValue(ible, "left")
 
     def test_unary_create_copy_no_simplification_averages(self):
         a_v = pybamm.Variable("a", domain=["negative electrode"])
@@ -292,9 +298,8 @@ class TestCopy:
             [a_v, a_v, c, c],
         ):
             assert average(var).create_copy(
-                    new_children=[var], perform_simplifications=False \
-                ) == \
-                average(var)
+                new_children=[var], perform_simplifications=False
+            ) == average(var)
 
         d = pybamm.Symbol("d", domain=["negative particle size"])
         R = pybamm.SpatialVariable("R", ["negative particle size"])
@@ -303,8 +308,9 @@ class TestCopy:
 
         s_a = pybamm.SizeAverage(d, f_a_dist=f_a_dist)
 
-        assert s_a.create_copy(new_children=[d], perform_simplifications=False) == \
-            pybamm.SizeAverage(d, f_a_dist=f_a_dist)
+        assert s_a.create_copy(
+            new_children=[d], perform_simplifications=False
+        ) == pybamm.SizeAverage(d, f_a_dist=f_a_dist)
 
     def test_concatenation_create_copy_no_simplification(self):
         a = pybamm.Parameter("a")
@@ -323,13 +329,16 @@ class TestCopy:
                 pybamm.DomainConcatenation([v_s, v_n], mesh),
             ],
         ):
-            assert symbol_n.create_copy(
-                    new_children=[v_s, v_n], perform_simplifications=False \
-                ) == \
-                symbol_s
+            assert (
+                symbol_n.create_copy(
+                    new_children=[v_s, v_n], perform_simplifications=False
+                )
+                == symbol_s
+            )
 
         with pytest.raises(
-            NotImplementedError, match="should always be copied using simplification checks"
+            NotImplementedError,
+            match="should always be copied using simplification checks",
         ):
             pybamm.NumpyConcatenation(a, b, v_s).create_copy(
                 new_children=[a, b], perform_simplifications=False
@@ -340,9 +349,8 @@ class TestCopy:
         b = pybamm.Parameter("b")
 
         assert pybamm.Function(np.sin, a).create_copy(
-                new_children=[b], perform_simplifications=False \
-            ) == \
-            pybamm.Function(np.sin, b)
+            new_children=[b], perform_simplifications=False
+        ) == pybamm.Function(np.sin, b)
 
     def test_symbol_new_copy_warning(self):
         with pytest.warns(DeprecationWarning):
@@ -363,5 +371,3 @@ class TestCopy:
         np.testing.assert_array_equal(
             model.concatenated_rhs.evaluate(None, y), copied_rhs.evaluate(None, y)
         )
-
-

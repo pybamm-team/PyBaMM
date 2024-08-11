@@ -53,7 +53,8 @@ class TestFunction:
         a = pybamm.StateVector(slice(0, 1))
         func = pybamm.Function(function_test, a)
         with pytest.raises(
-            NotImplementedError, match="Derivative of base Function class is not implemented"
+            NotImplementedError,
+            match="Derivative of base Function class is not implemented",
         ):
             func.diff(a)
 
@@ -127,11 +128,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.arcsinh(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.arcsinh(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
@@ -145,8 +147,9 @@ class TestSpecificFunctions:
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         fun_broad = pybamm.arcsinh(broad_a)
-        assert fun_broad == \
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2")
+        assert fun_broad == pybamm.PrimaryBroadcast(
+            pybamm.PrimaryBroadcast(fun, "test"), "test2"
+        )
 
         # test creation from json
         input_json = {
@@ -165,11 +168,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.arctan(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.arctan(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -189,11 +193,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.cos(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.cos(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -213,11 +218,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.cosh(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.cosh(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -237,11 +243,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.exp(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.exp(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -259,11 +266,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.log(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.log(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # Base 10
         fun = pybamm.log10(a)
@@ -271,11 +279,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.log10(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.log10(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         a = pybamm.InputParameter("a")
@@ -311,11 +320,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.sin(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.sin(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -335,11 +345,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.sinh(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.sinh(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -358,11 +369,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.sqrt(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.sqrt(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -380,11 +392,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.tanh(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.tanh(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
     def test_erf(self):
         a = pybamm.InputParameter("a")
@@ -393,11 +406,12 @@ class TestSpecificFunctions:
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.erf(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.erf(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
         # test creation from json
         input_json = {
@@ -411,15 +425,18 @@ class TestSpecificFunctions:
     def test_erfc(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.erfc(a)
-        assert fun.evaluate(inputs={"a": 3}) == pytest.approx(special.erfc(3), abs=1e-15)
+        assert fun.evaluate(inputs={"a": 3}) == pytest.approx(
+            special.erfc(3), abs=1e-15
+        )
         h = 0.0000001
         assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
-                pybamm.erfc(pybamm.Scalar(3 + h)).evaluate() \
-                - fun.evaluate(inputs={"a": 3}) \
-            ) \
+                pybamm.erfc(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
             / h,
-            abs=1e-05)
+            abs=1e-05,
+        )
 
 
 class TestNonObjectFunctions:
@@ -428,15 +445,21 @@ class TestNonObjectFunctions:
         mu = pybamm.InputParameter("mu")
         sigma = pybamm.InputParameter("sigma")
         fun = pybamm.normal_pdf(x, mu, sigma)
-        assert fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}) == 1 / np.sqrt(2 * np.pi)
-        assert fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}) == \
-            1 / np.sqrt(2 * np.pi) / 10
+        assert fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}) == 1 / np.sqrt(
+            2 * np.pi
+        )
+        assert (
+            fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10})
+            == 1 / np.sqrt(2 * np.pi) / 10
+        )
         assert fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}) == pytest.approx(0)
         assert fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}) == pytest.approx(0)
-        assert fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}) > \
-            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2})
-        assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) > \
-            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2})
+        assert fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}) > fun.evaluate(
+            inputs={"x": 1, "mu": 0, "sigma": 2}
+        )
+        assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) > fun.evaluate(
+            inputs={"x": -1, "mu": 0, "sigma": 2}
+        )
 
     def test_normal_cdf(self):
         x = pybamm.InputParameter("x")
@@ -447,8 +470,9 @@ class TestNonObjectFunctions:
         assert fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}) == 0.5
         assert fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}) == pytest.approx(1)
         assert fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}) == pytest.approx(0)
-        assert fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}) > \
-            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2})
-        assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) < \
-            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2})
-
+        assert fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}) > fun.evaluate(
+            inputs={"x": 1, "mu": 0, "sigma": 2}
+        )
+        assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) < fun.evaluate(
+            inputs={"x": -1, "mu": 0, "sigma": 2}
+        )

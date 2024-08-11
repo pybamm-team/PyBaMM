@@ -243,5 +243,3 @@ class TestJacobian:
         y0 = np.ones(1500)
         jac = conc_disc.jac(y).evaluate(y=y0).toarray()
         np.testing.assert_array_equal(jac, np.eye(1500))
-
-

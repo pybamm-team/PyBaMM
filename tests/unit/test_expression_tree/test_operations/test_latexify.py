@@ -80,7 +80,9 @@ class TestLatexify:
         func = str(model.latexify())
         assert "Voltage [V]" not in func
 
-    @pytest.mark.skipif(platform.system() in ["Windows", "Darwin"], reason="Only run for Linux")
+    @pytest.mark.skipif(
+        platform.system() in ["Windows", "Darwin"], reason="Only run for Linux"
+    )
     def test_sympy_preview(self):
         # Test sympy preview
         model_spme = pybamm.lithium_ion.SPMe()
@@ -89,5 +91,3 @@ class TestLatexify:
             filename = f"{uuid.uuid4()}.{ext}"
             model_spme.latexify(filename)
             os.remove(filename)
-
-

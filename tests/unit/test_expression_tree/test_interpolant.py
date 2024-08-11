@@ -405,5 +405,3 @@ class TestInterpolant:
         interp2d_json["children"] = (var1, var2)
 
         assert pybamm.Interpolant._from_json(interp2d_json) == interp
-
-

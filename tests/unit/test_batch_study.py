@@ -117,4 +117,3 @@ class TestBatchStudy:
             # create a GIF after calling the plot method
             bs.plot(show_plot=False)
             bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
-
