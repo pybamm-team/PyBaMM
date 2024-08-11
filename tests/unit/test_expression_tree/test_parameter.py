@@ -47,7 +47,7 @@ class TestFunctionParameter:
         assert func.name == "func"
         assert func.children[0] == var
         assert func.domain == []
-        assert func.diff_variable == None
+        assert func.diff_variable is None
 
     def test_function_parameter_diff(self):
         var = pybamm.Variable("var")
@@ -103,7 +103,7 @@ class TestFunctionParameter:
 
         x = pybamm.Scalar(1)
         assert myfun(x).print_name == "myfun"
-        assert _myfun(x).print_name == None
+        assert _myfun(x).print_name is None
 
     def test_function_parameter_to_equation(self):
         func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
