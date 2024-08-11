@@ -125,4 +125,3 @@ class TestFunctionParameter:
 
         with pytest.raises(NotImplementedError):
             pybamm.FunctionParameter._from_json({})
-

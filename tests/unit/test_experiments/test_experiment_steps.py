@@ -3,7 +3,6 @@
 #
 import pytest
 import pybamm
-import unittest
 import numpy as np
 from datetime import datetime
 
@@ -297,7 +296,9 @@ class TestExperimentSteps:
         custom_step_alg = pybamm.step.CustomStepImplicit(custom_step_voltage)
 
         assert custom_step_alg.control == "algebraic"
-        assert custom_step_alg.current_rhs_function({"Voltage [V]": 4.2}) == pytest.approx(0.1)
+        assert custom_step_alg.current_rhs_function(
+            {"Voltage [V]": 4.2}
+        ) == pytest.approx(0.1)
 
         custom_step_diff = pybamm.step.CustomStepImplicit(
             custom_step_voltage, control="differential"
@@ -306,5 +307,3 @@ class TestExperimentSteps:
 
         with pytest.raises(ValueError, match="control must be"):
             pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")
-
-

@@ -357,5 +357,3 @@ class TestCasadiConverter:
         var = pybamm.Variable("var")
         with pytest.raises(TypeError, match="Cannot convert symbol of type"):
             var.to_casadi()
-
-

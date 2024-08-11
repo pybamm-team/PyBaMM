@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import pytest
 
+
 class TestStateVector:
     def test_evaluate(self):
         sv = pybamm.StateVector(slice(0, 10))
@@ -17,7 +18,8 @@ class TestStateVector:
         # Try evaluating with a y that is too short
         y2 = np.ones(5)
         with pytest.raises(
-            ValueError, match="y is too short, so value with slice is smaller than expected"
+            ValueError,
+            match="y is too short, so value with slice is smaller than expected",
         ):
             sv.evaluate(y=y2)
 
@@ -120,5 +122,3 @@ class TestStateVectorDot:
     def test_name(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
         assert sv.name == "y_dot[0:10]"
-
-

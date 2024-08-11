@@ -84,26 +84,21 @@ class TestSymbol:
         assert a.tertiary_domain == ["tert"]
         assert a.tertiary_domain == ["tert"]
         assert a.quaternary_domain == ["quat"]
-        assert a.domains == \
-            {
-                "primary": ["test"],
-                "secondary": ["sec"],
-                "tertiary": ["tert"],
-                "quaternary": ["quat"],
-            }
+        assert a.domains == {
+            "primary": ["test"],
+            "secondary": ["sec"],
+            "tertiary": ["tert"],
+            "quaternary": ["quat"],
+        }
 
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         assert a.domain == ["t", "e", "s"]
         with pytest.raises(TypeError):
             a = pybamm.Symbol("a", domain=1)
         b = pybamm.Symbol("b", domain="test sec")
-        with pytest.raises(
-            pybamm.DomainError, match="All domains must be different"
-        ):
+        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
             b.domains = {"primary": "test", "secondary": "test"}
-        with pytest.raises(
-            pybamm.DomainError, match="All domains must be different"
-        ):
+        with pytest.raises(pybamm.DomainError, match="All domains must be different"):
             b = pybamm.Symbol(
                 "b",
                 domain="test",
@@ -121,7 +116,7 @@ class TestSymbol:
         assert isinstance(-a, pybamm.Negate)
         assert isinstance(abs(a), pybamm.AbsoluteValue)
         # special cases
-        assert -(-a) == a# noqa: B002
+        assert -(-a) == a  # noqa: B002
         assert -(a - b) == b - a
         assert abs(abs(a)) == abs(a)
 
@@ -162,7 +157,8 @@ class TestSymbol:
 
         # error raising
         with pytest.raises(
-            NotImplementedError, match="BinaryOperator not implemented for symbols of type"
+            NotImplementedError,
+            match="BinaryOperator not implemented for symbols of type",
         ):
             a + "two"
 
@@ -353,18 +349,18 @@ class TestSymbol:
         hex_regex = r"\-?0x[0-9,a-f]+"
         assert re.search(
             r"Symbol\(" + hex_regex + r", a, children=\[\], domains=\{\}\)",
-            a.__repr__()
+            a.__repr__(),
         )
         assert re.search(
             r"Symbol\(" + hex_regex + r", b, children=\[\], domains=\{\}\)",
-            b.__repr__()
+            b.__repr__(),
         )
 
         assert re.search(
             r"Symbol\("
             + hex_regex
             + r", c, children=\[\], domains=\{'primary': \['test'\]\}\)",
-            c.__repr__()
+            c.__repr__(),
         )
 
         assert re.search(
@@ -372,12 +368,12 @@ class TestSymbol:
             + hex_regex
             + r", d, children=\[\], domains=\{'primary': \['test'\], "
             + r"'secondary': \['other test'\]\}\)",
-            d.__repr__()
+            d.__repr__(),
         )
 
         assert re.search(
             r"Addition\(" + hex_regex + r", \+, children=\['a', 'b'\], domains=\{\}\)",
-            (a + b).__repr__()
+            (a + b).__repr__(),
         )
 
         assert re.search(
@@ -385,16 +381,15 @@ class TestSymbol:
             + hex_regex
             + r", \*, children=\['a', 'd'\], domains=\{'primary': \['test'\], "
             + r"'secondary': \['other test'\]\}\)",
-            (a * d).__repr__()
+            (a * d).__repr__(),
         )
 
         assert re.search(
             r"Gradient\("
             + hex_regex
             + r", grad, children=\['c'\], domains=\{'primary': \['test'\]\}\)",
-            pybamm.grad(c).__repr__()
+            pybamm.grad(c).__repr__(),
         )
-
 
     def test_symbol_visualise(self):
         with TemporaryDirectory() as dir_name:
@@ -549,5 +544,3 @@ class TestIsZero:
         with pytest.raises(NotImplementedError, match="Boolean"):
             if a > 1:
                 print("a is greater than 1")
-
-

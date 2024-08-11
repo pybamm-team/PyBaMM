@@ -60,8 +60,12 @@ class TestConcatenations:
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
         c = pybamm.Symbol("c", domain=["test"])
         conc = pybamm.concatenation(a, b, c)
-        assert conc.domain == \
-            ["negative electrode", "separator", "positive electrode", "test"]
+        assert conc.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "test",
+        ]
 
         # Can't concatenate nodes with overlapping domains
         d = pybamm.Symbol("d", domain=["separator"])
@@ -93,7 +97,8 @@ class TestConcatenations:
             "c", domain=["test"], auxiliary_domains={"secondary": "something else"}
         )
         with pytest.raises(
-            pybamm.DomainError, match="children must have same or empty auxiliary domains"
+            pybamm.DomainError,
+            match="children must have same or empty auxiliary domains",
         ):
             pybamm.concatenation(a, b, c)
 
@@ -145,7 +150,11 @@ class TestConcatenations:
         concat = pybamm.concatenation(a, b, c)
         assert isinstance(concat, pybamm.PrimaryBroadcast)
         assert concat.orphans[0] == var
-        assert concat.domain == ["negative electrode", "separator", "positive electrode"]
+        assert concat.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]
 
         # Full broadcast
         a = pybamm.FullBroadcast(0, "negative electrode", "current collector")
@@ -213,12 +222,11 @@ class TestConcatenations:
         a = pybamm.Symbol("a", domain=["negative electrode"])
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
         conc = pybamm.DomainConcatenation([a, b], mesh)
-        assert conc.domain == \
-            [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
+        assert conc.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]
 
         conc.secondary_dimensions_npts = 2
         with pytest.raises(ValueError, match="Concatenation and children must have"):
@@ -352,8 +360,9 @@ class TestConcatenations:
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
-        assert pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c) == \
-            pybamm.NumpyConcatenation(a, b, c)
+        assert pybamm.numpy_concatenation(
+            pybamm.numpy_concatenation(a, b), c
+        ) == pybamm.NumpyConcatenation(a, b, c)
 
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test a")
@@ -400,8 +409,7 @@ class TestConcatenations:
             "secondary_dimensions_npts": 1,
         }
 
-        assert conc.to_json() == \
-            json_dict
+        assert conc.to_json() == json_dict
 
         # manually add children
         json_dict["children"] = [a, b]
@@ -438,5 +446,3 @@ class TestConcatenations:
 
         # test _from_json
         assert pybamm.NumpyConcatenation._from_json(np_json) == conc_np
-
-

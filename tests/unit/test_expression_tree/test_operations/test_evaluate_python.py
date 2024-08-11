@@ -11,6 +11,7 @@ import numpy as np
 import scipy.sparse
 from collections import OrderedDict
 import re
+
 if pybamm.have_jax():
     import jax
 from tests import (
@@ -129,8 +130,9 @@ class TestEvaluate:
         assert next(iter(variable_symbols.keys())) == a.id
         assert list(variable_symbols.keys())[1] == b.id
         assert list(variable_symbols.keys())[2] == expr.id
-        assert list(variable_symbols.values())[2] == \
-            f"np.concatenate(({var_a},{var_b}))"
+        assert (
+            list(variable_symbols.values())[2] == f"np.concatenate(({var_a},{var_b}))"
+        )
 
         # test domain concatentate
         constant_symbols = OrderedDict()
@@ -141,8 +143,9 @@ class TestEvaluate:
         assert next(iter(variable_symbols.keys())) == a.id
         assert list(variable_symbols.keys())[1] == b.id
         assert list(variable_symbols.keys())[2] == expr.id
-        assert list(variable_symbols.values())[2] == \
-            f"np.concatenate(({var_a},{var_b}))"
+        assert (
+            list(variable_symbols.values())[2] == f"np.concatenate(({var_a},{var_b}))"
+        )
 
         # test that Concatentation throws
         a = pybamm.StateVector(slice(0, 1), domain="test a")
@@ -184,8 +187,10 @@ class TestEvaluate:
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
         assert len(constant_symbols) == 0
-        assert list(variable_symbols.values())[2] == \
-            f"np.concatenate(({var_a}[0:{a_pts}],{var_b}[0:{b_pts}]))"
+        assert (
+            list(variable_symbols.values())[2]
+            == f"np.concatenate(({var_a}[0:{a_pts}],{var_b}[0:{b_pts}]))"
+        )
 
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(y=y)
@@ -223,8 +228,10 @@ class TestEvaluate:
         b1_str = f"{var_b}[{b0_pts}:{b0_pts + b1_pts}]"
 
         assert len(constant_symbols) == 0
-        assert list(variable_symbols.values())[2] == \
-            f"np.concatenate(({a0_str},{b0_str},{b1_str}))"
+        assert (
+            list(variable_symbols.values())[2]
+            == f"np.concatenate(({a0_str},{b0_str},{b1_str}))"
+        )
 
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(y=y)
@@ -676,8 +683,10 @@ class TestEvaluate:
                     1.0,
                     1,
                 ]:
-                    assert str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:] == \
-                        target_dtype
+                    assert (
+                        str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
+                        == target_dtype
+                    )
             for c in [
                 np.float64(1.0),
                 np.int64(1),
@@ -686,16 +695,18 @@ class TestEvaluate:
                 jax.numpy.array([1.0], dtype=np.float64),
                 jax.numpy.array([1], dtype=np.int64),
             ]:
-                assert str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:] == \
-                    target_dtype
+                assert (
+                    str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
+                    == target_dtype
+                )
             for c in [
                 {key: np.float64(1.0) for key in ["a", "b"]},
             ]:
                 expr_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
                 assert all(
-                        str(c_v.dtype)[-2:] == target_dtype \
-                        for c_k, c_v in expr_demoted.items() \
-                    )
+                    str(c_v.dtype)[-2:] == target_dtype
+                    for c_k, c_v in expr_demoted.items()
+                )
             for c in [
                 (np.float64(1.0), np.float64(2.0)),
                 [np.float64(1.0), np.float64(2.0)],
@@ -708,7 +719,9 @@ class TestEvaluate:
             ]:
                 c = pybamm.JaxCooMatrix([0, 1], [0, 1], dtype([1.0, 2.0]), (2, 2))
                 c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.data)
+                assert all(
+                    str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.data
+                )
             for dtype in [
                 np.int64,
                 jax.numpy.int64,

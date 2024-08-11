@@ -144,7 +144,8 @@ class TestUnaryOperators:
             "x_n", domain=["negative electrode"]
         )
         with pytest.raises(
-            ValueError, match="Can't take the x-average of a symbol that evaluates on edges"
+            ValueError,
+            match="Can't take the x-average of a symbol that evaluates on edges",
         ):
             pybamm.x_average(symbol_on_edges)
 
@@ -248,7 +249,8 @@ class TestUnaryOperators:
         # r-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with pytest.raises(
-            ValueError, match="Can't take the r-average of a symbol that evaluates on edges"
+            ValueError,
+            match="Can't take the r-average of a symbol that evaluates on edges",
         ):
             pybamm.r_average(symbol_on_edges)
 
@@ -298,7 +300,8 @@ class TestUnaryOperators:
         # average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with pytest.raises(
-            ValueError, match="Can't take the z-average of a symbol that evaluates on edges"
+            ValueError,
+            match="Can't take the z-average of a symbol that evaluates on edges",
         ):
             pybamm.z_average(symbol_on_edges)
 
@@ -309,4 +312,3 @@ class TestUnaryOperators:
         assert pybamm.yz_average(a - b) == pybamm.yz_average(a) - pybamm.yz_average(b)
         assert pybamm.z_average(a + b) == pybamm.z_average(a) + pybamm.z_average(b)
         assert pybamm.z_average(a - b) == pybamm.z_average(a) - pybamm.z_average(b)
-

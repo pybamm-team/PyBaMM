@@ -4,7 +4,6 @@
 
 from datetime import datetime
 import pybamm
-import unittest
 import pytest
 
 
@@ -17,53 +16,52 @@ class TestExperiment:
                 "Charge at C/5 for 45 minutes",
             ]
         )
-        assert [step.to_dict() for step in experiment.steps] == \
-            [
-                {
-                    "value": 0.05,
-                    "type": "CRate",
-                    "duration": 1800.0,
-                    "period": 60.0,
-                    "temperature": None,
-                    "description": "Discharge at C/20 for 0.5 hours",
-                    "termination": [],
-                    "tags": [],
-                    "start_time": None,
-                },
-                {
-                    "value": -0.2,
-                    "type": "CRate",
-                    "duration": 2700.0,
-                    "period": 60.0,
-                    "temperature": None,
-                    "description": "Charge at C/5 for 45 minutes",
-                    "termination": [],
-                    "tags": [],
-                    "start_time": None,
-                },
-                {
-                    "value": 0.05,
-                    "type": "CRate",
-                    "duration": 1800.0,
-                    "period": 60.0,
-                    "temperature": None,
-                    "description": "Discharge at C/20 for 0.5 hours",
-                    "termination": [],
-                    "tags": [],
-                    "start_time": None,
-                },
-                {
-                    "value": -0.2,
-                    "type": "CRate",
-                    "duration": 2700.0,
-                    "period": 60.0,
-                    "temperature": None,
-                    "description": "Charge at C/5 for 45 minutes",
-                    "termination": [],
-                    "tags": [],
-                    "start_time": None,
-                },
-            ]
+        assert [step.to_dict() for step in experiment.steps] == [
+            {
+                "value": 0.05,
+                "type": "CRate",
+                "duration": 1800.0,
+                "period": 60.0,
+                "temperature": None,
+                "description": "Discharge at C/20 for 0.5 hours",
+                "termination": [],
+                "tags": [],
+                "start_time": None,
+            },
+            {
+                "value": -0.2,
+                "type": "CRate",
+                "duration": 2700.0,
+                "period": 60.0,
+                "temperature": None,
+                "description": "Charge at C/5 for 45 minutes",
+                "termination": [],
+                "tags": [],
+                "start_time": None,
+            },
+            {
+                "value": 0.05,
+                "type": "CRate",
+                "duration": 1800.0,
+                "period": 60.0,
+                "temperature": None,
+                "description": "Discharge at C/20 for 0.5 hours",
+                "termination": [],
+                "tags": [],
+                "start_time": None,
+            },
+            {
+                "value": -0.2,
+                "type": "CRate",
+                "duration": 2700.0,
+                "period": 60.0,
+                "temperature": None,
+                "description": "Charge at C/5 for 45 minutes",
+                "termination": [],
+                "tags": [],
+                "start_time": None,
+            },
+        ]
         assert experiment.cycle_lengths == [2, 1, 1]
 
     def test_invalid_step_type(self):
@@ -78,12 +76,16 @@ class TestExperiment:
     def test_str_repr(self):
         conds = ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"]
         experiment = pybamm.Experiment(conds)
-        assert str(experiment) == \
-            "[('Discharge at 1 C for 20 seconds',)" \
+        assert (
+            str(experiment)
+            == "[('Discharge at 1 C for 20 seconds',)"
             + ", ('Charge at 0.5 W for 10 minutes',)]"
-        assert repr(experiment) == \
-            "pybamm.Experiment([('Discharge at 1 C for 20 seconds',)" \
+        )
+        assert (
+            repr(experiment)
+            == "pybamm.Experiment([('Discharge at 1 C for 20 seconds',)"
             + ", ('Charge at 0.5 W for 10 minutes',)])"
+        )
 
     def test_bad_strings(self):
         with pytest.raises(
@@ -212,5 +214,3 @@ class TestExperiment:
 
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well
-
-
