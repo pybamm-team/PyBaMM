@@ -2,19 +2,19 @@
 # Tests for the jacobian methods
 #
 
+import pytest
 import pybamm
 
 import numpy as np
-import unittest
 from scipy.sparse import eye
 from tests import get_mesh_for_testing
 
 
-class TestJacobian(unittest.TestCase):
+class TestJacobian:
     def test_variable_is_statevector(self):
         a = pybamm.Symbol("a")
-        with self.assertRaisesRegex(
-            TypeError, "Jacobian can only be taken with respect to a 'StateVector'"
+        with pytest.raises(
+            TypeError, match="Jacobian can only be taken with respect to a 'StateVector'"
         ):
             a.jac(a)
 
@@ -52,7 +52,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         func = u @ pybamm.StateVector(slice(0, 1))
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             func.jac(y)
 
         # when differentiating by independent part of the state vector
@@ -111,11 +111,11 @@ class TestJacobian(unittest.TestCase):
         y1 = pybamm.StateVector(slice(0, 4), slice(7, 8))
         y_dot1 = pybamm.StateVectorDot(slice(0, 4), slice(7, 8))
         y2 = pybamm.StateVector(slice(4, 7))
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             y1.jac(y1)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             y2.jac(y1)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             y_dot1.jac(y1)
 
     def test_linear_ydot(self):
@@ -237,41 +237,41 @@ class TestJacobian(unittest.TestCase):
 
         y = pybamm.StateVector(slice(0, 1))
 
-        self.assertEqual(a.jac(y).evaluate(), 0)
+        assert a.jac(y).evaluate() == 0
 
         add = a + b
-        self.assertEqual(add.jac(y).evaluate(), 0)
+        assert add.jac(y).evaluate() == 0
 
         subtract = a - b
-        self.assertEqual(subtract.jac(y).evaluate(), 0)
+        assert subtract.jac(y).evaluate() == 0
 
         multiply = a * b
-        self.assertEqual(multiply.jac(y).evaluate(), 0)
+        assert multiply.jac(y).evaluate() == 0
 
         divide = a / b
-        self.assertEqual(divide.jac(y).evaluate(), 0)
+        assert divide.jac(y).evaluate() == 0
 
         power = a**b
-        self.assertEqual(power.jac(y).evaluate(), 0)
+        assert power.jac(y).evaluate() == 0
 
     def test_jac_of_symbol(self):
         a = pybamm.Symbol("a")
         y = pybamm.StateVector(slice(0, 1))
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             a.jac(y)
 
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
         b = pybamm.SpatialOperator("Operator", a)
         y = pybamm.StateVector(slice(0, 1))
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             b.jac(y)
 
     def test_jac_of_unary_operator(self):
         a = pybamm.Scalar(1)
         b = pybamm.UnaryOperator("Operator", a)
         y = pybamm.StateVector(slice(0, 1))
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             b.jac(y)
 
     def test_jac_of_binary_operator(self):
@@ -284,26 +284,26 @@ class TestJacobian(unittest.TestCase):
         i = pybamm.grad(phi_s)
 
         inner = pybamm.inner(2, i)
-        self.assertEqual(inner._binary_jac(a, b), 2 * b)
+        assert inner._binary_jac(a, b) == 2 * b
 
         inner = pybamm.inner(i, 2)
-        self.assertEqual(inner._binary_jac(a, b), 2 * a)
+        assert inner._binary_jac(a, b) == 2 * a
 
         inner = pybamm.inner(i, i)
-        self.assertEqual(inner._binary_jac(a, b), i * a + i * b)
+        assert inner._binary_jac(a, b) == i * a + i * b
 
     def test_jac_of_independent_variable(self):
         a = pybamm.IndependentVariable("Variable")
         y = pybamm.StateVector(slice(0, 1))
-        self.assertEqual(a.jac(y).evaluate(), 0)
+        assert a.jac(y).evaluate() == 0
 
     def test_jac_of_inner(self):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
         y = pybamm.StateVector(slice(0, 1))
-        self.assertEqual(pybamm.inner(a, b).jac(y).evaluate(), 0)
-        self.assertEqual(pybamm.inner(a, y).jac(y).evaluate(), 1)
-        self.assertEqual(pybamm.inner(y, b).jac(y).evaluate(), 2)
+        assert pybamm.inner(a, b).jac(y).evaluate() == 0
+        assert pybamm.inner(a, y).jac(y).evaluate() == 1
+        assert pybamm.inner(y, b).jac(y).evaluate() == 2
         vec = pybamm.StateVector(slice(0, 2))
         jac = pybamm.inner(a * vec, b * vec).jac(vec).evaluate(y=np.ones(2)).toarray()
         np.testing.assert_array_equal(jac, 4 * np.eye(2))
@@ -406,7 +406,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # One child
-        self.assertEqual(u.jac(u), pybamm.NumpyConcatenation(u).jac(u))
+        assert u.jac(u) == pybamm.NumpyConcatenation(u).jac(u)
 
     def test_jac_of_domain_concatenation(self):
         # create mesh
@@ -454,17 +454,9 @@ class TestJacobian(unittest.TestCase):
             slice(a_npts, a_npts + b_npts + c_npts), domain=b_dom + c_dom
         )
         conc = pybamm.DomainConcatenation([a, b], mesh)
-        with self.assertRaisesRegex(
-            NotImplementedError, "jacobian only implemented for when each child has"
+        with pytest.raises(
+            NotImplementedError, match="jacobian only implemented for when each child has"
         ):
             conc.jac(y)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
