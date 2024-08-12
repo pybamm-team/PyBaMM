@@ -186,7 +186,7 @@ nox -s tests
 or, alternatively, you can use posargs to pass the path to the test to `nox`. For example:
 
 ```bash
-nox -s tests -- tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model 
+nox -s tests -- tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
