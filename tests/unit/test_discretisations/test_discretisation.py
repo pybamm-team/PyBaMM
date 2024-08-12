@@ -811,7 +811,7 @@ class TestDiscretise:
             7 * np.ones_like(mesh["negative electrode"].edges[:, np.newaxis]),
         )
 
-    def test_broadcast_2_d(self):
+    def test_broadcast_2D(self):
         # broadcast in 2D --> MatrixMultiplication
         var = pybamm.Variable("var", ["current collector"])
         disc = get_1p1d_discretisation_for_testing()
