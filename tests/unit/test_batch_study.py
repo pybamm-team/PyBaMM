@@ -48,7 +48,7 @@ class TestBatchStudy:
 
         # Tests for None when only models are given with permutations=False
         bs_false_only_models.solve(t_eval=[0, 3600])
-        assert 2 == len(bs_false_only_models.sims)
+        assert len(bs_false_only_models.sims) == 2
 
         # Tests for None when only models are given with permutations=True
         bs_true_only_models.solve(t_eval=[0, 3600])
