@@ -267,7 +267,9 @@ def run_tests(session):
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     specific_test_files = session.posargs if session.posargs else []
-    session.run("python", "-m", "pytest", *specific_test_files, "-m", "unit or integration")
+    session.run(
+        "python", "-m", "pytest", *specific_test_files, "-m", "unit or integration"
+    )
 
 
 @nox.session(name="docs")
