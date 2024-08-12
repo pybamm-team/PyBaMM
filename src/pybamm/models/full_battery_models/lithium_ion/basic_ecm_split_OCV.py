@@ -42,16 +42,12 @@ class ECMsplitOCV(BaseModel):
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
         # Capacity in each electrode
-        # TODO specify capcity for negative and positive electrodes
-        # may be user-defined
-        q_n = 1  # Ah
-        q_p = 1  # Ah
-        Qn = q_n
-        Qp = q_p
+        Q_n = pybamm.Parameter("Negative electrode capacity [A.h]")
+        Q_p = pybamm.Parameter("Positive electrode capacity [A.h]")
 
         # State of charge electrode equations
-        self.rhs[c_n] = -I / Qn / 3600
-        self.rhs[c_p] = I / Qp / 3600
+        self.rhs[c_n] = -I / Q_n / 3600
+        self.rhs[c_p] = I / Q_p / 3600
         self.initial_conditions[c_n] = param.n.prim.c_init_av / param.n.prim.c_max
         self.initial_conditions[c_p] = param.p.prim.c_init_av / param.p.prim.c_max
 
@@ -59,9 +55,11 @@ class ECMsplitOCV(BaseModel):
         Un = param.n.prim.U(c_n, T)
         Up = param.p.prim.U(c_p, T)
 
-        # IR resistance, hard coded for now
-        IR = 0.1
-        V = Up - Un - IR
+        # Resistance for IR expression
+        R = pybamm.Parameter("Ohmic resistance [Ohm]")
+
+        # Voltage expression
+        V = Up - Un - I * R
 
         self.variables = {
             "Negative particle SOC": c_n,
