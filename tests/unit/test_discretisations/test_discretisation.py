@@ -948,7 +948,7 @@ class TestDiscretise:
         )[:, np.newaxis]
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
-    def test_concatenation_2_d(self):
+    def test_concatenation_2D(self):
         disc = get_1p1d_discretisation_for_testing(zpts=3)
 
         a = pybamm.Variable(
