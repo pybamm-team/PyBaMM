@@ -1,7 +1,7 @@
 #
 # Tests for the Concatenation class and subclasses
 #
-import unittest
+import pytest
 import unittest.mock as mock
 from tests import assert_domain_equal
 
@@ -13,46 +13,46 @@ import sympy
 from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
-class TestConcatenations(unittest.TestCase):
+class TestConcatenations:
     def test_base_concatenation(self):
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
         c = pybamm.Symbol("c", domain="test c")
         conc = pybamm.concatenation(a, b, c)
-        self.assertEqual(conc.name, "concatenation")
-        self.assertEqual(str(conc), "concatenation(a, b, c)")
-        self.assertIsInstance(conc.children[0], pybamm.Symbol)
-        self.assertEqual(conc.children[0].name, "a")
-        self.assertEqual(conc.children[1].name, "b")
-        self.assertEqual(conc.children[2].name, "c")
+        assert conc.name == "concatenation"
+        assert str(conc) == "concatenation(a, b, c)"
+        assert isinstance(conc.children[0], pybamm.Symbol)
+        assert conc.children[0].name == "a"
+        assert conc.children[1].name == "b"
+        assert conc.children[2].name == "c"
         d = pybamm.Vector([2], domain="test a")
         e = pybamm.Vector([1], domain="test b")
         f = pybamm.Vector([3], domain="test c")
         conc2 = pybamm.concatenation(d, e, f)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             conc2.evaluate()
 
         # trying to concatenate non-pybamm symbols
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             pybamm.concatenation(1, 2)
 
         # concatenation of length 0
-        with self.assertRaisesRegex(ValueError, "Cannot create empty concatenation"):
+        with pytest.raises(ValueError, match="Cannot create empty concatenation"):
             pybamm.concatenation()
 
         # concatenation of lenght 1
-        self.assertEqual(pybamm.concatenation(a), a)
+        assert pybamm.concatenation(a) == a
 
         a = pybamm.Variable("a", domain="test a")
         b = pybamm.Variable("b", domain="test b")
-        with self.assertRaisesRegex(TypeError, "ConcatenationVariable"):
+        with pytest.raises(TypeError, match="ConcatenationVariable"):
             pybamm.Concatenation(a, b)
 
         # base concatenation jacobian
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
         conc3 = pybamm.Concatenation(a, b)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             conc3._concatenation_jac(None)
 
     def test_concatenation_domains(self):
@@ -60,14 +60,16 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
         c = pybamm.Symbol("c", domain=["test"])
         conc = pybamm.concatenation(a, b, c)
-        self.assertEqual(
-            conc.domain,
-            ["negative electrode", "separator", "positive electrode", "test"],
-        )
+        assert conc.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "test",
+        ]
 
         # Can't concatenate nodes with overlapping domains
         d = pybamm.Symbol("d", domain=["separator"])
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             pybamm.concatenation(a, b, d)
 
     def test_concatenation_auxiliary_domains(self):
@@ -94,8 +96,9 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.Symbol(
             "c", domain=["test"], auxiliary_domains={"secondary": "something else"}
         )
-        with self.assertRaisesRegex(
-            pybamm.DomainError, "children must have same or empty auxiliary domains"
+        with pytest.raises(
+            pybamm.DomainError,
+            match="children must have same or empty auxiliary domains",
         ):
             pybamm.concatenation(a, b, c)
 
@@ -104,38 +107,38 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Variable("b", domain="test b")
 
         conc = pybamm.concatenation(a, b)
-        self.assertEqual(conc.scale, 1)
-        self.assertEqual(conc.reference, 0)
+        assert conc.scale == 1
+        assert conc.reference == 0
 
         a._scale = 2
-        with self.assertRaisesRegex(
-            ValueError, "Cannot concatenate symbols with different scales"
+        with pytest.raises(
+            ValueError, match="Cannot concatenate symbols with different scales"
         ):
             pybamm.concatenation(a, b)
 
         b._scale = 2
         conc = pybamm.concatenation(a, b)
-        self.assertEqual(conc.scale, 2)
+        assert conc.scale == 2
 
         a._reference = 3
-        with self.assertRaisesRegex(
-            ValueError, "Cannot concatenate symbols with different references"
+        with pytest.raises(
+            ValueError, match="Cannot concatenate symbols with different references"
         ):
             pybamm.concatenation(a, b)
 
         b._reference = 3
         conc = pybamm.concatenation(a, b)
-        self.assertEqual(conc.reference, 3)
+        assert conc.reference == 3
 
         a.bounds = (0, 1)
-        with self.assertRaisesRegex(
-            ValueError, "Cannot concatenate symbols with different bounds"
+        with pytest.raises(
+            ValueError, match="Cannot concatenate symbols with different bounds"
         ):
             pybamm.concatenation(a, b)
 
         b.bounds = (0, 1)
         conc = pybamm.concatenation(a, b)
-        self.assertEqual(conc.bounds, (0, 1))
+        assert conc.bounds == (0, 1)
 
     def test_concatenation_simplify(self):
         # Primary broadcast
@@ -145,11 +148,13 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.PrimaryBroadcast(var, "positive electrode")
 
         concat = pybamm.concatenation(a, b, c)
-        self.assertIsInstance(concat, pybamm.PrimaryBroadcast)
-        self.assertEqual(concat.orphans[0], var)
-        self.assertEqual(
-            concat.domain, ["negative electrode", "separator", "positive electrode"]
-        )
+        assert isinstance(concat, pybamm.PrimaryBroadcast)
+        assert concat.orphans[0] == var
+        assert concat.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]
 
         # Full broadcast
         a = pybamm.FullBroadcast(0, "negative electrode", "current collector")
@@ -157,8 +162,8 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
         concat = pybamm.concatenation(a, b, c)
-        self.assertIsInstance(concat, pybamm.FullBroadcast)
-        self.assertEqual(concat.orphans[0], pybamm.Scalar(0))
+        assert isinstance(concat, pybamm.FullBroadcast)
+        assert concat.orphans[0] == pybamm.Scalar(0)
         assert_domain_equal(
             concat.domains,
             {
@@ -184,7 +189,7 @@ class TestConcatenations(unittest.TestCase):
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
         # empty concatenation
         conc = pybamm.NumpyConcatenation()
-        self.assertEqual(conc._concatenation_jac(None), 0)
+        assert conc._concatenation_jac(None) == 0
 
     def test_numpy_concatenation_vector_scalar(self):
         # with entries
@@ -217,17 +222,14 @@ class TestConcatenations(unittest.TestCase):
         a = pybamm.Symbol("a", domain=["negative electrode"])
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
         conc = pybamm.DomainConcatenation([a, b], mesh)
-        self.assertEqual(
-            conc.domain,
-            [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ],
-        )
+        assert conc.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]
 
         conc.secondary_dimensions_npts = 2
-        with self.assertRaisesRegex(ValueError, "Concatenation and children must have"):
+        with pytest.raises(ValueError, match="Concatenation and children must have"):
             conc.create_slices(None)
 
     def test_concatenation_orphans(self):
@@ -238,15 +240,15 @@ class TestConcatenations(unittest.TestCase):
         a_new, b_new, c_new = conc.orphans
 
         # We should be able to manipulate the children without TreeErrors
-        self.assertIsInstance(2 * a_new, pybamm.Multiplication)
-        self.assertIsInstance(3 + b_new, pybamm.Addition)
-        self.assertIsInstance(4 - c_new, pybamm.Subtraction)
+        assert isinstance(2 * a_new, pybamm.Multiplication)
+        assert isinstance(3 + b_new, pybamm.Addition)
+        assert isinstance(4 - c_new, pybamm.Subtraction)
 
         # ids should stay the same
-        self.assertEqual(a, a_new)
-        self.assertEqual(b, b_new)
-        self.assertEqual(c, c_new)
-        self.assertEqual(conc, pybamm.concatenation(a_new, b_new, c_new))
+        assert a == a_new
+        assert b == b_new
+        assert c == c_new
+        assert conc == pybamm.concatenation(a_new, b_new, c_new)
 
     def test_broadcast_and_concatenate(self):
         # create discretisation
@@ -259,12 +261,10 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.PrimaryBroadcast(3, ["positive electrode"])
         conc = pybamm.concatenation(a, b, c)
 
-        self.assertEqual(
-            conc.domain, ["negative electrode", "separator", "positive electrode"]
-        )
-        self.assertEqual(conc.children[0].domain, ["negative electrode"])
-        self.assertEqual(conc.children[1].domain, ["separator"])
-        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        assert conc.domain == ["negative electrode", "separator", "positive electrode"]
+        assert conc.children[0].domain == ["negative electrode"]
+        assert conc.children[1].domain == ["separator"]
+        assert conc.children[2].domain == ["positive electrode"]
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
             processed_conc.evaluate(),
@@ -283,12 +283,10 @@ class TestConcatenations(unittest.TestCase):
         c_t = pybamm.PrimaryBroadcast(3 * pybamm.t, ["positive electrode"])
         conc = pybamm.concatenation(a_t, b_t, c_t)
 
-        self.assertEqual(
-            conc.domain, ["negative electrode", "separator", "positive electrode"]
-        )
-        self.assertEqual(conc.children[0].domain, ["negative electrode"])
-        self.assertEqual(conc.children[1].domain, ["separator"])
-        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        assert conc.domain == ["negative electrode", "separator", "positive electrode"]
+        assert conc.children[0].domain == ["negative electrode"]
+        assert conc.children[1].domain == ["separator"]
+        assert conc.children[2].domain == ["positive electrode"]
 
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
@@ -312,12 +310,10 @@ class TestConcatenations(unittest.TestCase):
         )
         conc = pybamm.concatenation(a_sv, b_sv, c_sv)
 
-        self.assertEqual(
-            conc.domain, ["negative electrode", "separator", "positive electrode"]
-        )
-        self.assertEqual(conc.children[0].domain, ["negative electrode"])
-        self.assertEqual(conc.children[1].domain, ["separator"])
-        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        assert conc.domain == ["negative electrode", "separator", "positive electrode"]
+        assert conc.children[0].domain == ["negative electrode"]
+        assert conc.children[1].domain == ["separator"]
+        assert conc.children[2].domain == ["positive electrode"]
 
         processed_conc = disc.process_symbol(conc)
         y = np.array([1, 2, 3])
@@ -335,12 +331,10 @@ class TestConcatenations(unittest.TestCase):
         # Mixed
         conc = pybamm.concatenation(a, b_t, c_sv)
 
-        self.assertEqual(
-            conc.domain, ["negative electrode", "separator", "positive electrode"]
-        )
-        self.assertEqual(conc.children[0].domain, ["negative electrode"])
-        self.assertEqual(conc.children[1].domain, ["separator"])
-        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        assert conc.domain == ["negative electrode", "separator", "positive electrode"]
+        assert conc.children[0].domain == ["negative electrode"]
+        assert conc.children[1].domain == ["separator"]
+        assert conc.children[2].domain == ["positive electrode"]
 
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
@@ -357,8 +351,8 @@ class TestConcatenations(unittest.TestCase):
     def test_domain_error(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
-        with self.assertRaisesRegex(
-            pybamm.DomainError, "Cannot concatenate child 'a' with empty domain"
+        with pytest.raises(
+            pybamm.DomainError, match="Cannot concatenate child 'a' with empty domain"
         ):
             pybamm.DomainConcatenation([a, b], None)
 
@@ -366,10 +360,9 @@ class TestConcatenations(unittest.TestCase):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
-        self.assertEqual(
-            pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c),
-            pybamm.NumpyConcatenation(a, b, c),
-        )
+        assert pybamm.numpy_concatenation(
+            pybamm.numpy_concatenation(a, b), c
+        ) == pybamm.NumpyConcatenation(a, b, c)
 
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test a")
@@ -379,10 +372,10 @@ class TestConcatenations(unittest.TestCase):
         # Test print_name
         func = pybamm.Concatenation(a, b)
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+        assert func.to_equation() == sympy.Symbol("test")
 
         # Test concat_sym
-        self.assertEqual(pybamm.Concatenation(a, b).to_equation(), func_symbol)
+        assert pybamm.Concatenation(a, b).to_equation() == func_symbol
 
     def test_to_from_json(self):
         # test DomainConcatenation
@@ -416,16 +409,13 @@ class TestConcatenations(unittest.TestCase):
             "secondary_dimensions_npts": 1,
         }
 
-        self.assertEqual(
-            conc.to_json(),
-            json_dict,
-        )
+        assert conc.to_json() == json_dict
 
         # manually add children
         json_dict["children"] = [a, b]
 
         # check symbol re-creation
-        self.assertEqual(pybamm.pybamm.DomainConcatenation._from_json(json_dict), conc)
+        assert pybamm.pybamm.DomainConcatenation._from_json(json_dict) == conc
 
         # -----------------------------
         # test NumpyConcatenation -----
@@ -449,20 +439,10 @@ class TestConcatenations(unittest.TestCase):
         }
 
         # test to_json
-        self.assertEqual(conc_np.to_json(), np_json)
+        assert conc_np.to_json() == np_json
 
         # add children
         np_json["children"] = [a_np, b_np, c_np]
 
         # test _from_json
-        self.assertEqual(pybamm.NumpyConcatenation._from_json(np_json), conc_np)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert pybamm.NumpyConcatenation._from_json(np_json) == conc_np
