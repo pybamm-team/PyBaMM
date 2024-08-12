@@ -57,7 +57,7 @@ class TestBatchStudy:
         # Tests for BatchStudy when permutations=False
         bs_false.solve()
         bs_false.plot(show_plot=False)
-        assert 2 == len(bs_false.sims)
+        assert len(bs_false.sims) == 2
         for num in range(len(bs_false.sims)):
             output_model = bs_false.sims[num].model.name
             models_list = [model.name for model in bs_false.models.values()]
@@ -76,7 +76,7 @@ class TestBatchStudy:
         # Tests for BatchStudy when permutations=True
         bs_true.solve()
         bs_true.plot(show_plot=False)
-        assert 4 == len(bs_true.sims)
+        assert len(bs_true.sims) == 4
         for num in range(len(bs_true.sims)):
             output_model = bs_true.sims[num].model.name
             models_list = [model.name for model in bs_true.models.values()]
