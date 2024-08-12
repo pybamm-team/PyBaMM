@@ -879,7 +879,7 @@ class TestDiscretise:
             1,
         )
 
-    def test_tertiary_broadcast_3_d(self):
+    def test_tertiary_broadcast_3D(self):
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
         var = pybamm.Variable(
