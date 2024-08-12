@@ -849,7 +849,7 @@ class TestDiscretise:
             np.outer(y_test, np.ones(mesh["separator"].npts + 1)).reshape(-1, 1),
         )
 
-    def test_secondary_broadcast_2_d(self):
+    def test_secondary_broadcast_2D(self):
         # secondary broadcast in 2D --> Matrix multiplication
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
