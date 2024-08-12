@@ -237,7 +237,7 @@ class TestEvaluate:
         result = evaluator(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
-    def test_domain_concatenation_2_d(self):
+    def test_domain_concatenation_2D(self):
         disc = get_1p1d_discretisation_for_testing()
 
         a_dom = ["negative electrode"]
