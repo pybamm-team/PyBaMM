@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 # Options to modify nox behaviour
-nox.options.default_venv_backend = "virtualenv"
+nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
 if sys.platform != "win32":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
