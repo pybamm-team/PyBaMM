@@ -42,8 +42,15 @@ class ECMsplitOCV(BaseModel):
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
         # Capacity in each electrode
-        Q_n = pybamm.Parameter("Negative electrode capacity [A.h]")
-        Q_p = pybamm.Parameter("Positive electrode capacity [A.h]")
+        Q_n = param.n.Q_init
+        Q_p = param.p.Q_init
+        # Q_n = pybamm.Parameter("Negative electrode capacity [A.h]")
+        # Q_p = pybamm.Parameter("Positive electrode capacity [A.h]")
+        R = pybamm.Parameter("Ohmic resistance [Ohm]")
+        Un = pybamm.Parameter("Negative electrode OCP [V]")
+        Up = pybamm.Parameter("Positive electrode OCP [V]")
+        c_n_0 = pybamm.Parameter("Negative electrode initial SOC")
+        c_p_0 = pybamm.Parameter("Positive electrode initial SOC")
 
         # State of charge electrode equations
         self.rhs[c_n] = -I / Q_n / 3600
@@ -72,6 +79,7 @@ class ECMsplitOCV(BaseModel):
             "Negative electrode potential [V]": Un,
             "Current variable [A]": I,
             "Current function [A]": I,
+            "Negative electrode capacity [A.h]": Q_n,
         }
 
         # Events specify points at which a solution should terminate
