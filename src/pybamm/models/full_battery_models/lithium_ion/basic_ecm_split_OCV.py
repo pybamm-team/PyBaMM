@@ -7,7 +7,7 @@ from .base_lithium_ion_model import BaseModel
 
 class ECMsplitOCV(BaseModel):
     """Basic Equivalent Circuit Model that uses two OCV functions
-    for each electrode from the OCV function from Lithium ion parameter sets.
+    for each electrode. This model is easily parameterizable with minimal parameters.
     This class differs from the :class: pybamm.equivalent_circuit.Thevenin() due
     to dual OCV functions to make up the voltage from each electrode.
 
@@ -34,7 +34,6 @@ class ECMsplitOCV(BaseModel):
         V = pybamm.Variable("Voltage [V]")
 
         # model is isothermal
-        T = param.T_init
         I = param.current_with_time
 
         # Capacity equation
@@ -42,28 +41,27 @@ class ECMsplitOCV(BaseModel):
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
         # Capacity in each electrode
-        Q_n = param.n.Q_init
-        Q_p = param.p.Q_init
-        # Q_n = pybamm.Parameter("Negative electrode capacity [A.h]")
-        # Q_p = pybamm.Parameter("Positive electrode capacity [A.h]")
-        R = pybamm.Parameter("Ohmic resistance [Ohm]")
-        Un = pybamm.Parameter("Negative electrode OCP [V]")
-        Up = pybamm.Parameter("Positive electrode OCP [V]")
-        c_n_0 = pybamm.Parameter("Negative electrode initial SOC")
-        c_p_0 = pybamm.Parameter("Positive electrode initial SOC")
+        Q_n = pybamm.Parameter("Negative electrode capacity [A.h]")
+        Q_p = pybamm.Parameter("Positive electrode capacity [A.h]")
 
         # State of charge electrode equations
+        c_n_0 = pybamm.Parameter("Negative electrode initial SOC")
+        c_p_0 = pybamm.Parameter("Positive electrode initial SOC")
         self.rhs[c_n] = -I / Q_n / 3600
         self.rhs[c_p] = I / Q_p / 3600
-        self.initial_conditions[c_n] = param.n.prim.c_init_av / param.n.prim.c_max
-        self.initial_conditions[c_p] = param.p.prim.c_init_av / param.p.prim.c_max
-
-        # OCV's for the electrodes
-        Un = param.n.prim.U(c_n, T)
-        Up = param.p.prim.U(c_p, T)
+        self.initial_conditions[c_n] = c_n_0
+        self.initial_conditions[c_p] = c_p_0
 
         # Resistance for IR expression
         R = pybamm.Parameter("Ohmic resistance [Ohm]")
+
+        # Open-circuit potential for each electrode
+        Un = pybamm.FunctionParameter(
+            "Negative electrode OCP [V]", {"Negative particle SOC": c_n}
+        )
+        Up = pybamm.FunctionParameter(
+            "Positive electrode OCP [V]", {"Positive particle SOC": c_p}
+        )
 
         # Voltage expression
         V = Up - Un - I * R
@@ -77,9 +75,7 @@ class ECMsplitOCV(BaseModel):
             "Times [s]": pybamm.t,
             "Positive electrode potential [V]": Up,
             "Negative electrode potential [V]": Un,
-            "Current variable [A]": I,
             "Current function [A]": I,
-            "Negative electrode capacity [A.h]": Q_n,
         }
 
         # Events specify points at which a solution should terminate
