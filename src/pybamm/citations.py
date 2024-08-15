@@ -38,7 +38,6 @@ class Citations:
         # Dict mapping citation tags for use when registering citations
         self._citation_tags = dict()
 
-        self.read_citations()
         self._reset()
 
     def _reset(self):
@@ -68,7 +67,7 @@ class Citations:
         """
         try:
             parse_file = import_optional_dependency("pybtex.database", "parse_file")
-            citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.bib")
+            citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
             bib_data = parse_file(citations_file, bib_format="bibtex")
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
@@ -94,10 +93,7 @@ class Citations:
             # Add to database
             self._all_citations[key] = new_citation
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
-                f"Could not add citation for '{key}' because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable adding citations."
-            )
+            pass
 
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
@@ -173,9 +169,11 @@ class Citations:
                     f"Not a bibtex citation or known citation: {key}"
                 ) from error
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
+            warnings.warn(
                 f"Could not parse citation for '{key}' because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable citation parsing."
+                "Install 'pybamm[cite]' to enable citation parsing.",
+                UserWarning,
+                stacklevel=2
             )
 
     def _tag_citations(self):
@@ -227,6 +225,7 @@ class Citations:
         """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
+        self.read_citations()
         try:
             pybtex = import_optional_dependency("pybtex")
             try:
@@ -261,28 +260,24 @@ class Citations:
                 with open(filename, "w") as f:
                     f.write(citations)
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
+            warnings.warn(
                 "Could not print citations because the 'pybtex' library is not installed. "
-                "Please, install 'pybamm[cite]' to print citations."
+                "Please, install 'pybamm[cite]' to print citations.",
+                UserWarning,
+                stacklevel=2
             )
 
 
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
-    try:
-        import_optional_dependency("pybtex")
-    except ImportError:
-        raise ImportError(
-            "Citations could not be read because the 'pybtex' library is not installed. "
-            "Install 'pybamm[cite]' to enable citation reading."
-        ) from None
-
     if verbose:  # pragma: no cover
         if filename is not None:  # pragma: no cover
             raise Exception(
-                "Verbose output is available only for the terminal and not for printing to files"
-            ) from None
+                "Verbose output is available only for the terminal and not for printing to files",
+            )
         else:
-            pybamm.citations.print(filename, output_format, verbose=True)
+            citations.print(filename, output_format, verbose=True)
     else:
         pybamm.citations.print(filename, output_format)
+
+citations = Citations()
