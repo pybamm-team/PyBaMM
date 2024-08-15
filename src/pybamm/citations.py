@@ -173,7 +173,7 @@ class Citations:
                 f"Could not parse citation for '{key}' because the 'pybtex' library is not installed. "
                 "Install 'pybamm[cite]' to enable citation parsing.",
                 UserWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
     def _tag_citations(self):
@@ -264,7 +264,7 @@ class Citations:
                 "Could not print citations because the 'pybtex' library is not installed. "
                 "Please, install 'pybamm[cite]' to print citations.",
                 UserWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
 
@@ -279,5 +279,6 @@ def print_citations(filename=None, output_format="text", verbose=False):
             citations.print(filename, output_format, verbose=True)
     else:
         pybamm.citations.print(filename, output_format)
+
 
 citations = Citations()
