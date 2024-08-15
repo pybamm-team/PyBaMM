@@ -166,9 +166,12 @@ class Experiment:
                         "Capacity termination must be given in the form "
                         "'80%', '4Ah', or '4A.h'"
                     )
-            elif term.endswith("V"):
+            elif term.endswith("V_min"):
                 end_discharge_V = term.split("V")[0]
-                termination_dict["voltage"] = (float(end_discharge_V), "V")
+                termination_dict["min_voltage"] = (float(end_discharge_V), "V")
+            elif term.endswith("v_max"):
+                end_charge_V = term.split("V")[0]
+                termination_dict['max_voltage'] = (float(end_charge_V), "V")
             elif any(
                 [
                     term.endswith(key)

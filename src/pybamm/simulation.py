@@ -554,9 +554,10 @@ class Simulation:
             all_first_states = starting_solution_first_states
             current_solution = starting_solution or pybamm.EmptySolution()
 
-            voltage_stop = self.experiment.termination.get("voltage")
+            min_voltage_stop = self.experiment.termination.get("min_voltage")
+            max_voltage_stop = self.experiment.termination.get("max_voltage")
             time_stop = self.experiment.termination.get("time")
-            logs["stopping conditions"] = {"voltage": voltage_stop, "time": time_stop}
+            logs["stopping conditions"] = {"voltage_min":min_voltage_stop[0], "voltage_max": max_voltage_stop[1], "time": time_stop}
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -854,9 +855,13 @@ class Simulation:
 
                 # Add minimum voltage to summary variable logs if there is a voltage stop
                 # See PR #3995
-                if voltage_stop is not None:
+                if min_voltage_stop is not None:
                     min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
                     logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+
+                if max_voltage_stop is not None:
+                    max_voltage = np.max(cycle_solution["Battery voltage [V]"].data)
+                    logs["summary variables"]["Maximum voltage [V]"] = max_voltage
 
                 callbacks.on_cycle_end(logs)
 
@@ -867,8 +872,12 @@ class Simulation:
                     if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
                         break
 
-                if voltage_stop is not None:
-                    if min_voltage <= voltage_stop[0]:
+                if min_voltage_stop is not None:
+                    if min_voltage <= min_voltage_stop[0]:
+                        break
+                
+                if max_voltage_stop is not None:
+                    if max_voltage >= max_voltage_stop[0]:
                         break
 
                 # Break if the experiment is infeasible (or errored)
