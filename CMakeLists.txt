@@ -35,7 +35,9 @@ add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
-add_subdirectory(${PYBIND11_DIR})
+find_package(pybind11 CONFIG REQUIRED)
+
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 
 # Check Casadi build flag
 if(NOT DEFINED PYBAMM_IDAKLU_EXPR_CASADI)
@@ -107,7 +109,9 @@ pybind11_add_module(idaklu
   ${IDAKLU_EXPR_IREE_SOURCE_FILES}
 )
 
-if (NOT DEFINED USE_PYTHON_CASADI)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(USE_PYTHON_CASADI FALSE)
+else()
   set(USE_PYTHON_CASADI TRUE)
 endif()
 
@@ -140,6 +144,15 @@ set_target_properties(
 )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
+
+if(NOT DEFINED ENV{INSTALL_DIR})
+  set(INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sundials_KLU_libs")
+else()
+  set(INSTALL_DIR $ENV{INSTALL_DIR})
+endif()
+
+message(STATUS "INSTALL_DIR is set to: ${INSTALL_DIR}")
+
 # Sundials
 find_package(SUNDIALS REQUIRED)
 message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
@@ -170,3 +183,5 @@ if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
   target_link_libraries(idaklu PRIVATE iree_compiler_bindings_c_loader)
   target_link_libraries(idaklu PRIVATE iree_runtime_runtime)
 endif()
+
+install(TARGETS idaklu DESTINATION "pybamm/solvers")
