@@ -292,7 +292,7 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        if solver.supports_interp:
+        if solver._supports_interp:
             return self._setup_timestepping(solver, tf, t_interp)
         else:
             return self._setup_timestepping_dense_t_eval(solver, tf, t_interp)

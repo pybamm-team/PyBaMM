@@ -65,7 +65,7 @@ class BaseSolver:
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
-        self.supports_interp = False
+        self._supports_interp = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
@@ -740,12 +740,14 @@ class BaseSolver:
                     "initial time and tf is the final time, but has been provided "
                     f"as a list of length {len(t_eval)}."
                 )
-            elif not self.supports_interp:
+            elif not self._supports_interp:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
+
+        t_interp = self.process_t_interp(t_interp)
 
         # Set up inputs
         #
@@ -1053,15 +1055,18 @@ class BaseSolver:
             )
 
     def process_t_interp(self, t_interp):
-        if not self.supports_interp and (t_interp is not None and len(t_interp) != 0):
+        # set a variable for this
+        no_interp = (not self._supports_interp) and (
+            t_interp is not None and len(t_interp) != 0
+        )
+        if no_interp:
             warnings.warn(
                 f"Explicit interpolation times not implemented for {self.name}",
                 pybamm.SolverWarning,
                 stacklevel=2,
             )
-            t_interp = np.empty(0)
 
-        if t_interp is None:
+        if no_interp or t_interp is None:
             t_interp = np.empty(0)
 
         return t_interp

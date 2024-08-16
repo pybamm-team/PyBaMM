@@ -233,7 +233,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             output_variables,
         )
         self.name = "IDA KLU solver"
-        self.supports_interp = True
+        self._supports_interp = True
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
@@ -853,9 +853,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             inputs = np.vstack(arrays_to_stack)
         else:
             inputs = np.array([[]])
-
-        if t_interp is None:
-            t_interp = np.empty(0)
 
         y0full = model.y0full
         ydot0full = model.ydot0full
