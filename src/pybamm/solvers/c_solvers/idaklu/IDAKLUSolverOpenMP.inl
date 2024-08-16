@@ -94,18 +94,18 @@ void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::InitializeStorage() {
+void IDAKLUSolverOpenMP<ExprSet>::InitializeStorage(int const N) {
   length_of_return_vector = ReturnVectorLength();
 
-  t = vector<realtype>(1, 0.0);
+  t = vector<realtype>(N, 0.0);
 
   y = vector<vector<realtype>>(
-      1,
+      N,
       vector<realtype>(length_of_return_vector, 0.0)
   );
 
   yS = vector<vector<vector<realtype>>>(
-      1,
+      N,
       vector<vector<realtype>>(
           number_of_parameters,
           vector<realtype>(length_of_return_vector, 0.0)
@@ -323,9 +323,6 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 {
   DEBUG("IDAKLUSolver::solve");
 
-  // Initialize length_of_return_vector, t, y, and yS
-  InitializeStorage();
-
   // If t_interp is empty, save all adaptive steps
   bool save_adaptive_steps = t_interp_np.unchecked<1>().size() == 0;
 
@@ -369,6 +366,11 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
       );
     }
   }
+
+  // Initialize length_of_return_vector, t, y, and yS
+  InitializeStorage(number_of_evals + number_of_interps);
+
+  int i_save = 0;
 
   realtype t0 = t_eval.front();
   realtype tf = t_eval.back();
@@ -443,7 +445,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   // Store Consistent initialization
-  SetStep(t0, y_val, yS_val);
+  SetStep(t0, y_val, yS_val, i_save);
 
   // Prepare next stop time
   i_eval = 1;
@@ -473,6 +475,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     bool hit_teval = retval == IDA_TSTOP_RETURN;
     bool hit_final_time = t_val >= tf || (hit_teval && i_eval == number_of_evals);
     bool hit_event = retval == IDA_ROOT_RETURN;
+    bool hit_adaptive = save_adaptive_steps && retval == IDA_SUCCESS;
 
     if (sensitivity) {
       CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
@@ -480,10 +483,18 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
     if (hit_tinterp) {
       // Save the interpolated state at t_prev < t < t_val, for all t in t_interp
-      SaveStepInterp(i_interp, t_interp_next, t_interp, t_val, t_prev, t_eval_next, y_val, yS_val);
+      SetStepInterp(i_interp,
+        t_interp_next,
+        t_interp,
+        t_val,
+        t_prev,
+        t_eval_next,
+        y_val,
+        yS_val,
+        i_save);
     }
 
-    if (save_adaptive_steps || hit_teval || hit_event) {
+    if (hit_adaptive || hit_teval || hit_event) {
       if (hit_tinterp) {
         // Reset the states and sensitivities t = t_val
         CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
@@ -493,7 +504,11 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
       }
 
       // Save the current state at t_val
-      SaveStep(t_val, y_val, yS_val);
+      if (hit_adaptive) {
+        // Dynamically allocate memory for the adaptive step
+        ExtendAdaptiveArrays();
+      }
+      SetStep(t_val, y_val, yS_val, i_save);
     }
 
     if (hit_final_time || hit_event) {
@@ -528,7 +543,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     PrintStats();
   }
 
-  int const number_of_timesteps = t.size();
+  int const number_of_timesteps = i_save;
   int count;
 
   // Copy the data to return as numpy arrays
@@ -639,16 +654,6 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 }
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::SaveStep(
-  realtype &tval,
-  realtype *y_val,
-  vector<realtype *> const &yS_val
-) {
-  ExtendAdaptiveArrays();
-  SetStep(tval, y_val, yS_val);
-}
-
-template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
   DEBUG("IDAKLUSolver::ExtendAdaptiveArrays");
   // Time
@@ -667,24 +672,30 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStep(
   realtype &tval,
   realtype *y_val,
-  vector<realtype *> const &yS_val
+  vector<realtype *> const &yS_val,
+  int &i_save
 ) {
   // Set adaptive step results for y and yS
   DEBUG("IDAKLUSolver::SetStep");
 
   // Time
-  t.back() = tval;
+  // if (i_save >= t.size()) {
+  //   ExtendAdaptiveArrays();
+  // }
+  t[i_save] = tval;
 
   if (save_outputs_only) {
-    SetStepOutput(tval, y_val, yS_val);
+    SetStepOutput(tval, y_val, yS_val, i_save);
   } else {
-    SetStepFull(tval, y_val, yS_val);
+    SetStepFull(tval, y_val, yS_val, i_save);
   }
+
+  i_save++;
 }
 
 
 template <class ExprSet>
-void IDAKLUSolverOpenMP<ExprSet>::SaveStepInterp(
+void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
   int &i_interp,
   realtype &t_interp_next,
   vector<realtype> const &t_interp,
@@ -692,23 +703,25 @@ void IDAKLUSolverOpenMP<ExprSet>::SaveStepInterp(
   realtype &t_prev,
   realtype const &t_eval_next,
   realtype *y_val,
-  vector<realtype *> const &yS_val
+  vector<realtype *> const &yS_val,
+  int &i_save
   ) {
   // Save the state at the requested time
-  DEBUG("IDAKLUSolver::SaveStepInterp");
+  DEBUG("IDAKLUSolver::SetStepInterp");
 
+  // int count = 0;
+  // auto i_interp_start = i_interp;
   while (i_interp <= (t_interp.size()-1) && t_interp_next <= t_val) {
-
-    if (t_interp_next > t_prev) {
-      CheckErrors(IDAGetDky(ida_mem, t_interp_next, 0, yy));
-      if (sensitivity) {
-        CheckErrors(IDAGetSensDky(ida_mem, t_interp_next, 0, yyS));
-      }
-
-      SaveStep(t_interp_next, y_val, yS_val);
+    CheckErrors(IDAGetDky(ida_mem, t_interp_next, 0, yy));
+    if (sensitivity) {
+      CheckErrors(IDAGetSensDky(ida_mem, t_interp_next, 0, yyS));
     }
 
-    i_interp += 1;
+    // Memory is already allocated for the interpolated values
+    SetStep(t_interp_next, y_val, yS_val, i_save);
+
+    i_interp++;
+    // count++;
     if (i_interp == (t_interp.size())) {
       // Reached the final t_interp value
       break;
@@ -721,20 +734,21 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepFull(
   realtype &tval,
   realtype *y_val,
-  vector<realtype *> const &yS_val
+  vector<realtype *> const &yS_val,
+  int &i_save
 ) {
   // Set adaptive step results for y and yS
   DEBUG("IDAKLUSolver::SetStepFull");
 
   // States
-  auto &y_back = y.back();
+  auto &y_back = y[i_save];
   for (size_t j = 0; j < number_of_states; ++j) {
     y_back[j] = y_val[j];
   }
 
   // Sensitivity
   if (sensitivity) {
-    SetStepFullSensitivities(tval, y_val, yS_val);
+    SetStepFullSensitivities(tval, y_val, yS_val, i_save);
   }
 }
 
@@ -742,13 +756,14 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepFullSensitivities(
   realtype &tval,
   realtype *y_val,
-  vector<realtype *> const &yS_val
+  vector<realtype *> const &yS_val,
+  int &i_save
 ) {
   DEBUG("IDAKLUSolver::SetStepFullSensitivities");
 
   // Calculate sensitivities for the full yS array
   for (size_t j = 0; j < number_of_parameters; ++j) {
-    auto &yS_back_j = yS.back()[j];
+    auto &yS_back_j = yS[i_save][j];
     auto &ySval_j = yS_val[j];
     for (size_t k = 0; k < number_of_states; ++k) {
       yS_back_j[k] = ySval_j[k];
@@ -760,7 +775,8 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
     realtype &tval,
     realtype *y_val,
-    const vector<realtype*>& yS_val
+    const vector<realtype*>& yS_val,
+    int &i_save
 ) {
   DEBUG("IDAKLUSolver::SetStepOutput");
   // Evaluate functions for each requested variable and store
@@ -770,12 +786,12 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutput(
     (*var_fcn)({&tval, y_val, functions->inputs.data()}, {&res[0]});
     // store in return vector
     for (size_t jj=0; jj<var_fcn->nnz_out(); jj++) {
-      y.back()[j++] = res[jj];
+      y[i_save][j++] = res[jj];
     }
   }
   // calculate sensitivities
   if (sensitivity) {
-    SetStepOutputSensitivities(tval, y_val, yS_val);
+    SetStepOutputSensitivities(tval, y_val, yS_val, i_save);
   }
 }
 
@@ -783,7 +799,8 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
   realtype &tval,
   realtype *y_val,
-  const vector<realtype*>& yS_val
+  const vector<realtype*>& yS_val,
+    int &i_save
   ) {
   DEBUG("IDAKLUSolver::SetStepOutputSensitivities");
   // Calculate sensitivities
@@ -804,7 +821,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
     }
     // Calculate sensitivities
     for (int paramk=0; paramk<number_of_parameters; paramk++) {
-      auto &yS_back_paramk = yS.back()[paramk];
+      auto &yS_back_paramk = yS[i_save][paramk];
       yS_back_paramk[dvar_k] = dens_dvar_dp[paramk];
 
       for (int spk=0; spk<dvar_dy->nnz_out(); spk++) {

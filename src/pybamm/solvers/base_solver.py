@@ -742,8 +742,6 @@ class BaseSolver:
                 )
             elif not self.supports_interp:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
-            else:
-                t_eval = np.array(t_eval)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
@@ -1054,6 +1052,20 @@ class BaseSolver:
                 f"Events {event_names} are non-positive at initial conditions"
             )
 
+    def process_t_interp(self, t_interp):
+        if not self.supports_interp and (t_interp is not None and len(t_interp) != 0):
+            warnings.warn(
+                f"Explicit interpolation times not implemented for {self.name}",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+            t_interp = np.empty(0)
+
+        if t_interp is None:
+            t_interp = np.empty(0)
+
+        return t_interp
+
     def step(
         self,
         old_solution,
@@ -1080,10 +1092,9 @@ class BaseSolver:
         dt : numeric type
             The timestep (in seconds) over which to step the solution
         t_eval : list or numpy.ndarray, optional
-            An array of times at which to return the solution during the step
+            An array of times at which to stop the simulation and return the solution during the step
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
-        t_interp
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
@@ -1138,16 +1149,7 @@ class BaseSolver:
         else:
             pass
 
-        if not self.supports_interp and (t_interp is not None and len(t_interp) != 0):
-            warnings.warn(
-                f"Explicit interpolation times not implemented for {self.name}",
-                pybamm.SolverWarning,
-                stacklevel=2,
-            )
-            t_interp = np.empty(0)
-
-        if t_interp is None:
-            t_interp = np.empty(0)
+        t_interp = self.process_t_interp(t_interp)
 
         t_start = old_solution.t[-1]
         t_eval = t_start + t_eval

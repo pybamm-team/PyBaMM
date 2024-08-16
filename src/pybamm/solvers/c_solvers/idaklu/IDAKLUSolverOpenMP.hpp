@@ -136,7 +136,7 @@ public:
   /**
    * @brief Initialize the storage for the solution
    */
-  void InitializeStorage();
+  void InitializeStorage(int const N);
 
   /**
    * @brief Apply user-configurable IDA options
@@ -154,15 +154,6 @@ public:
   void PrintStats();
 
   /**
-   * @brief Extend the adaptive arrays by 1 and set the step
-   */
-  void SaveStep(
-      realtype &t_val,
-      realtype *y_val,
-      vector<realtype *> const &yS_val
-  );
-
-  /**
    * @brief Extend the adaptive arrays by 1
    */
   void ExtendAdaptiveArrays();
@@ -171,59 +162,65 @@ public:
    * @brief Set the step values
    */
   void SetStep(
-      realtype &t_val,
-      realtype *y_val,
-      vector<realtype *> const &yS_val
+    realtype &t_val,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
   );
 
   /**
    * @brief Save the interpolated step values
    */
-  void SaveStepInterp(
-      int &i_interp,
-      realtype &t_interp_next,
-      vector<realtype> const &t_interp,
-      realtype &t_val,
-      realtype &t_prev,
-      realtype const &t_next,
-      realtype *y_val,
-      vector<realtype *> const &yS_val
+  void SetStepInterp(
+    int &i_interp,
+    realtype &t_interp_next,
+    vector<realtype> const &t_interp,
+    realtype &t_val,
+    realtype &t_prev,
+    realtype const &t_next,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
   );
 
   /**
    * @brief Save y and yS at the current time
    */
   void SetStepFull(
-      realtype &t_val,
-      realtype *y_val,
-      vector<realtype *> const &yS_val
+    realtype &t_val,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
   );
 
   /**
    * @brief Save yS at the current time
    */
   void SetStepFullSensitivities(
-      realtype &t_val,
-      realtype *y_val,
-      vector<realtype *> const &yS_val
+    realtype &t_val,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
   );
 
   /**
    * @brief Save the output function results at the requested time
    */
   void SetStepOutput(
-      realtype &t_val,
-      realtype *y_val,
-      const vector<realtype*> &yS_val
+    realtype &t_val,
+    realtype *y_val,
+    const vector<realtype*> &yS_val,
+    int &i_save
   );
 
   /**
    * @brief Save the output function sensitivities at the requested time
    */
   void SetStepOutputSensitivities(
-      realtype &t_val,
-      realtype *y_val,
-      const vector<realtype*> &yS_val
+    realtype &t_val,
+    realtype *y_val,
+    const vector<realtype*> &yS_val,
+    int &i_save
   );
 
 };
