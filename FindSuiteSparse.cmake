@@ -37,6 +37,36 @@
 #   system paths.
 #
 
+enable_language(Fortran)
+
+set(IDAKLU_BLAS_VENDOR
+    "OpenBLAS"
+    CACHE
+      STRING
+      "Sets the BLAS/LAPACK vendor. See https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors."
+)
+set_property(CACHE IDAKLU_BLAS_VENDOR PROPERTY STRINGS OpenBLAS Intel10_64lp Apple Generic)
+
+if(DEFINED ENV{CONDA_BUILD_STATE})
+  set(IDAKLU_BLAS_VENDOR "Generic")
+endif()
+
+if(IDAKLU_BLAS_VENDOR MATCHES "Intel")
+  set(BLA_STATIC FALSE)
+  set(BLA_SIZEOF_INTEGER 4)
+elseif(IDAKLU_BLAS_VENDOR MATCHES "Apple")
+  set(BLA_STATIC TRUE)
+  set(BLA_SIZEOF_INTEGER 4)
+else()
+  set(BLA_STATIC FALSE)
+  set(BLA_SIZEOF_INTEGER 4)
+endif()
+
+set(BLA_VENDOR ${IDAKLU_BLAS_VENDOR})
+
+# openBLAS: include a "lib" prefix in it's names
+set(CMAKE_FIND_LIBRARY_PREFIXES "" lib)
+
 find_package(BLAS QUIET)
 
 # look for desired componenents
@@ -60,7 +90,9 @@ endif()
 # look for library at positions given by the user
 find_library(SUITESPARSE_CONFIG_LIB
   NAMES "suitesparseconfig"
-  PATHS ${SuiteSparse_ROOT}
+  PATHS
+    ${SuiteSparse_ROOT}
+    ${INSTALL_DIR}
   PATH_SUFFIXES "lib" "lib32" "lib64" "Lib"
   NO_DEFAULT_PATH
 )
@@ -73,7 +105,9 @@ find_library(SUITESPARSE_CONFIG_LIB
 #look for header files at positions given by the user
 find_path(SUITESPARSE_INCLUDE_DIR
   NAMES "SuiteSparse_config.h"
-  PATHS ${SuiteSparse_ROOT}
+  PATHS
+    ${SuiteSparse_ROOT}
+    ${INSTALL_DIR}
   PATH_SUFFIXES "SuiteSparse_config" "SuiteSparse_config/include" "suitesparse" "include" "src" "SuiteSparse_config/Include"
   NO_DEFAULT_PATH
 )
@@ -89,7 +123,9 @@ foreach(_component ${SUITESPARSE_COMPONENTS})
   #look for library at positions given by the user
   find_library(${_component}_LIBRARY
     NAMES "${_componentLower}"
-    PATHS ${SuiteSparse_ROOT}
+    PATHS
+      ${SuiteSparse_ROOT}
+      ${INSTALL_DIR}
     PATH_SUFFIXES "lib" "lib32" "lib64" "${_component}" "${_component}/Lib"
     NO_DEFAULT_PATH
   )
@@ -102,7 +138,9 @@ foreach(_component ${SUITESPARSE_COMPONENTS})
   #look for header files at positions given by the user
   find_path(${_component}_INCLUDE_DIR
     NAMES "${_componentLower}.h"
-    PATHS ${SuiteSparse_ROOT}
+    PATHS
+      ${SuiteSparse_ROOT}
+      ${INSTALL_DIR}
     PATH_SUFFIXES "${_componentLower}" "include/${_componentLower}" "suitesparse" "include" "src" "${_component}" "${_component}/Include"
     NO_DEFAULT_PATH
   )
@@ -117,7 +155,9 @@ endforeach()
 #look for header files at positions given by the user
 find_path(SPQR_INCLUDE_DIR
   NAMES "SuiteSparseQR.hpp"
-  PATHS ${SuiteSparse_ROOT}
+  PATHS
+    ${SuiteSparse_ROOT}
+    ${INSTALL_DIR}
   PATH_SUFFIXES "spqr" "include/spqr" "suitesparse" "include" "src" "SPQR" "SPQR/Include"
   NO_DEFAULT_PATH
 )
