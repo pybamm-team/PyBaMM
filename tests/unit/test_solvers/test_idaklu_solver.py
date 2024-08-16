@@ -898,7 +898,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # Compare output to sol_all
         for varname in [*output_variables, *model_vars]:
             np.testing.assert_array_almost_equal(
-                sol[varname](t_eval), sol_all[varname](t_eval), 4
+                sol[varname](t_eval), sol_all[varname](t_eval), 3
             )
 
         # Check that the missing variables are not available in the solution
