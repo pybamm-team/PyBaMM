@@ -1,15 +1,15 @@
 [build-system]
 requires = [
-    "setuptools>=64",
-    "wheel",
+    "scikit-build-core>=0.9.9",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.5; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
+    "pybind11",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "pybamm"
@@ -156,15 +156,18 @@ Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 
-[tool.setuptools]
-include-package-data = true
+[tool.scikit-build]
+minimum-version = "0.9"
+build-dir = "build/{wheel_tag}"
 
-# List of files to include as package data. These are mainly the parameter CSV files in
-# the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
-# README.md files, and specific .txt files inside the pybamm/ directory are also included.
-# These are specified to be included in the SDist through MANIFEST.in.
-[tool.setuptools.package-data]
-pybamm = [
+[tool.scikit-build.logging]
+level = "INFO"
+
+[tool.scikit-build.wheel]
+cmake = false
+
+[tool.scikit-build.sdist]
+include = [
     "*.txt",
     "*.md",
     "*.csv",
@@ -173,8 +176,15 @@ pybamm = [
     "src/pybamm/plotting/mplstyle",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[[tool.scikit-build.overrides]]
+if.any.env.BUILD_IDAKLU = true
+if.any.env.CIBUILDWHEEL = true
+wheel.cmake = true
+cmake.version = ">=3.13"
+cmake.verbose = true
+cmake.build-type = "Release"
+cmake.targets = ["idaklu"]
+
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
