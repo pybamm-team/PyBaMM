@@ -1,16 +1,18 @@
 #
 # Tests for the create_from_bpx function
 #
-from tests import TestCase
+
 
 import tempfile
 import unittest
 import json
 import pybamm
 import copy
+import numpy as np
+import pytest
 
 
-class TestBPX(TestCase):
+class TestBPX(unittest.TestCase):
     def setUp(self):
         self.base = {
             "Header": {
@@ -107,28 +109,51 @@ class TestBPX(TestCase):
         }
 
     def test_bpx(self):
-        bpx_obj = copy.copy(self.base)
+        bpx_objs = [
+            {
+                **copy.deepcopy(self.base),
+                "Parameterisation": {
+                    **copy.deepcopy(self.base["Parameterisation"]),
+                    "Negative electrode": {
+                        **copy.deepcopy(
+                            self.base["Parameterisation"]["Negative electrode"]
+                        ),
+                        "Diffusivity [m2.s-1]": "8.3e-13 * exp(-13.4 * x) + 9.6e-15",  # new diffusivity
+                    },
+                },
+            },
+            copy.copy(self.base),
+        ]
+
+        model = pybamm.lithium_ion.DFN()
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/5 for 1 hour",
+            ]
+        )
 
         filename = "tmp.json"
-        with tempfile.NamedTemporaryFile(
-            suffix=filename, delete=False, mode="w"
-        ) as tmp:
-            # write to a tempory file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
-            json.dump(bpx_obj, tmp)
-            tmp.flush()
+        sols = []
+        for obj in bpx_objs:
+            with tempfile.NamedTemporaryFile(
+                suffix=filename, delete=False, mode="w"
+            ) as tmp:
+                # write to a temporary file so we can
+                # get the source later on using inspect.getsource
+                # (as long as the file still exists)
+                json.dump(obj, tmp)
+                tmp.flush()
 
-            pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
+                pv = pybamm.ParameterValues.create_from_bpx(tmp.name)
+                sim = pybamm.Simulation(
+                    model, parameter_values=pv, experiment=experiment
+                )
+                sols.append(sim.solve())
 
-            model = pybamm.lithium_ion.DFN()
-            experiment = pybamm.Experiment(
-                [
-                    "Discharge at C/5 for 1 hour",
-                ]
+        with pytest.raises(AssertionError):
+            np.testing.assert_allclose(
+                sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data, atol=1e-7
             )
-            sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
-            sim.solve()
 
     def test_constant_functions(self):
         bpx_obj = copy.copy(self.base)

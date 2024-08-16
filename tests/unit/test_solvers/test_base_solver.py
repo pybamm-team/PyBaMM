@@ -1,7 +1,7 @@
 #
 # Tests for the Base Solver class
 #
-from tests import TestCase
+
 import casadi
 import pybamm
 import numpy as np
@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 import unittest
 
 
-class TestBaseSolver(TestCase):
+class TestBaseSolver(unittest.TestCase):
     def test_base_solver_init(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         self.assertEqual(solver.rtol, 1e-2)
@@ -41,9 +41,10 @@ class TestBaseSolver(TestCase):
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
-        with self.assertRaisesRegex(pybamm.ModelError, "Cannot step empty model"):
+        error = "Cannot simulate an empty model"
+        with self.assertRaisesRegex(pybamm.ModelError, error):
             solver.step(None, model, None)
-        with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
+        with self.assertRaisesRegex(pybamm.ModelError, error):
             solver.solve(model, None)
 
     def test_t_eval_none(self):
@@ -122,7 +123,7 @@ class TestBaseSolver(TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
             solver.set_up(model)
 
-    def test_find_consistent_initial_conditions(self):
+    def test_find_consistent_initialization(self):
         # Simple system: a single algebraic equation
         class ScalarModel:
             def __init__(self):
@@ -148,13 +149,13 @@ class TestBaseSolver(TestCase):
 
         solver = pybamm.BaseSolver(root_method="lm")
         model = ScalarModel()
-        init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_equal(init_cond, -2)
+        init_states = solver.calculate_consistent_state(model)
+        np.testing.assert_array_equal(init_states, -2)
         # with casadi
         solver_with_casadi = pybamm.BaseSolver(root_method="casadi", root_tol=1e-12)
         model = ScalarModel()
-        init_cond = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_equal(init_cond, -2)
+        init_states = solver_with_casadi.calculate_consistent_state(model)
+        np.testing.assert_array_equal(init_states, -2)
 
         # More complicated system
         vec = np.array([0.0, 1.0, 1.5, 2.0])
@@ -184,19 +185,19 @@ class TestBaseSolver(TestCase):
                 return (y[1:] - vec[1:]) ** 2
 
         model = VectorModel()
-        init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
+        init_states = solver.calculate_consistent_state(model)
+        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
         # with casadi
-        init_cond = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
+        init_states = solver_with_casadi.calculate_consistent_state(model)
+        np.testing.assert_array_almost_equal(init_states.full().flatten(), vec)
 
         # With Jacobian
         def jac_dense(t, y, inputs):
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
         model.jac_algebraic_eval = jac_dense
-        init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
+        init_states = solver.calculate_consistent_state(model)
+        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
 
         # With sparse Jacobian
         def jac_sparse(t, y, inputs):
@@ -205,10 +206,10 @@ class TestBaseSolver(TestCase):
             )
 
         model.jac_algebraic_eval = jac_sparse
-        init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
+        init_states = solver.calculate_consistent_state(model)
+        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
 
-    def test_fail_consistent_initial_conditions(self):
+    def test_fail_consistent_initialization(self):
         class Model:
             def __init__(self):
                 self.y0 = np.array([2])

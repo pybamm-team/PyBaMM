@@ -46,7 +46,7 @@ jobs:
           ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.6
         with:
           name: asv_over_history_results
           path: results

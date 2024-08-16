@@ -1,7 +1,7 @@
 #
 # Tests for the Base Parameter Values class
 #
-from tests import TestCase
+
 
 import os
 import unittest
@@ -19,7 +19,7 @@ from pybamm.expression_tree.exceptions import OptionError
 import casadi
 
 
-class TestParameterValues(TestCase):
+class TestParameterValues(unittest.TestCase):
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
@@ -43,7 +43,7 @@ class TestParameterValues(TestCase):
             pybamm.ParameterValues(None, chemistry="lithium-ion")
 
         # junk param values rejected
-        with self.assertRaisesRegex(ValueError, "Invalid Parameter Value"):
+        with self.assertRaisesRegex(ValueError, "'Junk' is not a valid parameter set."):
             pybamm.ParameterValues("Junk")
 
     def test_repr(self):
@@ -674,8 +674,7 @@ class TestParameterValues(TestCase):
 
     def test_process_interpolant_3D_from_csv(self):
         name = "data_for_testing_3D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
-
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_3D_data_csv(name, path)
         parameter_values = pybamm.ParameterValues({"interpolation": processed})
 
@@ -719,8 +718,7 @@ class TestParameterValues(TestCase):
 
     def test_process_interpolant_2D_from_csv(self):
         name = "data_for_testing_2D"
-        path = os.path.join(pybamm.root_dir(), "tests", "unit", "test_parameters")
-
+        path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_2D_data_csv(name, path)
         parameter_values = pybamm.ParameterValues({"interpolation": processed})
 

@@ -1,15 +1,13 @@
 #
 # Tests for the State Vector class
 #
-from tests import TestCase
+
 import pybamm
 import numpy as np
-
-import unittest
-import unittest.mock as mock
+import pytest
 
 
-class TestStateVector(TestCase):
+class TestStateVector:
     def test_evaluate(self):
         sv = pybamm.StateVector(slice(0, 10))
         y = np.linspace(0, 2, 19)
@@ -19,8 +17,9 @@ class TestStateVector(TestCase):
 
         # Try evaluating with a y that is too short
         y2 = np.ones(5)
-        with self.assertRaisesRegex(
-            ValueError, "y is too short, so value with slice is smaller than expected"
+        with pytest.raises(
+            ValueError,
+            match="y is too short, so value with slice is smaller than expected",
         ):
             sv.evaluate(y=y2)
 
@@ -39,13 +38,13 @@ class TestStateVector(TestCase):
 
     def test_name(self):
         sv = pybamm.StateVector(slice(0, 10))
-        self.assertEqual(sv.name, "y[0:10]")
+        assert sv.name == "y[0:10]"
         sv = pybamm.StateVector(slice(0, 10), slice(20, 30))
-        self.assertEqual(sv.name, "y[0:10,20:30]")
+        assert sv.name == "y[0:10,20:30]"
         sv = pybamm.StateVector(
             slice(0, 10), slice(20, 30), slice(40, 50), slice(60, 70)
         )
-        self.assertEqual(sv.name, "y[0:10,20:30,...,60:70]")
+        assert sv.name == "y[0:10,20:30,...,60:70]"
 
     def test_pass_evaluation_array(self):
         # Turn off debug mode for this test
@@ -60,10 +59,10 @@ class TestStateVector(TestCase):
         pybamm.settings.debug_mode = original_debug_mode
 
     def test_failure(self):
-        with self.assertRaisesRegex(TypeError, "all y_slices must be slice objects"):
+        with pytest.raises(TypeError, match="all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
 
-    def test_to_from_json(self):
+    def test_to_from_json(self, mocker):
         original_debug_mode = pybamm.settings.debug_mode
         pybamm.settings.debug_mode = False
 
@@ -72,7 +71,7 @@ class TestStateVector(TestCase):
 
         json_dict = {
             "name": "y[0:10]",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -89,15 +88,15 @@ class TestStateVector(TestCase):
             "evaluation_array": [1, 2, 3, 4, 5],
         }
 
-        self.assertEqual(sv.to_json(), json_dict)
+        assert sv.to_json() == json_dict
 
-        self.assertEqual(pybamm.StateVector._from_json(json_dict), sv)
+        assert pybamm.StateVector._from_json(json_dict) == sv
 
         # Turn debug mode back to what is was before
         pybamm.settings.debug_mode = original_debug_mode
 
 
-class TestStateVectorDot(TestCase):
+class TestStateVectorDot:
     def test_evaluate(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
         y_dot = np.linspace(0, 2, 19)
@@ -107,29 +106,19 @@ class TestStateVectorDot(TestCase):
 
         # Try evaluating with a y that is too short
         y_dot2 = np.ones(5)
-        with self.assertRaisesRegex(
+        with pytest.raises(
             ValueError,
-            "y_dot is too short, so value with slice is smaller than expected",
+            match="y_dot is too short, so value with slice is smaller than expected",
         ):
             sv.evaluate(y_dot=y_dot2)
 
         # Try evaluating with y_dot=None
-        with self.assertRaisesRegex(
+        with pytest.raises(
             TypeError,
-            "StateVectorDot cannot evaluate input 'y_dot=None'",
+            match="StateVectorDot cannot evaluate input 'y_dot=None'",
         ):
             sv.evaluate(y_dot=None)
 
     def test_name(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
-        self.assertEqual(sv.name, "y_dot[0:10]")
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert sv.name == "y_dot[0:10]"
