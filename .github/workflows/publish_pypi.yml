@@ -15,6 +15,8 @@ on:
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
         required: false
         default: false
+  pull_request: # Temporarily trigger on PRs for debugging, remove later
+    types: [opened, synchronize, reopened]
 
 # Set options available for all jobs that use cibuildwheel
 env:
@@ -47,9 +49,6 @@ jobs:
           with open(output_file, "a", encoding="utf-8") as output_stream:
               output_stream.write(f"count={num_cpus}\n")
 
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
-
       - name: Install vcpkg on Windows
         run: |
           cd C:\
@@ -72,7 +71,10 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Build 64-bit wheels on Windows
-        run: pipx run cibuildwheel --output-dir wheelhouse
+        uses: pypa/cibuildwheel@v2.19.2
+        with:
+          package-dir: .
+          output-dir: wheelhouse
         env:
           CIBW_ENVIRONMENT: >
             PYBAMM_USE_VCPKG=ON
@@ -83,7 +85,7 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel pybind11
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: python -c "import pybamm; print(pybamm.IDAKLUSolver())"
 
@@ -106,17 +108,26 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
-
       - name: Build wheels on Linux
-        run: pipx run cibuildwheel --output-dir wheelhouse
+        uses: pypa/cibuildwheel@v2.19.2
+        with:
+          package-dir: .
+          output-dir: wheelhouse
         env:
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_BEFORE_ALL_LINUX: >
-            yum -y install openblas-devel lapack-devel &&
-            bash scripts/install_sundials.sh 6.0.3 6.5.0
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi setuptools wheel
+          CIBW_BEFORE_BUILD_LINUX: |
+            set -e -x
+
+            yum update -y
+            yum -y install openblas-devel 
+            # lapack-devel
+            python scripts/install_KLU_Sundials.py
+            # mkdir -p $(pwd)/sundials_KLU_libs/lib64/
+            # export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH
+            # export PATH=$(pwd)/sundials_KLU_libs/lib64/:$PATH
+            # echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+
+            python -m pip install cmake casadi scikit-build-core pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
             set -e -x
@@ -142,18 +153,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
-
       - name: Set macOS-specific environment variables
         run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel
-
       - name: Build wheels on macOS
-        shell: bash
-        run: |
+        uses: pypa/cibuildwheel@v2.19.2
+        with:
+          package-dir: .
+          output-dir: wheelhouse
+        env:
+          CIBW_BEFORE_ALL: |
             set -e -x
 
             # Set LLVM-OpenMP URL
@@ -190,23 +199,25 @@ jobs:
               export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
             fi
 
-            # link libgfortran dylibs and place them in $HOME/.local/lib
-            # and then change rpath to $HOME/.local/lib for each of them
+            # link libgfortran dylibs and place them in sundials_KLU_libs/lib/
+            # and then change rpath to /sundials_KLU_libs/lib/ for each of them
             # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
-            mkdir -p $HOME/.local/lib
+
+            mkdir -p $(pwd)/sundials_KLU_libs/lib/
+
             if [[ $(uname -m) == "x86_64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $HOME/.local/lib/
-                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-                codesign --force --sign - $HOME/.local/lib/$lib
+                cp $lib_dir/$lib $(pwd)/sundials_KLU_libs/lib/
+                install_name_tool -id $(pwd)/sundials_KLU_libs/lib/$lib $(pwd)/sundials_KLU_libs/lib/$lib
+                codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/$lib
               done
             elif [[ $(uname -m) == "arm64" ]]; then
               lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
               for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
-                cp $lib_dir/$lib $HOME/.local/lib/
-                install_name_tool -id $HOME/.local/lib/$lib $HOME/.local/lib/$lib
-                codesign --force --sign - $HOME/.local/lib/$lib
+                cp $lib_dir/$lib $(pwd)/sundials_KLU_libs/lib/
+                install_name_tool -id $(pwd)/sundials_KLU_libs/lib/$lib $(pwd)/sundials_KLU_libs/lib/$lib
+                codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/$lib
               done
             fi
 
@@ -221,10 +232,10 @@ jobs:
               PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev"
             fi
 
-            # Copy libomp.dylib from PREFIX to $HOME/.local/lib, needed for wheel repair
-            cp $PREFIX/lib/libomp.dylib $HOME/.local/lib/
-            install_name_tool -id $HOME/.local/lib/libomp.dylib $HOME/.local/lib/libomp.dylib
-            codesign --force --sign - $HOME/.local/lib/libomp.dylib
+            # Copy libomp.dylib from PREFIX to /sundials_KLU_libs/lib/, needed for wheel repair
+            cp $PREFIX/lib/libomp.dylib $(pwd)/sundials_KLU_libs/lib/
+            install_name_tool -id $(pwd)/sundials_KLU_libs/lib/libomp.dylib $(pwd)/sundials_KLU_libs/lib/libomp.dylib
+            codesign --force --sign - $(pwd)/sundials_KLU_libs/lib/libomp.dylib
 
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
@@ -233,15 +244,13 @@ jobs:
             export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
             export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
 
-            # cibuildwheel not recognising its environment variable, so set manually
-            export CIBUILDWHEEL="1"
-
             python scripts/install_KLU_Sundials.py
-            python -m cibuildwheel --output-dir wheelhouse
-        env:
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
+            export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
+            echo "$LD_LIBRARY_PATH"
+
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then
@@ -282,7 +291,10 @@ jobs:
 
   publish_pypi:
     # This job is only of value to PyBaMM and would always be skipped in forks
-    if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'release') &&
+      github.repository == 'pybamm-team/PyBaMM'
     name: Upload package to PyPI
     needs: [
       build_manylinux_wheels,
