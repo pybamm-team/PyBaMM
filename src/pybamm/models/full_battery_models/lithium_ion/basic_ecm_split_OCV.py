@@ -33,9 +33,7 @@ class ECMsplitOCV(pybamm.BaseModel):
         V = pybamm.Variable("Voltage [V]")
 
         # model is isothermal
-        I = pybamm.FunctionParameter(
-            "Current function [A]", {"Time [s]": pybamm.t}
-        )
+        I = pybamm.FunctionParameter("Current function [A]", {"Time [s]": pybamm.t})
 
         # Capacity equation
         self.rhs[Q] = I / 3600
@@ -68,8 +66,8 @@ class ECMsplitOCV(pybamm.BaseModel):
         V = Up - Un - I * R
 
         # Parameters for Voltage cutoff
-        voltage_high_cut = pybamm.Parameter('Upper voltage cut-off [V]')
-        voltage_low_cut = pybamm.Parameter('Lower voltage cut-off [V]')
+        voltage_high_cut = pybamm.Parameter("Upper voltage cut-off [V]")
+        voltage_low_cut = pybamm.Parameter("Lower voltage cut-off [V]")
 
         self.variables = {
             "Negative particle SOC": c_n,
