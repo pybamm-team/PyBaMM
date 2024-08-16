@@ -1163,8 +1163,6 @@ class BaseSolver:
             # the start of the next step
             t_start_shifted = t_start + step_start_offset
             t_eval[0] = t_start_shifted
-            if t_interp.size > 0:
-                t_interp[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()

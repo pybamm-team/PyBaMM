@@ -145,6 +145,9 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 20, 100)
         with self.assertWarns(pybamm.SolverWarning):
             solution = solver.solve(model_disc, t_eval)
+        t_eval = np.linspace(0, 20, 100)
+        with self.assertWarns(pybamm.SolverWarning):
+            solver.solve(model_disc, t_eval, t_interp=t_eval)
         self.assertLess(solution.t[-1], 20)
         # Solve with failure at t=0
         solver = pybamm.CasadiSolver(

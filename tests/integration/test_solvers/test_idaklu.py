@@ -110,7 +110,7 @@ class TestIDAKLUSolver:
         t0 = 0
         tf = 3600
         t_eval_dense = np.linspace(t0, tf, 1000)
-        t_eval_sparse = np.array([t0, tf])
+        t_eval_sparse = [t0, tf]
 
         t_interp_dense = np.linspace(t0, tf, 800)
         t_interp_sparse = [t0, tf]

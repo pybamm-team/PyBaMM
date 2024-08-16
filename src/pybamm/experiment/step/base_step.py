@@ -321,9 +321,6 @@ class BaseStep:
             else:
                 t_interp = np.empty(0)
 
-        if not isinstance(t_interp, np.ndarray):
-            t_interp = np.array(t_interp)
-
         return t_eval, t_interp
 
     def _setup_timestepping_dense_t_eval(self, tf, t_interp):

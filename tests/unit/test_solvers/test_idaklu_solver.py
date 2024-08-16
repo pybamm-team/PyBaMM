@@ -942,12 +942,13 @@ class TestIDAKLUSolver(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
 
-            t_eval = np.linspace(0, 100, 100)
+            t_eval = np.linspace(0, 100, 5)
 
             options = {
                 "linear_solver": "SUNLinSol_KLU",
                 "jacobian": "sparse",
                 "num_threads": 4,
+                "max_num_steps": 1000,
             }
             if form == "iree":
                 options["jax_evaluator"] = "iree"
@@ -1048,6 +1049,25 @@ class TestIDAKLUSolver(unittest.TestCase):
         )
         sol3 = sim3.solve(np.linspace(0, 3600, 2))
         self.assertEqual(sol3.termination, "event: Minimum voltage [V]")
+
+    def test_simulation_period(self):
+        model = pybamm.lithium_ion.DFN()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        solver = pybamm.IDAKLUSolver()
+
+        experiment = pybamm.Experiment(
+            ["Charge at C/10 for 10 seconds"], period="0.1 seconds"
+        )
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            experiment=experiment,
+            solver=solver,
+        )
+        sol = sim.solve()
+
+        np.testing.assert_array_almost_equal(sol.t, np.arange(0, 10.1, 0.1), decimal=4)
 
 
 if __name__ == "__main__":
