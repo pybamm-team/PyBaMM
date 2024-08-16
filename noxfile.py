@@ -228,7 +228,7 @@ def set_dev(session):
         #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
         components.append("iree")
         args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
+    session.run(python, "-m", "pip", "install", "--upgrade", "pip")
     session.run(
         python,
         "-m",
