@@ -47,7 +47,7 @@ class ScipySolver(pybamm.BaseSolver):
         self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 

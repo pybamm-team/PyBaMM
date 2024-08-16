@@ -105,6 +105,7 @@ class StandardModelTest:
             / self.parameter_values["Nominal cell capacity [A.h]"]
         )
         t_eval = np.linspace(0, 3600 / Crate, 100)
+        t_interp = t_eval
 
         # make param_name an input
         self.parameter_values.update({param_name: "[input]"})
@@ -118,7 +119,11 @@ class StandardModelTest:
         self.solver.atol = 1e-8
 
         self.solution = self.solver.solve(
-            self.model, t_eval, inputs=inputs, calculate_sensitivities=True
+            self.model,
+            t_eval,
+            inputs=inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
         )
         output_sens = self.solution[output_name].sensitivities[param_name]
 
@@ -126,10 +131,14 @@ class StandardModelTest:
         h = 1e-2 * param_value
         inputs_plus = {param_name: (param_value + 0.5 * h)}
         inputs_neg = {param_name: (param_value - 0.5 * h)}
-        sol_plus = self.solver.solve(self.model, t_eval, inputs=inputs_plus)
-        output_plus = sol_plus[output_name](t=t_eval)
-        sol_neg = self.solver.solve(self.model, t_eval, inputs=inputs_neg)
-        output_neg = sol_neg[output_name](t=t_eval)
+        sol_plus = self.solver.solve(
+            self.model, t_eval, inputs=inputs_plus, t_interp=t_interp
+        )
+        output_plus = sol_plus[output_name].data
+        sol_neg = self.solver.solve(
+            self.model, t_eval, inputs=inputs_neg, t_interp=t_interp
+        )
+        output_neg = sol_neg[output_name].data
         fd = (np.array(output_plus) - np.array(output_neg)) / h
         fd = fd.transpose().reshape(-1, 1)
         np.testing.assert_allclose(

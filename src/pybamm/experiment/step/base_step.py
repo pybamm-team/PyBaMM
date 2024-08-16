@@ -266,6 +266,88 @@ class BaseStep:
         else:
             return 24 * 3600  # one day in seconds
 
+    @staticmethod
+    def default_period():
+        return 60.0  # seconds
+
+    def default_time_vector(self, tf, t0=0):
+        if self.period is None:
+            period = self.default_period()
+        else:
+            period = self.period
+        npts = max(int(round(np.abs(tf - t0) / period)) + 1, 2)
+
+        return np.linspace(t0, tf, npts)
+
+    def setup_timestepping(self, solver, tf, t_interp=None):
+        """
+        Setup timestepping for the model.
+
+        Parameters
+        ----------
+        solver: :class`pybamm.BaseSolver`
+            The solver
+        tf: float
+            The final time
+        t_interp: np.array | None
+            The time points at which to interpolate the solution
+        """
+        if solver.supports_interp:
+            return self._setup_timestepping(tf, t_interp)
+        else:
+            return self._setup_timestepping_dense_t_eval(tf, t_interp)
+
+    def _setup_timestepping(self, tf, t_interp):
+        """
+        Setup timestepping for the model. This returns a t_eval vector that stops
+        only at the first and last time points. If t_interp and the period are
+        unspecified, then the solver will use adaptive time-stepping. For a given
+        period, t_interp willbe set to return the solution at the end of each period
+        and at the final time.
+
+        Parameters
+        ----------
+        solver: :class`pybamm.BaseSolver`
+            The solver
+        tf: float
+            The final time
+        t_interp: np.array | None
+            The time points at which to interpolate the solution
+        """
+        t_eval = np.array([0, tf])
+        if t_interp is None:
+            if self.period is not None:
+                t_interp = self.default_time_vector(tf)
+            else:
+                t_interp = np.empty(0)
+
+        if not isinstance(t_interp, np.ndarray):
+            t_interp = np.array(t_interp)
+
+        return t_eval, t_interp
+
+    def _setup_timestepping_dense_t_eval(self, tf, t_interp):
+        """
+        Setup timestepping for the model. By default, this returns a dense t_eval which
+        stops the solver at each point in the t_eval vector. This method is for solvers
+        that do not support intra-solve interpolation for the solution.
+
+        Parameters
+        ----------
+        solver: :class`pybamm.BaseSolver`
+            The solver
+        tf: float
+            The final time
+        t_interp: np.array | None
+            The time points at which to interpolate the solution
+        """
+        t_eval = self.default_time_vector(tf)
+
+        if t_interp is None:
+            t_interp = np.empty(0)
+
+        return t_eval, t_interp
+
     def process_model(self, model, parameter_values):
         new_model = model.new_copy()
         new_parameter_values = parameter_values.copy()

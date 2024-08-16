@@ -65,6 +65,7 @@ class BaseSolver:
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
+        self.supports_interp = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
@@ -664,6 +665,7 @@ class BaseSolver:
         inputs=None,
         nproc=None,
         calculate_sensitivities=False,
+        t_interp=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -687,6 +689,9 @@ class BaseSolver:
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
 
         Returns
         -------
@@ -735,8 +740,10 @@ class BaseSolver:
                     "initial time and tf is the final time, but has been provided "
                     f"as a list of length {len(t_eval)}."
                 )
-            else:
+            elif not self.supports_interp:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
+            else:
+                t_eval = np.array(t_eval)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
@@ -860,6 +867,7 @@ class BaseSolver:
                     model,
                     t_eval[start_index:end_index],
                     model_inputs_list[0],
+                    t_interp=t_interp,
                 )
                 new_solutions = [new_solution]
             elif model.convert_to_format == "jax":
@@ -868,6 +876,7 @@ class BaseSolver:
                     model,
                     t_eval[start_index:end_index],
                     model_inputs_list,
+                    t_interp,
                 )
             else:
                 with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
@@ -877,6 +886,7 @@ class BaseSolver:
                             [model] * ninputs,
                             [t_eval[start_index:end_index]] * ninputs,
                             model_inputs_list,
+                            [t_interp] * ninputs,
                         ),
                     )
                     p.close()
@@ -1053,6 +1063,7 @@ class BaseSolver:
         npts=None,
         inputs=None,
         save=True,
+        t_interp=None,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1072,11 +1083,15 @@ class BaseSolver:
             An array of times at which to return the solution during the step
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
+        t_interp
         npts : deprecated
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1123,8 +1138,20 @@ class BaseSolver:
         else:
             pass
 
+        if not self.supports_interp and (t_interp is not None and len(t_interp) != 0):
+            warnings.warn(
+                f"Explicit interpolation times not implemented for {self.name}",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+            t_interp = np.empty(0)
+
+        if t_interp is None:
+            t_interp = np.empty(0)
+
         t_start = old_solution.t[-1]
         t_eval = t_start + t_eval
+        t_interp = t_start + t_interp
         t_end = t_start + dt
 
         if t_start == 0:
@@ -1136,6 +1163,8 @@ class BaseSolver:
             # the start of the next step
             t_start_shifted = t_start + step_start_offset
             t_eval[0] = t_start_shifted
+            if t_interp.size > 0:
+                t_interp[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()
@@ -1187,7 +1216,7 @@ class BaseSolver:
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
-        solution = self._integrate(model, t_eval, model_inputs)
+        solution = self._integrate(model, t_eval, model_inputs, t_interp)
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred

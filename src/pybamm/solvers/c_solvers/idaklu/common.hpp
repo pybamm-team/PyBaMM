@@ -74,6 +74,36 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
   }
 }
 
+template<typename T>
+std::vector<T> setDiff(const std::vector<T>& A, const std::vector<T>& B) {
+    std::vector<T> result;
+    if (!(A.empty())) {
+      std::set_difference(A.begin(), A.end(), B.begin(), B.end(), std::back_inserter(result));
+    }
+    return result;
+}
+
+template<typename T>
+std::vector<T> makeSortedUnique(const std::vector<T>& input) {
+    std::unordered_set<T> uniqueSet(input.begin(), input.end()); // Remove duplicates
+    std::vector<T> uniqueVector(uniqueSet.begin(), uniqueSet.end()); // Convert to vector
+    std::sort(uniqueVector.begin(), uniqueVector.end()); // Sort the vector
+    return uniqueVector;
+}
+
+template<typename T>
+std::vector<T> makeSortedUnique(const np_array& input_np) {
+  std::vector<realtype> output(input_np.request().size);
+
+  auto const inputData = input_np.unchecked<1>();
+  for (int i = 0; i < output.size(); i++) {
+    output[i] = inputData[i];
+  }
+  auto const uniqueVector = makeSortedUnique<realtype>(output);
+
+  return uniqueVector;
+}
+
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
 #define DEBUG_VECTORn(vector, N)

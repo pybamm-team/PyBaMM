@@ -352,6 +352,7 @@ class Simulation:
         callbacks=None,
         showprogress=False,
         inputs=None,
+        t_interp=None,
         **kwargs,
     ):
         """
@@ -400,6 +401,9 @@ class Simulation:
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
             Default is False.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -687,13 +691,17 @@ class Simulation:
                         "start time": start_time,
                     }
                     # Make sure we take at least 2 timesteps
-                    npts = max(int(round(dt / step.period)) + 1, 2)
+                    t_eval, t_interp_processed = step.setup_timestepping(
+                        solver, dt, t_interp
+                    )
+
                     try:
                         step_solution = solver.step(
                             current_solution,
                             model,
                             dt,
-                            t_eval=np.linspace(0, dt, npts),
+                            t_eval,
+                            t_interp=t_interp_processed,
                             save=False,
                             inputs=inputs,
                             **kwargs,
