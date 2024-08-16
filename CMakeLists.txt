@@ -137,12 +137,6 @@ else()
   find_package(casadi CONFIG REQUIRED)
 endif()
 
-set_target_properties(
-  idaklu PROPERTIES
-  INSTALL_RPATH "${CASADI_DIR}"
-  INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 if(NOT DEFINED ENV{INSTALL_DIR})
@@ -170,6 +164,17 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+
+set(SUNDIALS_LIBRARY_DIR "${INSTALL_DIR}/lib")
+set(SUITESPARSE_LIBRARY_DIR "${INSTALL_DIR}/lib")
+
+set_target_properties(idaklu PROPERTIES
+  INSTALL_RPATH "${CASADI_DIR};${SUNDIALS_LIBRARY_DIR};${SUITESPARSE_LIBRARY_DIR}"
+  INSTALL_RPATH_USE_LINK_PATH TRUE
+  BUILD_RPATH "${CASADI_DIR};${SUNDIALS_LIBRARY_DIR};${SUITESPARSE_LIBRARY_DIR}"
+)
+message("NOTE: RPATHS linking SUNDIALS, SuiteSparse and casADi are set")
+
 
 # IREE (MLIR compiler and runtime library) build settings
 if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )

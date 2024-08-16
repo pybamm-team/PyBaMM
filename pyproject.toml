@@ -183,7 +183,6 @@ wheel.cmake = true
 cmake.version = ">=3.13"
 cmake.verbose = true
 cmake.build-type = "Release"
-cmake.targets = ["idaklu"]
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
