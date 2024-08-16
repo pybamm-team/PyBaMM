@@ -839,9 +839,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
         t_eval : numeric type
-            The times at which to compute the solution
+            The times at which to stop the integration due to a discontinuity in time.
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
+            which returns the adaptive time-stepping times.
         """
         inputs_dict = inputs_dict or {}
         # stack inputs
@@ -1161,15 +1164,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model to be solved
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None, the times in the model
-            are used.
+            The times at which to stop the integration due to a discontinuity in time.
         output_variables : list of str, optional
             The variables to be returned. If None, all variables in the model are used.
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
         t_interp : None, list or ndarray, optional
-            The times (in seconds) at which to interpolate the solution. Defaults to None.
-            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
+            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
+            which returns the adaptive time-stepping times.
         """
         obj = pybamm.IDAKLUJax(
             self,  # IDAKLU solver instance
