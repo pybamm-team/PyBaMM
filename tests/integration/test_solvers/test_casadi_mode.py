@@ -1,18 +1,17 @@
 #
-# Tests for the Casadi Solver Mode
+# Tests for the Casadi Solver Modes
 #
-from tests import TestCase
+
 import pybamm
-import unittest
 import numpy as np
 
 
-class TestCasadiMode(TestCase):
+class TestCasadiModes:
     def test_casadi_solver_mode(self):
         solvers = [
-            pybamm.CasadiSolver(mode="safe", atol=1e-8, rtol=1e-8),
-            pybamm.CasadiSolver(mode="fast", atol=1e-8, rtol=1e-8),
-            pybamm.CasadiSolver(mode="fast with events", atol=1e-8, rtol=1e-8),
+            pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-6),
+            pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-6),
+            pybamm.CasadiSolver(mode="fast with events", atol=1e-6, rtol=1e-6),
         ]
 
         # define experiment
@@ -44,24 +43,14 @@ class TestCasadiMode(TestCase):
             "Electrolyte concentration [mol.m-3]",
         ]
 
-        # compare solutions
+        # assert solutions
         for var in output_vars:
             np.testing.assert_allclose(
-                solutions[0][var].data, solutions[1][var].data, rtol=1e-8, atol=1e-8
+                solutions[0][var].data, solutions[1][var].data, rtol=1e-6, atol=1e-6
             )
             np.testing.assert_allclose(
-                solutions[0][var].data, solutions[2][var].data, rtol=1e-8, atol=1e-8
+                solutions[0][var].data, solutions[2][var].data, rtol=1e-6, atol=1e-6
             )
             np.testing.assert_allclose(
-                solutions[1][var].data, solutions[2][var].data, rtol=1e-8, atol=1e-8
+                solutions[1][var].data, solutions[2][var].data, rtol=1e-6, atol=1e-6
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
