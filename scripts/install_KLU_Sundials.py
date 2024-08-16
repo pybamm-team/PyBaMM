@@ -20,7 +20,7 @@ SUITESPARSE_CHECKSUM = (
     "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
 )
 SUNDIALS_CHECKSUM = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
-DEFAULT_INSTALL_DIR = os.path.join(os.getenv("HOME"), ".local")
+DEFAULT_INSTALL_DIR = "sundials_KLU_libs"
 
 
 def safe_remove_dir(path):
@@ -285,7 +285,7 @@ os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = str(cpu_count())
 
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
-download_dir = os.path.join(pybamm_dir, "install_KLU_Sundials")
+download_dir = os.path.join(pybamm_dir, "download_KLU_Sundials")
 if not os.path.exists(download_dir):
     os.makedirs(download_dir)
 
