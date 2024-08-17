@@ -13,7 +13,8 @@ USER pybamm
 
 WORKDIR /home/pybamm/
 
-RUN git clone https://github.com/pybamm-team/PyBaMM.git
+# TODO: Change clone to upstream before PR merge
+RUN git clone --branch migrate-to-sbc https://github.com/cringeyburger/PyBaMM.git
 
 WORKDIR /home/pybamm/PyBaMM
 
@@ -28,11 +29,10 @@ RUN uv venv $VIRTUAL_ENV
 RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN uv pip install --upgrade setuptools wheel wget cmake
-
+RUN uv pip install --upgrade scikit-build-core==0.10.3 wget cmake casadi pybind11
+ENV BUILD_IDAKLU=ON
 RUN python scripts/install_KLU_Sundials.py && \
-rm -rf pybind11 && \
-git clone https://github.com/pybind/pybind11.git && \
-uv pip install -e ".[all,dev,docs,jax]";
+    uv pip install --no-build-isolation --config-settings=editable.rebuild=true -Cbuild-dir=build -ve ".[all,dev,docs,jax]";
+
 
 ENTRYPOINT ["/bin/bash"]
