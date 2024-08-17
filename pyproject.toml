@@ -1,13 +1,13 @@
 [build-system]
 requires = [
-    "scikit-build-core>=0.9.9",
+    "scikit-build-core>=0.9.9,<=0.10.3",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.5; platform_system!='Windows'",
+    "casadi>=3.6.5,<=3.6.6; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
     # cross platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
-    "cmake; platform_system!='Windows'",
-    "pybind11",
+    "cmake>=3.13,<=3.20.3; platform_system!='Windows'",
+    "pybind11<=2.13.4",
 ]
 build-backend = "scikit_build_core.build"
 
