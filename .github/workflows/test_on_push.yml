@@ -86,8 +86,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
         uses: actions/cache@v4
@@ -158,8 +158,8 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
@@ -198,8 +198,8 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4
@@ -251,8 +251,8 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4

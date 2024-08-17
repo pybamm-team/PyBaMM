@@ -28,8 +28,8 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Install nox and asv
-        run: pip install -U pip nox asv
+      - name: Install nox, asv and tomlkit
+        run: pip install -U pip nox asv tomlkit
 
       - name: Fetch develop branch
         # Not required when worklow trigerred

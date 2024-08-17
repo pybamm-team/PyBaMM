@@ -68,8 +68,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
         timeout-minutes: 10
@@ -114,8 +114,8 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
@@ -141,8 +141,8 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         timeout-minutes: 10
@@ -169,8 +169,8 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Install nox
-        run: python -m pip install nox
+      - name: Install nox and tomlkit
+        run: python -m pip install nox tomlkit
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
         timeout-minutes: 10
