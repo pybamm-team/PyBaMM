@@ -76,7 +76,6 @@ if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
   )
 endif()
 
-# The complete (all dependencies) sources list should be mirrored in setup.py
 pybind11_add_module(idaklu
   # pybind11 interface
   src/pybamm/solvers/c_solvers/idaklu.cpp

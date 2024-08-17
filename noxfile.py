@@ -4,6 +4,7 @@ import sys
 import warnings
 import platform
 from pathlib import Path
+import tomlkit
 
 
 # Options to modify nox behaviour
@@ -218,6 +219,15 @@ def set_dev(session):
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
+    with open("pyproject.toml", encoding="utf-8") as file:
+        toml_data = tomlkit.parse(file.read())
+    build_dependencies = toml_data.get("build-system").get("requires")
+    if sys.platform == "win32":
+        build_dependencies = [
+            dep
+            for dep in build_dependencies
+            if not (dep.startswith("casadi") or dep.startswith("cmake"))
+        ]
     args = []
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
@@ -229,12 +239,16 @@ def set_dev(session):
         components.append("iree")
         args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
     session.run(python, "-m", "pip", "install", "--upgrade", "pip")
+    session.run(python, "-m", "pip", "install", *build_dependencies)
     session.run(
         python,
         "-m",
         "pip",
         "install",
-        "-e",
+        "--no-build-isolation",
+        "--config-settings=editable.rebuild=true",
+        "-Cbuild_dir=build",
+        "-ve",
         ".[{}]".format(",".join(components)),
         *args,
         external=True,
