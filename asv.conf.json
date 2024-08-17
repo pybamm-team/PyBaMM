@@ -24,8 +24,6 @@
   // "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}"],
   // "uninstall_command": ["return-code=any python -mpip uninstall -y {project}"],
   "build_command": [
-    "/bin/rm -rf pybind11",
-    "/usr/bin/git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git pybind11 -c advice.detachedHead=false",
     "python -m pip install build",
     "python -m build --wheel -o {build_cache_dir} {build_dir}"
   ],
@@ -34,7 +32,7 @@
 
   // List of branches to benchmark. If not provided, defaults to "master"
   // (for git) or "default" (for mercurial).
-  "branches": ["develop"], // for git
+  "branches": ["migrate-to-sbc"], // for git
   // "branches": ["default"],    // for mercurial
 
   // The DVCS being used.  If not set, it will be automatically
@@ -91,7 +89,8 @@
       "matplotlib": [],
     },
     "env": {
-      "LD_LIBRARY_PATH": "/home/runner/.local/lib"
+      "LD_LIBRARY_PATH": "/home/runner/work/PyBaMM/PyBaMM/sundials_KLU_libs/lib/",
+      "BUILD_IDAKLU": "ON"
     }
   }
 

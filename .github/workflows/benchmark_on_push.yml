@@ -2,6 +2,9 @@ name: Run benchmarks on push
 on:
   push:
     branches: [main, develop]
+  # TODO: Remove before PR merge
+  workflow_dispatch:
+
 
 concurrency:
   # Cancel intermediate builds always
@@ -31,6 +34,7 @@ jobs:
       - name: Install SuiteSparse and SUNDIALS
         run: python scripts/install_KLU_Sundials.py
 
+        # TODO: Set to upstream before PR merge
       - name: Fetch base branch
         run: |
           # This workflow also runs for merge commits
@@ -39,16 +43,16 @@ jobs:
           current_branch=$(git rev-parse --abbrev-ref HEAD)
           # This workflow should also run on forks; hence,
           # we should fetch the upstream develop branch.
-          git remote add upstream https://github.com/pybamm-team/PyBaMM/
-          if [ $current_branch != "develop" ]; then
-              git fetch upstream develop:develop
+          git remote add upstream https://github.com/cringeyburger/PyBaMM/
+          if [ $current_branch != "migrate-to-sbc" ]; then
+              git fetch upstream migrate-to-sbc:migrate-to-sbc
           fi
 
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
           # Get IDs of branch and PR commits
-          BASE_COMMIT=$(git rev-parse develop)
+          BASE_COMMIT=$(git rev-parse migrate-to-sbc)
           HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
