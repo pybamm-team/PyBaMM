@@ -125,6 +125,8 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
+    env:
+      BUILD_IDAKLU: ON
     name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
