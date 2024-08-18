@@ -28,6 +28,8 @@ concurrency:
 jobs:
   run_tests:
     runs-on: ${{ matrix.os }}
+    env:
+      BUILD_IDAKLU: OFF
     strategy:
       fail-fast: false
       matrix:
@@ -96,6 +98,8 @@ jobs:
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
+    env:
+      BUILD_IDAKLU: OFF
     name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
@@ -125,8 +129,6 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
-    env:
-      BUILD_IDAKLU: ON
     name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
@@ -155,6 +157,8 @@ jobs:
 
   run_scripts_tests:
     runs-on: ubuntu-latest
+    env:
+      BUILD_IDAKLU: OFF
     name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:

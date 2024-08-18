@@ -90,8 +90,7 @@
     },
     "env": {
       "LD_LIBRARY_PATH": "/home/runner/work/PyBaMM/PyBaMM/sundials_KLU_libs/lib/:${HOME}/.local/lib:${LD_LIBRARY_PATH}",
-      "INSTALL_DIR": "/home/runner/work/PyBaMM/PyBaMM/sundials_KLU_libs",
-      "BUILD_IDAKLU": "ON"
+      "INSTALL_DIR": "/home/runner/work/PyBaMM/PyBaMM/sundials_KLU_libs"
     }
   }
 

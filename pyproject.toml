@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "scikit-build-core>=0.9.9,<=0.10.3",
+    "scikit-build-core>=0.10,<=0.10.3",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.5,<=3.6.6; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
@@ -157,14 +157,19 @@ ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 
 [tool.scikit-build]
-minimum-version = "0.9"
+minimum-version = "0.10"
 build-dir = "build/{wheel_tag}"
+build.verbose = true
 
 [tool.scikit-build.logging]
 level = "INFO"
 
 [tool.scikit-build.wheel]
-cmake = false
+cmake = true
+
+[tool.scikit-build.cmake]
+version = ">=3.13"
+build-type = "Release"
 
 [tool.scikit-build.sdist]
 include = [
@@ -177,12 +182,10 @@ include = [
 ]
 
 [[tool.scikit-build.overrides]]
-if.any.env.BUILD_IDAKLU = true
-if.any.env.CIBUILDWHEEL = true
-wheel.cmake = true
-cmake.version = ">=3.13"
-cmake.verbose = true
-cmake.build-type = "Release"
+if.any.failed = true
+if.any.env.BUILD_IDAKLU = false
+if.any.env.READTHEDOCS = true
+wheel.cmake = false
 
 [tool.ruff]
 extend-include = ["*.ipynb"]

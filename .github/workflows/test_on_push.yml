@@ -34,6 +34,8 @@ jobs:
 
   run_unit_integration_and_coverage_tests:
     needs: style
+    env:
+      BUILD_IDAKLU: OFF
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -94,12 +96,8 @@ jobs:
         if: matrix.os != 'windows-latest'
         with:
           path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
+            ${{ github.workspace }}/install_KLU_Sundials/
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
@@ -127,6 +125,8 @@ jobs:
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     needs: style
+    env:
+      BUILD_IDAKLU: OFF
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -169,8 +169,6 @@ jobs:
 
   run_example_tests:
     needs: style
-    env:
-      BUILD_IDAKLU: ON
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -220,6 +218,8 @@ jobs:
 
   run_scripts_tests:
     needs: style
+    env:
+      BUILD_IDAKLU: OFF
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
