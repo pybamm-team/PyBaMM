@@ -37,35 +37,36 @@
 #   system paths.
 #
 
-enable_language(Fortran)
-
-set(IDAKLU_BLAS_VENDOR
+if(NOT DEFINED ENV{CIBUILDWHEEL} OR NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  enable_language(Fortran)
+  set(IDAKLU_BLAS_VENDOR
     "OpenBLAS"
     CACHE
       STRING
       "Sets the BLAS/LAPACK vendor. See https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors."
-)
-set_property(CACHE IDAKLU_BLAS_VENDOR PROPERTY STRINGS OpenBLAS Intel10_64lp Apple Generic)
+  )
+  set_property(CACHE IDAKLU_BLAS_VENDOR PROPERTY STRINGS OpenBLAS Intel10_64lp Apple Generic)
 
-if(DEFINED ENV{CONDA_BUILD_STATE})
-  set(IDAKLU_BLAS_VENDOR "Generic")
+  if(DEFINED ENV{CONDA_BUILD_STATE})
+    set(IDAKLU_BLAS_VENDOR "Generic")
+  endif()
+
+  if(IDAKLU_BLAS_VENDOR MATCHES "Intel")
+    set(BLA_STATIC FALSE)
+    set(BLA_SIZEOF_INTEGER 4)
+  elseif(IDAKLU_BLAS_VENDOR MATCHES "Apple")
+    set(BLA_STATIC TRUE)
+    set(BLA_SIZEOF_INTEGER 4)
+  else()
+    set(BLA_STATIC FALSE)
+    set(BLA_SIZEOF_INTEGER 4)
+  endif()
+
+  set(BLA_VENDOR ${IDAKLU_BLAS_VENDOR})
+
+  # openBLAS: include a "lib" prefix in it's names
+  set(CMAKE_FIND_LIBRARY_PREFIXES "" lib)
 endif()
-
-if(IDAKLU_BLAS_VENDOR MATCHES "Intel")
-  set(BLA_STATIC FALSE)
-  set(BLA_SIZEOF_INTEGER 4)
-elseif(IDAKLU_BLAS_VENDOR MATCHES "Apple")
-  set(BLA_STATIC TRUE)
-  set(BLA_SIZEOF_INTEGER 4)
-else()
-  set(BLA_STATIC FALSE)
-  set(BLA_SIZEOF_INTEGER 4)
-endif()
-
-set(BLA_VENDOR ${IDAKLU_BLAS_VENDOR})
-
-# openBLAS: include a "lib" prefix in it's names
-set(CMAKE_FIND_LIBRARY_PREFIXES "" lib)
 
 find_package(BLAS QUIET)
 

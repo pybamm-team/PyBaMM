@@ -176,7 +176,6 @@ set_target_properties(idaklu PROPERTIES
 )
 message("NOTE: RPATHS linking SUNDIALS, SuiteSparse and casADi are set")
 
-
 # IREE (MLIR compiler and runtime library) build settings
 if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
   set(IREE_BUILD_COMPILER ON)

@@ -117,16 +117,9 @@ jobs:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_BUILD_LINUX: |
             set -e -x
-
             yum update -y
-            yum -y install openblas-devel 
-            # lapack-devel
+            yum -y install openblas-devel
             python scripts/install_KLU_Sundials.py
-            # mkdir -p $(pwd)/sundials_KLU_libs/lib64/
-            # export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib64/:$LD_LIBRARY_PATH
-            # export PATH=$(pwd)/sundials_KLU_libs/lib64/:$PATH
-            # echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-
             python -m pip install cmake casadi scikit-build-core pybind11
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: |
@@ -246,7 +239,8 @@ jobs:
 
             python scripts/install_KLU_Sundials.py
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi scikit-build-core delocate pybind11
+          CIBW_BEFORE_BUILD: |
+            python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
             export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
             echo "$LD_LIBRARY_PATH"
