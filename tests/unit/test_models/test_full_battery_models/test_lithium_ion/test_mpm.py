@@ -20,8 +20,10 @@ class TestMPM:
     def test_default_parameter_values(self):
         # check default parameters are added correctly
         model = pybamm.lithium_ion.MPM()
-        assert model.default_parameter_values["Negative minimum particle radius [m]"] == \
-            0.0
+        assert (
+            model.default_parameter_values["Negative minimum particle radius [m]"]
+            == 0.0
+        )
 
     def test_lumped_thermal_model_1D(self):
         options = {"thermal": "lumped"}
@@ -206,4 +208,3 @@ class TestMPMWithPlating:
         options = {"lithium plating": "irreversible"}
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
-

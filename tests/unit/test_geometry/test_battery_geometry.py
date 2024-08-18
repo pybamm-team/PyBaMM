@@ -20,8 +20,7 @@ class TestBatteryGeometry:
     def test_geometry_keys(self, geometry):
         for domain_geoms in geometry.values():
             assert all(
-                isinstance(spatial_var, str)
-                for spatial_var in domain_geoms.keys()
+                isinstance(spatial_var, str) for spatial_var in domain_geoms.keys()
             )
         geometry.print_parameter_info()
 
@@ -62,13 +61,21 @@ class TestBatteryGeometry:
         geometry = pybamm.battery_geometry(options=options)
         geo = pybamm.GeometricParameters(options=options)
         assert geometry["negative primary particle"]["r_n_prim"]["min"] == 0
-        assert geometry["negative primary particle"]["r_n_prim"]["max"] == geo.n.prim.R_typ
+        assert (
+            geometry["negative primary particle"]["r_n_prim"]["max"] == geo.n.prim.R_typ
+        )
         assert geometry["negative secondary particle"]["r_n_sec"]["min"] == 0
-        assert geometry["negative secondary particle"]["r_n_sec"]["max"] == geo.n.sec.R_typ
+        assert (
+            geometry["negative secondary particle"]["r_n_sec"]["max"] == geo.n.sec.R_typ
+        )
         assert geometry["positive primary particle"]["r_p_prim"]["min"] == 0
-        assert geometry["positive primary particle"]["r_p_prim"]["max"] == geo.p.prim.R_typ
+        assert (
+            geometry["positive primary particle"]["r_p_prim"]["max"] == geo.p.prim.R_typ
+        )
         assert geometry["positive secondary particle"]["r_p_sec"]["min"] == 0
-        assert geometry["positive secondary particle"]["r_p_sec"]["max"] == geo.p.sec.R_typ
+        assert (
+            geometry["positive secondary particle"]["r_p_sec"]["max"] == geo.p.sec.R_typ
+        )
 
     def test_geometry_error(self):
         with pytest.raises(pybamm.GeometryError, match="Invalid current"):
@@ -98,25 +105,22 @@ class TestReadParameters:
 
         geometry = pybamm.battery_geometry(options={"dimensionality": 2})
 
-        assert set([x.name for x in geometry.parameters]) == \
-            set(
-                [
-                    x.name \
-                    for x in [
-                        L_n,
-                        L_s,
-                        L_p,
-                        L_y,
-                        L_z,
-                        tab_n_y,
-                        tab_n_z,
-                        L_tab_n,
-                        tab_p_y,
-                        tab_p_z,
-                        L_tab_p,
-                    ] \
-                ] \
-            )
+        assert set([x.name for x in geometry.parameters]) == set(
+            [
+                x.name
+                for x in [
+                    L_n,
+                    L_s,
+                    L_p,
+                    L_y,
+                    L_z,
+                    tab_n_y,
+                    tab_n_z,
+                    L_tab_n,
+                    tab_p_y,
+                    tab_p_z,
+                    L_tab_p,
+                ]
+            ]
+        )
         assert all(isinstance(x, pybamm.Parameter) for x in geometry.parameters)
-
-

@@ -38,7 +38,11 @@ class TestStandardParametersLeadAcid:
         param = pybamm.LeadAcidParameters()
         eps_param = param.epsilon_init
         assert isinstance(eps_param, pybamm.Concatenation)
-        assert eps_param.domain == ["negative electrode", "separator", "positive electrode"]
+        assert eps_param.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues("Sulzer2019")
@@ -114,4 +118,3 @@ class TestStandardParametersLeadAcid:
         assert param_eval["U_n_1"] < param_eval["U_n_0.5"]
         assert param_eval["U_p_1"] > param_eval["U_p_0.5"]
         assert param_eval["j0_Ox_1"] > param_eval["j0_Ox_0.5"]
-

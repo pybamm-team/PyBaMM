@@ -146,12 +146,13 @@ class TestBaseModel:
         assert "v+f+i" in model.variables_and_events
         assert "Event: u=e" in model.variables_and_events
 
-        assert set([x.name for x in model.parameters]) == \
-            set([x.name for x in [a, b, c, d, e, f, g, h, i]])
+        assert set([x.name for x in model.parameters]) == set(
+            [x.name for x in [a, b, c, d, e, f, g, h, i]]
+        )
         assert all(
-                isinstance(x, (pybamm.Parameter, pybamm.InputParameter)) \
-                for x in model.parameters \
-            )
+            isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
+            for x in model.parameters
+        )
 
         model.variables = {
             "v+f+i": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t}) + i
@@ -282,12 +283,9 @@ class TestBaseModel:
         assert parameter_info["sub1"]["f"][1] == "InputParameter in ['test']"
         assert parameter_info["sub2"]["b"][1] == "InputParameter in ['test']"
         assert parameter_info["sub2"]["h"][1] == "Parameter"
-        assert parameter_info["sub1"]["c"][1] == \
-            "FunctionParameter with inputs(s) ''"
-        assert parameter_info["sub2"]["d"][1] == \
-            "FunctionParameter with inputs(s) ''"
-        assert parameter_info["sub2"]["i"][1] == \
-            "FunctionParameter with inputs(s) ''"
+        assert parameter_info["sub1"]["c"][1] == "FunctionParameter with inputs(s) ''"
+        assert parameter_info["sub2"]["d"][1] == "FunctionParameter with inputs(s) ''"
+        assert parameter_info["sub2"]["i"][1] == "FunctionParameter with inputs(s) ''"
 
     def test_print_parameter_info(self):
         model = pybamm.BaseModel()
@@ -406,8 +404,9 @@ class TestBaseModel:
         model.events = [pybamm.Event("u=e", u - e)]
         model.variables = {"v+f": v + f}
 
-        assert set([x.name for x in model.input_parameters]) == \
-            set([x.name for x in [a, b, c, d, e, f]])
+        assert set([x.name for x in model.input_parameters]) == set(
+            [x.name for x in [a, b, c, d, e, f]]
+        )
         assert all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
 
     def test_update(self):
@@ -751,9 +750,7 @@ class TestBaseModel:
         assert var_fn(6, 3, 2, [2, 7]) == -1
 
         # Test fails if order not specified
-        with pytest.raises(
-            ValueError, match="input_parameter_order must be specified"
-        ):
+        with pytest.raises(ValueError, match="input_parameter_order must be specified"):
             model.export_casadi_objects(["a+b"])
 
         # Fine if order is not specified if there is only one input parameter
@@ -920,8 +917,7 @@ class TestBaseModel:
 
         # Test new initial conditions
         var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
-        assert isinstance(
-            new_model_disc.initial_conditions[var_scalar], pybamm.Vector)
+        assert isinstance(new_model_disc.initial_conditions[var_scalar], pybamm.Vector)
         assert new_model_disc.initial_conditions[var_scalar].entries == 3
 
         var_1D = list(new_model_disc.initial_conditions.keys())[1]
@@ -939,8 +935,7 @@ class TestBaseModel:
         )
 
         var_concat = list(new_model_disc.initial_conditions.keys())[3]
-        assert isinstance(
-            new_model_disc.initial_conditions[var_concat], pybamm.Vector)
+        assert isinstance(new_model_disc.initial_conditions[var_concat], pybamm.Vector)
         assert new_model_disc.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_concat].entries, 3
@@ -1050,8 +1045,7 @@ class TestBaseModel:
 
         # Test new initial conditions
         var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
-        assert isinstance(
-            new_model_disc.initial_conditions[var_scalar], pybamm.Vector)
+        assert isinstance(new_model_disc.initial_conditions[var_scalar], pybamm.Vector)
         assert new_model_disc.initial_conditions[var_scalar].entries == 5
 
         var_1D = list(new_model_disc.initial_conditions.keys())[1]
@@ -1069,8 +1063,7 @@ class TestBaseModel:
         )
 
         var_concat = list(new_model_disc.initial_conditions.keys())[3]
-        assert isinstance(
-            new_model_disc.initial_conditions[var_concat], pybamm.Vector)
+        assert isinstance(new_model_disc.initial_conditions[var_concat], pybamm.Vector)
         assert new_model_disc.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_concat].entries, 5
@@ -1098,9 +1091,7 @@ class TestBaseModel:
         )
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
-        with pytest.raises(
-            NotImplementedError, match="Variable must be 0D, 1D, or 2D"
-        ):
+        with pytest.raises(NotImplementedError, match="Variable must be 0D, 1D, or 2D"):
             model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
 
         var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
@@ -1279,5 +1270,3 @@ class TestBaseModel:
         new_model = pybamm.load_model("test_base_model.json")
 
         os.remove("test_base_model.json")
-
-

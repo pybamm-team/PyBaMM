@@ -109,19 +109,19 @@ class TestBaseBatteryModel:
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         assert issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.SubMesh0D,
-            )
+            model.default_submesh_types["current collector"],
+            pybamm.SubMesh0D,
+        )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         assert issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.Uniform1DSubMesh,
-            )
+            model.default_submesh_types["current collector"],
+            pybamm.Uniform1DSubMesh,
+        )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         assert issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.ScikitUniform2DSubMesh,
-            )
+            model.default_submesh_types["current collector"],
+            pybamm.ScikitUniform2DSubMesh,
+        )
 
     def test_default_var_pts(self):
         var_pts = {
@@ -154,11 +154,12 @@ class TestBaseBatteryModel:
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         assert isinstance(
-            model.default_spatial_methods["current collector"], pybamm.FiniteVolume)
+            model.default_spatial_methods["current collector"], pybamm.FiniteVolume
+        )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         assert isinstance(
             model.default_spatial_methods["current collector"],
-            pybamm.ScikitFiniteElement
+            pybamm.ScikitFiniteElement,
         )
 
     def test_options(self):
@@ -225,7 +226,8 @@ class TestBaseBatteryModel:
         with pytest.raises(pybamm.OptionError, match="SEI porosity change"):
             pybamm.BaseBatteryModel({"SEI porosity change": "bad SEI porosity change"})
         with pytest.raises(
-            pybamm.OptionError, match="SEI porosity change must now be given in string format"
+            pybamm.OptionError,
+            match="SEI porosity change must now be given in string format",
         ):
             pybamm.BaseBatteryModel({"SEI porosity change": True})
         # changing defaults based on other options
@@ -273,8 +275,10 @@ class TestBaseBatteryModel:
         model = pybamm.BaseBatteryModel(
             {"loss of active material": "stress-driven", "SEI on cracks": "true"}
         )
-        assert model.options["particle mechanics"] == \
-            ("swelling and cracking", "swelling only")
+        assert model.options["particle mechanics"] == (
+            "swelling and cracking",
+            "swelling only",
+        )
         assert model.options["stress-induced diffusion"] == "true"
         model = pybamm.BaseBatteryModel(
             {
@@ -303,9 +307,7 @@ class TestBaseBatteryModel:
         # plating model
         with pytest.raises(pybamm.OptionError, match="lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
-        with pytest.raises(
-            pybamm.OptionError, match="lithium plating porosity change"
-        ):
+        with pytest.raises(pybamm.OptionError, match="lithium plating porosity change"):
             pybamm.BaseBatteryModel(
                 {
                     "lithium plating porosity change": "bad lithium "
@@ -483,8 +485,10 @@ class TestOptions:
         options = BatteryModelOptions({})
         assert options.phases == {"negative": ["primary"], "positive": ["primary"]}
         options = BatteryModelOptions({"particle phases": ("1", "2")})
-        assert options.phases == \
-            {"negative": ["primary"], "positive": ["primary", "secondary"]}
+        assert options.phases == {
+            "negative": ["primary"],
+            "positive": ["primary", "secondary"],
+        }
 
     def test_domain_options(self):
         options = BatteryModelOptions(
@@ -500,10 +504,14 @@ class TestOptions:
         options = BatteryModelOptions(
             {"particle mechanics": (("swelling only", "swelling and cracking"), "none")}
         )
-        assert options.negative["particle mechanics"] == \
-            ("swelling only", "swelling and cracking")
+        assert options.negative["particle mechanics"] == (
+            "swelling only",
+            "swelling and cracking",
+        )
         assert options.negative.primary["particle mechanics"] == "swelling only"
-        assert options.negative.secondary["particle mechanics"] == "swelling and cracking"
+        assert (
+            options.negative.secondary["particle mechanics"] == "swelling and cracking"
+        )
         assert options.positive["particle mechanics"] == "none"
         assert options.positive.primary["particle mechanics"] == "none"
         assert options.positive.secondary["particle mechanics"] == "none"
@@ -513,7 +521,8 @@ class TestOptions:
         assert options.whole_cell_domains == ["separator", "positive electrode"]
 
         options = BatteryModelOptions({})
-        assert options.whole_cell_domains == \
-            ["negative electrode", "separator", "positive electrode"]
-
-
+        assert options.whole_cell_domains == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]

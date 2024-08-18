@@ -338,7 +338,6 @@ class TestScikitFiniteElementChebyshev2DSubMesh:
 
 class TestScikitExponential2DSubMesh:
     def test_mesh_creation(self, param):
-
         geometry = pybamm.battery_geometry(
             include_particles=False, options={"dimensionality": 2}
         )
@@ -402,7 +401,6 @@ class TestScikitExponential2DSubMesh:
 
 class TestScikitUser2DSubMesh:
     def test_mesh_creation(self, param):
-
         geometry = pybamm.battery_geometry(
             include_particles=False, options={"dimensionality": 2}
         )
@@ -483,5 +481,3 @@ class TestScikitUser2DSubMesh:
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied2DSubMesh, submesh_params)
         with pytest.raises(pybamm.GeometryError, match="User mesh requires"):
             mesh(None, None)
-
-

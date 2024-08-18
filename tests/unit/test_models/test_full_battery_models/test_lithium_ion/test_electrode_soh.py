@@ -159,7 +159,6 @@ class TestElectrodeSOH:
 
 class TestElectrodeSOHMSMR:
     def test_known_solution(self, options):
-
         param = pybamm.LithiumIonParameters(options=options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
@@ -193,7 +192,6 @@ class TestElectrodeSOHMSMR:
         esoh_solver._check_esoh_feasible(inputs)
 
     def test_known_solution_cell_capacity(self, options):
-
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
@@ -217,7 +215,6 @@ class TestElectrodeSOHMSMR:
         assert sol["Q"] == pytest.approx(Q, abs=1e-05)
 
     def test_error(self, options):
-
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 
@@ -333,9 +330,7 @@ class TestGetInitialSOC:
             {"working electrode": "positive"}
         ).default_parameter_values
 
-        with pytest.raises(
-            ValueError, match="Initial SOC should be between 0 and 1"
-        ):
+        with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
             pybamm.lithium_ion.get_initial_stoichiometries(2, parameter_values)
 
         with pytest.raises(ValueError, match="outside the voltage limits"):
@@ -354,22 +349,22 @@ class TestGetInitialSOC:
                 "5 A", parameter_values_half_cell
             )
 
-        with pytest.raises(
-            ValueError, match="Initial SOC should be between 0 and 1"
-        ):
+        with pytest.raises(ValueError, match="Initial SOC should be between 0 and 1"):
             pybamm.lithium_ion.get_initial_stoichiometry_half_cell(
                 2, parameter_values_half_cell
             )
 
         with pytest.raises(
-            ValueError, match="Known value must be cell capacity or cyclable lithium capacity"
+            ValueError,
+            match="Known value must be cell capacity or cyclable lithium capacity",
         ):
             pybamm.lithium_ion.ElectrodeSOHSolver(
                 parameter_values, known_value="something else"
             )
 
         with pytest.raises(
-            ValueError, match="Known value must be cell capacity or cyclable lithium capacity"
+            ValueError,
+            match="Known value must be cell capacity or cyclable lithium capacity",
         ):
             param_MSMR = pybamm.lithium_ion.MSMR(
                 {"number of MSMR reactions": "3"}
@@ -379,7 +374,8 @@ class TestGetInitialSOC:
             )
 
         with pytest.raises(
-            ValueError, match="Known value must be cell capacity or cyclable lithium capacity"
+            ValueError,
+            match="Known value must be cell capacity or cyclable lithium capacity",
         ):
             pybamm.models.full_battery_models.lithium_ion.electrode_soh._ElectrodeSOH(
                 known_value="something else"
@@ -410,7 +406,6 @@ class TestGetInitialOCP:
 
 class TestGetInitialOCPMSMR:
     def test_get_initial_ocp(self, options):
-
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
         Un, Up = pybamm.lithium_ion.get_initial_ocps(
@@ -427,7 +422,6 @@ class TestGetInitialOCPMSMR:
         assert Up - Un == pytest.approx(4)
 
     def test_min_max_ocp(self, options):
-
         param = pybamm.LithiumIonParameters(options)
         parameter_values = pybamm.ParameterValues("MSMR_Example")
 

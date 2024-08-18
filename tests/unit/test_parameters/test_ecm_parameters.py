@@ -92,5 +92,3 @@ class TestEcmParameters:
 
         value = parameter_values.evaluate(param.T_amb(sym))
         assert value == values["Ambient temperature [K]"] - 273.15
-
-

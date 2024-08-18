@@ -47,8 +47,9 @@ class TestUnaryOperators:
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         neg_broad = -broad_a
-        assert neg_broad == \
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(nega, "test"), "test2")
+        assert neg_broad == pybamm.PrimaryBroadcast(
+            pybamm.PrimaryBroadcast(nega, "test"), "test2"
+        )
 
         # Test from_json
         input_json = {
@@ -86,8 +87,9 @@ class TestUnaryOperators:
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         abs_broad = abs(broad_a)
-        assert abs_broad == \
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(absa, "test"), "test2")
+        assert abs_broad == pybamm.PrimaryBroadcast(
+            pybamm.PrimaryBroadcast(absa, "test"), "test2"
+        )
 
         # Test from_json
         input_json = {
@@ -109,9 +111,10 @@ class TestUnaryOperators:
         assert expr.evaluate(y=np.array([1]))[0, 0] == pytest.approx(1)
         assert expr.evaluate(y=np.array([0])) == 0
         assert expr.evaluate(y=np.array([-1]))[0, 0] == pytest.approx(1)
-        assert str(expr) == \
-            "y[0:1] * (exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1])) " \
+        assert (
+            str(expr) == "y[0:1] * (exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1])) "
             "/ (exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1]))"
+        )
 
     def test_sign(self):
         b = pybamm.Scalar(-4)
@@ -129,11 +132,10 @@ class TestUnaryOperators:
         assert pybamm.sign(broad) == pybamm.PrimaryBroadcast(-1, "test domain")
 
         conc = pybamm.Concatenation(broad, pybamm.PrimaryBroadcast(2, "another domain"))
-        assert pybamm.sign(conc) == \
-            pybamm.Concatenation(
-                pybamm.PrimaryBroadcast(-1, "test domain"),
-                pybamm.PrimaryBroadcast(1, "another domain"),
-            )
+        assert pybamm.sign(conc) == pybamm.Concatenation(
+            pybamm.PrimaryBroadcast(-1, "test domain"),
+            pybamm.PrimaryBroadcast(1, "another domain"),
+        )
 
         # Test from_json
         with pytest.raises(NotImplementedError):
@@ -200,7 +202,8 @@ class TestUnaryOperators:
         # gradient of scalar symbol should fail
         a = pybamm.Symbol("a")
         with pytest.raises(
-            pybamm.DomainError, match="Cannot take gradient of 'a' since its domain is empty"
+            pybamm.DomainError,
+            match="Cannot take gradient of 'a' since its domain is empty",
         ):
             pybamm.Gradient(a)
 
@@ -248,10 +251,9 @@ class TestUnaryOperators:
             pybamm.Variable("a", "some domain"), "test domain"
         )
         div = pybamm.div(a)
-        assert div == \
-            pybamm.PrimaryBroadcast(
-                pybamm.PrimaryBroadcast(0, "some domain"), "test domain" \
-            )
+        assert div == pybamm.PrimaryBroadcast(
+            pybamm.PrimaryBroadcast(0, "some domain"), "test domain"
+        )
 
         # otherwise divergence should work
         a = pybamm.Symbol("a", domain="test domain")
@@ -692,20 +694,27 @@ class TestUnaryOperators:
         assert pybamm.Gradient(a).to_equation() == sympy_Gradient("a")
 
         # Test Divergence
-        assert pybamm.Divergence(pybamm.Gradient(a)).to_equation() == \
-            sympy_Divergence(sympy_Gradient("a"))
+        assert pybamm.Divergence(pybamm.Gradient(a)).to_equation() == sympy_Divergence(
+            sympy_Gradient("a")
+        )
 
         # Test BoundaryValue
         assert pybamm.BoundaryValue(one, "right").to_equation() == sympy.Symbol("1")
-        assert pybamm.BoundaryValue(a, "right").to_equation() == sympy.Symbol("a^{surf}")
-        assert pybamm.BoundaryValue(b, "positive tab").to_equation() == sympy.Symbol(str(b))
-        assert pybamm.BoundaryValue(c, "left").to_equation() == \
-            sympy.Symbol(r"c^{\mathtt{\text{left}}}")
+        assert pybamm.BoundaryValue(a, "right").to_equation() == sympy.Symbol(
+            "a^{surf}"
+        )
+        assert pybamm.BoundaryValue(b, "positive tab").to_equation() == sympy.Symbol(
+            str(b)
+        )
+        assert pybamm.BoundaryValue(c, "left").to_equation() == sympy.Symbol(
+            r"c^{\mathtt{\text{left}}}"
+        )
 
         # Test Integral
         xn = pybamm.SpatialVariable("xn", ["negative electrode"])
-        assert pybamm.Integral(d, xn).to_equation() == \
-            sympy.Integral("d", sympy.Symbol("xn"))
+        assert pybamm.Integral(d, xn).to_equation() == sympy.Integral(
+            "d", sympy.Symbol("xn")
+        )
 
     def test_explicit_time_integral(self):
         expr = pybamm.ExplicitTimeIntegral(pybamm.Parameter("param"), pybamm.Scalar(1))
@@ -770,4 +779,3 @@ class TestUnaryOperators:
         expr_json["children"] = [pybamm.Parameter("param")]
         expr_json["initial_condition"] = [pybamm.Scalar(1)]
         assert pybamm.ExplicitTimeIntegral._from_json(expr_json) == expr
-

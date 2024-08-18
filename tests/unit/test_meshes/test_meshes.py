@@ -5,7 +5,6 @@
 import pytest
 import pybamm
 import numpy as np
-import unittest
 
 
 def get_param():
@@ -57,8 +56,10 @@ class TestMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
         # errors if old format
         geometry = {
@@ -78,8 +79,6 @@ class TestMesh:
         param.process_geometry(geometry)
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -114,8 +113,6 @@ class TestMesh:
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
 
-
-
         with pytest.raises(pybamm.DiscretisationError, match="Parameter values"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -134,7 +131,6 @@ class TestMesh:
 
         # provide mesh properties
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -157,7 +153,6 @@ class TestMesh:
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
 
-
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -177,7 +172,6 @@ class TestMesh:
 
         # provide mesh properties
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -223,7 +217,6 @@ class TestMesh:
         # provide mesh properties
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
 
-
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -247,8 +240,6 @@ class TestMesh:
         param.process_geometry(geometry)
 
         var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -370,5 +361,3 @@ class TestMeshGenerator:
     def test_init_name(self):
         mesh_generator = pybamm.MeshGenerator(pybamm.SubMesh0D)
         assert mesh_generator.__repr__() == "Generator for SubMesh0D"
-
-
