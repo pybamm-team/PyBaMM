@@ -4,21 +4,20 @@
 
 import pybamm
 import numbers
-import unittest
 import numpy as np
 import pandas as pd
 import pytest
 from tests import no_internet_connection
 
 
-class TestCurrentFunctions(unittest.TestCase):
+class TestCurrentFunctions:
     def test_constant_current(self):
         # test simplify
         param = pybamm.electrical_parameters
         current = param.current_with_time
         parameter_values = pybamm.ParameterValues({"Current function [A]": 2})
         processed_current = parameter_values.process_symbol(current)
-        self.assertIsInstance(processed_current, pybamm.Scalar)
+        assert isinstance(processed_current, pybamm.Scalar)
 
     @pytest.mark.skipif(
         no_internet_connection(),
@@ -101,11 +100,3 @@ class StandardCurrentFunctionTests:
         self.test_output_type()
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

@@ -3,10 +3,10 @@
 #
 
 import pybamm
-import unittest
+import pytest
 
 
-class TestThevenin(unittest.TestCase):
+class TestThevenin:
     def test_standard_model(self):
         model = pybamm.equivalent_circuit.Thevenin()
         model.check_well_posedness()
@@ -16,22 +16,17 @@ class TestThevenin(unittest.TestCase):
         x = model.variables["x ECMD"]
 
         # test var_pts
-        self.assertEqual(model.default_var_pts, {x: 20})
+        assert model.default_var_pts == {x: 20}
 
         # test geometry
-        self.assertEqual(
-            model.default_geometry, {"ECMD particle": {x: {"min": 0, "max": 1}}}
-        )
+        assert model.default_geometry == {"ECMD particle": {x: {"min": 0, "max": 1}}}
 
         # test spatial methods
-        self.assertIsInstance(
-            model.default_spatial_methods["ECMD particle"], pybamm.FiniteVolume
-        )
+        assert isinstance(
+            model.default_spatial_methods["ECMD particle"], pybamm.FiniteVolume)
 
         # test submesh types
-        self.assertEqual(
-            model.default_submesh_types, {"ECMD particle": pybamm.Uniform1DSubMesh}
-        )
+        assert model.default_submesh_types == {"ECMD particle": pybamm.Uniform1DSubMesh}
 
     def test_changing_number_of_rcs(self):
         options = {"number of rc elements": 0}
@@ -50,7 +45,7 @@ class TestThevenin(unittest.TestCase):
         model = pybamm.equivalent_circuit.Thevenin(options=options)
         model.check_well_posedness()
 
-        with self.assertRaisesRegex(pybamm.OptionError, "natural numbers"):
+        with pytest.raises(pybamm.OptionError, match="natural numbers"):
             options = {"number of rc elements": -1}
             model = pybamm.equivalent_circuit.Thevenin(options=options)
             model.check_well_posedness()
@@ -114,35 +109,25 @@ class TestThevenin(unittest.TestCase):
 
     def test_raise_option_error(self):
         options = {"not an option": "something"}
-        with self.assertRaisesRegex(
-            pybamm.OptionError, "Option 'not an option' not recognised"
+        with pytest.raises(
+            pybamm.OptionError, match="Option 'not an option' not recognised"
         ):
             pybamm.equivalent_circuit.Thevenin(options=options)
 
     def test_not_a_valid_option(self):
         options = {"operating mode": "not a valid option"}
-        with self.assertRaisesRegex(
-            pybamm.OptionError, "Option 'operating mode' must be one of"
+        with pytest.raises(
+            pybamm.OptionError, match="Option 'operating mode' must be one of"
         ):
             pybamm.equivalent_circuit.Thevenin(options=options)
 
     def test_get_default_parameters(self):
         model = pybamm.equivalent_circuit.Thevenin()
         values = model.default_parameter_values
-        self.assertIn("Initial SoC", list(values.keys()))
+        assert "Initial SoC" in list(values.keys())
         values.process_model(model)
 
     def test_get_default_quick_plot_variables(self):
         model = pybamm.equivalent_circuit.Thevenin()
         variables = model.default_quick_plot_variables
-        self.assertIn("Current [A]", variables)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert "Current [A]" in variables
