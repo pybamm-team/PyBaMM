@@ -242,9 +242,6 @@ jobs:
           CIBW_BEFORE_BUILD: |
             python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
-            export LD_LIBRARY_PATH=$(pwd)/sundials_KLU_libs/lib/:$LD_LIBRARY_PATH
-            echo "$LD_LIBRARY_PATH"
-
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then

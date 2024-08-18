@@ -122,7 +122,7 @@ execute_process(
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-if (CASADI_DIR)
+if(CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found Python casadi path: ${CASADI_DIR}")
 endif()
@@ -167,6 +167,9 @@ target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
 if(DEFINED ENV{CIBUILDWHEEL} AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(SUNDIALS_LIBRARY_DIR "${INSTALL_DIR}/lib64")
   set(SUITESPARSE_LIBRARY_DIR "${INSTALL_DIR}/lib64")
+else()
+  set(SUNDIALS_LIBRARY_DIR "${INSTALL_DIR}/lib")
+  set(SUITESPARSE_LIBRARY_DIR "${INSTALL_DIR}/lib")
 endif()
 
 set_target_properties(idaklu PROPERTIES
