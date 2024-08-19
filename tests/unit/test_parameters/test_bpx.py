@@ -151,7 +151,9 @@ class TestBPX(unittest.TestCase):
             )
 
     def test_no_already_exists_in_BPX(self):
-        with tempfile.NamedTemporaryFile(suffix="test.json", mode="w") as test_file:
+        with tempfile.NamedTemporaryFile(
+            suffix="test.json", delete=False, mode="w"
+        ) as test_file:
             json.dump(copy.copy(self.base), test_file)
             test_file.flush()
             params = pybamm.ParameterValues.create_from_bpx(test_file.name)
@@ -236,7 +238,7 @@ class TestBPX(unittest.TestCase):
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
+            # write to a temporay file so we can
             # get the source later on using inspect.getsource
             # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
