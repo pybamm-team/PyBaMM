@@ -83,14 +83,14 @@ class TestUtil:
                 pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
             )
 
-        package_dir = os.path.join(pybamm.root_dir(), "pybamm")
+        package_dir = os.path.join(pybamm.root_dir(), "src", "pybamm")
         with tempfile.NamedTemporaryFile("w", dir=package_dir) as tempfile_obj:
             path = os.path.join(package_dir, tempfile_obj.name)
             assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
 
-    @pytest.mark.skipif(pybamm.have_jax(), reason="The JAX solver is not installed")
+    @pytest.mark.skipif(not pybamm.have_jax(), reason="JAX is not installed")
     def test_is_jax_compatible(self):
-        assert True
+        assert pybamm.is_jax_compatible()
 
     def test_git_commit_info(self):
         git_commit_info = pybamm.get_git_commit_info()

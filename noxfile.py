@@ -180,7 +180,7 @@ def run_doctests(session):
         "-m",
         "pytest",
         "--doctest-plus",
-        "pybamm",
+        "src",
     )
 
 
@@ -266,7 +266,10 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    session.run("python", "-m", "pytest", "-m", "unit or integration")
+    specific_test_files = session.posargs if session.posargs else []
+    session.run(
+        "python", "-m", "pytest", *specific_test_files, "-m", "unit or integration"
+    )
 
 
 @nox.session(name="docs")
