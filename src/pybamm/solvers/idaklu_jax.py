@@ -22,7 +22,7 @@ if idaklu_spec is not None:
     except ImportError:  # pragma: no cover
         idaklu_spec = None
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
     from jax import lax
     from jax import numpy as jnp
@@ -56,7 +56,7 @@ class IDAKLUJax:
         output_variables=None,
         calculate_sensitivities=True,
     ):
-        if not pybamm.have_jax():
+        if not pybamm.has_jax():
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )  # pragma: no cover

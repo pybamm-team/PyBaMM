@@ -13,7 +13,7 @@ from scipy.linalg import bandwidth
 import importlib
 import warnings
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
     from jax import numpy as jnp
 

@@ -9,7 +9,7 @@ import numpy as np
 import unittest
 
 testcase = []
-if pybamm.have_idaklu() and pybamm.have_jax():
+if pybamm.have_idaklu() and pybamm.has_jax():
     from jax.tree_util import tree_flatten
     import jax
     import jax.numpy as jnp
@@ -84,7 +84,7 @@ if pybamm.have_idaklu() and pybamm.have_jax():
 
 # Check the interface throws an appropriate error if either IDAKLU or JAX not available
 @unittest.skipIf(
-    pybamm.have_idaklu() and pybamm.have_jax(),
+    pybamm.have_idaklu() and pybamm.has_jax(),
     "Both IDAKLU and JAX are available",
 )
 class TestIDAKLUJax_NoJax(unittest.TestCase):
@@ -94,7 +94,7 @@ class TestIDAKLUJax_NoJax(unittest.TestCase):
 
 
 @unittest.skipIf(
-    not pybamm.have_idaklu() or not pybamm.have_jax(),
+    not pybamm.have_idaklu() or not pybamm.has_jax(),
     "IDAKLU Solver and/or JAX are not available",
 )
 class TestIDAKLUJax(unittest.TestCase):

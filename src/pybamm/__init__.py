@@ -15,7 +15,7 @@ from .util import (
 )
 from .util import (
     get_parameters_filepath,
-    have_jax,
+    has_jax,
     install_jax,
     import_optional_dependency,
     is_jax_compatible,

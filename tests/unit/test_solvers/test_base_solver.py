@@ -360,7 +360,7 @@ class TestBaseSolver(unittest.TestCase):
         def exact_diff_a(y, a, b):
             return np.array([[y[0] ** 2 + 2 * a], [y[0]]])
 
-        @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+        @unittest.skipIf(not pybamm.has_jax(), "jax or jaxlib is not installed")
         def exact_diff_b(y, a, b):
             return np.array([[y[0]], [0]])
 
