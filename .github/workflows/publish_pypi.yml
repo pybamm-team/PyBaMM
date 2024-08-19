@@ -124,7 +124,7 @@ jobs:
           CIBW_TEST_COMMAND: |
             set -e -x
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
-            python -m pytest -m cibw {project}/tests/unit 
+            python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for Linux
         uses: actions/upload-artifact@v4.3.5
