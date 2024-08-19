@@ -182,7 +182,6 @@ include = [
 ]
 
 [[tool.scikit-build.overrides]]
-if.any.failed = true
 if.any.env.BUILD_IDAKLU = false
 if.any.env.READTHEDOCS = true
 wheel.cmake = false
