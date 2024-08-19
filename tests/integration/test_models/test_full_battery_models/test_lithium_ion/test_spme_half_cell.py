@@ -8,5 +8,5 @@ import pytest
 
 class TestSPMeHalfCell(BaseIntegrationTestLithiumIonHalfCell):
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup(self):
         self.model = pybamm.lithium_ion.SPMe
