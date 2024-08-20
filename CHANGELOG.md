@@ -2,8 +2,6 @@
 
 ## Features
 
-- Remove deprecated function `pybamm_install_jax` and renamed `have_jax` to
-  `has_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
 - Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
 
@@ -15,6 +13,11 @@
 ## Bug Fixes
 
 - Fixed bug where IDAKLU solver failed when `output variables` were specified and an event triggered. ([#4300](https://github.com/pybamm-team/PyBaMM/pull/4300))
+
+## Breaking changes
+
+- Remove deprecated function `pybamm_install_jax` and renamed `have_jax` to
+  `has_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
 
 # [v24.5](https://github.com/pybamm-team/PyBaMM/tree/v24.5) - 2024-07-26
 
