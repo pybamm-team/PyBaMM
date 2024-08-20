@@ -104,8 +104,8 @@ class StandardModelTest:
             self.parameter_values["Current function [A]"]
             / self.parameter_values["Nominal cell capacity [A.h]"]
         )
-        t_eval = np.linspace(0, 3600 / Crate, 100)
-        t_interp = t_eval
+        t_interp = np.linspace(0, 3600 / Crate, 100)
+        t_eval = np.array([t_interp[0], t_interp[-1]])
 
         # make param_name an input
         self.parameter_values.update({param_name: "[input]"})

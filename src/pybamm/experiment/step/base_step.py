@@ -292,7 +292,7 @@ class BaseStep:
         t_interp: np.array | None
             The time points at which to interpolate the solution
         """
-        if solver._supports_interp:
+        if solver.supports_interp:
             return self._setup_timestepping(solver, tf, t_interp)
         else:
             return self._setup_timestepping_dense_t_eval(solver, tf, t_interp)
@@ -302,7 +302,7 @@ class BaseStep:
         Setup timestepping for the model. This returns a t_eval vector that stops
         only at the first and last time points. If t_interp and the period are
         unspecified, then the solver will use adaptive time-stepping. For a given
-        period, t_interp willbe set to return the solution at the end of each period
+        period, t_interp will be set to return the solution at the end of each period
         and at the final time.
 
         Parameters

@@ -91,11 +91,20 @@ class TestIDAKLUSolver(unittest.TestCase):
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_eval = np.linspace(0, 1, 100)
-            t_interp = t_eval
+            if model.convert_to_format == "casadi" or (
+                model.convert_to_format == "jax"
+                and solver._options["jax_evaluator"] == "iree"
+            ):
+                t_interp = np.linspace(0, 1, 100)
+                t_eval = np.array([t_interp[0], t_interp[-1]])
+            else:
+                t_eval = np.linspace(0, 1, 100)
+                t_interp = t_eval
 
             solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
-            np.testing.assert_array_equal(solution.t, t_interp)
+            np.testing.assert_array_equal(
+                solution.t, t_interp, err_msg=f"Failed for form {form}"
+            )
             np.testing.assert_array_almost_equal(
                 solution.y[0],
                 np.exp(0.1 * solution.t),
@@ -272,8 +281,9 @@ class TestIDAKLUSolver(unittest.TestCase):
                     options={"jax_evaluator": "iree"} if form == "iree" else {},
                 )
 
-                t_eval = np.linspace(0, 3, 100)
-                t_interp = t_eval
+                t_interp = np.linspace(0, 3, 100)
+                t_eval = np.array([t_interp[0], t_interp[-1]])
+
                 a_value = 0.1
 
                 sol = solver.solve(
@@ -475,8 +485,8 @@ class TestIDAKLUSolver(unittest.TestCase):
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_eval = np.linspace(0, 3, 100)
-            t_interp = t_eval
+            t_interp = np.linspace(0, 3, 100)
+            t_eval = np.array([t_interp[0], t_interp[-1]])
 
             a_value = 0.1
             b_value = 0.0
@@ -673,8 +683,8 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = np.linspace(0, 1)
-        t_interp = t_eval
+        t_interp = np.linspace(0, 1)
+        t_eval = np.array([t_interp[0], t_interp[-1]])
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 

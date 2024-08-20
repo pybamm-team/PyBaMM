@@ -42,7 +42,7 @@ class ScipySolver(pybamm.BaseSolver):
             atol=atol,
             extrap_tol=extrap_tol,
         )
-        self.ode_solver = True
+        self._ode_solver = True
         self.extra_options = extra_options or {}
         self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")

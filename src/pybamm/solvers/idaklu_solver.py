@@ -894,11 +894,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 inputs,
                 self._setup["number_of_sensitivity_parameters"],
             )
-        # for i,t in enumerate(sol.t):
-        #     print(f"{i}: {t}")
         integration_time = timer.time()
-        # print(sol.t)
-        # print(sol.y)
 
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"

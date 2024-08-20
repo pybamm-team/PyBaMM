@@ -563,8 +563,7 @@ class IDAKLUJax:
         model : :class:`pybamm.BaseModel`
             The model to be solved
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None, the times in the model
-            are used.
+            The times at which to stop the integration due to a discontinuity in time.
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
         calculate_sensitivities : bool, optional

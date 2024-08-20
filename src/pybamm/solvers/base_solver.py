@@ -63,12 +63,44 @@ class BaseSolver:
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
-        self.ode_solver = False
-        self.algebraic_solver = False
+        self._ode_solver = False
+        self._algebraic_solver = False
         self._supports_interp = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
+
+    @property
+    def ode_solver(self):
+        return self._ode_solver
+
+    @ode_solver.setter
+    def ode_solver(self, value):
+        if not isinstance(value, bool):
+            raise ValueError("ode_solver must be a boolean value")
+        self._ode_solver = value
+
+    @property
+    def algebraic_solver(self):
+        return self._algebraic_solver
+
+    @algebraic_solver.setter
+    def algebraic_solver(self, value):
+        if not isinstance(value, bool):
+            raise ValueError("algebraic_solver must be a boolean value")
+        self._algebraic_solver = value
+
+    @property
+    def supports_interp(self):
+        return self._supports_interp
+
+    @supports_interp.setter
+    def supports_interp(self, value):
+        if not isinstance(value, bool):
+            raise ValueError("supports_interp must be a boolean value")
+        elif value and not isinstance(self, pybamm.IDAKLUSolver):
+            raise ValueError("Interpolation is only supported for `IDAKLUSolver`")
+        self._supports_interp = value
 
     @property
     def root_method(self):
@@ -84,7 +116,7 @@ class BaseSolver:
             method is None
             or (
                 isinstance(method, pybamm.BaseSolver)
-                and method.algebraic_solver is True
+                and method._algebraic_solver is True
             )
         ):
             raise pybamm.SolverError("Root method must be an algebraic solver")
@@ -108,7 +140,7 @@ class BaseSolver:
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
-            The times (in seconds) at which to compute the solution
+            The times at which to stop the integration due to a discontinuity in time.
         """
         inputs = inputs or {}
 
@@ -740,7 +772,7 @@ class BaseSolver:
                     "initial time and tf is the final time, but has been provided "
                     f"as a list of length {len(t_eval)}."
                 )
-            elif not self._supports_interp:
+            elif not self.supports_interp:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # Make sure t_eval is monotonic
@@ -1056,7 +1088,7 @@ class BaseSolver:
 
     def process_t_interp(self, t_interp):
         # set a variable for this
-        no_interp = (not self._supports_interp) and (
+        no_interp = (not self.supports_interp) and (
             t_interp is not None and len(t_interp) != 0
         )
         if no_interp:
@@ -1170,6 +1202,8 @@ class BaseSolver:
             # the start of the next step
             t_start_shifted = t_start + step_start_offset
             t_eval[0] = t_start_shifted
+            if t_interp.size > 0 and t_interp[0] == t_start:
+                t_interp[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()

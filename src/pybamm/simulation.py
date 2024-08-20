@@ -362,11 +362,14 @@ class Simulation:
         Parameters
         ----------
         t_eval : numeric type, optional
-            The times (in seconds) at which to compute the solution. Can be
-            provided as an array of times at which to return the solution, or as a
-            list `[t0, tf]` where `t0` is the initial time and `tf` is the final time.
-            If provided as a list the solution is returned at 100 points within the
-            interval `[t0, tf]`.
+            The times at which to stop the integration due to a discontinuity in time.
+            Can be provided as an array of times at which to return the solution, or as
+            a list `[t0, tf]` where `t0` is the initial time and `tf` is the final
+            time. If the solver does not support intra-solve interpolation, providing
+            `t_eval` as a list returns the solution at 100 points within the interval
+            `[t0, tf]`. Otherwise, the solution is returned at the times specified in
+            `t_interp` or as a result of the adaptive time-stepping solution. See the
+            `t_interp` argument for more details.
 
             If not using an experiment or running a drive cycle simulation (current
             provided as data) `t_eval` *must* be provided.
@@ -490,7 +493,7 @@ class Simulation:
                         )
 
             self._solution = solver.solve(
-                self._built_model, t_eval, inputs=inputs, **kwargs
+                self._built_model, t_eval, inputs=inputs, t_interp=t_interp, **kwargs
             )
 
         elif self.operating_mode == "with experiment":

@@ -328,16 +328,16 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // Process the time inputs
   // 1. Get the sorted and unique t_eval vector
-  auto const t_eval = makeSortedUnique<realtype>(t_eval_np);
+  auto const t_eval = makeSortedUnique(t_eval_np);
 
   // 2.1. Get the sorted and unique t_interp vector
-  auto const t_interp_unique_sorted = makeSortedUnique<realtype>(t_interp_np);
+  auto const t_interp_unique_sorted = makeSortedUnique(t_interp_np);
 
   // 2.2 Remove the t_eval values from t_interp
-  auto const t_interp_setdiff = setDiff<realtype>(t_interp_unique_sorted, t_eval);
+  auto const t_interp_setdiff = setDiff(t_interp_unique_sorted, t_eval);
 
   // 2.3 Finally, get the sorted and unique t_interp vector with t_eval values removed
-  auto const t_interp = makeSortedUnique<realtype>(t_interp_setdiff);
+  auto const t_interp = makeSortedUnique(t_interp_setdiff);
 
   int const number_of_evals = t_eval.size();
   int const number_of_interps = t_interp.size();
@@ -432,12 +432,16 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
   }
 
+  // Prepare first time step
+  i_eval = 1;
+  realtype t_eval_next = t_eval[i_eval];
+
   // Consistent initialization
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
     DEBUG("IDACalcIC");
     // IDACalcIC will throw a warning if it fails to find initial conditions
-    IDACalcIC(ida_mem, init_type, t_eval[1]);
+    IDACalcIC(ida_mem, init_type, t_eval_next);
   }
 
   if (sensitivity) {
@@ -446,10 +450,6 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // Store Consistent initialization
   SetStep(t0, y_val, yS_val, i_save);
-
-  // Prepare next stop time
-  i_eval = 1;
-  realtype t_eval_next = t_eval[i_eval];
 
   // Set the initial stop time
   IDASetStopTime(ida_mem, t_eval_next);
@@ -496,7 +496,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
 
     if (hit_adaptive || hit_teval || hit_event) {
       if (hit_tinterp) {
-        // Reset the states and sensitivities t = t_val
+        // Reset the states and sensitivities at t = t_val
         CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
         if (sensitivity) {
           CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
@@ -679,9 +679,6 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStep(
   DEBUG("IDAKLUSolver::SetStep");
 
   // Time
-  // if (i_save >= t.size()) {
-  //   ExtendAdaptiveArrays();
-  // }
   t[i_save] = tval;
 
   if (save_outputs_only) {
@@ -709,8 +706,6 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
   // Save the state at the requested time
   DEBUG("IDAKLUSolver::SetStepInterp");
 
-  // int count = 0;
-  // auto i_interp_start = i_interp;
   while (i_interp <= (t_interp.size()-1) && t_interp_next <= t_val) {
     CheckErrors(IDAGetDky(ida_mem, t_interp_next, 0, yy));
     if (sensitivity) {
@@ -721,7 +716,6 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
     SetStep(t_interp_next, y_val, yS_val, i_save);
 
     i_interp++;
-    // count++;
     if (i_interp == (t_interp.size())) {
       // Reached the final t_interp value
       break;
