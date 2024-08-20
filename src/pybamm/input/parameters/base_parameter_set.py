@@ -1,4 +1,3 @@
-
 class AbstractBaseParameters:
     _details = {}
     _sei = {}

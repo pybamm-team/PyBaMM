@@ -20,7 +20,7 @@ class Chen2020(AbstractBaseParameters):
     """
 
     def __init__(self):
-        super().__init__(self)
+        super().__init__()
 
         self._details = {
             "chemistry": "lithium_ion",
@@ -170,16 +170,13 @@ class Chen2020(AbstractBaseParameters):
         :class:`pybamm.Symbol`
             Open-circuit potential
         """
-
-        u_eq = (
+        return (
             1.9793 * np.exp(-39.3631 * sto)
             + 0.2482
             - 0.0909 * np.tanh(29.8538 * (sto - 0.1234))
             - 0.04478 * np.tanh(14.9159 * (sto - 0.2769))
             - 0.0205 * np.tanh(30.4444 * (sto - 0.6103))
         )
-
-        return u_eq
 
     @staticmethod
     def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -243,16 +240,13 @@ class Chen2020(AbstractBaseParameters):
         :class:`pybamm.Symbol`
             Open-circuit potential
         """
-
-        u_eq = (
+        return (
             -0.8090 * sto
             + 4.4875
             - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
             - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
             + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
         )
-
-        return u_eq
 
     @staticmethod
     def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(
@@ -317,11 +311,7 @@ class Chen2020(AbstractBaseParameters):
         :class:`pybamm.Symbol`
             Solid diffusivity
         """
-
-        D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
-
-        # Nyman et al. (2008) does not provide temperature dependence
-        return D_c_e
+        return 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
 
     @staticmethod
     def electrolyte_conductivity_Nyman2008(c_e, T):
@@ -347,16 +337,12 @@ class Chen2020(AbstractBaseParameters):
         :class:`pybamm.Symbol`
             Solid diffusivity
         """
-
-        sigma_e = (
+        # Nyman et al. (2008) does not provide temperature dependence
+        return (
             0.1297 * (c_e / 1000) ** 3
             - 2.51 * (c_e / 1000) ** 1.5
             + 3.329 * (c_e / 1000)
         )
-
-        # Nyman et al. (2008) does not provide temperature dependence
-        return sigma_e
-
 
 
 def get_parameter_values():

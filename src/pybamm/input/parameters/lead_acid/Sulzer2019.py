@@ -12,14 +12,13 @@ def lead_ocp_Bode1977(m):
     .. [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
 
     """
-    U = (
+    return (
         -0.294
         - 0.074 * np.log10(m)
         - 0.030 * np.log10(m) ** 2
         - 0.031 * np.log10(m) ** 3
         - 0.012 * np.log10(m) ** 4
     )
-    return U
 
 
 def lead_exchange_current_density_Sulzer2019(c_e, T):
@@ -49,9 +48,7 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
     """
     j0_ref = 0.06  # srinivasan2003mathematical
     c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
-    j0 = j0_ref * (c_e / c_e_init)
-
-    return j0
+    return j0_ref * (c_e / c_e_init)
 
 
 def lead_dioxide_ocp_Bode1977(m):
@@ -64,14 +61,13 @@ def lead_dioxide_ocp_Bode1977(m):
     .. [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
 
     """
-    U = (
+    return (
         1.628
         + 0.074 * np.log10(m)
         + 0.033 * np.log10(m) ** 2
         + 0.043 * np.log10(m) ** 3
         + 0.022 * np.log10(m) ** 4
     )
-    return U
 
 
 def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
@@ -107,9 +103,7 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     c_w = c_w_dim / c_w_ref
 
     j0_ref = 0.004  # srinivasan2003mathematical
-    j0 = j0_ref * (c_e / param.c_e_init) ** 2 * c_w
-
-    return j0
+    return j0_ref * (c_e / param.c_e_init) ** 2 * c_w
 
 
 def oxygen_exchange_current_density_Sulzer2019(c_e, T):
@@ -138,9 +132,7 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
     """
     j0_ref = 2.5e-23  # srinivasan2003mathematical
     c_e_init = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
-    j0 = j0_ref * (c_e / c_e_init)
-
-    return j0
+    return j0_ref * (c_e / c_e_init)
 
 
 def conductivity_Gu1997(c_e):
