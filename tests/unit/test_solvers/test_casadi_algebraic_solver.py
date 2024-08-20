@@ -7,7 +7,7 @@ import tests
 
 
 class TestCasadiAlgebraicSolver(unittest.TestCase):
-    def testalgebraic_solver_init(self):
+    def test_algebraic_solver_init(self):
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-4)
         self.assertEqual(solver.tol, 1e-4)
 

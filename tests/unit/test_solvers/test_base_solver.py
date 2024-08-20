@@ -73,6 +73,9 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.supports_interp = "test"
 
+        if not pybamm.have_idaklu():
+            return
+
         with self.assertRaisesRegex(
             ValueError, "Interpolation is only supported for `IDAKLUSolver`"
         ):

@@ -9,7 +9,7 @@ from tests import get_discretisation_for_testing
 
 
 class TestAlgebraicSolver(unittest.TestCase):
-    def testalgebraic_solver_init(self):
+    def test_algebraic_solver_init(self):
         solver = pybamm.AlgebraicSolver(
             method="hybr", tol=1e-4, extra_options={"maxfev": 100}
         )
