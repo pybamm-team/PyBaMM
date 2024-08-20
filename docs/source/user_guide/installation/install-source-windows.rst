@@ -126,7 +126,7 @@ Note that running ``nox`` will create new virtual environments for you to use, s
 After installing the above packages, you need to add the following location to your ``Path`` environment variable to be able to run ``nox`` in a terminal, like command prompt.
 Follow the instructions given above for VCPKG to add it to the ``Path``.
 
-.. code:: python
+.. code::
 
 	C:\Users\<USERNAME>\AppData\Roaming\Python\Python312\Scripts
 
