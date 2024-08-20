@@ -1,6 +1,12 @@
 import pybamm
 import os
 import numpy as np
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class OKane2022(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):

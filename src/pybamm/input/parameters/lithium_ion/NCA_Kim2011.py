@@ -1,5 +1,11 @@
 import pybamm
 import numpy as np
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class Kim2020NCA(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def graphite_diffusivity_Kim2011(sto, T):

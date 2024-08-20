@@ -1,6 +1,12 @@
 import pybamm
 import os
 import numpy as np
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class Chen2020Composite(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(

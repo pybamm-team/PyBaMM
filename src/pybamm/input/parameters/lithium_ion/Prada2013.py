@@ -1,5 +1,11 @@
 import pybamm
 import numpy as np
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class Prada2013(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def graphite_LGM50_ocp_Chen2020(sto):

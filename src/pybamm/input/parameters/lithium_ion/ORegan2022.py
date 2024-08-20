@@ -1,5 +1,11 @@
 import pybamm
 import numpy as np
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class ORegan2022(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):

@@ -1,5 +1,11 @@
 import pybamm
 import os
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class OKane2022GraphiteSiOxHalfCell(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):

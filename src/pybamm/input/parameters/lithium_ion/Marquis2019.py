@@ -1,5 +1,11 @@
 import pybamm
 import numpy as np
+from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
+
+
+class Marquis2019(AbstractBaseParameters):
+    def __init__(self):
+        super().__init__()
 
 
 def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
