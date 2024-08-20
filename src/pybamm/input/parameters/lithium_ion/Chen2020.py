@@ -206,8 +206,7 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     return sigma_e
 
 
-# Call dict via a function to avoid errors when editing in place
-def get_parameter_values():
+class Chen2020:
     """
     Parameters for an LG M50 cell, from the paper :footcite:t:`Chen2020` and references
     therein.
@@ -219,13 +218,16 @@ def get_parameter_values():
 
     .. note::
         This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values that were used to fit SEI models to
+        values. Instead, these are parameter values that were used to fit SEI models to
         observed experimental data in the referenced papers.
     """
 
-    return {
+    _details = {
         "chemistry": "lithium_ion",
-        # sei
+        "citations": ["Chen2020"],
+    }
+
+    _sei = {
         "Ratio of lithium moles to SEI moles": 2.0,
         "Inner SEI reaction proportion": 0.5,
         "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
@@ -248,7 +250,9 @@ def get_parameter_values():
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        # cell
+    }
+
+    _cell = {
         "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,
         "Separator thickness [m]": 1.2e-05,
@@ -270,7 +274,9 @@ def get_parameter_values():
         "Nominal cell capacity [A.h]": 5.0,
         "Current function [A]": 5.0,
         "Contact resistance [Ohm]": 0,
-        # negative electrode
+    }
+
+    _negative_electrode = {
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
         "Negative particle diffusivity [m2.s-1]": 3.3e-14,
@@ -288,7 +294,9 @@ def get_parameter_values():
         "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
         "Negative electrode OCP entropic change [V.K-1]": 0.0,
-        # positive electrode
+    }
+
+    _positive_electrode = {
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
         "Positive particle diffusivity [m2.s-1]": 4e-15,
@@ -306,19 +314,25 @@ def get_parameter_values():
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
         "Positive electrode OCP entropic change [V.K-1]": 0.0,
-        # separator
+    }
+
+    _seperator = {
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
         "Separator density [kg.m-3]": 397.0,
         "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
         "Separator thermal conductivity [W.m-1.K-1]": 0.16,
-        # electrolyte
+    }
+
+    _electrolyte = {
         "Initial concentration in electrolyte [mol.m-3]": 1000.0,
         "Cation transference number": 0.2594,
         "Thermodynamic factor": 1.0,
         "Electrolyte diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Nyman2008,
-        # experiment
+    }
+
+    _experiment = {
         "Reference temperature [K]": 298.15,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Ambient temperature [K]": 298.15,
@@ -331,6 +345,23 @@ def get_parameter_values():
         "Initial concentration in negative electrode [mol.m-3]": 29866.0,
         "Initial concentration in positive electrode [mol.m-3]": 17038.0,
         "Initial temperature [K]": 298.15,
-        # citations
-        "citations": ["Chen2020"],
     }
+
+    def get_param_set(self):
+        full_set = {}
+        for sub_set in [
+            self._details,
+            self._sei,
+            self._cell,
+            self._negative_electrode,
+            self._positive_electrode,
+            self._seperator,
+            self._electrolyte,
+            self._experiment,
+        ]:
+            full_set.update(sub_set)
+        return full_set
+
+
+def get_parameter_values():
+    return Chen2020().get_param_set()
