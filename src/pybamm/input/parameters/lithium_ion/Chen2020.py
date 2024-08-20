@@ -52,31 +52,45 @@ class Chen2020(AbstractBaseParameters):
             "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         }
 
+        self._thermal = {
+            "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
+            "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
+            "Cell cooling surface area [m2]": 0.00531,
+            "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
+            "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
+            "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
+            "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
+            "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
+            "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
+            "Positive electrode specific heat capacity [J.kg-1.K-1]": 700.0,
+            "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
+            "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
+            "Separator thermal conductivity [W.m-1.K-1]": 0.16,
+        }
+
         self._cell = {
-            "Negative current collector thickness [m]": 1.2e-05,
-            "Negative electrode thickness [m]": 8.52e-05,
-            "Separator thickness [m]": 1.2e-05,
-            "Positive electrode thickness [m]": 7.56e-05,
-            "Positive current collector thickness [m]": 1.6e-05,
             "Electrode height [m]": 0.065,
             "Electrode width [m]": 1.58,
-            "Cell cooling surface area [m2]": 0.00531,
             "Cell volume [m3]": 2.42e-05,
-            "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
-            "Negative current collector conductivity [S.m-1]": 58411000.0,
-            "Positive current collector conductivity [S.m-1]": 36914000.0,
-            "Negative current collector density [kg.m-3]": 8960.0,
-            "Positive current collector density [kg.m-3]": 2700.0,
-            "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
-            "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
-            "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
-            "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
             "Nominal cell capacity [A.h]": 5.0,
             "Current function [A]": 5.0,
             "Contact resistance [Ohm]": 0,
+            "Reference temperature [K]": 298.15,
+            "Ambient temperature [K]": 298.15,
+            "Number of electrodes connected in parallel to make a cell": 1.0,
+            "Number of cells connected in series to make a battery": 1.0,
+            "Lower voltage cut-off [V]": 2.5,
+            "Upper voltage cut-off [V]": 4.2,
+            "Open-circuit voltage at 0% SOC [V]": 2.5,
+            "Open-circuit voltage at 100% SOC [V]": 4.2,
+            "Initial concentration in negative electrode [mol.m-3]": 29866.0,
+            "Initial concentration in positive electrode [mol.m-3]": 17038.0,
+            "Initial temperature [K]": 298.15,
         }
 
         self._negative_electrode = {
+            "Negative current collector thickness [m]": 1.2e-05,
+            "Negative electrode thickness [m]": 8.52e-05,
             "Negative electrode conductivity [S.m-1]": 215.0,
             "Maximum concentration in negative electrode [mol.m-3]": 33133.0,
             "Negative particle diffusivity [m2.s-1]": 3.3e-14,
@@ -91,12 +105,14 @@ class Chen2020(AbstractBaseParameters):
             "Negative electrode exchange-current density [A.m-2]"
             "": self.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,
             "Negative electrode density [kg.m-3]": 1657.0,
-            "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
-            "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
             "Negative electrode OCP entropic change [V.K-1]": 0.0,
+            "Negative current collector conductivity [S.m-1]": 58411000.0,
+            "Negative current collector density [kg.m-3]": 8960.0,
         }
 
         self._positive_electrode = {
+            "Positive electrode thickness [m]": 7.56e-05,
+            "Positive current collector thickness [m]": 1.6e-05,
             "Positive electrode conductivity [S.m-1]": 0.18,
             "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
             "Positive particle diffusivity [m2.s-1]": 4e-15,
@@ -111,17 +127,16 @@ class Chen2020(AbstractBaseParameters):
             "Positive electrode exchange-current density [A.m-2]"
             "": self.nmc_LGM50_electrolyte_exchange_current_density_Chen2020,
             "Positive electrode density [kg.m-3]": 3262.0,
-            "Positive electrode specific heat capacity [J.kg-1.K-1]": 700.0,
-            "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
             "Positive electrode OCP entropic change [V.K-1]": 0.0,
+            "Positive current collector conductivity [S.m-1]": 36914000.0,
+            "Positive current collector density [kg.m-3]": 2700.0,
         }
 
         self._seperator = {
+            "Separator thickness [m]": 1.2e-05,
             "Separator porosity": 0.47,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
             "Separator density [kg.m-3]": 397.0,
-            "Separator specific heat capacity [J.kg-1.K-1]": 700.0,
-            "Separator thermal conductivity [W.m-1.K-1]": 0.16,
         }
 
         self._electrolyte = {
@@ -130,21 +145,6 @@ class Chen2020(AbstractBaseParameters):
             "Thermodynamic factor": 1.0,
             "Electrolyte diffusivity [m2.s-1]": self.electrolyte_diffusivity_Nyman2008,
             "Electrolyte conductivity [S.m-1]": self.electrolyte_conductivity_Nyman2008,
-        }
-
-        self._experiment = {
-            "Reference temperature [K]": 298.15,
-            "Total heat transfer coefficient [W.m-2.K-1]": 10.0,
-            "Ambient temperature [K]": 298.15,
-            "Number of electrodes connected in parallel to make a cell": 1.0,
-            "Number of cells connected in series to make a battery": 1.0,
-            "Lower voltage cut-off [V]": 2.5,
-            "Upper voltage cut-off [V]": 4.2,
-            "Open-circuit voltage at 0% SOC [V]": 2.5,
-            "Open-circuit voltage at 100% SOC [V]": 4.2,
-            "Initial concentration in negative electrode [mol.m-3]": 29866.0,
-            "Initial concentration in positive electrode [mol.m-3]": 17038.0,
-            "Initial temperature [K]": 298.15,
         }
 
     @staticmethod
