@@ -65,7 +65,6 @@ class Sulzer2019(AbstractBaseParameters):
             "Negative tab centre y-coordinate [m]": 0.06,
             "Negative tab centre z-coordinate [m]": 0.114,
             "Negative current collector density [kg.m-3]": 11300.0,
-
             "Negative electrode conductivity [S.m-1]": 4800000.0,
             "Negative electrode pore size [m]": 1e-07,
             "Maximum porosity of negative electrode": 0.53,
@@ -95,7 +94,6 @@ class Sulzer2019(AbstractBaseParameters):
             "Hydrogen reference OCP vs SHE [V]": 0.0,
             "Negative electrode double-layer capacity [F.m-2]": 0.2,
             "Negative electrode density [kg.m-3]": 11300.0,
-
         }
 
         self._positive_electrode = {
@@ -105,7 +103,6 @@ class Sulzer2019(AbstractBaseParameters):
             "Positive tab centre y-coordinate [m]": 0.147,
             "Positive tab centre z-coordinate [m]": 0.114,
             "Positive current collector density [kg.m-3]": 9375.0,
-
             "Positive electrode conductivity [S.m-1]": 80000.0,
             "Positive electrode pore size [m]": 1e-07,
             "Maximum porosity of positive electrode": 0.57,
@@ -127,7 +124,6 @@ class Sulzer2019(AbstractBaseParameters):
             "": 0.0,
             "Positive electrode double-layer capacity [F.m-2]": 0.2,
             "Positive electrode density [kg.m-3]": 9375.0,
-
         }
 
         self._seperator = {
@@ -135,7 +131,6 @@ class Sulzer2019(AbstractBaseParameters):
             "Maximum porosity of separator": 0.92,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
             "Separator density [kg.m-3]": 1680.0,
-
         }
 
         self._electrolyte = {
