@@ -38,6 +38,49 @@ class TestBaseSolver(unittest.TestCase):
         ):
             pybamm.BaseSolver(root_method=pybamm.ScipySolver())
 
+    def test_ode_solver_init(self):
+        solver = pybamm.BaseSolver()
+        solver.ode_solver = True
+        self.assertEqual(solver.ode_solver, True)
+
+        solver.ode_solver = False
+        self.assertEqual(solver.ode_solver, False)
+
+        with self.assertRaisesRegex(ValueError, "ode_solver must be a boolean value"):
+            solver.ode_solver = "test"
+
+    def test_algebraic_solver_init(self):
+        solver = pybamm.BaseSolver()
+        solver.algebraic_solver = True
+        self.assertEqual(solver.algebraic_solver, True)
+
+        solver.algebraic_solver = False
+        self.assertEqual(solver.algebraic_solver, False)
+
+        with self.assertRaisesRegex(
+            ValueError, "algebraic_solver must be a boolean value"
+        ):
+            solver.algebraic_solver = "test"
+
+    def test_supports_interp_init(self):
+        solver = pybamm.BaseSolver()
+
+        solver.supports_interp = False
+        self.assertEqual(solver.supports_interp, False)
+
+        with self.assertRaisesRegex(
+            ValueError, "supports_interp must be a boolean value"
+        ):
+            solver.supports_interp = "test"
+
+        with self.assertRaisesRegex(
+            ValueError, "Interpolation is only supported for `IDAKLUSolver`"
+        ):
+            solver.supports_interp = True
+
+        solver_ida = pybamm.IDAKLUSolver()
+        solver_ida.supports_interp = True
+
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
@@ -114,7 +157,7 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3]))
 
-    def test_ode_solver_fail_with_dae(self):
+    def testode_solver_fail_with_dae(self):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(1)
         model.algebraic = {a: a}

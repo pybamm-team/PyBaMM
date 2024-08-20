@@ -63,9 +63,9 @@ class BaseSolver:
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
-        self._ode_solver = False
-        self._algebraic_solver = False
-        self._supports_interp = False
+        self.ode_solver = False
+        self.algebraic_solver = False
+        self.supports_interp = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
@@ -116,7 +116,7 @@ class BaseSolver:
             method is None
             or (
                 isinstance(method, pybamm.BaseSolver)
-                and method._algebraic_solver is True
+                and method.algebraic_solver is True
             )
         ):
             raise pybamm.SolverError("Root method must be an algebraic solver")
@@ -647,7 +647,7 @@ class BaseSolver:
 
         """
 
-        if self.algebraic_solver or model.len_alg == 0:
+        if self._algebraic_solver or model.len_alg == 0:
             # Don't update model.y0
             return
 
@@ -852,7 +852,7 @@ class BaseSolver:
             self._model_set_up[model]["initial conditions"]
             != model.concatenated_initial_conditions
         ):
-            if self.algebraic_solver:
+            if self._algebraic_solver:
                 # For an algebraic solver, we don't need to set up the initial
                 # conditions function and we can just evaluate
                 # model.concatenated_initial_conditions
