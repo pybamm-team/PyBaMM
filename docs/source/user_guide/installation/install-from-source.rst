@@ -57,7 +57,7 @@ You can install the above with
 
     On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
-In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation. 
+In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation.
 
 To install ``tomlkit`` to your local user accout (ensure you are not within a virtual environment), use the following command:
 
@@ -101,11 +101,11 @@ For users requiring more control over the installation process, the ``pybamm-req
   .. code:: bash
 
       nox -s pybamm-requires -- --install-dir [custom_directory_path]
-  
+
   After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
 
   .. code:: bash
-	
+
 	  export INSTALL_DIR=[custom_directory_path]
 
 - ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
@@ -146,7 +146,7 @@ This script supports optional arguments for custom installations:
   After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
 
   .. code:: bash
-	
+
 	  export INSTALL_DIR=[custom_directory_path]
 
 - ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
@@ -364,20 +364,20 @@ Troubleshooting
 **Solution:** This error occurs when the build system, ``scikit-build-core``, can not find the SUNDIALS libraries to build the ``IDAKLU`` solver.
 
 1. Run the following command to ensure SUNDIALS libraries are installed:
-   
+
    .. code:: bash
 
 		nox -s pybamm-requires -- --force
 
 2. If you are using a custom directory for SUNDIALS, set the ``INSTALL_DIR`` environment variable to specify the path:
-   
+
    .. code:: bash
 
 		export INSTALL_DIR=[custom_directory_path]
 
 **Problem:** When installing SUNDIALS, I encountered ``CMake Error: The source "../CMakeLists.txt" does not match the source "../CMakeLists.txt" used to generate cache`` error.
 
-**Solution:** This error occurs when there is a delay between installing and downloading SUNDIALS libraries. 
+**Solution:** This error occurs when there is a delay between installing and downloading SUNDIALS libraries.
 
 1. Remove the following directories from the PyBaMM directory if they exist:
 
@@ -387,7 +387,7 @@ Troubleshooting
 
 2. Re-run the command to install SUNDIALS.
 3. If you are using a custom directory, make sure to set the ``INSTALL_DIR`` environment variable:
-   
+
    .. code:: bash
 
 		export INSTALL_DIR=[custom_directory_path]

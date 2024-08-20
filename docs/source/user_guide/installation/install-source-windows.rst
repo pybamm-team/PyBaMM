@@ -20,7 +20,7 @@ tick the box on ``Add Python 3.X to PATH``. For more detailed
 instructions please see the `official Python on Windows
 guide <https://docs.python.org/3.9/using/windows.html>`__.
 
-(Optional) If you wish to build the documentation locally, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, 
+(Optional) If you wish to build the documentation locally, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager,
 
 .. code:: bash
 
@@ -55,20 +55,20 @@ VCPKG automatically installs them for you during the build process. To learn mor
 
 To install VCPKG, follow the steps below:
 
-1. Open a Command Shell, and navigate to ``C:\``. 
-    * We are installing VCPKG in ``C:\vcpkg`` 
+1. Open a Command Shell, and navigate to ``C:\``.
+    * We are installing VCPKG in ``C:\vcpkg``
     * If you wish to install in a custom directory, make sure to change environment variable ``VCPKG_ROOT_DIR`` before installation as mentioned here in :ref:`installing-pybamm`.
-2. Clone VCPKG's GitHub repository 
-   
+2. Clone VCPKG's GitHub repository
+
    .. code:: bash
 
 	  git clone https://github.com/microsoft/vcpkg.git
 
-	
+
    * If you do not have Git installed, download and install it from the `official downloads page <https://git-scm.com/download/win>`_.
 
 3. Navigate inside VCPKG directory and install it:
-   
+
    .. code:: bash
 
 	  cd vcpkg && bootstrap-vcpkg.bat
@@ -76,12 +76,12 @@ To install VCPKG, follow the steps below:
 4. Add VCPKG directory to ``Path`` environment variable:
     * Copy the location ``C:\vcpkg``, or the location of your custom directory.
     * In the start menu, search for ``Edit the system environment variables`` and open it.
-    * Under the ``Advanced`` tab, click on ``Environment Variables`` 
+    * Under the ``Advanced`` tab, click on ``Environment Variables``
         .. image:: images-windows-source/pic2-env-var-open.png
-			:scale: 70% 
+			:scale: 70%
 
-	
-    * Select ``Path`` from ``user variables`` if you want to set VCPKG just for you, or use ``Path`` from ``system variables`` to set VCPKG for all the users using your system. 
+
+    * Select ``Path`` from ``user variables`` if you want to set VCPKG just for you, or use ``Path`` from ``system variables`` to set VCPKG for all the users using your system.
     	.. image:: images-windows-source/pic3-show-path.png
 		    :scale: 50%
 
@@ -99,14 +99,14 @@ CMake
 ~~~~~
 
 ``CMake`` is required to install the SUNDIALS and other libraries required for the ``IDAKLU`` solver.
-To install it, follow the link to the `official downloads page <https://cmake.org/download/>`_. 
+To install it, follow the link to the `official downloads page <https://cmake.org/download/>`_.
 
 Download an installer based on your system's architecture, i.e. ``x32/x64``, and make sure to check ``Add CMake to the PATH environment variable`` during installation.
 
 Python Packages
 ~~~~~~~~~~~~~~~
 
-In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation. 
+In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation.
 
 To install ``tomlkit`` to your local user accout (ensure you are not within a virtual environment), use the following command:
 
@@ -137,18 +137,18 @@ Make sure to replace ``<USERNAME>`` with your user name.
 Installing PyBaMM
 -----------------
 
-Open a Command Prompt and navigate to the folder where you want to install PyBaMM, 
+Open a Command Prompt and navigate to the folder where you want to install PyBaMM,
 
 1. Obtain the PyBaMM source code, clone the GitHub repository or download the source archive on the repository's homepage.
-   
+
    .. code:: bash
-	  
+
 		  git clone https://github.com/pybamm-team/PyBaMM.git
 
 2. Set the following environment variables by pasting the commands to your Command Prompt.
 
    .. code-block:: bash
-	  
+
 		  set PYBAMM_USE_VCPKG=ON
 		  set VCPKG_ROOT_DIR=C:\vcpkg
 		  set VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
@@ -158,7 +158,7 @@ Open a Command Prompt and navigate to the folder where you want to install PyBaM
 
 3. To check if the environment variables are properly set, try executing ``set CMAKE_GENERATOR_PLATFORM`` command to get an output ``CMAKE_GENERATOR_PLATFORM=x64``.
 
-.. note:: 
+.. note::
 
 	The environment variables set through Command Prompt will expire as soon as the session, i.e. terminal, is closed. Hence, the ``IDAKLU`` solver would not compile with the build commands if you closed and reopened the terminal.
 
