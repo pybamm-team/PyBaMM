@@ -44,6 +44,9 @@ input/*
 # keep images required by notebooks
 !docs/examples/notebooks/creating_models/SEI.png
 
+# keep images required for installation guide
+!docs/source/user_guide/installation/images-windows-source/*.png
+
 # simulation outputs
 out/
 config.py

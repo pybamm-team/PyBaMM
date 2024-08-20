@@ -217,7 +217,10 @@ def set_dev(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
-    python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
+    if sys.platform == "win32":
+        python = os.fsdecode(VENV_DIR.joinpath("Scripts\\python"))
+    else:
+        python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
     with open("pyproject.toml", encoding="utf-8") as file:
         toml_data = tomlkit.parse(file.read())

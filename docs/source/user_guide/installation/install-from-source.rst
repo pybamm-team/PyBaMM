@@ -32,6 +32,8 @@ To install PyBaMM, you will need:
 - A Fortran compiler (ex: ``gfortran``).
 - ``graphviz`` (optional), if you wish to build the documentation locally.
 - ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
+- ``texlive-latex-extra`` (optional) to convert model equations in latex.
+- ``dvipng`` (optional) to convert a DVI file to a PNG image.
 
 You can install the above with
 
@@ -39,7 +41,7 @@ You can install the above with
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake pandoc
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake pandoc texlive-latex-extra dvipng
 
 	Where ``X`` is the version sub-number.
 
@@ -51,9 +53,17 @@ You can install the above with
 
 .. note::
 
-    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc``.
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc, texlive-latex-extra, dvipng``.
 
     On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+
+In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation. 
+
+To install ``tomlkit`` to your local user accout (ensure you are not within a virtual environment), use the following command:
+
+.. code:: bash
+
+	  python3.X -m pip install --user tomlkit
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
 You can install it to your local user account (make sure you are not within a virtual environment) with
@@ -74,16 +84,13 @@ PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS 
 To use this solver, you must make sure that you have the necessary SUNDIALS components
 installed on your system.
 
-The IDA-based solver is currently unavailable on windows.
-If you are running windows, you can simply skip this section and jump to :ref:`pybamm-install`.
-
 .. code:: bash
 
 	  # in the PyBaMM/ directory
 	  nox -s pybamm-requires
 
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
-Both libraries are installed in ``~/.local``.
+Both libraries are installed in ``PyBaMM/sundials_KLU_libs``.
 
 For users requiring more control over the installation process, the ``pybamm-requires`` session supports additional command-line arguments:
 
@@ -94,6 +101,12 @@ For users requiring more control over the installation process, the ``pybamm-req
   .. code:: bash
 
       nox -s pybamm-requires -- --install-dir [custom_directory_path]
+  
+  After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
+
+  .. code:: bash
+	
+	  export INSTALL_DIR=[custom_directory_path]
 
 - ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
 
@@ -111,7 +124,6 @@ If you'd rather do things yourself,
 1. Make sure you have CMake installed
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
-4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
 
 
 PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
@@ -123,13 +135,19 @@ PyBaMM ships with a Python script that automates points 2. and 3. You can run it
 This script supports optional arguments for custom installations:
 
 - ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
-  By default, they are installed in ``~/.local``.
+  By default, they are installed in ``PyBaMM/sundials_KLU_libs``.
 
   Example:
 
   .. code:: bash
 
-      python scripts/install_KLU_Sundials.py --install-dir [custom_directory_path]
+	  python scripts/install_KLU_Sundials.py --install-dir [custom_directory_path]
+
+  After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
+
+  .. code:: bash
+	
+	  export INSTALL_DIR=[custom_directory_path]
 
 - ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
 
@@ -179,25 +197,62 @@ and run the tests to check your installation.
 Manual install
 ~~~~~~~~~~~~~~
 
-From the ``PyBaMM/`` directory, you can install PyBaMM using
+We recommend to install PyBaMM within a virtual environment, in order
+not to alter any distribution Python files.
+
+To create a virtual environment ``env`` within your current directory type:
+
+.. code:: bash
+
+   virtualenv env
+
+You can then “activate” the environment using:
+
+.. code:: bash
+
+   source env/bin/activate
+
+Now all the calls to pip described below will install PyBaMM and its
+dependencies into the environment ``env``. When you are ready to exit
+the environment and go back to your original system, just type:
+
+.. code:: bash
+
+   deactivate
+
+From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
 
 .. code:: bash
 
 	  pip install .
 
-If you intend to contribute to the development of PyBaMM, it is convenient to
-install in "editable mode", along with all the optional dependencies and useful
-tools for development and documentation:
+If you want to install PyBaMM in an "editable mode", use the following command:
 
 .. code:: bash
 
-	  pip install -e .[all,dev,docs]
+	  pip install -e .
+
+If you intend to contribute to the development of PyBaMM, it is convenient to
+install in "editable mode", along with all the optional dependencies and useful
+tools for development and documentation.
+
+Due to the ``--no-build-isolation`` flag in the "editable mode" command, you first need to install the build-time dependencies inside the virtual environment:
+
+.. code:: bash
+
+	pip install scikit-build-core==0.10.3 casadi cmake pybind11
+
+You can now install PyBaMM in "editable mode" for development using the following commands:
+
+.. code:: bash
+
+	  pip install --no-build-isolation --config-settings=editable.rebuild=true -ve .[all,dev,docs]
 
 If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
 .. code:: bash
 
-	  pip install -e '.[all,dev,docs]'
+	  pip install --no-build-isolation --config-settings=editable.rebuild=true -ve '.[all,dev,docs]'
 
 Before you start contributing to PyBaMM, please read the `contributing
 guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
@@ -304,36 +359,53 @@ Here are some additional useful commands you can run with ``Nox``:
 Troubleshooting
 ---------------
 
+**Problem:** I ran a ``nox``/python build command and encountered ``Could NOT find SUNDIALS (missing: SUNDIALS_INCLUDE_DIR SUNDIALS_LIBRARIES)`` error.
+
+**Solution:** This error occurs when the build system, ``scikit-build-core``, can not find the SUNDIALS libraries to build the ``IDAKLU`` solver.
+
+1. Run the following command to ensure SUNDIALS libraries are installed:
+   
+   .. code:: bash
+
+		nox -s pybamm-requires -- --force
+
+2. If you are using a custom directory for SUNDIALS, set the ``INSTALL_DIR`` environment variable to specify the path:
+   
+   .. code:: bash
+
+		export INSTALL_DIR=[custom_directory_path]
+
+**Problem:** When installing SUNDIALS, I encountered ``CMake Error: The source "../CMakeLists.txt" does not match the source "../CMakeLists.txt" used to generate cache`` error.
+
+**Solution:** This error occurs when there is a delay between installing and downloading SUNDIALS libraries. 
+
+1. Remove the following directories from the PyBaMM directory if they exist:
+
+   a. ``download_KLU_Sundials``
+   b. ``sundials_KLU_libs``
+   c. Any custom directory you have set for installation
+
+2. Re-run the command to install SUNDIALS.
+3. If you are using a custom directory, make sure to set the ``INSTALL_DIR`` environment variable:
+   
+   .. code:: bash
+
+		export INSTALL_DIR=[custom_directory_path]
+
 **Problem:** I have made edits to source files in PyBaMM, but these are
 not being used when I run my Python script.
 
-**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
-i.e. ``pip install -e .``. This sets the installed location of the
+**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag, like so:
+
+.. code:: bash
+
+	pip install -ve .
+
+If you want to install to contribute to PyBaMM, use this command:
+
+.. code:: bash
+
+	pip install --no-build-isolation --config-settings=editable.rebuild=true -ve .[all,dev,docs]
+
+This sets the installed location of the
 source files to your current directory.
-
-**Problem:** Errors when solving model
-``ValueError: Integrator name ida does not exist``, or
-``ValueError: Integrator name cvode does not exist``.
-
-**Solution:** This could mean that you have not installed
-``scikits.odes`` correctly, check the instructions given above and make
-sure each command was successful.
-
-One possibility is that you have not set your ``LD_LIBRARY_PATH`` to
-point to the sundials library, type ``echo $LD_LIBRARY_PATH`` and make
-sure one of the directories printed out corresponds to where the
-SUNDIALS libraries are located.
-
-Another common reason is that you forget to install a BLAS library such
-as OpenBLAS before installing SUNDIALS. Check the cmake output when you
-configured SUNDIALS, it might say:
-
-::
-
-   -- A library with BLAS API not found. Please specify library location.
-   -- LAPACK requires BLAS
-
-If this is the case, on a Debian or Ubuntu system you can install
-OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
-``brew install openblas`` for Mac OS) and then re-install SUNDIALS using
-the instructions above.
