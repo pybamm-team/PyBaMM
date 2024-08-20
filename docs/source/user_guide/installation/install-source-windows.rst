@@ -65,7 +65,7 @@ To install VCPKG, follow the steps below:
 	  git clone https://github.com/microsoft/vcpkg.git
 
 
-   * If you do not have Git installed, download and install it from the `official downloads page <https://git-scm.com/download/win>`_.
+   * If you do not have Git installed, download and install it from the `official Git download page <https://git-scm.com/download/win>`_.
 
 3. Navigate inside VCPKG directory and install it:
 
@@ -99,7 +99,7 @@ CMake
 ~~~~~
 
 ``CMake`` is required to install the SUNDIALS and other libraries required for the ``IDAKLU`` solver.
-To install it, follow the link to the `official downloads page <https://cmake.org/download/>`_.
+To install it, follow the link to the `official CMake downloads page <https://cmake.org/download/>`_.
 
 Download an installer based on your system's architecture, i.e. ``x32/x64``, and make sure to check ``Add CMake to the PATH environment variable`` during installation.
 
