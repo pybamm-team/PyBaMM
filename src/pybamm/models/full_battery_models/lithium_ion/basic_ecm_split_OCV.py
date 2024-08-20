@@ -18,8 +18,6 @@ class ECMsplitOCV(pybamm.BaseModel):
 
     def __init__(self, name="ECM with split OCV"):
         super().__init__(name)
-        # TODO citations
-        # param = self.param
 
         ######################
         # Variables
