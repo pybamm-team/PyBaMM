@@ -1,6 +1,6 @@
 #
-# Test that the model works should I change the base model to just regular base model from .lihtium_ion_model BaseModel
-# does that set parameters that we really don't want, is this really as simple as we want it to be
+# Test that the model works with an example parameter set
+#
 import pybamm
 import numpy as np
 

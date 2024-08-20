@@ -76,8 +76,8 @@ class ECMsplitOCV(pybamm.BaseModel):
             "Discharge capacity [A.h]": Q,
             "Voltage [V]": V,
             "Times [s]": pybamm.t,
-            "Positive electrode potential [V]": Up,
-            "Negative electrode potential [V]": Un,
+            "Positive electrode OCP [V]": Up,
+            "Negative electrode OCP [V]": Un,
             "Current function [A]": I,
         }
 
@@ -89,4 +89,14 @@ class ECMsplitOCV(pybamm.BaseModel):
             pybamm.Event("Maximum Positive Electrode SOC", 0.999 - c_p),
             pybamm.Event("Minimum Negative Electrode SOC", c_n - 0.0001),
             pybamm.Event("Minimum Positive Electrode SOC", c_p - 0.0001),
+        ]
+
+    @property
+    def default_quick_plot_variables(self):
+        return [
+            "Voltage [V]",
+            ["Negative particle SOC", "Positive particle SOC"],
+            "Negative electrode OCP [V]",
+            "Positive electrode OCP [V]",
+            "Current [A]",
         ]
