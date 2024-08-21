@@ -152,20 +152,3 @@ class TestIDAKLUSolver:
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
-
-    def test_interpolate_time_step_start_offset(self):
-        model = pybamm.lithium_ion.SPM()
-        experiment = pybamm.Experiment(
-            [
-                "Discharge at C/10 for 10 seconds",
-                "Charge at C/10 for 10 seconds",
-            ],
-            period="1 seconds",
-        )
-        solver = pybamm.IDAKLUSolver()
-        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
-        sol = sim.solve()
-        np.testing.assert_equal(
-            sol.sub_solutions[0].t[-1] + pybamm.settings.step_start_offset,
-            sol.sub_solutions[1].t[0],
-        )
