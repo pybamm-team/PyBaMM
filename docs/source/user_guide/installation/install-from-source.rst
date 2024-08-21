@@ -57,9 +57,9 @@ You can install the above with
 
     On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
-In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation.
+In addition to the packages above, you will need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. The tool is necessary to install build-time dependencies in "editable mode" without build isolation.
 
-To install ``tomlkit`` to your local user accout (ensure you are not within a virtual environment), use the following command:
+To install ``tomlkit`` to your local user account (ensure you are not within a virtual environment), use the following command:
 
 .. code:: bash
 
@@ -407,5 +407,5 @@ If you want to install to contribute to PyBaMM, use this command:
 
 	pip install --no-build-isolation --config-settings=editable.rebuild=true -ve .[all,dev,docs]
 
-This sets the installed location of the
+These commands set the installed location of the
 source files to your current directory.

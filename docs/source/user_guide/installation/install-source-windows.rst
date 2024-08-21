@@ -35,7 +35,7 @@ C++ Compiler
 
 PyBaMM uses a recent version of Microsoft Visual C++ (MSVC), which you can get using `Build Tools for Visual Studio Code 2022 <https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022/>`_.
 
-Note that you won't need Visual Studio 2022 entirely, just ``Desktop development with C++`` will suffice.
+Note that you won't need Visual Studio 2022 entirely; just ``Desktop development with C++`` will suffice.
 
 .. image:: images-windows-source/pic1-msvc-select.png
 	:height: 456px
@@ -48,16 +48,16 @@ VCPKG
 ~~~~~
 
 PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library.
-To use this solver, you must make sure that you have the necessary SUNDIALS components
+To use this solver, you must ensure you have the necessary SUNDIALS components
 installed on your system.
 
-VCPKG automatically installs them for you during the build process. To learn more, have a look at the `offical documentation by Microsoft <https://learn.microsoft.com/en-us/vcpkg/get_started/overview/>`_.
+VCPKG automatically installs them for you during the build process. To learn more, look at the `official documentation by Microsoft <https://learn.microsoft.com/en-us/vcpkg/get_started/overview/>`_.
 
 To install VCPKG, follow the steps below:
 
 1. Open a Command Shell, and navigate to ``C:\``.
     * We are installing VCPKG in ``C:\vcpkg``
-    * If you wish to install in a custom directory, make sure to change environment variable ``VCPKG_ROOT_DIR`` before installation as mentioned here in :ref:`installing-pybamm`.
+    * If you wish to install in a custom directory, change the environment variable ``VCPKG_ROOT_DIR`` before installation as mentioned herein :ref:`installing-pybamm`.
 2. Clone VCPKG's GitHub repository
 
    .. code:: bash
@@ -74,41 +74,41 @@ To install VCPKG, follow the steps below:
 	  cd vcpkg && bootstrap-vcpkg.bat
 
 4. Add VCPKG directory to ``Path`` environment variable:
-    * Copy the location ``C:\vcpkg``, or the location of your custom directory.
+    * Copy the location ``C:\vcpkg`` or the location of your custom directory.
     * In the start menu, search for ``Edit the system environment variables`` and open it.
     * Under the ``Advanced`` tab, click on ``Environment Variables``
         .. image:: images-windows-source/pic2-env-var-open.png
 			:scale: 70%
 
 
-    * Select ``Path`` from ``user variables`` if you want to set VCPKG just for you, or use ``Path`` from ``system variables`` to set VCPKG for all the users using your system.
+    * Select ``Path`` from ``user variables`` if you want to set VCPKG just for you, or use ``Path`` from ``system variables`` to set VCPKG for all your system users.
     	.. image:: images-windows-source/pic3-show-path.png
 		    :scale: 50%
 
 
-    * Select ``Path`` and click ``Edit``. select new. Paste the path to vcpasdfkg. then confirm your options by click okay.
+    * Select ``Path`` and select ``NEW``. Paste the location to VCPKG, then confirm your options by clicking ``OK``.
     	.. image:: images-windows-source/pic4-save-env-var.png
 		  :height: 900px
 		  :width: 900px
 		  :scale: 70%
 
 
-5. Close and reopen Command Prompt and type ``vcpkg`` to see an output of different options available for ``vcpkg``.
+5. Close and reopen Command Prompt and execute ``vcpkg`` to see an output of different options available for ``vcpkg``.
 
 CMake
 ~~~~~
 
-``CMake`` is required to install the SUNDIALS and other libraries required for the ``IDAKLU`` solver.
+``CMake`` is required to install the SUNDIALS and other libraries for the ``IDAKLU`` solver.
 To install it, follow the link to the `official CMake downloads page <https://cmake.org/download/>`_.
 
-Download an installer based on your system's architecture, i.e. ``x32/x64``, and make sure to check ``Add CMake to the PATH environment variable`` during installation.
+Download an installer based on your system's architecture, i.e. ``x32/x64``, and check ``Add CMake to the PATH environment variable`` during installation.
 
 Python Packages
 ~~~~~~~~~~~~~~~
 
-In addition to the packages above, you will also need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. This is necessary for installing build-time dependencies when installing in "editable mode" without build isolation.
+In addition to the packages above, you will need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. The tool is necessary to install build-time dependencies in "editable mode" without build isolation.
 
-To install ``tomlkit`` to your local user accout (ensure you are not within a virtual environment), use the following command:
+To install ``tomlkit`` to your local user account (ensure you are not within a virtual environment), use the following command:
 
 .. code:: bash
 
@@ -123,14 +123,14 @@ You can install it to your local user account (make sure you are not within a vi
 
 Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
 
-After installing the above packages, you need to add the following location to your ``Path`` environment variable to be able to run ``nox`` in a terminal, like command prompt.
-Follow the instructions given above for VCPKG to add it to the ``Path``.
+After installing the above packages, you must add the following location to your ``Path`` environment variable to run ``nox`` in a terminal, like Command Prompt.
+Follow the instructions above for VCPKG to add it to the ``Path``.
 
 .. code::
 
-	C:\Users\<USERNAME>\AppData\Roaming\Python\Python312\Scripts
+	C:\Users\<USERNAME>\AppData\Roaming\Python\Python3<X>\Scripts
 
-Make sure to replace ``<USERNAME>`` with your user name.
+Make sure to replace ``<USERNAME>`` with your user name and ``X`` with your Python subversion.
 
 .. _installing-pybamm:
 
@@ -139,7 +139,7 @@ Installing PyBaMM
 
 Open a Command Prompt and navigate to the folder where you want to install PyBaMM,
 
-1. Obtain the PyBaMM source code, clone the GitHub repository or download the source archive on the repository's homepage.
+1. Obtain the PyBaMM source code by cloning the GitHub repository or downloading the source archive on the repository's homepage.
 
    .. code:: bash
 
@@ -160,9 +160,9 @@ Open a Command Prompt and navigate to the folder where you want to install PyBaM
 
 .. note::
 
-	The environment variables set through Command Prompt will expire as soon as the session, i.e. terminal, is closed. Hence, the ``IDAKLU`` solver would not compile with the build commands if you closed and reopened the terminal.
+	The environment variables set through Command Prompt will expire as soon as the session, i.e. terminal, is closed. Hence, if you closed and reopened the terminal, the ``IDAKLU`` solver would not compile with the build commands.
 
-	To avoid this, you can set them permanently by adding them in either ``User Variables`` or ``System Variables``, if you want to set them for all users on the system. For more information, follow `this tutorial <https://phoenixnap.com/kb/windows-set-environment-variable#ftoc-heading-4>`_ on how to set environmental variables permanently.
+	To avoid this, you can set them permanently by adding them to either ``User Variables`` or ``System Variables`` if you want to set them for all users on the system. For more information, follow `this tutorial <https://phoenixnap.com/kb/windows-set-environment-variable#ftoc-heading-4>`_ on permanently setting environment variables.
 
 You should now have everything ready to build and install PyBaMM successfully.
 
@@ -192,9 +192,9 @@ and run the tests to check your installation.
 Manual install
 ~~~~~~~~~~~~~~
 
-We recommend to install PyBaMM within a virtual environment, in order not to alter any distribution python files.
+We recommend installing PyBaMM within a virtual environment to avoid altering any distribution of Python files.
 
-In the same Command Prompt shell where you've set the environment variables, install ``virtualenv`` by exexuting the following command:
+In the same Command Prompt shell where you've set the environment variables, install ``virtualenv`` by executing the following command:
 
 .. code:: bash
 
@@ -212,7 +212,7 @@ You can then “activate” the environment using:
 
    venv\Scripts\activate.bat
 
-Now all the calls to pip described below will install PyBaMM and its
+Now, all the calls to pip described below will install PyBaMM and its
 dependencies into the environment ``venv``. When you are ready to exit
 the environment and go back to your original system, just type:
 
@@ -260,7 +260,7 @@ Using Nox (recommended)
 
 You can use ``Nox`` to run the unit tests and example notebooks in isolated virtual environments.
 
-Make sure to install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager or, by following the instructions on the `graphviz website <https://graphviz.org/download/>`_ to pass all the tests. Otherwise, you can safely ignore the failed tests needing ``graphviz``.
+Make sure to install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager or by following the instructions on the `graphviz website <https://graphviz.org/download/>`_ to pass all the tests. Otherwise, you can safely ignore the failed tests needing ``graphviz``.
 
 The default command
 
@@ -378,5 +378,5 @@ If you want to install to contribute to PyBaMM, use this command:
 
 	pip install --no-build-isolation --config-settings=editable.rebuild=true -ve .[all,dev,docs]
 
-This sets the installed location of the
+These commands set the installed location of the
 source files to your current directory.
