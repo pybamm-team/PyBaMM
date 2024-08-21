@@ -364,29 +364,31 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
                 domain = domain.split()[0].lower()
-                crack = getattr(self.options, domain)["particle mechanics"]
-                if crack == "none":
-                    self.submodels[f"{domain} particle mechanics"] = (
-                        pybamm.particle_mechanics.NoMechanics(
-                            self.param, domain, options=self.options, phase="primary"
+                phases = self.options.phases[domain]
+                for phase in phases:
+                    crack = getattr(self.options, domain)["particle mechanics"]
+                    if crack == "none":
+                        self.submodels[f"{domain} {phase}particle mechanics"] = (
+                            pybamm.particle_mechanics.NoMechanics(
+                                self.param, domain, options=self.options, phase=phase
+                            )
                         )
-                    )
-                elif crack == "swelling only":
-                    self.submodels[f"{domain} particle mechanics"] = (
-                        pybamm.particle_mechanics.SwellingOnly(
-                            self.param, domain, options=self.options, phase="primary"
+                    elif crack == "swelling only":
+                        self.submodels[f"{domain} {phase}particle mechanics"] = (
+                            pybamm.particle_mechanics.SwellingOnly(
+                                self.param, domain, options=self.options, phase=phase
+                            )
                         )
-                    )
-                elif crack == "swelling and cracking":
-                    self.submodels[f"{domain} particle mechanics"] = (
-                        pybamm.particle_mechanics.CrackPropagation(
-                            self.param,
-                            domain,
-                            self.x_average,
-                            options=self.options,
-                            phase="primary",
+                    elif crack == "swelling and cracking":
+                        self.submodels[f"{domain} {phase}particle mechanics"] = (
+                            pybamm.particle_mechanics.CrackPropagation(
+                                self.param,
+                                domain,
+                                self.x_average,
+                                options=self.options,
+                                phase=phase,
+                            )
                         )
-                    )
 
     def set_active_material_submodel(self):
         for domain in ["negative", "positive"]:
@@ -400,7 +402,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                         )
                     else:
                         submod = pybamm.active_material.LossActiveMaterial(
-                            self.param, domain, self.options, self.x_average
+                            self.param, domain, self.options, self.x_average, phase
                         )
                     self.submodels[f"{domain} {phase} active material"] = submod
 
