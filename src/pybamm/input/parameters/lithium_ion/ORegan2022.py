@@ -7,6 +7,38 @@ class ORegan2022(AbstractBaseParameters):
     def __init__(self):
         super().__init__()
 
+        self._details = {
+
+        }
+
+        self._sei = {
+
+        }
+
+        self._thermal = {
+
+        }
+
+        self._cell = {
+
+        }
+
+        self._negative_electrode = {
+
+        }
+
+        self._positive_electrode = {
+
+        }
+
+        self._seperator = {
+
+        }
+
+        self._electrolyte = {
+
+        }
+
 
 def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     """
@@ -39,7 +71,6 @@ def electrolyte_conductivity_base_Landesfeind2019(c_e, T, coeffs):
     B = 1 + p3 * pybamm.sqrt(c) + p4 * (1 + p5 * np.exp(1000 / T)) * c
     C = 1 + c**4 * (p6 * np.exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
-
     return sigma_e / 10
 
 
@@ -74,7 +105,6 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
     B = np.exp(p3 / T)
     C = np.exp(p4 * c / T)
     D_e = A * B * C * 1e-10  # m2/s
-
     return D_e
 
 
