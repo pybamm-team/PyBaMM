@@ -1,5 +1,6 @@
 class AbstractBaseParameters:
     _details = {}
+    _plating = {}
     _sei = {}
     _thermal = {}
     _cell = {}
@@ -18,6 +19,7 @@ class AbstractBaseParameters:
         full_set = {}
         for sub_set in [
             self._details,
+            self._plating,
             self._sei,
             self._thermal,
             self._cell,
