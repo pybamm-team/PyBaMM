@@ -146,7 +146,7 @@ class Ecker2015(AbstractBaseParameters):
             "Positive electrode OCP entropic change [V.K-1]": 0.0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 2e-05,
             "Separator porosity": 0.508,
             "Separator Bruggeman coefficient (electrolyte)": 1.9804586773134945,

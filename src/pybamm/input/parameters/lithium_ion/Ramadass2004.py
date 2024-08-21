@@ -127,7 +127,7 @@ class Ramadass2004(AbstractBaseParameters):
             "": self.lico2_entropic_change_Moura2016,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 2.5e-05,
             "Separator porosity": 0.508,
             "Separator Bruggeman coefficient (electrolyte)": 1.9804586773134945,

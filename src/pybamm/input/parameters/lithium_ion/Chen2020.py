@@ -117,7 +117,7 @@ class Chen2020(AbstractBaseParameters):
             "Positive current collector density [kg.m-3]": 2700.0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 1.2e-05,
             "Separator porosity": 0.47,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,

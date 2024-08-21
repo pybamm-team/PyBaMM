@@ -69,7 +69,7 @@ class Prada2013(AbstractBaseParameters):
             "Positive electrode OCP entropic change [V.K-1]": 0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 2.5e-05,
             "Separator porosity": 0.45,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,

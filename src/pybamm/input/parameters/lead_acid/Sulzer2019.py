@@ -126,7 +126,7 @@ class Sulzer2019(AbstractBaseParameters):
             "Positive electrode density [kg.m-3]": 9375.0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 0.0015,
             "Maximum porosity of separator": 0.92,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,

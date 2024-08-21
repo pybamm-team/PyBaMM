@@ -156,7 +156,7 @@ class Chen2020Composite(AbstractBaseParameters):
             "Positive electrode OCP entropic change [V.K-1]": 0.0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 1.2e-05,
             "Separator porosity": 0.47,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,

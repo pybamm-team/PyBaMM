@@ -6,7 +6,7 @@ class AbstractBaseParameters:
     _cell = {}
     _negative_electrode = {}
     _positive_electrode = {}
-    _seperator = {}
+    _separator = {}
     _electrolyte = {}
 
     def degradation_available(self):
@@ -14,6 +14,9 @@ class AbstractBaseParameters:
 
     def thermal_available(self):
         return not self._thermal
+
+    def plating_available(self):
+        return not self._plating
 
     def get_param_set(self):
         full_set = {}
@@ -25,7 +28,7 @@ class AbstractBaseParameters:
             self._cell,
             self._negative_electrode,
             self._positive_electrode,
-            self._seperator,
+            self._separator,
             self._electrolyte,
         ]:
             full_set.update(sub_set)

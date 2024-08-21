@@ -165,7 +165,7 @@ class Ai2020(AbstractBaseParameters):
             "Positive electrode critical stress [Pa]": 375000000.0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 2.5e-05,
             "Separator porosity": 0.5,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,

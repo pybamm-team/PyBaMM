@@ -89,7 +89,7 @@ class Xu2019(AbstractBaseParameters):
             "Positive electrode double-layer capacity [F.m-2]": 0.2,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator porosity": 0.39,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
             "Separator Bruggeman coefficient (electrode)": 1.5,

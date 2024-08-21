@@ -1,8 +1,3 @@
-#
-# Tests for the Base Parameter Values class
-#
-
-
 import os
 import unittest
 
@@ -11,10 +6,7 @@ import pandas as pd
 
 import pybamm
 import tests.shared as shared
-from pybamm.input.parameters.lithium_ion.Marquis2019 import (
-    lico2_ocp_Dualfoil1998,
-    lico2_diffusivity_Dualfoil1998,
-)
+from pybamm.input.parameters.lithium_ion.Marquis2019 import Marquis2019
 from pybamm.expression_tree.exceptions import OptionError
 import casadi
 
@@ -616,7 +608,9 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_interpolant_against_function(self):
-        parameter_values = pybamm.ParameterValues({"function": lico2_ocp_Dualfoil1998})
+        parameter_values = pybamm.ParameterValues(
+            {"function": Marquis2019().lico2_ocp_Dualfoil1998}
+        )
         # path is parent dir of this file
         path = os.path.abspath(os.path.dirname(__file__))
         lico2_ocv_example_data = pybamm.parameters.process_1D_data(
@@ -643,7 +637,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_interpolant_2d_from_json(self):
         parameter_values = pybamm.ParameterValues(
-            {"function": lico2_diffusivity_Dualfoil1998}
+            {"function": Marquis2019().lico2_diffusivity_Dualfoil1998}
         )
         # path is parent dir of this file
         path = os.path.abspath(os.path.dirname(__file__))

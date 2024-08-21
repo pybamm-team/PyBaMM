@@ -127,7 +127,7 @@ class Ecker2015GraphiteHalfCell(AbstractBaseParameters):
             "Positive electrode OCP entropic change [V.K-1]": 0.0,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator porosity": 0.508,
             "Separator Bruggeman coefficient (electrolyte)": 1.9804586773134945,
             "Separator density [kg.m-3]": 1017.0,

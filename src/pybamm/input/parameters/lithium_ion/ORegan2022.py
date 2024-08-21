@@ -104,7 +104,7 @@ class ORegan2022(AbstractBaseParameters):
             "": self.nmc_LGM50_entropic_change_ORegan2022,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator porosity": 0.47,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
             "Separator Bruggeman coefficient (electrode)": 1.5,

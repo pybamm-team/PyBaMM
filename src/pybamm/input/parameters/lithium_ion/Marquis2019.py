@@ -133,7 +133,7 @@ class Marquis2019(AbstractBaseParameters):
             "": self.lico2_entropic_change_Moura2016,
         }
 
-        self._seperator = {
+        self._separator = {
             "Separator thickness [m]": 2.5e-05,
             "Separator porosity": 1.0,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
