@@ -4,10 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Prada2013(AbstractBaseParameters):
-    """
-    Parameters for an LFP cell, from the paper :footcite:t:`Prada2013`
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -245,4 +241,7 @@ class Prada2013(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for an LFP cell, from the paper :footcite:t:`Prada2013`
+    """
     return Prada2013().get_param_set()

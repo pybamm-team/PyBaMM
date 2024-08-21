@@ -4,21 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Chen2020(AbstractBaseParameters):
-    """
-    Parameters for an LG M50 cell, from the paper :footcite:t:`Chen2020` and references
-    therein.
-
-    SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
-    :footcite:t:`Yang2017`
-
-    .. note::
-        This parameter set does not claim to be representative of the true parameter
-        values. Instead, these are parameter values that were used to fit SEI models to
-        observed experimental data in the referenced papers.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -346,4 +331,18 @@ class Chen2020(AbstractBaseParameters):
 
 
 def get_parameter_values():
+    """
+    Parameters for an LG M50 cell, from the paper :footcite:t:`Chen2020` and references
+    therein.
+
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
+
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead, these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
+    """
     return Chen2020().get_param_set()

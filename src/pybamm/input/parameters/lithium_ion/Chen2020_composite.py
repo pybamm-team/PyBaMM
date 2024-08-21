@@ -5,15 +5,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Chen2020Composite(AbstractBaseParameters):
-    """
-    Parameters for a composite graphite/silicon negative electrode, from the paper
-    :footcite:t:`Ai2022`, based on the paper :footcite:t:`Chen2020`, and references
-    therein.
-
-    SEI parameters are example parameters for composite SEI on silicon/graphite. Both
-    phases use the same values, from the paper :footcite:t:`Yang2017`
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -476,4 +467,12 @@ class Chen2020Composite(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for a composite graphite/silicon negative electrode, from the paper
+    :footcite:t:`Ai2022`, based on the paper :footcite:t:`Chen2020`, and references
+    therein.
+
+    SEI parameters are example parameters for composite SEI on silicon/graphite. Both
+    phases use the same values, from the paper :footcite:t:`Yang2017`
+    """
     return Chen2020Composite().get_param_set()

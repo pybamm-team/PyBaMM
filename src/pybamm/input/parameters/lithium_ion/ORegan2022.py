@@ -4,13 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class ORegan2022(AbstractBaseParameters):
-    """
-    Parameters for an LG M50 cell, from the paper :footcite:t:`ORegan2022`
-
-    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte are from the paper
-    :footcite:t:`landesfeind2019temperature` and references therein.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -989,4 +982,10 @@ class ORegan2022(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for an LG M50 cell, from the paper :footcite:t:`ORegan2022`
+
+    Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte are from the paper
+    :footcite:t:`landesfeind2019temperature` and references therein.
+    """
     return ORegan2022().get_param_set()

@@ -4,28 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Ramadass2004(AbstractBaseParameters):
-    """
-    Ramadass2004 parameter set. This is a bit of a Frankenstein parameter set and should
-    be used with caution.
-
-    Parameters for a graphite negative electrode, Lithium Cobalt Oxide positive
-    electrode, and LiPF6 electrolyte are from the papers :footcite:t:`Marquis2019`,
-    :footcite:t:`Ramadass2004`, and references therein.
-
-    Parameters for the separator are from the papers :footcite:t:`Ecker2015i`
-
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
-    are extracted from Lithium Cobalt Oxide positive electrode parameters in
-    :footcite:t:`Zhao2018`
-
-    Parameters for SEI growth are from the papers :footcite:t:`Ramadass2004` and
-    :footcite:t:`safari2008multimodal`
-
-    .. note::
-        Ramadass 2004 has mistakes in units and values of SEI parameters, corrected by
-        Safari2009.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -492,4 +470,25 @@ class Ramadass2004(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Ramadass2004 parameter set. This is a bit of a Frankenstein parameter set and should
+    be used with caution.
+
+    Parameters for a graphite negative electrode, Lithium Cobalt Oxide positive
+    electrode, and LiPF6 electrolyte are from the papers :footcite:t:`Marquis2019`,
+    :footcite:t:`Ramadass2004`, and references therein.
+
+    Parameters for the separator are from the papers :footcite:t:`Ecker2015i`
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from Lithium Cobalt Oxide positive electrode parameters in
+    :footcite:t:`Zhao2018`
+
+    Parameters for SEI growth are from the papers :footcite:t:`Ramadass2004` and
+    :footcite:t:`safari2008multimodal`
+
+    .. note::
+        Ramadass 2004 has mistakes in units and values of SEI parameters, corrected by
+        Safari2009.
+    """
     return Ramadass2004().get_param_set()

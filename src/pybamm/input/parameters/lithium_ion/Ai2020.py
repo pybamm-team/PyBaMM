@@ -5,21 +5,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Ai2020(AbstractBaseParameters):
-    """
-    Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
-    :footcite:t:`rieger2016new` and references therein.
-
-    SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
-    :footcite:t:`Yang2017`
-
-    .. note::
-        This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values that were used to fit SEI models to
-        observed experimental data in the referenced papers.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -685,4 +670,18 @@ class Ai2020(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
+    :footcite:t:`rieger2016new` and references therein.
+
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
+
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
+    """
     return Ai2020().get_param_set()

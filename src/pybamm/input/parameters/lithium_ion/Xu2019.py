@@ -4,27 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Xu2019(AbstractBaseParameters):
-    """
-    Parameters for a Kokam SLPB78205130H half-cell, from the paper :footcite:t:`Xu2019`
-    and references therein. Anode is graphite MCMB 2528. Separator is Celgard 2325.
-    Cathode is lithium Cobalt Oxide. Electrolyte is LiPF6.
-
-    Parameters for a LiPF6 electrolyte are from the paper :footcite:t:`Valoen2005`
-
-    1C discharge from full
-    ^^^^^^^^^^^^^^^^^^^^^^
-
-    SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
-    :footcite:t:`Yang2017`.
-
-    .. note::
-        This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values that were used to fit SEI models to
-        observed experimental data in the referenced papers.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -316,4 +295,24 @@ class Xu2019(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for a Kokam SLPB78205130H half-cell, from the paper :footcite:t:`Xu2019`
+    and references therein. Anode is graphite MCMB 2528. Separator is Celgard 2325.
+    Cathode is lithium Cobalt Oxide. Electrolyte is LiPF6.
+
+    Parameters for a LiPF6 electrolyte are from the paper :footcite:t:`Valoen2005`
+
+    1C discharge from full
+    ^^^^^^^^^^^^^^^^^^^^^^
+
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`.
+
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
+    """
     return Xu2019().get_param_set()

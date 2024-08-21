@@ -4,32 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Ecker2015(AbstractBaseParameters):
-    """
-    Parameters for a Kokam SLPB 75106100 cell, from the papers :footcite:t:`Ecker2015i`
-    and :footcite:t:`Ecker2015ii`
-
-    The tab placement parameters are taken from measurements in :footcite:t:`Hales2019`
-
-    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
-    are extracted from :footcite:t:`Zhao2018`
-
-    Graphite negative electrode parameters
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-    The fits to data for the electrode and electrolyte properties are those provided
-    by Dr. Simon O'Kane in the paper :footcite:t:`Richardson2020`
-
-    SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
-    :footcite:t:`Yang2017`
-
-    .. note::
-        This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values that were used to fit SEI models to
-        observed experimental data in the referenced papers.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -626,4 +600,29 @@ class Ecker2015(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for a Kokam SLPB 75106100 cell, from the papers :footcite:t:`Ecker2015i`
+    and :footcite:t:`Ecker2015ii`
+
+    The tab placement parameters are taken from measurements in :footcite:t:`Hales2019`
+
+    The thermal material properties are for a 5 Ah power pouch cell by Kokam. The data
+    are extracted from :footcite:t:`Zhao2018`
+
+    Graphite negative electrode parameters
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    The fits to data for the electrode and electrolyte properties are those provided
+    by Dr. Simon O'Kane in the paper :footcite:t:`Richardson2020`
+
+    SEI parameters are example parameters for SEI growth from the papers
+    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
+    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Yang2017`
+
+    .. note::
+        This parameter set does not claim to be representative of the true parameter
+        values. Instead these are parameter values that were used to fit SEI models to
+        observed experimental data in the referenced papers.
+    """
     return Ecker2015().get_param_set()
