@@ -79,7 +79,7 @@ class ParameterValues:
                 pybamm.citations.register(citation)
 
     @staticmethod
-    def create_from_bpx(filename, target_soc=1.0):
+    def create_from_bpx(filename, target_soc: float = 1):
         """
         Parameters
         ----------
