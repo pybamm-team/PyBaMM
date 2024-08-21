@@ -16,10 +16,6 @@ class Prada2013(AbstractBaseParameters):
             "citations": ["Chen2020", "Prada2013"],
         }
 
-        self._sei = {}
-
-        self._thermal = {}
-
         self._cell = {
             "Negative electrode thickness [m]": 3.4e-05,
             "Separator thickness [m]": 2.5e-05,
