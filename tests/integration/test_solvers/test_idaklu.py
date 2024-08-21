@@ -162,7 +162,8 @@ class TestIDAKLUSolver:
             ],
             period="1 seconds",
         )
-        sim = pybamm.Simulation(model, experiment=experiment)
+        solver = pybamm.IDAKLUSolver()
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         sol = sim.solve()
         np.testing.assert_equal(
             sol.sub_solutions[0].t[-1] + pybamm.settings.step_start_offset,
