@@ -64,33 +64,31 @@ class Ai2020(AbstractBaseParameters):
             "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         }
 
-        self._thermal = {}
-
-        self._cell = {
-            "Negative current collector thickness [m]": 1e-05,
-            "Negative electrode thickness [m]": 7.65e-05,
-            "Separator thickness [m]": 2.5e-05,
-            "Positive electrode thickness [m]": 6.8e-05,
-            "Positive current collector thickness [m]": 1.5e-05,
-            "Electrode height [m]": 0.051,
-            "Electrode width [m]": 0.047,
+        self._thermal = {
             "Cell cooling surface area [m2]": 0.0060484,
-            "Cell volume [m3]": 1.5341e-05,
-            "Cell emissivity": 0.95,
-            "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
-            "Negative current collector conductivity [S.m-1]": 58411000.0,
-            "Positive current collector conductivity [S.m-1]": 36914000.0,
-            "Negative current collector density [kg.m-3]": 8960.0,
-            "Positive current collector density [kg.m-3]": 2700.0,
+            "Total heat transfer coefficient [W.m-2.K-1]": 35.0,
             "Negative current collector specific heat capacity [J.kg-1.K-1]": 385.0,
             "Positive current collector specific heat capacity [J.kg-1.K-1]": 897.0,
+            "Cell thermal expansion coefficient [m.K-1]": 1.1e-06,
             "Negative current collector thermal conductivity [W.m-1.K-1]": 401.0,
             "Positive current collector thermal conductivity [W.m-1.K-1]": 237.0,
+            "Negative electrode specific heat capacity [J.kg-1.K-1]": 1080.2,
+            "Negative electrode thermal conductivity [W.m-1.K-1]": 1.04,
+            "Positive electrode specific heat capacity [J.kg-1.K-1]": 1080.2,
+            "Positive electrode thermal conductivity [W.m-1.K-1]": 1.58,
+            "Separator specific heat capacity [J.kg-1.K-1]": 1080.2,
+            "Separator thermal conductivity [W.m-1.K-1]": 0.334,
+        }
+
+        self._cell = {
+            "Electrode height [m]": 0.051,
+            "Electrode width [m]": 0.047,
+            "Cell volume [m3]": 1.5341e-05,
+            "Cell emissivity": 0.95,
             "Nominal cell capacity [A.h]": 2.28,
             "Current function [A]": 2.28,
             "Contact resistance [Ohm]": 0,
             "Reference temperature [K]": 298.15,
-            "Total heat transfer coefficient [W.m-2.K-1]": 35.0,
             "Ambient temperature [K]": 298.15,
             "Number of electrodes connected in parallel to make a cell": 34.0,
             "Number of cells connected in series to make a battery": 1.0,
@@ -104,6 +102,10 @@ class Ai2020(AbstractBaseParameters):
         }
 
         self._negative_electrode = {
+            "Negative current collector density [kg.m-3]": 8960.0,
+            "Negative current collector conductivity [S.m-1]": 58411000.0,
+            "Negative current collector thickness [m]": 1e-05,
+            "Negative electrode thickness [m]": 7.65e-05,
             "Negative electrode conductivity [S.m-1]": 100.0,
             "Maximum concentration in negative electrode [mol.m-3]": 28700.0,
             "Negative particle diffusivity [m2.s-1]": self.graphite_diffusivity_Dualfoil1998,
@@ -118,8 +120,6 @@ class Ai2020(AbstractBaseParameters):
             "Negative electrode exchange-current density [A.m-2]"
             "": self.graphite_electrolyte_exchange_current_density_Dualfoil1998,
             "Negative electrode density [kg.m-3]": 2470.0,
-            "Negative electrode specific heat capacity [J.kg-1.K-1]": 1080.2,
-            "Negative electrode thermal conductivity [W.m-1.K-1]": 1.04,
             "Negative electrode OCP entropic change [V.K-1]"
             "": self.graphite_entropy_Enertech_Ai2020_function,
             "Negative electrode Poisson's ratio": 0.3,
@@ -141,6 +141,10 @@ class Ai2020(AbstractBaseParameters):
         }
 
         self._positive_electrode = {
+            "Positive current collector conductivity [S.m-1]": 36914000.0,
+            "Positive current collector density [kg.m-3]": 2700.0,
+            "Positive electrode thickness [m]": 6.8e-05,
+            "Positive current collector thickness [m]": 1.5e-05,
             "Positive electrode conductivity [S.m-1]": 10.0,
             "Maximum concentration in positive electrode [mol.m-3]": 49943.0,
             "Positive particle diffusivity [m2.s-1]": self.lico2_diffusivity_Dualfoil1998,
@@ -156,8 +160,6 @@ class Ai2020(AbstractBaseParameters):
             "Positive electrode exchange-current density [A.m-2]"
             "": self.lico2_electrolyte_exchange_current_density_Dualfoil1998,
             "Positive electrode density [kg.m-3]": 2470.0,
-            "Positive electrode specific heat capacity [J.kg-1.K-1]": 1080.2,
-            "Positive electrode thermal conductivity [W.m-1.K-1]": 1.58,
             "Positive electrode OCP entropic change [V.K-1]"
             "": self.lico2_entropic_change_Ai2020_function,
             "Positive electrode Poisson's ratio": 0.2,
@@ -179,11 +181,10 @@ class Ai2020(AbstractBaseParameters):
         }
 
         self._seperator = {
+            "Separator thickness [m]": 2.5e-05,
             "Separator porosity": 0.5,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
             "Separator density [kg.m-3]": 2470.0,
-            "Separator specific heat capacity [J.kg-1.K-1]": 1080.2,
-            "Separator thermal conductivity [W.m-1.K-1]": 0.334,
         }
 
         self._electrolyte = {

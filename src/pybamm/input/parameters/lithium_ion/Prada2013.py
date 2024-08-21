@@ -17,9 +17,6 @@ class Prada2013(AbstractBaseParameters):
         }
 
         self._cell = {
-            "Negative electrode thickness [m]": 3.4e-05,
-            "Separator thickness [m]": 2.5e-05,
-            "Positive electrode thickness [m]": 8e-05,
             "Electrode height [m]": 0.6,  # to give an area of 0.18 m2
             "Electrode width [m]": 0.3,  # to give an area of 0.18 m2
             "Nominal cell capacity [A.h]": 2.3,
@@ -41,6 +38,7 @@ class Prada2013(AbstractBaseParameters):
         }
 
         self._negative_electrode = {
+            "Negative electrode thickness [m]": 3.4e-05,
             "Negative electrode conductivity [S.m-1]": 215.0,
             "Maximum concentration in negative electrode [mol.m-3]": 30555,
             "Negative particle diffusivity [m2.s-1]": 3e-15,
@@ -58,6 +56,7 @@ class Prada2013(AbstractBaseParameters):
         }
 
         self._positive_electrode = {
+            "Positive electrode thickness [m]": 8e-05,
             "Positive electrode conductivity [S.m-1]": 0.33795074,
             "Maximum concentration in positive electrode [mol.m-3]": 22806.0,
             "Positive particle diffusivity [m2.s-1]": 5.9e-18,
@@ -75,6 +74,7 @@ class Prada2013(AbstractBaseParameters):
         }
 
         self._seperator = {
+            "Separator thickness [m]": 2.5e-05,
             "Separator porosity": 0.45,
             "Separator Bruggeman coefficient (electrolyte)": 1.5,
         }
