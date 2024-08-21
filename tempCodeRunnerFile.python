@@ -1,0 +1,45 @@
+from pprint import pprint
+
+def nest_params(flat_params):
+    """
+    Nest parameters from a flat dictionary into a hierarchical dictionary.
+
+    Parameters:
+    flat_params (dict): A flat dictionary where keys are in the format 'Category name parameter name'.
+
+    Returns:
+    dict: A nested dictionary organized by category.
+    """
+    nested_params = {}
+    for key, value in flat_params.items():
+        # Split the key on the first space
+        parts = key.split(" ", 1)
+        if len(parts) == 2:
+            category, param = parts
+        else:
+            # If there's no space, treat the entire key as a parameter
+            category, param = parts[0], ""
+
+        # Initialize the category in the nested dictionary if it doesn't exist
+        if category not in nested_params:
+            nested_params[category] = {}
+
+        # Add the parameter and its value under the category
+        nested_params[category][param.capitalize()] = value
+
+    return nested_params
+
+# Example usage with your flat_params dictionary
+flat_params = {
+    "Negative electrode thickness [m]": 0.0001,
+    "Separator thickness [m]": 2.5e-05,
+    "Positive electrode thickness [m]": 0.0001,
+    "Positive electrode porosity": 0.3,
+    "Negative current collector conductivity [S.m-1]": 58411000.0,
+    "Negative density [kg.m-3]": 1657.0,
+}
+
+nested_params = nest_params(flat_params)
+
+# Use pprint to print the nested dictionary in a readable format
+pprint(nested_params, width=60)
