@@ -11,6 +11,9 @@ class AbstractBaseParameters:
     def degradation_available(self):
         return not self._sei
 
+    def thermal_available(self):
+        return not self._thermal
+
     def get_param_set(self):
         full_set = {}
         for sub_set in [
