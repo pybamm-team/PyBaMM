@@ -36,7 +36,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         self.tol = tol
         self.extra_options = extra_options or {}
         self.name = f"Algebraic solver ({method})"
-        self.algebraic_solver = True
+        self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
 
     @property

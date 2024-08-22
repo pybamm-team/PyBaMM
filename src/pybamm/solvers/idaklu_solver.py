@@ -233,7 +233,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             output_variables,
         )
         self.name = "IDA KLU solver"
-        self.supports_interp = True
+        self._supports_interp = True
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")

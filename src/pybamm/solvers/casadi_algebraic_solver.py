@@ -25,7 +25,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         super().__init__()
         self.tol = tol
         self.name = "CasADi algebraic solver"
-        self.algebraic_solver = True
+        self._algebraic_solver = True
         self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
 

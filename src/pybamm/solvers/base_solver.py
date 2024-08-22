@@ -63,9 +63,9 @@ class BaseSolver:
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
-        self.ode_solver = False
-        self.algebraic_solver = False
-        self.supports_interp = False
+        self._ode_solver = False
+        self._algebraic_solver = False
+        self._supports_interp = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
@@ -74,33 +74,13 @@ class BaseSolver:
     def ode_solver(self):
         return self._ode_solver
 
-    @ode_solver.setter
-    def ode_solver(self, value):
-        if not isinstance(value, bool):
-            raise ValueError("ode_solver must be a boolean value")
-        self._ode_solver = value
-
     @property
     def algebraic_solver(self):
         return self._algebraic_solver
 
-    @algebraic_solver.setter
-    def algebraic_solver(self, value):
-        if not isinstance(value, bool):
-            raise ValueError("algebraic_solver must be a boolean value")
-        self._algebraic_solver = value
-
     @property
     def supports_interp(self):
         return self._supports_interp
-
-    @supports_interp.setter
-    def supports_interp(self, value):
-        if not isinstance(value, bool):
-            raise ValueError("supports_interp must be a boolean value")
-        elif value and not isinstance(self, pybamm.IDAKLUSolver):
-            raise ValueError("Interpolation is only supported for `IDAKLUSolver`")
-        self._supports_interp = value
 
     @property
     def root_method(self):
@@ -354,7 +334,7 @@ class BaseSolver:
                 f"Cannot use ODE solver '{self.name}' to solve DAE model"
             )
         # Check model.rhs for algebraic solvers
-        if self.algebraic_solver is True and len(model.rhs) > 0:
+        if self._algebraic_solver is True and len(model.rhs) > 0:
             raise pybamm.SolverError(
                 """Cannot use algebraic solver to solve model with time derivatives"""
             )
@@ -757,13 +737,13 @@ class BaseSolver:
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
         if t_eval is None:
-            if self.algebraic_solver is False:
+            if self._algebraic_solver is False:
                 raise ValueError("t_eval cannot be None")
             t_eval = np.array([0])
 
         # If t_eval is provided as [t0, tf] return the solution at 100 points
         elif isinstance(t_eval, list):
-            if len(t_eval) == 1 and self.algebraic_solver is True:
+            if len(t_eval) == 1 and self._algebraic_solver is True:
                 t_eval = np.array(t_eval)
             elif len(t_eval) != 2:
                 raise pybamm.SolverError(
@@ -982,7 +962,7 @@ class BaseSolver:
         # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
         if (
-            self.algebraic_solver is False
+            self._algebraic_solver is False
             and len(solutions[0].all_ts) == 1
             and len(solutions[0].all_ts[0]) == 1
         ):
