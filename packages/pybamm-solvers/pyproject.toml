@@ -1,0 +1,20 @@
+[project]
+name = "pyidaklu"
+description = "Python interface for the IDAKLU solver"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+dynamic = ["version", "readme"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tools.setuptools.packages.find]
+where = ["src"]
+include = ["pyidaklu"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pyidaklu.version.__version__"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
