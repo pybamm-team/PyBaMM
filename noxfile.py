@@ -90,7 +90,6 @@ def set_environment_variables(env_dict, session):
 def run_pybamm_requires(session):
     """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     if sys.platform != "win32":
         session.install("cmake", silent=False)
         session.run("python", "scripts/install_KLU_Sundials.py", *session.posargs)
@@ -125,7 +124,6 @@ def run_pybamm_requires(session):
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("coverage", silent=False)
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
@@ -147,7 +145,6 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     if (
         "CI" in os.environ
         and sys.version_info[:2] == (3, 12)
@@ -161,7 +158,6 @@ def run_integration(session):
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("-e", ".[all,dev,docs]", silent=False)
     session.run(
         "python",
@@ -176,7 +172,6 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
@@ -194,7 +189,6 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
@@ -206,7 +200,6 @@ def run_examples(session):
 def run_scripts(session):
     """Run the scripts tests for Python scripts."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("-e", ".[all,dev]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
@@ -241,7 +234,6 @@ def set_dev(session):
         #  - IREE compiler matches Jaxlib (use the matching nightly build) [pyproject.toml]
         components.append("iree")
         args = ["--find-links", PYBAMM_ENV.get("IREE_INDEX_URL")]
-    session.run(python, "-m", "pip", "install", "--upgrade", "pip")
     session.run(python, "-m", "pip", "install", *build_dependencies)
     session.run(
         python,
@@ -262,7 +254,6 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("-e", ".[all,dev,jax]", silent=False)
     specific_test_files = session.posargs if session.posargs else []
     session.run(
@@ -274,7 +265,6 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development
