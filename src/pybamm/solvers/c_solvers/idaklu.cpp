@@ -59,7 +59,8 @@ PYBIND11_MODULE(idaklu, m)
   py::class_<IDAKLUSolver>(m, "IDAKLUSolver")
   .def("solve", &IDAKLUSolver::solve,
     "perform a solve",
-    py::arg("t"),
+    py::arg("t_eval"),
+    py::arg("t_interp"),
     py::arg("y0"),
     py::arg("yp0"),
     py::arg("inputs"),
