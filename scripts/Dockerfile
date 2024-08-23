@@ -29,7 +29,7 @@ RUN uv venv $VIRTUAL_ENV
 RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN uv pip install --upgrade scikit-build-core==0.10.3 wget cmake casadi pybind11
+RUN uv pip install --upgrade scikit-build-core wget cmake casadi pybind11
 RUN python scripts/install_KLU_Sundials.py && \
     uv pip install --no-build-isolation --config-settings=editable.rebuild=true -ve ".[all,dev,docs,jax]";
 

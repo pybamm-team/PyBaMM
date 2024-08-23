@@ -240,7 +240,7 @@ Due to the ``--no-build-isolation`` flag in the "editable mode" command, you fir
 
 .. code:: bash
 
-	pip install scikit-build-core==0.10.3 casadi cmake pybind11
+	pip install scikit-build-core casadi cmake pybind11
 
 You can now install PyBaMM in "editable mode" for development using the following commands:
 
