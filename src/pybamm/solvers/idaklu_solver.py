@@ -294,17 +294,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 " if using IREE."
             )
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        elif (
-            model.convert_to_format == "jax"
-            and self._options["jax_evaluator"] != "iree"
-        ):
-            raise pybamm.SolverError(
-                "Unsupported evaluation engine for convert_to_format="
-                + f"{model.convert_to_format} "
-                + f"(jax_evaluator={self._options['jax_evaluator']})"
-            )
 
         if model.convert_to_format == "jax":
+            if self._options["jax_evaluator"] != "iree":
+                raise pybamm.SolverError(
+                    "Unsupported evaluation engine for convert_to_format="
+                    f"{model.convert_to_format} "
+                    f"(jax_evaluator={self._options['jax_evaluator']})"
+                )
             mass_matrix = model.mass_matrix.entries.toarray()
         elif model.convert_to_format == "casadi":
             if self._options["jacobian"] == "dense":
@@ -314,7 +311,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             raise pybamm.SolverError(
                 "Unsupported option for convert_to_format="
-                + f"{model.convert_to_format} "
+                f"{model.convert_to_format} "
             )
 
         # construct residuals function by binding inputs
@@ -753,7 +750,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0full.size)
-        # rtol = self.rtol
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi" or (
@@ -768,7 +764,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         else:  # pragma: no cover
             # Shouldn't ever reach this point
-            raise pybamm.SolverError("The python idaklu solver is no longer supported")
+            raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
         integration_time = timer.time()
 
         number_of_sensitivity_parameters = self._setup[

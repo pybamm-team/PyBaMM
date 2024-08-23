@@ -1466,26 +1466,13 @@ def process(
     elif model.convert_to_format != "casadi":
         y = vars_for_processing["y"]
         jacobian = vars_for_processing["jacobian"]
-        # Process with pybamm functions, converting
-        # to python evaluator
+
         if model.calculate_sensitivities:
-            report(
-                f"Calculating sensitivities for {name} with respect "
-                f"to parameters {model.calculate_sensitivities}"
+            raise pybamm.SolverError(  # pragma: no cover
+                "Sensitivies are no longer supported for the python "
+                "evaluator. Please use `convert_to_format = 'casadi'`, or `jax` "
+                "to calculate sensitivities."
             )
-            jacp_dict = {
-                p: symbol.diff(pybamm.InputParameter(p))
-                for p in model.calculate_sensitivities
-            }
-
-            report(f"Converting sensitivities for {name} to python")
-            jacp_dict = {
-                p: pybamm.EvaluatorPython(jacp) for p, jacp in jacp_dict.items()
-            }
-
-            # jacp should be a function that returns a dict of sensitivities
-            def jacp(*args, **kwargs):
-                return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
 
         else:
             jacp = None
