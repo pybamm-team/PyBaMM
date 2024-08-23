@@ -5,13 +5,14 @@
 from contextlib import redirect_stdout
 import io
 import unittest
-
+import pytest
 import numpy as np
 
 import pybamm
 from tests import get_discretisation_for_testing
 
 
+@pytest.mark.cibw
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
