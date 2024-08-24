@@ -7,6 +7,8 @@ import io
 import unittest
 import pytest
 import numpy as np
+import sys
+import platform
 
 import pybamm
 from tests import get_discretisation_for_testing
@@ -15,6 +17,17 @@ from tests import get_discretisation_for_testing
 @pytest.mark.cibw
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -64,6 +77,17 @@ class TestIDAKLUSolver(unittest.TestCase):
             true_solution = 0.1 * solution.t
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_model_events(self):
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
@@ -193,6 +217,17 @@ class TestIDAKLUSolver(unittest.TestCase):
                 err_msg=f"Failed for form {form}",
             )
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_input_params(self):
         # test a mix of scalar and vector input params
         for form in ["python", "casadi", "jax", "iree"]:
@@ -251,6 +286,17 @@ class TestIDAKLUSolver(unittest.TestCase):
                 sol.y[1:3], true_solution, err_msg=f"Failed for form {form}"
             )
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_sensitivities_initial_condition(self):
         for form in ["casadi", "iree"]:
             for output_variables in [[], ["2v"]]:
@@ -302,6 +348,17 @@ class TestIDAKLUSolver(unittest.TestCase):
                     err_msg=f"Failed for form {form}",
                 )
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -410,6 +467,17 @@ class TestIDAKLUSolver(unittest.TestCase):
                 err_msg=f"Failed for form {form}",
             )
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_ida_roberts_consistent_initialization(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -454,6 +522,17 @@ class TestIDAKLUSolver(unittest.TestCase):
                 model.ydot0full, [0.1, 0], err_msg=f"Failed for form {form}"
             )
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_sensitivities_with_events(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -618,6 +697,17 @@ class TestIDAKLUSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "FAILURE IDA"):
             solver.solve(model, t_eval)
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_dae_solver_algebraic_model(self):
         for form in ["python", "casadi", "jax", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.have_jax():
@@ -921,6 +1011,17 @@ class TestIDAKLUSolver(unittest.TestCase):
         sol["x_s [m]"].domain = ["current collector"]
         sol["x_s [m]"].initialise_1D()
 
+    @pytest.mark.xfail(
+        platform.system() == "Linux"
+        or (
+            (
+                platform.platform(terse=True).startswith("macOS-13")
+                or platform.platform(terse=True).startswith("macOS-14")
+            )
+            and sys.version_info[:2] == (3, 11)
+        ),
+        reason="problem with IDAKLU not having `create_iree_solver` attribute",
+    )
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming

@@ -37,7 +37,7 @@
 #   system paths.
 #
 
-if(NOT DEFINED ENV{CIBUILDWHEEL} OR NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   enable_language(Fortran)
   set(IDAKLU_BLAS_VENDOR
     "OpenBLAS"
