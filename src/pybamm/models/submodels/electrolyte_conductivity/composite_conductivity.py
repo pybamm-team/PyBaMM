@@ -173,6 +173,8 @@ class Composite(BaseElectrolyteConductivity):
         return variables
 
     def set_boundary_conditions(self, variables):
+        # Define the boundary conditions for electrolyte concentration and potential
+        # so the gradients can be computed
         if self.options.electrode_types["negative"] == "planar":
             domains = ["separator", "positive"]
         else:
@@ -182,11 +184,16 @@ class Composite(BaseElectrolyteConductivity):
             c_e = variables[
                 domain.capitalize() + " electrolyte concentration [mol.m-3]"
             ]
+            phi_e = variables[domain.capitalize() + " electrolyte potential [V]"]
             self.boundary_conditions.update(
                 {
                     c_e: {
                         "left": (pybamm.boundary_gradient(c_e, "left"), "Neumann"),
                         "right": (pybamm.boundary_gradient(c_e, "right"), "Neumann"),
-                    }
+                    },
+                    phi_e: {
+                        "left": (pybamm.boundary_gradient(phi_e, "left"), "Neumann"),
+                        "right": (pybamm.boundary_gradient(phi_e, "right"), "Neumann"),
+                    },
                 }
             )
