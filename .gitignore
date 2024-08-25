@@ -88,6 +88,10 @@ SuiteSparse-*
 build_sundials
 KLU_module_deps
 sundials_KLU_libs/include
+download_KLU_Sundials/
+
+# Ignore Python Egg Info Directories
+*.egg-info
 
 # downloads
 *.gz

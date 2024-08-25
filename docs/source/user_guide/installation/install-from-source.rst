@@ -1,5 +1,5 @@
-Install from source (GNU Linux and macOS)
-=========================================
+Install from source
+===================
 
 .. contents::
 
@@ -12,32 +12,21 @@ Here is a gentle introduction/refresher: `Python Virtual Environments: A Primer 
 Prerequisites
 ---------------
 
-The following instructions are valid for both GNU/Linux distributions and MacOS.
-If you are running Windows, consider using the `Windows Subsystem for Linux (WSL) <https://docs.microsoft.com/en-us/windows/wsl/install-win10>`_.
-
-To obtain the PyBaMM source code, clone the GitHub repository
-
-.. code:: bash
-
-	  git clone https://github.com/pybamm-team/PyBaMM.git
-
-or download the source archive on the repository's homepage.
-
-To install PyBaMM, you will need:
-
-- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
-- The Python headers file for your current Python version.
-- A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
-- A C compiler (ex: ``gcc``).
-- A Fortran compiler (ex: ``gfortran``).
-- ``graphviz`` (optional), if you wish to build the documentation locally.
-- ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
-- ``texlive-latex-extra`` (optional) to convert model equations in latex.
-- ``dvipng`` (optional) to convert a DVI file to a PNG image.
-
-You can install the above with
-
 .. tab:: Ubuntu/Debian
+
+	To install PyBaMM, you will need:
+
+	- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
+	- The Python headers file for your current Python version.
+	- A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
+	- A C compiler (ex: ``gcc``).
+	- A Fortran compiler (ex: ``gfortran``).
+	- ``graphviz`` (optional), if you wish to build the documentation locally.
+	- ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
+	- ``texlive-latex-extra`` (optional) to convert model equations in latex.
+	- ``dvipng`` (optional) to convert a DVI file to a PNG image.
+
+	You can install the above with
 
 	.. code:: bash
 
@@ -45,131 +34,266 @@ You can install the above with
 
 	Where ``X`` is the version sub-number.
 
+	.. note::
+
+		If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc, texlive-latex-extra, dvipng``.
+
+	Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
+	You can install it to your local user account (make sure you are not within a virtual environment) with
+
+	.. code:: bash
+
+		python3.X -m pip install --user nox
+
+	Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
+
+	Depending on your operating system, you may or may not have ``pip`` installed along Python.
+	If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
+
 .. tab:: MacOS
+
+	To install PyBaMM, you will need:
+
+	- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
+	- The Python headers file for your current Python version.
+	- A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
+	- A C compiler (ex: ``gcc``).
+	- A Fortran compiler (ex: ``gfortran``).
+	- ``graphviz`` (optional), if you wish to build the documentation locally.
+	- ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
+	- ``texlive-latex-extra`` (optional) to convert model equations in latex.
+	- ``dvipng`` (optional) to convert a DVI file to a PNG image.
+
+	You can install the above with
 
 	.. code:: bash
 
 		brew install python openblas gcc gfortran graphviz libomp cmake pandoc
 
-.. note::
+	Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
+	You can install it to your local user account (make sure you are not within a virtual environment) with
 
-    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc, texlive-latex-extra, dvipng``.
+	.. code:: bash
 
-    On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+		python3.X -m pip install --user nox
 
-In addition to the packages above, you will need `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser. The tool is necessary to install build-time dependencies in "editable mode" without build isolation.
+	Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
 
-To install ``tomlkit`` to your local user account (ensure you are not within a virtual environment), use the following command:
+	Depending on your operating system, you may or may not have ``pip`` installed along Python.
+	If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
 
-.. code:: bash
+.. tab:: Windows
 
-	  python3.X -m pip install --user tomlkit
+	To use PyBaMM, you must have Python 3.9, 3.10, 3.11, or 3.12 installed.
 
-Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
-You can install it to your local user account (make sure you are not within a virtual environment) with
+	To install Python 3.X, download the installation files from `Python’s
+	website <https://www.python.org/downloads/windows/>`_. Make sure to
+	tick the box on ``Add Python 3.X to PATH``. For more detailed
+	instructions please see the `official Python on Windows
+	guide <https://docs.python.org/3.9/using/windows.html>`__.
 
-.. code:: bash
+	(Optional) If you wish to build the documentation locally, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager,
 
-	  python3.X -m pip install --user nox
+	.. code:: bash
 
-Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
+		  choco install graphviz
 
-Depending on your operating system, you may or may not have ``pip`` installed along Python.
-If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
+	or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
+
+	Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
+	You can install it to your local user account (make sure you are not within a virtual environment) with
+
+	.. code:: bash
+
+		python -m pip install --user nox
+
+	Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
+
+	After installing, you must add the following location to your ``Path`` environment variable to run ``nox`` in a terminal, like Command Prompt.
+
+	.. code::
+
+		C:\Users\<USERNAME>\AppData\Roaming\Python\Python3<X>\Scripts
+
+	Make sure to replace ``<USERNAME>`` with your user name and ``X`` with your Python subversion.
+
+.. _install-build-time:
 
 Installing the build-time requirements
 --------------------------------------
 
-PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library.
-To use this solver, you must make sure that you have the necessary SUNDIALS components
-installed on your system.
+.. tab:: GNU/Linux and MacOS
 
-.. code:: bash
+	PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library.
+	To use this solver, you must make sure that you have the necessary SUNDIALS components
+	installed on your system.
 
-	  # in the PyBaMM/ directory
-	  nox -s pybamm-requires
+	.. code:: bash
 
-This will download, compile and install the SuiteSparse and SUNDIALS libraries.
-Both libraries are installed in ``PyBaMM/sundials_KLU_libs``.
+		# in the project root directory
+		nox -s pybamm-requires
 
-For users requiring more control over the installation process, the ``pybamm-requires`` session supports additional command-line arguments:
+	This will download, compile and install the SuiteSparse and SUNDIALS libraries.
+	Both libraries are installed in ``PyBaMM/sundials_KLU_libs``.
 
-- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
+	For users requiring more control over the installation process, the ``pybamm-requires`` session supports additional command-line arguments:
 
-  Example:
+	- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
 
-  .. code:: bash
+	Example:
 
-      nox -s pybamm-requires -- --install-dir [custom_directory_path]
+	.. code:: bash
 
-  After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
+		nox -s pybamm-requires -- --install-dir [custom_directory_path]
 
-  .. code:: bash
+	After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
 
-	  export INSTALL_DIR=[custom_directory_path]
+	.. code:: bash
 
-- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
+		export INSTALL_DIR=[custom_directory_path]
 
-  Example:
+	- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
 
-  .. code:: bash
+	Example:
 
-      nox -s pybamm-requires -- --force
+	.. code:: bash
+
+		nox -s pybamm-requires -- --force
+
+.. tab:: Windows
+
+	PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library. To use this solver, you must ensure you have the necessary SUNDIALS components installed on your system.
+	To install SUNDIALS, you will need to install the following components:
+
+	VCPKG
+
+	- VCPKG automatically installs the required libraries for you during the build process. To install VCPKG, follow the instructions in `Microsoft's official documentation <https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-cmd>`_.
+	- Make sure to add the location to ``Path`` and a new environment variable ``VCPKG_ROOT_DIR`` with the location to VCPKG.
+
+	C++ Compiler
+
+	- PyBaMM uses a recent version of Microsoft Visual C++ (MSVC), which you can get using `Build Tools for Visual Studio Code 2022 <https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022/>`_.
+	- Note that you won't need Visual Studio 2022 entirely; just ``Desktop development with C++`` will suffice.
+
+	CMake
+
+	- ``CMake`` is required to install the SUNDIALS and other libraries for the ``IDAKLU`` solver.
+	- To install it, follow the link to the `official CMake downloads page <https://cmake.org/download/>`_.
+	- Download an installer based on your system's architecture, i.e. ``x32/x64``, and check ``Add CMake to the PATH environment variable`` during installation.
 
 Manual install of build time requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you'd rather do things yourself,
+.. tab:: GNU/Linux and MacOS
 
-1. Make sure you have CMake installed
-2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
-3. Compile and install SUNDIALS.
+	If you'd rather do things yourself,
+
+	1. Make sure you have CMake installed
+	2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
+	3. Compile and install SUNDIALS.
 
 
-PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
+	PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
 
-.. code:: bash
+	.. code:: bash
 
-	  python scripts/install_KLU_Sundials.py
+		python scripts/install_KLU_Sundials.py
 
-This script supports optional arguments for custom installations:
+	This script supports optional arguments for custom installations:
 
-- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
-  By default, they are installed in ``PyBaMM/sundials_KLU_libs``.
+	- ``--install-dir``: Specify a custom installation directory for SUNDIALS and SuiteSparse.
 
-  Example:
+	By default, they are installed in ``PyBaMM/sundials_KLU_libs``.
 
-  .. code:: bash
+	Example:
 
-	  python scripts/install_KLU_Sundials.py --install-dir [custom_directory_path]
+	.. code:: bash
 
-  After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
+		python scripts/install_KLU_Sundials.py --install-dir [custom_directory_path]
 
-  .. code:: bash
+	After running this command, you need to export the environment variable ``INSTALL_DIR`` with the custom installation directory to link the libraries with the solver:
 
-	  export INSTALL_DIR=[custom_directory_path]
+	.. code:: bash
 
-- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
+		export INSTALL_DIR=[custom_directory_path]
 
-  Example:
+	- ``--force``: Force the installation of SUNDIALS and SuiteSparse, even if they are already found in the specified directory.
 
-  .. code:: bash
+	Example:
 
-      python scripts/install_KLU_Sundials.py --force
+	.. code:: bash
+
+		python scripts/install_KLU_Sundials.py --force
+
+.. tab:: Windows
+
+	There isn't a method to manually build SUNDIALS on Windows. However, if you've followed the instructions provided in the previous section (:ref:`install-build-time`), you should have successfully set up SUNDIALS on your Windows system.
+
+	With SUNDIALS already set up, you can proceed directly to the next section.
 
 .. _pybamm-install:
 
 Installing PyBaMM
 -----------------
 
-You should now have everything ready to build and install PyBaMM successfully.
+.. tab:: GNU/Linux and MacOS
+
+	To obtain the PyBaMM source code, clone the GitHub repository
+
+	.. code:: bash
+
+		git clone https://github.com/pybamm-team/PyBaMM.git
+
+	or download the source archive on the repository's homepage.
+
+	You should now have everything ready to build and install PyBaMM successfully.
+
+.. tab:: Windows
+
+	Open a Command Prompt and navigate to the folder where you want to install PyBaMM,
+
+	1. Obtain the PyBaMM source code by cloning the GitHub repository or downloading the source archive on the repository's homepage.
+
+	   .. code:: bash
+
+			git clone https://github.com/pybamm-team/PyBaMM.git
+
+	2. PyBaMM requires setting a few environment variables to install the IDAKLU solver. To put them automatically, run the following ``.bat`` script using the following command from the project root directory.
+
+	   .. code::
+
+			.\Scripts\windows_setup.bat
+
+	The script sets the following environment variables with the following defaults.
+
+	.. code-block:: bash
+
+		PYBAMM_USE_VCPKG: ON
+		VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+		VCPKG_FEATURE_FLAGS: manifests,registries
+
+	.. note::
+
+		Ensure you set the ``VCPKG_ROOT_DIR`` environment variable to the location where VCPKG is installed.
+
+	You should now have everything ready to build and install PyBaMM successfully.
 
 Using ``Nox`` (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+PyBaMM needs a few build-time dependencies when installing PyBaMM in "editable mode" without build-isolation. `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser, automates this process for you.
+
+To install ``tomlkit`` to your local user account (ensure you are not within a virtual environment), use the following command:
+
 .. code:: bash
 
-	# in the PyBaMM/ directory
+	  python -m pip install --user tomlkit
+
+To install PyBaMM, execute the following command
+
+.. code:: bash
+
+	# in the project root directory
 	nox -s dev
 
 .. note::
@@ -188,7 +312,7 @@ You can now activate the environment with
 
 .. tab:: Windows
 
-	.. code:: bash
+	.. code::
 
 		venv\Scripts\activate.bat
 
@@ -197,68 +321,138 @@ and run the tests to check your installation.
 Manual install
 ~~~~~~~~~~~~~~
 
-We recommend to install PyBaMM within a virtual environment, in order
-not to alter any distribution Python files.
+We recommend installing PyBaMM within a virtual environment to avoid altering any distribution of Python files.
 
-To create a virtual environment ``env`` within your current directory type:
+.. tab:: GNU/Linux and MacOS
 
-.. code:: bash
+	To create a virtual environment ``env`` within your current directory type:
 
-   virtualenv env
+	.. code:: bash
 
-You can then “activate” the environment using:
+		virtualenv env
 
-.. code:: bash
+	You can then “activate” the environment using:
 
-   source env/bin/activate
+	.. code:: bash
 
-Now all the calls to pip described below will install PyBaMM and its
-dependencies into the environment ``env``. When you are ready to exit
-the environment and go back to your original system, just type:
+		source env/bin/activate
 
-.. code:: bash
+	Now all the calls to pip described below will install PyBaMM and its
+	dependencies into the environment ``env``. When you are ready to exit
+	the environment and go back to your original system, just type:
 
-   deactivate
+	.. code:: bash
 
-From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
+		deactivate
 
-.. code:: bash
+	From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
 
-	  pip install .
+	.. code:: bash
 
-If you want to install PyBaMM in an "editable mode", use the following command:
+		pip install .
 
-.. code:: bash
+	If you intend to contribute to the development of PyBaMM, it is convenient to
+	install in "editable mode", along with all the optional dependencies and useful
+	tools for development and documentation.
 
-	  pip install -e .
+	You can install PyBaMM in an "editable mode" using the following command:
 
-If you intend to contribute to the development of PyBaMM, it is convenient to
-install in "editable mode", along with all the optional dependencies and useful
-tools for development and documentation.
+	.. code:: bash
 
-Due to the ``--no-build-isolation`` flag in the "editable mode" command, you first need to install the build-time dependencies inside the virtual environment:
+		pip install -e .[all,dev,docs]
 
-.. code:: bash
+	You can also install PyBaMM with "partial rebuilds" enabled. But, due to the ``--no-build-isolation`` flag, you first need to install the build-time dependencies inside the virtual environment:
 
-	pip install scikit-build-core casadi cmake pybind11
+	.. code:: bash
 
-You can now install PyBaMM in "editable mode" for development using the following commands:
+		pip install scikit-build-core pybind11 casadi cmake
 
-.. code:: bash
+	You can now install PyBaMM in "editable mode" with "partial rebuilds" for development using the following command:
 
-	  pip install --no-build-isolation --config-settings=editable.rebuild=true -ve .[all,dev,docs]
+	.. code:: bash
 
-If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
+		pip install --no-build-isolation --config-settings=editable.rebuild=true -e .[all,dev,docs]
 
-.. code:: bash
+	If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
-	  pip install --no-build-isolation --config-settings=editable.rebuild=true -ve '.[all,dev,docs]'
+	.. code:: bash
+
+		pip install --no-build-isolation --config-settings=editable.rebuild=true -e '.[all,dev,docs]'
+
+
+.. tab:: Windows
+
+	You can install ``virtualenv`` by executing the following command:
+
+	.. code:: bash
+
+		python -m pip install virtualenv
+
+	Create a virtual environment ``venv`` within the PyBaMM root directory:
+
+	.. code:: bash
+
+		python -m virtualenv venv
+
+	You can then “activate” the environment using:
+
+	.. code:: text
+
+		venv\Scripts\activate.bat
+
+	Now, all the calls to pip described below will install PyBaMM and its
+	dependencies into the environment ``venv``. When you are ready to exit
+	the environment and go back to your original system, just type:
+
+	.. code:: bash
+
+		deactivate
+
+	From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
+
+	.. code:: bash
+
+		pip install .
+
+	If you intend to contribute to the development of PyBaMM, it is convenient to
+	install in "editable mode", along with all the optional dependencies and useful
+	tools for development and documentation.
+
+	You can install PyBaMM in an "editable mode" using the following command:
+
+	.. code:: bash
+
+		pip install -e .[all,dev,docs]
+
+	You can also install PyBaMM with "partial rebuilds" enabled. But, due to the ``--no-build-isolation`` flag, you first need to install the build-time dependencies inside the virtual environment:
+
+	.. code:: bash
+
+		pip install scikit-build-core pybind11
+
+	You can now install PyBaMM in "editable mode" with "partial rebuilds" for development using the following command:
+
+	.. code:: bash
+
+		pip install --no-build-isolation --config-settings=editable.rebuild=true -e .[all,dev,docs]
+
+.. note::
+
+	The "partial rebuilds" feature is still experimental and may break. To learn more, check out `scikit-build-core's official documentation <https://scikit-build-core.readthedocs.io/en/stable/configuration.html#editable-installs/>`_.
 
 Before you start contributing to PyBaMM, please read the `contributing
 guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`__.
 
 Running the tests
 -----------------
+
+.. tab:: GNU/Linux
+
+	Make sure to install ``texlive-latex-extra`` to pass all tests. Otherwise, you can safely ignore the failed tests needing it.
+
+.. tab:: Windows and MacOS
+
+	Make sure to install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager (Windows) or using ``brew`` (MacOS) to pass all the tests. Otherwise, you can safely ignore the failed tests needing ``graphviz``.
 
 Using Nox (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -292,31 +486,32 @@ Finally, to run the unit and the integration suites sequentially, use
 
 	nox -s tests
 
-Using the test runner
-~~~~~~~~~~~~~~~~~~~~~~
+Using ``pytest``
+~~~~~~~~~~~~~~~~
 
-You can run unit tests for PyBaMM using
-
-.. code:: bash
-
-	  # in the PyBaMM/ directory
-	  python run-tests.py --unit
-
-
-The above starts a sub-process using the current python interpreter (i.e. using your current
-Python environment) and run the unit tests. This can take a few minutes.
-
-You can also use the test runner to run the doctests:
+You can run unit tests for PyBaMM inside the virtual environment using
 
 .. code:: bash
 
-	  python run-tests.py --doctest
+	  pytest -m unit
 
-There is more to the PyBaMM test runner. To see a list of all options, type
+You can run integration tests using
 
 .. code:: bash
 
-	  python run-tests.py --help
+	  pytest -m integration
+
+To run both unit and integration tests, use the following command:
+
+.. code:: bash
+
+	  pytest -m tests
+
+You can also use ``pytest`` to test example notebooks.
+
+.. code:: bash
+
+	  pytest --nbmake docs/source/examples/
 
 How to build the PyBaMM documentation
 -------------------------------------
@@ -359,53 +554,86 @@ Here are some additional useful commands you can run with ``Nox``:
 Troubleshooting
 ---------------
 
-**Problem:** I ran a ``nox``/python build command and encountered ``Could NOT find SUNDIALS (missing: SUNDIALS_INCLUDE_DIR SUNDIALS_LIBRARIES)`` error.
+.. tab:: GNU/Linux and MacOS
 
-**Solution:** This error occurs when the build system, ``scikit-build-core``, can not find the SUNDIALS libraries to build the ``IDAKLU`` solver.
+	**Problem:** I ran a ``nox``/python build command and encountered ``Could NOT find SUNDIALS (missing: SUNDIALS_INCLUDE_DIR SUNDIALS_LIBRARIES)`` error.
 
-1. Run the following command to ensure SUNDIALS libraries are installed:
+	**Solution:** This error occurs when the build system, ``scikit-build-core``, can not find the SUNDIALS libraries to build the ``IDAKLU`` solver.
 
-   .. code:: bash
+	1. Run the following command to ensure SUNDIALS libraries are installed:
 
-		nox -s pybamm-requires -- --force
+	   .. code:: bash
 
-2. If you are using a custom directory for SUNDIALS, set the ``INSTALL_DIR`` environment variable to specify the path:
+			nox -s pybamm-requires -- --force
 
-   .. code:: bash
+	2. If you are using a custom directory for SUNDIALS, set the ``INSTALL_DIR`` environment variable to specify the path:
 
-		export INSTALL_DIR=[custom_directory_path]
+	   .. code:: bash
 
-**Problem:** When installing SUNDIALS, I encountered ``CMake Error: The source "../CMakeLists.txt" does not match the source "../CMakeLists.txt" used to generate cache`` error.
+			export INSTALL_DIR=[custom_directory_path]
 
-**Solution:** This error occurs when there is a delay between installing and downloading SUNDIALS libraries.
+	**Problem:** When installing SUNDIALS, I encountered ``CMake Error: The source "../CMakeLists.txt" does not match the source "../CMakeLists.txt" used to generate cache`` error.
 
-1. Remove the following directories from the PyBaMM directory if they exist:
+	**Solution:** This error occurs when there is a delay between installing and downloading SUNDIALS libraries.
 
-   a. ``download_KLU_Sundials``
-   b. ``sundials_KLU_libs``
-   c. Any custom directory you have set for installation
+	1. Remove the following directories from the PyBaMM directory if they exist:
 
-2. Re-run the command to install SUNDIALS.
-3. If you are using a custom directory, make sure to set the ``INSTALL_DIR`` environment variable:
+	   a. ``download_KLU_Sundials``
+	   b. ``sundials_KLU_libs``
+	   c. Any custom directory you have set for installation
 
-   .. code:: bash
+	2. Re-run the command to install SUNDIALS.
+	3. If you are using a custom directory, make sure to set the ``INSTALL_DIR`` environment variable:
 
-		export INSTALL_DIR=[custom_directory_path]
+	   .. code:: bash
 
-**Problem:** I have made edits to source files in PyBaMM, but these are
-not being used when I run my Python script.
+			export INSTALL_DIR=[custom_directory_path]
 
-**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag, like so:
+	**Problem:** I have made edits to source files in PyBaMM, but these are
+	not being used when I run my Python script.
 
-.. code:: bash
+	**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag, like so:
 
-	pip install -ve .
+	.. code:: bash
 
-If you want to install to contribute to PyBaMM, use this command:
+		pip install -e .
 
-.. code:: bash
+	If you want to install with "partial rebuilds" enabled, use this command:
 
-	pip install --no-build-isolation --config-settings=editable.rebuild=true -ve .[all,dev,docs]
+	.. code:: bash
 
-These commands set the installed location of the
-source files to your current directory.
+		pip install --no-build-isolation --config-settings=editable.rebuild=true -e.
+
+	Make sure you have the build-time dependencies installed beforehand.
+
+	These commands set the installed location of the
+	source files to your current directory.
+
+.. tab:: Windows
+
+	**Problem:** I ran a ``nox``/python build command and encountered ``Configuring incomplete, errors occurred!`` error.
+
+	**Solution:** This can occur when the environment variables are improperly set in the terminal.
+
+	1. Make sure you've set environment variables before running any ``nox``/python build command.
+	2. Try running the build command again in the same terminal.
+
+	**Problem:** I have made edits to source files in PyBaMM, but these are
+	not being used when I run my Python script.
+
+	**Solution:** Make sure you have installed PyBaMM using the ``-e`` flag, like so:
+
+	.. code:: bash
+
+		pip install -e .
+
+	If you want to install with "partial rebuilds" enabled, use this command:
+
+	.. code:: bash
+
+		pip install --no-build-isolation --config-settings=editable.rebuild=true -e.
+
+	Make sure you have the build-time dependencies installed beforehand.
+
+	These commands set the installed location of the
+	source files to your current directory.

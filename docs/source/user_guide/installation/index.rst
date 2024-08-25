@@ -227,7 +227,6 @@ Installing a specific version? Installing from source? Check the advanced instal
 
    gnu-linux-mac
    windows
-   install-source-windows
    windows-wsl
    install-from-source
    install-from-docker
