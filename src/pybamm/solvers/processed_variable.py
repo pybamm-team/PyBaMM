@@ -75,43 +75,42 @@ class ProcessedVariable:
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
 
+        # xr_data_array is initialized
+        self._xr_data_array = None
+
         # handle 2D (in space) finite element variables differently
         if (
             self.mesh
             and "current collector" in self.domain
             and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
         ):
-            self.initialise_2D_scikit_fem()
+            return self.initialise_2D_scikit_fem()
 
         # check variable shape
-        else:
-            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
-                self.initialise_0D()
-            else:
-                n = self.mesh.npts
-                base_shape = self.base_eval_shape[0]
-                # Try some shapes that could make the variable a 1D variable
-                if base_shape in [n, n + 1]:
-                    self.initialise_1D()
-                else:
-                    # Try some shapes that could make the variable a 2D variable
-                    first_dim_nodes = self.mesh.nodes
-                    first_dim_edges = self.mesh.edges
-                    second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-                    if self.base_eval_size // len(second_dim_pts) in [
-                        len(first_dim_nodes),
-                        len(first_dim_edges),
-                    ]:
-                        self.initialise_2D()
-                    else:
-                        # Raise error for 3D variable
-                        raise NotImplementedError(
-                            f"Shape not recognized for {base_variables[0]}"
-                            + "(note processing of 3D variables is not yet implemented)"
-                        )
+        if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
+            return self.initialise_0D()
 
-        # xr_data_array is initialized when needed
-        self._xr_data_array = None
+        n = self.mesh.npts
+        base_shape = self.base_eval_shape[0]
+        # Try some shapes that could make the variable a 1D variable
+        if base_shape in [n, n + 1]:
+            return self.initialise_1D()
+
+        # Try some shapes that could make the variable a 2D variable
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_pts = self.base_variables[0].secondary_mesh.nodes
+        if self.base_eval_size // len(second_dim_pts) in [
+            len(first_dim_nodes),
+            len(first_dim_edges),
+        ]:
+            return self.initialise_2D()
+
+        # Raise error for 3D variable
+        raise NotImplementedError(
+            f"Shape not recognized for {base_variables[0]}"
+            + "(note processing of 3D variables is not yet implemented)"
+        )
 
     def initialise_0D(self):
         # initialise empty array of the correct size

@@ -68,7 +68,7 @@ PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-00
 
 ### Ruff
 
-We use [ruff](https://github.com/charliermarsh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
+We use [ruff](https://github.com/astral-sh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
 python -m pip install pre-commit
@@ -182,6 +182,11 @@ If you want to check integration tests as well as unit tests, type
 
 ```bash
 nox -s tests
+```
+or, alternatively, you can use posargs to pass the path to the test to `nox`. For example:
+
+```bash
+nox -s tests -- tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
