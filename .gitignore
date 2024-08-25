@@ -90,8 +90,11 @@ KLU_module_deps
 sundials_KLU_libs/include
 download_KLU_Sundials/
 
-# Ignore Python Egg Info Directories
+# ignore Python Egg Info Directories
 *.egg-info
+
+# ignore IREE
+iree
 
 # downloads
 *.gz
