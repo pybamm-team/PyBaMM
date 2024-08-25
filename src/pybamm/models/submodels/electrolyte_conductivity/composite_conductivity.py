@@ -24,21 +24,11 @@ class Composite(BaseElectrolyteConductivity):
     def __init__(self, param, domain=None, options=None):
         super().__init__(param, domain, options=options)
 
-    def _higher_order_macinnes_function(self, x):
-        "Function to differentiate between composite and first-order models"
+    def _derivative_macinnes_function(self, x):
+        "Compute the derivative of the MacInnes function."
         tol = pybamm.settings.tolerances["macinnes__c_e"]
         x = pybamm.maximum(x, tol)
-        return pybamm.log(x)
-
-    def _gradient_macinnes_function(self, x):
-        "Gradient of the MacInnes function"
-        # tol = pybamm.settings.tolerances["macinnes__c_e"]
-        # x_edge = pybamm.FullBroadcastToEdges(
-        #     x,
-        #     broadcast_domains=x.domains,
-        # )
-        # return pybamm.grad(x) / pybamm.maximum(x_edge, tol)
-        return pybamm.grad(self._higher_order_macinnes_function(x))
+        return 1 / x
 
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
@@ -97,7 +87,7 @@ class Composite(BaseElectrolyteConductivity):
 
             eta_c_n = -RT_F_av_n * pybamm.IndefiniteIntegral(
                 param.chi(c_e_n, T_av_n)
-                * self._higher_order_macinnes_function(c_e_n).diff(c_e_n)
+                * self._derivative_macinnes_function(c_e_n)
                 * pybamm.grad(c_e_n),
                 x_n,
             )
@@ -118,7 +108,7 @@ class Composite(BaseElectrolyteConductivity):
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
         eta_c_s = -RT_F_av_s * pybamm.IndefiniteIntegral(
             param.chi(c_e_s, T_av_s)
-            * self._higher_order_macinnes_function(c_e_s).diff(c_e_s)
+            * self._derivative_macinnes_function(c_e_s)
             * pybamm.grad(c_e_s),
             x_s,
         )
@@ -137,7 +127,7 @@ class Composite(BaseElectrolyteConductivity):
         i_e_p_edge = i_boundary_cc * (L_x - x_p_edge) / L_p
         eta_c_p = -RT_F_av_p * pybamm.IndefiniteIntegral(
             param.chi(c_e_p, T_av_p)
-            * self._higher_order_macinnes_function(c_e_p).diff(c_e_p)
+            * self._derivative_macinnes_function(c_e_p)
             * pybamm.grad(c_e_p),
             x_p,
         )
