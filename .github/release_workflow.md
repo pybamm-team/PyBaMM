@@ -56,8 +56,8 @@ If a new release is required after the release of `vYY.MM.{x-1}` -
 Some other essential things to check throughout the release process -
 
 - If updating our custom vcpkg registry entries
-  [pybamm-team/sundials-vcpkg-registry][SUNDIALS_VCPKG]
-  or [pybamm-team/casadi-vcpkg-registry][CASADI_VCPKG] (used to build Windows
+  [sundials-vcpkg-registry][SUNDIALS_VCPKG]
+  or [casadi-vcpkg-registry][CASADI_VCPKG] (used to build Windows
   wheels), make sure to update the baseline of the registries in
   vcpkg-configuration.json to the latest commit id.
 - Update jax and jaxlib to the latest version in `pybamm.util` and
@@ -77,7 +77,7 @@ Some other essential things to check throughout the release process -
   PR **must** bump the build number in `meta.yaml` and **must** be from a
   personal fork of the repository.
 
-[SUNDIALS_VCPKG]: (https://github.com/pybamm-team/sundials-vcpkg-registry)
-[CASADI_VCPKG]: (https://github.com/pybamm-team/casadi-vcpkg-registry)
-[PYBAMM_FEED]: (https://github.com/conda-forge/pybamm-feedstock)
-[FEED_GUIDE]: (https://conda-forge.org/docs/maintainer/updating_pkgs.html#updating-the-feedstock-repository)
+[SUNDIALS_VCPKG]: https://github.com/pybamm-team/sundials-vcpkg-registry
+[CASADI_VCPKG]: https://github.com/pybamm-team/casadi-vcpkg-registry
+[PYBAMM_FEED]: https://github.com/conda-forge/pybamm-feedstock
+[FEED_GUIDE]: https://conda-forge.org/docs/maintainer/updating_pkgs.html#updating-the-feedstock-repository
