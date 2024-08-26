@@ -932,9 +932,6 @@ class ParameterValues:
                     file.write((s + " : {:10.3E}\n").format(name, value))
 
 
-
-
-
 EXPERIMENT_PARAMS = [
     "Reference temperature [K]",
     "Total heat transfer coefficient [W.m-2.K-1]",
@@ -967,6 +964,7 @@ categories = [
     "Electrolyte",
 ]
 
+
 def nest_dict(params):
     nested_dict = defaultdict(dict)
 
@@ -997,6 +995,7 @@ def nest_dict(params):
                 nested_dict["Misc."][key] = value
 
     return dict(nested_dict)
+
 
 def flat_dictionary(nested_dict):
     flat_dict = {}
