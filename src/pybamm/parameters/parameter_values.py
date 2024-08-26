@@ -930,3 +930,93 @@ class ParameterValues:
                     file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
+
+
+
+
+
+EXPERIMENT_PARAMS = [
+    "Reference temperature [K]",
+    "Total heat transfer coefficient [W.m-2.K-1]",
+    "Ambient temperature [K]",
+    "Number of electrodes connected in parallel to make a cell",
+    "Number of cells connected in series to make a battery",
+    "Lower voltage cut-off [V]",
+    "Upper voltage cut-off [V]",
+    "Open-circuit voltage at 0% SOC [V]",
+    "Open-circuit voltage at 100% SOC [V]",
+    "Initial concentration in negative electrode [mol.m-3]",
+    "Initial concentration in positive electrode [mol.m-3]",
+    "Initial temperature [K]",
+]
+
+CELL_PARAMS = [
+    "Electrode height [m]",
+    "Electrode width [m]",
+    "Cell volume [m3]",
+    "Cell cooling surface area [m2]",
+    "Nominal cell capacity [A.h]",
+]
+
+categories = [
+    "Negative current collector",
+    "Negative electrode",
+    "Separator",
+    "Positive electrode",
+    "Positive current collector",
+    "Electrolyte",
+]
+
+def nest_dict(params):
+    nested_dict = defaultdict(dict)
+
+    for key, value in params.items():
+        # First catch special cases
+        if key in EXPERIMENT_PARAMS:
+            nested_dict["Experiment"][key] = value
+        elif key in CELL_PARAMS:
+            nested_dict["Cell"][key] = value
+        else:
+            # then loop through categories
+            param_added = False
+            key_lower = key.lower().replace(
+                "particle", "electrode"
+            )  # catch "particle" in the electrode category
+            for category in categories:
+                if category.lower() in key_lower:
+                    short_key = (
+                        key.replace("particle", "electrode")
+                        .replace(category, "")
+                        .strip()
+                    )
+                    short_key = short_key[0].upper() + short_key[1:]
+                    nested_dict[category][short_key] = value
+                    param_added = True
+                    break
+            if not param_added:
+                nested_dict["Misc."][key] = value
+
+    return dict(nested_dict)
+
+def flat_dictionary(nested_dict):
+    flat_dict = {}
+
+    for category, params in nested_dict.items():
+        for key, value in params.items():
+            # Replace "electrode" with "particle" in key and remove category name
+            if category != "Experiment" and category != "Cell" and category != "Misc.":
+                key = key.replace(category, "").strip()
+                if "OCP" and "SEI" in key:
+                    new_key = f"{category} {key[0]}{key[1:]}"
+                elif any(p in key for p in ["Diffusivity", "Radius"]):
+                    new_key = f"{category.replace("electrode", "particle")} {key[0].lower()}{key[1:]}"
+                else:
+                    # Combine category and key, capitalize the first letter of the key
+                    new_key = f"{category} {key[0].lower()}{key[1:]}"
+            else:
+                new_key = key
+
+            # Save to flat_dict
+            flat_dict[new_key] = value
+
+    return flat_dict
