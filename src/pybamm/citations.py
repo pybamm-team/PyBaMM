@@ -64,14 +64,12 @@ class Citations:
         """Reads the citations in `pybamm.CITATIONS.bib`. Other works can be cited
         by passing a BibTeX citation to :meth:`register`.
         """
-        try:
+        if not self._module_import_error:
             parse_file = import_optional_dependency("pybtex.database", "parse_file")
             citations_file = os.path.join(pybamm.__path__[0], "CITATIONS.bib")
             bib_data = parse_file(citations_file, bib_format="bibtex")
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
-        except ModuleNotFoundError:  # pragma: no cover
-            pass
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
@@ -145,7 +143,7 @@ class Citations:
         key: str
             A BibTeX formatted citation
         """
-        try:
+        if not self._module_import_error:
             PybtexError = import_optional_dependency("pybtex.scanner", "PybtexError")
             parse_string = import_optional_dependency("pybtex.database", "parse_string")
             try:
@@ -156,18 +154,13 @@ class Citations:
 
                 # Add and register all citations
                 for key, entry in bib_data.entries.items():
-                    # Add to _all_citations dictionary
                     self._add_citation(key, entry)
-                    # Add to _papers_to_cite set
                     self._papers_to_cite.add(key)
-                    return
+                return
             except PybtexError as error:
-                # Unable to parse / unknown key
                 raise KeyError(
                     f"Not a bibtex citation or known citation: {key}"
                 ) from error
-        except ModuleNotFoundError:  # pragma: no cover
-            self._module_import_error = True
 
     def _tag_citations(self):
         """Prints the citation tags for the citations that have been registered
@@ -218,7 +211,7 @@ class Citations:
         """
         # Parse citations that were not known keys at registration, but do not
         # fail if they cannot be parsed
-        try:
+        if not self._module_import_error:
             pybtex = import_optional_dependency("pybtex")
             try:
                 for key in self._unknown_citations:
@@ -232,28 +225,33 @@ class Citations:
                 # delete the invalid citation from the set
                 self._unknown_citations.remove(key)
 
-            if output_format == "text":
-                citations = pybtex.format_from_strings(
-                    self._cited, style="plain", output_backend="plaintext"
-                )
-            elif output_format == "bibtex":
-                citations = "\n".join(self._cited)
-            else:
-                raise pybamm.OptionError(
-                    f"Output format {output_format} not recognised."
-                    "It should be 'text' or 'bibtex'."
-                )
-
-            if filename is None:
-                print(citations)
-                if verbose:
-                    self._tag_citations()  # pragma: no cover
-            else:
-                with open(filename, "w") as f:
-                    f.write(citations)
-        except ModuleNotFoundError:  # pragma: no cover
-            self._module_import_error = True
+            cite_list = self.format_citations(output_format, pybtex)
+            self.write_citations(cite_list, filename, verbose)
+        else:
             self.print_import_warning()
+
+    def write_citations(self, cite_list, filename, verbose):
+        if filename is None:
+            print(cite_list)
+            if verbose:
+                self._tag_citations()  # pragma: no cover
+        else:
+            with open(filename, "w") as f:
+                f.write(cite_list)
+
+    def format_citations(self, output_format, pybtex):
+        if output_format == "text":
+            cite_list = pybtex.format_from_strings(
+                self._cited, style="plain", output_backend="plaintext"
+            )
+        elif output_format == "bibtex":
+            cite_list = "\n".join(self._cited)
+        else:
+            raise pybamm.OptionError(
+                f"Output format {output_format} not recognised."
+                "It should be 'text' or 'bibtex'."
+            )
+        return cite_list
 
     def print_import_warning(self):
         if self._module_import_error:
