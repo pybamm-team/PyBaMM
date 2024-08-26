@@ -191,12 +191,12 @@ class TestSimulationExperiment(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(
             solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"](solutions[0].t),
             decimal=1,
         )
         np.testing.assert_array_almost_equal(
             solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"].data,
+            solutions[1]["Current [A]"](solutions[0].t),
             decimal=0,
         )
         self.assertEqual(solutions[1].termination, "final time")
