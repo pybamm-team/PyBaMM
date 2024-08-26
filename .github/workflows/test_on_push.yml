@@ -36,7 +36,11 @@ jobs:
   run_windows_unit_integration_tests:
     needs: style
     env:
-      BUILD_IDAKLU: OFF
+      PYBAMM_USE_VCPKG: ON
+      VCPKG_ROOT_DIR: C:\vcpkg
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+      VCPKG_FEATURE_FLAGS: manifests,registries
+      CMAKE_GENERATOR: "Visual Studio 17 2022"
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -57,6 +61,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+
+      - name: Cache packages installed through vcpkg on Windows
+        uses: actions/cache@v4
+        env:
+          cache-name: vckpg_binary_cache
+        with:
+          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
+
+      - name: Install vcpkg on Windows
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
 
       - name: Install nox and tomlkit
         run: python -m pip install nox tomlkit
