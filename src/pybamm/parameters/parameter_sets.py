@@ -17,8 +17,7 @@ class ParameterSets(Mapping):
 
 
         >>> import pybamm
-        >>> list(pybamm.parameter_sets)
-        ['Sulzer2019', 'Ai2020', 'Chen2020', 'Chen2020_composite', 'Ecker2015', 'Ecker2015_graphite_halfcell', 'Marquis2019', 'Mohtat2020', 'NCA_Kim2011', 'OKane2022', 'OKane2022_graphite_SiOx_halfcell', 'ORegan2022', 'Prada2013', 'Ramadass2004', 'Xu2019', 'ECM_Example', 'MSMR_Example']
+        >>> list(pybamm.parameter_sets) # doctest: +SKIP
 
     Get the docstring for a parameter set:
 

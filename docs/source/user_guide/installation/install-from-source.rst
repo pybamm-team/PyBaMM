@@ -122,11 +122,10 @@ Prerequisites
 Installing the build-time requirements
 --------------------------------------
 
-.. tab:: GNU/Linux and MacOS
+PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library. To use this solver, you must ensure you have the necessary SUNDIALS components installed on your system.
+To install SUNDIALS, you will need to install the following components:
 
-	PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library.
-	To use this solver, you must make sure that you have the necessary SUNDIALS components
-	installed on your system.
+.. tab:: GNU/Linux and MacOS
 
 	.. code:: bash
 
@@ -161,9 +160,6 @@ Installing the build-time requirements
 		nox -s pybamm-requires -- --force
 
 .. tab:: Windows
-
-	PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library. To use this solver, you must ensure you have the necessary SUNDIALS components installed on your system.
-	To install SUNDIALS, you will need to install the following components:
 
 	VCPKG
 

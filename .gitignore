@@ -44,9 +44,6 @@ input/*
 # keep images required by notebooks
 !docs/examples/notebooks/creating_models/SEI.png
 
-# keep images required for installation guide
-!docs/source/user_guide/installation/images-windows-source/*.png
-
 # simulation outputs
 out/
 config.py
@@ -87,7 +84,7 @@ sundials-*
 SuiteSparse-*
 build_sundials
 KLU_module_deps
-sundials_KLU_libs/include
+sundials_KLU_libs/
 download_KLU_Sundials/
 
 # ignore Python Egg Info Directories

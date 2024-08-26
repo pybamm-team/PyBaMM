@@ -157,7 +157,7 @@ ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 
 [tool.scikit-build]
-minimum-version = "0.10"
+minimum-version = "build-system.requires"
 build-dir = "build/{wheel_tag}"
 build.verbose = true
 
