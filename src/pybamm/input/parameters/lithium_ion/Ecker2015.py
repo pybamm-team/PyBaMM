@@ -622,7 +622,7 @@ def get_parameter_values():
 
     .. note::
         This parameter set does not claim to be representative of the true parameter
-        values. Instead these are parameter values that were used to fit SEI models to
+        values. Instead, these are parameter values that were used to fit SEI models to
         observed experimental data in the referenced papers.
     """
     return Ecker2015().get_param_set()
