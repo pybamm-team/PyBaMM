@@ -1,8 +1,3 @@
-#
-# Bibliographical information for PyBaMM
-# Inspired by firedrake/PETSc citation workflow
-# https://firedrakeproject.org/citing.html
-#
 import pybamm
 import os
 import warnings
@@ -25,29 +20,32 @@ class Citations:
     >>> pybamm.print_citations("citations.txt")
     """
 
-    def __init__(self):
-        # Set of citation keys that have been registered
-        self._papers_to_cite = set()
+    _module_import_error = False
+    # Set of citation keys that have been registered
+    _papers_to_cite: set
+    # Set of unknown citations to parse with pybtex
+    _unknown_citations: set
+    # Dict mapping citation tags for use when registering citations
+    _citation_tags: dict
 
+    def __init__(self):
+        self._check_for_bibtex()
         # Dict mapping citations keys to BibTex entries
         self._all_citations: dict[str, str] = dict()
-
-        # Set of unknown citations to parse with pybtex
-        self._unknown_citations = set()
-
-        # Dict mapping citation tags for use when registering citations
-        self._citation_tags = dict()
 
         self.read_citations()
         self._reset()
 
+    def _check_for_bibtex(self):
+        try:
+            import_optional_dependency("pybtex")
+        except ModuleNotFoundError:
+            self._module_import_error = True
+
     def _reset(self):
         """Reset citations to default only (only for testing purposes)"""
-        # Initialize empty papers to cite
         self._papers_to_cite = set()
-        # Initialize empty set of unknown citations
         self._unknown_citations = set()
-        # Initialize empty citation tags
         self._citation_tags = dict()
         # Register the PyBaMM paper and the NumPy paper
         self.register("Sulzer2021")
@@ -73,16 +71,12 @@ class Citations:
             for key, entry in bib_data.entries.items():
                 self._add_citation(key, entry)
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
-                "Citations could not be read because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable citation reading."
-            )
+            pass
 
     def _add_citation(self, key, entry):
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
-
         try:
             Entry = import_optional_dependency("pybtex.database", "Entry")
             # Check input types are correct
@@ -97,10 +91,7 @@ class Citations:
             # Add to database
             self._all_citations[key] = new_citation
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
-                f"Could not add citation for '{key}' because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable adding citations."
-            )
+            pass
 
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
@@ -138,7 +129,7 @@ class Citations:
                     self._add_citation_tag(key, entry=caller)
                     # Don't add citation tags if the citation is registered manually
                 except KeyError:  # pragma: no cover
-                    pass
+                    self._module_import_error = True
         else:
             # If citation is unknown, parse it later with pybtex
             self._unknown_citations.add(key)
@@ -176,10 +167,7 @@ class Citations:
                     f"Not a bibtex citation or known citation: {key}"
                 ) from error
         except ModuleNotFoundError:  # pragma: no cover
-            pybamm.logger.warning(
-                f"Could not parse citation for '{key}' because the 'pybtex' library is not installed. "
-                "Install 'pybamm[cite]' to enable citation parsing."
-            )
+            self._module_import_error = True
 
     def _tag_citations(self):
         """Prints the citation tags for the citations that have been registered
@@ -193,7 +181,7 @@ class Citations:
     def print(self, filename=None, output_format="text", verbose=False):
         """Print all citations that were used for running simulations. The verbose
         option is provided to print tags for citations in the output such that it can
-        can be seen where the citations were registered due to the use of PyBaMM models
+        be seen where the citations were registered due to the use of PyBaMM models
         and solvers in the code.
 
         .. note::
@@ -264,6 +252,11 @@ class Citations:
                 with open(filename, "w") as f:
                     f.write(citations)
         except ModuleNotFoundError:  # pragma: no cover
+            self._module_import_error = True
+            self.print_import_warning()
+
+    def print_import_warning(self):
+        if self._module_import_error:
             pybamm.logger.warning(
                 "Could not print citations because the 'pybtex' library is not installed. "
                 "Please, install 'pybamm[cite]' to print citations."
@@ -272,15 +265,11 @@ class Citations:
 
 def print_citations(filename=None, output_format="text", verbose=False):
     """See :meth:`Citations.print`"""
-    if verbose:  # pragma: no cover
-        if filename is not None:  # pragma: no cover
-            raise Exception(
-                "Verbose output is available only for the terminal and not for printing to files",
-            )
-        else:
-            citations.print(filename, output_format, verbose=True)
-    else:
-        pybamm.citations.print(filename, output_format)
+    if verbose and filename is not None:  # pragma: no cover
+        raise Exception(
+            "Verbose output is available only for the terminal and not for printing to files",
+        )
+    pybamm.citations.print(filename, output_format, verbose)
 
 
 citations = Citations()
