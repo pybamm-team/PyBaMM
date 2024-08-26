@@ -55,6 +55,7 @@ class IDAKLUJax:
         t_eval,
         output_variables=None,
         calculate_sensitivities=True,
+        t_interp=None,
     ):
         if not pybamm.has_jax():
             raise ModuleNotFoundError(
@@ -77,6 +78,7 @@ class IDAKLUJax:
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=calculate_sensitivities,
+            t_interp=t_interp,
         )
 
     def get_jaxpr(self):
@@ -355,16 +357,15 @@ class IDAKLUJax:
         fo reuse.
         """
         # Reconstruct dictionary of inputs
-        if self.jax_inputs is None:
-            d = self._hashabledict()
-        else:
+        d = self._hashabledict()
+        if self.jax_inputs is not None:
             # Use hashable dictionaries for caching the solve
-            d = self._hashabledict()
             for key, value in zip(self.jax_inputs.keys(), inputs_values):
                 d[key] = value
         # Solver
         logger.debug("_jaxify_solve:")
         logger.debug(f"  t_eval: {self.jax_t_eval}")
+        logger.debug(f"  t_interp: {self.jax_t_interp}")
         logger.debug(f"  t: {t}")
         logger.debug(f"  invar: {invar}")
         logger.debug(f"  inputs: {dict(d)}")
@@ -375,6 +376,7 @@ class IDAKLUJax:
             tuple(self.jax_t_eval),
             inputs=self._hashabledict(d),
             calculate_sensitivities=self.jax_calculate_sensitivities,
+            t_interp=tuple(self.jax_t_interp),
         )
         if invar is not None:
             if isinstance(invar, numbers.Number):
@@ -549,6 +551,7 @@ class IDAKLUJax:
         *,
         output_variables=None,
         calculate_sensitivities=True,
+        t_interp=None,
     ):
         """JAXify the model and solver
 
@@ -560,12 +563,14 @@ class IDAKLUJax:
         model : :class:`pybamm.BaseModel`
             The model to be solved
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None, the times in the model
-            are used.
+            The times at which to stop the integration due to a discontinuity in time.
         output_variables : list of str, optional
             The variables to be returned. If None, the variables in the model are used.
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         """
         if self.jaxpr is not None:
             warnings.warn(
@@ -579,6 +584,7 @@ class IDAKLUJax:
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=calculate_sensitivities,
+            t_interp=t_interp,
         )
         return self.jaxpr
 
@@ -589,11 +595,15 @@ class IDAKLUJax:
         *,
         output_variables=None,
         calculate_sensitivities=True,
+        t_interp=None,
     ):
         """JAXify the model and solver"""
 
         self.jax_model = model
         self.jax_t_eval = t_eval
+        if t_interp is None:
+            t_interp = np.empty(0)
+        self.jax_t_interp = t_interp
         self.jax_output_variables = (
             output_variables if output_variables else self.solver.output_variables
         )

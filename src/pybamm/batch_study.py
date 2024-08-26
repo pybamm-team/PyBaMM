@@ -106,6 +106,7 @@ class BatchStudy:
         calc_esoh=True,
         starting_solution=None,
         initial_soc=None,
+        t_interp=None,
         **kwargs,
     ):
         """

@@ -114,7 +114,7 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3]))
 
-    def test_ode_solver_fail_with_dae(self):
+    def testode_solver_fail_with_dae(self):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(1)
         model.algebraic = {a: a}

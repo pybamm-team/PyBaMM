@@ -13,6 +13,7 @@ from scipy.linalg import bandwidth
 import importlib
 import warnings
 
+
 if pybamm.has_jax():
     import jax
     from jax import numpy as jnp
@@ -232,6 +233,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             output_variables,
         )
         self.name = "IDA KLU solver"
+        self._supports_interp = True
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
@@ -828,7 +830,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
         return pybamm.EvaluatorJax._demote_64_to_32(x)
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -837,9 +839,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
         t_eval : numeric type
-            The times at which to compute the solution
+            The times at which to stop the integration due to a discontinuity in time.
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
+            which returns the adaptive time-stepping times.
         """
         inputs_dict = inputs_dict or {}
         # stack inputs
@@ -863,6 +868,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ):
             sol = self._setup["solver"].solve(
                 t_eval,
+                t_interp,
                 y0full,
                 ydot0full,
                 inputs,
@@ -919,13 +925,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             yS_out = False
 
         # 0 = solved for all t_eval
-        if sol.flag == 0:
-            termination = "final time"
         # 2 = found root(s)
-        elif sol.flag == 2:
+        if sol.flag == 2:
             termination = "event"
+        elif sol.flag >= 0:
+            termination = "final time"
         else:
-            raise pybamm.SolverError("idaklu solver failed")
+            raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
 
         newsol = pybamm.Solution(
             sol.t,
@@ -939,6 +945,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
         newsol.integration_time = integration_time
         if not self.output_variables:
+            # print((newsol.y).shape)
             return newsol
 
         # Populate variables and sensititivies dictionaries directly
@@ -1138,6 +1145,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         *,
         output_variables=None,
         calculate_sensitivities=True,
+        t_interp=None,
     ):
         """JAXify the solver object
 
@@ -1149,12 +1157,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model to be solved
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None, the times in the model
-            are used.
+            The times at which to stop the integration due to a discontinuity in time.
         output_variables : list of str, optional
             The variables to be returned. If None, all variables in the model are used.
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
+            which returns the adaptive time-stepping times.
         """
         obj = pybamm.IDAKLUJax(
             self,  # IDAKLU solver instance
@@ -1162,5 +1172,43 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=calculate_sensitivities,
+            t_interp=t_interp,
         )
         return obj
+
+    @staticmethod
+    def _solver_flag(flag):
+        flags = {
+            99: "IDA_WARNING: IDASolve succeeded but an unusual situation occurred.",
+            2: "IDA_ROOT_RETURN: IDASolve succeeded and found one or more roots.",
+            1: "IDA_TSTOP_RETURN: IDASolve succeeded by reaching the specified stopping point.",
+            0: "IDA_SUCCESS: Successful function return.",
+            -1: "IDA_TOO_MUCH_WORK: The solver took mxstep internal steps but could not reach tout.",
+            -2: "IDA_TOO_MUCH_ACC: The solver could not satisfy the accuracy demanded by the user for some internal step.",
+            -3: "IDA_ERR_FAIL: Error test failures occurred too many times during one internal time step or minimum step size was reached.",
+            -4: "IDA_CONV_FAIL: Convergence test failures occurred too many times during one internal time step or minimum step size was reached.",
+            -5: "IDA_LINIT_FAIL: The linear solver's initialization function failed.",
+            -6: "IDA_LSETUP_FAIL: The linear solver's setup function failed in an unrecoverable manner.",
+            -7: "IDA_LSOLVE_FAIL: The linear solver's solve function failed in an unrecoverable manner.",
+            -8: "IDA_RES_FAIL: The user-provided residual function failed in an unrecoverable manner.",
+            -9: "IDA_REP_RES_FAIL: The user-provided residual function repeatedly returned a recoverable error flag, but the solver was unable to recover.",
+            -10: "IDA_RTFUNC_FAIL: The rootfinding function failed in an unrecoverable manner.",
+            -11: "IDA_CONSTR_FAIL: The inequality constraints were violated and the solver was unable to recover.",
+            -12: "IDA_FIRST_RES_FAIL: The user-provided residual function failed recoverably on the first call.",
+            -13: "IDA_LINESEARCH_FAIL: The line search failed.",
+            -14: "IDA_NO_RECOVERY: The residual function, linear solver setup function, or linear solver solve function had a recoverable failure, but IDACalcIC could not recover.",
+            -15: "IDA_NLS_INIT_FAIL: The nonlinear solver's init routine failed.",
+            -16: "IDA_NLS_SETUP_FAIL: The nonlinear solver's setup routine failed.",
+            -20: "IDA_MEM_NULL: The ida mem argument was NULL.",
+            -21: "IDA_MEM_FAIL: A memory allocation failed.",
+            -22: "IDA_ILL_INPUT: One of the function inputs is illegal.",
+            -23: "IDA_NO_MALLOC: The ida memory was not allocated by a call to IDAInit.",
+            -24: "IDA_BAD_EWT: Zero value of some error weight component.",
+            -25: "IDA_BAD_K: The k-th derivative is not available.",
+            -26: "IDA_BAD_T: The time t is outside the last step taken.",
+            -27: "IDA_BAD_DKY: The vector argument where derivative should be stored is NULL.",
+        }
+
+        flag_unknown = "Unknown IDA flag."
+
+        return flags.get(flag, flag_unknown)
