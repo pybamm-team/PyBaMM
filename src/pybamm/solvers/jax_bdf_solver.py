@@ -7,7 +7,7 @@ import numpy as onp
 
 import pybamm
 
-if pybamm.have_hax():
+if pybamm.have_jax():
     import jax
     import jax.numpy as jnp
     from jax import core, dtypes
@@ -1007,7 +1007,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
         calculated state vector at each of the m time points
 
     """
-    if not pybamm.have_hax():
+    if not pybamm.have_jax():
         raise ModuleNotFoundError(
             "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
         )

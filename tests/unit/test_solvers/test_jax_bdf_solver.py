@@ -5,11 +5,11 @@ from tests import get_mesh_for_testing
 import sys
 import numpy as np
 
-if pybamm.have_hax():
+if pybamm.have_jax():
     import jax
 
 
-@unittest.skipIf(not pybamm.have_hax(), "jax or jaxlib is not installed")
+@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver_(self):  # Trailing _ manipulates the random seed
         # Create model

@@ -264,7 +264,7 @@ def get_parameters_filepath(path):
         return os.path.join(pybamm.__path__[0], path)
 
 
-def have_hax():
+def have_jax():
     """
     Check if jax and jaxlib are installed with the correct versions
 

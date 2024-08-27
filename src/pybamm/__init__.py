@@ -15,7 +15,7 @@ from .util import (
 )
 from .util import (
     get_parameters_filepath,
-    have_hax,
+    have_jax,
     import_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
