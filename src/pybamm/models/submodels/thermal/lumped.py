@@ -67,7 +67,7 @@ class Lumped(BaseThermal):
         variables.update(
             {
                 # Lumped cooling
-               "Surface total cooling [W.m-3]": Q_cool_vol_av,
+                "Surface total cooling [W.m-3]": Q_cool_vol_av,
                 "Surface total cooling [W]": Q_cool_W,
                 # Contact resistance
                 "Lumped contact resistance heating [W.m-3]": Q_cr_vol_av,
