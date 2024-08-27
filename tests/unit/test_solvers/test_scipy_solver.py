@@ -11,7 +11,7 @@ import sys
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
-        if pybamm.has_jax():
+        if pybamm.have_hax():
             formats = ["python", "jax"]
         else:
             formats = ["python"]
@@ -339,7 +339,7 @@ class TestScipySolver(unittest.TestCase):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
     def test_model_solver_multiple_inputs_jax_format(self):
-        if pybamm.has_jax():
+        if pybamm.have_hax():
             # Create model
             model = pybamm.BaseModel()
             model.convert_to_format = "jax"

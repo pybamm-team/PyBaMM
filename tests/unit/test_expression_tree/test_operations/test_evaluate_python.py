@@ -12,7 +12,7 @@ import scipy.sparse
 from collections import OrderedDict
 import re
 
-if pybamm.has_jax():
+if pybamm.have_hax():
     import jax
 from tests import (
     function_test,
@@ -446,7 +446,7 @@ class TestEvaluate:
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_find_symbols_jax(self):
         # test sparse conversion
         constant_symbols = OrderedDict()
@@ -459,7 +459,7 @@ class TestEvaluate:
             next(iter(constant_symbols.values())).toarray(), A.entries.toarray()
         )
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -621,7 +621,7 @@ class TestEvaluate:
                 result = evaluator(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_jacobian(self):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
@@ -636,7 +636,7 @@ class TestEvaluate:
             result_true = evaluator_jac(t=None, y=y)
             np.testing.assert_allclose(result_test, result_true)
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_jvp(self):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
@@ -656,7 +656,7 @@ class TestEvaluate:
             np.testing.assert_allclose(result_test, result_true)
             np.testing.assert_allclose(result_test_times_v, result_true_times_v)
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
         expr = a**2
@@ -664,7 +664,7 @@ class TestEvaluate:
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_inputs(self):
         a = pybamm.InputParameter("a")
         expr = a**2
@@ -672,7 +672,7 @@ class TestEvaluate:
         result = evaluator(inputs={"a": 2})
         assert result == 4
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_demotion(self):
         for demote in [True, False]:
             pybamm.demote_expressions_to_32bit = demote  # global flag
@@ -734,7 +734,7 @@ class TestEvaluate:
                 assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.col)
             pybamm.demote_expressions_to_32bit = False
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_jax_coo_matrix(self):
         A = pybamm.JaxCooMatrix([0, 1], [0, 1], [1.0, 2.0], (2, 2))
         Adense = jax.numpy.array([[1.0, 0], [0, 2.0]])

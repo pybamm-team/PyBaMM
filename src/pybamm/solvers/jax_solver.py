@@ -6,7 +6,7 @@ import asyncio
 
 import pybamm
 
-if pybamm.has_jax():
+if pybamm.have_hax():
     import jax
     import jax.numpy as jnp
     from jax.experimental.ode import odeint
@@ -59,7 +59,7 @@ class JaxSolver(pybamm.BaseSolver):
         extrap_tol=None,
         extra_options=None,
     ):
-        if not pybamm.has_jax():
+        if not pybamm.have_hax():
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )

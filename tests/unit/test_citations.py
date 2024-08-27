@@ -424,7 +424,7 @@ class TestCitations:
             assert "Hindmarsh2005" in citations._papers_to_cite
             assert "Hindmarsh2005" in citations._citation_tags.keys()
 
-    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.have_hax(), reason="jax or jaxlib is not installed")
     def test_jax_citations(self):
         citations = pybamm.citations
         citations._reset()

@@ -53,7 +53,7 @@ class BaseIntegrationTestLithiumIon:
         to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if pybamm.has_jax():
+        if pybamm.have_hax():
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
