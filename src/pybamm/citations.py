@@ -75,7 +75,7 @@ class Citations:
         """Adds `entry` to `self._all_citations` under `key`, warning the user if a
         previous entry is overwritten
         """
-        try:
+        if not self._module_import_error:
             Entry = import_optional_dependency("pybtex.database", "Entry")
             # Check input types are correct
             if not isinstance(key, str) or not isinstance(entry, Entry):
@@ -88,8 +88,6 @@ class Citations:
 
             # Add to database
             self._all_citations[key] = new_citation
-        except ModuleNotFoundError:  # pragma: no cover
-            pass
 
     def _add_citation_tag(self, key, entry):
         """Adds a tag for a citation key in the dict, which represents the name of the
