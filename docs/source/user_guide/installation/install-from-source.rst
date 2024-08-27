@@ -277,14 +277,6 @@ Installing PyBaMM
 Using ``Nox`` (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-PyBaMM needs a few build-time dependencies when installing PyBaMM in "editable mode" without build-isolation. `TOML Kit <https://tomlkit.readthedocs.io/en/latest/>`_, a ``toml`` table parser, automates this process for you.
-
-To install ``tomlkit`` to your local user account (ensure you are not within a virtual environment), use the following command:
-
-.. code:: bash
-
-	  python -m pip install --user tomlkit
-
 To install PyBaMM, execute the following command
 
 .. code:: bash
@@ -572,14 +564,14 @@ Troubleshooting
 
 	**Solution:** This error occurs when there is a delay between installing and downloading SUNDIALS libraries.
 
-	1. Remove the following directories from the PyBaMM directory if they exist:
+	3. Remove the following directories from the PyBaMM directory if they exist:
 
 	   a. ``download_KLU_Sundials``
 	   b. ``sundials_KLU_libs``
 	   c. Any custom directory you have set for installation
 
-	2. Re-run the command to install SUNDIALS.
-	3. If you are using a custom directory, make sure to set the ``INSTALL_DIR`` environment variable:
+	4. Re-run the command to install SUNDIALS.
+	5. If you are using a custom directory, make sure to set the ``INSTALL_DIR`` environment variable:
 
 	   .. code:: bash
 

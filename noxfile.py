@@ -4,7 +4,6 @@ import sys
 import warnings
 import platform
 from pathlib import Path
-import tomlkit
 
 
 # Options to modify nox behaviour
@@ -51,6 +50,22 @@ def set_iree_state():
                 )
                 return "OFF"
     return state
+
+
+def get_build_dependencies():
+    """
+    Gets build-time dependencies from `pyproject.toml` specific to platform
+    """
+    build_dependencies = nox.project.load_toml("pyproject.toml")["build-system"][
+        "requires"
+    ]
+    if sys.platform == "win32":
+        build_dependencies = [
+            dep
+            for dep in build_dependencies
+            if not (dep.startswith("casadi") or dep.startswith("cmake"))
+        ]
+    return build_dependencies
 
 
 project_dir = Path(__file__).parent.resolve()
@@ -128,10 +143,13 @@ def run_coverage(session):
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
         session.install("pytest-github-actions-annotate-failures")
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
         session.install(
+            "--no-build-isolation",
             "-e",
             ".[iree]",
             "--find-links",
@@ -151,14 +169,18 @@ def run_integration(session):
         and sys.platform == "linux"
     ):
         session.install("pytest-github-actions-annotate-failures")
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "integration")
 
 
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    session.install("-e", ".[all,dev,docs]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev,docs]", silent=False)
     session.run(
         "python",
         "-m",
@@ -172,10 +194,13 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev,jax]", silent=False)
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # See comments in 'dev' session
         session.install(
+            "--no-build-isolation",
             "-e",
             ".[iree]",
             "--find-links",
@@ -189,7 +214,9 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
         "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
@@ -200,7 +227,9 @@ def run_examples(session):
 def run_scripts(session):
     """Run the scripts tests for Python scripts."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
 
@@ -215,16 +244,8 @@ def set_dev(session):
     else:
         python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
-    with open("pyproject.toml", encoding="utf-8") as file:
-        toml_data = tomlkit.parse(file.read())
-    build_dependencies = toml_data.get("build-system").get("requires")
-    if sys.platform == "win32":
-        build_dependencies = [
-            dep
-            for dep in build_dependencies
-            if not (dep.startswith("casadi") or dep.startswith("cmake"))
-        ]
     args = []
+    build_dependencies = get_build_dependencies()
     if PYBAMM_ENV.get("PYBAMM_IDAKLU_EXPR_IREE") == "ON":
         # Install IREE libraries for Jax-MLIR expression evaluation in the IDAKLU solver
         # (optional). IREE is currently pre-release and relies on nightly jaxlib builds.
@@ -254,7 +275,9 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("-e", ".[all,dev,jax]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,dev,jax]", silent=False)
     specific_test_files = session.posargs if session.posargs else []
     session.run(
         "python", "-m", "pytest", *specific_test_files, "-m", "unit or integration"
@@ -265,7 +288,9 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    session.install("-e", ".[all,docs]", silent=False)
+    build_dependencies = get_build_dependencies()
+    session.install(*build_dependencies)
+    session.install("--no-build-isolation", "-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:

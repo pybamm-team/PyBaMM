@@ -1,4 +1,3 @@
-
 name: PyBaMM
 
 on:
@@ -46,7 +45,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-    name: Tests (windows_latest / Python ${{ matrix.python-version }})
+    name: Tests (windows-latest / Python ${{ matrix.python-version }})
 
     steps:
       - name: Check out PyBaMM repository
@@ -78,8 +77,8 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
 
-      - name: Install nox and tomlkit
-        run: python -m pip install nox tomlkit
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Run unit tests for windows-latest with Python ${{ matrix.python-version }}
         run: python -m nox -s unit
@@ -91,8 +90,8 @@ jobs:
     needs: style
     runs-on: ${{ matrix.os }}
     env:
-        PYBAMM_IDAKLU_EXPR_CASADI: ON
-        PYBAMM_IDAKLU_EXPR_IREE: ON
+      PYBAMM_IDAKLU_EXPR_CASADI: ON
+      PYBAMM_IDAKLU_EXPR_IREE: ON
     strategy:
       fail-fast: false
       matrix:
@@ -114,7 +113,7 @@ jobs:
         # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz libomp openblas
+          brew install graphviz libomp
           brew reinstall gcc
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -124,8 +123,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install nox and tomlkit
-        run: python -m pip install nox tomlkit
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for macOS
         uses: actions/cache@v4
@@ -133,6 +132,7 @@ jobs:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ github.workspace }}/install_KLU_Sundials/
+            ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on macOS
@@ -178,8 +178,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install nox and tomlkit
-        run: python -m pip install nox tomlkit
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4
@@ -187,6 +187,7 @@ jobs:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
             ${{ github.workspace }}/install_KLU_Sundials/
+            ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-ubuntu-latest-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
       - name: Install SuiteSparse and SUNDIALS on GNU/Linux
@@ -246,8 +247,8 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
-      - name: Install nox and tomlkit
-        run: python -m pip install nox tomlkit
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
@@ -286,14 +287,15 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
-      - name: Install nox and tomlkit
-        run: python -m pip install nox tomlkit
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4
         with:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
+            ${{ github.workspace }}/install_KLU_Sundials/
             ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-ubuntu-latest-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
@@ -335,14 +337,15 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
-      - name: Install nox and tomlkit
-        run: python -m pip install nox tomlkit
+      - name: Install nox
+        run: python -m pip install nox
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4
         with:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
+            ${{ github.workspace }}/install_KLU_Sundials/
             ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
