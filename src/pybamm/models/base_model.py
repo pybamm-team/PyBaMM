@@ -39,6 +39,7 @@ class BaseModel:
         calling `evaluate(t, y)` on the given expression treeself.
         - "casadi": convert into CasADi expression tree, which then uses CasADi's \
         algorithm to calculate the Jacobian.
+        - "jax": convert into JAX expression tree
 
         Default is "casadi".
     """
