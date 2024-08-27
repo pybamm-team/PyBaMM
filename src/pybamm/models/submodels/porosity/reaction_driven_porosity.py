@@ -34,12 +34,13 @@ class ReactionDriven(BaseModel):
                 Domain = dom.capitalize()
                 roughness_k = variables[f"{Domain} electrode roughness ratio"]
                 phases_option = getattr(self.options, dom)["particle phases"]
-                if phases_option == "1":
-                    phases = ""
-                else:
-                    phases = self.options.phases[dom]
+                phases = self.options.phases[dom]
                 for phase in phases:
-                    L_sei_k = variables[f"{Domain} total {phase} SEI thickness [m]"]
+                    if phases_option == "1" and phase == "primary":
+                        phase_name = ""
+                    else:
+                        phase_name = phase + " "
+                    L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
                     if Domain == "Negative":
                         if phase == "secondary":
                             L_sei_0 = (
@@ -59,11 +60,13 @@ class ReactionDriven(BaseModel):
                                 param.p.prim.L_inner_0 + param.p.prim.L_outer_0
                             )
                     L_pl_k = variables[
-                        f"{Domain} {phase} lithium plating thickness [m]"
+                        f"{Domain} {phase_name}lithium plating thickness [m]"
                     ]
-                    L_dead_k = variables[f"{Domain} {phase} dead lithium thickness [m]"]
+                    L_dead_k = variables[
+                        f"{Domain} {phase_name}dead lithium thickness [m]"
+                    ]
                     L_sei_cr_k = variables[
-                        f"{Domain} total {phase} SEI on cracks thickness [m]"
+                        f"{Domain} total {phase_name}SEI on cracks thickness [m]"
                     ]
 
                     L_tot = (
@@ -74,7 +77,7 @@ class ReactionDriven(BaseModel):
                     )
 
                     a_k = variables[
-                        f"{Domain} electrode {phase} surface area to volume ratio [m-1]"
+                        f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
                     ]
 
                     # This assumes a thin film so curvature effects are neglected.
