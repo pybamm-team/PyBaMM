@@ -18,6 +18,7 @@
 
 ## Breaking changes
 
+- Remove deprecated function `pybamm_install_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
 - Removed legacy python-IDAKLU solver. ([#4326](https://github.com/pybamm-team/PyBaMM/pull/4326))
 
 # [v24.5](https://github.com/pybamm-team/PyBaMM/tree/v24.5) - 2024-07-26
