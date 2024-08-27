@@ -201,4 +201,4 @@ if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
   target_link_libraries(idaklu PRIVATE iree_runtime_runtime)
 endif()
 
-install(TARGETS idaklu DESTINATION "pybamm/solvers")
+install(TARGETS idaklu DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/src/pybamm/solvers")
