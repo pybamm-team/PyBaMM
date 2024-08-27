@@ -85,6 +85,7 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
+          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel pybind11
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "all,dev,jax"
@@ -117,6 +118,7 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_ARCHS_LINUX: x86_64
+          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BEFORE_BUILD_LINUX: |
             set -e -x
             yum update -y
@@ -243,6 +245,7 @@ jobs:
 
             python scripts/install_KLU_Sundials.py
           CIBW_ARCHS_MACOS: auto
+          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BEFORE_BUILD: |
             python -m pip install cmake casadi scikit-build-core delocate pybind11
           CIBW_REPAIR_WHEEL_COMMAND: |
