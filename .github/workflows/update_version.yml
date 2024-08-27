@@ -39,15 +39,6 @@ jobs:
           message: 'Bump to ${{ env.VERSION }}'
           new_branch: '${{ env.VERSION }}'
 
-      # Checkout to develop for updating versions in the same
-      - uses: actions/checkout@v4
-        with:
-          ref: 'develop'
-
-      # Update all the version strings
-      - name: Update version
-        run: python scripts/update_version.py
-
       # Create a PR from version branch to main
       - name: Make a PR from ${{ env.VERSION }} to main
         id: release_pr
