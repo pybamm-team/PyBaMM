@@ -2,6 +2,7 @@ class AbstractBaseParameters:
     """
     Base class for grouping and processing parameter sets.
     """
+
     _details = {}
     _plating = {}
     _sei = {}

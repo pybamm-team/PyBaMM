@@ -4,11 +4,6 @@ from pybamm.input.parameters.base_parameter_set import AbstractBaseParameters
 
 
 class Sulzer2019(AbstractBaseParameters):
-    """
-    Parameters for BBOXX lead-acid cells, from the paper
-    :footcite:t:`sulzer2019asymptotic` and references therein.
-    """
-
     def __init__(self):
         super().__init__()
 
@@ -358,4 +353,8 @@ class Sulzer2019(AbstractBaseParameters):
 
 # Call dict via a function to avoid errors when editing in place
 def get_parameter_values():
+    """
+    Parameters for BBOXX lead-acid cells, from the paper
+    :footcite:t:`sulzer2019asymptotic` and references therein.
+    """
     return Sulzer2019().get_param_set()
