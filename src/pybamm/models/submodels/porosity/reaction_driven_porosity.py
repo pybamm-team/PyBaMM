@@ -33,7 +33,11 @@ class ReactionDriven(BaseModel):
                 dom = domain.split()[0]
                 Domain = dom.capitalize()
                 roughness_k = variables[f"{Domain} electrode roughness ratio"]
-                phases = self.options.phases[dom]
+                phases_option = getattr(self.options, dom)["particle phases"]
+                if phases_option == "1":
+                    phases = ""
+                else:
+                    phases = self.options.phases[dom]
                 for phase in phases:
                     L_sei_k = variables[f"{Domain} total {phase} SEI thickness [m]"]
                     if Domain == "Negative":
