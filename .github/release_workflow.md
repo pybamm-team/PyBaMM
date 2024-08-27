@@ -29,13 +29,14 @@ GitHub, PyPI, and conda-forge by the maintainers.
 
 If a new release is required after the release of `vYY.MM.{x-1}` -
 
-1. Cherry-pick the bug fix commit to `vYY.MM` branch once the fix is merged
-   into `develop`. The CHANGELOG entry for such fixes should go under the
+1. Create a new branch for the `vYY.MM.x` release using the `vYY.MM.{x-1}` tag.
+
+2. Cherry-pick the bug fixes to `vYY.MM.x` branch once the fix is
+   merged into `develop`. The CHANGELOG entry for such fixes should go under the
    `YY.MM.x` heading in `CHANGELOG.md`
 
-2. Run `update_version.yml` manually while using `append_to_tag` to specify
-   the bugfix number (`.1`, `.2`, ...). This will increment the version to
-   `YY.MM.x` by running `scripts/update_version.py` in the following files:
+3. Run `scripts/update_version.py` manually while setting `VERSION=vYY.MM.x`
+   in your environment. This will update the version in the following files:
 
    - `pybamm/version.py`
    - `docs/conf.py`
@@ -44,10 +45,11 @@ If a new release is required after the release of `vYY.MM.{x-1}` -
    - `vcpkg.json`
    - `CHANGELOG.md`
 
-   These changes will be automatically pushed to the existing `vYY.MM`
-   branch and a PR will be created to update version strings in `main`.
+   Commit the changes to your release branch.
 
-3. Create a new GitHub release with the same tag (`YY.MM.x`) from the `vYY.MM`
+4. Create a PR for the release and configure it to merge into the `main` branch.
+
+5. Create a new GitHub release with the same tag (`YY.MM.x`) from the `main`
    branch and a description copied from `CHANGELOG.md`. This release will
    automatically trigger `publish_pypi.yml` and create a _release_ on PyPI.
 
