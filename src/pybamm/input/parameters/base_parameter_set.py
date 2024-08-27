@@ -3,16 +3,15 @@ class AbstractBaseParameters:
     Base class for grouping and processing parameter sets.
     """
 
-    def __init__(self):
-        self._details = {}
-        self._plating = {}
-        self._sei = {}
-        self._thermal = {}
-        self._cell = {}
-        self._negative_electrode = {}
-        self._positive_electrode = {}
-        self._separator = {}
-        self._electrolyte = {}
+    _details = {}
+    _plating = {}
+    _sei = {}
+    _thermal = {}
+    _cell = {}
+    _negative_electrode = {}
+    _positive_electrode = {}
+    _separator = {}
+    _electrolyte = {}
 
     def degradation_available(self):
         return True if self._sei else False
