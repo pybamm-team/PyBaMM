@@ -1078,6 +1078,30 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             ),
         )
 
+    def test_solver_interpolation_warning(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver()
+
+        # Check for warning with t_interp
+        t_eval = np.linspace(0, 1, 10)
+        t_interp = t_eval
+        with self.assertWarns(
+            pybamm.SolverWarning,
+            msg=f"Explicit interpolation times not implemented for {solver.name}",
+        ):
+            solver.solve(model, t_eval, t_interp=t_interp)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
