@@ -127,7 +127,7 @@ class Citations:
                     self._add_citation_tag(key, entry=caller)
                     # Don't add citation tags if the citation is registered manually
                 except KeyError:  # pragma: no cover
-                    self._module_import_error = True
+                    pass
         else:
             # If citation is unknown, parse it later with pybtex
             self._unknown_citations.add(key)
