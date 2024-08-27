@@ -55,7 +55,7 @@ def plot_thermal_components(
     volume = solution["Cell thermal volume [m3]"].entries
 
     heating_sources = [
-        "Lumped total cooling",
+        "Surface total cooling",
         "Ohmic heating",
         "Irreversible electrochemical heating",
         "Reversible heating",
@@ -77,9 +77,9 @@ def plot_thermal_components(
     # Plot
     # Initialise
     total_heat = 0
-    bottom_heat = heats["Lumped total cooling"]
+    bottom_heat = heats["Surface total cooling"]
     total_cumul_heat = 0
-    bottom_cumul_heat = cumul_heats["Lumped total cooling"]
+    bottom_cumul_heat = cumul_heats["Surface total cooling"]
     # Plot components
     for name in heating_sources:
         top_heat = bottom_heat + abs(heats[name])
