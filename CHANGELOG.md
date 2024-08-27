@@ -13,12 +13,13 @@
 
 ## Bug Fixes
 
+- Fixed memory issue that caused failure when `output variables` were specified with (`IDAKLUSolver`). ([#4379](https://github.com/pybamm-team/PyBaMM/issues/4379))
 - Fixed bug where IDAKLU solver failed when `output variables` were specified and an event triggered. ([#4300](https://github.com/pybamm-team/PyBaMM/pull/4300))
 
 ## Breaking changes
 
-- Remove deprecated function `pybamm_install_jax` and renamed `have_jax` to
-  `has_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
+- Remove deprecated function `pybamm_install_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
+- Removed legacy python-IDAKLU solver. ([#4326](https://github.com/pybamm-team/PyBaMM/pull/4326))
 
 # [v24.5](https://github.com/pybamm-team/PyBaMM/tree/v24.5) - 2024-07-26
 

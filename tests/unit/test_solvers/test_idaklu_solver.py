@@ -19,7 +19,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -65,7 +65,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
     def test_model_events(self):
-        for form in ["python", "casadi", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -195,7 +195,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_input_params(self):
         # test a mix of scalar and vector input params
-        for form in ["python", "casadi", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -306,7 +306,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -414,7 +414,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -458,7 +458,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["casadi", "python", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -619,7 +619,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
-        for form in ["python", "casadi", "jax", "iree"]:
+        for form in ["casadi", "iree"]:
             if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
             if (form == "iree") and not pybamm.have_iree():
@@ -1096,6 +1096,46 @@ class TestIDAKLUSolver(unittest.TestCase):
             sol.sub_solutions[0].t[-1] + pybamm.settings.step_start_offset,
             sol.sub_solutions[1].t[0],
         )
+
+    def test_python_idaklu_deprecation_errors(self):
+        for form in ["python", "", "jax"]:
+            if form == "jax" and not pybamm.has_jax():
+                continue
+
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            u = pybamm.Variable("u")
+            v = pybamm.Variable("v")
+            model.rhs = {u: 0.1 * v}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u: 0, v: 1}
+            model.events = [pybamm.Event("1", 0.2 - u), pybamm.Event("2", v)]
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            t_eval = np.linspace(0, 3, 100)
+
+            solver = pybamm.IDAKLUSolver(
+                root_method="lm",
+            )
+
+            if form == "python":
+                with self.assertRaisesRegex(
+                    pybamm.SolverError,
+                    "Unsupported option for convert_to_format=python",
+                ):
+                    with self.assertWarnsRegex(
+                        DeprecationWarning,
+                        "The python-idaklu solver has been deprecated.",
+                    ):
+                        _ = solver.solve(model, t_eval)
+            elif form == "jax":
+                with self.assertRaisesRegex(
+                    pybamm.SolverError,
+                    "Unsupported evaluation engine for convert_to_format=jax",
+                ):
+                    _ = solver.solve(model, t_eval)
 
 
 if __name__ == "__main__":
