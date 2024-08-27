@@ -105,8 +105,11 @@ class BaseThermal(pybamm.BaseSubModel):
                 i_e_n, i_e_s, i_e_p = i_e.orphans
                 phi_e_n = variables["Negative electrolyte potential [V]"]
                 Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
+                # Q_ohm_e_n = -pybamm.inner(i_e_n, i_e_n)
             Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
+            # Q_ohm_e_s = -pybamm.inner(i_e_s, i_e_s)
             Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
+            # Q_ohm_e_p = -pybamm.inner(i_e_p, i_e_p)
             Q_ohm_e = pybamm.concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
         else:
             # else compute using i_e across all domains

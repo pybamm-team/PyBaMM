@@ -59,19 +59,24 @@ class Composite(BaseElectrolyteConductivity):
         L_x = param.L_x
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
+        x_p_edge = pybamm.standard_spatial_vars.x_p_edge
 
         # electrolyte current
         if self.options.electrode_types["negative"] == "planar":
-            i_e_n = None
+            # i_e_n = None
+            pass
         else:
             x_n = pybamm.standard_spatial_vars.x_n
+            x_n_edge = pybamm.standard_spatial_vars.x_n_edge
             T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
             RT_F_av_n = param.R * T_av_n / param.F
-            i_e_n = i_boundary_cc * x_n / L_n
-        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
-        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
-        i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
-
+            # i_e_n = i_boundary_cc * x_n / L_n
+            i_e_n_edge = i_boundary_cc * x_n_edge / L_n
+        # i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
+        i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
+        # i_e_p = i_boundary_cc * (L_x - x_p) / L_p
+        i_e_p_edge = i_boundary_cc * (L_x - x_p_edge) / L_p
+        i_e = pybamm.concatenation(i_e_n_edge, i_e_s_edge, i_e_p_edge)
         phi_e_dict = {}
 
         # electrolyte potential
@@ -82,8 +87,6 @@ class Composite(BaseElectrolyteConductivity):
         else:
             # need to have current evaluated on edge as integral will make it
             # evaluate on node
-            x_n_edge = pybamm.standard_spatial_vars.x_n_edge
-            i_e_n_edge = i_boundary_cc * x_n_edge / L_n
 
             eta_c_n = -RT_F_av_n * pybamm.IndefiniteIntegral(
                 param.chi(c_e_n, T_av_n)
@@ -105,7 +108,6 @@ class Composite(BaseElectrolyteConductivity):
             phi_e_n = phi_e_const - (delta_phi_e_n + eta_c_n)
             phi_e_dict["negative electrode"] = phi_e_n
 
-        i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
         eta_c_s = -RT_F_av_s * pybamm.IndefiniteIntegral(
             param.chi(c_e_s, T_av_s)
             * self._derivative_macinnes_function(c_e_s)
@@ -123,8 +125,6 @@ class Composite(BaseElectrolyteConductivity):
             - (delta_phi_e_s + eta_c_s)
         )
 
-        x_p_edge = pybamm.standard_spatial_vars.x_p_edge
-        i_e_p_edge = i_boundary_cc * (L_x - x_p_edge) / L_p
         eta_c_p = -RT_F_av_p * pybamm.IndefiniteIntegral(
             param.chi(c_e_p, T_av_p)
             * self._derivative_macinnes_function(c_e_p)
@@ -176,24 +176,34 @@ class Composite(BaseElectrolyteConductivity):
         # Define the boundary conditions for electrolyte concentration and potential
         # so the gradients can be computed
         if self.options.electrode_types["negative"] == "planar":
-            domains = ["separator", "positive"]
+            domains = ["Separator", "Positive"]
         else:
-            domains = ["negative", "separator", "positive"]
+            domains = ["Negative", "Separator", "Positive"]
 
-        for domain in domains:
-            c_e = variables[
-                domain.capitalize() + " electrolyte concentration [mol.m-3]"
-            ]
-            phi_e = variables[domain.capitalize() + " electrolyte potential [V]"]
-            self.boundary_conditions.update(
-                {
-                    c_e: {
-                        "left": (pybamm.boundary_gradient(c_e, "left"), "Neumann"),
-                        "right": (pybamm.boundary_gradient(c_e, "right"), "Neumann"),
-                    },
-                    phi_e: {
-                        "left": (pybamm.boundary_gradient(phi_e, "left"), "Neumann"),
-                        "right": (pybamm.boundary_gradient(phi_e, "right"), "Neumann"),
-                    },
-                }
-            )
+        var_names = [
+            " electrode porosity times concentration [mol.m-3]",
+            " electrolyte concentration [mol.m-3]",
+            " electrolyte potential [V]",
+        ]
+
+        for name in var_names:
+            for domain in domains:
+                full_var_name = domain + name
+
+                # Fix inconcsistency in naming, where porosity times concentration is
+                # called "electrode porosity times concentration"
+                full_var_name = full_var_name.replace(
+                    "Separator electrode", "Separator"
+                )
+                var = variables[full_var_name]
+                self.boundary_conditions.update(
+                    {
+                        var: {
+                            "left": (pybamm.boundary_gradient(var, "left"), "Neumann"),
+                            "right": (
+                                pybamm.boundary_gradient(var, "right"),
+                                "Neumann",
+                            ),
+                        },
+                    }
+                )
