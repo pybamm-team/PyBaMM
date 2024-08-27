@@ -142,7 +142,10 @@ class BaseUnitTestLithiumIon:
         self.check_well_posedness(options)
 
     def test_well_posed_contact_resistance(self):
-        options = {"contact resistance": "true"}
+        options = {
+            "contact resistance": "true",
+            "thermal": "lumped",
+        }
         self.check_well_posedness(options)
 
     def test_well_posed_particle_uniform(self):
@@ -558,5 +561,30 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "diffusivity": (("current sigmoid", "current sigmoid"), "current sigmoid"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_different_degradation(self):
+        # phases have same degradation
+        options = {
+            "particle phases": ("2", "1"),
+            "SEI": ("ec reaction limited", "none"),
+            "lithium plating": ("reversible", "none"),
+            "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
+        self.check_well_posedness(options)
+        # phases have different degradation
+        options = {
+            "particle phases": ("2", "1"),
+            "SEI": (("ec reaction limited", "solvent-diffusion limited"), "none"),
+            "lithium plating": (("reversible", "irreversible"), "none"),
+            "open-circuit potential": (("current sigmoid", "single"), "single"),
+        }
+        self.check_well_posedness(options)
+        # one of the phases has no degradation
+        options = {
+            "particle phases": ("2", "1"),
+            "SEI": (("none", "solvent-diffusion limited"), "none"),
+            "lithium plating": (("none", "irreversible"), "none"),
         }
         self.check_well_posedness(options)

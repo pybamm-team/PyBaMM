@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.1"
+version = "24.5"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -107,26 +107,32 @@ dev = [
     "pytest-doctestplus",
     # For test parameterization
     "parameterized>=0.9",
-    # For testing Jupyter notebooks
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
+    "pytest-mock",
+    # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
 ]
-# For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
+# For the Jax solver.
+# Note: These must be kept in sync with the versions defined in pybamm/util.py, and
+#       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-# Contains all optional dependencies, except for jax and dev dependencies
+# For MLIR expression evaluation (IDAKLU Solver)
+iree = [
+    # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
+    "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
+]
+# Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
-
-[project.scripts]
-pybamm_install_jax = "pybamm.util:install_jax"
 
 [project.entry-points."pybamm_parameter_sets"]
 Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
@@ -160,13 +166,12 @@ pybamm = [
     "*.md",
     "*.csv",
     "*.py",
-    "pybamm/CITATIONS.bib",
-    "pybamm/plotting/mplstyle",
+    "src/pybamm/CITATIONS.bib",
+    "src/pybamm/plotting/mplstyle",
 ]
 
 [tool.setuptools.packages.find]
-include = ["pybamm", "pybamm.*"]
-
+where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
@@ -191,6 +196,7 @@ extend-select = [
     "UP",            # pyupgrade
     "YTT",           # flake8-2020
     "TID252",        # relative-imports
+    "S101",          # to identify use of assert statement
 ]
 ignore = [
     "E741",        # Ambiguous variable name
@@ -211,29 +217,29 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["T20"]
+"tests/*" = ["T20", "S101"]
 "docs/*" = ["T20"]
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
-# NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
-minversion = "6"
+minversion = "8"
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
     "pytest-xdist",
+    "pytest-mock",
 ]
+norecursedirs = 'pybind11*'
 addopts = [
     "-nauto",
-    "-v",
-    "-ra",
+    "-vra",
     "--strict-config",
     "--strict-markers",
 ]
 testpaths = [
-    "docs/source/examples/",
+    "tests",
 ]
 console_output_style = "progress"
 xfail_strict = true
@@ -255,7 +261,7 @@ log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
-source = ["pybamm"]
+source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
 
 [tool.repo-review]

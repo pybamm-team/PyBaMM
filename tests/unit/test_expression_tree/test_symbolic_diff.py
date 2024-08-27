@@ -1,14 +1,14 @@
 #
 # Tests for the symbolic differentiation methods
 #
-from tests import TestCase
+
 import numpy as np
 import pybamm
 import unittest
 from numpy import testing
 
 
-class TestSymbolicDifferentiation(TestCase):
+class TestSymbolicDifferentiation(unittest.TestCase):
     def test_advanced(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))

@@ -1,4 +1,3 @@
-from tests import TestCase
 import pybamm
 import unittest
 import numpy as np
@@ -6,7 +5,7 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
 
 
-class TestCasadiSolver(TestCase):
+class TestCasadiSolver(unittest.TestCase):
     def test_bad_mode(self):
         with self.assertRaisesRegex(ValueError, "invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
@@ -582,7 +581,7 @@ class TestCasadiSolver(TestCase):
         )
 
 
-class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
+class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -963,7 +962,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(TestCase):
         )
 
 
-class TestCasadiSolverDAEsWithForwardSensitivityEquations(TestCase):
+class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -1078,6 +1077,30 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(TestCase):
                 ]
             ),
         )
+
+    def test_solver_interpolation_warning(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver()
+
+        # Check for warning with t_interp
+        t_eval = np.linspace(0, 1, 10)
+        t_interp = t_eval
+        with self.assertWarns(
+            pybamm.SolverWarning,
+            msg=f"Explicit interpolation times not implemented for {solver.name}",
+        ):
+            solver.solve(model, t_eval, t_interp=t_interp)
 
 
 if __name__ == "__main__":

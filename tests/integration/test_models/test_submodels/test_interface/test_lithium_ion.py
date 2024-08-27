@@ -1,16 +1,15 @@
 #
 # Tests for the electrode-electrolyte interface equations for lithium-ion models
 #
-from tests import TestCase
 import pybamm
 from tests import get_discretisation_for_testing
-
-import unittest
+import pytest
 import numpy as np
 
 
-class TestExchangeCurrentDensity(TestCase):
-    def setUp(self):
+class TestExchangeCurrentDensity:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
         c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
@@ -49,8 +48,8 @@ class TestExchangeCurrentDensity(TestCase):
         )
         model_p.options = self.options
         j0_p = model_p._get_exchange_current_density(self.variables)
-        self.assertEqual(j0_n.domain, ["negative electrode"])
-        self.assertEqual(j0_p.domain, ["positive electrode"])
+        assert j0_n.domain == ["negative electrode"]
+        assert j0_p.domain == ["positive electrode"]
 
     def test_set_parameters_lithium_ion(self):
         param = pybamm.LithiumIonParameters()
@@ -70,9 +69,9 @@ class TestExchangeCurrentDensity(TestCase):
         j0_p = parameter_values.process_symbol(j0_p)
         # Test
         for x in j0_n.pre_order():
-            self.assertNotIsInstance(x, pybamm.Parameter)
+            assert not isinstance(x, pybamm.Parameter)
         for x in j0_p.pre_order():
-            self.assertNotIsInstance(x, pybamm.Parameter)
+            assert not isinstance(x, pybamm.Parameter)
 
     def test_discretisation_lithium_ion(self):
         param = pybamm.LithiumIonParameters()
@@ -107,14 +106,5 @@ class TestExchangeCurrentDensity(TestCase):
             ]
         )
         # should evaluate to vectors with the right shape
-        self.assertEqual(j0_n.evaluate(y=y).shape, (mesh["negative electrode"].npts, 1))
-        self.assertEqual(j0_p.evaluate(y=y).shape, (mesh["positive electrode"].npts, 1))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()
+        assert j0_n.evaluate(y=y).shape == (mesh["negative electrode"].npts, 1)
+        assert j0_p.evaluate(y=y).shape == (mesh["positive electrode"].npts, 1)

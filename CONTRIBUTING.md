@@ -38,7 +38,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
 4. [Install](https://docs.pybamm.org/en/latest/source/user_guide/installation/install-from-source.html) PyBaMM with the developer options.
-5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
+5. [Test](#testing) if your installation worked, using pytest: `$ pytest -m unit`.
 
 You now have everything you need to start making changes!
 
@@ -68,7 +68,7 @@ PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-00
 
 ### Ruff
 
-We use [ruff](https://github.com/charliermarsh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
+We use [ruff](https://github.com/astral-sh/ruff) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
 ```bash
 python -m pip install pre-commit
@@ -149,9 +149,13 @@ The `test_optional_dependencies` function extracts `pybamm` mandatory distributi
 
 ## Testing
 
-All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
+All code requires testing. We use the [pytest](https://docs.pytest.org/en/stable/) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-We also use [pytest](https://docs.pytest.org/en/latest/) along with the [nbmake](https://github.com/treebeardtech/nbmake) and the [pytest-xdist](https://pypi.org/project/pytest-xdist/) plugins to test the example notebooks.
+We use following plugins for various needs:
+
+[nbmake](https://github.com/treebeardtech/nbmake/) : plugins to test the example notebooks.
+
+[pytest-xdist](https://pypi.org/project/pytest-xdist/) : plugins to run tests in parallel.
 
 If you have `nox` installed, to run unit tests, type
 
@@ -162,14 +166,14 @@ nox -s unit
 else, type
 
 ```bash
-python run-tests.py --unit
+pytest -m unit
 ```
 
 ### Writing tests
 
 Every new feature should have its own test. To create ones, have a look at the `test` directory and see if there's a test for a similar method. Copy-pasting this is a good way to start.
 
-Next, add some simple (and speedy!) tests of your main features. If these run without exceptions that's a good start! Next, check the output of your methods using any of these [assert methods](https://docs.python.org/3.3/library/unittest.html#assert-methods).
+Next, add some simple (and speedy!) tests of your main features. If these run without exceptions that's a good start! Next, check the output of your methods using [assert statements](https://docs.pytest.org/en/7.1.x/how-to/assert.html).
 
 ### Running more tests
 
@@ -178,6 +182,11 @@ If you want to check integration tests as well as unit tests, type
 
 ```bash
 nox -s tests
+```
+or, alternatively, you can use posargs to pass the path to the test to `nox`. For example:
+
+```bash
+nox -s tests -- tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -193,7 +202,7 @@ nox -s examples
 Alternatively, you may use `pytest` directly with the `--nbmake` flag:
 
 ```bash
-pytest --nbmake
+pytest --nbmake docs/source/examples/
 ```
 
 which runs all the notebooks in the `docs/source/examples/notebooks/` folder in parallel by default, using the `pytest-xdist` plugin.
@@ -245,19 +254,19 @@ This also means that, if you can't fix the bug yourself, it will be much easier 
 1. Run individual test scripts instead of the whole test suite:
 
    ```bash
-   python tests/unit/path/to/test
+   pytest tests/unit/path/to/test
    ```
 
    You can also run an individual test from a particular script, e.g.
 
    ```bash
-   python tests/unit/test_quick_plot.py TestQuickPlot.test_failure
+   pytest tests/unit/test_plotting/test_quick_plot.py::TestQuickPlot::test_simple_ode_model
    ```
 
    If you want to run several, but not all, the tests from a script, you can restrict which tests are run from a particular script by using the skipping decorator:
 
    ```python
-   @unittest.skip("")
+   @pytest.mark.skip("")
    def test_bit_of_code(self):
        ...
    ```
@@ -401,7 +410,7 @@ pybamm.print_citations()
 
 to the end of a script will print all citations that were used by that script. This will print BibTeX information to the terminal; passing a filename to `print_citations` will print the BibTeX information to the specified file instead.
 
-When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.bib). Then, add the line
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the BibTeX for your paper to [CITATIONS.bib](https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/CITATIONS.bib). Then, add the line
 
 ```python3
 pybamm.citations.register("your_paper_bibtex_identifier")

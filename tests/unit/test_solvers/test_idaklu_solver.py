@@ -1,32 +1,35 @@
 #
 # Tests for the KLU Solver class
 #
-from tests import TestCase
+
 from contextlib import redirect_stdout
 import io
 import unittest
-
+import pytest
 import numpy as np
 
 import pybamm
 from tests import get_discretisation_for_testing
 
 
+@pytest.mark.cibw
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
-class TestIDAKLUSolver(TestCase):
+class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u = pybamm.Variable("u")
             v = pybamm.Variable("v")
             model.rhs = {u: 0.1 * v}
@@ -37,7 +40,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             solution = solver.solve(model, t_eval)
@@ -59,8 +65,10 @@ class TestIDAKLUSolver(TestCase):
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
     def test_model_events(self):
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -68,7 +76,7 @@ class TestIDAKLUSolver(TestCase):
                 root_method = "lm"
             # Create model
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             var = pybamm.Variable("var")
             model.rhs = {var: 0.1 * var}
             model.initial_conditions = {var: 1}
@@ -77,12 +85,32 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             model_disc = disc.process_model(model, inplace=False)
             # Solve
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
-            t_eval = np.linspace(0, 1, 100)
-            solution = solver.solve(model_disc, t_eval)
-            np.testing.assert_array_equal(solution.t, t_eval)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
+
+            if model.convert_to_format == "casadi" or (
+                model.convert_to_format == "jax"
+                and solver._options["jax_evaluator"] == "iree"
+            ):
+                t_interp = np.linspace(0, 1, 100)
+                t_eval = np.array([t_interp[0], t_interp[-1]])
+            else:
+                t_eval = np.linspace(0, 1, 100)
+                t_interp = t_eval
+
+            solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
+            np.testing.assert_array_equal(
+                solution.t, t_interp, err_msg=f"Failed for form {form}"
+            )
             np.testing.assert_array_almost_equal(
-                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+                solution.y[0],
+                np.exp(0.1 * solution.t),
+                decimal=5,
+                err_msg=f"Failed for form {form}",
             )
 
             # Check invalid atol type raises an error
@@ -92,21 +120,37 @@ class TestIDAKLUSolver(TestCase):
             # enforce events that won't be triggered
             model.events = [pybamm.Event("an event", var + 1)]
             model_disc = disc.process_model(model, inplace=False)
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
-            solution = solver.solve(model_disc, t_eval)
-            np.testing.assert_array_equal(solution.t, t_eval)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
+            solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
+            np.testing.assert_array_equal(solution.t, t_interp)
             np.testing.assert_array_almost_equal(
-                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+                solution.y[0],
+                np.exp(0.1 * solution.t),
+                decimal=5,
+                err_msg=f"Failed for form {form}",
             )
 
             # enforce events that will be triggered
             model.events = [pybamm.Event("an event", 1.01 - var)]
             model_disc = disc.process_model(model, inplace=False)
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
-            solution = solver.solve(model_disc, t_eval)
-            self.assertLess(len(solution.t), len(t_eval))
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
+            solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
+            self.assertLess(len(solution.t), len(t_interp))
             np.testing.assert_array_almost_equal(
-                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+                solution.y[0],
+                np.exp(0.1 * solution.t),
+                decimal=5,
+                err_msg=f"Failed for form {form}",
             )
 
             # bigger dae model with multiple events
@@ -124,31 +168,44 @@ class TestIDAKLUSolver(TestCase):
             disc = get_discretisation_for_testing()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8, root_method=root_method)
-            t_eval = np.linspace(0, 5, 100)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8,
+                atol=1e-8,
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
+            t_eval = np.array([0, 5])
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_less(solution.y[0, :-1], 1.5)
             np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
             np.testing.assert_equal(solution.t_event[0], solution.t[-1])
             np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
             np.testing.assert_array_almost_equal(
-                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+                solution.y[0],
+                np.exp(0.1 * solution.t),
+                decimal=5,
+                err_msg=f"Failed for form {form}",
             )
             np.testing.assert_array_almost_equal(
-                solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+                solution.y[-1],
+                2 * np.exp(0.1 * solution.t),
+                decimal=5,
+                err_msg=f"Failed for form {form}",
             )
 
     def test_input_params(self):
         # test a mix of scalar and vector input params
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u1 = pybamm.Variable("u1")
             u2 = pybamm.Variable("u2")
             u3 = pybamm.Variable("u3")
@@ -162,7 +219,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
@@ -175,58 +235,88 @@ class TestIDAKLUSolver(TestCase):
             )
 
             # test that y[3] remains constant
-            np.testing.assert_array_almost_equal(sol.y[3], np.ones(sol.t.shape))
+            np.testing.assert_array_almost_equal(
+                sol.y[3], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[0], true_solution)
+            np.testing.assert_array_almost_equal(
+                sol.y[0], true_solution, err_msg=f"Failed for form {form}"
+            )
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
-
-    def test_sensitivites_initial_condition(self):
-        for output_variables in [[], ["2v"]]:
-            model = pybamm.BaseModel()
-            model.convert_to_format = "casadi"
-            u = pybamm.Variable("u")
-            v = pybamm.Variable("v")
-            a = pybamm.InputParameter("a")
-            model.rhs = {u: -u}
-            model.algebraic = {v: a * u - v}
-            model.initial_conditions = {u: 1, v: 1}
-            model.variables = {"2v": 2 * v}
-
-            disc = pybamm.Discretisation()
-            disc.process_model(model)
-            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
-
-            t_eval = np.linspace(0, 3, 100)
-            a_value = 0.1
-
-            sol = solver.solve(
-                model, t_eval, inputs={"a": a_value}, calculate_sensitivities=True
-            )
-
             np.testing.assert_array_almost_equal(
-                sol["2v"].sensitivities["a"].full().flatten(),
-                np.exp(-sol.t) * 2,
-                decimal=4,
+                sol.y[1:3], true_solution, err_msg=f"Failed for form {form}"
             )
+
+    def test_sensitivities_initial_condition(self):
+        for form in ["casadi", "iree"]:
+            for output_variables in [[], ["2v"]]:
+                if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                    continue
+                if (form == "iree") and not pybamm.have_iree():
+                    continue
+                if form == "casadi":
+                    root_method = "casadi"
+                else:
+                    root_method = "lm"
+                model = pybamm.BaseModel()
+                model.convert_to_format = "jax" if form == "iree" else form
+                u = pybamm.Variable("u")
+                v = pybamm.Variable("v")
+                a = pybamm.InputParameter("a")
+                model.rhs = {u: -u}
+                model.algebraic = {v: a * u - v}
+                model.initial_conditions = {u: 1, v: 1}
+                model.variables = {"2v": 2 * v}
+
+                disc = pybamm.Discretisation()
+                disc.process_model(model)
+                solver = pybamm.IDAKLUSolver(
+                    rtol=1e-6,
+                    atol=1e-6,
+                    root_method=root_method,
+                    output_variables=output_variables,
+                    options={"jax_evaluator": "iree"} if form == "iree" else {},
+                )
+
+                t_interp = np.linspace(0, 3, 100)
+                t_eval = np.array([t_interp[0], t_interp[-1]])
+
+                a_value = 0.1
+
+                sol = solver.solve(
+                    model,
+                    t_eval,
+                    inputs={"a": a_value},
+                    calculate_sensitivities=True,
+                    t_interp=t_interp,
+                )
+
+                np.testing.assert_array_almost_equal(
+                    sol["2v"].sensitivities["a"].full().flatten(),
+                    np.exp(-sol.t) * 2,
+                    decimal=4,
+                    err_msg=f"Failed for form {form}",
+                )
 
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             u = pybamm.Variable("u")
             v = pybamm.Variable("v")
             a = pybamm.InputParameter("a")
@@ -238,9 +328,13 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
-            t_eval = np.linspace(0, 3, 100)
+            t_interp = np.linspace(0, 3, 100)
+            t_eval = np.array([t_interp[0], t_interp[-1]])
             a_value = 0.1
 
             # solve first without sensitivities
@@ -248,14 +342,19 @@ class TestIDAKLUSolver(TestCase):
                 model,
                 t_eval,
                 inputs={"a": a_value},
+                t_interp=t_interp,
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
+            np.testing.assert_array_almost_equal(
+                sol.y[1, :], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+            np.testing.assert_array_almost_equal(
+                sol.y[0, :], true_solution, err_msg=f"Failed for form {form}"
+            )
 
             # should be no sensitivities calculated
             with self.assertRaises(KeyError):
@@ -263,45 +362,113 @@ class TestIDAKLUSolver(TestCase):
 
             # now solve with sensitivities (this should cause set_up to be run again)
             sol = solver.solve(
-                model, t_eval, inputs={"a": a_value}, calculate_sensitivities=True
+                model,
+                t_eval,
+                inputs={"a": a_value},
+                calculate_sensitivities=True,
+                t_interp=t_interp,
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
+            np.testing.assert_array_almost_equal(
+                sol.y[1, :], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+            np.testing.assert_array_almost_equal(
+                sol.y[0, :], true_solution, err_msg=f"Failed for form {form}"
+            )
 
             # evaluate the sensitivities using idas
             dyda_ida = sol.sensitivities["a"]
 
             # evaluate the sensitivities using finite difference
             h = 1e-6
-            sol_plus = solver.solve(model, t_eval, inputs={"a": a_value + 0.5 * h})
-            sol_neg = solver.solve(model, t_eval, inputs={"a": a_value - 0.5 * h})
+            sol_plus = solver.solve(
+                model, t_eval, inputs={"a": a_value + 0.5 * h}, t_interp=t_interp
+            )
+            sol_neg = solver.solve(
+                model, t_eval, inputs={"a": a_value - 0.5 * h}, t_interp=t_interp
+            )
             dyda_fd = (sol_plus.y - sol_neg.y) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
+            decimal = (
+                2 if form == "iree" else 6
+            )  # iree currently operates with single precision
+            np.testing.assert_array_almost_equal(
+                dyda_ida, dyda_fd, decimal=decimal, err_msg=f"Failed for form {form}"
+            )
 
             # get the sensitivities for the variable
             d2uda = sol["2u"].sensitivities["a"]
-            np.testing.assert_array_almost_equal(2 * dyda_ida[0:200:2], d2uda)
+            np.testing.assert_array_almost_equal(
+                2 * dyda_ida[0:200:2],
+                d2uda,
+                decimal=decimal,
+                err_msg=f"Failed for form {form}",
+            )
 
-    def test_sensitivities_with_events(self):
+    def test_ida_roberts_consistent_initialization(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["casadi", "python", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
+            u = pybamm.Variable("u")
+            v = pybamm.Variable("v")
+            model.rhs = {u: 0.1 * v}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u: 0, v: 2}
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
+
+            # Set up and  model consistently initializate the model
+            solver.set_up(model)
+            t0 = 0.0
+            solver._set_consistent_initialization(model, t0, inputs_dict={})
+
+            # u(t0) = 0, v(t0) = 1
+            np.testing.assert_array_almost_equal(
+                model.y0full, [0, 1], err_msg=f"Failed for form {form}"
+            )
+            # u'(t0) = 0.1 * v(t0) = 0.1
+            # Since v is algebraic, the initial derivative is set to 0
+            np.testing.assert_array_almost_equal(
+                model.ydot0full, [0.1, 0], err_msg=f"Failed for form {form}"
+            )
+
+    def test_sensitivities_with_events(self):
+        # this test implements a python version of the ida Roberts
+        # example provided in sundials
+        # see sundials ida examples pdf
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            model = pybamm.BaseModel()
+            model.convert_to_format = "jax" if form == "iree" else form
             u = pybamm.Variable("u")
             v = pybamm.Variable("v")
             a = pybamm.InputParameter("a")
@@ -314,9 +481,14 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
 
-            t_eval = np.linspace(0, 3, 100)
+            t_interp = np.linspace(0, 3, 100)
+            t_eval = np.array([t_interp[0], t_interp[-1]])
+
             a_value = 0.1
             b_value = 0.0
 
@@ -326,14 +498,19 @@ class TestIDAKLUSolver(TestCase):
                 t_eval,
                 inputs={"a": a_value, "b": b_value},
                 calculate_sensitivities=True,
+                t_interp=t_interp,
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
+            np.testing.assert_array_almost_equal(
+                sol.y[1, :], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+            np.testing.assert_array_almost_equal(
+                sol.y[0, :], true_solution, err_msg=f"Failed for form {form}"
+            )
 
             # evaluate the sensitivities using idas
             dyda_ida = sol.sensitivities["a"]
@@ -342,31 +519,52 @@ class TestIDAKLUSolver(TestCase):
             # evaluate the sensitivities using finite difference
             h = 1e-6
             sol_plus = solver.solve(
-                model, t_eval, inputs={"a": a_value + 0.5 * h, "b": b_value}
+                model,
+                t_eval,
+                inputs={"a": a_value + 0.5 * h, "b": b_value},
+                t_interp=t_interp,
             )
             sol_neg = solver.solve(
-                model, t_eval, inputs={"a": a_value - 0.5 * h, "b": b_value}
+                model,
+                t_eval,
+                inputs={"a": a_value - 0.5 * h, "b": b_value},
+                t_interp=t_interp,
             )
             max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
             dyda_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
+            decimal = (
+                2 if form == "iree" else 6
+            )  # iree currently operates with single precision
             np.testing.assert_array_almost_equal(
-                dyda_ida[: (2 * max_index), :], dyda_fd
+                dyda_ida[: (2 * max_index), :],
+                dyda_fd,
+                decimal=decimal,
+                err_msg=f"Failed for form {form}",
             )
 
             sol_plus = solver.solve(
-                model, t_eval, inputs={"a": a_value, "b": b_value + 0.5 * h}
+                model,
+                t_eval,
+                inputs={"a": a_value, "b": b_value + 0.5 * h},
+                t_interp=t_interp,
             )
             sol_neg = solver.solve(
-                model, t_eval, inputs={"a": a_value, "b": b_value - 0.5 * h}
+                model,
+                t_eval,
+                inputs={"a": a_value, "b": b_value - 0.5 * h},
+                t_interp=t_interp,
             )
             max_index = min(sol_plus.y.shape[1], sol_neg.y.shape[1]) - 1
             dydb_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
             dydb_fd = dydb_fd.transpose().reshape(-1, 1)
 
             np.testing.assert_array_almost_equal(
-                dydb_ida[: (2 * max_index), :], dydb_fd
+                dydb_ida[: (2 * max_index), :],
+                dydb_fd,
+                decimal=decimal,
+                err_msg=f"Failed for form {form}",
             )
 
     def test_failures(self):
@@ -417,19 +615,21 @@ class TestIDAKLUSolver(TestCase):
         solver = pybamm.IDAKLUSolver()
 
         t_eval = np.linspace(0, 3, 100)
-        with self.assertRaisesRegex(pybamm.SolverError, "idaklu solver failed"):
+        with self.assertRaisesRegex(pybamm.SolverError, "FAILURE IDA"):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
-        for form in ["python", "casadi", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
             else:
                 root_method = "lm"
             model = pybamm.BaseModel()
-            model.convert_to_format = form
+            model.convert_to_format = "jax" if form == "iree" else form
             var = pybamm.Variable("var")
             model.algebraic = {var: var + 1}
             model.initial_conditions = {var: 0}
@@ -437,7 +637,10 @@ class TestIDAKLUSolver(TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                options={"jax_evaluator": "iree"} if form == "iree" else {},
+            )
             t_eval = np.linspace(0, 1)
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)
@@ -471,7 +674,7 @@ class TestIDAKLUSolver(TestCase):
 
         np.testing.assert_array_almost_equal(soln.y, soln_banded.y, 5)
 
-    def test_options(self):
+    def test_setup_options(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -481,22 +684,23 @@ class TestIDAKLUSolver(TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        t_eval = np.linspace(0, 1)
+        t_interp = np.linspace(0, 1)
+        t_eval = np.array([t_interp[0], t_interp[-1]])
         solver = pybamm.IDAKLUSolver()
-        soln_base = solver.solve(model, t_eval)
+        soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
         # test print_stats
         solver = pybamm.IDAKLUSolver(options={"print_stats": True})
         f = io.StringIO()
         with redirect_stdout(f):
-            solver.solve(model, t_eval)
+            solver.solve(model, t_eval, t_interp=t_interp)
         s = f.getvalue()
         self.assertIn("Solver Stats", s)
 
         solver = pybamm.IDAKLUSolver(options={"print_stats": False})
         f = io.StringIO()
         with redirect_stdout(f):
-            solver.solve(model, t_eval)
+            solver.solve(model, t_eval, t_interp=t_interp)
         s = f.getvalue()
         self.assertEqual(len(s), 0)
 
@@ -516,9 +720,14 @@ class TestIDAKLUSolver(TestCase):
                         "jacobian": jacobian,
                         "linear_solver": linear_solver,
                         "preconditioner": precon,
+                        "max_num_steps": 10000,
                     }
-                    solver = pybamm.IDAKLUSolver(options=options)
-                    if (
+                    solver = pybamm.IDAKLUSolver(
+                        atol=1e-8,
+                        rtol=1e-8,
+                        options=options,
+                    )
+                    works = (
                         jacobian == "none"
                         and (linear_solver == "SUNLinSol_Dense")
                         or jacobian == "dense"
@@ -534,20 +743,82 @@ class TestIDAKLUSolver(TestCase):
                             and linear_solver != "SUNLinSol_Dense"
                             and linear_solver != "garbage"
                         )
-                    ):
-                        works = True
-                    else:
-                        works = False
+                    )
 
                     if works:
-                        soln = solver.solve(model, t_eval)
-                        np.testing.assert_array_almost_equal(soln.y, soln_base.y, 5)
+                        soln = solver.solve(model, t_eval, t_interp=t_interp)
+                        np.testing.assert_array_almost_equal(soln.y, soln_base.y, 4)
                     else:
                         with self.assertRaises(ValueError):
                             soln = solver.solve(model, t_eval)
 
+    def test_solver_options(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -0.1 * u}
+        model.algebraic = {v: v - u}
+        model.initial_conditions = {u: 1, v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_interp = np.linspace(0, 1)
+        t_eval = np.array([t_interp[0], t_interp[-1]])
+        solver = pybamm.IDAKLUSolver()
+        soln_base = solver.solve(model, t_eval, t_interp=t_interp)
+
+        options_success = {
+            "max_order_bdf": 4,
+            "max_num_steps": 490,
+            "dt_init": 0.01,
+            "dt_max": 1000.9,
+            "max_error_test_failures": 11,
+            "max_nonlinear_iterations": 5,
+            "max_convergence_failures": 11,
+            "nonlinear_convergence_coefficient": 1.0,
+            "suppress_algebraic_error": True,
+            "nonlinear_convergence_coefficient_ic": 0.01,
+            "max_num_steps_ic": 6,
+            "max_num_jacobians_ic": 5,
+            "max_num_iterations_ic": 11,
+            "max_linesearch_backtracks_ic": 101,
+            "linesearch_off_ic": True,
+            "init_all_y_ic": False,
+            "linear_solver": "SUNLinSol_KLU",
+            "linsol_max_iterations": 6,
+            "epsilon_linear_tolerance": 0.06,
+            "increment_factor": 0.99,
+            "linear_solution_scaling": False,
+        }
+
+        # test everything works
+        for option in options_success:
+            options = {option: options_success[option]}
+            solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
+            soln = solver.solve(model, t_eval, t_interp=t_interp)
+
+            np.testing.assert_array_almost_equal(soln.y, soln_base.y, 4)
+
+        options_fail = {
+            "max_order_bdf": -1,
+            "max_num_steps_ic": -1,
+            "max_num_jacobians_ic": -1,
+            "max_num_iterations_ic": -1,
+            "max_linesearch_backtracks_ic": -1,
+            "epsilon_linear_tolerance": -1.0,
+            "increment_factor": -1.0,
+        }
+
+        # test that the solver throws a warning
+        for option in options_fail:
+            options = {option: options_fail[option]}
+            solver = pybamm.IDAKLUSolver(options=options)
+
+            with self.assertRaises(ValueError):
+                solver.solve(model, t_eval)
+
     def test_with_output_variables(self):
-        # Construct a model and solve for all vairables, then test
+        # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
         input_parameters = {}  # Sensitivities dictionary
@@ -637,7 +908,9 @@ class TestIDAKLUSolver(TestCase):
 
         # Compare output to sol_all
         for varname in [*output_variables, *model_vars]:
-            self.assertTrue(np.allclose(sol[varname].data, sol_all[varname].data))
+            np.testing.assert_array_almost_equal(
+                sol[varname](t_eval), sol_all[varname](t_eval), 3
+            )
 
         # Check that the missing variables are not available in the solution
         for varname in inaccessible_vars:
@@ -649,76 +922,220 @@ class TestIDAKLUSolver(TestCase):
         sol["x_s [m]"].initialise_1D()
 
     def test_with_output_variables_and_sensitivities(self):
-        # Construct a model and solve for all vairables, then test
+        # Construct a model and solve for all variables, then test
         # the 'output_variables' option for each variable in turn, confirming
         # equivalence
 
-        # construct model
+        for form in ["casadi", "iree"]:
+            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                continue
+            if (form == "iree") and not pybamm.have_iree():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            input_parameters = {  # Sensitivities dictionary
+                "Current function [A]": 0.222,
+                "Separator porosity": 0.3,
+            }
+
+            # construct model
+            model = pybamm.lithium_ion.DFN()
+            model.convert_to_format = "jax" if form == "iree" else form
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.update({key: "[input]" for key in input_parameters})
+            param.process_model(model)
+            param.process_geometry(geometry)
+            var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
+            mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+
+            t_eval = np.linspace(0, 100, 5)
+
+            options = {
+                "linear_solver": "SUNLinSol_KLU",
+                "jacobian": "sparse",
+                "num_threads": 4,
+                "max_num_steps": 1000,
+            }
+            if form == "iree":
+                options["jax_evaluator"] = "iree"
+
+            # Use a selection of variables of different types
+            output_variables = [
+                "Voltage [V]",
+                "Time [min]",
+                "x [m]",
+                "Negative particle flux [mol.m-2.s-1]",
+                "Throughput capacity [A.h]",  # ExplicitTimeIntegral
+            ]
+
+            # Use the full model as comparison (tested separately)
+            solver_all = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                atol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
+                rtol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
+                options=options,
+            )
+            sol_all = solver_all.solve(
+                model,
+                t_eval,
+                inputs=input_parameters,
+                calculate_sensitivities=True,
+            )
+
+            # Solve for a subset of variables and compare results
+            solver = pybamm.IDAKLUSolver(
+                root_method=root_method,
+                atol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
+                rtol=1e-8 if form != "iree" else 1e-0,  # iree has reduced precision
+                options=options,
+                output_variables=output_variables,
+            )
+            sol = solver.solve(
+                model,
+                t_eval,
+                inputs=input_parameters,
+                calculate_sensitivities=True,
+            )
+
+            # Compare output to sol_all
+            tol = 1e-5 if form != "iree" else 1e-2  # iree has reduced precision
+            for varname in output_variables:
+                np.testing.assert_array_almost_equal(
+                    sol[varname](t_eval),
+                    sol_all[varname](t_eval),
+                    tol,
+                    err_msg=f"Failed for {varname} with form {form}",
+                )
+
+            # Mock a 1D current collector and initialise (none in the model)
+            sol["x_s [m]"].domain = ["current collector"]
+            sol["x_s [m]"].initialise_1D()
+
+    def test_bad_jax_evaluator(self):
         model = pybamm.lithium_ion.DFN()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        input_parameters = {  # Sensitivities dictionary
-            "Current function [A]": 0.680616,
-            "Separator porosity": 1.0,
-        }
-        param.update({key: "[input]" for key in input_parameters})
-        param.process_model(model)
-        param.process_geometry(geometry)
-        var_pts = {"x_n": 50, "x_s": 50, "x_p": 50, "r_n": 5, "r_p": 5}
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        t_eval = np.linspace(0, 3600, 100)
+        model.convert_to_format = "jax"
+        with self.assertRaises(pybamm.SolverError):
+            pybamm.IDAKLUSolver(options={"jax_evaluator": "bad_evaluator"})
 
-        options = {
-            "linear_solver": "SUNLinSol_KLU",
-            "jacobian": "sparse",
-            "num_threads": 4,
-        }
+    def test_bad_jax_evaluator_output_variables(self):
+        model = pybamm.lithium_ion.DFN()
+        model.convert_to_format = "jax"
+        with self.assertRaises(pybamm.SolverError):
+            pybamm.IDAKLUSolver(
+                options={"jax_evaluator": "bad_evaluator"},
+                output_variables=["Terminal voltage [V]"],
+            )
 
-        # Use a selection of variables of different types
-        output_variables = [
-            "Voltage [V]",
-            "Time [min]",
-            "x [m]",
-            "Negative particle flux [mol.m-2.s-1]",
-            "Throughput capacity [A.h]",  # ExplicitTimeIntegral
-        ]
+    def test_with_output_variables_and_event_termination(self):
+        model = pybamm.lithium_ion.DFN()
+        parameter_values = pybamm.ParameterValues("Chen2020")
 
-        # Use the full model as comparison (tested separately)
-        solver_all = pybamm.IDAKLUSolver(
-            atol=1e-8,
-            rtol=1e-8,
-            options=options,
-        )
-        sol_all = solver_all.solve(
+        sim = pybamm.Simulation(
             model,
-            t_eval,
-            inputs=input_parameters,
-            calculate_sensitivities=True,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
+        )
+        sol = sim.solve(np.linspace(0, 3600, 2))
+        self.assertEqual(sol.termination, "event: Minimum voltage [V]")
+
+        # create an event that doesn't require the state vector
+        eps_p = model.variables["Positive electrode porosity"]
+        model.events.append(
+            pybamm.Event(
+                "Zero positive electrode porosity cut-off",
+                pybamm.min(eps_p),
+                pybamm.EventType.TERMINATION,
+            )
         )
 
-        # Solve for a subset of variables and compare results
-        solver = pybamm.IDAKLUSolver(
-            atol=1e-8,
-            rtol=1e-8,
-            options=options,
-            output_variables=output_variables,
-        )
-        sol = solver.solve(
+        sim3 = pybamm.Simulation(
             model,
-            t_eval,
-            inputs=input_parameters,
-            calculate_sensitivities=True,
+            parameter_values=parameter_values,
+            solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
+        )
+        sol3 = sim3.solve(np.linspace(0, 3600, 2))
+        self.assertEqual(sol3.termination, "event: Minimum voltage [V]")
+
+    def test_simulation_period(self):
+        model = pybamm.lithium_ion.DFN()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        solver = pybamm.IDAKLUSolver()
+
+        experiment = pybamm.Experiment(
+            ["Charge at C/10 for 10 seconds"], period="0.1 seconds"
         )
 
-        # Compare output to sol_all
-        for varname in output_variables:
-            self.assertTrue(np.allclose(sol[varname].data, sol_all[varname].data))
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            experiment=experiment,
+            solver=solver,
+        )
+        sol = sim.solve()
 
-        # Mock a 1D current collector and initialise (none in the model)
-        sol["x_s [m]"].domain = ["current collector"]
-        sol["x_s [m]"].initialise_1D()
+        np.testing.assert_array_almost_equal(sol.t, np.arange(0, 10.1, 0.1), decimal=4)
+
+    def test_interpolate_time_step_start_offset(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/10 for 10 seconds",
+                "Charge at C/10 for 10 seconds",
+            ],
+            period="1 seconds",
+        )
+        solver = pybamm.IDAKLUSolver()
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+        sol = sim.solve()
+        np.testing.assert_equal(
+            sol.sub_solutions[0].t[-1] + pybamm.settings.step_start_offset,
+            sol.sub_solutions[1].t[0],
+        )
+
+    def test_python_idaklu_deprecation_errors(self):
+        for form in ["python", "", "jax"]:
+            if form == "jax" and not pybamm.have_jax():
+                continue
+
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            u = pybamm.Variable("u")
+            v = pybamm.Variable("v")
+            model.rhs = {u: 0.1 * v}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u: 0, v: 1}
+            model.events = [pybamm.Event("1", 0.2 - u), pybamm.Event("2", v)]
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            t_eval = np.linspace(0, 3, 100)
+
+            solver = pybamm.IDAKLUSolver(
+                root_method="lm",
+            )
+
+            if form == "python":
+                with self.assertRaisesRegex(
+                    pybamm.SolverError,
+                    "Unsupported option for convert_to_format=python",
+                ):
+                    with self.assertWarnsRegex(
+                        DeprecationWarning,
+                        "The python-idaklu solver has been deprecated.",
+                    ):
+                        _ = solver.solve(model, t_eval)
+            elif form == "jax":
+                with self.assertRaisesRegex(
+                    pybamm.SolverError,
+                    "Unsupported evaluation engine for convert_to_format=jax",
+                ):
+                    _ = solver.solve(model, t_eval)
 
 
 if __name__ == "__main__":

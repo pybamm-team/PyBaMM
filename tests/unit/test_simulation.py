@@ -1,7 +1,7 @@
 import pybamm
 import numpy as np
 import pandas as pd
-from tests import TestCase
+
 import os
 import sys
 import unittest
@@ -12,7 +12,7 @@ from scipy.integrate import cumulative_trapezoid
 from tests import no_internet_connection
 
 
-class TestSimulation(TestCase):
+class TestSimulation(unittest.TestCase):
     def test_simple_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
@@ -364,6 +364,49 @@ class TestSimulation(TestCase):
         np.testing.assert_array_equal(
             sim.solution.all_inputs[1]["Current function [A]"], 2
         )
+
+    def test_time_varying_input_function(self):
+        tf = 20.0
+
+        def oscillating(t):
+            return 3.6 + 0.1 * np.sin(2 * np.pi * t / tf)
+
+        model = pybamm.lithium_ion.SPM()
+
+        operating_modes = {
+            "Current [A]": pybamm.step.current,
+            "C-rate": pybamm.step.c_rate,
+            "Voltage [V]": pybamm.step.voltage,
+            "Power [W]": pybamm.step.power,
+        }
+        for name in operating_modes:
+            operating_mode = operating_modes[name]
+            step = operating_mode(oscillating, duration=tf / 2)
+            experiment = pybamm.Experiment([step, step], period=f"{tf / 100} seconds")
+
+            solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+            sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+            sim.solve()
+            for sol in sim.solution.sub_solutions:
+                t0 = sol.t[0]
+                np.testing.assert_array_almost_equal(
+                    sol[name].entries, np.array(oscillating(sol.t - t0))
+                )
+
+            # check improper inputs
+            for x in (np.nan, np.inf):
+
+                def f(t, x=x):
+                    return x + t
+
+                with self.assertRaises(ValueError):
+                    operating_mode(f)
+
+            def g(t, y):
+                return t
+
+            with self.assertRaises(TypeError):
+                operating_mode(g)
 
     def test_save_load(self):
         with TemporaryDirectory() as dir_name:

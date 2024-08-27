@@ -1,7 +1,7 @@
 #
 # Tests for the Processed Variable class
 #
-from tests import TestCase
+
 import casadi
 import pybamm
 import tests
@@ -61,7 +61,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariable(TestCase):
+class TestProcessedVariable(unittest.TestCase):
     def test_processed_variable_0D(self):
         # without space
         t = pybamm.t

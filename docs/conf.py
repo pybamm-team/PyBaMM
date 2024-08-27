@@ -176,13 +176,21 @@ htmlhelp_basename = "pybamm"
 html_sidebars = {"**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"]}
 
 # For edit button
-html_context = {
-    "github_user": "pybamm-team",
-    "github_repo": "pybamm",
-    "github_version": "develop",
-    "doc_path": "docs/",
-}
+html_context.update(
+    {
+        "github_user": "pybamm-team",
+        "github_repo": "pybamm",
+        "github_version": "develop",
+        "doc_path": "docs/",
+    }
+)
 
+# Set canonical URL from the Read the Docs Domain
+html_baseurl = os.getenv("READTHEDOCS_CANONICAL_URL", "")
+
+# Tell Jinja2 templates the build is running on Read the Docs
+if os.getenv("READTHEDOCS") == "True":
+    html_context["READTHEDOCS"] = True
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
@@ -280,7 +288,7 @@ intersphinx_mapping = {
 
 # -- sphinxcontrib-bibtex configuration --------------------------------------
 
-bibtex_bibfiles = ["../pybamm/CITATIONS.bib"]
+bibtex_bibfiles = ["../src/pybamm/CITATIONS.bib"]
 bibtex_style = "unsrt"
 bibtex_footbibliography_header = """.. rubric:: References"""
 bibtex_reference_style = "author_year"

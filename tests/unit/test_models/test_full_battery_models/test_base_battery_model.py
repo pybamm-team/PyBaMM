@@ -1,7 +1,7 @@
 #
 # Tests for the base battery model class
 #
-from tests import TestCase
+
 from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
 import pybamm
 import unittest
@@ -56,7 +56,7 @@ PRINT_OPTIONS_OUTPUT = """\
 """
 
 
-class TestBaseBatteryModel(TestCase):
+class TestBaseBatteryModel(unittest.TestCase):
     def test_process_parameters_and_discretise(self):
         model = pybamm.lithium_ion.SPM()
         # Set up geometry and parameters
@@ -305,6 +305,10 @@ class TestBaseBatteryModel(TestCase):
         # SEI on cracks
         with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
+        with self.assertRaisesRegex(pybamm.OptionError, "'SEI on cracks' is 'true'"):
+            pybamm.BaseBatteryModel(
+                {"SEI on cracks": "true", "particle mechanics": "swelling only"}
+            )
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
@@ -483,7 +487,7 @@ class TestBaseBatteryModel(TestCase):
         os.remove("test_base_battery_model.json")
 
 
-class TestOptions(TestCase):
+class TestOptions(unittest.TestCase):
     def test_print_options(self):
         with io.StringIO() as buffer, redirect_stdout(buffer):
             BatteryModelOptions(OPTIONS_DICT).print_options()

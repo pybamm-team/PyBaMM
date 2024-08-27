@@ -1,15 +1,37 @@
 #
 # Tests for the Thevenin equivalant circuit model
 #
-from tests import TestCase
+
 import pybamm
 import unittest
 
 
-class TestThevenin(TestCase):
+class TestThevenin(unittest.TestCase):
     def test_standard_model(self):
         model = pybamm.equivalent_circuit.Thevenin()
         model.check_well_posedness()
+
+    def test_default_properties(self):
+        model = pybamm.equivalent_circuit.Thevenin()
+        x = model.variables["x ECMD"]
+
+        # test var_pts
+        self.assertEqual(model.default_var_pts, {x: 20})
+
+        # test geometry
+        self.assertEqual(
+            model.default_geometry, {"ECMD particle": {x: {"min": 0, "max": 1}}}
+        )
+
+        # test spatial methods
+        self.assertIsInstance(
+            model.default_spatial_methods["ECMD particle"], pybamm.FiniteVolume
+        )
+
+        # test submesh types
+        self.assertEqual(
+            model.default_submesh_types, {"ECMD particle": pybamm.Uniform1DSubMesh}
+        )
 
     def test_changing_number_of_rcs(self):
         options = {"number of rc elements": 0}
@@ -32,6 +54,11 @@ class TestThevenin(TestCase):
             options = {"number of rc elements": -1}
             model = pybamm.equivalent_circuit.Thevenin(options=options)
             model.check_well_posedness()
+
+    def test_diffusion_element(self):
+        options = {"diffusion element": "true"}
+        model = pybamm.equivalent_circuit.Thevenin(options=options)
+        model.check_well_posedness(post_discretisation=True)
 
     def test_calculate_discharge_energy(self):
         options = {"calculate discharge energy": "true"}
