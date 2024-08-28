@@ -4,12 +4,11 @@ on:
   schedule:
      # Run at 10 am UTC on day-of-month 1 in January, May, and September.
      - cron: "0 10 1 1,5,9 *"
-  workflow_dispatch:
 
 jobs:
   update-version:
     # This workflow is only of value to PyBaMM and would always be skipped in forks
-    if: github.repository_owner == 'kratman'
+    if: github.repository_owner == 'pybamm-team'
     runs-on: ubuntu-latest
 
     steps:
@@ -46,7 +45,7 @@ jobs:
         uses: repo-sync/pull-request@v2
         with:
           source_branch: '${{ env.VERSION }}'
-          destination_branch: "develop"
+          destination_branch: "main"
           pr_title: "Make release ${{ env.VERSION }}"
           pr_body: "**Check the [release workflow](https://github.com/pybamm-team/PyBaMM/blob/develop/.github/release_workflow.md)**"
           github_token: ${{ secrets.GITHUB_TOKEN }}
