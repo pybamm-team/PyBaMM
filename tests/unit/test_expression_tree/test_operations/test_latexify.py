@@ -6,8 +6,18 @@ import pytest
 import os
 import platform
 import uuid
+import subprocess
 
 import pybamm
+
+
+def is_latex_installed():
+    try:
+        # Try to run the LaTeX version command
+        subprocess.run(["latex", "--version"], check=True, capture_output=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
 
 
 class TestLatexify:
@@ -83,6 +93,7 @@ class TestLatexify:
     @pytest.mark.skipif(
         platform.system() in ["Windows", "Darwin"], reason="Only run for Linux"
     )
+    @pytest.mark.skipif(not is_latex_installed(), reason="LaTeX is not installed")
     def test_sympy_preview(self):
         # Test sympy preview
         model_spme = pybamm.lithium_ion.SPMe()
