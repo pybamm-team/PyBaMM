@@ -135,6 +135,18 @@ class SEIGrowth(BaseModel):
             # Scott Marquis thesis (eq. 5.94)
             eta_inner = delta_phi - phase_param.U_inner
             j_sei = (eta_inner < 0) * phase_param.kappa_inner * eta_inner / L_sei_inner
+        
+        elif SEI_option == "Kolzenberg2020":
+            eta_bar = F_RT * (delta_phi)
+            # j0_sei = param.F * phase_param.k_sei * phase_param.c_sol
+            L_diff = (phase_param.D_li * phase_param.c_li_0 * param.F / phase_param.j0_sei) \
+                 * pybamm.exp(-(1-alpha_SEI) * eta_bar)
+            L_tun = phase_param.L_tunneling
+            L_app = (L_sei - L_tun) * ((L_sei - L_tun) > 0)   
+            L_mig =  2 / F_RT * phase_param.kappa_Li_ion / (pybamm.AbsoluteValue(j) + 1e-38)
+            LL_k0 = (1 - L_app / L_mig * pybamm.sign(j)) / (1 - L_app / L_mig * pybamm.sign(j) + L_app / L_diff)
+            j_sei =  -phase_param.j0_sei * LL_k0 * pybamm.exp(-alpha_SEI * eta_bar)  
+            
         elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)
             j_sei = -(
