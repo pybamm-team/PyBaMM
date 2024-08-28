@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Get current date for the first release candidate
         run: |
-          echo "VERSION=$(date +'v%y.%-m' + ".0")" >> $GITHUB_ENV
+          echo "VERSION=$(date +'v%y.%-m').0" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
