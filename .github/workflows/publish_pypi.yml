@@ -244,7 +244,14 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
-          CIBW_REPAIR_WHEEL_COMMAND: delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND: |
+            if [[ $(uname -m) == "x86_64" ]]; then
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+            elif [[ $(uname -m) == "arm64" ]]; then
+              # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            fi
           CIBW_TEST_EXTRAS: "all,dev,jax"
           CIBW_TEST_COMMAND: |
             set -e -x
