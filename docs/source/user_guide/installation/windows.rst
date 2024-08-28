@@ -75,7 +75,7 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 	  pip install "pybamm[jax]"
 
-The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
+The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
 Uninstall PyBaMM
 ----------------
