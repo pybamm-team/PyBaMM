@@ -20,9 +20,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -66,9 +64,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_model_events(self):
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -92,15 +88,8 @@ class TestIDAKLUSolver(unittest.TestCase):
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            if model.convert_to_format == "casadi" or (
-                model.convert_to_format == "jax"
-                and solver._options["jax_evaluator"] == "iree"
-            ):
-                t_interp = np.linspace(0, 1, 100)
-                t_eval = np.array([t_interp[0], t_interp[-1]])
-            else:
-                t_eval = np.linspace(0, 1, 100)
-                t_interp = t_eval
+            t_interp = np.linspace(0, 1, 100)
+            t_eval = [t_interp[0], t_interp[-1]]
 
             solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
             np.testing.assert_array_equal(
@@ -196,9 +185,7 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_input_params(self):
         # test a mix of scalar and vector input params
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -224,7 +211,8 @@ class TestIDAKLUSolver(unittest.TestCase):
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
 
-            t_eval = np.linspace(0, 3, 100)
+            t_interp = np.linspace(0, 3, 100)
+            t_eval = [t_interp[0], t_interp[-1]]
             a_value = 0.1
             b_value = np.array([[0.2], [0.3]])
 
@@ -232,6 +220,7 @@ class TestIDAKLUSolver(unittest.TestCase):
                 model,
                 t_eval,
                 inputs={"a": a_value, "b": b_value},
+                t_interp=t_interp,
             )
 
             # test that y[3] remains constant
@@ -254,9 +243,9 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_sensitivities_initial_condition(self):
         for form in ["casadi", "iree"]:
             for output_variables in [[], ["2v"]]:
-                if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                    continue
-                if (form == "iree") and not pybamm.have_iree():
+                if (form == "iree") and (
+                    not pybamm.have_jax() or not pybamm.have_iree()
+                ):
                     continue
                 if form == "casadi":
                     root_method = "casadi"
@@ -283,7 +272,7 @@ class TestIDAKLUSolver(unittest.TestCase):
                 )
 
                 t_interp = np.linspace(0, 3, 100)
-                t_eval = np.array([t_interp[0], t_interp[-1]])
+                t_eval = [t_interp[0], t_interp[-1]]
 
                 a_value = 0.1
 
@@ -307,9 +296,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -334,7 +321,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             t_interp = np.linspace(0, 3, 100)
-            t_eval = np.array([t_interp[0], t_interp[-1]])
+            t_eval = [t_interp[0], t_interp[-1]]
             a_value = 0.1
 
             # solve first without sensitivities
@@ -415,9 +402,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -459,9 +444,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -487,7 +470,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             t_interp = np.linspace(0, 3, 100)
-            t_eval = np.array([t_interp[0], t_interp[-1]])
+            t_eval = [t_interp[0], t_interp[-1]]
 
             a_value = 0.1
             b_value = 0.0
@@ -620,9 +603,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_dae_solver_algebraic_model(self):
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -685,7 +666,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc.process_model(model)
 
         t_interp = np.linspace(0, 1)
-        t_eval = np.array([t_interp[0], t_interp[-1]])
+        t_eval = [t_interp[0], t_interp[-1]]
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -763,7 +744,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc.process_model(model)
 
         t_interp = np.linspace(0, 1)
-        t_eval = np.array([t_interp[0], t_interp[-1]])
+        t_eval = [t_interp[0], t_interp[-1]]
         solver = pybamm.IDAKLUSolver()
         soln_base = solver.solve(model, t_eval, t_interp=t_interp)
 
@@ -927,9 +908,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # equivalence
 
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
-                continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and (not pybamm.have_jax() or not pybamm.have_iree()):
                 continue
             if form == "casadi":
                 root_method = "casadi"

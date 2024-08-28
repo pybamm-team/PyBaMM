@@ -17,6 +17,7 @@ models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
 npts = [4, 8, 16, 32, 64]
 
 solvers = {
+    "IDAKLUSolver": pybamm.IDAKLUSolver(),
     "Casadi - safe": pybamm.CasadiSolver(),
     "Casadi - fast": pybamm.CasadiSolver(mode="fast"),
 }
