@@ -109,13 +109,7 @@ Prerequisites
 
 	Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
 
-	After installing, you must add the following location to your ``Path`` environment variable to run ``nox`` in a terminal, like Command Prompt.
-
-	.. code::
-
-		C:\Users\<USERNAME>\AppData\Roaming\Python\Python3<X>\Scripts
-
-	Make sure to replace ``<USERNAME>`` with your user name and ``X`` with your Python subversion.
+	Please note that all ``nox`` commands should now be run with ``python -m`` prepended. For example, instead of using ``nox -s dev``, use ``python -m nox -s dev``.
 
 .. _install-build-time:
 
@@ -258,7 +252,7 @@ Installing PyBaMM
 
 	   .. code::
 
-			.\Scripts\windows_setup.bat
+			.\scripts\windows_setup.bat
 
 	The script sets the following environment variables with the following defaults.
 
@@ -325,49 +319,6 @@ We recommend installing PyBaMM within a virtual environment to avoid altering an
 
 		source env/bin/activate
 
-	Now all the calls to pip described below will install PyBaMM and its
-	dependencies into the environment ``env``. When you are ready to exit
-	the environment and go back to your original system, just type:
-
-	.. code:: bash
-
-		deactivate
-
-	From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
-
-	.. code:: bash
-
-		pip install .
-
-	If you intend to contribute to the development of PyBaMM, it is convenient to
-	install in "editable mode", along with all the optional dependencies and useful
-	tools for development and documentation.
-
-	You can install PyBaMM in an "editable mode" using the following command:
-
-	.. code:: bash
-
-		pip install -e .[all,dev,docs]
-
-	You can also install PyBaMM with "partial rebuilds" enabled. But, due to the ``--no-build-isolation`` flag, you first need to install the build-time dependencies inside the virtual environment:
-
-	.. code:: bash
-
-		pip install scikit-build-core pybind11 casadi cmake
-
-	You can now install PyBaMM in "editable mode" with "partial rebuilds" for development using the following command:
-
-	.. code:: bash
-
-		pip install --no-build-isolation --config-settings=editable.rebuild=true -e .[all,dev,docs]
-
-	If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
-
-	.. code:: bash
-
-		pip install --no-build-isolation --config-settings=editable.rebuild=true -e '.[all,dev,docs]'
-
-
 .. tab:: Windows
 
 	You can install ``virtualenv`` by executing the following command:
@@ -388,41 +339,55 @@ We recommend installing PyBaMM within a virtual environment to avoid altering an
 
 		venv\Scripts\activate.bat
 
-	Now, all the calls to pip described below will install PyBaMM and its
-	dependencies into the environment ``venv``. When you are ready to exit
-	the environment and go back to your original system, just type:
+Now all the calls to pip described below will install PyBaMM and its
+dependencies into the environment ``env``. When you are ready to exit
+the environment and go back to your original system, just type:
+
+.. code:: bash
+
+	deactivate
+
+From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
+
+.. code:: bash
+
+	pip install .
+
+If you intend to contribute to the development of PyBaMM, it is convenient to
+install in "editable mode", along with all the optional dependencies and useful
+tools for development and documentation.
+
+Due to the ``--no-build-isolation`` flag, you first need to install the build-time dependencies inside the virtual environment:
+
+.. tab:: GNU/Linux and MacOS
 
 	.. code:: bash
 
-		deactivate
+		pip install scikit-build-core pybind11 casadi cmake
 
-	From the ``PyBaMM/`` directory inside the virtual environment, you can install PyBaMM using
-
-	.. code:: bash
-
-		pip install .
-
-	If you intend to contribute to the development of PyBaMM, it is convenient to
-	install in "editable mode", along with all the optional dependencies and useful
-	tools for development and documentation.
-
-	You can install PyBaMM in an "editable mode" using the following command:
-
-	.. code:: bash
-
-		pip install -e .[all,dev,docs]
-
-	You can also install PyBaMM with "partial rebuilds" enabled. But, due to the ``--no-build-isolation`` flag, you first need to install the build-time dependencies inside the virtual environment:
+.. tab:: Windows
 
 	.. code:: bash
 
 		pip install scikit-build-core pybind11
 
-	You can now install PyBaMM in "editable mode" with "partial rebuilds" for development using the following command:
+You can now install PyBaMM in "editable mode" using the following command:
 
-	.. code:: bash
+.. code:: bash
 
-		pip install --no-build-isolation --config-settings=editable.rebuild=true -e .[all,dev,docs]
+	pip install --no-build-isolation -e .[all,dev,docs]
+
+You can also install PyBaMM in "editable mode" with "partial rebuilds" for development using the following command:
+
+.. code:: bash
+
+	pip install --no-build-isolation --config-settings=editable.rebuild=true -e .[all,dev,docs]
+
+If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
+
+.. code:: bash
+
+	pip install --no-build-isolation --config-settings=editable.rebuild=true -e '.[all,dev,docs]'
 
 .. note::
 
@@ -584,7 +549,7 @@ Troubleshooting
 
 	.. code:: bash
 
-		pip install -e .
+		pip install --no-build-isolation -e .
 
 	If you want to install with "partial rebuilds" enabled, use this command:
 
@@ -613,7 +578,7 @@ Troubleshooting
 
 	.. code:: bash
 
-		pip install -e .
+		pip install --no-build-isolation -e .
 
 	If you want to install with "partial rebuilds" enabled, use this command:
 

@@ -64,10 +64,10 @@ jobs:
       - name: Cache packages installed through vcpkg on Windows
         uses: actions/cache@v4
         env:
-          cache-name: vckpg_binary_cache
+          cache-name: vcpkg_binary_cache
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
+          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}-${{ steps.setup-python.outputs.python-version }}
 
       - name: Install vcpkg on Windows
         run: |
@@ -131,7 +131,7 @@ jobs:
         with:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ github.workspace }}/install_KLU_Sundials/
+            ${{ github.workspace }}/download_KLU_Sundials/
             ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
@@ -161,15 +161,8 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
-          packages: gfortran gcc graphviz pandoc
+          packages: gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
           execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
@@ -186,7 +179,7 @@ jobs:
         with:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ github.workspace }}/install_KLU_Sundials/
+            ${{ github.workspace }}/download_KLU_Sundials/
             ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-ubuntu-latest-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
@@ -230,15 +223,8 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
-          packages: graphviz pandoc
+          packages: graphviz pandoc texlive-latex-extra dvipng
           execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
         id: setup-python
@@ -270,15 +256,8 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
-          packages: gfortran gcc graphviz pandoc
+          packages: gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
           execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         id: setup-python
@@ -295,7 +274,7 @@ jobs:
         with:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ github.workspace }}/install_KLU_Sundials/
+            ${{ github.workspace }}/download_KLU_Sundials/
             ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-ubuntu-latest-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 
@@ -320,15 +299,8 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
-          packages: gfortran gcc graphviz
+          packages: gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
           execute_install_scripts: true
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         id: setup-python
@@ -345,7 +317,7 @@ jobs:
         with:
           path: |
             # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ github.workspace }}/install_KLU_Sundials/
+            ${{ github.workspace }}/download_KLU_Sundials/
             ${{ github.workspace }}/sundials_KLU_libs/
           key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
 

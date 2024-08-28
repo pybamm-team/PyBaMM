@@ -26,22 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  style:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
-      - name: Check style
-        run: |
-          python -m pip install pre-commit
-          pre-commit run -a
-
   run_windows_unit_integration_tests:
-    needs: style
     env:
       PYBAMM_USE_VCPKG: ON
       VCPKG_ROOT_DIR: C:\vcpkg
@@ -85,7 +70,6 @@ jobs:
         run: python -m nox -s integration
 
   run_macos_unit_integration_tests:
-    needs: style
     runs-on: ${{ matrix.os }}
     env:
         PYBAMM_IDAKLU_EXPR_CASADI: ON
@@ -133,7 +117,6 @@ jobs:
         run: python -m nox -s integration
 
   run_linux_unit_integration_coverage_tests:
-    needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -146,14 +129,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
-        run: sudo apt install gfortran gcc graphviz pandoc
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+        run: sudo apt install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -186,7 +162,6 @@ jobs:
 
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
-    needs: style
     env:
       BUILD_IDAKLU: OFF
     runs-on: ubuntu-latest
@@ -201,14 +176,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Linux system dependencies
-        run: sudo apt install graphviz pandoc
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install texlive-latex-extra dvipng
+        run: sudo apt install graphviz pandoc texlive-latex-extra dvipng
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -225,7 +193,6 @@ jobs:
         run: python -m nox -s docs
 
   run_example_tests:
-    needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -236,14 +203,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
-        run: sudo apt install gfortran gcc graphviz pandoc
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+        run: sudo apt install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -261,7 +221,6 @@ jobs:
         run: python -m nox -s examples
 
   run_scripts_tests:
-    needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -272,14 +231,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Linux system dependencies
-        run: sudo apt install gfortran gcc graphviz
-
-      # dot -c is for registering graphviz fonts and plugins
-      - name: Install OpenBLAS and TeXLive for Linux
-        run: |
-          sudo apt-get update
-          sudo dot -c
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+        run: sudo apt install gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5

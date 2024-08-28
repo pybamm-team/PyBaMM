@@ -59,12 +59,6 @@ def get_build_dependencies():
     build_dependencies = nox.project.load_toml("pyproject.toml")["build-system"][
         "requires"
     ]
-    if sys.platform == "win32":
-        build_dependencies = [
-            dep
-            for dep in build_dependencies
-            if not (dep.startswith("casadi") or dep.startswith("cmake"))
-        ]
     return build_dependencies
 
 
