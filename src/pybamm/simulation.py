@@ -352,6 +352,7 @@ class Simulation:
         callbacks=None,
         showprogress=False,
         inputs=None,
+        t_interp=None,
         **kwargs,
     ):
         """
@@ -361,11 +362,14 @@ class Simulation:
         Parameters
         ----------
         t_eval : numeric type, optional
-            The times (in seconds) at which to compute the solution. Can be
-            provided as an array of times at which to return the solution, or as a
-            list `[t0, tf]` where `t0` is the initial time and `tf` is the final time.
-            If provided as a list the solution is returned at 100 points within the
-            interval `[t0, tf]`.
+            The times at which to stop the integration due to a discontinuity in time.
+            Can be provided as an array of times at which to return the solution, or as
+            a list `[t0, tf]` where `t0` is the initial time and `tf` is the final
+            time. If the solver does not support intra-solve interpolation, providing
+            `t_eval` as a list returns the solution at 100 points within the interval
+            `[t0, tf]`. Otherwise, the solution is returned at the times specified in
+            `t_interp` or as a result of the adaptive time-stepping solution. See the
+            `t_interp` argument for more details.
 
             If not using an experiment or running a drive cycle simulation (current
             provided as data) `t_eval` *must* be provided.
@@ -400,6 +404,9 @@ class Simulation:
             Whether to show a progress bar for cycling. If true, shows a progress bar
             for cycles. Has no effect when not used with an experiment.
             Default is False.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -486,7 +493,7 @@ class Simulation:
                         )
 
             self._solution = solver.solve(
-                self._built_model, t_eval, inputs=inputs, **kwargs
+                self._built_model, t_eval, inputs=inputs, t_interp=t_interp, **kwargs
             )
 
         elif self.operating_mode == "with experiment":
@@ -687,13 +694,17 @@ class Simulation:
                         "start time": start_time,
                     }
                     # Make sure we take at least 2 timesteps
-                    npts = max(int(round(dt / step.period)) + 1, 2)
+                    t_eval, t_interp_processed = step.setup_timestepping(
+                        solver, dt, t_interp
+                    )
+
                     try:
                         step_solution = solver.step(
                             current_solution,
                             model,
                             dt,
-                            t_eval=np.linspace(0, dt, npts),
+                            t_eval,
+                            t_interp=t_interp_processed,
                             save=False,
                             inputs=inputs,
                             **kwargs,
