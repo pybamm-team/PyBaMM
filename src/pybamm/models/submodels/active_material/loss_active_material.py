@@ -49,6 +49,32 @@ class LossActiveMaterial(BaseModel):
             f"Loss of lithium due to loss of {phase}active material "
             f"in {domain} electrode [mol]"
         )
+        if phase == "":
+            variables.update(
+                {
+                    f"Loss of lithium due to loss of {phase}active material "
+                    f"in {domain} electrode [mol]": lli_due_to_lam
+                }
+            )
+        else:
+            total_lli_due_to_lam = (
+                f"Loss of lithium due to loss of active material "
+                f"in {domain} electrode [mol]"
+            )
+            variables.update(
+                {
+                    f"Loss of lithium due to loss of {phase}active material "
+                    f"in {domain} electrode [mol]": lli_due_to_lam,
+                    total_lli_due_to_lam: pybamm.Variable(
+                        f"Loss of lithium due to loss of primary active material "
+                        f"in {domain} electrode [mol]"
+                    )
+                    + pybamm.Variable(
+                        f"Loss of lithium due to loss of secondary active material "
+                        f"in {domain} electrode [mol]"
+                    ),
+                }
+            )
         variables.update(
             {
                 f"Loss of lithium due to loss of {phase}active material "
