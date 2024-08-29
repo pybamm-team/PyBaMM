@@ -40,6 +40,7 @@ if pybamm.have_idaklu() and pybamm.have_jax():
         t_eval,
         inputs=inputs,
         calculate_sensitivities=True,
+        t_interp=t_eval,
     )
 
     # Get jax expressions for IDAKLU solver
@@ -54,6 +55,7 @@ if pybamm.have_idaklu() and pybamm.have_jax():
         t_eval,
         output_variables=output_variables[:1],
         calculate_sensitivities=True,
+        t_interp=t_eval,
     )
     f1 = idaklu_jax_solver1.get_jaxpr()
     # Multiple output variables
@@ -62,6 +64,7 @@ if pybamm.have_idaklu() and pybamm.have_jax():
         t_eval,
         output_variables=output_variables,
         calculate_sensitivities=True,
+        t_interp=t_eval,
     )
     f3 = idaklu_jax_solver3.get_jaxpr()
 
@@ -151,11 +154,12 @@ class TestIDAKLUJax(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
         # Regenerate surrogate data
-        sim = idaklu_solver.solve(model, t_eval)
+        sim = idaklu_solver.solve(model, t_eval, t_interp=t_eval)
         idaklu_jax_solver = idaklu_solver.jaxify(
             model,
             t_eval,
             output_variables=output_variables,
+            t_interp=t_eval,
         )
         f = idaklu_jax_solver.get_jaxpr()
         # Check that evaluation can occur (and is correct) with no inputs
@@ -423,7 +427,6 @@ class TestIDAKLUJax(unittest.TestCase):
 
     @parameterized.expand(testcase, skip_on_empty=True)
     def test_jacrev_vector(self, output_variables, idaklu_jax_solver, f, wrapper):
-        out = wrapper(jax.jacrev(f, argnums=1))(t_eval[k], inputs)
         out = wrapper(jax.jacrev(f, argnums=1))(t_eval, inputs)
         flat_out, _ = tree_flatten(out)
         flat_out = np.concatenate(np.array([f for f in flat_out]), 1).T.flatten()
@@ -847,6 +850,7 @@ class TestIDAKLUJax(unittest.TestCase):
             t_eval,
             inputs=inputs_pred,
             calculate_sensitivities=True,
+            t_interp=t_eval,
         )
         pred = sim_pred["v"]
 

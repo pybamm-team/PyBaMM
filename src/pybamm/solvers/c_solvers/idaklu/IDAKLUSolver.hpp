@@ -27,7 +27,8 @@ public:
    * @brief Abstract solver method that returns a Solution class
    */
   virtual Solution solve(
-    np_array t_np,
+    np_array t_eval_np,
+    np_array t_interp_np,
     np_array y0_np,
     np_array yp0_np,
     np_array_dense inputs) = 0;

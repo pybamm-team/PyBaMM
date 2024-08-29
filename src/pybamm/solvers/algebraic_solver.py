@@ -36,7 +36,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         self.tol = tol
         self.extra_options = extra_options or {}
         self.name = f"Algebraic solver ({method})"
-        self.algebraic_solver = True
+        self._algebraic_solver = True
         pybamm.citations.register("Virtanen2020")
 
     @property
@@ -47,7 +47,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
