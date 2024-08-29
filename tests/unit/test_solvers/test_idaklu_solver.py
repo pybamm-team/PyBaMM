@@ -13,16 +13,16 @@ from tests import get_discretisation_for_testing
 
 
 @pytest.mark.cibw
-@unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+@unittest.skipIf(not pybamm.has_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -66,9 +66,9 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_model_events(self):
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -196,9 +196,9 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_input_params(self):
         # test a mix of scalar and vector input params
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -254,9 +254,9 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_sensitivities_initial_condition(self):
         for form in ["casadi", "iree"]:
             for output_variables in [[], ["2v"]]:
-                if (form == "jax" or form == "iree") and not pybamm.have_jax():
+                if (form == "jax" or form == "iree") and not pybamm.has_jax():
                     continue
-                if (form == "iree") and not pybamm.have_iree():
+                if (form == "iree") and not pybamm.has_iree():
                     continue
                 if form == "casadi":
                     root_method = "casadi"
@@ -307,9 +307,9 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -415,9 +415,9 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -459,9 +459,9 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -620,9 +620,9 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_dae_solver_algebraic_model(self):
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -927,9 +927,9 @@ class TestIDAKLUSolver(unittest.TestCase):
         # equivalence
 
         for form in ["casadi", "iree"]:
-            if (form == "jax" or form == "iree") and not pybamm.have_jax():
+            if (form == "jax" or form == "iree") and not pybamm.has_jax():
                 continue
-            if (form == "iree") and not pybamm.have_iree():
+            if (form == "iree") and not pybamm.has_iree():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -1099,7 +1099,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_python_idaklu_deprecation_errors(self):
         for form in ["python", "", "jax"]:
-            if form == "jax" and not pybamm.have_jax():
+            if form == "jax" and not pybamm.has_jax():
                 continue
 
             model = pybamm.BaseModel()
