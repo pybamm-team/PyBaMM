@@ -282,20 +282,6 @@ class DomainLithiumIonParameters(BaseParameters):
         self.b_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{Domain} electrode Paris' law constant m")
 
-        # Loss of active material parameters
-        self.m_LAM = pybamm.Parameter(
-            f"{Domain} electrode LAM constant exponential term"
-        )
-        self.beta_LAM = pybamm.Parameter(
-            f"{Domain} electrode LAM constant proportional term [s-1]"
-        )
-        self.stress_critical = pybamm.Parameter(
-            f"{Domain} electrode critical stress [Pa]"
-        )
-        self.beta_LAM_sei = pybamm.Parameter(
-            f"{Domain} electrode reaction-driven LAM factor [m3.mol-1]"
-        )
-
         # Utilisation parameters
         self.u_init = pybamm.Parameter(
             f"Initial {domain} electrode interface utilisation"
@@ -523,6 +509,20 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         # Mechanical property
         self.nu = pybamm.Parameter(f"{pref}{Domain} electrode Poisson's ratio")
+
+        # Loss of active material parameters
+        self.m_LAM = pybamm.Parameter(
+            f"{pref}{Domain} electrode LAM constant exponential term"
+        )
+        self.beta_LAM = pybamm.Parameter(
+            f"{pref}{Domain} electrode LAM constant proportional term [s-1]"
+        )
+        self.stress_critical = pybamm.Parameter(
+            f"{pref}{Domain} electrode critical stress [Pa]"
+        )
+        self.beta_LAM_sei = pybamm.Parameter(
+            f"{pref}{Domain} electrode reaction-driven LAM factor [m3.mol-1]"
+        )
 
     def D(self, c_s, T, lithiation=None):
         """
@@ -782,7 +782,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         domain, Domain = self.domain_Domain
         return pybamm.FunctionParameter(
-            f"{Domain} electrode volume change",
+            f"{self.phase_prefactor}{Domain} electrode volume change",
             {
                 "Particle stoichiometry": sto,
                 f"{self.phase_prefactor}Maximum {domain} particle "

@@ -49,32 +49,7 @@ class LossActiveMaterial(BaseModel):
             f"Loss of lithium due to loss of {phase}active material "
             f"in {domain} electrode [mol]"
         )
-        if phase == "":
-            variables.update(
-                {
-                    f"Loss of lithium due to loss of {phase}active material "
-                    f"in {domain} electrode [mol]": lli_due_to_lam
-                }
-            )
-        else:
-            total_lli_due_to_lam = (
-                f"Loss of lithium due to loss of active material "
-                f"in {domain} electrode [mol]"
-            )
-            variables.update(
-                {
-                    f"Loss of lithium due to loss of {phase}active material "
-                    f"in {domain} electrode [mol]": lli_due_to_lam,
-                    total_lli_due_to_lam: pybamm.Variable(
-                        f"Loss of lithium due to loss of primary active material "
-                        f"in {domain} electrode [mol]"
-                    )
-                    + pybamm.Variable(
-                        f"Loss of lithium due to loss of secondary active material "
-                        f"in {domain} electrode [mol]"
-                    ),
-                }
-            )
+
         variables.update(
             {
                 f"Loss of lithium due to loss of {phase}active material "
@@ -109,9 +84,9 @@ class LossActiveMaterial(BaseModel):
                     f"{Domain} {phase_name}particle surface radial stress [Pa]"
                 ]
 
-            beta_LAM = self.domain_param.beta_LAM
-            stress_critical = self.domain_param.stress_critical
-            m_LAM = self.domain_param.m_LAM
+            beta_LAM = self.phase_param.beta_LAM
+            stress_critical = self.phase_param.stress_critical
+            m_LAM = self.phase_param.m_LAM
 
             stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
             # compressive stress make no contribution
@@ -125,7 +100,7 @@ class LossActiveMaterial(BaseModel):
             deps_solid_dt += j_stress_LAM
 
         if "reaction" in lam_option:
-            beta_LAM_sei = self.domain_param.beta_LAM_sei
+            beta_LAM_sei = self.phase_param.beta_LAM_sei
             if self.x_average is True:
                 a_j_sei = variables[
                     f"X-averaged {domain} electrode {phase_name}SEI "
