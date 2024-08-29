@@ -37,6 +37,8 @@ class SEIGrowth(BaseModel):
         SEI_option = getattr(self.options, domain)["SEI"]
         if SEI_option == "ec reaction limited":
             pybamm.citations.register("Yang2017")
+        elif SEI_option == "Kolzenberg2020":
+            pybamm.citations.register("von2020solid")
         else:
             pybamm.citations.register("Marquis2020")
 
@@ -137,8 +139,11 @@ class SEIGrowth(BaseModel):
             j_sei = (eta_inner < 0) * phase_param.kappa_inner * eta_inner / L_sei_inner
 
         elif SEI_option == "Kolzenberg2020":
+            # Equation 19 in
+            # von Kolzenberg L, Latz A, Horstmann B.
+            # Solid electrolyte interphase during battery cycling:
+            # Theory of growth regimes. ChemSusChem. 2020 Aug 7;13(15):3901-10.
             eta_bar = F_RT * (delta_phi)
-            # j0_sei = param.F * phase_param.k_sei * phase_param.c_sol
             L_diff = (
                 phase_param.D_li * phase_param.c_li_0 * param.F / phase_param.j0_sei
             ) * pybamm.exp(-(1 - alpha_SEI) * eta_bar)
@@ -147,10 +152,10 @@ class SEIGrowth(BaseModel):
             L_mig = (
                 2 / F_RT * phase_param.kappa_Li_ion / (pybamm.AbsoluteValue(j) + 1e-38)
             )
-            LL_k0 = (1 - L_app / L_mig * pybamm.sign(j)) / (
+            LL_k = (1 - L_app / L_mig * pybamm.sign(j)) / (
                 1 - L_app / L_mig * pybamm.sign(j) + L_app / L_diff
             )
-            j_sei = -phase_param.j0_sei * LL_k0 * pybamm.exp(-alpha_SEI * eta_bar)
+            j_sei = -phase_param.j0_sei * LL_k * pybamm.exp(-alpha_SEI * eta_bar)
 
         elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)

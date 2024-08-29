@@ -241,7 +241,6 @@ def get_parameter_values():
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Initial inner SEI thickness [m]": 2.5e-09,
         "Initial outer SEI thickness [m]": 2.5e-09,
-        "tunneling distance for electrons [m]": 1e-9,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -249,7 +248,6 @@ def get_parameter_values():
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-        "SEI lithium ion conductivity [S.m-1]": 1.4e-13,
         # cell
         "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 8.52e-05,
