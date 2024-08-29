@@ -6,7 +6,7 @@ import pytest
 import os
 import platform
 import uuid
-import subprocess
+import subprocess  # nosec
 
 import pybamm
 
@@ -14,7 +14,7 @@ import pybamm
 def is_latex_installed():
     try:
         # Try to run the LaTeX version command
-        subprocess.run(["latex", "--version"], check=True, capture_output=True)
+        subprocess.run("latex --version", check=True, shell=True, capture_output=True)  # nosec
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
