@@ -161,13 +161,13 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
-          packages: gfortran gcc graphviz pandoc
+          packages: gfortran gcc graphviz pandoc texlive-latex-extra dvipng
           execute_install_scripts: true
 
-      - name: Install OpenBLAS and TeXLive for Linux
+      - name: Install OpenBLAS for Linux
         run: |
           sudo apt-get update
-          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install libopenblas-dev
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
@@ -261,8 +261,13 @@ jobs:
       - name: Install Linux system dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1.4.2
         with:
-          packages: gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+          packages: gfortran gcc graphviz pandoc texlive-latex-extra dvipng
           execute_install_scripts: true
+
+      - name: Install OpenBLAS for Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install libopenblas-dev
 
       - name: Set up Python 3.12
         id: setup-python
@@ -306,6 +311,11 @@ jobs:
         with:
           packages: gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
           execute_install_scripts: true
+
+      - name: Install OpenBLAS for Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install libopenblas-dev
 
       - name: Set up Python 3.12
         id: setup-python
