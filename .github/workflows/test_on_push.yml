@@ -163,7 +163,7 @@ jobs:
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
-      
+
       - name: Install OpenBLAS and TeXLive for Linux
         run: |
           sudo apt-get update
