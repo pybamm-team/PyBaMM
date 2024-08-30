@@ -3,7 +3,7 @@ import pybamm
 import numpy as np
 
 
-@pytest.mark.skipif(not pybamm.have_idaklu(), reason="idaklu solver is not installed")
+@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
 class TestIDAKLUSolver:
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()
