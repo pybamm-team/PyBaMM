@@ -1,6 +1,3 @@
-#
-# Tests the citations class.
-#
 import pytest
 
 import pybamm
