@@ -245,9 +245,7 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_sensitivities_initial_condition(self):
         for form in ["casadi", "iree"]:
             for output_variables in [[], ["2v"]]:
-                if (form == "iree") and (
-                    not pybamm.has_jax() or not pybamm.has_iree()
-                ):
+                if (form == "iree") and (not pybamm.has_jax() or not pybamm.has_iree()):
                     continue
                 if form == "casadi":
                     root_method = "casadi"

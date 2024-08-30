@@ -19,7 +19,7 @@
 
 ## Breaking changes
 
-- Replaced `have_jax` with `has_jax`, `have_idaklu` with `has_idaklu`, and 
+- Replaced `have_jax` with `has_jax`, `have_idaklu` with `has_idaklu`, and
   `have_iree` with `has_iree` ()
 - Remove deprecated function `pybamm_install_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
 - Removed legacy python-IDAKLU solver. ([#4326](https://github.com/pybamm-team/PyBaMM/pull/4326))
