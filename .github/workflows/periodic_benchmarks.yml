@@ -31,10 +31,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install gfortran gcc libopenblas-dev
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools wget cmake casadi numpy
-          python -m pip install asv[virtualenv]
+          python -m uv pip install --upgrade pip wheel setuptools wget cmake casadi numpy
+          python -m uv pip install asv[virtualenv]
 
       - name: Install SuiteSparse and SUNDIALS
         run: python scripts/install_KLU_Sundials.py
