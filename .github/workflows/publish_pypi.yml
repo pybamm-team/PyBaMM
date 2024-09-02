@@ -85,8 +85,10 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel pybind11
-          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair -w {dest_dir} {wheel}
+          CIBW_BEFORE_BUILD: python -m pip install scikit-build-core delvewheel pybind11 # skip CasADi and CMake
+          # Fix access violation because GHA runners have modified PATH that picks wrong
+          # msvcp140.dll, see https://github.com/adang1345/delvewheel/issues/54
+          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "all,dev,jax"
           CIBW_TEST_COMMAND: |
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
@@ -150,8 +152,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Set macOS-specific environment variables
-        run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
 
       - name: Build wheels on macOS
         uses: pypa/cibuildwheel@v2.19.2
@@ -242,6 +244,10 @@ jobs:
             export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
 
             python scripts/install_KLU_Sundials.py
+            python -m cibuildwheel --output-dir wheelhouse
+        env:
+          # 10.13 for Intel (macos-12/macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: |
             python -m pip install cmake casadi scikit-build-core delocate pybind11
@@ -249,7 +255,7 @@ jobs:
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
             elif [[ $(uname -m) == "arm64" ]]; then
-              # Use higher macOS target for now: https://github.com/casadi/casadi/issues/3698
+              # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
               for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
             fi
