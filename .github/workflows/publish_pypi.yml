@@ -245,7 +245,6 @@ jobs:
 
             python scripts/install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse
-        env:
           # 10.13 for Intel (macos-12/macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
