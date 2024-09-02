@@ -27,9 +27,12 @@ jobs:
         with:
           python-version: 3.12
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Check style
         run: |
-          python -m pip install pre-commit
+          python -m uv pip install pre-commit
           pre-commit run -a
 
   run_windows_unit_integration_tests:
@@ -176,8 +179,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4
@@ -238,8 +244,11 @@ jobs:
           python-version: 3.11
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
@@ -276,8 +285,11 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4
@@ -324,8 +336,11 @@ jobs:
           python-version: 3.12
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
         uses: actions/cache@v4

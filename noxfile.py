@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 # Options to modify nox behaviour
-nox.options.default_venv_backend = "virtualenv"
+nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
 if sys.platform != "win32":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
@@ -210,7 +210,7 @@ def run_examples(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     build_dependencies = get_build_dependencies()
     session.install(*build_dependencies)
-    session.install("--no-build-isolation", "-e", ".[all,dev]", silent=False)
+    session.install("--no-build-isolation", "-e", ".[all,dev,jax]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
         "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
