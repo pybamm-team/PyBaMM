@@ -536,7 +536,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   realtype *yterm_return = new realtype[length_of_final_sv_slice];
   if (save_outputs_only) {
     // store final state slice if outout variables are specified
-    yterm_return = y_val;
+    std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(realtype*));
   }
 
   if (solver_opts.print_stats) {

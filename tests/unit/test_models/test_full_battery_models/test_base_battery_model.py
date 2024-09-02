@@ -36,7 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'number of MSMR reactions': 'none' (possible: ['none'])
 'open-circuit potential': 'single' (possible: ['single', 'current sigmoid', 'MSMR', 'Wycisk'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
-'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
+'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
@@ -47,6 +47,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'SEI porosity change': 'false' (possible: ['false', 'true'])
 'stress-induced diffusion': 'true' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
+'surface temperature': 'ambient' (possible: ['ambient', 'lumped'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
@@ -211,8 +212,6 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(pybamm.OptionError, "The 'fast diffusion'"):
-            pybamm.BaseBatteryModel({"particle": "fast diffusion"})
         with self.assertRaisesRegex(pybamm.OptionError, "working electrode"):
             pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
         with self.assertRaisesRegex(pybamm.OptionError, "The 'negative' working"):
@@ -233,10 +232,6 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"SEI film resistance": "bad SEI film resistance"})
         with self.assertRaisesRegex(pybamm.OptionError, "SEI porosity change"):
             pybamm.BaseBatteryModel({"SEI porosity change": "bad SEI porosity change"})
-        with self.assertRaisesRegex(
-            pybamm.OptionError, "SEI porosity change must now be given in string format"
-        ):
-            pybamm.BaseBatteryModel({"SEI porosity change": True})
         # changing defaults based on other options
         model = pybamm.BaseBatteryModel()
         self.assertEqual(model.options["SEI film resistance"], "none")
@@ -385,6 +380,12 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "heat of mixing": "true",
                     "particle size": "distribution",
                 }
+            )
+
+        # surface thermal model
+        with self.assertRaisesRegex(pybamm.OptionError, "surface temperature"):
+            pybamm.BaseBatteryModel(
+                {"surface temperature": "lumped", "thermal": "x-full"}
             )
 
         # phases
