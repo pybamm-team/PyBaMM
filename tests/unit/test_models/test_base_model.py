@@ -158,7 +158,8 @@ class TestBaseModel:
         }
         model.print_parameter_info()
 
-    def test_get_parameter_info(self):
+    @pytest.mark.parametrize("symbols", ["c", "d", "e", "f", "h", "i"])
+    def test_get_parameter_info(self, symbols):
         model = pybamm.BaseModel()
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b", "test")
@@ -185,15 +186,26 @@ class TestBaseModel:
         parameter_info = model.get_parameter_info()
         assert parameter_info["a"][1] == "InputParameter"
         assert parameter_info["b"][1] == "InputParameter in ['test']"
-        assert "c" in parameter_info
-        assert "d" in parameter_info
-        assert "e" in parameter_info
-        assert "f" in parameter_info
+        assert symbols in parameter_info
         assert parameter_info["g"][1] == "Parameter"
-        assert "h" in parameter_info
-        assert "i" in parameter_info
 
-    def test_get_parameter_info_submodel(self):
+    @pytest.mark.parametrize(
+        "sub, key, parameter_value",
+        [
+            ("sub1", "a", "InputParameter"),
+            ("sub1", "w", "InputParameter"),
+            ("sub1", "e", "InputParameter"),
+            ("sub1", "g", "Parameter"),
+            ("sub1", "x", "Parameter"),
+            ("sub1", "f", "InputParameter in ['test']"),
+            ("sub2", "b", "InputParameter in ['test']"),
+            ("sub2", "h", "Parameter"),
+            ("sub1", "c", "FunctionParameter with inputs(s) ''"),
+            ("sub2", "d", "FunctionParameter with inputs(s) ''"),
+            ("sub2", "i", "FunctionParameter with inputs(s) ''"),
+        ]
+    )
+    def test_get_parameter_info_submodel(self, sub, key, parameter_value):
         submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
 
         class SubModel1(pybamm.BaseSubModel):
@@ -274,20 +286,7 @@ class TestBaseModel:
 
         assert "a" in parameter_info["sub1"]
         assert "b" in parameter_info["sub2"]
-        assert parameter_info["sub1"]["a"][1] == "InputParameter"
-        assert parameter_info["sub1"]["w"][1] == "InputParameter"
-        assert parameter_info["sub1"]["e"][1] == "InputParameter"
-        assert parameter_info["sub1"]["g"][1] == "Parameter"
-        assert parameter_info["sub1"]["x"][1] == "Parameter"
-        assert parameter_info["sub1"]["f"][1] == "InputParameter in ['test']"
-        assert parameter_info["sub2"]["b"][1] == "InputParameter in ['test']"
-        assert parameter_info["sub2"]["h"][1] == "Parameter"
-        assert parameter_info["sub1"]["c"][1] == \
-            "FunctionParameter with inputs(s) ''"
-        assert parameter_info["sub2"]["d"][1] == \
-            "FunctionParameter with inputs(s) ''"
-        assert parameter_info["sub2"]["i"][1] == \
-            "FunctionParameter with inputs(s) ''"
+        assert parameter_info[sub][key][1] == parameter_value
 
     def test_print_parameter_info(self):
         model = pybamm.BaseModel()
@@ -336,7 +335,24 @@ class TestBaseModel:
         assert "Parameter" in result
         assert "FunctionParameter with inputs(s) ''" in result
 
-    def test_print_parameter_info_submodel(self):
+    @pytest.mark.parametrize(
+        "values",
+        [
+            "'sub1' submodel parameters:",
+            "'sub2' submodel parameters:",
+            "Parameter",
+            "InputParameter",
+            "FunctionParameter with inputs(s) ''",
+            "InputParameter in ['test']",
+            "g",
+            "a",
+            "c",
+            "h",
+            "b",
+            "d",
+        ]
+    )
+    def test_print_parameter_info_submodel(self, values):
         model = pybamm.BaseModel()
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b", "test")
@@ -375,18 +391,7 @@ class TestBaseModel:
         sys.stdout = sys.__stdout__
 
         result = captured_output.getvalue().strip()
-        assert "'sub1' submodel parameters:" in result
-        assert "'sub2' submodel parameters:" in result
-        assert "Parameter" in result
-        assert "InputParameter" in result
-        assert "FunctionParameter with inputs(s) ''" in result
-        assert "InputParameter in ['test']" in result
-        assert "g" in result
-        assert "a" in result
-        assert "c" in result
-        assert "h" in result
-        assert "b" in result
-        assert "d" in result
+        assert values in result
 
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model

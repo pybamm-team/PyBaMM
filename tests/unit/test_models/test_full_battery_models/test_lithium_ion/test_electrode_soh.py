@@ -6,6 +6,7 @@ import pytest
 import pybamm
 
 
+# Fixture for TestElectrodeSOHMSMR, TestCalculateTheoreticalEnergy and TestGetInitialOCPMSMR class.
 @pytest.fixture()
 def options():
     options = {

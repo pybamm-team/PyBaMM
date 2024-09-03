@@ -25,7 +25,7 @@ class TestBatteryGeometry:
             )
         geometry.print_parameter_info()
 
-    def test_geometry(self, geometry):
+    def test_geometry(self):
         geo = pybamm.geometric_parameters
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(

@@ -17,7 +17,6 @@ class TestVariable:
         assert a.domain == []
         a = pybamm.Variable("a", domain=["test"])
         assert a.domain[0] == "test"
-        pytest.raises(TypeError, match=pybamm.Variable("a", domain="test"))
         assert a.scale == 1
         assert a.reference == 0
 
@@ -76,7 +75,6 @@ class TestVariableDot:
         assert a.domain == []
         a = pybamm.VariableDot("a", domain=["test"])
         assert a.domain[0] == "test"
-        pytest.raises(TypeError, match=pybamm.Variable("a", domain="test"))
 
     def test_variable_id(self):
         a1 = pybamm.VariableDot("a", domain=["negative electrode"])
