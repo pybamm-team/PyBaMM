@@ -940,6 +940,26 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "MehrdadBabazadeh",
+      "name": "Mehrdad Babazadeh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/30574522?v=4",
+      "profile": "https://github.com/MehrdadBabazadeh",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "pipliggins",
+      "name": "Pip Liggins",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55396775?v=4",
+      "profile": "https://github.com/pipliggins",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,

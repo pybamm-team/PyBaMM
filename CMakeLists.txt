@@ -35,32 +35,75 @@ add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
-
 add_subdirectory(${PYBIND11_DIR})
-# The sources list should mirror the list in setup.py
+
+# Check Casadi build flag
+if(NOT DEFINED PYBAMM_IDAKLU_EXPR_CASADI)
+  set(PYBAMM_IDAKLU_EXPR_CASADI ON)
+endif()
+message("PYBAMM_IDAKLU_EXPR_CASADI: ${PYBAMM_IDAKLU_EXPR_CASADI}")
+
+# Casadi PyBaMM source files
+set(IDAKLU_EXPR_CASADI_SOURCE_FILES "")
+if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON" )
+  add_compile_definitions(CASADI_ENABLE)
+  set(IDAKLU_EXPR_CASADI_SOURCE_FILES
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.hpp
+  )
+endif()
+
+# Check IREE build flag
+if(NOT DEFINED PYBAMM_IDAKLU_EXPR_IREE)
+  set(PYBAMM_IDAKLU_EXPR_IREE OFF)
+endif()
+message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
+
+# IREE (MLIR expression evaluation) PyBaMM source files
+set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
+if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+  add_compile_definitions(IREE_ENABLE)
+  # Source file list
+  set(IDAKLU_EXPR_IREE_SOURCE_FILES
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp
+    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp
+  )
+endif()
+
+# The complete (all dependencies) sources list should be mirrored in setup.py
 pybind11_add_module(idaklu
-  pybamm/solvers/c_solvers/idaklu/casadi_functions.cpp
-  pybamm/solvers/c_solvers/idaklu/casadi_functions.hpp
-  pybamm/solvers/c_solvers/idaklu/casadi_solver.cpp
-  pybamm/solvers/c_solvers/idaklu/casadi_solver.hpp
-  pybamm/solvers/c_solvers/idaklu/CasadiSolver.cpp
-  pybamm/solvers/c_solvers/idaklu/CasadiSolver.hpp
-  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.cpp
-  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP.hpp
-  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.cpp
-  pybamm/solvers/c_solvers/idaklu/CasadiSolverOpenMP_solvers.hpp
-  pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.cpp
-  pybamm/solvers/c_solvers/idaklu/casadi_sundials_functions.hpp
-  pybamm/solvers/c_solvers/idaklu/idaklu_jax.cpp
-  pybamm/solvers/c_solvers/idaklu/idaklu_jax.hpp
-  pybamm/solvers/c_solvers/idaklu/common.hpp
-  pybamm/solvers/c_solvers/idaklu/python.hpp
-  pybamm/solvers/c_solvers/idaklu/python.cpp
-  pybamm/solvers/c_solvers/idaklu/solution.cpp
-  pybamm/solvers/c_solvers/idaklu/solution.hpp
-  pybamm/solvers/c_solvers/idaklu/options.hpp
-  pybamm/solvers/c_solvers/idaklu/options.cpp
-  pybamm/solvers/c_solvers/idaklu.cpp
+  # pybind11 interface
+  src/pybamm/solvers/c_solvers/idaklu.cpp
+  # IDAKLU solver (SUNDIALS)
+  src/pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.inl
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.hpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.cpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.hpp
+  src/pybamm/solvers/c_solvers/idaklu/sundials_functions.inl
+  src/pybamm/solvers/c_solvers/idaklu/sundials_functions.hpp
+  src/pybamm/solvers/c_solvers/idaklu/IdakluJax.cpp
+  src/pybamm/solvers/c_solvers/idaklu/IdakluJax.hpp
+  src/pybamm/solvers/c_solvers/idaklu/common.hpp
+  src/pybamm/solvers/c_solvers/idaklu/common.cpp
+  src/pybamm/solvers/c_solvers/idaklu/Solution.cpp
+  src/pybamm/solvers/c_solvers/idaklu/Solution.hpp
+  src/pybamm/solvers/c_solvers/idaklu/Options.hpp
+  src/pybamm/solvers/c_solvers/idaklu/Options.cpp
+  # IDAKLU expressions / function evaluation [abstract]
+  src/pybamm/solvers/c_solvers/idaklu/Expressions/Expressions.hpp
+  src/pybamm/solvers/c_solvers/idaklu/Expressions/Base/Expression.hpp
+  src/pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionSet.hpp
+  src/pybamm/solvers/c_solvers/idaklu/Expressions/Base/ExpressionTypes.hpp
+  # IDAKLU expressions - concrete implementations
+  ${IDAKLU_EXPR_CASADI_SOURCE_FILES}
+  ${IDAKLU_EXPR_IREE_SOURCE_FILES}
 )
 
 if (NOT DEFINED USE_PYTHON_CASADI)
@@ -113,3 +156,16 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
+
+# IREE (MLIR compiler and runtime library) build settings
+if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+  set(IREE_BUILD_COMPILER ON)
+  set(IREE_BUILD_TESTS OFF)
+  set(IREE_BUILD_SAMPLES OFF)
+  add_subdirectory(iree EXCLUDE_FROM_ALL)
+  set(IREE_COMPILER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/iree/compiler")
+  target_include_directories(idaklu SYSTEM PRIVATE "${IREE_COMPILER_ROOT}/bindings/c/iree/compiler")
+  target_compile_options(idaklu PRIVATE ${IREE_DEFAULT_COPTS})
+  target_link_libraries(idaklu PRIVATE iree_compiler_bindings_c_loader)
+  target_link_libraries(idaklu PRIVATE iree_runtime_runtime)
+endif()

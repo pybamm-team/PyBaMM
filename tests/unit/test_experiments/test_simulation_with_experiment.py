@@ -1,7 +1,6 @@
 #
 # Test setting up a simulation with an experiment
 #
-from tests import TestCase
 import casadi
 import pybamm
 import numpy as np
@@ -16,7 +15,7 @@ class ShortDurationCRate(pybamm.step.CRate):
         return 1
 
 
-class TestSimulationExperiment(TestCase):
+class TestSimulationExperiment(unittest.TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
@@ -169,7 +168,7 @@ class TestSimulationExperiment(TestCase):
             sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    @unittest.skipIf(not pybamm.has_idaklu(), "idaklu solver is not installed")
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -192,12 +191,12 @@ class TestSimulationExperiment(TestCase):
 
         np.testing.assert_array_almost_equal(
             solutions[0]["Voltage [V]"].data,
-            solutions[1]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"](solutions[0].t),
             decimal=1,
         )
         np.testing.assert_array_almost_equal(
             solutions[0]["Current [A]"].data,
-            solutions[1]["Current [A]"].data,
+            solutions[1]["Current [A]"](solutions[0].t),
             decimal=0,
         )
         self.assertEqual(solutions[1].termination, "final time")
@@ -486,6 +485,7 @@ class TestSimulationExperiment(TestCase):
         # Load negative electrode OCP data
         filename = os.path.join(
             pybamm.root_dir(),
+            "src",
             "pybamm",
             "input",
             "parameters",
@@ -500,6 +500,7 @@ class TestSimulationExperiment(TestCase):
         # Load positive electrode OCP data
         filename = os.path.join(
             pybamm.root_dir(),
+            "src",
             "pybamm",
             "input",
             "parameters",

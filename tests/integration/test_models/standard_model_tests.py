@@ -3,10 +3,9 @@
 #
 import pybamm
 import tests
-import uuid
+import tempfile
 
 import numpy as np
-import os
 
 
 class StandardModelTest:
@@ -105,7 +104,8 @@ class StandardModelTest:
             self.parameter_values["Current function [A]"]
             / self.parameter_values["Nominal cell capacity [A.h]"]
         )
-        t_eval = np.linspace(0, 3600 / Crate, 100)
+        t_interp = np.linspace(0, 3600 / Crate, 100)
+        t_eval = np.array([t_interp[0], t_interp[-1]])
 
         # make param_name an input
         self.parameter_values.update({param_name: "[input]"})
@@ -119,7 +119,11 @@ class StandardModelTest:
         self.solver.atol = 1e-8
 
         self.solution = self.solver.solve(
-            self.model, t_eval, inputs=inputs, calculate_sensitivities=True
+            self.model,
+            t_eval,
+            inputs=inputs,
+            calculate_sensitivities=True,
+            t_interp=t_interp,
         )
         output_sens = self.solution[output_name].sensitivities[param_name]
 
@@ -127,10 +131,14 @@ class StandardModelTest:
         h = 1e-2 * param_value
         inputs_plus = {param_name: (param_value + 0.5 * h)}
         inputs_neg = {param_name: (param_value - 0.5 * h)}
-        sol_plus = self.solver.solve(self.model, t_eval, inputs=inputs_plus)
-        output_plus = sol_plus[output_name](t=t_eval)
-        sol_neg = self.solver.solve(self.model, t_eval, inputs=inputs_neg)
-        output_neg = sol_neg[output_name](t=t_eval)
+        sol_plus = self.solver.solve(
+            self.model, t_eval, inputs=inputs_plus, t_interp=t_interp
+        )
+        output_plus = sol_plus[output_name].data
+        sol_neg = self.solver.solve(
+            self.model, t_eval, inputs=inputs_neg, t_interp=t_interp
+        )
+        output_neg = sol_neg[output_name].data
         fd = (np.array(output_plus) - np.array(output_neg)) / h
         fd = fd.transpose().reshape(-1, 1)
         np.testing.assert_allclose(
@@ -141,9 +149,8 @@ class StandardModelTest:
         )
 
     def test_serialisation(self, solver=None, t_eval=None):
-        # Generating unique file names to avoid race conditions when run in parallel.
-        unique_id = uuid.uuid4()
-        file_name = f"test_model_{unique_id}"
+        temp = tempfile.NamedTemporaryFile(prefix="test_model")
+        file_name = temp.name
         self.model.save_model(
             file_name, variables=self.model.variables, mesh=self.disc.mesh
         )
@@ -178,8 +185,7 @@ class StandardModelTest:
             np.testing.assert_array_almost_equal(
                 new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
             )
-
-        os.remove(file_name + ".json")
+        temp.close()
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False

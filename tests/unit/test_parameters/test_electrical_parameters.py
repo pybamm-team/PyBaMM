@@ -1,13 +1,11 @@
 #
 # Tests for the electrical parameters
 #
-from tests import TestCase
+import pytest
 import pybamm
 
-import unittest
 
-
-class TestElectricalParameters(TestCase):
+class TestElectricalParameters:
     def test_current_functions(self):
         # create current functions
         param = pybamm.electrical_parameters
@@ -27,17 +25,7 @@ class TestElectricalParameters(TestCase):
         current_density_eval = parameter_values.process_symbol(current_density)
 
         # check current
-        self.assertEqual(current_eval.evaluate(t=3), 2)
+        assert current_eval.evaluate(t=3) == 2
 
         # check current density
-        self.assertAlmostEqual(current_density_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert current_density_eval.evaluate(t=3) == pytest.approx(2 / (8 * 0.1 * 0.1))

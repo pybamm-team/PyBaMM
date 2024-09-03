@@ -1,14 +1,12 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-from tests import TestCase
 import pybamm
 
 import numpy as np
-import unittest
 
 
-class TestAsymptoticConvergence(TestCase):
+class TestAsymptoticConvergence:
     def test_leading_order_convergence(self):
         """
         Check that the leading-order model solution converges linearly in C_e to the
@@ -72,12 +70,3 @@ class TestAsymptoticConvergence(TestCase):
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
 
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

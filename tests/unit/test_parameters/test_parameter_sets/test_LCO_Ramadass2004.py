@@ -1,12 +1,11 @@
 #
 # Tests for Ai (2020) Enertech parameter set loads
 #
-from tests import TestCase
+import pytest
 import pybamm
-import unittest
 
 
-class TestRamadass2004(TestCase):
+class TestRamadass2004:
     def test_functions(self):
         param = pybamm.ParameterValues("Ramadass2004")
         sto = pybamm.Scalar(0.5)
@@ -40,16 +39,6 @@ class TestRamadass2004(TestCase):
         }
 
         for name, value in fun_test.items():
-            self.assertAlmostEqual(
-                param.evaluate(param[name](*value[0])), value[1], places=4
+            assert param.evaluate(param[name](*value[0])) == pytest.approx(
+                value[1], abs=0.0001
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

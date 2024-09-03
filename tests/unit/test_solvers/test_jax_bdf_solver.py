@@ -1,16 +1,16 @@
 import pybamm
 import unittest
 from tests import get_mesh_for_testing
-from tests import TestCase
+
 import sys
 import numpy as np
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
 
 
-@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
-class TestJaxBDFSolver(TestCase):
+@unittest.skipIf(not pybamm.has_jax(), "jax or jaxlib is not installed")
+class TestJaxBDFSolver(unittest.TestCase):
     def test_solver_(self):  # Trailing _ manipulates the random seed
         # Create model
         model = pybamm.BaseModel()
