@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v24.9.0](https://github.com/pybamm-team/PyBaMM/tree/v24.9.0) - 2024-09-03
+
 ## Features
 
 - Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode. ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
