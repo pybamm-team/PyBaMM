@@ -1,7 +1,7 @@
-Equivalent Circuit Model with Split OCV (ECMsplitOCV)
+Equivalent Circuit Model with Split OCV (SplitOCVR)
 =====================================================
 
-.. autoclass:: pybamm.lithium_ion.ECMsplitOCV
+.. autoclass:: pybamm.lithium_ion.SplitOCVR
     :members:
 
 .. footbibliography::

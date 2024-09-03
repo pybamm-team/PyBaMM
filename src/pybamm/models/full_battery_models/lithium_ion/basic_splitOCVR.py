@@ -4,7 +4,7 @@
 import pybamm
 
 
-class ECMsplitOCV(pybamm.BaseModel):
+class SplitOCVR(pybamm.BaseModel):
     """Basic Equivalent Circuit Model that uses two OCV functions
     for each electrode. This model is easily parameterizable with minimal parameters.
     This class differs from the :class: pybamm.equivalent_circuit.Thevenin() due
@@ -25,8 +25,8 @@ class ECMsplitOCV(pybamm.BaseModel):
         # All variables are only time-dependent
         # No domain definition needed
 
-        c_n = pybamm.Variable("Negative particle SOC")
-        c_p = pybamm.Variable("Positive particle SOC")
+        theta_n = pybamm.Variable("Negative particle stoichiometry")
+        theta_p = pybamm.Variable("Positive particle stoichiometry")
         Q = pybamm.Variable("Discharge capacity [A.h]")
         V = pybamm.Variable("Voltage [V]")
 
@@ -42,22 +42,22 @@ class ECMsplitOCV(pybamm.BaseModel):
         Q_p = pybamm.Parameter("Positive electrode capacity [A.h]")
 
         # State of charge electrode equations
-        c_n_0 = pybamm.Parameter("Negative electrode initial SOC")
-        c_p_0 = pybamm.Parameter("Positive electrode initial SOC")
-        self.rhs[c_n] = -I / Q_n / 3600
-        self.rhs[c_p] = I / Q_p / 3600
-        self.initial_conditions[c_n] = c_n_0
-        self.initial_conditions[c_p] = c_p_0
+        theta_n_0 = pybamm.Parameter("Negative electrode initial stoichiometry")
+        theta_p_0 = pybamm.Parameter("Positive electrode initial stoichiometry")
+        self.rhs[theta_n] = -I / Q_n / 3600
+        self.rhs[theta_p] = I / Q_p / 3600
+        self.initial_conditions[theta_n] = theta_n_0
+        self.initial_conditions[theta_p] = theta_p_0
 
         # Resistance for IR expression
         R = pybamm.Parameter("Ohmic resistance [Ohm]")
 
         # Open-circuit potential for each electrode
         Un = pybamm.FunctionParameter(
-            "Negative electrode OCP [V]", {"Negative particle SOC": c_n}
+            "Negative electrode OCP [V]", {"Negative particle stoichiometry": theta_n}
         )
         Up = pybamm.FunctionParameter(
-            "Positive electrode OCP [V]", {"Positive particle SOC": c_p}
+            "Positive electrode OCP [V]", {"Positive particle stoichiometry": theta_p}
         )
 
         # Voltage expression
@@ -68,8 +68,8 @@ class ECMsplitOCV(pybamm.BaseModel):
         voltage_low_cut = pybamm.Parameter("Lower voltage cut-off [V]")
 
         self.variables = {
-            "Negative particle SOC": c_n,
-            "Positive particle SOC": c_p,
+            "Negative particle stoichiometry": theta_n,
+            "Positive particle stoichiometry": theta_p,
             "Current [A]": I,
             "Discharge capacity [A.h]": Q,
             "Voltage [V]": V,
@@ -83,17 +83,17 @@ class ECMsplitOCV(pybamm.BaseModel):
         self.events += [
             pybamm.Event("Minimum voltage [V]", V - voltage_low_cut),
             pybamm.Event("Maximum voltage [V]", voltage_high_cut - V),
-            pybamm.Event("Maximum Negative Electrode SOC", 0.999 - c_n),
-            pybamm.Event("Maximum Positive Electrode SOC", 0.999 - c_p),
-            pybamm.Event("Minimum Negative Electrode SOC", c_n - 0.0001),
-            pybamm.Event("Minimum Positive Electrode SOC", c_p - 0.0001),
+            pybamm.Event("Maximum Negative Electrode stoichiometry", 0.999 - theta_n),
+            pybamm.Event("Maximum Positive Electrode stoichiometry", 0.999 - theta_p),
+            pybamm.Event("Minimum Negative Electrode stoichiometry", theta_n - 0.0001),
+            pybamm.Event("Minimum Positive Electrode stoichiometry", theta_p - 0.0001),
         ]
 
     @property
     def default_quick_plot_variables(self):
         return [
             "Voltage [V]",
-            ["Negative particle SOC", "Positive particle SOC"],
+            ["Negative particle stoichiometry", "Positive particle stoichiometry"],
             "Negative electrode OCP [V]",
             "Positive electrode OCP [V]",
             "Current [A]",

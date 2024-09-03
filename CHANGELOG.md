@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode. ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
 - Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
 

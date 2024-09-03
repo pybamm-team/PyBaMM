@@ -3,17 +3,16 @@
 #
 import pybamm
 import numpy as np
+import tests
 
 
-class TestECMSplitOCVModel:
-    def test_run_model_with_parameters(self):
-        model = pybamm.lithium_ion.ECMsplitOCV()
-
+class TestSplitOCVR:
+    def test_basic_processing(self):
         # example parameters
         qp0 = 8.73231852
         qn0 = 5.82761507
-        c0_n = 0.9013973983641687 * 0.9
-        c0_p = 0.5142305254580026 * 0.83
+        theta0_n = 0.9013973983641687 * 0.9
+        theta0_p = 0.5142305254580026 * 0.83
 
         # OCV functions
         def Un(theta_n):
@@ -41,18 +40,17 @@ class TestECMSplitOCVModel:
             {
                 "Positive electrode capacity [A.h]": qp0,
                 "Ohmic resistance [Ohm]": 0.001,
-                "Negative electrode initial SOC": c0_n,
+                "Negative electrode initial stoichiometry": theta0_n,
                 "Lower voltage cut-off [V]": 2.8,
-                "Positive electrode initial SOC": c0_p,
+                "Positive electrode initial stoichiometry": theta0_p,
                 "Upper voltage cut-off [V]": 4.2,
                 "Negative electrode capacity [A.h]": qn0,
                 "Current function [A]": 5,
                 "Positive electrode OCP [V]": Up,
                 "Negative electrode OCP [V]": Un,
+                "Nominal cell capacity [A.h]": 5,
             }
         )
-
-        # solve the model
-        sim = pybamm.Simulation(model, parameter_values=pars)
-        t_eval = np.linspace(0, 3600)
-        sim.solve(t_eval)
+        model = pybamm.lithium_ion.SplitOCVR()
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(param=pars)
