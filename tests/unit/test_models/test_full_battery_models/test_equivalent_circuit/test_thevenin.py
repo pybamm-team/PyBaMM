@@ -23,7 +23,8 @@ class TestThevenin:
 
         # test spatial methods
         assert isinstance(
-            model.default_spatial_methods["ECMD particle"], pybamm.FiniteVolume)
+            model.default_spatial_methods["ECMD particle"], pybamm.FiniteVolume
+        )
 
         # test submesh types
         assert model.default_submesh_types == {"ECMD particle": pybamm.Uniform1DSubMesh}

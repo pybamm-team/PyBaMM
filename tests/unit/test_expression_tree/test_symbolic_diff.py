@@ -38,10 +38,12 @@ class TestSymbolicDifferentiation:
         assert func.diff(b).evaluate(y=y) == np.exp(3) * (7 * np.exp(3 * 5 + 5 + 3) + 5)
         #
         func = pybamm.sin(pybamm.cos(a * 4) / 2) * pybamm.cos(4 * pybamm.exp(b / 3))
-        assert func.diff(a).evaluate(y=y) == \
-            -2 * np.sin(20) * np.cos(np.cos(20) / 2) * np.cos(4 * np.exp(1))
-        assert func.diff(b).evaluate(y=y) == \
-            -4 / 3 * np.exp(1) * np.sin(4 * np.exp(1)) * np.sin(np.cos(20) / 2)
+        assert func.diff(a).evaluate(y=y) == -2 * np.sin(20) * np.cos(
+            np.cos(20) / 2
+        ) * np.cos(4 * np.exp(1))
+        assert func.diff(b).evaluate(y=y) == -4 / 3 * np.exp(1) * np.sin(
+            4 * np.exp(1)
+        ) * np.sin(np.cos(20) / 2)
         #
         func = pybamm.sin(a * b)
         assert func.diff(a).evaluate(y=y) == 3 * np.cos(15)
@@ -95,4 +97,3 @@ class TestSymbolicDifferentiation:
         b = pybamm.Symbol("b")
         with pytest.raises(NotImplementedError):
             a._diff(b)
-

@@ -20,7 +20,6 @@ def geometry(r):
 
 
 class TestSubMesh1D:
-
     def test_tabs(self):
         edges = np.linspace(0, 1, 10)
         tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
@@ -72,8 +71,6 @@ class TestUniform1DSubMesh:
             pybamm.Uniform1DSubMesh(lims, None)
 
     def test_symmetric_mesh_creation_no_parameters(self, r, geometry):
-
-
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
         var_pts = {r: 20}
 
@@ -86,14 +83,14 @@ class TestUniform1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
 
 class TestExponential1DSubMesh:
     def test_symmetric_mesh_creation_no_parameters_even(self, r, geometry):
-
-
         submesh_params = {"side": "symmetric"}
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
@@ -111,12 +108,12 @@ class TestExponential1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
     def test_symmetric_mesh_creation_no_parameters_odd(self, r, geometry):
-
-
         submesh_params = {"side": "symmetric", "stretch": 1.5}
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
@@ -134,12 +131,12 @@ class TestExponential1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
     def test_left_mesh_creation_no_parameters(self, r, geometry):
-
-
         submesh_params = {"side": "left"}
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
@@ -157,12 +154,12 @@ class TestExponential1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
     def test_right_mesh_creation_no_parameters(self, r, geometry):
-
-
         submesh_params = {"side": "right", "stretch": 2}
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(
@@ -180,14 +177,14 @@ class TestExponential1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
 
 class TestChebyshev1DSubMesh:
     def test_mesh_creation_no_parameters(self, r, geometry):
-
-
         submesh_types = {"negative particle": pybamm.Chebyshev1DSubMesh}
         var_pts = {r: 20}
 
@@ -200,8 +197,10 @@ class TestChebyshev1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
 
 class TestUser1DSubMesh:
@@ -234,8 +233,6 @@ class TestUser1DSubMesh:
             mesh(None, None)
 
     def test_mesh_creation_no_parameters(self, r, geometry):
-
-
         edges = np.array([0, 0.3, 1])
         submesh_params = {"edges": edges}
         submesh_types = {
@@ -254,8 +251,10 @@ class TestUser1DSubMesh:
 
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
 
 class TestSpectralVolume1DSubMesh:
@@ -283,8 +282,6 @@ class TestSpectralVolume1DSubMesh:
             mesh(lims, npts)
 
     def test_mesh_creation_no_parameters(self, r, geometry):
-
-
         edges = np.array([0, 0.3, 1])
         order = 3
         submesh_params = {"edges": edges, "order": order}
@@ -305,8 +302,10 @@ class TestSpectralVolume1DSubMesh:
         # check number of edges and nodes
         assert len(mesh["negative particle"].sv_nodes) == var_pts[r]
         assert len(mesh["negative particle"].nodes) == order * var_pts[r]
-        assert len(mesh["negative particle"].edges) == \
-            len(mesh["negative particle"].nodes) + 1
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
 
         # check Chebyshev subdivision locations
         for a, b in zip(
@@ -331,5 +330,3 @@ class TestSpectralVolume1DSubMesh:
             [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0],
         ):
             assert a == pytest.approx(b)
-
-

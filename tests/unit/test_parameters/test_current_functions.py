@@ -98,5 +98,3 @@ class StandardCurrentFunctionTests:
 
     def test_all(self):
         self.test_output_type()
-
-

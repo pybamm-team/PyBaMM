@@ -23,12 +23,12 @@ class TestLeadAcidLOQS:
         assert isinstance(model.default_spatial_methods, dict)
         assert isinstance(
             model.default_spatial_methods["current collector"],
-            pybamm.ZeroDimensionalSpatialMethod
+            pybamm.ZeroDimensionalSpatialMethod,
         )
         assert issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.SubMesh0D,
-            )
+            model.default_submesh_types["current collector"],
+            pybamm.SubMesh0D,
+        )
 
     def test_well_posed_with_convection(self):
         options = {"convection": "uniform transverse"}
@@ -48,11 +48,12 @@ class TestLeadAcidLOQS:
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
         assert isinstance(
-            model.default_spatial_methods["current collector"], pybamm.FiniteVolume)
+            model.default_spatial_methods["current collector"], pybamm.FiniteVolume
+        )
         assert issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.Uniform1DSubMesh,
-            )
+            model.default_submesh_types["current collector"],
+            pybamm.Uniform1DSubMesh,
+        )
 
     def test_well_posed_2plus1_d(self):
         options = {
@@ -64,12 +65,12 @@ class TestLeadAcidLOQS:
         model.check_well_posedness()
         assert isinstance(
             model.default_spatial_methods["current collector"],
-            pybamm.ScikitFiniteElement
-    )
+            pybamm.ScikitFiniteElement,
+        )
         assert issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.ScikitUniform2DSubMesh,
-            )
+            model.default_submesh_types["current collector"],
+            pybamm.ScikitUniform2DSubMesh,
+        )
 
 
 class TestLeadAcidLOQSWithSideReactions:
@@ -144,5 +145,3 @@ class TestLeadAcidLOQSExternalCircuits:
         options = {"calculate discharge energy": "true"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
-
-

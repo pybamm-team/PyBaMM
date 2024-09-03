@@ -4,7 +4,6 @@
 
 
 import tempfile
-import unittest
 import json
 import pybamm
 import copy
@@ -478,8 +477,8 @@ class TestBPX:
             assert param["User-defined scalar parameter"] == 1.0
             var = pybamm.Variable("var")
             assert isinstance(
-                param["User-defined parameter data"](var), pybamm.Interpolant)
+                param["User-defined parameter data"](var), pybamm.Interpolant
+            )
             assert isinstance(
-                param["User-defined parameter data function"](var), pybamm.Power)
-
-
+                param["User-defined parameter data function"](var), pybamm.Power
+            )
