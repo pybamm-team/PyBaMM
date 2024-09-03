@@ -3,6 +3,9 @@
 
 #include "IDAKLUSolver.hpp"
 #include "common.hpp"
+#include <vector>
+using std::vector;
+
 #include "Options.hpp"
 #include "Solution.hpp"
 #include "sundials_legacy_wrapper.hpp"
@@ -46,26 +49,32 @@ public:
   void *ida_mem = nullptr;
   np_array atol_np;
   np_array rhs_alg_id;
-  int number_of_states;  // cppcheck-suppress unusedStructMember
-  int number_of_parameters;  // cppcheck-suppress unusedStructMember
-  int number_of_events;  // cppcheck-suppress unusedStructMember
+  int const number_of_states;  // cppcheck-suppress unusedStructMember
+  int const number_of_parameters;  // cppcheck-suppress unusedStructMember
+  int const number_of_events;  // cppcheck-suppress unusedStructMember
   int precon_type;  // cppcheck-suppress unusedStructMember
   N_Vector yy, yp, avtol;  // y, y', and absolute tolerance
   N_Vector *yyS;  // cppcheck-suppress unusedStructMember
   N_Vector *ypS;  // cppcheck-suppress unusedStructMember
   N_Vector id;              // rhs_alg_id
   realtype rtol;
-  const int jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
-  int jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
-  int jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
+  int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
+  int const jac_bandwidth_lower;  // cppcheck-suppress unusedStructMember
+  int const jac_bandwidth_upper;  // cppcheck-suppress unusedStructMember
   SUNMatrix J;
   SUNLinearSolver LS = nullptr;
   std::unique_ptr<ExprSet> functions;
-  std::vector<realtype> res;
-  std::vector<realtype> res_dvar_dy;
-  std::vector<realtype> res_dvar_dp;
-  SetupOptions setup_opts;
-  SolverOptions solver_opts;
+  vector<realtype> res;
+  vector<realtype> res_dvar_dy;
+  vector<realtype> res_dvar_dp;
+  bool const sensitivity;  // cppcheck-suppress unusedStructMember
+  bool const save_outputs_only; // cppcheck-suppress unusedStructMember
+  int length_of_return_vector;  // cppcheck-suppress unusedStructMember
+  vector<realtype> t;  // cppcheck-suppress unusedStructMember
+  vector<vector<realtype>> y;  // cppcheck-suppress unusedStructMember
+  vector<vector<vector<realtype>>> yS;  // cppcheck-suppress unusedStructMember
+  SetupOptions const setup_opts;
+  SolverOptions const solver_opts;
 
 #if SUNDIALS_VERSION_MAJOR >= 6
   SUNContext sunctx;
@@ -95,35 +104,11 @@ public:
   ~IDAKLUSolverOpenMP();
 
   /**
-   * Evaluate functions (including sensitivies) for each requested
-   * variable and store
-   * @brief Evaluate functions
-   */
-  void CalcVars(
-    realtype *y_return,
-    size_t length_of_return_vector,
-    size_t t_i,
-    realtype *tret,
-    realtype *yval,
-    const std::vector<realtype*>& ySval,
-    realtype *yS_return,
-    size_t *ySk);
-
-  /**
-   * @brief Evaluate functions for sensitivities
-   */
-  void CalcVarsSensitivities(
-    realtype *tret,
-    realtype *yval,
-    const std::vector<realtype*>& ySval,
-    realtype *yS_return,
-    size_t *ySk);
-
-  /**
    * @brief The main solve method that solves for each variable and time step
    */
   Solution solve(
-    np_array t_np,
+    np_array t_eval_np,
+    np_array t_interp_np,
     np_array y0_np,
     np_array yp0_np,
     np_array_dense inputs) override;
@@ -144,6 +129,16 @@ public:
   void SetMatrix();
 
   /**
+   * @brief Get the length of the return vector
+   */
+  int ReturnVectorLength();
+
+  /**
+   * @brief Initialize the storage for the solution
+   */
+  void InitializeStorage(int const N);
+
+  /**
    * @brief Apply user-configurable IDA options
    */
   void SetSolverOptions();
@@ -152,6 +147,82 @@ public:
    * @brief Check the return flag for errors
    */
   void CheckErrors(int const & flag);
+
+  /**
+   * @brief Print the solver statistics
+   */
+  void PrintStats();
+
+  /**
+   * @brief Extend the adaptive arrays by 1
+   */
+  void ExtendAdaptiveArrays();
+
+  /**
+   * @brief Set the step values
+   */
+  void SetStep(
+    realtype &t_val,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save the interpolated step values
+   */
+  void SetStepInterp(
+    int &i_interp,
+    realtype &t_interp_next,
+    vector<realtype> const &t_interp,
+    realtype &t_val,
+    realtype &t_prev,
+    realtype const &t_next,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save y and yS at the current time
+   */
+  void SetStepFull(
+    realtype &t_val,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save yS at the current time
+   */
+  void SetStepFullSensitivities(
+    realtype &t_val,
+    realtype *y_val,
+    vector<realtype *> const &yS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save the output function results at the requested time
+   */
+  void SetStepOutput(
+    realtype &t_val,
+    realtype *y_val,
+    const vector<realtype*> &yS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save the output function sensitivities at the requested time
+   */
+  void SetStepOutputSensitivities(
+    realtype &t_val,
+    realtype *y_val,
+    const vector<realtype*> &yS_val,
+    int &i_save
+  );
+
 };
 
 #include "IDAKLUSolverOpenMP.inl"

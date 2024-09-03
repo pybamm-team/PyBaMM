@@ -33,7 +33,7 @@ package (``cell_parameters``) should consist of the following::
 The actual parameter set is defined within ``cell_alpha.py``, as shown below.
 For an example, see the `Marquis2019`_ parameter sets.
 
-.. _Marquis2019: https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/input/parameters/lithium_ion/Marquis2019.py
+.. _Marquis2019: https://github.com/pybamm-team/PyBaMM/blob/develop/src/pybamm/input/parameters/lithium_ion/Marquis2019.py
 
 .. code-block:: python
     :linenos:

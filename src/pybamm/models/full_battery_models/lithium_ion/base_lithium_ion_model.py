@@ -48,6 +48,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_electrolyte_concentration_submodel()
         self.set_electrolyte_potential_submodel()
         self.set_thermal_submodel()
+        self.set_surface_temperature_submodel()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_sei_on_cracks_submodel()

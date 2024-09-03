@@ -8,7 +8,7 @@ import pytest
 
 class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup(self):
         self.model = pybamm.lithium_ion.NewmanTobias
 
     def test_basic_processing(self):

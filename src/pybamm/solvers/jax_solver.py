@@ -6,7 +6,7 @@ import asyncio
 
 import pybamm
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
     import jax.numpy as jnp
     from jax.experimental.ode import odeint
@@ -59,7 +59,7 @@ class JaxSolver(pybamm.BaseSolver):
         extrap_tol=None,
         extra_options=None,
     ):
-        if not pybamm.have_jax():
+        if not pybamm.has_jax():
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
@@ -72,9 +72,7 @@ class JaxSolver(pybamm.BaseSolver):
         method_options = ["RK45", "BDF"]
         if method not in method_options:
             raise ValueError(f"method must be one of {method_options}")
-        self.ode_solver = False
-        if method == "RK45":
-            self.ode_solver = True
+        self._ode_solver = method == "RK45"
         self.extra_options = extra_options or {}
         self.name = f"JAX solver ({method})"
         self._cached_solves = dict()
@@ -187,7 +185,7 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs=None, t_interp=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 

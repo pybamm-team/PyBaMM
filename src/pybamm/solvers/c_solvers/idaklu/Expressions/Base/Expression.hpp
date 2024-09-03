@@ -47,12 +47,12 @@ public:  // method declarations
   /**
    * @brief Returns row indices in COO format (where the output data represents sparse matrix elements)
    */
-  virtual std::vector<expr_int> get_row() = 0;
+  virtual const std::vector<expr_int>& get_row() = 0;
 
   /**
    * @brief Returns column indices in COO format (where the output data represents sparse matrix elements)
    */
-  virtual std::vector<expr_int> get_col() = 0;
+  virtual const std::vector<expr_int>& get_col() = 0;
 
 public:  // data members
   /**

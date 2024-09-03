@@ -74,6 +74,24 @@ void csc_csr(const realtype f[], const T1 c[], const T1 r[], realtype nf[], T2 n
   }
 }
 
+
+/**
+ * @brief Utility function to convert numpy array to std::vector<realtype>
+ */
+std::vector<realtype> numpy2realtype(const np_array& input_np);
+
+/**
+ * @brief Utility function to compute the set difference of two vectors
+ */
+std::vector<realtype> setDiff(const std::vector<realtype>& A, const std::vector<realtype>& B);
+
+/**
+ * @brief Utility function to make a sorted and unique vector
+ */
+std::vector<realtype> makeSortedUnique(const std::vector<realtype>& input);
+
+std::vector<realtype> makeSortedUnique(const np_array& input_np);
+
 #ifdef NDEBUG
 #define DEBUG_VECTOR(vector)
 #define DEBUG_VECTORn(vector, N)
