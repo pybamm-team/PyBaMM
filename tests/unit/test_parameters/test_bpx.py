@@ -1,8 +1,3 @@
-#
-# Tests for the create_from_bpx function
-#
-
-
 import tempfile
 import json
 import pybamm
@@ -155,6 +150,15 @@ class TestBPX:
                 sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data, atol=1e-7
             )
 
+    def test_no_already_exists_in_BPX(self):
+        with tempfile.NamedTemporaryFile(
+            suffix="test.json", delete=False, mode="w"
+        ) as test_file:
+            json.dump(copy.copy(self.base), test_file)
+            test_file.flush()
+            params = pybamm.ParameterValues.create_from_bpx(test_file.name)
+            assert "check_already_exists" not in params.keys()
+
     def test_constant_functions(self):
         bpx_obj = copy.copy(self.base)
         bpx_obj["Parameterisation"]["Electrolyte"].update(
@@ -234,7 +238,7 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
+            # write to a temporary file so we can
             # get the source later on using inspect.getsource
             # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
