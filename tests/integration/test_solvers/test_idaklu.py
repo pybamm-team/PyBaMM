@@ -3,7 +3,7 @@ import pybamm
 import numpy as np
 
 
-@pytest.mark.skipif(not pybamm.have_idaklu(), reason="idaklu solver is not installed")
+@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
 class TestIDAKLUSolver:
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()
@@ -32,7 +32,7 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         t_interp = np.linspace(0, 3500, 100)
-        t_eval = np.array([t_interp[0], t_interp[-1]])
+        t_eval = [t_interp[0], t_interp[-1]]
         solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
         solution = solver.solve(
             model,
