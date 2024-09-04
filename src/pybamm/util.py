@@ -4,7 +4,6 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import argparse
 import importlib.util
 import importlib.metadata
 import numbers
@@ -12,9 +11,7 @@ import os
 import pathlib
 import pickle
 import subprocess
-import sys
 import timeit
-from platform import system
 import difflib
 from warnings import warn
 
@@ -267,7 +264,7 @@ def get_parameters_filepath(path):
         return os.path.join(pybamm.__path__[0], path)
 
 
-def have_jax():
+def has_jax():
     """
     Check if jax and jaxlib are installed with the correct versions
 
@@ -312,60 +309,6 @@ def is_constant_and_can_evaluate(symbol):
             return False
     else:
         return False
-
-
-def install_jax(arguments=None):  # pragma: no cover
-    """
-    Install compatible versions of jax, jaxlib.
-
-    Command Line Interface::
-
-        $ pybamm_install_jax
-
-    |   optional arguments:
-    |    -h, --help   show help message
-    |    -f, --force  force install compatible versions of jax and jaxlib
-    """
-    parser = argparse.ArgumentParser(description="Install jax and jaxlib")
-    parser.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        help="force install compatible versions of"
-        f" jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION})",
-    )
-
-    args = parser.parse_args(arguments)
-
-    if system() == "Windows":
-        raise NotImplementedError("Jax is not available on Windows")
-
-    # Raise an error if jax and jaxlib are already installed, but incompatible
-    # and --force is not set
-    elif importlib.util.find_spec("jax") is not None:
-        if not args.force and not is_jax_compatible():
-            raise ValueError(
-                "Jax is already installed but the installed version of jax or jaxlib is"
-                " not supported by PyBaMM. \nYou can force install compatible versions"
-                f" of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION}) using the"
-                " following command: \npybamm_install_jax --force"
-            )
-
-    msg = (
-        "pybamm_install_jax is deprecated,"
-        " use 'pip install pybamm[jax]' to install jax & jaxlib"
-    )
-    warn(msg, DeprecationWarning, stacklevel=2)
-    subprocess.check_call(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            f"jax>={JAX_VERSION}",
-            f"jaxlib>={JAXLIB_VERSION}",
-        ]
-    )
 
 
 # https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports

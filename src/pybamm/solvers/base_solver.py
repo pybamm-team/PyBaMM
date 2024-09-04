@@ -63,11 +63,24 @@ class BaseSolver:
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
-        self.ode_solver = False
-        self.algebraic_solver = False
+        self._ode_solver = False
+        self._algebraic_solver = False
+        self._supports_interp = False
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
+
+    @property
+    def ode_solver(self):
+        return self._ode_solver
+
+    @property
+    def algebraic_solver(self):
+        return self._algebraic_solver
+
+    @property
+    def supports_interp(self):
+        return self._supports_interp
 
     @property
     def root_method(self):
@@ -107,7 +120,7 @@ class BaseSolver:
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
-            The times (in seconds) at which to compute the solution
+            The times at which to stop the integration due to a discontinuity in time.
         """
         inputs = inputs or {}
 
@@ -321,7 +334,7 @@ class BaseSolver:
                 f"Cannot use ODE solver '{self.name}' to solve DAE model"
             )
         # Check model.rhs for algebraic solvers
-        if self.algebraic_solver is True and len(model.rhs) > 0:
+        if self._algebraic_solver is True and len(model.rhs) > 0:
             raise pybamm.SolverError(
                 """Cannot use algebraic solver to solve model with time derivatives"""
             )
@@ -614,7 +627,7 @@ class BaseSolver:
 
         """
 
-        if self.algebraic_solver or model.len_alg == 0:
+        if self._algebraic_solver or model.len_alg == 0:
             # Don't update model.y0
             return
 
@@ -691,6 +704,7 @@ class BaseSolver:
         inputs=None,
         nproc=None,
         calculate_sensitivities=False,
+        t_interp=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -714,6 +728,9 @@ class BaseSolver:
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
 
         Returns
         -------
@@ -738,13 +755,13 @@ class BaseSolver:
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
         if t_eval is None:
-            if self.algebraic_solver is False:
+            if self._algebraic_solver is False:
                 raise ValueError("t_eval cannot be None")
             t_eval = np.array([0])
 
         # If t_eval is provided as [t0, tf] return the solution at 100 points
         elif isinstance(t_eval, list):
-            if len(t_eval) == 1 and self.algebraic_solver is True:
+            if len(t_eval) == 1 and self._algebraic_solver is True:
                 t_eval = np.array(t_eval)
             elif len(t_eval) != 2:
                 raise pybamm.SolverError(
@@ -753,12 +770,14 @@ class BaseSolver:
                     "initial time and tf is the final time, but has been provided "
                     f"as a list of length {len(t_eval)}."
                 )
-            else:
+            elif not self.supports_interp:
                 t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
+
+        t_interp = self.process_t_interp(t_interp)
 
         # Set up inputs
         #
@@ -832,7 +851,7 @@ class BaseSolver:
             self._model_set_up[model]["initial conditions"]
             != model.concatenated_initial_conditions
         ):
-            if self.algebraic_solver:
+            if self._algebraic_solver:
                 # For an algebraic solver, we don't need to set up the initial
                 # conditions function and we can just evaluate
                 # model.concatenated_initial_conditions
@@ -879,6 +898,7 @@ class BaseSolver:
                     model,
                     t_eval[start_index:end_index],
                     model_inputs_list[0],
+                    t_interp=t_interp,
                 )
                 new_solutions = [new_solution]
             elif model.convert_to_format == "jax":
@@ -887,6 +907,7 @@ class BaseSolver:
                     model,
                     t_eval[start_index:end_index],
                     model_inputs_list,
+                    t_interp,
                 )
             else:
                 with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
@@ -896,6 +917,7 @@ class BaseSolver:
                             [model] * ninputs,
                             [t_eval[start_index:end_index]] * ninputs,
                             model_inputs_list,
+                            [t_interp] * ninputs,
                         ),
                     )
                     p.close()
@@ -959,7 +981,7 @@ class BaseSolver:
         # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
         if (
-            self.algebraic_solver is False
+            self._algebraic_solver is False
             and len(solutions[0].all_ts) == 1
             and len(solutions[0].all_ts[0]) == 1
         ):
@@ -1146,6 +1168,23 @@ class BaseSolver:
             ]
         return concatenated_initial_conditions
 
+    def process_t_interp(self, t_interp):
+        # set a variable for this
+        no_interp = (not self.supports_interp) and (
+            t_interp is not None and len(t_interp) != 0
+        )
+        if no_interp:
+            warnings.warn(
+                f"Explicit interpolation times not implemented for {self.name}",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+
+        if no_interp or t_interp is None:
+            t_interp = np.empty(0)
+
+        return t_interp
+
     def step(
         self,
         old_solution,
@@ -1156,6 +1195,7 @@ class BaseSolver:
         inputs=None,
         save=True,
         calculate_sensitivities=False,
+        t_interp=None,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -1172,7 +1212,7 @@ class BaseSolver:
         dt : numeric type
             The timestep (in seconds) over which to step the solution
         t_eval : list or numpy.ndarray, optional
-            An array of times at which to return the solution during the step
+            An array of times at which to stop the simulation and return the solution during the step
             (Note: t_eval is the time measured from the start of the step, so should start at 0 and end at dt).
             By default, the solution is returned at t0 and t0 + dt.
         npts : deprecated
@@ -1185,6 +1225,9 @@ class BaseSolver:
             If only a subset of sensitivities are required, can also pass a
             list of input parameter names
 
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to None.
+            Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -1231,8 +1274,11 @@ class BaseSolver:
         else:
             pass
 
+        t_interp = self.process_t_interp(t_interp)
+
         t_start = old_solution.t[-1]
         t_eval = t_start + t_eval
+        t_interp = t_start + t_interp
         t_end = t_start + dt
 
         if t_start == 0:
@@ -1244,6 +1290,8 @@ class BaseSolver:
             # the start of the next step
             t_start_shifted = t_start + step_start_offset
             t_eval[0] = t_start_shifted
+            if t_interp.size > 0 and t_interp[0] == t_start:
+                t_interp[0] = t_start_shifted
 
         # Set timer
         timer = pybamm.Timer()
@@ -1332,7 +1380,7 @@ class BaseSolver:
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
-        solution = self._integrate(model, t_eval, model_inputs)
+        solution = self._integrate(model, t_eval, model_inputs, t_interp)
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
@@ -1611,26 +1659,13 @@ def process(
     elif model.convert_to_format != "casadi":
         y = vars_for_processing["y"]
         jacobian = vars_for_processing["jacobian"]
-        # Process with pybamm functions, converting
-        # to python evaluator
+
         if model.calculate_sensitivities:
-            report(
-                f"Calculating sensitivities for {name} with respect "
-                f"to parameters {model.calculate_sensitivities}"
+            raise pybamm.SolverError(  # pragma: no cover
+                "Sensitivies are no longer supported for the python "
+                "evaluator. Please use `convert_to_format = 'casadi'`, or `jax` "
+                "to calculate sensitivities."
             )
-            jacp_dict = {
-                p: symbol.diff(pybamm.InputParameter(p))
-                for p in model.calculate_sensitivities
-            }
-
-            report(f"Converting sensitivities for {name} to python")
-            jacp_dict = {
-                p: pybamm.EvaluatorPython(jacp) for p, jacp in jacp_dict.items()
-            }
-
-            # jacp should be a function that returns a dict of sensitivities
-            def jacp(*args, **kwargs):
-                return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
 
         else:
             jacp = None

@@ -2,6 +2,7 @@
 # Test for the evaluate-to-python functions
 #
 
+import pytest
 import pybamm
 
 from tests import get_discretisation_for_testing, get_1p1d_discretisation_for_testing
@@ -9,8 +10,9 @@ import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
+import re
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
 from tests import (
     function_test,
@@ -18,7 +20,7 @@ from tests import (
 )
 
 
-class TestEvaluate(unittest.TestCase):
+class TestEvaluate:
     def test_find_symbols(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -28,84 +30,82 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         expr = a + b
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(len(constant_symbols), 0)
+        assert len(constant_symbols) == 0
 
         # test keys of known_symbols
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.id)
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == b.id
+        assert list(variable_symbols.keys())[2] == expr.id
 
         # test values of variable_symbols
-        self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
+        assert next(iter(variable_symbols.values())) == "y[0:1]"
+        assert list(variable_symbols.values())[1] == "y[1:2]"
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
-        self.assertEqual(list(variable_symbols.values())[2], f"{var_a} + {var_b}")
+        assert list(variable_symbols.values())[2] == f"{var_a} + {var_b}"
 
         # test identical subtree
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = a + b + b
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(len(constant_symbols), 0)
+        assert len(constant_symbols) == 0
 
         # test keys of variable_symbols
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.children[0].id)
-        self.assertEqual(list(variable_symbols.keys())[3], expr.id)
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == b.id
+        assert list(variable_symbols.keys())[2] == expr.children[0].id
+        assert list(variable_symbols.keys())[3] == expr.id
 
         # test values of variable_symbols
-        self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
-        self.assertEqual(list(variable_symbols.values())[2], f"{var_a} + {var_b}")
+        assert next(iter(variable_symbols.values())) == "y[0:1]"
+        assert list(variable_symbols.values())[1] == "y[1:2]"
+        assert list(variable_symbols.values())[2] == f"{var_a} + {var_b}"
 
         var_child = pybamm.id_to_python_variable(expr.children[0].id)
-        self.assertEqual(list(variable_symbols.values())[3], f"{var_child} + {var_b}")
+        assert list(variable_symbols.values())[3] == f"{var_child} + {var_b}"
 
         # test unary op
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = pybamm.maximum(a, -(b))
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(len(constant_symbols), 0)
+        assert len(constant_symbols) == 0
 
         # test keys of variable_symbols
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.children[1].id)
-        self.assertEqual(list(variable_symbols.keys())[3], expr.id)
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == b.id
+        assert list(variable_symbols.keys())[2] == expr.children[1].id
+        assert list(variable_symbols.keys())[3] == expr.id
 
         # test values of variable_symbols
-        self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
-        self.assertEqual(list(variable_symbols.values())[2], f"-({var_b})")
+        assert next(iter(variable_symbols.values())) == "y[0:1]"
+        assert list(variable_symbols.values())[1] == "y[1:2]"
+        assert list(variable_symbols.values())[2] == f"-({var_b})"
         var_child = pybamm.id_to_python_variable(expr.children[1].id)
-        self.assertEqual(
-            list(variable_symbols.values())[3], f"np.maximum({var_a},{var_child})"
-        )
+        assert list(variable_symbols.values())[3] == f"np.maximum({var_a},{var_child})"
 
         # test function
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = pybamm.Function(function_test, a)
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(next(iter(constant_symbols.keys())), expr.id)
-        self.assertEqual(next(iter(constant_symbols.values())), function_test)
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], expr.id)
-        self.assertEqual(next(iter(variable_symbols.values())), "y[0:1]")
+        assert next(iter(constant_symbols.keys())) == expr.id
+        assert next(iter(constant_symbols.values())) == function_test
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == expr.id
+        assert next(iter(variable_symbols.values())) == "y[0:1]"
         var_funct = pybamm.id_to_python_variable(expr.id, True)
-        self.assertEqual(list(variable_symbols.values())[1], f"{var_funct}({var_a})")
+        assert list(variable_symbols.values())[1] == f"{var_funct}({var_a})"
 
         # test matrix
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         A = pybamm.Matrix([[1, 2], [3, 4]])
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
-        self.assertEqual(len(variable_symbols), 0)
-        self.assertEqual(next(iter(constant_symbols.keys())), A.id)
+        assert len(variable_symbols) == 0
+        assert next(iter(constant_symbols.keys())) == A.id
         np.testing.assert_allclose(
             next(iter(constant_symbols.values())), np.array([[1, 2], [3, 4]])
         )
@@ -115,8 +115,8 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
-        self.assertEqual(len(variable_symbols), 0)
-        self.assertEqual(next(iter(constant_symbols.keys())), A.id)
+        assert len(variable_symbols) == 0
+        assert next(iter(constant_symbols.keys())) == A.id
         np.testing.assert_allclose(
             next(iter(constant_symbols.values())).toarray(), A.entries.toarray()
         )
@@ -126,13 +126,12 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         expr = pybamm.NumpyConcatenation(a, b)
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(len(constant_symbols), 0)
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.id)
-        self.assertEqual(
-            list(variable_symbols.values())[2],
-            f"np.concatenate(({var_a},{var_b}))",
+        assert len(constant_symbols) == 0
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == b.id
+        assert list(variable_symbols.keys())[2] == expr.id
+        assert (
+            list(variable_symbols.values())[2] == f"np.concatenate(({var_a},{var_b}))"
         )
 
         # test domain concatentate
@@ -140,13 +139,12 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         expr = pybamm.NumpyConcatenation(a, b)
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(len(constant_symbols), 0)
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.id)
-        self.assertEqual(
-            list(variable_symbols.values())[2],
-            f"np.concatenate(({var_a},{var_b}))",
+        assert len(constant_symbols) == 0
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == b.id
+        assert list(variable_symbols.keys())[2] == expr.id
+        assert (
+            list(variable_symbols.values())[2] == f"np.concatenate(({var_a},{var_b}))"
         )
 
         # test that Concatentation throws
@@ -154,12 +152,12 @@ class TestEvaluate(unittest.TestCase):
         b = pybamm.StateVector(slice(1, 2), domain="test b")
 
         expr = pybamm.concatenation(a, b)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
         # test that these nodes throw
         for expr in (pybamm.Variable("a"), pybamm.Parameter("a")):
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
     def test_domain_concatenation(self):
@@ -182,16 +180,16 @@ class TestEvaluate(unittest.TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(next(iter(variable_symbols.keys())), a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.id)
+        assert next(iter(variable_symbols.keys())) == a.id
+        assert list(variable_symbols.keys())[1] == b.id
+        assert list(variable_symbols.keys())[2] == expr.id
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
-        self.assertEqual(len(constant_symbols), 0)
-        self.assertEqual(
-            list(variable_symbols.values())[2],
-            f"np.concatenate(({var_a}[0:{a_pts}],{var_b}[0:{b_pts}]))",
+        assert len(constant_symbols) == 0
+        assert (
+            list(variable_symbols.values())[2]
+            == f"np.concatenate(({var_a}[0:{a_pts}],{var_b}[0:{b_pts}]))"
         )
 
         evaluator = pybamm.EvaluatorPython(expr)
@@ -229,10 +227,10 @@ class TestEvaluate(unittest.TestCase):
         a0_str = f"{var_a}[0:{a0_pts}]"
         b1_str = f"{var_b}[{b0_pts}:{b0_pts + b1_pts}]"
 
-        self.assertEqual(len(constant_symbols), 0)
-        self.assertEqual(
-            list(variable_symbols.values())[2],
-            f"np.concatenate(({a0_str},{b0_str},{b1_str}))",
+        assert len(constant_symbols) == 0
+        assert (
+            list(variable_symbols.values())[2]
+            == f"np.concatenate(({a0_str},{b0_str},{b1_str}))"
         )
 
         evaluator = pybamm.EvaluatorPython(expr)
@@ -249,7 +247,7 @@ class TestEvaluate(unittest.TestCase):
         conc = pybamm.concatenation(2 * a, 3 * b)
         disc.set_variable_slices([a, b])
         expr = disc.process_symbol(conc)
-        self.assertIsInstance(expr, pybamm.DomainConcatenation)
+        assert isinstance(expr, pybamm.DomainConcatenation)
 
         y = np.empty((expr._size, 1))
         for i in range(len(y)):
@@ -259,7 +257,7 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
-        self.assertEqual(len(constant_symbols), 0)
+        assert len(constant_symbols) == 0
 
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(y=y)
@@ -284,7 +282,7 @@ class TestEvaluate(unittest.TestCase):
             r"var_[0-9m]+ = var_[0-9m]+ \+ var_[0-9m]+"
         )
 
-        self.assertRegex(variable_str, expected_str)
+        assert re.search(expected_str, variable_str)
 
     def test_evaluator_python(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -297,40 +295,40 @@ class TestEvaluate(unittest.TestCase):
         expr = a * b
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, 6)
+        assert result == 6
         result = evaluator(t=None, y=np.array([[1], [3]]))
-        self.assertEqual(result, 3)
+        assert result == 3
 
         # test function(a*b)
         expr = pybamm.Function(function_test, a * b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, 12)
+        assert result == 12
 
         expr = pybamm.Function(multi_var_function_test, a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, 5)
+        assert result == 5
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator()
-        self.assertEqual(result, 6)
+        assert result == 6
 
         # test a larger expression
         expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorPython(expr)
         for y in y_tests:
             result = evaluator(t=None, y=y)
-            self.assertEqual(result, expr.evaluate(t=None, y=y))
+            assert result == expr.evaluate(t=None, y=y)
 
         # test something with time
         expr = a * pybamm.t
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator(t=t, y=y)
-            self.assertEqual(result, expr.evaluate(t=t, y=y))
+            assert result == expr.evaluate(t=t, y=y)
 
         # test something with a matrix multiplication
         A = pybamm.Matrix([[1, 2], [3, 4]])
@@ -373,7 +371,7 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator(t=t, y=y)
-            self.assertEqual(result, expr.evaluate(t=t, y=y))
+            assert result == expr.evaluate(t=t, y=y)
 
         # test something with a sparse matrix multiplication
         A = pybamm.Matrix([[1, 2], [3, 4]])
@@ -448,20 +446,20 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_find_symbols_jax(self):
         # test sparse conversion
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
         pybamm.find_symbols(A, constant_symbols, variable_symbols, output_jax=True)
-        self.assertEqual(len(variable_symbols), 0)
-        self.assertEqual(next(iter(constant_symbols.keys())), A.id)
+        assert len(variable_symbols) == 0
+        assert next(iter(constant_symbols.keys())) == A.id
         np.testing.assert_allclose(
             next(iter(constant_symbols.values())).toarray(), A.entries.toarray()
         )
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -477,15 +475,15 @@ class TestEvaluate(unittest.TestCase):
         expr = a * b
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, 6)
+        assert result == 6
         result = evaluator(t=None, y=np.array([[1], [3]]))
-        self.assertEqual(result, 3)
+        assert result == 3
 
         # test function(a*b)
         expr = pybamm.Function(function_test, a * b)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(t=None, y=np.array([[2], [3]]))
-        self.assertEqual(result, 12)
+        assert result == 12
 
         # test exp
         expr = pybamm.exp(a * b)
@@ -497,7 +495,7 @@ class TestEvaluate(unittest.TestCase):
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator()
-        self.assertEqual(result, 6)
+        assert result == 6
 
         # test a larger expression
         expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
@@ -511,7 +509,7 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator(t=t, y=y)
-            self.assertEqual(result, expr.evaluate(t=t, y=y))
+            assert result == expr.evaluate(t=t, y=y)
 
         # test something with a matrix multiplication
         A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
@@ -554,7 +552,7 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator(t=t, y=y)
-            self.assertEqual(result, expr.evaluate(t=t, y=y))
+            assert result == expr.evaluate(t=t, y=y)
 
         # test something with a sparse matrix-vector multiplication
         A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
@@ -590,7 +588,7 @@ class TestEvaluate(unittest.TestCase):
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
         a = pybamm.StateVector(slice(0, 1))
         expr = pybamm.SparseStack(A, a * B)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             evaluator = pybamm.EvaluatorJax(expr)
 
         # test sparse mat-mat mult
@@ -598,7 +596,7 @@ class TestEvaluate(unittest.TestCase):
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
         a = pybamm.StateVector(slice(0, 1))
         expr = A @ (a * B)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             evaluator = pybamm.EvaluatorJax(expr)
 
         # test numpy concatenation
@@ -623,7 +621,7 @@ class TestEvaluate(unittest.TestCase):
                 result = evaluator(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_jacobian(self):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
@@ -638,7 +636,7 @@ class TestEvaluate(unittest.TestCase):
             result_true = evaluator_jac(t=None, y=y)
             np.testing.assert_allclose(result_test, result_true)
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_jvp(self):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
@@ -658,7 +656,7 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result_test, result_true)
             np.testing.assert_allclose(result_test_times_v, result_true_times_v)
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
         expr = a**2
@@ -666,15 +664,15 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_inputs(self):
         a = pybamm.InputParameter("a")
         expr = a**2
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator(inputs={"a": 2})
-        self.assertEqual(result, 4)
+        assert result == 4
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_evaluator_jax_demotion(self):
         for demote in [True, False]:
             pybamm.demote_expressions_to_32bit = demote  # global flag
@@ -685,9 +683,9 @@ class TestEvaluate(unittest.TestCase):
                     1.0,
                     1,
                 ]:
-                    self.assertEqual(
-                        str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:],
-                        target_dtype,
+                    assert (
+                        str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
+                        == target_dtype
                     )
             for c in [
                 np.float64(1.0),
@@ -697,36 +695,32 @@ class TestEvaluate(unittest.TestCase):
                 jax.numpy.array([1.0], dtype=np.float64),
                 jax.numpy.array([1], dtype=np.int64),
             ]:
-                self.assertEqual(
-                    str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:],
-                    target_dtype,
+                assert (
+                    str(pybamm.EvaluatorJax._demote_64_to_32(c).dtype)[-2:]
+                    == target_dtype
                 )
             for c in [
                 {key: np.float64(1.0) for key in ["a", "b"]},
             ]:
                 expr_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                self.assertTrue(
-                    all(
-                        str(c_v.dtype)[-2:] == target_dtype
-                        for c_k, c_v in expr_demoted.items()
-                    )
+                assert all(
+                    str(c_v.dtype)[-2:] == target_dtype
+                    for c_k, c_v in expr_demoted.items()
                 )
             for c in [
                 (np.float64(1.0), np.float64(2.0)),
                 [np.float64(1.0), np.float64(2.0)],
             ]:
                 expr_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                self.assertTrue(
-                    all(str(c_i.dtype)[-2:] == target_dtype for c_i in expr_demoted)
-                )
+                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in expr_demoted)
             for dtype in [
                 np.float64,
                 jax.numpy.float64,
             ]:
                 c = pybamm.JaxCooMatrix([0, 1], [0, 1], dtype([1.0, 2.0]), (2, 2))
                 c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                self.assertTrue(
-                    all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.data)
+                assert all(
+                    str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.data
                 )
             for dtype in [
                 np.int64,
@@ -736,15 +730,11 @@ class TestEvaluate(unittest.TestCase):
                     dtype([0, 1]), dtype([0, 1]), [1.0, 2.0], (2, 2)
                 )
                 c_demoted = pybamm.EvaluatorJax._demote_64_to_32(c)
-                self.assertTrue(
-                    all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.row)
-                )
-                self.assertTrue(
-                    all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.col)
-                )
+                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.row)
+                assert all(str(c_i.dtype)[-2:] == target_dtype for c_i in c_demoted.col)
             pybamm.demote_expressions_to_32bit = False
 
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_jax_coo_matrix(self):
         A = pybamm.JaxCooMatrix([0, 1], [0, 1], [1.0, 2.0], (2, 2))
         Adense = jax.numpy.array([[1.0, 0], [0, 2.0]])
@@ -754,7 +744,7 @@ class TestEvaluate(unittest.TestCase):
         np.testing.assert_allclose(A @ v, Adense @ v)
         np.testing.assert_allclose(A.scalar_multiply(3.0).toarray(), Adense * 3.0)
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             A.multiply(v)
 
 

@@ -2,7 +2,7 @@
 # Tests for the Function classes
 #
 
-import unittest
+import pytest
 import unittest.mock as mock
 
 import numpy as np
@@ -16,29 +16,29 @@ from tests import (
 )
 
 
-class TestFunction(unittest.TestCase):
+class TestFunction:
     def test_number_input(self):
         # with numbers
         log = pybamm.Function(np.log, 10)
-        self.assertIsInstance(log.children[0], pybamm.Scalar)
-        self.assertEqual(log.evaluate(), np.log(10))
+        assert isinstance(log.children[0], pybamm.Scalar)
+        assert log.evaluate() == np.log(10)
 
         summ = pybamm.Function(multi_var_function_test, 1, 2)
-        self.assertIsInstance(summ.children[0], pybamm.Scalar)
-        self.assertIsInstance(summ.children[1], pybamm.Scalar)
-        self.assertEqual(summ.evaluate(), 3)
+        assert isinstance(summ.children[0], pybamm.Scalar)
+        assert isinstance(summ.children[1], pybamm.Scalar)
+        assert summ.evaluate() == 3
 
     def test_function_of_one_variable(self):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(function_test, a)
-        self.assertEqual(funca.name, "function (function_test)")
-        self.assertEqual(str(funca), "function_test(a)")
-        self.assertEqual(funca.children[0].name, a.name)
+        assert funca.name == "function (function_test)"
+        assert str(funca) == "function_test(a)"
+        assert funca.children[0].name == a.name
 
         b = pybamm.Scalar(1)
         sina = pybamm.Function(np.sin, b)
-        self.assertEqual(sina.evaluate(), np.sin(1))
-        self.assertEqual(sina.name, f"function ({np.sin.__name__})")
+        assert sina.evaluate() == np.sin(1)
+        assert sina.name == f"function ({np.sin.__name__})"
 
         c = pybamm.Vector(np.linspace(0, 1))
         cosb = pybamm.Function(np.cos, c)
@@ -52,20 +52,21 @@ class TestFunction(unittest.TestCase):
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         func = pybamm.Function(function_test, a)
-        with self.assertRaisesRegex(
-            NotImplementedError, "Derivative of base Function class is not implemented"
+        with pytest.raises(
+            NotImplementedError,
+            match="Derivative of base Function class is not implemented",
         ):
             func.diff(a)
 
     def test_exceptions(self):
         a = pybamm.Variable("a", domain="something")
         b = pybamm.Variable("b", domain="something else")
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             pybamm.Function(multi_var_function_test, a, b)
 
     def test_function_unnamed(self):
         fun = pybamm.Function(np.cos, pybamm.t)
-        self.assertEqual(fun.name, "function (cos)")
+        assert fun.name == "function (cos)"
 
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test")
@@ -73,224 +74,216 @@ class TestFunction(unittest.TestCase):
         # Test print_name
         func = pybamm.Arcsinh(a)
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+        assert func.to_equation() == sympy.Symbol("test")
 
         # Test Arcsinh
-        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh("a"))
+        assert pybamm.Arcsinh(a).to_equation() == sympy.asinh("a")
 
         # Test Arctan
-        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan("a"))
+        assert pybamm.Arctan(a).to_equation() == sympy.atan("a")
 
         # Test Exp
-        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp("a"))
+        assert pybamm.Exp(a).to_equation() == sympy.exp("a")
 
         # Test log
         value = 54.0
-        self.assertEqual(pybamm.Log(value).to_equation(), sympy.log(value))
+        assert pybamm.Log(value).to_equation() == sympy.log(value)
 
         # Test sinh
-        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh("a"))
+        assert pybamm.Sinh(a).to_equation() == sympy.sinh("a")
 
         # Test Function
         value = 10
-        self.assertEqual(pybamm.Function(np.log, value).to_equation(), value)
+        assert pybamm.Function(np.log, value).to_equation() == value
 
     def test_to_from_json_error(self):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(function_test, a)
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             funca.to_json()
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             pybamm.Function._from_json({})
 
 
-class TestSpecificFunctions(unittest.TestCase):
-    def test_to_json(self):
+class TestSpecificFunctions:
+    def test_to_json(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
 
         expected_json = {
             "name": "function (cos)",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "cos",
         }
 
-        self.assertEqual(fun.to_json(), expected_json)
+        assert fun.to_json() == expected_json
 
-    def test_arcsinh(self):
+    def test_arcsinh(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.arcsinh(a)
-        self.assertIsInstance(fun, pybamm.Arcsinh)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.arcsinh(3))
+        assert isinstance(fun, pybamm.Arcsinh)
+        assert fun.evaluate(inputs={"a": 3}) == np.arcsinh(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.arcsinh(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(fun_broad, pybamm.PrimaryBroadcast(fun, "test"))
+        assert fun_broad == pybamm.PrimaryBroadcast(fun, "test")
 
         broad_a = pybamm.FullBroadcast(a, "test", "test2")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(fun_broad, pybamm.FullBroadcast(fun, "test", "test2"))
+        assert fun_broad == pybamm.FullBroadcast(fun, "test", "test2")
 
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(
-            fun_broad,
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2"),
+        assert fun_broad == pybamm.PrimaryBroadcast(
+            pybamm.PrimaryBroadcast(fun, "test"), "test2"
         )
 
         # test creation from json
         input_json = {
             "name": "arcsinh",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "arcsinh",
             "children": [a],
         }
-        self.assertEqual(pybamm.Arcsinh._from_json(input_json), fun)
+        assert pybamm.Arcsinh._from_json(input_json) == fun
 
-    def test_arctan(self):
+    def test_arctan(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.arctan(a)
-        self.assertIsInstance(fun, pybamm.Arctan)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.arctan(3))
+        assert isinstance(fun, pybamm.Arctan)
+        assert fun.evaluate(inputs={"a": 3}) == np.arctan(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.arctan(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "arctan",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "arctan",
             "children": [a],
         }
-        self.assertEqual(pybamm.Arctan._from_json(input_json), fun)
+        assert pybamm.Arctan._from_json(input_json) == fun
 
-    def test_cos(self):
+    def test_cos(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
-        self.assertIsInstance(fun, pybamm.Cos)
-        self.assertEqual(fun.children[0], a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cos(3))
+        assert isinstance(fun, pybamm.Cos)
+        assert fun.children[0] == a
+        assert fun.evaluate(inputs={"a": 3}) == np.cos(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.cos(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "cos",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "cos",
             "children": [a],
         }
-        self.assertEqual(pybamm.Cos._from_json(input_json), fun)
+        assert pybamm.Cos._from_json(input_json) == fun
 
-    def test_cosh(self):
+    def test_cosh(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.cosh(a)
-        self.assertIsInstance(fun, pybamm.Cosh)
-        self.assertEqual(fun.children[0], a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cosh(3))
+        assert isinstance(fun, pybamm.Cosh)
+        assert fun.children[0] == a
+        assert fun.evaluate(inputs={"a": 3}) == np.cosh(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.cosh(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "cosh",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "cosh",
             "children": [a],
         }
-        self.assertEqual(pybamm.Cosh._from_json(input_json), fun)
+        assert pybamm.Cosh._from_json(input_json) == fun
 
-    def test_exp(self):
+    def test_exp(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.exp(a)
-        self.assertIsInstance(fun, pybamm.Exp)
-        self.assertEqual(fun.children[0], a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.exp(3))
+        assert isinstance(fun, pybamm.Exp)
+        assert fun.children[0] == a
+        assert fun.evaluate(inputs={"a": 3}) == np.exp(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.exp(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "exp",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "exp",
             "children": [a],
         }
-        self.assertEqual(pybamm.Exp._from_json(input_json), fun)
+        assert pybamm.Exp._from_json(input_json) == fun
 
-    def test_log(self):
+    def test_log(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.log(a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.log(3))
+        assert fun.evaluate(inputs={"a": 3}) == np.log(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.log(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # Base 10
         fun = pybamm.log10(a)
-        self.assertAlmostEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
+        assert fun.evaluate(inputs={"a": 3}) == pytest.approx(np.log10(3))
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.log10(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
@@ -298,131 +291,126 @@ class TestSpecificFunctions(unittest.TestCase):
         fun = pybamm.log(a)
         input_json = {
             "name": "log",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "log",
             "children": [a],
         }
-        self.assertEqual(pybamm.Log._from_json(input_json), fun)
+        assert pybamm.Log._from_json(input_json) == fun
 
     def test_max(self):
         a = pybamm.StateVector(slice(0, 3))
         y_test = np.array([1, 2, 3])
         fun = pybamm.max(a)
-        self.assertIsInstance(fun, pybamm.Function)
-        self.assertEqual(fun.evaluate(y=y_test), 3)
+        assert isinstance(fun, pybamm.Function)
+        assert fun.evaluate(y=y_test) == 3
 
     def test_min(self):
         a = pybamm.StateVector(slice(0, 3))
         y_test = np.array([1, 2, 3])
         fun = pybamm.min(a)
-        self.assertIsInstance(fun, pybamm.Function)
-        self.assertEqual(fun.evaluate(y=y_test), 1)
+        assert isinstance(fun, pybamm.Function)
+        assert fun.evaluate(y=y_test) == 1
 
-    def test_sin(self):
+    def test_sin(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.sin(a)
-        self.assertIsInstance(fun, pybamm.Sin)
-        self.assertEqual(fun.children[0], a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sin(3))
+        assert isinstance(fun, pybamm.Sin)
+        assert fun.children[0] == a
+        assert fun.evaluate(inputs={"a": 3}) == np.sin(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.sin(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "sin",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "sin",
             "children": [a],
         }
-        self.assertEqual(pybamm.Sin._from_json(input_json), fun)
+        assert pybamm.Sin._from_json(input_json) == fun
 
-    def test_sinh(self):
+    def test_sinh(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.sinh(a)
-        self.assertIsInstance(fun, pybamm.Sinh)
-        self.assertEqual(fun.children[0], a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sinh(3))
+        assert isinstance(fun, pybamm.Sinh)
+        assert fun.children[0] == a
+        assert fun.evaluate(inputs={"a": 3}) == np.sinh(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.sinh(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "sinh",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "sinh",
             "children": [a],
         }
-        self.assertEqual(pybamm.Sinh._from_json(input_json), fun)
+        assert pybamm.Sinh._from_json(input_json) == fun
 
-    def test_sqrt(self):
+    def test_sqrt(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.sqrt(a)
-        self.assertIsInstance(fun, pybamm.Sqrt)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sqrt(3))
+        assert isinstance(fun, pybamm.Sqrt)
+        assert fun.evaluate(inputs={"a": 3}) == np.sqrt(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.sqrt(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
         input_json = {
             "name": "sqrt",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "sqrt",
             "children": [a],
         }
-        self.assertEqual(pybamm.Sqrt._from_json(input_json), fun)
+        assert pybamm.Sqrt._from_json(input_json) == fun
 
     def test_tanh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.tanh(a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.tanh(3))
+        assert fun.evaluate(inputs={"a": 3}) == np.tanh(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.tanh(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
     def test_erf(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.erf(a)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), special.erf(3))
+        assert fun.evaluate(inputs={"a": 3}) == special.erf(3)
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.erf(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
         # test creation from json
@@ -432,48 +420,45 @@ class TestSpecificFunctions(unittest.TestCase):
             "function": "erf",
             "children": [a],
         }
-        self.assertEqual(pybamm.Erf._from_json(input_json), fun)
+        assert pybamm.Erf._from_json(input_json) == fun
 
     def test_erfc(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.erfc(a)
-        self.assertAlmostEqual(
-            fun.evaluate(inputs={"a": 3}), special.erfc(3), places=15
+        assert fun.evaluate(inputs={"a": 3}) == pytest.approx(
+            special.erfc(3), abs=1e-15
         )
         h = 0.0000001
-        self.assertAlmostEqual(
-            fun.diff(a).evaluate(inputs={"a": 3}),
+        assert fun.diff(a).evaluate(inputs={"a": 3}) == pytest.approx(
             (
                 pybamm.erfc(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
-            places=5,
+            abs=1e-05,
         )
 
 
-class TestNonObjectFunctions(unittest.TestCase):
+class TestNonObjectFunctions:
     def test_normal_pdf(self):
         x = pybamm.InputParameter("x")
         mu = pybamm.InputParameter("mu")
         sigma = pybamm.InputParameter("sigma")
         fun = pybamm.normal_pdf(x, mu, sigma)
-        self.assertEqual(
-            fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}), 1 / np.sqrt(2 * np.pi)
+        assert fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}) == 1 / np.sqrt(
+            2 * np.pi
         )
-        self.assertEqual(
-            fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}),
-            1 / np.sqrt(2 * np.pi) / 10,
+        assert (
+            fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10})
+            == 1 / np.sqrt(2 * np.pi) / 10
         )
-        self.assertAlmostEqual(fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}), 0)
-        self.assertAlmostEqual(fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}), 0)
-        self.assertGreater(
-            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}),
-            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2}),
+        assert fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}) == pytest.approx(0)
+        assert fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}) == pytest.approx(0)
+        assert fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}) > fun.evaluate(
+            inputs={"x": 1, "mu": 0, "sigma": 2}
         )
-        self.assertGreater(
-            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}),
-            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2}),
+        assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) > fun.evaluate(
+            inputs={"x": -1, "mu": 0, "sigma": 2}
         )
 
     def test_normal_cdf(self):
@@ -481,25 +466,13 @@ class TestNonObjectFunctions(unittest.TestCase):
         mu = pybamm.InputParameter("mu")
         sigma = pybamm.InputParameter("sigma")
         fun = pybamm.normal_cdf(x, mu, sigma)
-        self.assertEqual(fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}), 0.5)
-        self.assertEqual(fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}), 0.5)
-        self.assertAlmostEqual(fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}), 1)
-        self.assertAlmostEqual(fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}), 0)
-        self.assertGreater(
-            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}),
-            fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 2}),
+        assert fun.evaluate(inputs={"x": 0, "mu": 0, "sigma": 1}) == 0.5
+        assert fun.evaluate(inputs={"x": 2, "mu": 2, "sigma": 10}) == 0.5
+        assert fun.evaluate(inputs={"x": 100, "mu": 0, "sigma": 1}) == pytest.approx(1)
+        assert fun.evaluate(inputs={"x": -100, "mu": 0, "sigma": 1}) == pytest.approx(0)
+        assert fun.evaluate(inputs={"x": 1, "mu": 0, "sigma": 1}) > fun.evaluate(
+            inputs={"x": 1, "mu": 0, "sigma": 2}
         )
-        self.assertLess(
-            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}),
-            fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 2}),
+        assert fun.evaluate(inputs={"x": -1, "mu": 0, "sigma": 1}) < fun.evaluate(
+            inputs={"x": -1, "mu": 0, "sigma": 2}
         )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

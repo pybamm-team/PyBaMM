@@ -15,8 +15,7 @@ from .util import (
 )
 from .util import (
     get_parameters_filepath,
-    have_jax,
-    install_jax,
+    has_jax,
     import_optional_dependency,
     is_jax_compatible,
     get_git_commit_info,
@@ -171,7 +170,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu, have_iree
+from .solvers.idaklu_solver import IDAKLUSolver, has_idaklu, has_iree
 
 # Experiments
 from .experiment.experiment import Experiment
