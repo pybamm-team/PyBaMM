@@ -1250,12 +1250,9 @@ class BaseSolver:
         # Make sure model isn't empty
         self._check_empty_model(model)
 
-        # Make sure dt is greater than the offset
-        step_start_offset = pybamm.settings.step_start_offset
-        if dt <= step_start_offset:
-            raise pybamm.SolverError(
-                f"Step time must be at least {pybamm.TimerTime(step_start_offset)}"
-            )
+        # Make sure dt is greater than zero
+        if dt <= 0:
+            raise pybamm.SolverError("Step time must be >0")
 
         # Raise deprecation warning for npts and convert it to t_eval
         if npts is not None:
@@ -1284,11 +1281,11 @@ class BaseSolver:
         if t_start == 0:
             t_start_shifted = t_start
         else:
-            # offset t_start by t_start_offset (default 1 ns)
+            # find the next largest floating point value for t_start
             # to avoid repeated times in the solution
             # from having the same time at the end of the previous step and
             # the start of the next step
-            t_start_shifted = t_start + step_start_offset
+            t_start_shifted = np.nextafter(t_start, np.inf)
             t_eval[0] = t_start_shifted
             if t_interp.size > 0 and t_interp[0] == t_start:
                 t_interp[0] = t_start_shifted
