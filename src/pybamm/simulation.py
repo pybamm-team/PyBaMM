@@ -192,7 +192,6 @@ class Simulation:
                 restrict_list.update(step.get_parameter_values([]).keys())
             elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
                 restrict_list.update(["Current function [A]"])
-        print(parameter_values)
         for key in restrict_list:
             try:
                 param = parameter_values[key]
@@ -711,7 +710,6 @@ class Simulation:
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / step.period)) + 1, 2)
                     try:
-                        print("doing step for ", step_str)
                         step_solution = solver.step(
                             current_solution,
                             model,
