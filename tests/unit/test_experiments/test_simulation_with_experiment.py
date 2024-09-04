@@ -201,6 +201,50 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         self.assertEqual(solutions[1].termination, "final time")
 
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    def test_solve_with_sensitivities_and_experiment(self):
+        experiment_2step = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                ),
+            ]
+            * 2,
+        )
+
+        solutions = []
+        for solver in [pybamm.CasadiSolver(), pybamm.IDAKLUSolver()]:
+            model = pybamm.lithium_ion.SPM()
+            param = model.default_parameter_values
+            input_param_name = "Negative electrode active material volume fraction"
+            input_param_value = 0.6
+            param.update({input_param_name: "[input]"})
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment_2step,
+                solver=solver,
+                parameter_values=param,
+            )
+            solution = sim.solve(
+                inputs={input_param_name: input_param_value},
+                calculate_sensitivities=True,
+            )
+            solutions.append(solution)
+
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Voltage [V]"].data,
+            solutions[1]["Voltage [V]"].data,
+            decimal=1,
+        )
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Voltage [V]"].sensitivities[input_param_name],
+            solutions[1]["Voltage [V]"].sensitivities[input_param_name],
+            decimal=1,
+        )
+
     def test_run_experiment_drive_cycle(self):
         drive_cycle = np.array([np.arange(10), np.arange(10)]).T
         experiment = pybamm.Experiment(
