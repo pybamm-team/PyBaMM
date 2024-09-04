@@ -1173,7 +1173,7 @@ class BaseSolver:
         if t_start == 0:
             t_start_shifted = t_start
         else:
-            # offset t_start by t_start_offset (default 1 ns)
+            # find the next largest floating point value for t_start
             # to avoid repeated times in the solution
             # from having the same time at the end of the previous step and
             # the start of the next step
