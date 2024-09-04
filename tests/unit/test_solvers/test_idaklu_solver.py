@@ -1079,7 +1079,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
         sol = sim.solve()
         np.testing.assert_equal(
-            sol.sub_solutions[0].t[-1] + pybamm.settings.step_start_offset,
+            np.nextafter(sol.sub_solutions[0].t[-1], np.inf),
             sol.sub_solutions[1].t[0],
         )
 
