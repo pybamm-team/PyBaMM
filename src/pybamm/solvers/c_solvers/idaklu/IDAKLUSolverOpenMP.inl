@@ -552,7 +552,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   if (functions->var_fcns.size() > 0) {
     yS_ret = np_array(
       std::vector<ptrdiff_t> {
-        number_of_timesteps,
+        t_i,
         length_of_return_vector,
         number_of_parameters
       },
@@ -563,7 +563,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     yS_ret = np_array(
       std::vector<ptrdiff_t> {
         number_of_parameters,
-        number_of_timesteps,
+        t_i,
         length_of_return_vector
       },
       &yS_return[0],

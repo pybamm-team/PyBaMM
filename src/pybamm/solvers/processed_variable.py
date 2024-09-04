@@ -418,36 +418,38 @@ class ProcessedVariable:
 
     def initialise_sensitivity_explicit_forward(self):
         "Set up the sensitivity dictionary"
-        inputs_stacked = self.all_inputs_casadi[0]
 
-        # Set up symbolic variables
-        t_casadi = casadi.MX.sym("t")
-        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
-        p_casadi = {
-            name: casadi.MX.sym(name, value.shape[0])
-            for name, value in self.all_inputs[0].items()
-        }
-
-        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
-
-        # Convert variable to casadi format for differentiating
-        var_casadi = self.base_variables[0].to_casadi(
-            t_casadi, y_casadi, inputs=p_casadi
-        )
-        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
-        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
-
-        # Convert to functions and evaluate index-by-index
-        dvar_dy_func = casadi.Function(
-            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
-        )
-        dvar_dp_func = casadi.Function(
-            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
-        )
         all_S_var = []
-        for ts, ys, dy_dp in zip(
-            self.all_ts, self.all_ys, self.solution_sensitivities["all"]
+        for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
+            self.all_ts,
+            self.all_ys,
+            self.all_inputs_casadi,
+            self.all_inputs,
+            self.base_variables,
+            self.solution_sensitivities["all"],
         ):
+            # Set up symbolic variables
+            t_casadi = casadi.MX.sym("t")
+            y_casadi = casadi.MX.sym("y", ys.shape[0])
+            p_casadi = {
+                name: casadi.MX.sym(name, value.shape[0])
+                for name, value in inputs.items()
+            }
+
+            p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+
+            # Convert variable to casadi format for differentiating
+            var_casadi = base_variable.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+            dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+            dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+
+            # Convert to functions and evaluate index-by-index
+            dvar_dy_func = casadi.Function(
+                "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
+            )
+            dvar_dp_func = casadi.Function(
+                "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
+            )
             for idx, t in enumerate(ts):
                 u = ys[:, idx]
                 next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)

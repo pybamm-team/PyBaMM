@@ -711,6 +711,7 @@ class Simulation:
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / step.period)) + 1, 2)
                     try:
+                        print("doing step for ", step_str)
                         step_solution = solver.step(
                             current_solution,
                             model,

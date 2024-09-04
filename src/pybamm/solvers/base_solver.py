@@ -1110,8 +1110,10 @@ class BaseSolver:
             else:
                 raise NotImplementedError("Variable must have type 'Variable'")
 
+            scale, reference = var.scale.value, var.reference.value
             for i in range(ninputs):
-                initial_conditions[i].append(final_state_eval[i])
+                scaled_final_state_eval = (final_state_eval[i] - reference) / scale
+                initial_conditions[i].append(scaled_final_state_eval)
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
@@ -1142,7 +1144,6 @@ class BaseSolver:
                 np.vstack([eq for _, eq in sorted(zip(slices, init))])
                 for init in initial_conditions
             ]
-
         return concatenated_initial_conditions
 
     def step(
@@ -1319,8 +1320,6 @@ class BaseSolver:
                 for s in model.y0S:
                     y0_list.append(s[model.len_rhs :])
             model.y0 = casadi.vertcat(*y0_list)
-
-        print(model.y0, type(model.y0))
 
         set_up_time = timer.time()
 

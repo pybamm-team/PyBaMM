@@ -378,24 +378,61 @@ class TestSimulation(unittest.TestCase):
         param.update({input_param_name: "[input]"})
         exp = pybamm.Experiment(
             [
-                "Discharge at 1C until 3.6V",
-                "Rest for 1 hour",
-                "Charge at 1C until 4.2V",
-                "Hold at 4.2V until C/50",
+                "Discharge at C/20 for 1 hour",
+                "Charge at 1 A until 4.1 V",
+                "Hold at 4.1 V until C/2",
+                "Discharge at 2 W for 1 hour",
             ]
         )
+
         solver = pybamm.IDAKLUSolver()
         sim = pybamm.Simulation(
             model, parameter_values=param, experiment=exp, solver=solver
         )
 
-        sol1 = sim.solve(
+        sol_sens = sim.solve(
             inputs={input_param_name: input_param_value},
             calculate_sensitivities=True,
         )
 
-        # check that the sensitivities are stored
-        self.assertTrue(input_param_name in sol1.sensitivities)
+        sol_sens_time = sol_sens.t
+        sol_sens_all = sol_sens["Terminal voltage [V]"].sensitivities["all"]
+        print("XXXXXXXXXXXXXXXXsol_sens_all", sol_sens_all[0])
+        print("XXXXXXXXXXXXXXXXsol_sens_all", sol_sens_all[1])
+        sol_sens = (
+            sol_sens["Terminal voltage [V]"]
+            .sensitivities[input_param_name]
+            .full()
+            .flatten()
+        )
+
+        solver = pybamm.IDAKLUSolver()
+        sim = pybamm.Simulation(
+            model, parameter_values=param, experiment=exp, solver=solver
+        )
+
+        h = 1e-5
+        sol_neg = sim.solve(
+            inputs={input_param_name: input_param_value - h},
+        )
+        sol_neg = sol_neg["Terminal voltage [V]"](sol_sens_time)
+        sol_pos = sim.solve(
+            inputs={input_param_name: input_param_value + h},
+        )
+        sol_pos = sol_pos["Terminal voltage [V]"](sol_sens_time)
+
+        sol_fd = (sol_pos - sol_neg) / (2 * h)
+
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(sol_sens_time, sol_fd, label="FD")
+        ax.plot(sol_sens_time, sol_sens, label="Sens")
+        plt.legend()
+        plt.savefig("sensitivities.png")
+
+        np.testing.assert_array_almost_equal(sol_fd, sol_sens, decimal=5)
 
     def test_step_with_inputs(self):
         dt = 0.001
