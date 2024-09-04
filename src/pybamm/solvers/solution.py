@@ -797,6 +797,7 @@ class Solution:
         #   need to be extracted
         # - dict if sensitivities are provided as a dict of {parameter: sensitivities}
         # both self and other should have the same type of sensitivities
+        # OR both can be either False or {} (i.e. no sensitivities)
         if isinstance(self._sensitivities, bool) and isinstance(
             other._sensitivities, bool
         ):
@@ -810,6 +811,8 @@ class Solution:
                     sensitivities[key] = sensitivities[key] + other._sensitivities[key]
                 else:
                     sensitivities[key] = other._sensitivities[key]
+        elif not self._sensitivities and not other._sensitivities:
+            sensitivities = {}
         else:
             raise ValueError("Sensitivities must be of the same type")
 
