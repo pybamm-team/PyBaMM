@@ -333,6 +333,7 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"
