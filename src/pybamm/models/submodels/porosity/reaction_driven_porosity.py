@@ -43,22 +43,14 @@ class ReactionDriven(BaseModel):
                     L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
                     if Domain == "Negative":
                         if phase == "secondary":
-                            L_sei_0 = (
-                                param.n.sec.L_inner_0 + param.n.sec.L_outer_0
-                            )
+                            L_sei_0 = param.n.sec.L_inner_0 + param.n.sec.L_outer_0
                         else:
-                            L_sei_0 = (
-                                param.n.prim.L_inner_0 + param.n.prim.L_outer_0
-                            )
+                            L_sei_0 = param.n.prim.L_inner_0 + param.n.prim.L_outer_0
                     elif Domain == "Positive":
                         if phase == "secondary":
-                            L_sei_0 = (
-                                param.p.sec.L_inner_0 + param.p.sec.L_outer_0
-                            )
+                            L_sei_0 = param.p.sec.L_inner_0 + param.p.sec.L_outer_0
                         else:
-                            L_sei_0 = (
-                                param.p.prim.L_inner_0 + param.p.prim.L_outer_0
-                            )
+                            L_sei_0 = param.p.prim.L_inner_0 + param.p.prim.L_outer_0
                     L_pl_k = variables[
                         f"{Domain} {phase_name}lithium plating thickness [m]"
                     ]
