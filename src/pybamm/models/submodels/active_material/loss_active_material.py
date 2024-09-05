@@ -176,7 +176,7 @@ class LossActiveMaterial(BaseModel):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        eps_solid_init = self.domain_param.prim.epsilon_s
+        eps_solid_init = self.phase_param.epsilon_s
 
         if self.x_average is True:
             eps_solid_xav = variables[
