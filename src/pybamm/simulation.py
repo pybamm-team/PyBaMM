@@ -8,7 +8,6 @@ import pybamm
 import numpy as np
 import hashlib
 import warnings
-import sys
 from functools import lru_cache
 from datetime import timedelta
 from pybamm.util import import_optional_dependency
@@ -464,9 +463,9 @@ class Simulation:
                 # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
-                elif (
-                    set(np.round(time_data, 12)).issubset(set(np.round(t_eval, 12)))
-                ) is False:
+                elif not isinstance(solver, pybamm.IDAKLUSolver) and not set(
+                    np.round(time_data, 12)
+                ).issubset(set(np.round(t_eval, 12))):
                     warnings.warn(
                         """
                         t_eval does not contain all of the time points in the data
@@ -478,7 +477,7 @@ class Simulation:
                     )
                     dt_data_min = np.min(np.diff(time_data))
                     dt_eval_max = np.max(np.diff(t_eval))
-                    if dt_eval_max > dt_data_min + sys.float_info.epsilon:
+                    if dt_eval_max > np.nextafter(dt_data_min, np.inf):
                         warnings.warn(
                             f"""
                             The largest timestep in t_eval ({dt_eval_max}) is larger than
@@ -581,7 +580,7 @@ class Simulation:
                             + timedelta(seconds=float(current_solution.t[-1]))
                         )
                     ).total_seconds()
-                    if rest_time > pybamm.settings.step_start_offset:
+                    if rest_time > 0:
                         # logs["step operating conditions"] = "Initial rest for padding"
                         # callbacks.on_step_start(logs)
 
@@ -738,7 +737,7 @@ class Simulation:
                                 + timedelta(seconds=float(step_solution.t[-1]))
                             )
                         ).total_seconds()
-                        if rest_time > pybamm.settings.step_start_offset:
+                        if rest_time > 0:
                             logs["step number"] = (step_num, cycle_length)
                             logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)

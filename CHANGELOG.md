@@ -1,9 +1,15 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Optimizations
+- Removed the `start_step_offset` setting and disabled minimum `dt` warnings for drive cycles with the (`IDAKLUSolver`). ([#4416](https://github.com/pybamm-team/PyBaMM/pull/4416))
+
+# [v24.9.0](https://github.com/pybamm-team/PyBaMM/tree/v24.9.0) - 2024-09-03
+
 ## Features
 
 - Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
+- Added lumped surface thermal model ([#4203](https://github.com/pybamm-team/PyBaMM/pull/4203))
 
 ## Optimizations
 
