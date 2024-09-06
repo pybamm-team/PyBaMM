@@ -404,7 +404,7 @@ class ProcessedVariable:
             return {}
         # Otherwise initialise and return sensitivities
         if self._sensitivities is None:
-            if self.all_solution_sensitivities != {}:
+            if self.all_solution_sensitivities:
                 self.initialise_sensitivity_explicit_forward()
             else:
                 raise ValueError(
