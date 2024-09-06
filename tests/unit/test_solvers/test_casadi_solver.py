@@ -1000,7 +1000,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["var2 squared"].data, 4 * np.exp(2 * 0.1 * solution.t)
         )
         np.testing.assert_allclose(
-            solution["var2 squared"].sensitivities["p"][0],
+            solution["var2 squared"].sensitivities["p"],
             (8 * solution.t * np.exp(2 * 0.1 * solution.t))[:, np.newaxis],
             atol=1e-7,
         )
@@ -1031,7 +1031,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["var squared"].data, (0.1 * solution.t) ** 2
         )
         np.testing.assert_allclose(
-            solution["var squared"].sensitivities["p"][0],
+            solution["var squared"].sensitivities["p"],
             (2 * 0.1 * solution.t**2).reshape(-1, 1),
             atol=1e-7,
         )
