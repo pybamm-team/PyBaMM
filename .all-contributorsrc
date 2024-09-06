@@ -960,6 +960,15 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "medha-14",
+      "name": "Medha Bhardwaj",
+      "avatar_url": "https://avatars.githubusercontent.com/u/143182673?v=4",
+      "profile": "https://github.com/medha-14",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
