@@ -757,7 +757,7 @@ class BaseModel:
                 f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
-            submodel.set_events(self.variables)
+            submodel.add_events_from(self.variables)
             pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()

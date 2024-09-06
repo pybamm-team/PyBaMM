@@ -102,7 +102,7 @@ class DiffusionElement(pybamm.BaseSubModel):
         z = variables["Distributed SoC"]
         self.initial_conditions = {z: self.param.initial_soc}
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         z_surf = variables["Surface SoC"]
         self.events += [
             pybamm.Event("Minimum surface SoC", z_surf),
