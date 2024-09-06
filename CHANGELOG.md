@@ -29,6 +29,7 @@
   `have_iree` with `has_iree` ([#4398](https://github.com/pybamm-team/PyBaMM/pull/4398))
 - Remove deprecated function `pybamm_install_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
 - Removed legacy python-IDAKLU solver. ([#4326](https://github.com/pybamm-team/PyBaMM/pull/4326))
+- Renamed `set_events` function to `add_events_from` to better reflect its purpose. This may require updating calls to set_events in your codebase. ([#4421](https://github.com/pybamm-team/PyBaMM/pull/4421))
 
 # [v24.5](https://github.com/pybamm-team/PyBaMM/tree/v24.5) - 2024-07-26
 
