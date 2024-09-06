@@ -193,7 +193,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0,
                     model,
                     inputs_dict,
-                    sensitivities=False,
+                    all_sensitivities=False,
                 )
                 solution.solve_time = 0
                 solution.integration_time = 0
@@ -478,7 +478,7 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
-            sensitivities=False,
+            all_sensitivities=False,
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
@@ -696,7 +696,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol,
                 model,
                 inputs_dict,
-                sensitivities=extract_sensitivities_in_solution,
+                all_sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )
             sol.integration_time = integration_time
@@ -736,7 +736,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol,
                 model,
                 inputs_dict,
-                sensitivities=extract_sensitivities_in_solution,
+                all_sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )
             sol.integration_time = integration_time

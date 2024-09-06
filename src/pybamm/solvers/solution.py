@@ -58,11 +58,10 @@ class Solution:
         the event happens.
     termination : str
         String to indicate why the solution terminated
-
-    sensitivities: bool or dict
+    all_sensitivities: bool or dict of lists
         True if sensitivities included as the solution of the explicit forwards
         equations.  False if no sensitivities included/wanted. Dict if sensitivities are
-        provided as a dict of {parameter: sensitivities} pairs.
+        provided as a dict of {parameter: [sensitivities]} pairs.
 
     """
 
@@ -75,7 +74,7 @@ class Solution:
         t_event=None,
         y_event=None,
         termination="final time",
-        sensitivities=False,
+        all_sensitivities=False,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
@@ -99,15 +98,15 @@ class Solution:
         else:
             self.all_inputs = all_inputs
 
-        if isinstance(sensitivities, bool):
-            self._sensitivities = sensitivities
-        elif isinstance(sensitivities, dict):
-            self._sensitivities = {}
-            for key, value in sensitivities.items():
+        if isinstance(all_sensitivities, bool):
+            self._all_sensitivities = all_sensitivities
+        elif isinstance(all_sensitivities, dict):
+            self._all_sensitivities = {}
+            for key, value in all_sensitivities.items():
                 if isinstance(value, list):
-                    self._sensitivities[key] = value
+                    self._all_sensitivities[key] = value
                 else:
-                    self._sensitivities[key] = [value]
+                    self._all_sensitivities[key] = [value]
 
         else:
             raise TypeError("sensitivities arg needs to be a bool or dict")
@@ -147,13 +146,13 @@ class Solution:
         pybamm.citations.register("Andersson2019")
 
     def has_sensitivities(self) -> bool:
-        if isinstance(self._sensitivities, bool):
-            return self._sensitivities
-        elif isinstance(self._sensitivities, dict):
-            return len(self._sensitivities) > 0
+        if isinstance(self._all_sensitivities, bool):
+            return self._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict):
+            return len(self._all_sensitivities) > 0
 
     def extract_explicit_sensitivities(self):
-        self._sensitivities = {}
+        self._all_sensitivities = {}
 
         # extract sensitivities from each sub-solution
         for index, (model, ys, ts, inputs) in enumerate(
@@ -163,10 +162,12 @@ class Solution:
                 model, ys, ts, inputs
             )
             for key, value in sens_segment.items():
-                if key in self._sensitivities:
-                    self._sensitivities[key] = self._sensitivities[key] + [value]
+                if key in self._all_sensitivities:
+                    self._all_sensitivities[key] = self._all_sensitivities[key] + [
+                        value
+                    ]
                 else:
-                    self._sensitivities[key] = [value]
+                    self._all_sensitivities[key] = [value]
 
     def _extract_sensitivity_matrix(self, model, y):
         n_states = model.len_rhs_and_alg
@@ -290,7 +291,7 @@ class Solution:
             return self._y
         except AttributeError:
             # if y is evaluated before sensitivities then need to extract them
-            if isinstance(self._sensitivities, bool) and self._sensitivities:
+            if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
                 self.extract_explicit_sensitivities()
 
             self.set_y()
@@ -300,20 +301,30 @@ class Solution:
     @property
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array"""
-        if isinstance(self._sensitivities, bool):
-            if self._sensitivities:
-                self.extract_explicit_sensitivities()
-            else:
-                self._sensitivities = {}
+        try:
+            return self._sensitivities
+        except AttributeError:
+            self.set_sensitivities()
         return self._sensitivities
 
-    @sensitivities.setter
-    def sensitivities(self, value):
-        """Updates the sensitivity"""
-        # sensitivities must be a dict or bool
-        if not isinstance(value, (bool, dict)):
-            raise TypeError("sensitivities arg needs to be a bool or dict")
-        self._sensitivities = value
+    def set_sensitivities(self):
+        if not self.has_sensitivities():
+            self._sensitivities = {}
+            return
+
+        # extract sensitivities if they are not already extracted
+        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
+            self.extract_explicit_sensitivities()
+
+        is_casadi = isinstance(
+            next(iter(self._all_sensitivities.values()))[0], (casadi.DM, casadi.MX)
+        )
+        self._sensitivities = {}
+        for key, sens in self._all_sensitivities.items():
+            if is_casadi:
+                self._sensitivities[key] = casadi.vertcat(*sens)
+            else:
+                self._sensitivities[key] = np.vstack(sens)
 
     def set_y(self):
         try:
@@ -426,13 +437,13 @@ class Solution:
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
-        if isinstance(self._sensitivities, bool):
-            sensitivities = self._sensitivities
-        elif isinstance(self._sensitivities, dict):
+        if isinstance(self._all_sensitivities, bool):
+            sensitivities = self._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict):
             sensitivities = {}
             n_states = self.all_models[-1].len_rhs_and_alg
-            for key in self._sensitivities:
-                sensitivities[key] = self.sensitivities[key][-1][-n_states:, :]
+            for key in self._all_sensitivities:
+                sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
         new_sol = Solution(
             self.all_ts[-1][-1:],
             self.all_ys[-1][:, -1:],
@@ -441,7 +452,7 @@ class Solution:
             self.t_event,
             self.y_event,
             self.termination,
-            sensitivities=sensitivities,
+            all_sensitivities=sensitivities,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
@@ -491,7 +502,7 @@ class Solution:
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # make sure that sensitivities are extracted if required
-        if isinstance(self._sensitivities, bool) and self._sensitivities:
+        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
             self.extract_explicit_sensitivities()
 
         # Convert single entry to list
@@ -798,21 +809,23 @@ class Solution:
         # - dict if sensitivities are provided as a dict of {parameter: sensitivities}
         # both self and other should have the same type of sensitivities
         # OR both can be either False or {} (i.e. no sensitivities)
-        if isinstance(self._sensitivities, bool) and isinstance(
-            other._sensitivities, bool
+        if isinstance(self._all_sensitivities, bool) and isinstance(
+            other._all_sensitivities, bool
         ):
-            sensitivities = self._sensitivities or other._sensitivities
-        elif isinstance(self._sensitivities, dict) and isinstance(
-            other._sensitivities, dict
+            all_sensitivities = self._all_sensitivities or other._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict) and isinstance(
+            other._all_sensitivities, dict
         ):
-            sensitivities = self._sensitivities
-            for key in other._sensitivities:
-                if key in sensitivities:
-                    sensitivities[key] = sensitivities[key] + other._sensitivities[key]
+            all_sensitivities = self._all_sensitivities
+            for key in other._all_sensitivities:
+                if key in all_sensitivities:
+                    all_sensitivities[key] = (
+                        all_sensitivities[key] + other._all_sensitivities[key]
+                    )
                 else:
-                    sensitivities[key] = other._sensitivities[key]
-        elif not self._sensitivities and not other._sensitivities:
-            sensitivities = {}
+                    all_sensitivities[key] = other._all_sensitivities[key]
+        elif not self._all_sensitivities and not other._all_sensitivities:
+            all_sensitivities = {}
         else:
             raise ValueError("Sensitivities must be of the same type")
 
@@ -824,7 +837,7 @@ class Solution:
             other.t_event,
             other.y_event,
             other.termination,
-            sensitivities=sensitivities,
+            all_sensitivities=all_sensitivities,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -852,7 +865,7 @@ class Solution:
             self.t_event,
             self.y_event,
             self.termination,
-            self._sensitivities,
+            self._all_sensitivities,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -962,7 +975,7 @@ def make_cycle_solution(
         sum_sols.t_event,
         sum_sols.y_event,
         sum_sols.termination,
-        sum_sols.sensitivities,
+        sum_sols._all_sensitivities,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions

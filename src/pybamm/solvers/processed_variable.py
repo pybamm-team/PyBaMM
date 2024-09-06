@@ -419,13 +419,12 @@ class ProcessedVariable:
         "Set up the sensitivity dictionary"
 
         all_S_var = []
-        for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
+        for ts, ys, inputs_stacked, inputs, base_variable in zip(
             self.all_ts,
             self.all_ys,
             self.all_inputs_casadi,
             self.all_inputs,
             self.base_variables,
-            self.solution_sensitivities["all"],
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -461,6 +460,7 @@ class ProcessedVariable:
                     dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
             # Compute sensitivity
+            dy_dp = self.solution_sensitivities["all"]
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
             all_S_var.append(S_var)
 

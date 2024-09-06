@@ -368,7 +368,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # evaluate the sensitivities using idas
-            dyda_ida = sol.sensitivities["a"][0]
+            dyda_ida = sol.sensitivities["a"]
 
             # evaluate the sensitivities using finite difference
             h = 1e-6
@@ -496,8 +496,8 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # evaluate the sensitivities using idas
-            dyda_ida = sol.sensitivities["a"][0]
-            dydb_ida = sol.sensitivities["b"][0]
+            dyda_ida = sol.sensitivities["a"]
+            dydb_ida = sol.sensitivities["b"]
 
             # evaluate the sensitivities using finite difference
             h = 1e-6
