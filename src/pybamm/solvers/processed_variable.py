@@ -66,7 +66,7 @@ class ProcessedVariable:
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
-        self.solution_sensitivities = solution.sensitivities
+        self.all_solution_sensitivities = solution._all_sensitivities
 
         # Store time
         self.t_pts = solution.t
@@ -404,7 +404,7 @@ class ProcessedVariable:
             return {}
         # Otherwise initialise and return sensitivities
         if self._sensitivities is None:
-            if self.solution_sensitivities != {}:
+            if self.all_solution_sensitivities != {}:
                 self.initialise_sensitivity_explicit_forward()
             else:
                 raise ValueError(
@@ -419,12 +419,13 @@ class ProcessedVariable:
         "Set up the sensitivity dictionary"
 
         all_S_var = []
-        for ts, ys, inputs_stacked, inputs, base_variable in zip(
+        for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
             self.all_ts,
             self.all_ys,
             self.all_inputs_casadi,
             self.all_inputs,
             self.base_variables,
+            self.all_solution_sensitivities["all"],
         ):
             # Set up symbolic variables
             t_casadi = casadi.MX.sym("t")
@@ -460,7 +461,6 @@ class ProcessedVariable:
                     dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
             # Compute sensitivity
-            dy_dp = self.solution_sensitivities["all"]
             S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
             all_S_var.append(S_var)
 

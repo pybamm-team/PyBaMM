@@ -307,6 +307,21 @@ class Solution:
             self.set_sensitivities()
         return self._sensitivities
 
+    @sensitivities.setter
+    def sensitivities(self, value):
+        """Updates the sensitivity if False or True. Raises an error if sensitivities are a dict"""
+        # sensitivities must be a dict or bool
+        if not isinstance(value, bool):
+            raise TypeError("sensitivities arg needs to be a bool")
+
+        if isinstance(self._all_sensitivities, dict):
+            raise NotImplementedError(
+                "Setting sensitivities is not supported if sensitivities are "
+                "already provided as a dict of {parameter: sensitivities} pairs."
+            )
+
+        self._all_sensitivities = value
+
     def set_sensitivities(self):
         if not self.has_sensitivities():
             self._sensitivities = {}
@@ -412,6 +427,13 @@ class Solution:
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
+        if isinstance(self._all_sensitivities, bool):
+            sensitivities = self._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict):
+            sensitivities = {}
+            n_states = self.all_models[0].len_rhs_and_alg
+            for key in self._all_sensitivities:
+                sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
         new_sol = Solution(
             self.all_ts[0][:1],
             self.all_ys[0][:, :1],
@@ -420,6 +442,7 @@ class Solution:
             None,
             None,
             "final time",
+            all_sensitivities=sensitivities,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
