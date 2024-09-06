@@ -451,3 +451,79 @@ class BaseIntegrationTestLithiumIon:
         )
 
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_composite_reaction_driven_LAM(self):
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "loss of active material": "reaction-driven",
+        }
+
+        # taken from Ai2020
+        def graphite_volume_change_Ai2020(sto, c_s_max):
+            p1 = 145.907
+            p2 = -681.229
+            p3 = 1334.442
+            p4 = -1415.710
+            p5 = 873.906
+            p6 = -312.528
+            p7 = 60.641
+            p8 = -5.706
+            p9 = 0.386
+            p10 = -4.966e-05
+            t_change = (
+                p1 * sto**9
+                + p2 * sto**8
+                + p3 * sto**7
+                + p4 * sto**6
+                + p5 * sto**5
+                + p6 * sto**4
+                + p7 * sto**3
+                + p8 * sto**2
+                + p9 * sto
+                + p10
+            )
+            return t_change
+
+        # taken from Ai2020
+        def lico2_volume_change_Ai2020(sto, c_s_max):
+            omega = pybamm.Parameter(
+                "Positive electrode partial molar volume [m3.mol-1]"
+            )
+            t_change = omega * c_s_max * sto
+            return t_change
+
+        # use Chen2020 composite and add Ai2020 stress-driven parameters
+        parameter_values = pybamm.ParameterValues("Chen2020_composite")
+        parameter_values.update(
+            {
+                "Primary: Negative electrode LAM constant proportional term [s-1]": 1e-4
+                / 3600,
+                "Secondary: Negative electrode LAM constant proportional term [s-1]": 1e-4
+                / 3600,
+                "Positive electrode LAM constant proportional term [s-1]": 1e-4 / 3600,
+                "Primary: Negative electrode partial molar volume [m3.mol-1]": 3.1e-06,
+                "Primary: Negative electrode Young's modulus [Pa]": 15000000000.0,
+                "Primary: Negative electrode Poisson's ratio": 0.3,
+                "Primary: Negative electrode critical stress [Pa]": 60000000.0,
+                "Secondary: Negative electrode critical stress [Pa]": 60000000.0,
+                "Primary: Negative electrode LAM constant exponential term": 2.0,
+                "Secondary: Negative electrode LAM constant exponential term": 2.0,
+                "Secondary: Negative electrode partial molar volume [m3.mol-1]": 3.1e-06,
+                "Secondary: Negative electrode Young's modulus [Pa]": 15000000000.0,
+                "Secondary: Negative electrode Poisson's ratio": 0.3,
+                "Negative electrode reference concentration for free of deformation [mol.m-3]": 0.0,
+                "Primary: Negative electrode volume change": graphite_volume_change_Ai2020,
+                "Secondary: Negative electrode volume change": graphite_volume_change_Ai2020,
+                "Positive electrode partial molar volume [m3.mol-1]": -7.28e-07,
+                "Positive electrode Young's modulus [Pa]": 375000000000.0,
+                "Positive electrode Poisson's ratio": 0.2,
+                "Positive electrode critical stress [Pa]": 375000000.0,
+                "Positive electrode LAM constant exponential term": 2.0,
+                "Positive electrode reference concentration for free of deformation [mol.m-3]": 0.0,
+                "Positive electrode volume change": lico2_volume_change_Ai2020,
+            },
+            check_already_exists=False,
+        )
+
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
