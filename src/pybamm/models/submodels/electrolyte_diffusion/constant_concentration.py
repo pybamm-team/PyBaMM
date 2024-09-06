@@ -76,6 +76,6 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
             }
         }
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         # No event since the concentration is constant
         pass
