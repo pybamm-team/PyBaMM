@@ -289,11 +289,11 @@ class Solution:
         try:
             return self._y
         except AttributeError:
-            self.set_y()
-
             # if y is evaluated before sensitivities then need to extract them
             if isinstance(self._sensitivities, bool) and self._sensitivities:
                 self.extract_explicit_sensitivities()
+
+            self.set_y()
 
             return self._y
 

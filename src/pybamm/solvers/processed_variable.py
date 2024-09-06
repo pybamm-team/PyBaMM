@@ -465,7 +465,7 @@ class ProcessedVariable:
             all_S_var.append(S_var)
 
         S_var = casadi.vertcat(*all_S_var)
-        sensitivities = {"all": all_S_var}
+        sensitivities = {"all": S_var}
 
         # Add the individual sensitivity
         start = 0

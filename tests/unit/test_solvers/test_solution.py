@@ -89,7 +89,7 @@ class TestSolution(unittest.TestCase):
 
         # Add solution already contained in existing solution
         t3 = np.array([2])
-        y3 = np.ones((20, 1))
+        y3 = np.ones((1, 1))
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
         self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
 
@@ -146,7 +146,8 @@ class TestSolution(unittest.TestCase):
 
         sol_copy = sol1.copy()
         self.assertEqual(sol_copy.all_ts, sol1.all_ts)
-        self.assertEqual(sol_copy.all_ys, sol1.all_ys)
+        for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys):
+            np.testing.assert_array_equal(ys_copy, ys1)
         self.assertEqual(sol_copy.all_inputs, sol1.all_inputs)
         self.assertEqual(sol_copy.all_inputs_casadi, sol1.all_inputs_casadi)
         self.assertEqual(sol_copy.set_up_time, sol1.set_up_time)
