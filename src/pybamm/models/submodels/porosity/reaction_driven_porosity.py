@@ -23,7 +23,6 @@ class ReactionDriven(BaseModel):
         self.x_average = x_average
 
     def get_coupled_variables(self, variables):
-        param = self.param
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
             delta_eps_k = 0
@@ -36,21 +35,23 @@ class ReactionDriven(BaseModel):
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
                 for phase in phases:
-                    if phases_option == "1" and phase == "primary":
+                    if self.options["particle phases"] == "1":
                         phase_name = ""
+                        pref = ""
+                    elif phases_option == "1" and phase == "primary":
+                        phase_name = ""
+                        pref = "Primary: "
                     else:
                         phase_name = phase + " "
+                        pref = phase.capitalize() + ": "
                     L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
-                    if Domain == "Negative":
-                        if phase == "secondary":
-                            L_sei_0 = param.n.sec.L_inner_0 + param.n.sec.L_outer_0
-                        else:
-                            L_sei_0 = param.n.prim.L_inner_0 + param.n.prim.L_outer_0
-                    elif Domain == "Positive":
-                        if phase == "secondary":
-                            L_sei_0 = param.p.sec.L_inner_0 + param.p.sec.L_outer_0
-                        else:
-                            L_sei_0 = param.p.prim.L_inner_0 + param.p.prim.L_outer_0
+                    L_inner_0 = pybamm.Parameter(
+                        f"{pref}Initial inner SEI thickness [m]"
+                    )
+                    L_outer_0 = pybamm.Parameter(
+                        f"{pref}Initial outer SEI thickness [m]"
+                    )
+                    L_sei_0 = L_inner_0 + L_outer_0
                     L_pl_k = variables[
                         f"{Domain} {phase_name}lithium plating thickness [m]"
                     ]
