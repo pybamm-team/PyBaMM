@@ -88,7 +88,7 @@ class ReactionDriven(BaseModel):
 
         return variables
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         eps_p = variables["Positive electrode porosity"]
         self.events.append(
             pybamm.Event(
