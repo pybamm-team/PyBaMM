@@ -36,12 +36,15 @@ class ReactionDriven(BaseModel):
                 phases = self.options.phases[dom]
                 for phase in phases:
                     if self.options["particle phases"] == "1":
+                        # both electrodes have one phase
                         phase_name = ""
                         pref = ""
                     elif phases_option == "1" and phase == "primary":
+                        # `domain` has one phase
                         phase_name = ""
                         pref = "Primary: "
                     else:
+                        # `domain` has more than one phase
                         phase_name = phase + " "
                         pref = phase.capitalize() + ": "
                     L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
