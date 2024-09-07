@@ -16,6 +16,6 @@ Utility functions
 
 .. autofunction:: pybamm.load
 
-.. autofunction:: pybamm.have_jax
+.. autofunction:: pybamm.has_jax
 
 .. autofunction:: pybamm.is_jax_compatible

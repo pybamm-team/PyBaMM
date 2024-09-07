@@ -22,7 +22,7 @@ class BaseIntegrationTestLithiumIon:
         param = pybamm.ParameterValues("Ecker2015")
         rtol = 1e-6
         atol = 1e-6
-        if pybamm.have_idaklu():
+        if pybamm.has_idaklu():
             solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         else:
             solver = pybamm.CasadiSolver(rtol=rtol, atol=atol)
@@ -53,7 +53,7 @@ class BaseIntegrationTestLithiumIon:
         to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if pybamm.have_jax():
+        if pybamm.has_jax():
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
