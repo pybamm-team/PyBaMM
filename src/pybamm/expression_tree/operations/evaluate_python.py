@@ -11,7 +11,7 @@ import scipy.sparse
 
 import pybamm
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
 
     platform = jax.lib.xla_bridge.get_backend().platform.casefold()
@@ -43,7 +43,7 @@ class JaxCooMatrix:
     def __init__(
         self, row: ArrayLike, col: ArrayLike, data: ArrayLike, shape: tuple[int, int]
     ):
-        if not pybamm.have_jax():  # pragma: no cover
+        if not pybamm.has_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )
@@ -527,7 +527,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol: pybamm.Symbol):
-        if not pybamm.have_jax():  # pragma: no cover
+        if not pybamm.has_jax():  # pragma: no cover
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
             )

@@ -70,10 +70,8 @@ class TestBaseSolver(unittest.TestCase):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
         # Check stepping with step size too small
-        dt = 1e-9
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Step time must be at least 1.000 ns"
-        ):
+        dt = -1e-9
+        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be >0"):
             solver.step(None, model, dt)
 
         # Checking if array t_eval lies within range
@@ -355,12 +353,12 @@ class TestBaseSolver(unittest.TestCase):
         assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "fork"
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    @unittest.skipIf(not pybamm.has_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
             return np.array([[y[0] ** 2 + 2 * a], [y[0]]])
 
-        @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+        @unittest.skipIf(not pybamm.has_jax(), "jax or jaxlib is not installed")
         def exact_diff_b(y, a, b):
             return np.array([[y[0]], [0]])
 
