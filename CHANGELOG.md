@@ -4,6 +4,7 @@
 - Removed the `start_step_offset` setting and disabled minimum `dt` warnings for drive cycles with the (`IDAKLUSolver`). ([#4416](https://github.com/pybamm-team/PyBaMM/pull/4416))
 
 ## Breaking changes
+- The parameters "... electrode OCP entropic change [V.K-1]" and "... electrode volume change" are now expected to be functions of stoichiometry only instead of functions of both stoichiometry and maximum concentration ([#](https://github.com/pybamm-team/PyBaMM/pull/))
 - Renamed `set_events` function to `add_events_from` to better reflect its purpose. ([#4421](https://github.com/pybamm-team/PyBaMM/pull/4421))
 
 # [v24.9.0](https://github.com/pybamm-team/PyBaMM/tree/v24.9.0) - 2024-09-03
