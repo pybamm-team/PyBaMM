@@ -204,7 +204,7 @@ class TestBaseBatteryModel:
             pybamm.BaseBatteryModel({"convection": "full transverse"})
         with pytest.raises(pybamm.OptionError, match="particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with pytest.raises(pybamm.OptionError, match="The 'fast diffusion'"):
+        with pytest.raises(pybamm.OptionError, match=r"The 'fast diffusion'"):
             pybamm.BaseBatteryModel({"particle": "fast diffusion"})
         with pytest.raises(pybamm.OptionError, match="working electrode"):
             pybamm.BaseBatteryModel({"working electrode": "bad working electrode"})
@@ -376,7 +376,7 @@ class TestBaseBatteryModel:
             )
 
         # surface thermal model
-        with self.assertRaisesRegex(pybamm.OptionError, "surface temperature"):
+        with pytest.raises(pybamm.OptionError, match="surface temperature"):
             pybamm.BaseBatteryModel(
                 {"surface temperature": "lumped", "thermal": "x-full"}
             )
