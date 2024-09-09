@@ -1108,29 +1108,16 @@ class BaseSolver:
             The initial conditions for the sensitivities, each element of the tuple
             corresponds to an input parameter
         """
-        if not solution.has_sensitivities():
-            raise ValueError(
-                "Solution object must have sensitivities to set sensitivities"
-            )
-        if not model.is_discretised:
-            raise ValueError("Model must be discretised to set sensitivities")
+
         ninputs = len(model.calculate_sensitivities)
         initial_conditions = tuple([] for _ in range(ninputs))
         solution = solution.last_state
         for var in model.initial_conditions:
-            if isinstance(var, pybamm.Variable):
-                try:
-                    final_state = solution[var.name]
-                except KeyError as e:
-                    raise pybamm.ModelError(
-                        f"key {e.args[0] } not found in solution provided"
-                    ) from e
-                final_state = final_state.sensitivities
-                final_state_eval = tuple(
-                    final_state[key] for key in model.calculate_sensitivities
-                )
-            else:
-                raise NotImplementedError("Variable must have type 'Variable'")
+            final_state = solution[var.name]
+            final_state = final_state.sensitivities
+            final_state_eval = tuple(
+                final_state[key] for key in model.calculate_sensitivities
+            )
 
             scale, reference = var.scale.value, var.reference.value
             for i in range(ninputs):
@@ -1141,19 +1128,7 @@ class BaseSolver:
         # discretised
         # Unpack slices for sorting
         y_slices = {var: slce for var, slce in model.y_slices.items()}
-        slices = []
-        for symbol in model.initial_conditions.keys():
-            if isinstance(symbol, pybamm.Concatenation):
-                # must append the slice for the whole concatenation, so that
-                # equations get sorted correctly
-                slices.append(
-                    slice(
-                        y_slices[symbol.children[0]][0].start,
-                        y_slices[symbol.children[-1]][0].stop,
-                    )
-                )
-            else:
-                slices.append(y_slices[symbol][0])
+        slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
 
         # sort equations according to slices
         if isinstance(initial_conditions[0], casadi.DM):
