@@ -14,6 +14,7 @@
 - Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
 - Added lumped surface thermal model ([#4203](https://github.com/pybamm-team/PyBaMM/pull/4203))
+- Added sensitivity calculation support for `pybamm.Simulation` and `pybamm.Experiment` ([#4415](https://github.com/pybamm-team/PyBaMM/pull/4415))
 
 ## Optimizations
 
