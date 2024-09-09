@@ -1330,17 +1330,13 @@ class BaseSolver:
                 # reset y0 to original initial conditions
                 self.set_up(model, model_inputs, ics_only=True)
         elif old_solution.all_models[-1] == model:
-            if using_sensitivities:
-                # initialize with old solution
-                y0, y0S = old_solution._extract_explicit_sensitivities(
-                    old_solution.all_ys[-1][:, -1]
-                )
-                model.y0 = y0
-                model.y0S = y0S
-            else:
-                model.y0 = old_solution.all_ys[-1][:, -1]
+            last_state = old_solution.last_state
+            model.y0 = last_state.all_ys[0]
+            if using_sensitivities and isinstance(last_state._all_sensitivities, dict):
+                full_sens = last_state._all_sensitivities["all"][0]
+                model.y0S = tuple(full_sens[:, i] for i in range(full_sens.shape[1]))
+
         else:
-            # todo: this does not play well with explicit sensitivity calculations (returns the wrong y0)
             _, concatenated_initial_conditions = model.set_initial_conditions_from(
                 old_solution, return_type="ics"
             )
@@ -1354,6 +1350,7 @@ class BaseSolver:
             explicit_sensitivities
             and using_sensitivities
             and not isinstance(old_solution, pybamm.EmptySolution)
+            and not old_solution.all_models[-1] == model
         ):
             y0_list = []
             if model.len_rhs > 0:
