@@ -657,6 +657,8 @@ class ElectrodeSOHSolver:
             The tolerance for the solver used to compute the initial stoichiometries.
             A lower value results in higher precision but may increase computation time.
             Default is 1e-6.
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
 
         Returns
         -------
@@ -727,6 +729,11 @@ class ElectrodeSOHSolver:
         Calculate min/max stoichiometries
         given voltage limits, open-circuit potentials, etc defined by parameter_values
 
+        Parameters
+        ----------
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
+
         Returns
         -------
         x_0, x_100, y_100, y_0
@@ -751,7 +758,7 @@ class ElectrodeSOHSolver:
         sol = self.solve(all_inputs)
         return [sol["x_0"], sol["x_100"], sol["y_100"], sol["y_0"]]
 
-    def get_initial_ocps(self, initial_value, tol=1e-6):
+    def get_initial_ocps(self, initial_value, tol=1e-6, inputs=None):
         """
         Calculate initial open-circuit potentials to start off the simulation at a
         particular state of charge, given voltage limits, open-circuit potentials, etc
@@ -760,9 +767,14 @@ class ElectrodeSOHSolver:
         Parameters
         ----------
         initial_value : float
-            Target SOC, must be between 0 and 1.
+            Target initial value.
+            If integer, interpreted as SOC, must be between 0 and 1.
+            If string e.g. "4 V", interpreted as voltage,
+            must be between V_min and V_max.
         tol: float, optional
             Tolerance for the solver used in calculating initial stoichiometries.
+        inputs : dict, optional
+            A dictionary of input parameters passed to the model.
 
         Returns
         -------
@@ -771,7 +783,7 @@ class ElectrodeSOHSolver:
         """
         parameter_values = self.parameter_values
         param = self.param
-        x, y = self.get_initial_stoichiometries(initial_value, tol)
+        x, y = self.get_initial_stoichiometries(initial_value, tol, inputs=inputs)
         if self.options["open-circuit potential"] == "MSMR":
             msmr_pot_model = _get_msmr_potential_model(
                 self.parameter_values, self.param
@@ -783,8 +795,8 @@ class ElectrodeSOHSolver:
             Up = sol["Up"].data[0]
         else:
             T_ref = parameter_values["Reference temperature [K]"]
-            Un = parameter_values.evaluate(param.n.prim.U(x, T_ref))
-            Up = parameter_values.evaluate(param.p.prim.U(y, T_ref))
+            Un = parameter_values.evaluate(param.n.prim.U(x, T_ref), inputs=inputs)
+            Up = parameter_values.evaluate(param.p.prim.U(y, T_ref), inputs=inputs)
         return Un, Up
 
     def get_min_max_ocps(self):
@@ -871,6 +883,8 @@ def get_initial_stoichiometries(
         The tolerance for the solver used to compute the initial stoichiometries.
         A lower value results in higher precision but may increase computation time.
         Default is 1e-6.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
 
     Returns
     -------
@@ -918,6 +932,8 @@ def get_initial_ocps(
     param=None,
     known_value="cyclable lithium capacity",
     options=None,
+    tol=1e-6,
+    inputs=None,
 ):
     """
     Calculate initial open-circuit potentials to start off the simulation at a
@@ -942,6 +958,10 @@ def get_initial_ocps(
     options : dict-like, optional
         A dictionary of options to be passed to the model, see
         :class:`pybamm.BatteryModelOptions`.
+    tol: float, optional
+        Tolerance for the solver used in calculating initial open-circuit potentials.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
 
     Returns
     -------
@@ -949,7 +969,7 @@ def get_initial_ocps(
         The initial electrode OCPs that give the desired initial state of charge
     """
     esoh_solver = ElectrodeSOHSolver(parameter_values, param, known_value, options)
-    return esoh_solver.get_initial_ocps(initial_value)
+    return esoh_solver.get_initial_ocps(initial_value, tol, inputs=inputs)
 
 
 def get_min_max_ocps(
