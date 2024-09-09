@@ -52,6 +52,20 @@ class TestSolution(unittest.TestCase):
             pybamm.Solution(ts, bad_ys, model, {})
         self.assertIn("exceeds the maximum", captured.records[0].getMessage())
 
+        with self.assertRaisesRegex(
+            TypeError, "sensitivities arg needs to be a bool or dict"
+        ):
+            pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
+
+        sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
+        with self.assertRaisesRegex(TypeError, "sensitivities arg needs to be a bool"):
+            sol.sensitivities = "bad"
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Setting sensitivities is not supported if sensitivities are already provided as a dict",
+        ):
+            sol.sensitivities = True
+
     def test_add_solutions(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
@@ -110,6 +124,23 @@ class TestSolution(unittest.TestCase):
             pybamm.SolverError, "Only a Solution or None can be added to a Solution"
         ):
             2 + sol3
+
+        sol1 = pybamm.Solution(
+            t1,
+            y1,
+            pybamm.BaseModel(),
+            {},
+            all_sensitivities={"test": [np.ones((1, 3))]},
+        )
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {}, all_sensitivities=True)
+        with self.assertRaisesRegex(
+            ValueError, "Sensitivities must be of the same type"
+        ):
+            sol3 = sol1 + sol2
+        sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {}, all_sensitivities=False)
+        sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
+        sol3 = sol1 + sol2
+        self.assertFalse(sol3._all_sensitivities)
 
     def test_add_solutions_different_models(self):
         # Set up first solution
