@@ -240,7 +240,7 @@ class TestBaseModel:
                 u = variables["u"]
                 self.initial_conditions = {u: c}
 
-            def set_events(self, variables):
+            def add_events_from(self, variables):
                 e = pybamm.InputParameter("e")
                 u = variables["u"]
                 self.events = [pybamm.Event("u=e", u - e)]
@@ -1159,7 +1159,7 @@ class TestBaseModel:
                 v = variables["v"]
                 self.initial_conditions = {u: 0, v: 0}
 
-            def set_events(self, variables):
+            def add_events_from(self, variables):
                 u = variables["u"]
                 self.events.append(
                     pybamm.Event(

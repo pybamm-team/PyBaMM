@@ -29,8 +29,8 @@ class TestOKane2022:
                 [1000, 16566.5, 33133, pybamm.Scalar(298.15)],
                 0.33947,
             ),
-            ("Negative electrode cracking rate", [pybamm.Scalar(298.15)], 3.9e-20),
-            ("Negative electrode volume change", [pybamm.Scalar(0.9), 33133], 0.0897),
+            "Negative electrode cracking rate": ([T], 3.9e-20),
+            "Negative electrode volume change": ([sto], 0.0897),
             # Positive electrode
             (
                 "Positive particle diffusivity [m2.s-1]",
@@ -42,13 +42,14 @@ class TestOKane2022:
                 [1000, 31552, 63104, pybamm.Scalar(298.15)],
                 3.4123,
             ),
-            ("Positive electrode OCP [V]", [pybamm.Scalar(0.9)], 3.5682),
-            ("Positive electrode cracking rate", [pybamm.Scalar(298.15)], 3.9e-20),
-            ("Positive electrode volume change", [pybamm.Scalar(0.9), 63104], 0.70992),
-        ],
-    )
-    def test_functions(self, name, inputs, expected_output):
-        param = pybamm.ParameterValues("OKane2022")
-        assert param.evaluate(param[name](*inputs)) == pytest.approx(
-            expected_output, abs=0.0001
-        )
+            "Positive electrode OCP [V]": ([sto], 3.5682),
+            "Positive electrode cracking rate": ([T], 3.9e-20),
+            "Positive electrode volume change": ([sto], 0.70992),
+        }
+
+        for name, value in fun_test.items():
+            self.assertAlmostEqual(
+                param.evaluate(param[name](*value[0])), value[1], places=4
+            )
+
+

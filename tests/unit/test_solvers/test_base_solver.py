@@ -70,10 +70,8 @@ class TestBaseSolver(unittest.TestCase):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
         # Check stepping with step size too small
-        dt = 1e-9
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Step time must be at least 1.000 ns"
-        ):
+        dt = -1e-9
+        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be >0"):
             solver.step(None, model, dt)
 
         # Checking if array t_eval lies within range
