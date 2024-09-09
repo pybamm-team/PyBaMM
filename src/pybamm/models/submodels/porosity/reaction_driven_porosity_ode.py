@@ -94,7 +94,7 @@ class ReactionDrivenODE(BaseModel):
             eps = variables["Porosity"]
             self.initial_conditions = {eps: self.param.epsilon_init}
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         for domain in self.options.whole_cell_domains:
             if domain == "separator":
                 continue
