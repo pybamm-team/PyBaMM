@@ -51,5 +51,3 @@ class TestOKane2022:
             self.assertAlmostEqual(
                 param.evaluate(param[name](*value[0])), value[1], places=4
             )
-
-
