@@ -316,6 +316,17 @@ class TestSimulation(unittest.TestCase):
         sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
+    def test_restricted_input_params(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Initial temperature [K]": "[input]"})
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        with self.assertRaisesRegex(pybamm.ModelError, "Initial temperature"):
+            sim.solve([0, 3600])
+
     def test_esoh_with_input_param(self):
         # Test that initial soc works with a relevant input parameter
         model = pybamm.lithium_ion.DFN({"working electrode": "positive"})

@@ -840,13 +840,11 @@ class Solution:
             other._all_sensitivities, dict
         ):
             all_sensitivities = self._all_sensitivities
+            # we can assume that the keys are the same for both solutions
             for key in other._all_sensitivities:
-                if key in all_sensitivities:
-                    all_sensitivities[key] = (
-                        all_sensitivities[key] + other._all_sensitivities[key]
-                    )
-                else:
-                    all_sensitivities[key] = other._all_sensitivities[key]
+                all_sensitivities[key] = (
+                    all_sensitivities[key] + other._all_sensitivities[key]
+                )
         elif not self._all_sensitivities and not other._all_sensitivities:
             all_sensitivities = {}
         else:
