@@ -102,7 +102,7 @@ class CrackPropagation(BaseMechanics):
             l_cr_0 = pybamm.PrimaryBroadcast(l_cr_0, f"{domain} electrode")
         self.initial_conditions = {l_cr: l_cr_0}
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         domain, Domain = self.domain_Domain
 
         if self.x_average is True:
