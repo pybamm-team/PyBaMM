@@ -866,12 +866,13 @@ class Solution:
         new_sol.closest_event_idx = other.closest_event_idx
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
-        # Set solution time (if available)
-        if getattr(self, "solve_time", None) is not None and getattr(
-            other, "solve_time", None
-        ):
-            new_sol.solve_time = self.solve_time + other.solve_time
-            new_sol.integration_time = self.integration_time + other.integration_time
+        # Add timers (if available)
+        for attr in ["solve_time", "integration_time", "set_up_time"]:
+            if (
+                getattr(self, attr, None) is not None
+                and getattr(other, attr, None) is not None
+            ):
+                setattr(new_sol, attr, getattr(self, attr) + getattr(other, attr))
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
