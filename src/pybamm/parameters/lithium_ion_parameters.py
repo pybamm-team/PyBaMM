@@ -669,11 +669,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         "MSMR" formulation, stoichiometry is explicitly defined as a function of U and
         T, and dUdT is only used to calculate the reversible heat generation term.
         """
-        domain, Domain = self.domain_Domain
+        Domain = self.domain.capitalize()
         inputs = {
             f"{Domain} particle stoichiometry": sto,
-            f"{self.phase_prefactor}Maximum {domain} particle "
-            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode OCP entropic change [V.K-1]",
@@ -794,12 +792,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         Volume change for the electrode; sto should be R-averaged
         """
-        domain, Domain = self.domain_Domain
+        Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{Domain} electrode volume change",
             {
-                "Particle stoichiometry": sto,
-                f"{self.phase_prefactor}Maximum {domain} particle "
-                "surface concentration [mol.m-3]": self.c_max,
+                f"{Domain} particle stoichiometry": sto,
             },
         )
