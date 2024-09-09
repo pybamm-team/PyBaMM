@@ -1131,16 +1131,10 @@ class BaseSolver:
         slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
 
         # sort equations according to slices
-        if isinstance(initial_conditions[0][0], casadi.DM):
-            concatenated_initial_conditions = [
-                casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
-                for init in initial_conditions
-            ]
-        else:
-            concatenated_initial_conditions = [
-                np.vstack([eq for _, eq in sorted(zip(slices, init))])
-                for init in initial_conditions
-            ]
+        concatenated_initial_conditions = [
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
+            for init in initial_conditions
+        ]
         return concatenated_initial_conditions
 
     def process_t_interp(self, t_interp):
