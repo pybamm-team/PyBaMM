@@ -233,7 +233,7 @@ def copper_thermal_conductivity_CRC(T):
 
 def graphite_LGM50_diffusivity_ORegan2022(sto, T):
     """
-    LG M50 Graphite diffusivity as a function of stochiometry, in this case the
+    LG M50 Graphite diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from [1].
 
     References
@@ -245,7 +245,7 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
     T: :class:`pybamm.Symbol`
        Dimensional temperature
 
@@ -292,7 +292,7 @@ def graphite_LGM50_diffusivity_ORegan2022(sto, T):
 
 def graphite_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 Graphite open-circuit potential as a function of stochiometry, fit taken
+    LG M50 Graphite open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
     References
@@ -305,7 +305,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
 
     Returns
     -------
@@ -439,10 +439,10 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
     return lambda_wet
 
 
-def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
+def graphite_LGM50_entropic_change_ORegan2022(sto):
     """
     LG M50 Graphite entropic change in open-circuit potential (OCP) at a temperature of
-    298.15K as a function of the stochiometry. The fit is taken from [1].
+    298.15K as a function of the stoichiometry. The fit is taken from [1].
 
     References
     ----------
@@ -453,7 +453,7 @@ def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
 
     Returns
     -------
@@ -525,7 +525,7 @@ def nmc_LGM50_diffusivity_ORegan2022(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
     T: :class:`pybamm.Symbol`
        Dimensional temperature
 
@@ -579,7 +579,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
      Parameters
      ----------
      sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
 
      Returns
      -------
@@ -712,10 +712,10 @@ def nmc_LGM50_thermal_conductivity_ORegan2022(T):
     return lambda_wet
 
 
-def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
+def nmc_LGM50_entropic_change_ORegan2022(sto):
     """
     LG M50 NMC 811 entropic change in open-circuit potential (OCP) at a temperature of
-    298.15K as a function of the stochiometry. The fit is taken from [1].
+    298.15K as a function of the stoichiometry. The fit is taken from [1].
 
     References
     ----------
@@ -726,7 +726,7 @@ def nmc_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
 
     Returns
     -------

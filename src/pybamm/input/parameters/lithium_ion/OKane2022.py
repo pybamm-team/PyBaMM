@@ -96,7 +96,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
 
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
-    LG M50 Graphite diffusivity as a function of stochiometry, in this case the
+    LG M50 Graphite diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from [1].
 
     References
@@ -109,7 +109,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
     T: :class:`pybamm.Symbol`
        Dimensional temperature
 
@@ -165,9 +165,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def graphite_volume_change_Ai2020(sto, c_s_max):
+def graphite_volume_change_Ai2020(sto):
     """
-    Graphite particle volume change as a function of stochiometry [1, 2].
+    Graphite particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -182,7 +182,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
     Returns
     -------
@@ -260,7 +260,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
      Parameters
      ----------
      sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
      T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -279,7 +279,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
+    LG M50 NMC open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
     References
@@ -292,7 +292,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
@@ -344,9 +344,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def volume_change_Ai2020(sto, c_s_max):
+def volume_change_Ai2020(sto):
     """
-    Particle volume change as a function of stochiometry [1, 2].
+    Particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -361,7 +361,7 @@ def volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
     Returns
     -------
@@ -369,6 +369,7 @@ def volume_change_Ai2020(sto, c_s_max):
         volume change, dimensionless, normalised by particle volume
     """
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
+    c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
     t_change = omega * c_s_max * sto
     return t_change
 

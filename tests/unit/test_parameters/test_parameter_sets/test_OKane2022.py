@@ -27,7 +27,7 @@ class TestOKane2022(unittest.TestCase):
                 0.33947,
             ),
             "Negative electrode cracking rate": ([T], 3.9e-20),
-            "Negative electrode volume change": ([sto, 33133], 0.0897),
+            "Negative electrode volume change": ([sto], 0.0897),
             # Positive electrode
             "Positive particle diffusivity [m2.s-1]": ([sto, T], 4e-15),
             "Positive electrode exchange-current density [A.m-2]": (
@@ -36,7 +36,7 @@ class TestOKane2022(unittest.TestCase):
             ),
             "Positive electrode OCP [V]": ([sto], 3.5682),
             "Positive electrode cracking rate": ([T], 3.9e-20),
-            "Positive electrode volume change": ([sto, 63104], 0.70992),
+            "Positive electrode volume change": ([sto], 0.70992),
         }
 
         for name, value in fun_test.items():

@@ -203,7 +203,7 @@ class TestBPX(unittest.TestCase):
                 D = param[f"{electrode} particle diffusivity [m2.s-1]"]
                 dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
                 check_constant_output(D)
-                check_constant_output(dUdT)
+                self.assertEqual(dUdT, 1)
 
             kappa = param["Electrolyte conductivity [S.m-1]"]
             De = param["Electrolyte diffusivity [m2.s-1]"]
@@ -260,9 +260,7 @@ class TestBPX(unittest.TestCase):
                 self.assertIsInstance(D, pybamm.Interpolant)
                 OCP = param[f"{electrode} electrode OCP [V]"](c)
                 self.assertIsInstance(OCP, pybamm.Interpolant)
-                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](
-                    c, 10000
-                )
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
                 self.assertIsInstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
