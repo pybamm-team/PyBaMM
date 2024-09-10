@@ -618,13 +618,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
-                    "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', 'loss of active material'"
+                    "'Fickian diffusion'."
                 )
 
         if options["surface temperature"] == "lumped":
