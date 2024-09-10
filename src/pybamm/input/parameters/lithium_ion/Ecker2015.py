@@ -316,9 +316,9 @@ def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
         Exchange-current density [A.m-2]
     """
 
-    k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
+    k_pl = pybamm.Parameter("Negative lithium plating kinetic rate constant [m.s-1]")
 
-    return pybamm.constants.F * k_plating * c_e
+    return pybamm.constants.F * k_pl * c_e
 
 
 def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
@@ -350,9 +350,9 @@ def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
         Exchange-current density [A.m-2]
     """
 
-    k_plating = pybamm.Parameter("Lithium plating kinetic rate constant [m.s-1]")
+    k_pl = pybamm.Parameter("Negative lithium plating kinetic rate constant [m.s-1]")
 
-    return pybamm.constants.F * k_plating * c_Li
+    return pybamm.constants.F * k_pl * c_Li
 
 
 def SEI_limited_dead_lithium_OKane2022(L_sei):
@@ -374,9 +374,9 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
         Dead lithium decay rate [s-1]
     """
 
-    gamma_0 = pybamm.Parameter("Dead lithium decay constant [s-1]")
-    L_inner_0 = pybamm.Parameter("Initial inner SEI thickness [m]")
-    L_outer_0 = pybamm.Parameter("Initial outer SEI thickness [m]")
+    gamma_0 = pybamm.Parameter("Negative dead lithium decay constant [s-1]")
+    L_inner_0 = pybamm.Parameter("Initial negative inner SEI thickness [m]")
+    L_outer_0 = pybamm.Parameter("Initial negative outer SEI thickness [m]")
     L_sei_0 = L_inner_0 + L_outer_0
 
     gamma = gamma_0 * L_sei_0 / L_sei
@@ -502,37 +502,37 @@ def get_parameter_values():
         "chemistry": "lithium_ion",
         # lithium plating
         "Lithium metal partial molar volume [m3.mol-1]": 1.3e-05,
-        "Lithium plating kinetic rate constant [m.s-1]": 1e-10,
-        "Exchange-current density for plating [A.m-2]"
+        "Negative lithium plating kinetic rate constant [m.s-1]": 1e-10,
+        "Exchange-current density for negative lithium plating [A.m-2]"
         "": plating_exchange_current_density_OKane2020,
-        "Exchange-current density for stripping [A.m-2]"
+        "Exchange-current density for negative lithium stripping [A.m-2]"
         "": stripping_exchange_current_density_OKane2020,
-        "Initial plated lithium concentration [mol.m-3]": 0.0,
-        "Typical plated lithium concentration [mol.m-3]": 1000.0,
-        "Lithium plating transfer coefficient": 0.5,
-        "Dead lithium decay constant [s-1]": 1e-06,
-        "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
+        "Initial negative lithium plating concentration [mol.m-3]": 0.0,
+        "Negative lithium plating reference concentration [mol.m-3]": 1000.0,
+        "Negative lithium plating transfer coefficient": 0.5,
+        "Negative dead lithium decay constant [s-1]": 1e-06,
+        "Negative dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
         # sei
-        "Ratio of lithium moles to SEI moles": 2.0,
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "SEI reaction exchange current density [A.m-2]": 1.5e-07,
-        "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
-        "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
-        "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 2.5e-09,
-        "Initial outer SEI thickness [m]": 2.5e-09,
-        "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
-        "EC diffusivity [m2.s-1]": 2e-18,
-        "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.4,
-        "SEI growth activation energy [J.mol-1]": 0.0,
+        "Ratio of lithium moles to negative SEI moles": 2.0,
+        "Negative inner SEI reaction proportion": 0.5,
+        "Negative inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Negative outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Negative SEI reaction exchange current density [A.m-2]": 1.5e-07,
+        "Negative SEI resistivity [Ohm.m]": 200000.0,
+        "Negative outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Bulk solvent concentration for negative SEI [mol.m-3]": 2636.0,
+        "Negative inner SEI open-circuit potential [V]": 0.1,
+        "Negative outer SEI open-circuit potential [V]": 0.8,
+        "Negative inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Negative inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Negative lithium interstitial reference concentration [mol.m-3]": 15.0,
+        "Initial negative inner SEI thickness [m]": 2.5e-09,
+        "Initial negative outer SEI thickness [m]": 2.5e-09,
+        "Negative EC initial concentration in electrolyte [mol.m-3]": 4541.0,
+        "EC diffusivity through negative SEI [m2.s-1]": 2e-18,
+        "Negative SEI kinetic rate constant [m.s-1]": 1e-12,
+        "Negative SEI open-circuit potential [V]": 0.4,
+        "Negative SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         # cell

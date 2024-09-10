@@ -390,64 +390,83 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         # SEI parameters
         self.V_bar_inner = pybamm.Parameter(
-            f"{pref}Inner SEI partial molar volume [m3.mol-1]"
+            f"{pref}{Domain} inner SEI partial molar volume [m3.mol-1]"
         )
         self.V_bar_outer = pybamm.Parameter(
-            f"{pref}Outer SEI partial molar volume [m3.mol-1]"
+            f"{pref}{Domain} outer SEI partial molar volume [m3.mol-1]"
         )
-
         self.j0_sei = pybamm.Parameter(
-            f"{pref}SEI reaction exchange current density [A.m-2]"
+            f"{pref}{Domain} SEI reaction exchange current density [A.m-2]"
         )
-
-        self.R_sei = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
-        self.D_sol = pybamm.Parameter(f"{pref}Outer SEI solvent diffusivity [m2.s-1]")
-        self.c_sol = pybamm.Parameter(f"{pref}Bulk solvent concentration [mol.m-3]")
-        self.U_inner = pybamm.Parameter(f"{pref}Inner SEI open-circuit potential [V]")
-        self.U_outer = pybamm.Parameter(f"{pref}Outer SEI open-circuit potential [V]")
+        self.R_sei = pybamm.Parameter(f"{pref}{Domain} SEI resistivity [Ohm.m]")
+        self.D_sol = pybamm.Parameter(
+            f"{pref}{Domain} outer SEI solvent diffusivity [m2.s-1]"
+        )
+        self.c_sol = pybamm.Parameter(
+            f"{pref} Bulk solvent concentration for {domain} SEI [mol.m-3]"
+        )
+        self.U_inner = pybamm.Parameter(
+            f"{pref}{Domain} inner SEI open-circuit potential [V]"
+        )
+        self.U_outer = pybamm.Parameter(
+            f"{pref}{Domain} outer SEI open-circuit potential [V]"
+        )
         self.kappa_inner = pybamm.Parameter(
-            f"{pref}Inner SEI electron conductivity [S.m-1]"
+            f"{pref}{Domain} inner SEI electron conductivity [S.m-1]"
         )
         self.D_li = pybamm.Parameter(
-            f"{pref}Inner SEI lithium interstitial diffusivity [m2.s-1]"
+            f"{pref}{Domain} inner SEI lithium interstitial diffusivity [m2.s-1]"
         )
         self.c_li_0 = pybamm.Parameter(
-            f"{pref}Lithium interstitial reference concentration [mol.m-3]"
+            f"{pref}{Domain} lithium interstitial reference concentration [mol.m-3]"
         )
-        self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
-        self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
+        self.L_inner_0 = pybamm.Parameter(
+            f"{pref}Initial {domain} inner SEI thickness [m]"
+        )
+        self.L_outer_0 = pybamm.Parameter(
+            f"{pref}Initial {domain} outer SEI thickness [m]"
+        )
+        self.L_sei_0 = self.L_inner_0 + self.L_outer_0
         self.L_inner_crack_0 = pybamm.Parameter(
-            f"{pref}Initial inner SEI on cracks thickness [m]"
+            f"{pref}Initial {domain} inner SEI on cracks thickness [m]"
         )
         self.L_outer_crack_0 = pybamm.Parameter(
-            f"{pref}Initial outer SEI on cracks thickness [m]"
+            f"{pref}Initial {domain} outer SEI on cracks thickness [m]"
         )
-
-        self.L_sei_0 = self.L_inner_0 + self.L_outer_0
-        self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")
-        self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
+        self.E_sei = pybamm.Parameter(
+            f"{pref}{Domain} SEI growth activation energy [J.mol-1]"
+        )
+        self.alpha_SEI = pybamm.Parameter(
+            f"{pref}{Domain} SEI growth transfer coefficient"
+        )
         self.inner_sei_proportion = pybamm.Parameter(
-            f"{pref}Inner SEI reaction proportion"
+            f"{pref}{Domain} inner SEI reaction proportion"
         )
-        self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
+        self.z_sei = pybamm.Parameter(
+            f"{pref}Ratio of lithium moles to {domain} SEI moles"
+        )
 
         # EC reaction
         self.c_ec_0 = pybamm.Parameter(
-            f"{pref}EC initial concentration in electrolyte [mol.m-3]"
+            f"{pref}{Domain} EC initial concentration in electrolyte [mol.m-3]"
         )
-        self.D_ec = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
-        self.k_sei = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
-        self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
+        self.D_ec = pybamm.Parameter(
+            f"{pref} EC diffusivity through {domain} SEI [m2.s-1]"
+        )
+        self.k_sei = pybamm.Parameter(
+            f"{pref}{Domain} SEI kinetic rate constant [m.s-1]"
+        )
+        self.U_sei = pybamm.Parameter(f"{pref}{Domain} SEI open-circuit potential [V]")
 
         # Lithium plating parameters
-        self.c_Li_typ = pybamm.Parameter(
-            f"{pref}Typical plated lithium concentration [mol.m-3]"
+        self.c_Li_ref = pybamm.Parameter(
+            f"{pref}{Domain} lithium plating reference concentration [mol.m-3]"
         )
         self.c_plated_Li_0 = pybamm.Parameter(
-            f"{pref}Initial plated lithium concentration [mol.m-3]"
+            f"{pref}Initial {domain} lithium plating concentration [mol.m-3]"
         )
         self.alpha_plating = pybamm.Parameter(
-            f"{pref}Lithium plating transfer coefficient"
+            f"{pref}{Domain} lithium plating transfer coefficient"
         )
         self.alpha_stripping = 1 - self.alpha_plating
 
@@ -591,27 +610,29 @@ class ParticleLithiumIonParameters(BaseParameters):
 
     def j0_stripping(self, c_e, c_Li, T):
         """Dimensional exchange-current density for stripping [A.m-2]"""
-        Domain = self.domain.capitalize()
+        domain, Domain = self.domain_Domain
         inputs = {
             f"{Domain} electrolyte concentration [mol.m-3]": c_e,
             f"{Domain} plated lithium concentration [mol.m-3]": c_Li,
             f"{Domain} temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}Exchange-current density for stripping [A.m-2]",
+            f"{self.phase_prefactor}"
+            f"Exchange-current density for {domain} lithium stripping [A.m-2]",
             inputs,
         )
 
     def j0_plating(self, c_e, c_Li, T):
         """Dimensional exchange-current density for plating [A.m-2]"""
-        Domain = self.domain.capitalize()
+        domain, Domain = self.domain_Domain
         inputs = {
             f"{Domain} electrolyte concentration [mol.m-3]": c_e,
             f"{Domain} plated lithium concentration [mol.m-3]": c_Li,
             f"{Domain} temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}Exchange-current density for plating [A.m-2]",
+            f"{self.phase_prefactor}"
+            f"Exchange-current density for {domain} lithium plating [A.m-2]",
             inputs,
         )
 
@@ -620,7 +641,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         inputs = {f"{Domain} total {self.phase_name}SEI thickness [m]": L_sei}
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}Dead lithium decay rate [s-1]", inputs
+            f"{self.phase_prefactor}{Domain} dead lithium decay rate [s-1]", inputs
         )
 
     def U(self, sto, T, lithiation=None):
