@@ -384,7 +384,7 @@ class BaseIntegrationTestLithiumIon:
         }
 
         # taken from Ai2020
-        def graphite_volume_change_Ai2020(sto, c_s_max):
+        def graphite_volume_change_Ai2020(sto):
             p1 = 145.907
             p2 = -681.229
             p3 = 1334.442
@@ -410,10 +410,11 @@ class BaseIntegrationTestLithiumIon:
             return t_change
 
         # taken from Ai2020
-        def lico2_volume_change_Ai2020(sto, c_s_max):
+        def lico2_volume_change_Ai2020(sto):
             omega = pybamm.Parameter(
                 "Positive electrode partial molar volume [m3.mol-1]"
             )
+            c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
             t_change = omega * c_s_max * sto
             return t_change
 
@@ -460,7 +461,7 @@ class BaseIntegrationTestLithiumIon:
         }
 
         # taken from Ai2020
-        def graphite_volume_change_Ai2020(sto, c_s_max):
+        def graphite_volume_change_Ai2020(sto):
             p1 = 145.907
             p2 = -681.229
             p3 = 1334.442
@@ -486,10 +487,11 @@ class BaseIntegrationTestLithiumIon:
             return t_change
 
         # taken from Ai2020
-        def lico2_volume_change_Ai2020(sto, c_s_max):
+        def lico2_volume_change_Ai2020(sto):
             omega = pybamm.Parameter(
                 "Positive electrode partial molar volume [m3.mol-1]"
             )
+            c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
             t_change = omega * c_s_max * sto
             return t_change
 
