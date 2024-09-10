@@ -49,10 +49,10 @@ class ReactionDriven(BaseModel):
                         L_sei_0 = pybamm.Scalar(0)
                     else:
                         L_inner_0 = pybamm.Parameter(
-                            f"{pref}Initial {domain} inner SEI thickness [m]"
+                            f"{pref}Initial {dom} inner SEI thickness [m]"
                         )
                         L_outer_0 = pybamm.Parameter(
-                            f"{pref}Initial {domain} outer SEI thickness [m]"
+                            f"{pref}Initial {dom} outer SEI thickness [m]"
                         )
                         L_sei_0 = L_inner_0 + L_outer_0
                     L_pl_k = variables[
