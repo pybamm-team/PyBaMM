@@ -43,7 +43,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 def silicon_ocp_lithiation_Mark2016(sto):
     """
     silicon Open-circuit Potential (OCP) as a a function of the
-    stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
+    stoichiometry. The fit is taken from the Enertech cell [1], which is only accurate
     for 0 < sto < 1.
 
     References
@@ -55,7 +55,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
     Parameters
     ----------
     sto: double
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     Returns
     -------
@@ -87,7 +87,7 @@ def silicon_ocp_lithiation_Mark2016(sto):
 def silicon_ocp_delithiation_Mark2016(sto):
     """
     silicon Open-circuit Potential (OCP) as a a function of the
-    stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
+    stoichiometry. The fit is taken from the Enertech cell [1], which is only accurate
     for 0 < sto < 1.
 
     References
@@ -99,7 +99,7 @@ def silicon_ocp_delithiation_Mark2016(sto):
     Parameters
     ----------
     sto: double
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     Returns
     -------
@@ -170,7 +170,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
+    LG M50 NMC open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
     References
@@ -183,7 +183,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
