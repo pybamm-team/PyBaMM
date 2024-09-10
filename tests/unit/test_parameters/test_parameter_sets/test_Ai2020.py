@@ -22,10 +22,10 @@ class TestAi2020:
                 0.6098,
             ),
             "Positive electrode OCP entropic change [V.K-1]": (
-                [sto, c_p_max],
+                [sto],
                 -2.1373e-4,
             ),
-            "Positive electrode volume change": ([sto, c_p_max], -1.8179e-2),
+            "Positive electrode volume change": ([sto], -1.8179e-2),
             # Negative electrode
             "Negative electrode cracking rate": ([T], 3.9e-20),
             "Negative particle diffusivity [m2.s-1]": ([sto, T], 3.9e-14),
@@ -34,10 +34,10 @@ class TestAi2020:
                 0.4172,
             ),
             "Negative electrode OCP entropic change [V.K-1]": (
-                [sto, c_n_max],
+                [sto],
                 -1.1033e-4,
             ),
-            "Negative electrode volume change": ([sto, c_n_max], 5.1921e-2),
+            "Negative electrode volume change": ([sto], 5.1921e-2),
         }
 
         for name, value in fun_test.items():
