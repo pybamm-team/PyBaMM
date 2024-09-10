@@ -5,7 +5,7 @@ import pybamm
 class TestOKane2022:
     @pytest.mark.parametrize(
         "name, inputs, expected_output",
-        [
+        {
             # Lithium plating
             (
                 "Exchange-current density for plating [A.m-2]",
