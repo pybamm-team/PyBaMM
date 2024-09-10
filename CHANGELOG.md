@@ -3,6 +3,10 @@
 ## Optimizations
 - Removed the `start_step_offset` setting and disabled minimum `dt` warnings for drive cycles with the (`IDAKLUSolver`). ([#4416](https://github.com/pybamm-team/PyBaMM/pull/4416))
 
+## Features
+
+- Added phase-dependent particle options to LAM #4369
+
 # [v24.9.0](https://github.com/pybamm-team/PyBaMM/tree/v24.9.0) - 2024-09-03
 
 ## Features
