@@ -414,7 +414,9 @@ class BaseIntegrationTestLithiumIon:
             omega = pybamm.Parameter(
                 "Positive electrode partial molar volume [m3.mol-1]"
             )
-            c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
+            c_s_max = pybamm.Parameter(
+                "Maximum concentration in positive electrode [mol.m-3]"
+            )
             t_change = omega * c_s_max * sto
             return t_change
 
@@ -491,7 +493,9 @@ class BaseIntegrationTestLithiumIon:
             omega = pybamm.Parameter(
                 "Positive electrode partial molar volume [m3.mol-1]"
             )
-            c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
+            c_s_max = pybamm.Parameter(
+                "Maximum concentration in positive electrode [mol.m-3]"
+            )
             t_change = omega * c_s_max * sto
             return t_change
 
