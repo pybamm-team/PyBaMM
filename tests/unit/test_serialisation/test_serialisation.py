@@ -5,7 +5,6 @@
 import json
 import os
 import pytest
-import unittest.mock as mock
 from datetime import datetime
 import numpy as np
 import pybamm

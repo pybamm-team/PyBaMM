@@ -301,7 +301,7 @@ class TestBaseSolver:
             sol = solver.step(
                 old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
             )
-            assert not input_key in sol.all_inputs[0]
+            assert input_key not in sol.all_inputs[0]
 
     def test_extrapolation_warnings(self):
         # Make sure the extrapolation warnings work

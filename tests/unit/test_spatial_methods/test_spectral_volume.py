@@ -5,7 +5,6 @@
 import pytest
 import pybamm
 import numpy as np
-import unittest
 
 
 def get_mesh_for_testing(

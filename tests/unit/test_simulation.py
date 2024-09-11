@@ -25,15 +25,15 @@ class TestSimulation:
         sim = pybamm.Simulation(model)
 
         # check that the model is unprocessed
-        assert sim._mesh == None
-        assert sim._disc == None
+        assert sim._mesh is None
+        assert sim._disc is None
         V = sim.model.variables["Voltage [V]"]
         assert V.has_symbol_of_classes(pybamm.Parameter)
         assert not V.has_symbol_of_classes(pybamm.Matrix)
 
         sim.set_parameters()
-        assert sim._mesh == None
-        assert sim._disc == None
+        assert sim._mesh is None
+        assert sim._disc is None
         V = sim.model_with_set_params.variables["Voltage [V]"]
         assert not V.has_symbol_of_classes(pybamm.Parameter)
         assert not V.has_symbol_of_classes(pybamm.Matrix)
@@ -51,8 +51,8 @@ class TestSimulation:
                 model.default_spatial_methods[key].__class__
 
         sim.build()
-        assert not sim._mesh is None
-        assert not sim._disc is None
+        assert sim._mesh is not None
+        assert sim._disc is not None
         V = sim.built_model.variables["Voltage [V]"]
         assert not V.has_symbol_of_classes(pybamm.Parameter)
         assert V.has_symbol_of_classes(pybamm.Matrix)
@@ -60,7 +60,7 @@ class TestSimulation:
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve([0, 600])
-        assert not sim._solution is None
+        assert sim._solution is not None
         for val in list(sim.built_model.rhs.values()):
             assert not val.has_symbol_of_classes(pybamm.Parameter)
             # skip test for scalar variables (e.g. discharge capacity)
