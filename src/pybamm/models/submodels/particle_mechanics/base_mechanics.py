@@ -101,29 +101,26 @@ class BaseMechanics(pybamm.BaseSubModel):
         )
 
         if (
-            f"Negative electrode {phase_name}thickness change [m]" in variables
-            and f"Positive electrode {phase_name}thickness change [m]" in variables
+            f"{Domain} primary thickness change [m]" in variables
+            and f"{Domain} secondary thickness change [m]" in variables
+        ):
+            variables[f"{Domain} thickness change [m]"] = (
+                variables[f"{Domain} primary thickness change [m]"]
+                + variables[f"{Domain} secondary thickness change [m]"]
+            )
+
+        if (
+            "Negative electrode thickness change [m]" in variables
+            and "Positive electrode thickness change [m]" in variables
         ):
             # thermal expansion
             # Ai2019 eq [13]
             thermal_expansion = self.param.alpha_T_cell * (T_xav - self.param.T_ref)
             # calculate total cell thickness change
-            neg_thickness_change = variables[
-                f"Negative electrode {phase_name}thickness change [m]"
-            ]
-            pos_thickness_change = variables[
-                f"Positive electrode {phase_name}thickness change [m]"
-            ]
-            variables[f"Cell {phase_name}thickness change [m]"] = (
-                neg_thickness_change + pos_thickness_change + thermal_expansion
-            )
-        if (
-            "Cell primary thickness change [m]" in variables
-            and "Cell secondary thickness change [m]" in variables
-        ):
+            neg_thickness_change = variables["Negative electrode thickness change [m]"]
+            pos_thickness_change = variables["Positive electrode thickness change [m]"]
             variables["Cell thickness change [m]"] = (
-                variables["Cell primary thickness change [m]"]
-                + variables["Cell secondary thickness change [m]"]
+                neg_thickness_change + pos_thickness_change + thermal_expansion
             )
 
         return variables
