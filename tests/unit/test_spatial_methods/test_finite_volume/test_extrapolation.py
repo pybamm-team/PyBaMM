@@ -496,5 +496,3 @@ class TestExtrapolation:
             extrap_pos_disc.evaluate(None, constant_y),
             extrap_right_disc.evaluate(None, constant_y),
         )
-
-

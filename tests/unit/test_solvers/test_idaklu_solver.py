@@ -1121,5 +1121,3 @@ class TestIDAKLUSolver:
                     match="Unsupported evaluation engine for convert_to_format=jax",
                 ):
                     _ = solver.solve(model, t_eval)
-
-

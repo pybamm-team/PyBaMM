@@ -36,8 +36,12 @@ class TestGhostNodes:
         np.testing.assert_array_equal(
             sym_ghost.evaluate(y=y_test)[1:-1], discretised_symbol.evaluate(y=y_test)
         )
-        assert (sym_ghost.evaluate(y=y_test)[0] + sym_ghost.evaluate(y=y_test)[1]) / 2 == 0
-        assert (sym_ghost.evaluate(y=y_test)[-2] + sym_ghost.evaluate(y=y_test)[-1]) / 2 == 3
+        assert (
+            sym_ghost.evaluate(y=y_test)[0] + sym_ghost.evaluate(y=y_test)[1]
+        ) / 2 == 0
+        assert (
+            sym_ghost.evaluate(y=y_test)[-2] + sym_ghost.evaluate(y=y_test)[-1]
+        ) / 2 == 3
 
         # test errors
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
@@ -89,17 +93,13 @@ class TestGhostNodes:
             discretised_symbol.evaluate(None, y_test),
         )
         assert (
-                symbol_plus_ghost_both.evaluate(None, y_test)[0] \
-                + symbol_plus_ghost_both.evaluate(None, y_test)[1] \
-            ) \
-            / 2 == \
-            0
+            symbol_plus_ghost_both.evaluate(None, y_test)[0]
+            + symbol_plus_ghost_both.evaluate(None, y_test)[1]
+        ) / 2 == 0
         assert (
-                symbol_plus_ghost_both.evaluate(None, y_test)[-2] \
-                + symbol_plus_ghost_both.evaluate(None, y_test)[-1] \
-            ) \
-            / 2 == \
-            3
+            symbol_plus_ghost_both.evaluate(None, y_test)[-2]
+            + symbol_plus_ghost_both.evaluate(None, y_test)[-1]
+        ) / 2 == 3
 
     def test_p2d_add_ghost_nodes(self):
         # create discretisation
@@ -179,5 +179,3 @@ class TestGhostNodes:
         np.testing.assert_array_equal(
             (c_s_p_ghost_eval[:, -2] + c_s_p_ghost_eval[:, -1]) / 2, 3
         )
-
-

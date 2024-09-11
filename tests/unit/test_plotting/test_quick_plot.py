@@ -205,7 +205,10 @@ class TestQuickPlot:
             solution, ["a", ["c broadcasted", "c broadcasted"]], variable_limits="tight"
         )
         assert quick_plot.axis_limits[("a",)][2:] == [None, None]
-        assert quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:] == [None, None]
+        assert quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:] == [
+            None,
+            None,
+        ]
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
@@ -510,4 +513,3 @@ class TestQuickPlotAxes:
         assert axes[0] == 1
         assert axes.by_variable("test 1") == 1
         assert axes.by_variable("test 2") == 1
-

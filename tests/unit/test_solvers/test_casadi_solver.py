@@ -1101,5 +1101,3 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations:
             match=f"Explicit interpolation times not implemented for {solver.name}",
         ):
             solver.solve(model, t_eval, t_interp=t_interp)
-
-

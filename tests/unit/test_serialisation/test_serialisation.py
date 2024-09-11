@@ -5,7 +5,6 @@
 import json
 import os
 import pytest
-import unittest.mock as mock
 from datetime import datetime
 import numpy as np
 import pybamm
@@ -591,5 +590,3 @@ class TestSerialise:
 
         # check dynamic plot loads
         new_solution.plot(show_plot=False)
-
-

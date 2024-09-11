@@ -47,12 +47,14 @@ class TestSimulation:
         assert sim.var_pts == model.default_var_pts
         assert sim.mesh is None
         for key in sim.spatial_methods.keys():
-            assert sim.spatial_methods[key].__class__ == \
-                model.default_spatial_methods[key].__class__
+            assert (
+                sim.spatial_methods[key].__class__
+                == model.default_spatial_methods[key].__class__
+            )
 
         sim.build()
-        assert not sim._mesh is None
-        assert not sim._disc is None
+        assert sim._mesh is not None
+        assert sim._disc is not None
         V = sim.built_model.variables["Voltage [V]"]
         assert not V.has_symbol_of_classes(pybamm.Parameter)
         assert V.has_symbol_of_classes(pybamm.Matrix)
@@ -60,7 +62,7 @@ class TestSimulation:
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve([0, 600])
-        assert not sim._solution is None
+        assert sim._solution is not None
         for val in list(sim.built_model.rhs.values()):
             assert not val.has_symbol_of_classes(pybamm.Parameter)
             # skip test for scalar variables (e.g. discharge capacity)
@@ -431,7 +433,8 @@ class TestSimulation:
             sim = pybamm.Simulation(model)
             sim.solve([0, 600])
             with pytest.raises(
-                NotImplementedError, match="Cannot save simulation if model format is python"
+                NotImplementedError,
+                match="Cannot save simulation if model format is python",
             ):
                 sim.save(test_name)
 
@@ -450,10 +453,12 @@ class TestSimulation:
             os.remove(filename)
             raise excep
 
-        assert "graphite_LGM50_electrolyte_exchange_current_density_Chen2020" == \
-            pkl_obj.parameter_values[
-                "Negative electrode exchange-current density [A.m-2]" \
+        assert (
+            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
+            == pkl_obj.parameter_values[
+                "Negative electrode exchange-current density [A.m-2]"
             ].__name__
+        )
         os.remove(filename)
 
     def test_save_load_dae(self):
@@ -627,5 +632,3 @@ class TestSimulation:
         inputs = {"Electrode height [m]": 0.2}
         sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
         sim.solve(t_eval=t_eval, inputs=inputs)
-
-

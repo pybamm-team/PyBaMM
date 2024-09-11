@@ -5,7 +5,6 @@
 import pytest
 import pybamm
 import numpy as np
-import unittest
 
 
 def get_mesh_for_testing(
@@ -629,5 +628,3 @@ class TestSpectralVolume:
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), expected
         )
-
-

@@ -562,4 +562,3 @@ class TestScikitFiniteElement:
         # spatial vars should discretise to the flattend meshgrid
         np.testing.assert_array_equal(y_disc.evaluate(), y_actual)
         np.testing.assert_array_equal(z_disc.evaluate(), z_actual)
-

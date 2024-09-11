@@ -1091,28 +1091,20 @@ class TestProcessedVariable:
         assert processed_var._process_spatial_variable_names([]) is None
 
         # Test tabs is ignored
-        assert processed_var._process_spatial_variable_names(["tabs", "var"]) == \
-            "var"
+        assert processed_var._process_spatial_variable_names(["tabs", "var"]) == "var"
 
         # Test strings stay strings
-        assert processed_var._process_spatial_variable_names(["y"]) == \
-            "y"
+        assert processed_var._process_spatial_variable_names(["y"]) == "y"
 
         # Test spatial variables are converted to strings
         x = pybamm.SpatialVariable("x", domain=["domain"])
-        assert processed_var._process_spatial_variable_names([x]) == \
-            "x"
+        assert processed_var._process_spatial_variable_names([x]) == "x"
 
         # Test renaming for PyBaMM convention
-        assert processed_var._process_spatial_variable_names(["x_a", "x_b"]) == \
-            "x"
-        assert processed_var._process_spatial_variable_names(["r_a", "r_b"]) == \
-            "r"
-        assert processed_var._process_spatial_variable_names(["R_a", "R_b"]) == \
-            "R"
+        assert processed_var._process_spatial_variable_names(["x_a", "x_b"]) == "x"
+        assert processed_var._process_spatial_variable_names(["r_a", "r_b"]) == "r"
+        assert processed_var._process_spatial_variable_names(["R_a", "R_b"]) == "R"
 
         # Test error raised if spatial variable name not recognised
         with pytest.raises(NotImplementedError, match="Spatial variable name"):
             processed_var._process_spatial_variable_names(["var1", "var2"])
-
-

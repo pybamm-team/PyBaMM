@@ -436,5 +436,3 @@ class TestProcessedVariableComputed:
                 pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
                 warn=False,
             )
-
-

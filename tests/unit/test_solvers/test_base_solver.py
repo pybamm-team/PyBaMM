@@ -9,7 +9,6 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 
-
 class TestBaseSolver:
     def test_base_solver_init(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
@@ -107,9 +106,7 @@ class TestBaseSolver:
         a = pybamm.Variable("a")
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
-        with pytest.raises(
-            pybamm.SolverError, match="No value provided for input 'p'"
-        ):
+        with pytest.raises(pybamm.SolverError, match="No value provided for input 'p'"):
             solver.solve(model, np.array([1, 2, 3]))
 
     def test_ode_solver_fail_with_dae(self):
@@ -238,13 +235,15 @@ class TestBaseSolver:
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with pytest.raises(
-            pybamm.SolverError, match="Could not find acceptable solution: solver terminated"
+            pybamm.SolverError,
+            match="Could not find acceptable solution: solver terminated",
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with pytest.raises(
-            pybamm.SolverError, match="Could not find acceptable solution: Error in Function"
+            pybamm.SolverError,
+            match="Could not find acceptable solution: Error in Function",
         ):
             solver.calculate_consistent_state(Model())
 
@@ -301,7 +300,7 @@ class TestBaseSolver:
             sol = solver.step(
                 old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
             )
-            assert not input_key in sol.all_inputs[0]
+            assert input_key not in sol.all_inputs[0]
 
     def test_extrapolation_warnings(self):
         # Make sure the extrapolation warnings work
@@ -353,12 +352,16 @@ class TestBaseSolver:
         assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "fork"
 
-    @pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
             return np.array([[y[0] ** 2 + 2 * a], [y[0]]])
 
-        @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+        @pytest.mark.skipif(
+            not pybamm.has_jax(), reason="jax or jaxlib is not installed"
+        )
         def exact_diff_b(y, a, b):
             return np.array([[y[0]], [0]])
 
@@ -397,5 +400,3 @@ class TestBaseSolver:
             np.testing.assert_allclose(
                 sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
             )
-
-
