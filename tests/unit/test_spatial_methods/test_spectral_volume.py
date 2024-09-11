@@ -2,6 +2,7 @@
 # Test for the operator class
 #
 
+import pytest
 import pybamm
 import numpy as np
 import unittest
@@ -87,10 +88,10 @@ def get_1p1d_mesh_for_testing(
     )
 
 
-class TestSpectralVolume(unittest.TestCase):
+class TestSpectralVolume:
     def test_exceptions(self):
         sp_meth = pybamm.SpectralVolume()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             sp_meth.chebyshev_differentiation_matrices(3, 3)
 
         mesh = get_mesh_for_testing()
@@ -104,17 +105,17 @@ class TestSpectralVolume(unittest.TestCase):
         sp_meth.build(mesh)
 
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
         bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
 
-    def test_grad_div_shapes_Dirichlet_bcs(self):
+    def test_grad_div_shapes_dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions and also test the
         case where only one Spectral Volume is discretised
@@ -169,7 +170,7 @@ class TestSpectralVolume(unittest.TestCase):
             np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
-    def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
+    def test_spherical_grad_div_shapes_dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in spherical polar
         coordinates
@@ -248,7 +249,7 @@ class TestSpectralVolume(unittest.TestCase):
             div_eval[:, 2:-2], 6 * np.ones([sec_npts, npts - 4])
         )
 
-    def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
+    def test_p2d_spherical_grad_div_shapes_dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in the pseudo
         2-dimensional case
@@ -307,7 +308,7 @@ class TestSpectralVolume(unittest.TestCase):
             div_eval[:, 2:-2], 6 * np.ones([sec_pts, prim_pts - 4])
         )
 
-    def test_grad_div_shapes_Neumann_bcs(self):
+    def test_grad_div_shapes_neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions in Cartesian coordinates
         """
@@ -361,7 +362,7 @@ class TestSpectralVolume(unittest.TestCase):
             np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
-    def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self):
+    def test_grad_div_shapes_dirichlet_and_neumann_bcs(self):
         """
         Test grad and div with a Dirichlet boundary condition on one side and
         a Neumann boundary conditions on the other side in Cartesian coordinates
@@ -422,7 +423,7 @@ class TestSpectralVolume(unittest.TestCase):
             np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
-    def test_spherical_grad_div_shapes_Neumann_bcs(self):
+    def test_spherical_grad_div_shapes_neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions spherical polar
         coordinates
@@ -484,7 +485,7 @@ class TestSpectralVolume(unittest.TestCase):
             6 * np.ones((submesh.npts, 1)),
         )
 
-    def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
+    def test_p2d_spherical_grad_div_shapes_neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions in the pseudo
         2-dimensional case
@@ -630,11 +631,3 @@ class TestSpectralVolume(unittest.TestCase):
         )
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

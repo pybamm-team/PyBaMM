@@ -1,18 +1,18 @@
 import casadi
 import pybamm
-import unittest
+import pytest
 import numpy as np
 from scipy.optimize import least_squares
 import tests
 
 
-class TestCasadiAlgebraicSolver(unittest.TestCase):
+class TestCasadiAlgebraicSolver:
     def test_algebraic_solver_init(self):
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-4)
-        self.assertEqual(solver.tol, 1e-4)
+        assert solver.tol == 1e-4
 
         solver.tol = 1e-5
-        self.assertEqual(solver.tol, 1e-5)
+        assert solver.tol == 1e-5
 
     def test_simple_root_find(self):
         # Simple system: a single algebraic equation
@@ -65,13 +65,13 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         model = Model()
 
         solver = pybamm.CasadiAlgebraicSolver()
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: Error in Function"
+        with pytest.raises(
+            pybamm.SolverError, match="Could not find acceptable solution: Error in Function"
         ):
             solver._integrate(model, np.array([0]), {})
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
+        with pytest.raises(
+            pybamm.SolverError, match="Could not find acceptable solution: solver terminated"
         ):
             solver._integrate(model, np.array([0]), {})
 
@@ -91,9 +91,9 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
                 return y**0.5
 
         model = NaNModel()
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            "Could not find acceptable solution: solver returned NaNs",
+            match="Could not find acceptable solution: solver returned NaNs",
         ):
             solver._integrate(model, np.array([0]), {})
 
@@ -170,7 +170,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.y, -7)
 
 
-class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
+class TestCasadiAlgebraicSolverSensitivity:
     def test_solve_with_symbolic_input(self):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var")
@@ -236,7 +236,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
-    def test_solve_with_symbolic_input_1D_scalar_input(self):
+    def test_solve_with_symbolic_input_1_d_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
         param = pybamm.InputParameter("param")
@@ -261,7 +261,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         np.testing.assert_array_equal(solution["var"].data, -3)
         np.testing.assert_array_equal(solution["var"].sensitivities["param"], -1)
 
-    def test_solve_with_symbolic_input_1D_vector_input(self):
+    def test_solve_with_symbolic_input_1_d_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
         param = pybamm.InputParameter("param", "negative electrode")
@@ -346,11 +346,3 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

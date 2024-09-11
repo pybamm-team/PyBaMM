@@ -3,24 +3,24 @@
 #
 
 import pybamm
-import unittest
+import pytest
 import numpy as np
 from tests import get_discretisation_for_testing
 
 
-class TestAlgebraicSolver(unittest.TestCase):
+class TestAlgebraicSolver:
     def test_algebraic_solver_init(self):
         solver = pybamm.AlgebraicSolver(
             method="hybr", tol=1e-4, extra_options={"maxfev": 100}
         )
-        self.assertEqual(solver.method, "hybr")
-        self.assertEqual(solver.extra_options, {"maxfev": 100})
-        self.assertEqual(solver.tol, 1e-4)
+        assert solver.method == "hybr"
+        assert solver.extra_options == {"maxfev": 100}
+        assert solver.tol == 1e-4
 
         solver.method = "krylov"
-        self.assertEqual(solver.method, "krylov")
+        assert solver.method == "krylov"
         solver.tol = 1e-5
-        self.assertEqual(solver.tol, 1e-5)
+        assert solver.tol == 1e-5
 
     def test_wrong_solver(self):
         # Create model
@@ -31,9 +31,9 @@ class TestAlgebraicSolver(unittest.TestCase):
 
         # test errors
         solver = pybamm.AlgebraicSolver()
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            "Cannot use algebraic solver to solve model with time derivatives",
+            match="Cannot use algebraic solver to solve model with time derivatives",
         ):
             solver.solve(model)
 
@@ -61,7 +61,7 @@ class TestAlgebraicSolver(unittest.TestCase):
         # Relax options and see worse results
         solver = pybamm.AlgebraicSolver(extra_options={"ftol": 1})
         solution = solver._integrate(model, np.array([0]))
-        self.assertNotEqual(solution.y, -2)
+        assert solution.y != -2
 
     def test_root_find_fail(self):
         class Model(pybamm.BaseModel):
@@ -81,15 +81,15 @@ class TestAlgebraicSolver(unittest.TestCase):
         model = Model()
 
         solver = pybamm.AlgebraicSolver(method="hybr")
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            "Could not find acceptable solution: The iteration is not making",
+            match="Could not find acceptable solution: The iteration is not making",
         ):
             solver._integrate(model, np.array([0]))
 
         solver = pybamm.AlgebraicSolver()
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
+        with pytest.raises(
+            pybamm.SolverError, match="Could not find acceptable solution: solver terminated"
         ):
             solver._integrate(model, np.array([0]))
 
@@ -304,12 +304,3 @@ class TestAlgebraicSolver(unittest.TestCase):
         solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
         np.testing.assert_array_equal(solution.y, -7)
 
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

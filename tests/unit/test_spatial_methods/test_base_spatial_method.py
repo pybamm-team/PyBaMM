@@ -2,9 +2,9 @@
 # Test for the base Spatial Method class
 #
 
+import pytest
 import numpy as np
 import pybamm
-import unittest
 from tests import (
     get_mesh_for_testing,
     get_1p1d_mesh_for_testing,
@@ -12,31 +12,31 @@ from tests import (
 )
 
 
-class TestSpatialMethod(unittest.TestCase):
+class TestSpatialMethod:
     def test_basics(self):
         mesh = get_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod()
         spatial_method.build(mesh)
-        self.assertEqual(spatial_method.mesh, mesh)
-        with self.assertRaises(NotImplementedError):
+        assert spatial_method.mesh == mesh
+        with pytest.raises(NotImplementedError):
             spatial_method.gradient(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.divergence(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.laplacian(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.gradient_squared(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.boundary_integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.delta_function(None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.internal_neumann_condition(None, None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.evaluate_at(None, None, None)
 
     def test_get_auxiliary_domain_repeats(self):
@@ -47,20 +47,18 @@ class TestSpatialMethod(unittest.TestCase):
 
         # No auxiliary domains
         repeats = spatial_method._get_auxiliary_domain_repeats({})
-        self.assertEqual(repeats, 1)
+        assert repeats == 1
 
         # Just secondary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
             {"secondary": ["negative electrode"]}
         )
-        self.assertEqual(repeats, mesh["negative electrode"].npts)
+        assert repeats == mesh["negative electrode"].npts
 
         repeats = spatial_method._get_auxiliary_domain_repeats(
             {"secondary": ["negative electrode", "separator"]}
         )
-        self.assertEqual(
-            repeats, mesh["negative electrode"].npts + mesh["separator"].npts
-        )
+        assert repeats == mesh["negative electrode"].npts + mesh["separator"].npts
 
         # With tertiary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
@@ -69,17 +67,15 @@ class TestSpatialMethod(unittest.TestCase):
                 "tertiary": ["current collector"],
             }
         )
-        self.assertEqual(
-            repeats,
-            (mesh["negative electrode"].npts + mesh["separator"].npts)
-            * mesh["current collector"].npts,
-        )
+        assert repeats == \
+            (mesh["negative electrode"].npts + mesh["separator"].npts) \
+            * mesh["current collector"].npts
 
         # Just tertiary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
             {"tertiary": ["current collector"]},
         )
-        self.assertEqual(repeats, mesh["current collector"].npts)
+        assert repeats == mesh["current collector"].npts
 
         # With quaternary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
@@ -89,12 +85,10 @@ class TestSpatialMethod(unittest.TestCase):
                 "quaternary": ["current collector"],
             }
         )
-        self.assertEqual(
-            repeats,
-            mesh["negative particle size"].npts
-            * (mesh["negative electrode"].npts + mesh["separator"].npts)
-            * mesh["current collector"].npts,
-        )
+        assert repeats == \
+            mesh["negative particle size"].npts \
+            * (mesh["negative electrode"].npts + mesh["separator"].npts) \
+            * mesh["current collector"].npts
 
     def test_discretise_spatial_variable(self):
         # create discretisation
@@ -108,7 +102,7 @@ class TestSpatialMethod(unittest.TestCase):
         r = pybamm.SpatialVariable("r", ["negative particle"])
         for var in [x1, x2, r]:
             var_disc = spatial_method.spatial_variable(var)
-            self.assertIsInstance(var_disc, pybamm.Vector)
+            assert isinstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
                 var_disc.evaluate()[:, 0], mesh[var.domain].nodes
             )
@@ -119,7 +113,7 @@ class TestSpatialMethod(unittest.TestCase):
         r_edge = pybamm.SpatialVariableEdge("r", ["negative particle"])
         for var in [x1_edge, x2_edge, r_edge]:
             var_disc = spatial_method.spatial_variable(var)
-            self.assertIsInstance(var_disc, pybamm.Vector)
+            assert isinstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
                 var_disc.evaluate()[:, 0], mesh[var.domain].edges
             )
@@ -130,12 +124,12 @@ class TestSpatialMethod(unittest.TestCase):
         mesh = get_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod()
         spatial_method.build(mesh)
-        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
+        with pytest.raises(TypeError, match="Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
         # test also symbol "right"
         symbol = pybamm.BoundaryGradient(child, "right")
-        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
+        with pytest.raises(TypeError, match="Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
         mesh = get_1p1d_mesh_for_testing()
@@ -147,15 +141,7 @@ class TestSpatialMethod(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         symbol = pybamm.BoundaryGradient(child, "left")
-        with self.assertRaisesRegex(NotImplementedError, "Cannot process 2D symbol"):
+        with pytest.raises(NotImplementedError, match="Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

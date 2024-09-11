@@ -6,12 +6,12 @@
 #  values itself since it does not have access to the full state vector
 #
 
+import pytest
 import casadi
 import pybamm
 import tests
 
 import numpy as np
-import unittest
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -68,7 +68,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariableComputed(unittest.TestCase):
+class TestProcessedVariableComputed:
     def test_processed_variable_0D(self):
         # without space
         y = pybamm.StateVector(slice(0, 1))
@@ -115,7 +115,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         )
 
         # test no inputs (i.e. no sensitivity)
-        self.assertDictEqual(processed_var.sensitivities, {})
+        assert processed_var.sensitivities == {}
 
         # with parameter
         t = pybamm.t
@@ -136,7 +136,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         )
 
         # test no sensitivity raises error
-        self.assertIsNone(processed_var.sensitivities)
+        assert processed_var.sensitivities is None
 
     def test_processed_variable_1D(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -386,7 +386,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         np.testing.assert_array_equal(processed_var.unroll(), y_sol.reshape(10, 40, 1))
 
         # Check unroll function (3D)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             processed_var.dimensions = 3
             processed_var.unroll()
 
@@ -428,7 +428,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
         var_casadi = to_casadi(var_sol, u_sol)
 
-        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
+        with pytest.raises(NotImplementedError, match="Shape not recognized"):
             pybamm.ProcessedVariableComputed(
                 [var_sol],
                 [var_casadi],
@@ -438,11 +438,3 @@ class TestProcessedVariableComputed(unittest.TestCase):
             )
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

@@ -10,10 +10,9 @@ from tests import (
     get_cylindrical_mesh_for_testing,
 )
 import numpy as np
-import unittest
 
 
-class TestFiniteVolumeGradDiv(unittest.TestCase):
+class TestFiniteVolumeGradDiv:
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in Cartesian coordinates
@@ -639,11 +638,3 @@ class TestFiniteVolumeGradDiv(unittest.TestCase):
         )
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

@@ -2,39 +2,39 @@
 # Tests for the Base Solver class
 #
 
+import pytest
 import casadi
 import pybamm
 import numpy as np
 from scipy.sparse import csr_matrix
 
-import unittest
 
 
-class TestBaseSolver(unittest.TestCase):
+class TestBaseSolver:
     def test_base_solver_init(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
-        self.assertEqual(solver.rtol, 1e-2)
-        self.assertEqual(solver.atol, 1e-4)
+        assert solver.rtol == 1e-2
+        assert solver.atol == 1e-4
 
         solver.rtol = 1e-5
-        self.assertEqual(solver.rtol, 1e-5)
+        assert solver.rtol == 1e-5
         solver.rtol = 1e-7
-        self.assertEqual(solver.rtol, 1e-7)
+        assert solver.rtol == 1e-7
 
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
-        self.assertIsInstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
+        assert isinstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
 
         solver = pybamm.BaseSolver(root_method="lm")
-        self.assertIsInstance(solver.root_method, pybamm.AlgebraicSolver)
-        self.assertEqual(solver.root_method.method, "lm")
+        assert isinstance(solver.root_method, pybamm.AlgebraicSolver)
+        assert solver.root_method.method == "lm"
 
         root_solver = pybamm.AlgebraicSolver()
         solver = pybamm.BaseSolver(root_method=root_solver)
-        self.assertEqual(solver.root_method, root_solver)
+        assert solver.root_method == root_solver
 
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Root method must be an algebraic solver"
+        with pytest.raises(
+            pybamm.SolverError, match="Root method must be an algebraic solver"
         ):
             pybamm.BaseSolver(root_method=pybamm.ScipySolver())
 
@@ -42,9 +42,9 @@ class TestBaseSolver(unittest.TestCase):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
         error = "Cannot simulate an empty model"
-        with self.assertRaisesRegex(pybamm.ModelError, error):
+        with pytest.raises(pybamm.ModelError, match=error):
             solver.step(None, model, None)
-        with self.assertRaisesRegex(pybamm.ModelError, error):
+        with pytest.raises(pybamm.ModelError, match=error):
             solver.solve(model, None)
 
     def test_t_eval_none(self):
@@ -56,7 +56,7 @@ class TestBaseSolver(unittest.TestCase):
         disc.process_model(model)
 
         solver = pybamm.BaseSolver()
-        with self.assertRaisesRegex(ValueError, "t_eval cannot be None"):
+        with pytest.raises(ValueError, match="t_eval cannot be None"):
             solver.solve(model, None)
 
     def test_nonmonotonic_teval(self):
@@ -64,29 +64,29 @@ class TestBaseSolver(unittest.TestCase):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(0)
         model.rhs = {a: a}
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "t_eval must increase monotonically"
+        with pytest.raises(
+            pybamm.SolverError, match="t_eval must increase monotonically"
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
         # Check stepping with step size too small
         dt = -1e-9
-        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be >0"):
+        with pytest.raises(pybamm.SolverError, match="Step time must be >0"):
             solver.step(None, model, dt)
 
         # Checking if array t_eval lies within range
         dt = 2
         t_eval = np.array([0, 1])
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            "Elements inside array t_eval must lie in the closed interval 0 to dt",
+            match="Elements inside array t_eval must lie in the closed interval 0 to dt",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
         t_eval = np.array([1, dt])
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            "Elements inside array t_eval must lie in the closed interval 0 to dt",
+            match="Elements inside array t_eval must lie in the closed interval 0 to dt",
         ):
             solver.step(None, model, dt, t_eval=t_eval)
 
@@ -96,8 +96,8 @@ class TestBaseSolver(unittest.TestCase):
         model.variables = {"v": v}
         solver = pybamm.DummySolver()
         t_eval = np.array([0])
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Solution time vector has length 1"
+        with pytest.raises(
+            pybamm.SolverError, match="Solution time vector has length 1"
         ):
             solver.solve(model, t_eval)
 
@@ -107,8 +107,8 @@ class TestBaseSolver(unittest.TestCase):
         a = pybamm.Variable("a")
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "No value provided for input 'p'"
+        with pytest.raises(
+            pybamm.SolverError, match="No value provided for input 'p'"
         ):
             solver.solve(model, np.array([1, 2, 3]))
 
@@ -118,7 +118,7 @@ class TestBaseSolver(unittest.TestCase):
         model.algebraic = {a: a}
         model.concatenated_initial_conditions = pybamm.Scalar(0)
         solver = pybamm.ScipySolver()
-        with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
+        with pytest.raises(pybamm.SolverError, match="Cannot use ODE solver"):
             solver.set_up(model)
 
     def test_find_consistent_initialization(self):
@@ -231,20 +231,20 @@ class TestBaseSolver(unittest.TestCase):
 
         solver = pybamm.BaseSolver(root_method="hybr")
 
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            "Could not find acceptable solution: The iteration is not making",
+            match="Could not find acceptable solution: The iteration is not making",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
+        with pytest.raises(
+            pybamm.SolverError, match="Could not find acceptable solution: solver terminated"
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: Error in Function"
+        with pytest.raises(
+            pybamm.SolverError, match="Could not find acceptable solution: Error in Function"
         ):
             solver.calculate_consistent_state(Model())
 
@@ -256,9 +256,9 @@ class TestBaseSolver(unittest.TestCase):
         model.initial_conditions = {v: 1}
 
         solver = pybamm.BaseSolver()
-        self.assertFalse(model.is_discretised)
+        assert not model.is_discretised
         solver.set_up(model, {})
-        self.assertTrue(model.is_discretised)
+        assert model.is_discretised
 
         # 1D model cannot be automatically discretised
         model = pybamm.BaseModel()
@@ -266,8 +266,8 @@ class TestBaseSolver(unittest.TestCase):
         model.rhs = {v: -1}
         model.initial_conditions = {v: 1}
 
-        with self.assertRaisesRegex(
-            pybamm.DiscretisationError, "Cannot automatically discretise model"
+        with pytest.raises(
+            pybamm.DiscretisationError, match="Cannot automatically discretise model"
         ):
             solver.set_up(model, {})
 
@@ -285,7 +285,7 @@ class TestBaseSolver(unittest.TestCase):
         solver = pybamm.BaseSolver(root_method="casadi")
         pybamm.set_logging_level("ERROR")
         solver.set_up(model, {})
-        self.assertEqual(model.convert_to_format, "casadi")
+        assert model.convert_to_format == "casadi"
         pybamm.set_logging_level("WARNING")
 
     def test_inputs_step(self):
@@ -301,7 +301,7 @@ class TestBaseSolver(unittest.TestCase):
             sol = solver.step(
                 old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
             )
-            self.assertFalse(input_key in sol.all_inputs[0])
+            assert not input_key in sol.all_inputs[0]
 
     def test_extrapolation_warnings(self):
         # Make sure the extrapolation warnings work
@@ -326,10 +326,10 @@ class TestBaseSolver(unittest.TestCase):
         solver = pybamm.ScipySolver()
         solver.set_up(model)
 
-        with self.assertWarns(pybamm.SolverWarning):
+        with pytest.warns(pybamm.SolverWarning):
             solver.step(old_solution=None, model=model, dt=1.0)
 
-        with self.assertWarns(pybamm.SolverWarning):
+        with pytest.warns(pybamm.SolverWarning):
             solver.solve(model, t_eval=[0, 1])
 
     def test_multiple_models_error(self):
@@ -344,7 +344,7 @@ class TestBaseSolver(unittest.TestCase):
 
         solver = pybamm.ScipySolver()
         solver.solve(model, t_eval=[0, 1])
-        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
+        with pytest.raises(RuntimeError, match="already been initialised"):
             solver.solve(model2, t_eval=[0, 1])
 
     def test_multiprocess_context(self):
@@ -353,12 +353,12 @@ class TestBaseSolver(unittest.TestCase):
         assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "fork"
 
-    @unittest.skipIf(not pybamm.has_idaklu(), "idaklu solver is not installed")
+    @pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
             return np.array([[y[0] ** 2 + 2 * a], [y[0]]])
 
-        @unittest.skipIf(not pybamm.has_jax(), "jax or jaxlib is not installed")
+        @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
         def exact_diff_b(y, a, b):
             return np.array([[y[0]], [0]])
 
@@ -399,11 +399,3 @@ class TestBaseSolver(unittest.TestCase):
             )
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
