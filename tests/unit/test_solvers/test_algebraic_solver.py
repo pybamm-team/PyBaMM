@@ -89,7 +89,8 @@ class TestAlgebraicSolver:
 
         solver = pybamm.AlgebraicSolver()
         with pytest.raises(
-            pybamm.SolverError, match="Could not find acceptable solution: solver terminated"
+            pybamm.SolverError,
+            match="Could not find acceptable solution: solver terminated",
         ):
             solver._integrate(model, np.array([0]))
 
@@ -303,4 +304,3 @@ class TestAlgebraicSolver:
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
         np.testing.assert_array_equal(solution.y, -7)
-

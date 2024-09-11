@@ -58,7 +58,9 @@ class TestFiniteVolumeIntegration:
         constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
         assert integral_eqn_disc.evaluate(None, constant_y) == ls + lp
         linear_y = submesh.nodes
-        assert integral_eqn_disc.evaluate(None, linear_y)[0][0] == pytest.approx((1 - (ln) ** 2) / 2)
+        assert integral_eqn_disc.evaluate(None, linear_y)[0][0] == pytest.approx(
+            (1 - (ln) ** 2) / 2
+        )
         cos_y = np.cos(submesh.nodes[:, np.newaxis])
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, cos_y), np.sin(1) - np.sin(ln), decimal=4
@@ -653,5 +655,3 @@ class TestFiniteVolumeIntegration:
                 full_int_phi_disc.evaluate(y=phi_exact).flatten(),
                 int_plus_back_int_phi_disc.evaluate(y=phi_exact).flatten(),
             )
-
-

@@ -636,5 +636,3 @@ class TestFiniteVolumeGradDiv:
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), expected
         )
-
-

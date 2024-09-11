@@ -175,4 +175,3 @@ class TestJaxBDFSolver:
         )
 
         np.testing.assert_allclose(y[:, 0].reshape(-1), np.exp(-0.1 * t_eval))
-

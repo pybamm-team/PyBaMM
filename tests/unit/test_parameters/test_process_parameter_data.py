@@ -56,5 +56,3 @@ class TestProcessParameterData:
     def test_error(self):
         with pytest.raises(FileNotFoundError, match="Could not find file"):
             pybamm.parameters.process_1D_data("not_a_real_file", "not_a_real_path")
-
-

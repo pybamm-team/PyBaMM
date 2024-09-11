@@ -619,5 +619,3 @@ class TestFiniteVolume:
 
         m = mesh["negative electrode"].npts
         np.testing.assert_array_equal(inner_disc.evaluate(y=y), np.zeros((n * m, 1)))
-
-

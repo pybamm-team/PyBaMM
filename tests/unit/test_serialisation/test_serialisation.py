@@ -590,5 +590,3 @@ class TestSerialise:
 
         # check dynamic plot loads
         new_solution.plot(show_plot=False)
-
-

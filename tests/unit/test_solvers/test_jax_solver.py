@@ -237,4 +237,3 @@ class TestJaxSolver:
         y = solver({"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
-

@@ -67,9 +67,11 @@ class TestSpatialMethod:
                 "tertiary": ["current collector"],
             }
         )
-        assert repeats == \
-            (mesh["negative electrode"].npts + mesh["separator"].npts) \
+        assert (
+            repeats
+            == (mesh["negative electrode"].npts + mesh["separator"].npts)
             * mesh["current collector"].npts
+        )
 
         # Just tertiary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
@@ -85,10 +87,12 @@ class TestSpatialMethod:
                 "quaternary": ["current collector"],
             }
         )
-        assert repeats == \
-            mesh["negative particle size"].npts \
-            * (mesh["negative electrode"].npts + mesh["separator"].npts) \
+        assert (
+            repeats
+            == mesh["negative particle size"].npts
+            * (mesh["negative electrode"].npts + mesh["separator"].npts)
             * mesh["current collector"].npts
+        )
 
     def test_discretise_spatial_variable(self):
         # create discretisation
@@ -143,5 +147,3 @@ class TestSpatialMethod:
         symbol = pybamm.BoundaryGradient(child, "left")
         with pytest.raises(NotImplementedError, match="Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)
-
-

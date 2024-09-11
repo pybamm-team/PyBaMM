@@ -48,20 +48,20 @@ class TestParameterValues:
 
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
-        assert repr(param) == \
-            "{'Boltzmann constant [J.K-1]': 1.380649e-23,\n" \
-            " 'Electron charge [C]': 1.602176634e-19,\n" \
-            " 'Faraday constant [C.mol-1]': 96485.33212,\n" \
-            " 'Ideal gas constant [J.K-1.mol-1]': 8.314462618,\n" \
+        assert (
+            repr(param) == "{'Boltzmann constant [J.K-1]': 1.380649e-23,\n"
+            " 'Electron charge [C]': 1.602176634e-19,\n"
+            " 'Faraday constant [C.mol-1]': 96485.33212,\n"
+            " 'Ideal gas constant [J.K-1.mol-1]': 8.314462618,\n"
             " 'a': 1}"
-        assert param._ipython_key_completions_() == \
-            [
-                "Ideal gas constant [J.K-1.mol-1]",
-                "Faraday constant [C.mol-1]",
-                "Boltzmann constant [J.K-1]",
-                "Electron charge [C]",
-                "a",
-            ]
+        )
+        assert param._ipython_key_completions_() == [
+            "Ideal gas constant [J.K-1.mol-1]",
+            "Faraday constant [C.mol-1]",
+            "Boltzmann constant [J.K-1]",
+            "Electron charge [C]",
+            "a",
+        ]
 
     def test_eq(self):
         assert pybamm.ParameterValues({"a": 1}) == pybamm.ParameterValues({"a": 1})
@@ -561,7 +561,9 @@ class TestParameterValues:
 
         processed_func = parameter_values.process_symbol(func)
         assert isinstance(processed_func, pybamm.Interpolant)
-        assert processed_func.evaluate(inputs={"a": 3.01, "b": 4.4}) == pytest.approx(14.82)
+        assert processed_func.evaluate(inputs={"a": 3.01, "b": 4.4}) == pytest.approx(
+            14.82
+        )
 
         # process differentiated function parameter
         # diff_func = func.diff(a)
@@ -770,8 +772,9 @@ class TestParameterValues:
         param = pybamm.ParameterValues({"func": 2})
         func_proc = param.process_symbol(func)
 
-        assert func_proc == \
-            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "current collector")
+        assert func_proc == pybamm.PrimaryBroadcast(
+            pybamm.Scalar(2, name="func"), "current collector"
+        )
 
         # secondary and tertiary
         var = pybamm.Variable(
@@ -787,10 +790,9 @@ class TestParameterValues:
         param = pybamm.ParameterValues({"func": 2})
         func_proc = param.process_symbol(func)
 
-        assert func_proc == \
-            pybamm.FullBroadcast(
-                pybamm.Scalar(2, name="func"), "negative particle", "current collector" \
-            )
+        assert func_proc == pybamm.FullBroadcast(
+            pybamm.Scalar(2, name="func"), "negative particle", "current collector"
+        )
 
         # secondary, tertiary and quaternary
         var = pybamm.Variable(
@@ -807,15 +809,14 @@ class TestParameterValues:
         param = pybamm.ParameterValues({"func": 2})
         func_proc = param.process_symbol(func)
 
-        assert func_proc == \
-            pybamm.FullBroadcast(
-                pybamm.Scalar(2, name="func"),
-                "negative particle",
-                {
-                    "secondary": "negative particle size",
-                    "tertiary": "current collector",
-                },
-            )
+        assert func_proc == pybamm.FullBroadcast(
+            pybamm.Scalar(2, name="func"),
+            "negative particle",
+            {
+                "secondary": "negative particle size",
+                "tertiary": "current collector",
+            },
+        )
 
         # special case for integral of concatenations of broadcasts
         var_n = pybamm.Variable("var_n", domain="negative electrode")
@@ -873,8 +874,9 @@ class TestParameterValues:
         )
         func_proc = param.process_symbol(func)
 
-        assert func_proc == \
-            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector")
+        assert func_proc == pybamm.PrimaryBroadcast(
+            pybamm.Scalar(3), "current collector"
+        )
 
     def test_process_size_average(self):
         # Test that the x-average of a broadcast gets processed correctly
@@ -1027,4 +1029,3 @@ class TestParameterValues:
             match="referring to the reaction at the surface of a lithium metal electrode",
         ):
             parameter_values.evaluate(param)
-
