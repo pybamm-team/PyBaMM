@@ -39,6 +39,7 @@ class Citations:
     def _check_for_bibtex(self):
         try:
             import_optional_dependency("pybtex")
+            import_optional_dependency("pybtex.database")
         except ModuleNotFoundError:
             self._module_import_error = True
 
