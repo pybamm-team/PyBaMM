@@ -6,6 +6,7 @@ import numpy as np
 from pybamm.util import import_optional_dependency
 from pybamm.simulation import Simulation
 from pybamm.solvers.solution import Solution
+from pybamm.parameters.base_parameters import NullParameters
 
 
 def plot_voltage_components(
@@ -39,8 +40,12 @@ def plot_voltage_components(
     # Check if the input is a Simulation and extract Solution
     if isinstance(input_data, Simulation):
         solution = input_data.solution
+        working_electrode = input_data.options["working electrode"]
+        model_param = input_data.model.param
     elif isinstance(input_data, Solution):
         solution = input_data
+        working_electrode = input_data.all_models[0].options["working electrode"]
+        model_param = input_data.all_models[0].param
     plt = import_optional_dependency("matplotlib.pyplot")
 
     # Set a default value for alpha, the opacity
@@ -51,43 +56,83 @@ def plot_voltage_components(
         show_plot = False
     else:
         fig, ax = plt.subplots(figsize=(8, 4))
-
-    if split_by_electrode is False:
-        overpotentials = [
-            "Battery particle concentration overpotential [V]",
-            "X-averaged battery reaction overpotential [V]",
-            "X-averaged battery concentration overpotential [V]",
-            "X-averaged battery electrolyte ohmic losses [V]",
-            "X-averaged battery solid phase ohmic losses [V]",
-        ]
-        labels = [
-            "Particle concentration overpotential",
-            "Reaction overpotential",
-            "Electrolyte concentration overpotential",
-            "Ohmic electrolyte overpotential",
-            "Ohmic electrode overpotential",
-        ]
-    else:
-        overpotentials = [
-            "Battery negative particle concentration overpotential [V]",
-            "Battery positive particle concentration overpotential [V]",
-            "X-averaged battery negative reaction overpotential [V]",
-            "X-averaged battery positive reaction overpotential [V]",
-            "X-averaged battery concentration overpotential [V]",
-            "X-averaged battery electrolyte ohmic losses [V]",
-            "X-averaged battery negative solid phase ohmic losses [V]",
-            "X-averaged battery positive solid phase ohmic losses [V]",
-        ]
-        labels = [
-            "Negative particle concentration overpotential",
-            "Positive particle concentration overpotential",
-            "Negative reaction overpotential",
-            "Positive reaction overpotential",
-            "Electrolyte concentration overpotential",
-            "Ohmic electrolyte overpotential",
-            "Ohmic negative electrode overpotential",
-            "Ohmic positive electrode overpotential",
-        ]
+    
+    if working_electrode == "both":
+        if split_by_electrode is False:
+            overpotentials = [
+                "Battery particle concentration overpotential [V]",
+                "X-averaged battery reaction overpotential [V]",
+                "X-averaged battery concentration overpotential [V]",
+                "X-averaged battery electrolyte ohmic losses [V]",
+                "X-averaged battery solid phase ohmic losses [V]",
+            ]
+            labels = [
+                "Particle concentration overpotential",
+                "Reaction overpotential",
+                "Electrolyte concentration overpotential",
+                "Ohmic electrolyte overpotential",
+                "Ohmic electrode overpotential",
+            ]
+        else:
+            overpotentials = [
+                "Battery negative particle concentration overpotential [V]",
+                "Battery positive particle concentration overpotential [V]",
+                "X-averaged battery negative reaction overpotential [V]",
+                "X-averaged battery positive reaction overpotential [V]",
+                "X-averaged battery concentration overpotential [V]",
+                "X-averaged battery electrolyte ohmic losses [V]",
+                "X-averaged battery negative solid phase ohmic losses [V]",
+                "X-averaged battery positive solid phase ohmic losses [V]",
+            ]
+            labels = [
+                "Negative particle concentration overpotential",
+                "Positive particle concentration overpotential",
+                "Negative reaction overpotential",
+                "Positive reaction overpotential",
+                "Electrolyte concentration overpotential",
+                "Ohmic electrolyte overpotential",
+                "Ohmic negative electrode overpotential",
+                "Ohmic positive electrode overpotential",
+            ]
+    elif working_electrode == "positive":
+        if isinstance(model_param.p.sec, NullParameters):
+            overpotentials = [
+                "Positive particle concentration overpotential [V]",
+                "X-averaged positive electrode reaction overpotential [V]",
+                "X-averaged battery concentration overpotential [V]",
+                "X-averaged battery electrolyte ohmic losses [V]",
+                "X-averaged battery solid phase ohmic losses [V]",
+            ]
+            labels = [
+                "Particle concentration overpotential",
+                "Reaction overpotential",
+                "Electrolyte concentration overpotential",
+                "Ohmic electrolyte overpotential",
+                "Ohmic electrode overpotential",
+            ]
+        else:
+            overpotentials = [
+                "Positive primary particle concentration overpotential [V]",
+                "Positive secondary particle concentration overpotential [V]",
+                "Battery negative particle concentration overpotential [V]",
+                "X-averaged positive electrode primary reaction overpotential [V]",
+                "X-averaged positive electrode secondary reaction overpotential [V]",
+                "X-averaged battery negative reaction overpotential [V]",
+                "X-averaged battery concentration overpotential [V]",
+                "X-averaged battery electrolyte ohmic losses [V]",
+                "X-averaged battery solid phase ohmic losses [V]",
+            ]
+            labels = [
+                "Primary particle concentration overpotential",
+                "Secondary particle concentration overpotential",
+                "Negative particle concentration overpotential",
+                "Primary reaction overpotential",
+                "Secondary reaction overpotential",
+                "Negative interface overpotential",
+                "Electrolyte concentration overpotential",
+                "Ohmic electrolyte overpotential",
+                "Ohmic electrode overpotential",
+            ]
 
     # Plot
     # Initialise
@@ -128,6 +173,10 @@ def plot_voltage_components(
         # negative overpotentials are positive for a discharge and negative for a charge
         # so we have to multiply by -1 to show them correctly
         sgn = -1 if "negative" in overpotential else 1
+        sgn = -1 if "Lithium metal" in overpotential else 1
+        for phase in ["primary","secondary"]:
+            for type in ["reaction","particle concentration"]:
+                sgn *= 0.5 if f"{phase} {type}" in overpotential else 1
         bottom = top + sgn * solution[overpotential].entries
         ax.fill_between(time, bottom, top, **kwargs_fill, label=label)
         top = bottom

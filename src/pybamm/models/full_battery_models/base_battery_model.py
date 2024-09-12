@@ -1333,9 +1333,19 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_particle_n = self.variables[
             f"Negative {phase_n}particle concentration overpotential [V]"
         ]
-        eta_particle_p = self.variables[
-            f"Positive {phase_p}particle concentration overpotential [V]"
-        ]
+        if self.options.positive['particle phases'] == '2':
+            eta_particle_p = (
+                self.variables[
+                    f"Positive {phase_p}particle concentration overpotential [V]"
+                ] + 
+                self.variables[
+                    "Positive secondary particle concentration overpotential [V]"
+                ]
+            ) / 2
+        else:
+            eta_particle_p = self.variables[
+                f"Positive {phase_p}particle concentration overpotential [V]"
+            ]
 
         ocv_surf = ocp_surf_p_av - ocp_surf_n_av
         ocv_bulk = ocp_p_bulk - ocp_n_bulk
@@ -1351,9 +1361,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             eta_r_n_av = self.variables[
                 f"X-averaged negative electrode {phase_n}reaction overpotential [V]"
             ]
-        eta_r_p_av = self.variables[
-            f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
-        ]
+        if self.options.positive['particle phases'] == '2':
+            eta_r_p_av = (
+                self.variables[
+                    f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
+                ] + 
+                self.variables[
+                    "X-averaged positive electrode secondary reaction overpotential [V]"
+                ]
+            ) / 2
+        else:
+            eta_r_p_av = self.variables[
+                f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
+            ]
         eta_r_av = eta_r_p_av - eta_r_n_av
 
         delta_phi_s_n_av = self.variables[
