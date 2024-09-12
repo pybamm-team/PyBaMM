@@ -1333,12 +1333,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_particle_n = self.variables[
             f"Negative {phase_n}particle concentration overpotential [V]"
         ]
-        if self.options.positive['particle phases'] == '2':
+        if self.options.positive["particle phases"] == "2":
             eta_particle_p = (
                 self.variables[
                     f"Positive {phase_p}particle concentration overpotential [V]"
-                ] + 
-                self.variables[
+                ]
+                + self.variables[
                     "Positive secondary particle concentration overpotential [V]"
                 ]
             ) / 2
@@ -1361,12 +1361,12 @@ class BaseBatteryModel(pybamm.BaseModel):
             eta_r_n_av = self.variables[
                 f"X-averaged negative electrode {phase_n}reaction overpotential [V]"
             ]
-        if self.options.positive['particle phases'] == '2':
+        if self.options.positive["particle phases"] == "2":
             eta_r_p_av = (
                 self.variables[
                     f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
-                ] + 
-                self.variables[
+                ]
+                + self.variables[
                     "X-averaged positive electrode secondary reaction overpotential [V]"
                 ]
             ) / 2

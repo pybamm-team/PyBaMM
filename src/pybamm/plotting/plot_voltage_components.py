@@ -56,7 +56,7 @@ def plot_voltage_components(
         show_plot = False
     else:
         fig, ax = plt.subplots(figsize=(8, 4))
-    
+
     if working_electrode == "both":
         if split_by_electrode is False:
             overpotentials = [
@@ -174,8 +174,8 @@ def plot_voltage_components(
         # so we have to multiply by -1 to show them correctly
         sgn = -1 if "negative" in overpotential else 1
         sgn = -1 if "Lithium metal" in overpotential else 1
-        for phase in ["primary","secondary"]:
-            for type in ["reaction","particle concentration"]:
+        for phase in ["primary", "secondary"]:
+            for type in ["reaction", "particle concentration"]:
                 sgn *= 0.5 if f"{phase} {type}" in overpotential else 1
         bottom = top + sgn * solution[overpotential].entries
         ax.fill_between(time, bottom, top, **kwargs_fill, label=label)
