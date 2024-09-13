@@ -1022,7 +1022,6 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
         )
         np.testing.assert_array_equal(solution.t, t_eval)
-        print(solution.y.shape)
         np.testing.assert_allclose(np.array(solution.y)[0], 0.1 * solution.t)
         np.testing.assert_allclose(
             solution.sensitivities["p"], solution.t.reshape(-1, 1), atol=1e-7

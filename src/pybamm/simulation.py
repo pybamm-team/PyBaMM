@@ -192,16 +192,14 @@ class Simulation:
             elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
                 restrict_list.update(["Current function [A]"])
         for key in restrict_list:
-            try:
-                param = parameter_values[key]
-                if isinstance(param, pybamm.InputParameter):
-                    raise pybamm.ModelError(
-                        f"Cannot use '{key}' as an input parameter in this experiment. "
-                        f"This experiment is controlled via the following parameters: {restrict_list}. "
-                        f"None of these parameters are able to be input parameters."
-                    )
-            except KeyError:
-                pass
+            if key in parameter_values and isinstance(
+                parameter_values[key], pybamm.InputParameter
+            ):
+                raise pybamm.ModelError(
+                    f"Cannot use '{key}' as an input parameter in this experiment. "
+                    f"This experiment is controlled via the following parameters: {restrict_list}. "
+                    f"None of these parameters are able to be input parameters."
+                )
 
         # Set the initial temperature to be the temperature of the first step
         # We can set this globally for all steps since any subsequent steps will either
