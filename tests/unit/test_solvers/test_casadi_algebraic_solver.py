@@ -238,7 +238,7 @@ class TestCasadiAlgebraicSolverSensitivity:
         lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
-    def test_solve_with_symbolic_input_1_d_scalar_input(self):
+    def test_solve_with_symbolic_input_1D_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
         param = pybamm.InputParameter("param")
