@@ -248,7 +248,7 @@ class TestSpectralVolume:
             div_eval[:, 2:-2], 6 * np.ones([sec_npts, npts - 4])
         )
 
-    def test_p2d_spherical_grad_div_shapes_dirichlet_bcs(self):
+    def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in the pseudo
         2-dimensional case
