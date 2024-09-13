@@ -422,7 +422,7 @@ class TestSpectralVolume:
             np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
-    def test_spherical_grad_div_shapes_neumann_bcs(self):
+    def test_spherical_grad_div_shapes_Neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions spherical polar
         coordinates
