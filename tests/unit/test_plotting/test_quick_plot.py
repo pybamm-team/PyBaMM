@@ -414,7 +414,7 @@ class TestQuickPlot:
 
         pybamm.close_plots()
 
-    def test_plot_2plus1_d_spm(self):
+    def test_plot_2plus1D_spm(self):
         spm = pybamm.lithium_ion.SPM(
             {"current collector": "potential pair", "dimensionality": 2}
         )
