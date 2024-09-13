@@ -708,7 +708,7 @@ class TestParameterValues:
                 decimal=10,
             )
 
-    def test_process_interpolant_2_d_from_csv(self):
+    def test_process_interpolant_2D_from_csv(self):
         name = "data_for_testing_2D"
         path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_2D_data_csv(name, path)
