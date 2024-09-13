@@ -314,6 +314,17 @@ class TestSimulation:
         sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
         assert sim._built_initial_soc == 0.8
 
+    def test_restricted_input_params(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Initial temperature [K]": "[input]"})
+        experiment = pybamm.Experiment(["Discharge at 1C until 2.5 V"])
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, experiment=experiment
+        )
+        with pytest.raises(pybamm.ModelError, match="Initial temperature"):
+            sim.solve([0, 3600])
+
     def test_esoh_with_input_param(self):
         # Test that initial soc works with a relevant input parameter
         model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
@@ -334,6 +345,38 @@ class TestSimulation:
         sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1})
         np.testing.assert_array_equal(
             sim.solution.all_inputs[0]["Current function [A]"], 1
+        )
+
+    def test_solve_with_sensitivities(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        h = 1e-6
+        sol1 = sim.solve(
+            t_eval=[0, 600],
+            inputs={"Current function [A]": 1},
+            calculate_sensitivities=True,
+        )
+
+        # check that the sensitivities are stored
+        assert "Current function [A]" in sol1.sensitivities
+
+        sol2 = sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1 + h})
+
+        # check that the sensitivities are not stored
+        assert "Current function [A]" not in sol2.sensitivities
+
+        # check that the sensitivities are roughly correct
+        np.testing.assert_array_almost_equal(
+            sol1["Terminal voltage [V]"].entries
+            + h
+            * sol1["Terminal voltage [V]"]
+            .sensitivities["Current function [A]"]
+            .full()
+            .flatten(),
+            sol2["Terminal voltage [V]"].entries,
+            decimal=5,
         )
 
     def test_step_with_inputs(self):
