@@ -41,7 +41,7 @@ class TestProcessParameterData:
         assert isinstance(processed[1][0][1], np.ndarray)
         assert isinstance(processed[1][1], np.ndarray)
 
-    def test_process_3_d_data_csv(self):
+    def test_process_3D_data_csv(self):
         name = "data_for_testing_3D"
         path = os.path.abspath(os.path.dirname(__file__))
         processed = pybamm.parameters.process_3D_data_csv(name, path)
