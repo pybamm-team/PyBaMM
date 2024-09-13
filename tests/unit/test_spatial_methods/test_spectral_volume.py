@@ -307,7 +307,7 @@ class TestSpectralVolume:
             div_eval[:, 2:-2], 6 * np.ones([sec_pts, prim_pts - 4])
         )
 
-    def test_grad_div_shapes_neumann_bcs(self):
+    def test_grad_div_shapes_Neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions in Cartesian coordinates
         """
