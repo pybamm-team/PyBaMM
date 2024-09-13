@@ -727,7 +727,11 @@ class BaseSolver:
         calculate_sensitivities : list of str or bool, optional
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
-            list of input parameter names
+            list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
+            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+            if the timings of your experimental protocol change rapidly with respect to your input parameters.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1192,8 +1196,11 @@ class BaseSolver:
         calculate_sensitivities : list of str or bool, optional
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
-            list of input parameter names
-
+            list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
+            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+            if the timings of your experimental protocol change rapidly with respect to your input parameters.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
