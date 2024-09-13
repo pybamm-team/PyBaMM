@@ -6,7 +6,6 @@ from contextlib import redirect_stdout
 import io
 import pytest
 import numpy as np
-import sys
 
 import pybamm
 from tests import get_discretisation_for_testing
