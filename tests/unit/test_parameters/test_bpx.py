@@ -260,9 +260,7 @@ class TestBPX:
                 assert isinstance(D, pybamm.Interpolant)
                 OCP = param[f"{electrode} electrode OCP [V]"](c)
                 assert isinstance(OCP, pybamm.Interpolant)
-                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](
-                    c, 10000
-                )
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
                 assert isinstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
