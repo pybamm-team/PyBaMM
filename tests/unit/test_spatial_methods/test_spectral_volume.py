@@ -169,7 +169,7 @@ class TestSpectralVolume:
             np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
-    def test_spherical_grad_div_shapes_dirichlet_bcs(self):
+    def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in spherical polar
         coordinates
