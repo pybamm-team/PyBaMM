@@ -114,7 +114,7 @@ class TestSpectralVolume:
         with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
 
-    def test_grad_div_shapes_dirichlet_bcs(self):
+    def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions and also test the
         case where only one Spectral Volume is discretised
