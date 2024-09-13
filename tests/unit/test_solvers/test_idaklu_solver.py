@@ -1110,9 +1110,9 @@ class TestIDAKLUSolver:
                     pybamm.SolverError,
                     match="Unsupported option for convert_to_format=python",
                 ):
-                    with self.assertWarnsRegex(
+                    with pytest.raises(
                         DeprecationWarning,
-                        "The python-idaklu solver has been deprecated.",
+                        match="The python-idaklu solver has been deprecated.",
                     ):
                         _ = solver.solve(model, t_eval)
             elif form == "jax":
