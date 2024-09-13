@@ -361,7 +361,7 @@ class TestSpectralVolume:
             np.zeros_like(submesh.nodes[:, np.newaxis]),
         )
 
-    def test_grad_div_shapes_dirichlet_and_neumann_bcs(self):
+    def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self):
         """
         Test grad and div with a Dirichlet boundary condition on one side and
         a Neumann boundary conditions on the other side in Cartesian coordinates
