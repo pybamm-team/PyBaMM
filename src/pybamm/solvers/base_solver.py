@@ -864,9 +864,9 @@ class BaseSolver:
                 # If the new initial conditions are different
                 # and cannot be evaluated directly, set up again
                 self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-            self._model_set_up[model]["initial conditions"] = (
-                model.concatenated_initial_conditions
-            )
+            self._model_set_up[model][
+                "initial conditions"
+            ] = model.concatenated_initial_conditions
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list[0])
@@ -1478,8 +1478,12 @@ class BaseSolver:
 
         # second pass: check if the extrapolation events are within the tolerance
         last_state = solution.last_state
-        t = last_state.all_ts[0][0]
-        y = last_state.all_ys[0][:, 0]
+        if solution.t_event:
+            t = solution.t_event[0]
+            y = solution.y_event[:, 0]
+        else:
+            t = last_state.all_ts[0][0]
+            y = last_state.all_ys[0][:, 0]
         inputs = last_state.all_inputs[0]
 
         if isinstance(y, casadi.DM):
