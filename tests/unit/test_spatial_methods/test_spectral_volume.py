@@ -484,7 +484,7 @@ class TestSpectralVolume:
             6 * np.ones((submesh.npts, 1)),
         )
 
-    def test_p2d_spherical_grad_div_shapes_neumann_bcs(self):
+    def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions in the pseudo
         2-dimensional case
