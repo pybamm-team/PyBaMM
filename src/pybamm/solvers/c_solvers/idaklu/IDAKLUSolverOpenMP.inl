@@ -87,10 +87,17 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
   // Create vectors
-  yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-  yp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-  avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-  id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+  if (options.num_threads == 1) {
+    yy = N_VNew_Serial(number_of_states, sunctx);
+    yp = N_VNew_Serial(number_of_states, sunctx);
+    avtol = N_VNew_Serial(number_of_states, sunctx);
+    id = N_VNew_Serial(number_of_states, sunctx);
+  } else {
+    yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    avtol = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+  }
 }
 
 template <class ExprSet>
@@ -313,67 +320,38 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
 }
 
 template <class ExprSet>
-Solution IDAKLUSolverOpenMP<ExprSet>::solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs
+void CasadiSolverOpenMP<ExprSet>::solve_individual(
+    const realtype *t_eval,
+    const int number_of_evals,
+    const realtype *t_interp,
+    const int number_of_interps,
+    const realtype *y0,
+    const realtype *yp0,
+    const realtype *inputs,
+    const int length_of_return_vector,
+    realtype *y_return,
+    realtype *yS_return,
+    realtype *t_return,
+    int &t_i,
+    int &retval
+    bool save_adaptive_steps,
+    bool save_interp_steps,
 )
 {
-  DEBUG("IDAKLUSolver::solve");
+  DEBUG("IDAKLUSolver::solve_individual");
 
-  // If t_interp is empty, save all adaptive steps
-  bool save_adaptive_steps = t_interp_np.unchecked<1>().size() == 0;
 
-  // Process the time inputs
-  // 1. Get the sorted and unique t_eval vector
-  auto const t_eval = makeSortedUnique(t_eval_np);
 
-  // 2.1. Get the sorted and unique t_interp vector
-  auto const t_interp_unique_sorted = makeSortedUnique(t_interp_np);
 
-  // 2.2 Remove the t_eval values from t_interp
-  auto const t_interp_setdiff = setDiff(t_interp_unique_sorted, t_eval);
+  const realtype t0 = t_eval[0];
+  const realtype tf = t_eval[number_of_evals - 1];
 
-  // 2.3 Finally, get the sorted and unique t_interp vector with t_eval values removed
-  auto const t_interp = makeSortedUnique(t_interp_setdiff);
-
-  int const number_of_evals = t_eval.size();
-  int const number_of_interps = t_interp.size();
-
-  // setDiff removes entries of t_interp that overlap with
-  // t_eval, so we need to check if we need to interpolate any unique points.
-  // This is not the same as save_adaptive_steps since some entries of t_interp
-  // may be removed by setDiff
-  bool save_interp_steps = number_of_interps > 0;
-
-  // 3. Check if the timestepping entries are valid
-  if (number_of_evals < 2) {
-    throw std::invalid_argument(
-      "t_eval must have at least 2 entries"
-    );
-  } else if (save_interp_steps) {
-    if (t_interp.front() < t_eval.front()) {
-      throw std::invalid_argument(
-        "t_interp values must be greater than the smallest t_eval value: "
-        + std::to_string(t_eval.front())
-      );
-    } else if (t_interp.back() > t_eval.back()) {
-      throw std::invalid_argument(
-        "t_interp values must be less than the greatest t_eval value: "
-        + std::to_string(t_eval.back())
-      );
-    }
-  }
 
   // Initialize length_of_return_vector, t, y, and yS
+  // tODO move this
   InitializeStorage(number_of_evals + number_of_interps);
 
   int i_save = 0;
-
-  realtype t0 = t_eval.front();
-  realtype tf = t_eval.back();
 
   realtype t_val = t0;
   realtype t_prev = t0;
@@ -386,8 +364,6 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     t_interp_next = t_interp[0];
   }
 
-  auto y0 = y0_np.unchecked<1>();
-  auto yp0 = yp0_np.unchecked<1>();
   auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
 
   if (y0.size() != n_coeffs) {

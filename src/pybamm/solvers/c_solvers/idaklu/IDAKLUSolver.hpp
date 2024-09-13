@@ -24,14 +24,24 @@ public:
   ~IDAKLUSolver() = default;
 
   /**
-   * @brief Abstract solver method that returns a Solution class
+   * @brief Abstract solver method that executes the solver
    */
-  virtual Solution solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs) = 0;
+  virtual void solve_individual(
+    const realtype *t_eval,
+    const int number_of_evals,
+    const realtype *t_interp,
+    const int number_of_interps,
+    const realtype *y0,
+    const realtype *yp0,
+    const realtype *inputs,
+    const int length_of_return_vector,
+    realtype *y_return,
+    realtype *yS_return,
+    realtype *t_return,
+    int &t_i,
+    int &retval
+    bool save_adaptive_steps,
+  ) = 0;
 
   /**
    * Abstract method to initialize the solver, once vectors and solver classes

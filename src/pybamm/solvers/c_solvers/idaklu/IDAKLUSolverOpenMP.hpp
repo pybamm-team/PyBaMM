@@ -106,12 +106,19 @@ public:
   /**
    * @brief The main solve method that solves for each variable and time step
    */
-  Solution solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs) override;
+  void solve(
+    const realtype *t,
+    const int number_of_timesteps,
+    const realtype *y0_np,
+    const realtype *yp0_np,
+    const realtype *inputs,
+    const int length_of_return_vector,
+    realtype *y_return,
+    realtype *yS_return,
+    realtype *t_return,
+    int &t_i,
+    int &retval
+  ) override;
 
   /**
    * @brief Concrete implementation of initialization method
