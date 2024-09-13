@@ -7,7 +7,7 @@ import pybamm
 import tests
 
 import numpy as np
-import unittest
+import pytest
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -61,7 +61,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariable(unittest.TestCase):
+class TestProcessedVariable:
     def test_processed_variable_0D(self):
         # without space
         t = pybamm.t
@@ -112,7 +112,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         # test no inputs (i.e. no sensitivity)
-        self.assertDictEqual(processed_var.sensitivities, {})
+        assert processed_var.sensitivities == {}
 
         # with parameter
         t = pybamm.t
@@ -132,7 +132,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         # test no sensitivity raises error
-        with self.assertRaisesRegex(ValueError, "Cannot compute sensitivities"):
+        with pytest.raises(ValueError, match="Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
     def test_processed_variable_1D(self):
@@ -562,10 +562,10 @@ class TestProcessedVariable(unittest.TestCase):
             processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
         )
         # 1 vector, 1 scalar
-        self.assertEqual(processed_eqn(0.5, x_sol[10:30]).shape, (20,))
-        self.assertEqual(processed_eqn(t_sol[4:9], x_sol[-1]).shape, (5,))
+        assert processed_eqn(0.5, x_sol[10:30]).shape == (20,)
+        assert processed_eqn(t_sol[4:9], x_sol[-1]).shape == (5,)
         # 2 scalars
-        self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, ())
+        assert processed_eqn(0.5, x_sol[-1]).shape == ()
 
         # test x
         x_disc = disc.process_symbol(x)
@@ -686,7 +686,7 @@ class TestProcessedVariable(unittest.TestCase):
                 "domain B": {b: {"min": 0, "max": 1}},
             }
         )
-        with self.assertRaisesRegex(NotImplementedError, "Spatial variable name"):
+        with pytest.raises(NotImplementedError, match="Spatial variable name"):
             pybamm.ProcessedVariable(
                 [var_sol],
                 [var_casadi],
@@ -892,7 +892,7 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
         )
 
-    def test_processed_var_2D_scikit_interpolation(self):
+    def test_processed_var_2_d_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
@@ -1061,7 +1061,7 @@ class TestProcessedVariable(unittest.TestCase):
         u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
         var_casadi = to_casadi(var_sol, u_sol)
 
-        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
+        with pytest.raises(NotImplementedError, match="Shape not recognized"):
             pybamm.ProcessedVariable(
                 [var_sol],
                 [var_casadi],
@@ -1088,51 +1088,23 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         # Test empty list returns None
-        self.assertIsNone(processed_var._process_spatial_variable_names([]))
+        assert processed_var._process_spatial_variable_names([]) is None
 
         # Test tabs is ignored
-        self.assertEqual(
-            processed_var._process_spatial_variable_names(["tabs", "var"]),
-            "var",
-        )
+        assert processed_var._process_spatial_variable_names(["tabs", "var"]) == "var"
 
         # Test strings stay strings
-        self.assertEqual(
-            processed_var._process_spatial_variable_names(["y"]),
-            "y",
-        )
+        assert processed_var._process_spatial_variable_names(["y"]) == "y"
 
         # Test spatial variables are converted to strings
         x = pybamm.SpatialVariable("x", domain=["domain"])
-        self.assertEqual(
-            processed_var._process_spatial_variable_names([x]),
-            "x",
-        )
+        assert processed_var._process_spatial_variable_names([x]) == "x"
 
         # Test renaming for PyBaMM convention
-        self.assertEqual(
-            processed_var._process_spatial_variable_names(["x_a", "x_b"]),
-            "x",
-        )
-        self.assertEqual(
-            processed_var._process_spatial_variable_names(["r_a", "r_b"]),
-            "r",
-        )
-        self.assertEqual(
-            processed_var._process_spatial_variable_names(["R_a", "R_b"]),
-            "R",
-        )
+        assert processed_var._process_spatial_variable_names(["x_a", "x_b"]) == "x"
+        assert processed_var._process_spatial_variable_names(["r_a", "r_b"]) == "r"
+        assert processed_var._process_spatial_variable_names(["R_a", "R_b"]) == "R"
 
         # Test error raised if spatial variable name not recognised
-        with self.assertRaisesRegex(NotImplementedError, "Spatial variable name"):
+        with pytest.raises(NotImplementedError, match="Spatial variable name"):
             processed_var._process_spatial_variable_names(["var1", "var2"])
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
