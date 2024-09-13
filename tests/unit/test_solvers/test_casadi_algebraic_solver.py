@@ -263,7 +263,7 @@ class TestCasadiAlgebraicSolverSensitivity:
         np.testing.assert_array_equal(solution["var"].data, -3)
         np.testing.assert_array_equal(solution["var"].sensitivities["param"], -1)
 
-    def test_solve_with_symbolic_input_1_d_vector_input(self):
+    def test_solve_with_symbolic_input_1D_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
         param = pybamm.InputParameter("param", "negative electrode")
