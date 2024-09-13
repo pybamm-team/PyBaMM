@@ -864,9 +864,9 @@ class BaseSolver:
                 # If the new initial conditions are different
                 # and cannot be evaluated directly, set up again
                 self.set_up(model, model_inputs_list[0], t_eval, ics_only=True)
-            self._model_set_up[model][
-                "initial conditions"
-            ] = model.concatenated_initial_conditions
+            self._model_set_up[model]["initial conditions"] = (
+                model.concatenated_initial_conditions
+            )
         else:
             # Set the standard initial conditions
             self._set_initial_conditions(model, t_eval[0], model_inputs_list[0])
