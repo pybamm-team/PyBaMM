@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 
 import os
-import sys
-import unittest
 import uuid
 import pytest
 from tempfile import TemporaryDirectory
@@ -12,7 +10,7 @@ from scipy.integrate import cumulative_trapezoid
 from tests import no_internet_connection
 
 
-class TestSimulation(unittest.TestCase):
+class TestSimulation:
     def test_simple_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
@@ -27,49 +25,49 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         # check that the model is unprocessed
-        self.assertEqual(sim._mesh, None)
-        self.assertEqual(sim._disc, None)
+        assert sim._mesh is None
+        assert sim._disc is None
         V = sim.model.variables["Voltage [V]"]
-        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
-        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
+        assert V.has_symbol_of_classes(pybamm.Parameter)
+        assert not V.has_symbol_of_classes(pybamm.Matrix)
 
         sim.set_parameters()
-        self.assertEqual(sim._mesh, None)
-        self.assertEqual(sim._disc, None)
+        assert sim._mesh is None
+        assert sim._disc is None
         V = sim.model_with_set_params.variables["Voltage [V]"]
-        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
-        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
+        assert not V.has_symbol_of_classes(pybamm.Parameter)
+        assert not V.has_symbol_of_classes(pybamm.Matrix)
         # Make sure model is unchanged
-        self.assertNotEqual(sim.model, model)
+        assert sim.model != model
         V = model.variables["Voltage [V]"]
-        self.assertTrue(V.has_symbol_of_classes(pybamm.Parameter))
-        self.assertFalse(V.has_symbol_of_classes(pybamm.Matrix))
+        assert V.has_symbol_of_classes(pybamm.Parameter)
+        assert not V.has_symbol_of_classes(pybamm.Matrix)
 
-        self.assertEqual(sim.submesh_types, model.default_submesh_types)
-        self.assertEqual(sim.var_pts, model.default_var_pts)
-        self.assertIsNone(sim.mesh)
+        assert sim.submesh_types == model.default_submesh_types
+        assert sim.var_pts == model.default_var_pts
+        assert sim.mesh is None
         for key in sim.spatial_methods.keys():
-            self.assertEqual(
-                sim.spatial_methods[key].__class__,
-                model.default_spatial_methods[key].__class__,
+            assert (
+                sim.spatial_methods[key].__class__
+                == model.default_spatial_methods[key].__class__
             )
 
         sim.build()
-        self.assertFalse(sim._mesh is None)
-        self.assertFalse(sim._disc is None)
+        assert sim._mesh is not None
+        assert sim._disc is not None
         V = sim.built_model.variables["Voltage [V]"]
-        self.assertFalse(V.has_symbol_of_classes(pybamm.Parameter))
-        self.assertTrue(V.has_symbol_of_classes(pybamm.Matrix))
+        assert not V.has_symbol_of_classes(pybamm.Parameter)
+        assert V.has_symbol_of_classes(pybamm.Matrix)
 
     def test_solve(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve([0, 600])
-        self.assertFalse(sim._solution is None)
+        assert sim._solution is not None
         for val in list(sim.built_model.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
+            assert not val.has_symbol_of_classes(pybamm.Parameter)
             # skip test for scalar variables (e.g. discharge capacity)
             if val.size > 1:
-                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+                assert val.has_symbol_of_classes(pybamm.Matrix)
 
         # test solve without check
         sim = pybamm.Simulation(
@@ -77,15 +75,15 @@ class TestSimulation(unittest.TestCase):
         )
         sol = sim.solve(t_eval=[0, 600])
         for val in list(sim.built_model.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
+            assert not val.has_symbol_of_classes(pybamm.Parameter)
             # skip test for scalar variables (e.g. discharge capacity)
             if val.size > 1:
-                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+                assert val.has_symbol_of_classes(pybamm.Matrix)
 
         # Test options that are only available when simulating an experiment
-        with self.assertRaisesRegex(ValueError, "save_at_cycles"):
+        with pytest.raises(ValueError, match="save_at_cycles"):
             sim.solve(save_at_cycles=2)
-        with self.assertRaisesRegex(ValueError, "starting_solution"):
+        with pytest.raises(ValueError, match="starting_solution"):
             sim.solve(starting_solution=sol)
 
     def test_solve_remove_independent_variables_from_rhs(self):
@@ -157,8 +155,8 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         current_1C = model.default_parameter_values["Current function [A]"]
         sim = pybamm.Simulation(model, C_rate=2)
-        self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
-        self.assertEqual(sim.C_rate, 2)
+        assert sim.parameter_values["Current function [A]"] == 2 * current_1C
+        assert sim.C_rate == 2
 
     def test_step(self):
         dt = 0.001
@@ -166,24 +164,24 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         sim.step(dt)  # 1 step stores first two points
-        self.assertEqual(sim.solution.y.full()[0, :].size, 2)
+        assert sim.solution.y.full()[0, :].size == 2
         np.testing.assert_array_almost_equal(sim.solution.t, np.array([0, dt]))
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
-        self.assertEqual(sim.solution.y.full()[0, :].size, 4)
+        assert sim.solution.y.full()[0, :].size == 4
         np.testing.assert_array_almost_equal(
             sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
         )
 
         sim.step(dt, save=False)  # now only store the two end step points
-        self.assertEqual(sim.solution.y.full()[0, :].size, 2)
+        assert sim.solution.y.full()[0, :].size == 2
         np.testing.assert_array_almost_equal(
             sim.solution.t, np.array([2 * dt + 1e-9, 3 * dt])
         )
         # Start from saved solution
         sim.step(dt, starting_solution=saved_sol)
-        self.assertEqual(sim.solution.y.full()[0, :].size, 4)
+        assert sim.solution.y.full()[0, :].size == 4
         np.testing.assert_array_almost_equal(
             sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
         )
@@ -197,15 +195,15 @@ class TestSimulation(unittest.TestCase):
         param = model.default_parameter_values
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 600], initial_soc=1)
-        self.assertEqual(sim._built_initial_soc, 1)
+        assert sim._built_initial_soc == 1
         sim.solve(t_eval=[0, 600], initial_soc=0.5)
-        self.assertEqual(sim._built_initial_soc, 0.5)
+        assert sim._built_initial_soc == 0.5
         exp = pybamm.Experiment(
             [pybamm.step.string("Discharge at 1C until 3.6V", period="1 minute")]
         )
         sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
         sim.solve(initial_soc=0.8)
-        self.assertEqual(sim._built_initial_soc, 0.8)
+        assert sim._built_initial_soc == 0.8
 
         # test with drive cycle
         data_loader = pybamm.DataLoader()
@@ -220,12 +218,12 @@ class TestSimulation(unittest.TestCase):
         param["Current function [A]"] = current_interpolant
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(initial_soc=0.8)
-        self.assertEqual(sim._built_initial_soc, 0.8)
+        assert sim._built_initial_soc == 0.8
 
         # Test that build works with initial_soc
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.build(initial_soc=0.5)
-        self.assertEqual(sim._built_initial_soc, 0.5)
+        assert sim._built_initial_soc == 0.5
 
         # Test that initial soc works with a relevant input parameter
         model = pybamm.lithium_ion.DFN()
@@ -236,7 +234,7 @@ class TestSimulation(unittest.TestCase):
         )
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": og_eps_p})
-        self.assertEqual(sim._built_initial_soc, 0.8)
+        assert sim._built_initial_soc == 0.8
 
         # test having an input parameter in the ocv function
         model = pybamm.lithium_ion.SPM()
@@ -264,14 +262,14 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model)
         sim.solve([0, 1], initial_soc=0.9)
-        self.assertEqual(sim._built_initial_soc, 0.9)
+        assert sim._built_initial_soc == 0.9
 
         # Test whether initial_soc works with half cell (build)
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model)
         sim.build(initial_soc=0.9)
-        self.assertEqual(sim._built_initial_soc, 0.9)
+        assert sim._built_initial_soc == 0.9
 
         # Test whether initial_soc works with half cell when it is a voltage
         model = pybamm.lithium_ion.SPM({"working electrode": "positive"})
@@ -284,14 +282,14 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sol = sim.solve([0, 1], initial_soc=f"{ucv} V")
         voltage = sol["Terminal voltage [V]"].entries
-        self.assertAlmostEqual(voltage[0], ucv, places=5)
+        assert voltage[0] == pytest.approx(ucv, abs=1e-05)
 
         # test with MSMR
         model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
         param = pybamm.ParameterValues("MSMR_Example")
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.build(initial_soc=0.5)
-        self.assertEqual(sim._built_initial_soc, 0.5)
+        assert sim._built_initial_soc == 0.5
 
     def test_solve_with_initial_soc_with_input_param_in_ocv(self):
         # test having an input parameter in the ocv function
@@ -314,7 +312,7 @@ class TestSimulation(unittest.TestCase):
             model, parameter_values=parameter_values, experiment=experiment
         )
         sim.solve([0, 3600], inputs={"a": 1}, initial_soc=0.8)
-        self.assertEqual(sim._built_initial_soc, 0.8)
+        assert sim._built_initial_soc == 0.8
 
     def test_restricted_input_params(self):
         model = pybamm.lithium_ion.SPM()
@@ -337,7 +335,7 @@ class TestSimulation(unittest.TestCase):
         )
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 1], initial_soc=0.8, inputs={"eps_p": original_eps_p})
-        self.assertEqual(sim._built_initial_soc, 0.8)
+        assert sim._built_initial_soc == 0.8
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
@@ -390,17 +388,17 @@ class TestSimulation(unittest.TestCase):
         sim.step(
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first two points
-        self.assertEqual(sim.solution.t.size, 2)
-        self.assertEqual(sim.solution.y.full()[0, :].size, 2)
-        self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
+        assert sim.solution.t.size == 2
+        assert sim.solution.y.full()[0, :].size == 2
+        assert sim.solution.t[0] == 0
+        assert sim.solution.t[1] == dt
         np.testing.assert_array_equal(
             sim.solution.all_inputs[0]["Current function [A]"], 1
         )
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
-        self.assertEqual(sim.solution.y.full()[0, :].size, 4)
+        assert sim.solution.y.full()[0, :].size == 4
         np.testing.assert_array_almost_equal(
             sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
         )
@@ -442,13 +440,13 @@ class TestSimulation(unittest.TestCase):
                 def f(t, x=x):
                     return x + t
 
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     operating_mode(f)
 
             def g(t, y):
                 return t
 
-            with self.assertRaises(TypeError):
+            with pytest.raises(TypeError):
                 operating_mode(g)
 
     def test_save_load(self):
@@ -461,13 +459,13 @@ class TestSimulation(unittest.TestCase):
 
             sim.save(test_name)
             sim_load = pybamm.load_sim(test_name)
-            self.assertEqual(sim.model.name, sim_load.model.name)
+            assert sim.model.name == sim_load.model.name
 
             # save after solving
             sim.solve([0, 600])
             sim.save(test_name)
             sim_load = pybamm.load_sim(test_name)
-            self.assertEqual(sim.model.name, sim_load.model.name)
+            assert sim.model.name == sim_load.model.name
 
             # with python formats
             model.convert_to_format = None
@@ -477,8 +475,9 @@ class TestSimulation(unittest.TestCase):
             model.convert_to_format = "python"
             sim = pybamm.Simulation(model)
             sim.solve([0, 600])
-            with self.assertRaisesRegex(
-                NotImplementedError, "Cannot save simulation if model format is python"
+            with pytest.raises(
+                NotImplementedError,
+                match="Cannot save simulation if model format is python",
             ):
                 sim.save(test_name)
 
@@ -497,11 +496,11 @@ class TestSimulation(unittest.TestCase):
             os.remove(filename)
             raise excep
 
-        self.assertEqual(
-            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020",
-            pkl_obj.parameter_values[
+        assert (
+            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
+            == pkl_obj.parameter_values[
                 "Negative electrode exchange-current density [A.m-2]"
-            ].__name__,
+            ].__name__
         )
         os.remove(filename)
 
@@ -517,7 +516,7 @@ class TestSimulation(unittest.TestCase):
             sim.solve([0, 600])
             sim.save(test_name)
             sim_load = pybamm.load_sim(test_name)
-            self.assertEqual(sim.model.name, sim_load.model.name)
+            assert sim.model.name == sim_load.model.name
 
             # with python format
             model.convert_to_format = None
@@ -535,7 +534,7 @@ class TestSimulation(unittest.TestCase):
             sim.solve([0, 600])
             sim.save(test_name)
             sim_load = pybamm.load_sim(test_name)
-            self.assertEqual(sim.model.name, sim_load.model.name)
+            assert sim.model.name == sim_load.model.name
 
     def test_save_load_model(self):
         model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
@@ -543,7 +542,7 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         # test exception if not discretised
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             sim.save_model("sim_save")
 
         # save after solving
@@ -553,7 +552,7 @@ class TestSimulation(unittest.TestCase):
         # load model
         saved_model = pybamm.load_model("sim_save.json")
 
-        self.assertEqual(model.options, saved_model.options)
+        assert model.options == saved_model.options
 
         os.remove("sim_save.json")
 
@@ -561,7 +560,7 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
         # test exception if not solved
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             sim.plot()
 
         # now solve and plot
@@ -572,8 +571,8 @@ class TestSimulation(unittest.TestCase):
     def test_create_gif(self):
         with TemporaryDirectory() as dir_name:
             sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-            with self.assertRaisesRegex(
-                ValueError, "The simulation has not been solved yet."
+            with pytest.raises(
+                ValueError, match="The simulation has not been solved yet."
             ):
                 sim.create_gif()
             sim.solve(t_eval=[0, 10])
@@ -620,13 +619,13 @@ class TestSimulation(unittest.TestCase):
 
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
-        with self.assertWarns(pybamm.SolverWarning):
+        with pytest.warns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, 10, 3))
 
         # check warning raised if t_eval doesnt contain time_data , but has a finer
         # resolution (can still solve, but good for users to know they dont have
         # the solution returned at the data points)
-        with self.assertWarns(pybamm.SolverWarning):
+        with pytest.warns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
 
     def test_discontinuous_current(self):
@@ -647,20 +646,20 @@ class TestSimulation(unittest.TestCase):
         )
         sim.solve([0, 3600])
         current = sim.solution["Current [A]"]
-        self.assertEqual(current(0), 1)
-        self.assertEqual(current(1500), -0.5)
-        self.assertEqual(current(3000), 0.5)
+        assert current(0) == 1
+        assert current(1500) == -0.5
+        assert current(3000) == 0.5
 
     def test_t_eval(self):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
 
         # test no t_eval
-        with self.assertRaisesRegex(pybamm.SolverError, "'t_eval' must be provided"):
+        with pytest.raises(pybamm.SolverError, match="'t_eval' must be provided"):
             sim.solve()
 
         # test t_eval list of length != 2
-        with self.assertRaisesRegex(pybamm.SolverError, "'t_eval' can be provided"):
+        with pytest.raises(pybamm.SolverError, match="'t_eval' can be provided"):
             sim.solve(t_eval=[0, 1, 2])
 
         # tets list gets turned into np.linspace(t0, tf, 100)
@@ -676,11 +675,3 @@ class TestSimulation(unittest.TestCase):
         inputs = {"Electrode height [m]": 0.2}
         sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
         sim.solve(t_eval=t_eval, inputs=inputs)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

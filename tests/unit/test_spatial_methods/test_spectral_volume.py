@@ -2,9 +2,9 @@
 # Test for the operator class
 #
 
+import pytest
 import pybamm
 import numpy as np
-import unittest
 
 
 def get_mesh_for_testing(
@@ -87,10 +87,10 @@ def get_1p1d_mesh_for_testing(
     )
 
 
-class TestSpectralVolume(unittest.TestCase):
+class TestSpectralVolume:
     def test_exceptions(self):
         sp_meth = pybamm.SpectralVolume()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             sp_meth.chebyshev_differentiation_matrices(3, 3)
 
         mesh = get_mesh_for_testing()
@@ -104,14 +104,14 @@ class TestSpectralVolume(unittest.TestCase):
         sp_meth.build(mesh)
 
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
         bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
 
     def test_grad_div_shapes_Dirichlet_bcs(self):
@@ -628,13 +628,3 @@ class TestSpectralVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), expected
         )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
