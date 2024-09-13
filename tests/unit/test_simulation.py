@@ -322,7 +322,7 @@ class TestSimulation:
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, experiment=experiment
         )
-        with self.assertRaisesRegex(pybamm.ModelError, "Initial temperature"):
+        with pytest.raises(pybamm.ModelError, match="Initial temperature"):
             sim.solve([0, 3600])
 
     def test_esoh_with_input_param(self):
@@ -360,12 +360,12 @@ class TestSimulation:
         )
 
         # check that the sensitivities are stored
-        self.assertTrue("Current function [A]" in sol1.sensitivities)
+        assert "Current function [A]" in sol1.sensitivities
 
         sol2 = sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1 + h})
 
         # check that the sensitivities are not stored
-        self.assertFalse("Current function [A]" in sol2.sensitivities)
+        assert "Current function [A]" not in sol2.sensitivities
 
         # check that the sensitivities are roughly correct
         np.testing.assert_array_almost_equal(
