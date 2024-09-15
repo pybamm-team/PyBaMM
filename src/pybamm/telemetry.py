@@ -24,15 +24,18 @@ def capture(event):
     if pybamm.config.is_running_tests():
         return
 
+    properties = {
+        "python_version": sys.version,
+        "pybamm_version": pybamm.__version__,
+    }
+
     config = pybamm.config.read()
+    if config:
+        user_id = config["uuid"]
+    else:
+        user_id = "anonymous-user-id"
+        properties["$process_person_profile"] = False
 
     # setting $process_person_profile to False mean that we only track what events are
     # being run and don't capture anything about the user
-    _posthog.capture(
-        config["uuid"],
-        event,
-        properties={
-            "python_version": sys.version,
-            "pybamm_version": pybamm.__version__,
-        },
-    )
+    _posthog.capture(user_id, event, properties=properties)
