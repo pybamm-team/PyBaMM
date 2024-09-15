@@ -4,6 +4,7 @@
 import pybamm
 
 pybamm.set_logging_level("INFO")
+pybamm.telemetry.disable()
 
 # load models
 models = [

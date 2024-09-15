@@ -192,8 +192,8 @@ from .simulation import Simulation, load_sim, is_notebook
 # Batch Study
 from .batch_study import BatchStudy
 
-# Callbacks
-from . import callbacks
+# Callbacks and telemetry
+from . import callbacks, telemetry
 
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
@@ -220,6 +220,7 @@ __all__ = [
     "simulation",
     "solvers",
     "spatial_methods",
+    "telemetry",
     "type_definitions",
     "util",
     "version",
