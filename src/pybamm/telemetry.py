@@ -20,13 +20,18 @@ if _opt_out != "false":
 
 
 def capture(event):
+    # don't capture events in automated testing
+    if pybamm.config.is_running_tests():
+        return
+
+    config = pybamm.config.read()
+
     # setting $process_person_profile to False mean that we only track what events are
     # being run and don't capture anything about the user
     _posthog.capture(
-        "anonymous-user-id",
+        config["uuid"],
         event,
         properties={
-            "$process_person_profile": False,
             "python_version": sys.version,
             "pybamm_version": pybamm.__version__,
         },

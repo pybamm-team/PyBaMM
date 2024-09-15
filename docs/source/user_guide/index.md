@@ -80,4 +80,4 @@ PyBaMM collects anonymous usage data to help improve the library. This telemetry
 - **What is collected**: Basic usage information like PyBaMM version, Python version, and which functions are run.
 - **Why**: To understand how PyBaMM is used and prioritize development efforts.
 - **Opt-out**: To disable telemetry, set the environment variable `PYBAMM_OPTOUT_TELEMETRY=true` or use `pybamm.telemetry.disable()` in your code.
-- **Privacy**: No personal information (name, email, etc) or sensitive information (parameter values, simulation results) is ever collected.
+- **Privacy**: No personal information (name, email, etc) or sensitive information (parameter values, simulation results, etc) is ever collected.
