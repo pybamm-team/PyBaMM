@@ -46,14 +46,14 @@ def generate():
     if is_running_tests():
         return
 
+    # Check if the config file already exists
+    if read() is not None:
+        return
+
     config_file = _get_config_file()
 
     # Create the directory if it doesn't exist
     config_file.parent.mkdir(parents=True, exist_ok=True)
-
-    # Check if the config file already exists
-    if read() is not None:
-        return
 
     # Generate a UUID
     unique_id = uuid.uuid4()
