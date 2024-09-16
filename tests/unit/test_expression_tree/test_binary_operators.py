@@ -294,7 +294,7 @@ class TestBinaryOperators:
         disc.process_model(model)
 
         # check doesn't evaluate on edges anymore
-        assert model.variables["inner"].evaluates_on_edges("primary") == False
+        assert not model.variables["inner"].evaluates_on_edges("primary")
 
     def test_source(self):
         u = pybamm.Variable("u", domain="current collector")
@@ -795,10 +795,10 @@ class TestBinaryOperators:
             sympy.Matrix([[4.0, 1.0], [2.0, 2.0]])
 
         # Test EqualHeaviside
-        assert pybamm.EqualHeaviside(1, 0).to_equation() == False
+        assert not pybamm.EqualHeaviside(1, 0).to_equation()
 
         # Test NotEqualHeaviside
-        assert pybamm.NotEqualHeaviside(2, 4).to_equation() == True
+        assert pybamm.NotEqualHeaviside(2, 4).to_equation()
 
     def test_to_json(self, mocker):
         # Test Addition
