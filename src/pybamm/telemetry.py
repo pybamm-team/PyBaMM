@@ -19,7 +19,7 @@ if _opt_out != "false":
     disable()
 
 
-def capture(event):
+def capture(event):  # pragma: no cover
     # don't capture events in automated testing
     if pybamm.config.is_running_tests():
         return

@@ -1,19 +1,10 @@
 import uuid
-import pathlib
 import os
+import platformdirs
+from pathlib import Path
 
 
-def _get_config_file():
-    # Get the home directory
-    home_dir = pathlib.Path.home()
-
-    # Create the file path for pybamm config
-    config_file = home_dir / ".config" / "pybamm" / "config.yml"
-
-    return config_file
-
-
-def is_running_tests():
+def is_running_tests():  # pragma: no cover
     """
     Detect if the code is being run as part of a test suite.
 
@@ -42,7 +33,7 @@ def is_running_tests():
     return any(runner in sys.argv[0].lower() for runner in test_runners)
 
 
-def generate():
+def generate():  # pragma: no cover
     if is_running_tests():
         return
 
@@ -50,8 +41,16 @@ def generate():
     if read() is not None:
         return
 
-    config_file = _get_config_file()
+    config_file = Path(platformdirs.user_config_dir("pybamm")) / "config.yml"
+    write_uuid_to_file(config_file)
 
+
+def read():  # pragma: no cover
+    config_file = Path(platformdirs.user_config_dir("pybamm")) / "config.yml"
+    return read_uuid_from_file(config_file)
+
+
+def write_uuid_to_file(config_file):
     # Create the directory if it doesn't exist
     config_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -64,9 +63,7 @@ def generate():
         f.write(f"  uuid: {unique_id}\n")
 
 
-def read():
-    config_file = _get_config_file()
-
+def read_uuid_from_file(config_file):
     # Check if the config file exists
     if not config_file.exists():
         return None
