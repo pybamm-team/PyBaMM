@@ -65,7 +65,7 @@ def write_uuid_to_file(config_file):
 
 def read_uuid_from_file(config_file):
     # Check if the config file exists
-    if not config_file.exists():
+    if not config_file.exists():  # pragma: no cover
         return None
 
     # Read the UUID from the config file
@@ -78,5 +78,5 @@ def read_uuid_from_file(config_file):
 
         config = yaml.safe_load(content)
         return config["pybamm"]
-    except (yaml.YAMLError, ValueError):
+    except (yaml.YAMLError, ValueError):  # pragma: no cover
         return None

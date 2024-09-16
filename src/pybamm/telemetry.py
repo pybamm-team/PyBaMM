@@ -15,7 +15,7 @@ def disable():
 
 
 _opt_out = os.getenv("PYBAMM_OPTOUT_TELEMETRY", "false").lower()
-if _opt_out != "false":
+if _opt_out != "false":  # pragma: no cover
     disable()
 
 
