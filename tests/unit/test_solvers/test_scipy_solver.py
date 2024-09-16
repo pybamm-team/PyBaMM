@@ -8,7 +8,6 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
 
 
-
 class TestScipySolver:
     def test_model_solver_python_and_jax(self):
         if pybamm.has_jax():
@@ -304,10 +303,8 @@ class TestScipySolver:
         ]
         with pytest.raises(
             pybamm.SolverError,
-                match=
-                "Cannot solve for a list of input parameters"
-                " sets with discontinuities"
-
+            match="Cannot solve for a list of input parameters"
+            " sets with discontinuities",
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
@@ -332,7 +329,8 @@ class TestScipySolver:
 
         with pytest.raises(
             pybamm.SolverError,
-            match="Input parameters cannot appear in expression " "for initial conditions."
+            match="Input parameters cannot appear in expression "
+            "for initial conditions.",
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
@@ -778,5 +776,3 @@ class TestScipySolverWithSensitivity:
             solution["integral of var"].sensitivities["param"],
             np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
         )
-
-

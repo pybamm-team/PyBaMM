@@ -393,15 +393,21 @@ class TestBinaryOperators:
         minimum = pybamm.softminus(a, b, 50)
         assert minimum.evaluate(y=np.array([2]))[0, 0] == pytest.approx(1)
         assert minimum.evaluate(y=np.array([0]))[0, 0] == pytest.approx(0)
-        assert str(minimum) == "-0.02 * log(1.9287498479639178e-22 + exp(-50.0 * y[0:1]))"
+        assert (
+            str(minimum) == "-0.02 * log(1.9287498479639178e-22 + exp(-50.0 * y[0:1]))"
+        )
 
         maximum = pybamm.softplus(a, b, 50)
         assert maximum.evaluate(y=np.array([2]))[0, 0] == pytest.approx(2)
         assert maximum.evaluate(y=np.array([0]))[0, 0] == pytest.approx(1)
-        assert str(maximum)[:20] == \
-            "0.02 * log(5.184705528587072e+21 + exp(50.0 * y[0:1]))"[:20]
-        assert str(maximum)[-20:] == \
-            "0.02 * log(5.184705528587072e+21 + exp(50.0 * y[0:1]))"[-20:]
+        assert (
+            str(maximum)[:20]
+            == "0.02 * log(5.184705528587072e+21 + exp(50.0 * y[0:1]))"[:20]
+        )
+        assert (
+            str(maximum)[-20:]
+            == "0.02 * log(5.184705528587072e+21 + exp(50.0 * y[0:1]))"[-20:]
+        )
 
         # Test that smooth min/max are used when the setting is changed
         pybamm.settings.min_max_mode = "soft"
@@ -432,11 +438,13 @@ class TestBinaryOperators:
         assert maximum.evaluate(y=np.array([0]))[0, 0] == pytest.approx(1)
 
         minimum = pybamm.smooth_min(a, b, 1)
-        assert str(minimum) == \
-            "0.5 * (1.0 + y[0:1] - sqrt(1.0 + (1.0 - y[0:1]) ** 2.0))"
+        assert (
+            str(minimum) == "0.5 * (1.0 + y[0:1] - sqrt(1.0 + (1.0 - y[0:1]) ** 2.0))"
+        )
         maximum = pybamm.smooth_max(a, b, 1)
-        assert str(maximum) == \
-            "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])"
+        assert (
+            str(maximum) == "0.5 * (sqrt(1.0 + (1.0 - y[0:1]) ** 2.0) + 1.0 + y[0:1])"
+        )
 
         # Test that smooth min/max are used when the setting is changed
         pybamm.settings.min_max_mode = "smooth"
@@ -476,8 +484,9 @@ class TestBinaryOperators:
         # power with broadcasts
         assert (c**broad2) == pybamm.PrimaryBroadcast(c**2, "domain")
         assert (broad2**c) == pybamm.PrimaryBroadcast(2**c, "domain")
-        assert (broad2 ** pybamm.PrimaryBroadcast(c, "domain")) == \
-            pybamm.PrimaryBroadcast(2**c, "domain")
+        assert (
+            broad2 ** pybamm.PrimaryBroadcast(c, "domain")
+        ) == pybamm.PrimaryBroadcast(2**c, "domain")
         # power with broadcasts to edge
         assert isinstance(var**broad2_edge, pybamm.Power)
         assert (var**broad2_edge).left == var
@@ -791,8 +800,9 @@ class TestBinaryOperators:
         # Test Matrix Multiplication
         arr1 = pybamm.Array([[1, 0], [0, 1]])
         arr2 = pybamm.Array([[4, 1], [2, 2]])
-        assert pybamm.MatrixMultiplication(arr1, arr2).to_equation() == \
-            sympy.Matrix([[4.0, 1.0], [2.0, 2.0]])
+        assert pybamm.MatrixMultiplication(arr1, arr2).to_equation() == sympy.Matrix(
+            [[4.0, 1.0], [2.0, 2.0]]
+        )
 
         # Test EqualHeaviside
         assert not pybamm.EqualHeaviside(1, 0).to_equation()
