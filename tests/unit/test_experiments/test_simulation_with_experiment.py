@@ -36,10 +36,12 @@ class TestSimulationExperiment:
             steps[1].basic_repr()
         ]  # CC charge
         model_V = sim.experiment_unique_steps_to_model[steps[2].basic_repr()]  # CV hold
-        assert "Current cut-off [A] [experiment]" in \
-            [event.name for event in model_V.events]
-        assert "Charge voltage cut-off [V] [experiment]" in \
-            [event.name for event in model_I.events]
+        assert "Current cut-off [A] [experiment]" in [
+            event.name for event in model_V.events
+        ]
+        assert "Charge voltage cut-off [V] [experiment]" in [
+            event.name for event in model_I.events
+        ]
 
         # fails if trying to set up with something that isn't an experiment
         with pytest.raises(TypeError, match="experiment must be"):
@@ -51,8 +53,7 @@ class TestSimulationExperiment:
         sim = pybamm.Simulation(model, experiment="Discharge at C/20 for 1 hour")
         sim.build_for_experiment()
         assert len(sim.experiment.steps) == 1
-        assert sim.experiment.steps[0].description == \
-            "Discharge at C/20 for 1 hour"
+        assert sim.experiment.steps[0].description == "Discharge at C/20 for 1 hour"
         sim = pybamm.Simulation(
             model,
             experiment=["Discharge at C/20 for 1 hour", pybamm.step.rest(60)],
@@ -162,7 +163,9 @@ class TestSimulationExperiment:
             sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
-    @pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -195,7 +198,9 @@ class TestSimulationExperiment:
         )
         assert solutions[1].termination == "final time"
 
-    @pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
     def test_solve_with_sensitivities_and_experiment(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -286,8 +291,9 @@ class TestSimulationExperiment:
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.build_for_experiment()
-        assert sorted([step.basic_repr() for step in experiment.steps]) == \
-            sorted(list(sim.experiment_unique_steps_to_model.keys()))
+        assert sorted([step.basic_repr() for step in experiment.steps]) == sorted(
+            list(sim.experiment_unique_steps_to_model.keys())
+        )
 
     def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
@@ -751,11 +757,13 @@ class TestSimulationExperiment:
         sim.build_for_experiment()
         assert "Rest for padding" in sim.experiment_unique_steps_to_model.keys()
         # Check at least there is an input parameter (temperature)
-        assert len(sim.experiment_unique_steps_to_model["Rest for padding"].parameters) > 0
+        assert (
+            len(sim.experiment_unique_steps_to_model["Rest for padding"].parameters) > 0
+        )
         # Check the model is the same
         assert isinstance(
             sim.experiment_unique_steps_to_model["Rest for padding"],
-            pybamm.lithium_ion.SPM
+            pybamm.lithium_ion.SPM,
         )
 
     def test_run_start_time_experiment(self):
@@ -962,10 +970,10 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve(calc_esoh=False)
-        assert sol.cycles[0].steps[0].termination == \
-            "event: Negative stoichiometry cut-off [experiment]"
+        assert (
+            sol.cycles[0].steps[0].termination
+            == "event: Negative stoichiometry cut-off [experiment]"
+        )
 
         neg_stoich = sol["Negative electrode stoichiometry"].data
         assert neg_stoich[-1] == pytest.approx(0.5, abs=0.0001)
-
-
