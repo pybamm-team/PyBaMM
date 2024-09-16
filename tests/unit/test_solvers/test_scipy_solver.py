@@ -1,15 +1,15 @@
 # Tests for the Scipy Solver class
 #
+import pytest
 import pybamm
 
-import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
-import sys
 
 
-class TestScipySolver(unittest.TestCase):
+
+class TestScipySolver:
     def test_model_solver_python_and_jax(self):
         if pybamm.has_jax():
             formats = ["python", "jax"]
@@ -43,10 +43,8 @@ class TestScipySolver(unittest.TestCase):
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
             # Test time
-            self.assertEqual(
-                solution.total_time, solution.solve_time + solution.set_up_time
-            )
-            self.assertEqual(solution.termination, "final time")
+            assert solution.total_time == solution.solve_time + solution.set_up_time
+            assert solution.termination == "final time"
 
     def test_model_solver_failure(self):
         # Turn off warnings to ignore sqrt error
@@ -65,7 +63,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 3, 100)
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         # Expect solver to fail when y goes negative
-        with self.assertRaises(pybamm.SolverError):
+        with pytest.raises(pybamm.SolverError):
             solver.solve(model, t_eval)
 
         # Turn warnings back on
@@ -96,7 +94,7 @@ class TestScipySolver(unittest.TestCase):
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
-        self.assertLess(len(solution.t), len(t_eval))
+        assert len(solution.t) < len(t_eval)
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
@@ -222,7 +220,7 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(step_sol1.y[0], np.exp(0.1 * step_sol1.t))
 
         # Step again, the model has changed so this raises an error
-        with self.assertRaisesRegex(RuntimeError, "already been initialised"):
+        with pytest.raises(RuntimeError, match="already been initialised"):
             solver.step(step_sol1, model2, dt)
 
     def test_model_solver_with_inputs(self):
@@ -245,11 +243,11 @@ class TestScipySolver(unittest.TestCase):
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        self.assertLess(len(solution.t), len(t_eval))
+        assert len(solution.t) < len(t_eval)
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
-    def test_model_solver_multiple_inputs_happy_path(self):
+    def test_model_solver_multiple_inputs_happy_path(self, subtests):
         for convert_to_format in ["python", "casadi"]:
             # Create model
             model = pybamm.BaseModel()
@@ -271,7 +269,7 @@ class TestScipySolver(unittest.TestCase):
 
             solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
             for i in range(ninputs):
-                with self.subTest(i=i):
+                with subtests.test(i=i):
                     solution = solutions[i]
                     np.testing.assert_array_equal(solution.t, t_eval)
                     np.testing.assert_allclose(
@@ -304,12 +302,12 @@ class TestScipySolver(unittest.TestCase):
                 event_type=pybamm.EventType.DISCONTINUITY,
             )
         ]
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            (
+                match=
                 "Cannot solve for a list of input parameters"
                 " sets with discontinuities"
-            ),
+
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
@@ -332,13 +330,13 @@ class TestScipySolver(unittest.TestCase):
         ninputs = 8
         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
 
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.SolverError,
-            ("Input parameters cannot appear in expression " "for initial conditions."),
+            match="Input parameters cannot appear in expression " "for initial conditions."
         ):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-    def test_model_solver_multiple_inputs_jax_format(self):
+    def test_model_solver_multiple_inputs_jax_format(self, subtests):
         if pybamm.has_jax():
             # Create model
             model = pybamm.BaseModel()
@@ -360,7 +358,7 @@ class TestScipySolver(unittest.TestCase):
 
             solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
             for i in range(ninputs):
-                with self.subTest(i=i):
+                with subtests.test(i=i):
                     solution = solutions[i]
                     np.testing.assert_array_equal(solution.t, t_eval)
                     np.testing.assert_allclose(
@@ -395,7 +393,7 @@ class TestScipySolver(unittest.TestCase):
             solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
             t_eval = np.linspace(0, 10, 100)
             solution = solver.solve(model_disc, t_eval)
-            self.assertLess(len(solution.t), len(t_eval))
+            assert len(solution.t) < len(t_eval)
             np.testing.assert_array_equal(
                 solution.t[:-1], t_eval[: len(solution.t) - 1]
             )
@@ -422,7 +420,7 @@ class TestScipySolver(unittest.TestCase):
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        self.assertLess(len(solution.t), len(t_eval))
+        assert len(solution.t) < len(t_eval)
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
@@ -492,7 +490,7 @@ class TestScipySolver(unittest.TestCase):
         )
 
 
-class TestScipySolverWithSensitivity(unittest.TestCase):
+class TestScipySolverWithSensitivity:
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -782,10 +780,3 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
