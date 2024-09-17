@@ -200,7 +200,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         Returns
         -------
-        object
+        list of `pybamm.Solution`
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
 
@@ -301,6 +301,4 @@ class JaxSolver(pybamm.BaseSolver):
             sol.integration_time = integration_time
             solutions.append(sol)
 
-        if len(solutions) == 1:
-            return solutions[0]
         return solutions
