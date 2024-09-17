@@ -55,7 +55,6 @@ class SolutionData
      */
     Solution generate_solution();
 
-
 private:
 
     int flag;

@@ -1,5 +1,6 @@
 #include "IDAKLUSolverGroup.hpp"
 #include <omp.h>
+#include <optional>
 
 std::vector<Solution> IDAKLUSolverGroup::solve(
     np_array t_eval_np,
@@ -91,7 +92,6 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
       "inputs has wrong number of rows. Expected " + std::to_string(number_of_groups) +
       " but got " + std::to_string(inputs.shape()[0]));
 
-
   const std::size_t solves_per_thread = number_of_groups / m_solvers.size();
   const std::size_t remainder_solves = number_of_groups % m_solvers.size();
 
@@ -101,16 +101,31 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
 
   std::vector<SolutionData> results(number_of_groups);
 
+  std::optional<std::exception> exception;
+
   omp_set_num_threads(m_solvers.size());
   #pragma omp parallel for
   for (int i = 0; i < m_solvers.size(); i++) {
-    for (int j = 0; j < solves_per_thread; j++) {
-      const std::size_t index = i * solves_per_thread + j;
-      const realtype *y = y0 + index * y0_np.shape(1);
-      const realtype *yp = yp0 + index * yp0_np.shape(1);
-      const realtype *input = inputs_data + index * inputs.shape(1);
-      results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
+    try {
+      for (int j = 0; j < solves_per_thread; j++) {
+        const std::size_t index = i * solves_per_thread + j;
+        const realtype *y = y0 + index * y0_np.shape(1);
+        const realtype *yp = yp0 + index * yp0_np.shape(1);
+        const realtype *input = inputs_data + index * inputs.shape(1);
+        results[index] = m_solvers[i]->solve(t_eval, t_interp, y, yp, input, save_adaptive_steps, save_interp_steps);
+      }
+    } catch (std::exception &e) {
+      // If an exception is thrown, we need to catch it and rethrow it outside the parallel region
+      #pragma omp critical
+      {
+        exception = e;
+      }
     }
+  }
+
+  if (exception.has_value()) {
+    py::set_error(PyExc_ValueError, exception->what());
+    throw py::error_already_set();
   }
 
   for (int i = 0; i < remainder_solves; i++) {

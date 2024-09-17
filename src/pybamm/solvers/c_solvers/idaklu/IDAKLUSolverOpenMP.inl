@@ -300,6 +300,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
+  DEBUG("IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP");
   // Free memory
   if (sensitivity) {
       IDASensFree(ida_mem);
@@ -723,8 +724,7 @@ template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag) {
   if (flag < 0) {
     auto message = (std::string("IDA failed with flag ") + std::to_string(flag)).c_str();
-    py::set_error(PyExc_ValueError, message);
-    throw py::error_already_set();
+    throw std::runtime_error(message);
   }
 }
 
