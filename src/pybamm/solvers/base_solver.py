@@ -873,17 +873,8 @@ class BaseSolver:
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
-            ninputs = len(model_inputs_list)
-            if ninputs == 1:
-                new_solution = self._integrate(
-                    model,
-                    t_eval[start_index:end_index],
-                    model_inputs_list[0],
-                    t_interp=t_interp,
-                )
-                new_solutions = [new_solution]
-            elif model.convert_to_format == "jax":
-                # Jax can parallelize over the inputs efficiently
+            if isinstance(self, (pybamm.JaxSolver, pybamm.IDAKLUSolver)):
+                # Jax and IDAKLU solver can accept a list of inputs
                 new_solutions = self._integrate(
                     model,
                     t_eval[start_index:end_index],
@@ -891,18 +882,28 @@ class BaseSolver:
                     t_interp,
                 )
             else:
-                with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-                    new_solutions = p.starmap(
-                        self._integrate,
-                        zip(
-                            [model] * ninputs,
-                            [t_eval[start_index:end_index]] * ninputs,
-                            model_inputs_list,
-                            [t_interp] * ninputs,
-                        ),
+                ninputs = len(model_inputs_list)
+                if ninputs == 1:
+                    new_solution = self._integrate(
+                        model,
+                        t_eval[start_index:end_index],
+                        model_inputs_list[0],
+                        t_interp=t_interp,
                     )
-                    p.close()
-                    p.join()
+                    new_solutions = [new_solution]
+                else:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+                        new_solutions = p.starmap(
+                            self._integrate,
+                            zip(
+                                [model] * ninputs,
+                                [t_eval[start_index:end_index]] * ninputs,
+                                model_inputs_list,
+                                [t_interp] * ninputs,
+                            ),
+                        )
+                        p.close()
+                        p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -972,7 +973,7 @@ class BaseSolver:
             )
 
         # Return solution(s)
-        if ninputs == 1:
+        if len(solutions) == 1:
             return solutions[0]
         else:
             return solutions

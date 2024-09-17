@@ -52,6 +52,7 @@ public:
   int const number_of_states;  // cppcheck-suppress unusedStructMember
   int const number_of_parameters;  // cppcheck-suppress unusedStructMember
   int const number_of_events;  // cppcheck-suppress unusedStructMember
+  int number_of_timesteps;
   int precon_type;  // cppcheck-suppress unusedStructMember
   N_Vector yy, yp, avtol;  // y, y', and absolute tolerance
   N_Vector *yyS;  // cppcheck-suppress unusedStructMember
@@ -106,19 +107,16 @@ public:
   /**
    * @brief The main solve method that solves for each variable and time step
    */
-  void solve(
-    const realtype *t,
-    const int number_of_timesteps,
-    const realtype *y0_np,
-    const realtype *yp0_np,
+  SolutionData solve(
+    const std::vector<realtype> &t_eval,
+    const std::vector<realtype> &t_interp,
+    const realtype *y0,
+    const realtype *yp0,
     const realtype *inputs,
-    const int length_of_return_vector,
-    realtype *y_return,
-    realtype *yS_return,
-    realtype *t_return,
-    int &t_i,
-    int &retval
+    bool save_adaptive_steps,
+    bool save_interp_steps
   ) override;
+
 
   /**
    * @brief Concrete implementation of initialization method

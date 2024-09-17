@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "SolutionData.hpp"
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
@@ -86,17 +87,19 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
+  DEBUG("IDAKLUSolverOpenMP::AllocateVectors (num_threads = " << setup_opts.num_threads << ")");
   // Create vectors
-  if (options.num_threads == 1) {
+  if (setup_opts.num_threads == 1) {
     yy = N_VNew_Serial(number_of_states, sunctx);
     yp = N_VNew_Serial(number_of_states, sunctx);
     avtol = N_VNew_Serial(number_of_states, sunctx);
     id = N_VNew_Serial(number_of_states, sunctx);
   } else {
-    yy = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
-    yp = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
-    avtol = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
-    id = N_VNew_OpenMP(number_of_states, options.num_threads, sunctx);
+    DEBUG("IDAKLUSolverOpenMP::AllocateVectors OpenMP");
+    yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    yp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
   }
 }
 
@@ -320,36 +323,26 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
 }
 
 template <class ExprSet>
-void CasadiSolverOpenMP<ExprSet>::solve_individual(
-    const realtype *t_eval,
-    const int number_of_evals,
-    const realtype *t_interp,
-    const int number_of_interps,
-    const realtype *y0,
-    const realtype *yp0,
-    const realtype *inputs,
-    const int length_of_return_vector,
-    realtype *y_return,
-    realtype *yS_return,
-    realtype *t_return,
-    int &t_i,
-    int &retval
-    bool save_adaptive_steps,
-    bool save_interp_steps,
+SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
+  const std::vector<realtype> &t_eval,
+  const std::vector<realtype> &t_interp,
+  const realtype *y0,
+  const realtype *yp0,
+  const realtype *inputs,
+  bool save_adaptive_steps,
+  bool save_interp_steps
 )
 {
-  DEBUG("IDAKLUSolver::solve_individual");
+  DEBUG("IDAKLUSolver::solve");
+  const int number_of_evals = t_eval.size();
+  const int number_of_interps = t_interp.size();
 
+  if (t.size() < number_of_evals + number_of_interps) {
+    InitializeStorage(number_of_evals + number_of_interps);
+  }
 
-
-
-  const realtype t0 = t_eval[0];
-  const realtype tf = t_eval[number_of_evals - 1];
-
-
-  // Initialize length_of_return_vector, t, y, and yS
-  // tODO move this
-  InitializeStorage(number_of_evals + number_of_interps);
+  realtype t0 = t_eval[0];
+  realtype tf = t_eval[number_of_evals - 1];
 
   int i_save = 0;
 
@@ -366,20 +359,9 @@ void CasadiSolverOpenMP<ExprSet>::solve_individual(
 
   auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
 
-  if (y0.size() != n_coeffs) {
-    throw std::domain_error(
-      "y0 has wrong size. Expected " + std::to_string(n_coeffs) +
-      " but got " + std::to_string(y0.size()));
-  } else if (yp0.size() != n_coeffs) {
-    throw std::domain_error(
-      "yp0 has wrong size. Expected " + std::to_string(n_coeffs) +
-      " but got " + std::to_string(yp0.size()));
-  }
-
   // set inputs
-  auto p_inputs = inputs.unchecked<2>();
   for (int i = 0; i < functions->inputs.size(); i++) {
-    functions->inputs[i] = p_inputs(i, 0);
+    functions->inputs[i] = inputs[i];
   }
 
   // Setup consistent initialization
@@ -508,19 +490,21 @@ void CasadiSolverOpenMP<ExprSet>::solve_individual(
     t_prev = t_val;
   }
 
+
+
+  if (solver_opts.print_stats) {
+    PrintStats();
+  }
+
+  // store number of timesteps so we can generate the solution later
+  number_of_timesteps = i_save;
+
   int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
   realtype *yterm_return = new realtype[length_of_final_sv_slice];
   if (save_outputs_only) {
     // store final state slice if outout variables are specified
     std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(realtype*));
   }
-
-  if (solver_opts.print_stats) {
-    PrintStats();
-  }
-
-  int const number_of_timesteps = i_save;
-  int count;
 
   // Copy the data to return as numpy arrays
 
@@ -530,43 +514,17 @@ void CasadiSolverOpenMP<ExprSet>::solve_individual(
     t_return[i] = t[i];
   }
 
-  py::capsule free_t_when_done(
-    t_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
 
-  np_array t_ret = np_array(
-    number_of_timesteps,
-    &t_return[0],
-    free_t_when_done
-  );
 
   // States, y
   realtype *y_return = new realtype[number_of_timesteps * length_of_return_vector];
-  count = 0;
+  int count = 0;
   for (size_t i = 0; i < number_of_timesteps; i++) {
     for (size_t j = 0; j < length_of_return_vector; j++) {
       y_return[count] = y[i][j];
       count++;
     }
   }
-
-  py::capsule free_y_when_done(
-    y_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array y_ret = np_array(
-    number_of_timesteps * length_of_return_vector,
-    &y_return[0],
-    free_y_when_done
-  );
 
   // Sensitivity states, yS
   // Note: Ordering of vector is different if computing outputs vs returning
@@ -590,43 +548,7 @@ void CasadiSolverOpenMP<ExprSet>::solve_individual(
     }
   }
 
-  py::capsule free_yS_when_done(
-    yS_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array yS_ret = np_array(
-    vector<ptrdiff_t> {
-      arg_sens0,
-      arg_sens1,
-      arg_sens2
-    },
-    &yS_return[0],
-    free_yS_when_done
-  );
-
-  // Final state slice, yterm
-  py::capsule free_yterm_when_done(
-    yterm_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array y_term = np_array(
-    length_of_final_sv_slice,
-    &yterm_return[0],
-    free_yterm_when_done
-  );
-
-  // Store the solution
-  Solution sol(retval, t_ret, y_ret, yS_ret, y_term);
-
-  return sol;
+  return SolutionData(retval, number_of_timesteps, length_of_return_vector, arg_sens0, arg_sens1, arg_sens2, length_of_final_sv_slice, t_return, y_return, yS_return, yterm_return);
 }
 
 template <class ExprSet>

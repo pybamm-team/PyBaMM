@@ -14,12 +14,10 @@ public:
   /**
    * @brief Default constructor
    */
-  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters, int length_of_return_vector, bool is_output_variables):
+  IDAKLUSolverGroup(std::vector<std::unique_ptr<IDAKLUSolver>> solvers, int number_of_states, int number_of_parameters):
     m_solvers(std::move(solvers)),
     number_of_states(number_of_states),
-    number_of_parameters(number_of_parameters),
-    length_of_return_vector(length_of_return_vector),
-    is_output_variables(is_output_variables)
+    number_of_parameters(number_of_parameters)
     {}
 
   // no copy constructor (unique_ptr cannot be copied)
@@ -38,15 +36,13 @@ public:
     np_array t_interp_np,
     np_array y0_np,
     np_array yp0_np,
-    np_array_dense inputs);
+    np_array inputs);
 
 
   private:
     std::vector<std::unique_ptr<IDAKLUSolver>> m_solvers;
     int number_of_states;
     int number_of_parameters;
-    int length_of_return_vector;
-    bool is_output_variables;
 };
 
 #endif // PYBAMM_IDAKLU_SOLVER_GROUP_HPP

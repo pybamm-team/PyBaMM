@@ -82,6 +82,8 @@ pybind11_add_module(idaklu
   src/pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverGroup.cpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverGroup.hpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.inl
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.hpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.cpp
@@ -94,6 +96,8 @@ pybind11_add_module(idaklu
   src/pybamm/solvers/c_solvers/idaklu/common.cpp
   src/pybamm/solvers/c_solvers/idaklu/Solution.cpp
   src/pybamm/solvers/c_solvers/idaklu/Solution.hpp
+  src/pybamm/solvers/c_solvers/idaklu/SolutionData.cpp
+  src/pybamm/solvers/c_solvers/idaklu/SolutionData.hpp
   src/pybamm/solvers/c_solvers/idaklu/Options.hpp
   src/pybamm/solvers/c_solvers/idaklu/Options.cpp
   # IDAKLU expressions / function evaluation [abstract]
@@ -137,6 +141,12 @@ set_target_properties(
   INSTALL_RPATH "${CASADI_DIR}"
   INSTALL_RPATH_USE_LINK_PATH TRUE
 )
+
+# openmp
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
