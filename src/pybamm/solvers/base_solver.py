@@ -1233,7 +1233,13 @@ class BaseSolver:
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
-        solution = self._integrate(model, t_eval, model_inputs, t_interp)
+
+        # API for _integrate is different for JaxSolver and IDAKLUSolver
+        if isinstance(self, (pybamm.JaxSolver, pybamm.IDAKLUSolver)):
+            solutions = self._integrate(model, t_eval, [model_inputs], t_interp)
+            solution = solutions[0]
+        else:
+            solution = self._integrate(model, t_eval, model_inputs, t_interp)
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
