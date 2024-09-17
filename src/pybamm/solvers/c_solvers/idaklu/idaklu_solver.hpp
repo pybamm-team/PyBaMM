@@ -193,6 +193,8 @@ IDAKLUSolverGroup *create_idaklu_solver_group(
 
   std::vector<std::unique_ptr<IDAKLUSolver>> solvers;
   for (int i = 0; i < setup_opts.num_solvers; i++) {
+    // Note: we can't copy an ExprSet as it contains raw pointers to the functions
+    // So we create it in the loop
     auto functions = std::make_unique<ExprSet>(
       rhs_alg,
       jac_times_cjmass,

@@ -341,10 +341,10 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     InitializeStorage(number_of_evals + number_of_interps);
   }
 
-  realtype t0 = t_eval[0];
-  realtype tf = t_eval[number_of_evals - 1];
-
   int i_save = 0;
+
+  realtype t0 = t_eval.front();
+  realtype tf = t_eval.back();
 
   realtype t_val = t0;
   realtype t_prev = t0;
@@ -490,7 +490,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     t_prev = t_val;
   }
 
-
+  int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
+  realtype *yterm_return = new realtype[length_of_final_sv_slice];
+  if (save_outputs_only) {
+    // store final state slice if outout variables are specified
+    std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(realtype*));
+  }
 
   if (solver_opts.print_stats) {
     PrintStats();
@@ -499,13 +504,6 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   // store number of timesteps so we can generate the solution later
   number_of_timesteps = i_save;
 
-  int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
-  realtype *yterm_return = new realtype[length_of_final_sv_slice];
-  if (save_outputs_only) {
-    // store final state slice if outout variables are specified
-    std::memcpy(yterm_return, y_val, length_of_final_sv_slice * sizeof(realtype*));
-  }
-
   // Copy the data to return as numpy arrays
 
   // Time, t
@@ -513,8 +511,6 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   for (size_t i = 0; i < number_of_timesteps; i++) {
     t_return[i] = t[i];
   }
-
-
 
   // States, y
   realtype *y_return = new realtype[number_of_timesteps * length_of_return_vector];
