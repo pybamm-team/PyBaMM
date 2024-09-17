@@ -174,7 +174,7 @@ class Simulation:
                 % (2**32)
             )
 
-    def set_up_and_parameterise_experiment(self):
+    def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
         Create and parameterise the models for each step in the experiment.
 
@@ -182,6 +182,46 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         parameter_values = self._parameter_values.copy()
+
+        # some parameters are used to control the experiment, and should not be
+        # input parameters
+        restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
+        for step in self.experiment.steps:
+            if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
+                restrict_list.update(step.get_parameter_values([]).keys())
+            elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
+                restrict_list.update(["Current function [A]"])
+        for key in restrict_list:
+            if key in parameter_values.keys() and isinstance(
+                parameter_values[key], pybamm.InputParameter
+            ):
+                raise pybamm.ModelError(
+                    f"Cannot use '{key}' as an input parameter in this experiment. "
+                    f"This experiment is controlled via the following parameters: {restrict_list}. "
+                    f"None of these parameters are able to be input parameters."
+                )
+
+        if (
+            solve_kwargs is not None
+            and "calculate_sensitivities" in solve_kwargs
+            and solve_kwargs["calculate_sensitivities"]
+        ):
+            for step in self.experiment.steps:
+                if any(
+                    [
+                        isinstance(
+                            term,
+                            pybamm.experiment.step.step_termination.BaseTermination,
+                        )
+                        for term in step.termination
+                    ]
+                ):
+                    pybamm.logger.warning(
+                        f"Step '{step}' has a termination condition based on an event. Sensitivity calculation will be inaccurate "
+                        "if the time of each step event changes rapidly with respect to the parameters. "
+                    )
+                    break
+
         # Set the initial temperature to be the temperature of the first step
         # We can set this globally for all steps since any subsequent steps will either
         # start at the temperature at the end of the previous step (if non-isothermal
@@ -303,7 +343,7 @@ class Simulation:
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
 
-    def build_for_experiment(self, initial_soc=None, inputs=None):
+    def build_for_experiment(self, initial_soc=None, inputs=None, solve_kwargs=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
         experiment, where there may be several models and solvers to build.
@@ -314,7 +354,7 @@ class Simulation:
         if self.steps_to_built_models:
             return
         else:
-            self.set_up_and_parameterise_experiment()
+            self.set_up_and_parameterise_experiment(solve_kwargs)
 
             # Can process geometry with default parameter values (only electrical
             # parameters change between parameter values)
@@ -497,7 +537,9 @@ class Simulation:
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
-            self.build_for_experiment(initial_soc=initial_soc, inputs=inputs)
+            self.build_for_experiment(
+                initial_soc=initial_soc, inputs=inputs, solve_kwargs=kwargs
+            )
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"

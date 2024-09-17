@@ -4,7 +4,6 @@
 
 from contextlib import redirect_stdout
 import io
-import unittest
 import pytest
 import numpy as np
 
@@ -13,8 +12,8 @@ from tests import get_discretisation_for_testing
 
 
 @pytest.mark.cibw
-@unittest.skipIf(not pybamm.has_idaklu(), "idaklu solver is not installed")
-class TestIDAKLUSolver(unittest.TestCase):
+@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
+class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -146,7 +145,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # Check invalid atol type raises an error
-            with self.assertRaises(pybamm.SolverError):
+            with pytest.raises(pybamm.SolverError):
                 solver._check_atol_type({"key": "value"}, [])
 
             # enforce events that won't be triggered
@@ -177,7 +176,7 @@ class TestIDAKLUSolver(unittest.TestCase):
                 options={"jax_evaluator": "iree"} if form == "iree" else {},
             )
             solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
-            self.assertLess(len(solution.t), len(t_interp))
+            assert len(solution.t) < len(t_interp)
             np.testing.assert_array_almost_equal(
                 solution.y[0],
                 np.exp(0.1 * solution.t),
@@ -385,7 +384,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             # should be no sensitivities calculated
-            with self.assertRaises(KeyError):
+            with pytest.raises(KeyError):
                 print(sol.sensitivities["a"])
 
             # now solve with sensitivities (this should cause set_up to be run again)
@@ -607,7 +606,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with self.assertRaisesRegex(pybamm.SolverError, "KLU requires the Jacobian"):
+        with pytest.raises(pybamm.SolverError, match="KLU requires the Jacobian"):
             solver.solve(model, t_eval)
 
         model = pybamm.BaseModel()
@@ -622,8 +621,8 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         # will give solver error
         t_eval = [0, -3]
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "t_eval must increase monotonically"
+        with pytest.raises(
+            pybamm.SolverError, match="t_eval must increase monotonically"
         ):
             solver.solve(model, t_eval)
 
@@ -639,7 +638,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with self.assertRaisesRegex(pybamm.SolverError, "FAILURE IDA"):
+        with pytest.raises(pybamm.SolverError, match="FAILURE IDA"):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
@@ -718,14 +717,14 @@ class TestIDAKLUSolver(unittest.TestCase):
         with redirect_stdout(f):
             solver.solve(model, t_eval, t_interp=t_interp)
         s = f.getvalue()
-        self.assertIn("Solver Stats", s)
+        assert "Solver Stats" in s
 
         solver = pybamm.IDAKLUSolver(options={"print_stats": False})
         f = io.StringIO()
         with redirect_stdout(f):
             solver.solve(model, t_eval, t_interp=t_interp)
         s = f.getvalue()
-        self.assertEqual(len(s), 0)
+        assert len(s) == 0
 
         # test everything else
         for jacobian in ["none", "dense", "sparse", "matrix-free", "garbage"]:
@@ -772,7 +771,7 @@ class TestIDAKLUSolver(unittest.TestCase):
                         soln = solver.solve(model, t_eval, t_interp=t_interp)
                         np.testing.assert_array_almost_equal(soln.y, soln_base.y, 4)
                     else:
-                        with self.assertRaises(ValueError):
+                        with pytest.raises(ValueError):
                             soln = solver.solve(model, t_eval, t_interp=t_interp)
 
     def test_solver_options(self):
@@ -837,7 +836,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             options = {option: options_fail[option]}
             solver = pybamm.IDAKLUSolver(options=options)
 
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 solver.solve(model, t_eval)
 
     def test_with_output_variables(self):
@@ -940,7 +939,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         # Check that the missing variables are not available in the solution
         for varname in inaccessible_vars:
-            with self.assertRaises(KeyError):
+            with pytest.raises(KeyError):
                 sol[varname].data
 
         # Mock a 1D current collector and initialise (none in the model)
@@ -1046,13 +1045,13 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_bad_jax_evaluator(self):
         model = pybamm.lithium_ion.DFN()
         model.convert_to_format = "jax"
-        with self.assertRaises(pybamm.SolverError):
+        with pytest.raises(pybamm.SolverError):
             pybamm.IDAKLUSolver(options={"jax_evaluator": "bad_evaluator"})
 
     def test_bad_jax_evaluator_output_variables(self):
         model = pybamm.lithium_ion.DFN()
         model.convert_to_format = "jax"
-        with self.assertRaises(pybamm.SolverError):
+        with pytest.raises(pybamm.SolverError):
             pybamm.IDAKLUSolver(
                 options={"jax_evaluator": "bad_evaluator"},
                 output_variables=["Terminal voltage [V]"],
@@ -1068,7 +1067,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
         )
         sol = sim.solve(np.linspace(0, 3600, 2))
-        self.assertEqual(sol.termination, "event: Minimum voltage [V]")
+        assert sol.termination == "event: Minimum voltage [V]"
 
         # create an event that doesn't require the state vector
         eps_p = model.variables["Positive electrode porosity"]
@@ -1086,7 +1085,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             solver=pybamm.IDAKLUSolver(output_variables=["Terminal voltage [V]"]),
         )
         sol3 = sim3.solve(np.linspace(0, 3600, 2))
-        self.assertEqual(sol3.termination, "event: Minimum voltage [V]")
+        assert sol3.termination == "event: Minimum voltage [V]"
 
     def test_simulation_period(self):
         model = pybamm.lithium_ion.DFN()
@@ -1148,29 +1147,18 @@ class TestIDAKLUSolver(unittest.TestCase):
             )
 
             if form == "python":
-                with self.assertRaisesRegex(
+                with pytest.raises(
                     pybamm.SolverError,
-                    "Unsupported option for convert_to_format=python",
+                    match="Unsupported option for convert_to_format=python",
                 ):
-                    with self.assertWarnsRegex(
+                    with pytest.raises(
                         DeprecationWarning,
-                        "The python-idaklu solver has been deprecated.",
+                        match="The python-idaklu solver has been deprecated.",
                     ):
                         _ = solver.solve(model, t_eval)
             elif form == "jax":
-                with self.assertRaisesRegex(
+                with pytest.raises(
                     pybamm.SolverError,
-                    "Unsupported evaluation engine for convert_to_format=jax",
+                    match="Unsupported evaluation engine for convert_to_format=jax",
                 ):
                     _ = solver.solve(model, t_eval)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-
-    unittest.main()

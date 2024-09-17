@@ -670,6 +670,33 @@ class BaseSolver:
         y0 = root_sol.all_ys[0]
         return y0
 
+    def _solve_process_calculate_sensitivities_arg(
+        inputs, model, calculate_sensitivities
+    ):
+        # get a list-only version of calculate_sensitivities
+        if isinstance(calculate_sensitivities, bool):
+            if calculate_sensitivities:
+                calculate_sensitivities_list = [p for p in inputs.keys()]
+            else:
+                calculate_sensitivities_list = []
+        else:
+            calculate_sensitivities_list = calculate_sensitivities
+
+        calculate_sensitivities_list.sort()
+        if not hasattr(model, "calculate_sensitivities"):
+            model.calculate_sensitivities = []
+
+        # Check that calculate_sensitivites have not been updated
+        sensitivities_have_changed = (
+            calculate_sensitivities_list != model.calculate_sensitivities
+        )
+
+        # save sensitivity parameters so we can identify them later on
+        # (FYI: this is used in the Solution class)
+        model.calculate_sensitivities = calculate_sensitivities_list
+
+        return calculate_sensitivities_list, sensitivities_have_changed
+
     def solve(
         self,
         model,
@@ -700,7 +727,11 @@ class BaseSolver:
         calculate_sensitivities : list of str or bool, optional
             Whether the solver calculates sensitivities of all input parameters. Defaults to False.
             If only a subset of sensitivities are required, can also pass a
-            list of input parameter names
+            list of input parameter names.  **Limitations**: sensitivities are not calculated up to numerical tolerances
+            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+            if the timings of your experimental protocol change rapidly with respect to your input parameters.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -721,15 +752,6 @@ class BaseSolver:
 
         """
         pybamm.logger.info(f"Start solving {model.name} with {self.name}")
-
-        # get a list-only version of calculate_sensitivities
-        if isinstance(calculate_sensitivities, bool):
-            if calculate_sensitivities:
-                calculate_sensitivities_list = [p for p in inputs.keys()]
-            else:
-                calculate_sensitivities_list = []
-        else:
-            calculate_sensitivities_list = calculate_sensitivities
 
         # Make sure model isn't empty
         self._check_empty_model(model)
@@ -772,6 +794,12 @@ class BaseSolver:
             self._set_up_model_inputs(model, inputs) for inputs in inputs_list
         ]
 
+        calculate_sensitivities_list, sensitivities_have_changed = (
+            BaseSolver._solve_process_calculate_sensitivities_arg(
+                model_inputs_list[0], model, calculate_sensitivities
+            )
+        )
+
         # (Re-)calculate consistent initialization
         # Assuming initial conditions do not depend on input parameters
         # when len(inputs_list) > 1, only `model_inputs_list[0]`
@@ -792,13 +820,8 @@ class BaseSolver:
                     "for initial conditions."
                 )
 
-        # Check that calculate_sensitivites have not been updated
-        calculate_sensitivities_list.sort()
-        if hasattr(model, "calculate_sensitivities"):
-            model.calculate_sensitivities.sort()
-        else:
-            model.calculate_sensitivities = []
-        if calculate_sensitivities_list != model.calculate_sensitivities:
+        # if any setup configuration has changed, we need to re-set up
+        if sensitivities_have_changed:
             self._model_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
             if isinstance(self, pybamm.CasadiSolver):
@@ -1067,6 +1090,58 @@ class BaseSolver:
                 f"Events {event_names} are non-positive at initial conditions"
             )
 
+    def _set_sens_initial_conditions_from(
+        self, solution: pybamm.Solution, model: pybamm.BaseModel
+    ) -> tuple:
+        """
+        A restricted version of BaseModel.set_initial_conditions_from that only extracts the
+        sensitivities from a solution object, and only for a model that has been descretised.
+        This is used when setting the initial conditions for a sensitivity model.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution to use to initialize the model
+
+        model: :class:`pybamm.BaseModel`
+            The model whose sensitivities to set
+
+        Returns
+        -------
+
+        initial_conditions : tuple of ndarray
+            The initial conditions for the sensitivities, each element of the tuple
+            corresponds to an input parameter
+        """
+
+        ninputs = len(model.calculate_sensitivities)
+        initial_conditions = tuple([] for _ in range(ninputs))
+        solution = solution.last_state
+        for var in model.initial_conditions:
+            final_state = solution[var.name]
+            final_state = final_state.sensitivities
+            final_state_eval = tuple(
+                final_state[key] for key in model.calculate_sensitivities
+            )
+
+            scale, reference = var.scale.value, var.reference.value
+            for i in range(ninputs):
+                scaled_final_state_eval = (final_state_eval[i] - reference) / scale
+                initial_conditions[i].append(scaled_final_state_eval)
+
+        # Also update the concatenated initial conditions if the model is already
+        # discretised
+        # Unpack slices for sorting
+        y_slices = {var: slce for var, slce in model.y_slices.items()}
+        slices = [y_slices[symbol][0] for symbol in model.initial_conditions.keys()]
+
+        # sort equations according to slices
+        concatenated_initial_conditions = [
+            casadi.vertcat(*[eq for _, eq in sorted(zip(slices, init))])
+            for init in initial_conditions
+        ]
+        return concatenated_initial_conditions
+
     def process_t_interp(self, t_interp):
         # set a variable for this
         no_interp = (not self.supports_interp) and (
@@ -1093,6 +1168,7 @@ class BaseSolver:
         npts=None,
         inputs=None,
         save=True,
+        calculate_sensitivities=False,
         t_interp=None,
     ):
         """
@@ -1118,6 +1194,14 @@ class BaseSolver:
             Any input parameters to pass to the model when solving
         save : bool, optional
             Save solution with all previous timesteps. Defaults to True.
+        calculate_sensitivities : list of str or bool, optional
+            Whether the solver calculates sensitivities of all input parameters. Defaults to False.
+            If only a subset of sensitivities are required, can also pass a
+            list of input parameter names. **Limitations**: sensitivities are not calculated up to numerical tolerances
+            so are not guarenteed to be within the tolerances set by the solver, please raise an issue if you
+            require this functionality. Also, when using this feature with `pybamm.Experiment`, the sensitivities
+            do not take into account the movement of step-transitions wrt input parameters, so do not use this feature
+            if the timings of your experimental protocol change rapidly with respect to your input parameters.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to None.
             Only valid for solvers that support intra-solve interpolation (`IDAKLUSolver`).
@@ -1189,8 +1273,15 @@ class BaseSolver:
         # Set up inputs
         model_inputs = self._set_up_model_inputs(model, inputs)
 
+        # process calculate_sensitivities argument
+        calculate_sensitivities_list, sensitivities_have_changed = (
+            BaseSolver._solve_process_calculate_sensitivities_arg(
+                model_inputs, model, calculate_sensitivities
+            )
+        )
+
         first_step_this_model = model not in self._model_set_up
-        if first_step_this_model:
+        if first_step_this_model or sensitivities_have_changed:
             if len(self._model_set_up) > 0:
                 existing_model = next(iter(self._model_set_up))
                 raise RuntimeError(
@@ -1209,18 +1300,45 @@ class BaseSolver:
         ):
             pybamm.logger.verbose(f"Start stepping {model.name} with {self.name}")
 
+        using_sensitivities = len(model.calculate_sensitivities) > 0
+
         if isinstance(old_solution, pybamm.EmptySolution):
             if not first_step_this_model:
                 # reset y0 to original initial conditions
                 self.set_up(model, model_inputs, ics_only=True)
         elif old_solution.all_models[-1] == model:
-            # initialize with old solution
-            model.y0 = old_solution.all_ys[-1][:, -1]
+            last_state = old_solution.last_state
+            model.y0 = last_state.all_ys[0]
+            if using_sensitivities and isinstance(last_state._all_sensitivities, dict):
+                full_sens = last_state._all_sensitivities["all"][0]
+                model.y0S = tuple(full_sens[:, i] for i in range(full_sens.shape[1]))
+
         else:
             _, concatenated_initial_conditions = model.set_initial_conditions_from(
                 old_solution, return_type="ics"
             )
             model.y0 = concatenated_initial_conditions.evaluate(0, inputs=model_inputs)
+            if using_sensitivities:
+                model.y0S = self._set_sens_initial_conditions_from(old_solution, model)
+
+        # hopefully we'll get rid of explicit sensitivities soon so we can remove this
+        explicit_sensitivities = model.len_rhs_sens > 0 or model.len_alg_sens > 0
+        if (
+            explicit_sensitivities
+            and using_sensitivities
+            and not isinstance(old_solution, pybamm.EmptySolution)
+            and not old_solution.all_models[-1] == model
+        ):
+            y0_list = []
+            if model.len_rhs > 0:
+                y0_list.append(model.y0[: model.len_rhs])
+                for s in model.y0S:
+                    y0_list.append(s[: model.len_rhs])
+            if model.len_alg > 0:
+                y0_list.append(model.y0[model.len_rhs :])
+                for s in model.y0S:
+                    y0_list.append(s[model.len_rhs :])
+            model.y0 = casadi.vertcat(*y0_list)
 
         set_up_time = timer.time()
 
