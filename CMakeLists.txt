@@ -145,10 +145,14 @@ set_target_properties(
 # openmp
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   execute_process(
-      COMMAND "brew --prefix"
+      COMMAND "brew" "--prefix"
       OUTPUT_VARIABLE HOMEBREW_PREFIX
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
+  if (OpenMP_ROOT)
+    set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
+  else()
+    set(OpenMP_ROOT "${HOMEBREW_PREFIX}/opt/libomp")
+  endif()
 endif()
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
