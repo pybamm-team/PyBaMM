@@ -9,6 +9,7 @@
 #include <pybind11/stl_bind.h>
 
 #include "idaklu/idaklu_solver.hpp"
+#include "idaklu/IDAKLUSolverGroup.hpp"
 #include "idaklu/IdakluJax.hpp"
 #include "idaklu/common.hpp"
 #include "idaklu/Expressions/Casadi/CasadiFunctions.hpp"
@@ -26,15 +27,17 @@ casadi::Function generate_casadi_function(const std::string &data)
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
+PYBIND11_MAKE_OPAQUE(std::vector<Solution>);
 
 PYBIND11_MODULE(idaklu, m)
 {
   m.doc() = "sundials solvers"; // optional module docstring
 
   py::bind_vector<std::vector<np_array>>(m, "VectorNdArray");
+  py::bind_vector<std::vector<Solution>>(m, "VectorSolution");
 
-  py::class_<IDAKLUSolver>(m, "IDAKLUSolver")
-  .def("solve", &IDAKLUSolver::solve,
+  py::class_<IDAKLUSolverGroup>(m, "IDAKLUSolverGroup")
+  .def("solve", &IDAKLUSolverGroup::solve,
     "perform a solve",
     py::arg("t_eval"),
     py::arg("t_interp"),
@@ -43,8 +46,8 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("inputs"),
     py::return_value_policy::take_ownership);
 
-  m.def("create_casadi_solver", &create_idaklu_solver<CasadiFunctions>,
-    "Create a casadi idaklu solver object",
+  m.def("create_casadi_solver_group", &create_idaklu_solver_group<CasadiFunctions>,
+    "Create a group of casadi idaklu solver objects",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),
     py::arg("rhs_alg"),
@@ -70,8 +73,8 @@ PYBIND11_MODULE(idaklu, m)
     py::return_value_policy::take_ownership);
 
 #ifdef IREE_ENABLE
-  m.def("create_iree_solver", &create_idaklu_solver<IREEFunctions>,
-    "Create a iree idaklu solver object",
+  m.def("create_iree_solver_group", &create_idaklu_solver_group<IREEFunctions>,
+    "Create a group of iree idaklu solver objects",
     py::arg("number_of_states"),
     py::arg("number_of_parameters"),
     py::arg("rhs_alg"),
