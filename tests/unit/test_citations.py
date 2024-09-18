@@ -1,6 +1,3 @@
-#
-# Tests the citations class.
-#
 import pytest
 import pybamm
 import os
@@ -110,6 +107,15 @@ class TestCitations:
 
         with pytest.raises(TypeError):
             pybamm.citations._add_citation(1001, Entry("misc"))
+
+    def test_pybtex_warning(self, caplog):
+        class CiteWithWarning(pybamm.Citations):
+            def __init__(self):
+                super().__init__()
+                self._module_import_error = True
+
+        CiteWithWarning().print_import_warning()
+        assert "Could not print citations" in caplog.text
 
     def test_andersson_2019(self):
         citations = pybamm.citations

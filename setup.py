@@ -323,8 +323,6 @@ idaklu_ext = Extension(
         "src/pybamm/solvers/c_solvers/idaklu/IdakluJax.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/common.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/common.cpp",
-        "src/pybamm/solvers/c_solvers/idaklu/python.hpp",
-        "src/pybamm/solvers/c_solvers/idaklu/python.cpp",
         "src/pybamm/solvers/c_solvers/idaklu/Solution.cpp",
         "src/pybamm/solvers/c_solvers/idaklu/Solution.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/Options.hpp",
