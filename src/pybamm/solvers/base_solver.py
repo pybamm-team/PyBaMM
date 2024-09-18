@@ -86,6 +86,10 @@ class BaseSolver:
     def root_method(self):
         return self._root_method
 
+    @property
+    def supports_parallel_solve(self):
+        return False
+
     @root_method.setter
     def root_method(self, method):
         if method == "casadi":
@@ -896,7 +900,7 @@ class BaseSolver:
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
-            if isinstance(self, (pybamm.JaxSolver, pybamm.IDAKLUSolver)):
+            if self.supports_parallel_solve:
                 # Jax and IDAKLU solver can accept a list of inputs
                 new_solutions = self._integrate(
                     model,
@@ -1353,7 +1357,7 @@ class BaseSolver:
         timer.reset()
 
         # API for _integrate is different for JaxSolver and IDAKLUSolver
-        if isinstance(self, (pybamm.JaxSolver, pybamm.IDAKLUSolver)):
+        if self.supports_parallel_solve:
             solutions = self._integrate(model, t_eval, [model_inputs], t_interp)
             solution = solutions[0]
         else:

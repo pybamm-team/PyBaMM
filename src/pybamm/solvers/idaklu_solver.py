@@ -732,6 +732,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
         return pybamm.EvaluatorJax._demote_64_to_32(x)
 
+    @property
+    def supports_parallel_solve(self):
+        return True
+
     def _integrate(self, model, t_eval, inputs_list=None, t_interp=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.

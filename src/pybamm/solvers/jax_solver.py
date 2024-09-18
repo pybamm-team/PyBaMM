@@ -185,6 +185,10 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
+    @property
+    def supports_parallel_solve(self):
+        return True
+
     def _integrate(self, model, t_eval, inputs=None, t_interp=None):
         """
         Solve a model defined by dydt with initial conditions y0.
