@@ -445,7 +445,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   if (sensitivity) {
-    CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
+    CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
   }
 
   // Store Consistent initialization
@@ -478,7 +478,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     bool hit_adaptive = save_adaptive_steps && retval == IDA_SUCCESS;
 
     if (sensitivity) {
-      CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
+      CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
     }
 
     if (hit_tinterp) {
@@ -499,7 +499,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
         // Reset the states and sensitivities at t = t_val
         CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
         if (sensitivity) {
-          CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
+          CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
         }
       }
 

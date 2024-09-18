@@ -26,3 +26,9 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
 
     def test_composite_graphite_silicon_sei(self):
         pass  # skip this test
+
+    def test_composite_reaction_driven_LAM(self):
+        pass  # skip this test
+
+    def test_composite_stress_driven_LAM(self):
+        pass  # skip this test

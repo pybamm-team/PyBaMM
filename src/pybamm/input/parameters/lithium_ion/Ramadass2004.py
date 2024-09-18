@@ -4,7 +4,7 @@ import numpy as np
 
 def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
     """
-    Graphite MCMB 2528 diffusivity as a function of stochiometry, in this case the
+    Graphite MCMB 2528 diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Dualfoil [1].
 
     References
@@ -14,7 +14,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -34,7 +34,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 def graphite_ocp_Ramadass2004(sto):
     """
     Graphite Open-circuit Potential (OCP) as a function of the
-    stochiometry (theta?). The fit is taken from Ramadass 2004.
+    stoichiometry (theta?). The fit is taken from Ramadass 2004.
 
     References
     ----------
@@ -92,10 +92,10 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def graphite_entropic_change_Moura2016(sto, c_s_max):
+def graphite_entropic_change_Moura2016(sto):
     """
     Graphite entropic change in open-circuit potential (OCP) at a temperature of
-    298.15K as a function of the stochiometry taken from Scott Moura's FastDFN code
+    298.15K as a function of the stoichiometry taken from Scott Moura's FastDFN code
     [1].
 
     References
@@ -105,9 +105,12 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-        Stochiometry of material (li-fraction)
+        stoichiometry of material (li-fraction)
 
     """
+    # Original parametrization was expressed in terms of c_s_max, but we want to
+    # express it in terms of stoichiometry only
+    c_s_max = 24983.2619938437
     du_dT = (
         -1.5 * (120.0 / c_s_max) * np.exp(-120 * sto)
         + (0.0351 / (0.083 * c_s_max)) * ((np.cosh((sto - 0.286) / 0.083)) ** (-2))
@@ -125,7 +128,7 @@ def graphite_entropic_change_Moura2016(sto, c_s_max):
 
 def lico2_diffusivity_Ramadass2004(sto, T):
     """
-    LiCo2 diffusivity as a function of stochiometry, in this case the
+    LiCo2 diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Ramadass 2004.
 
     References
@@ -137,7 +140,7 @@ def lico2_diffusivity_Ramadass2004(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -156,7 +159,7 @@ def lico2_diffusivity_Ramadass2004(sto, T):
 def lico2_ocp_Ramadass2004(sto):
     """
     Lithium Cobalt Oxide (LiCO2) Open-circuit Potential (OCP) as a a function of the
-    stochiometry. The fit is taken from Ramadass 2004. Stretch is considered the
+    stoichiometry. The fit is taken from Ramadass 2004. Stretch is considered the
     overhang area negative electrode / area positive electrode, in Ramadass 2002.
 
     References
@@ -168,7 +171,7 @@ def lico2_ocp_Ramadass2004(sto):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     """
 
@@ -228,10 +231,10 @@ def lico2_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, c_s_m
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def lico2_entropic_change_Moura2016(sto, c_s_max):
+def lico2_entropic_change_Moura2016(sto):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
-    a temperature of 298.15K as a function of the stochiometry. The fit is taken
+    a temperature of 298.15K as a function of the stoichiometry. The fit is taken
     from Scott Moura's FastDFN code [1].
 
     References
@@ -241,13 +244,15 @@ def lico2_entropic_change_Moura2016(sto, c_s_max):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-        Stochiometry of material (li-fraction)
+        stoichiometry of material (li-fraction)
     """
     # Since the equation for LiCo2 from this ref. has the stretch factor,
     # should this too? If not, the "bumps" in the OCV don't line up.
     stretch = 1.062
     sto = stretch * sto
-
+    # Original parametrization was expressed in terms of c_s_max, but we want to
+    # express it in terms of stoichiometry only
+    c_s_max = 51217.9257309275
     du_dT = (
         0.07645 * (-54.4806 / c_s_max) * ((1.0 / np.cosh(30.834 - 54.4806 * sto)) ** 2)
         + 2.1581 * (-50.294 / c_s_max) * ((np.cosh(52.294 - 50.294 * sto)) ** (-2))

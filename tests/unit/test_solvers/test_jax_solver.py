@@ -1,16 +1,15 @@
+import pytest
 import pybamm
-import unittest
 from tests import get_mesh_for_testing
 
-import sys
 import numpy as np
 
 if pybamm.has_jax():
     import jax
 
 
-@unittest.skipIf(not pybamm.has_jax(), "jax or jaxlib is not installed")
-class TestJaxSolver(unittest.TestCase):
+@pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+class TestJaxSolver:
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
@@ -38,10 +37,8 @@ class TestJaxSolver(unittest.TestCase):
             )
 
             # Test time
-            self.assertEqual(
-                solution.total_time, solution.solve_time + solution.set_up_time
-            )
-            self.assertEqual(solution.termination, "final time")
+            assert solution.total_time == solution.solve_time + solution.set_up_time
+            assert solution.termination == "final time"
 
             second_solution = solver.solve(model, t_eval)
 
@@ -76,10 +73,8 @@ class TestJaxSolver(unittest.TestCase):
         np.testing.assert_allclose(solution.y[-1], 2 * soln, rtol=1e-7, atol=1e-7)
 
         # Test time
-        self.assertEqual(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
-        self.assertEqual(solution.termination, "final time")
+        assert solution.total_time == solution.solve_time + solution.set_up_time
+        assert solution.termination == "final time"
 
         second_solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(second_solution.y, solution.y)
@@ -124,7 +119,7 @@ class TestJaxSolver(unittest.TestCase):
             grad_solve = jax.jit(jax.grad(solve_model))
             grad = grad_solve(rate)
 
-            self.assertAlmostEqual(grad, grad_num, places=1)
+            assert grad == pytest.approx(grad_num, abs=0.1)
 
     def test_solver_only_works_with_jax(self):
         model = pybamm.BaseModel()
@@ -144,7 +139,7 @@ class TestJaxSolver(unittest.TestCase):
             model.convert_to_format = convert_to_format
 
             solver = pybamm.JaxSolver()
-            with self.assertRaisesRegex(RuntimeError, "must be converted to JAX"):
+            with pytest.raises(RuntimeError, match="must be converted to JAX"):
                 solver.solve(model, t_eval)
 
     def test_solver_doesnt_support_events(self):
@@ -171,7 +166,7 @@ class TestJaxSolver(unittest.TestCase):
         # Solve
         solver = pybamm.JaxSolver()
         t_eval = np.linspace(0, 10, 100)
-        with self.assertRaisesRegex(RuntimeError, "Terminate events not supported"):
+        with pytest.raises(RuntimeError, match="Terminate events not supported"):
             solver.solve(model, t_eval)
 
     def test_model_solver_with_inputs(self):
@@ -223,14 +218,14 @@ class TestJaxSolver(unittest.TestCase):
         disc.process_model(model)
 
         # test that another method string gives error
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             solver = pybamm.JaxSolver(method="not_real")
 
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 80)
 
-        with self.assertRaisesRegex(RuntimeError, "Model is not set up for solving"):
+        with pytest.raises(RuntimeError, match="Model is not set up for solving"):
             solver.get_solve(model, t_eval)
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})
@@ -242,12 +237,3 @@ class TestJaxSolver(unittest.TestCase):
         y = solver({"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

@@ -16,7 +16,7 @@ def graphite_diffusivity_Kim2011(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -35,7 +35,7 @@ def graphite_diffusivity_Kim2011(sto, T):
 
 def graphite_ocp_Kim2011(sto):
     """
-    Graphite Open-circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open-circuit Potential (OCP) as a function of the stoichiometry [1].
 
     References
     ----------
@@ -92,7 +92,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     """
 
     i0_ref = 36  # reference exchange current density at 100% SOC
-    sto = 0.36  # stochiometry at 100% SOC
+    sto = 0.36  # stoichiometry at 100% SOC
     c_s_n_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
@@ -111,7 +111,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
 
 def nca_diffusivity_Kim2011(sto, T):
     """
-    NCA diffusivity as a function of stochiometry [1].
+    NCA diffusivity as a function of stoichiometry [1].
 
     References
     ----------
@@ -123,7 +123,7 @@ def nca_diffusivity_Kim2011(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -168,7 +168,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
         Exchange-current density [A.m-2]
     """
     i0_ref = 4  # reference exchange current density at 100% SOC
-    sto = 0.41  # stochiometry at 100% SOC
+    sto = 0.41  # stoichiometry at 100% SOC
     c_s_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
@@ -252,7 +252,7 @@ def electrolyte_conductivity_Kim2011(c_e, T):
 
 def nca_ocp_Kim2011(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open Circuit Potential (OCP) as a function of the stoichiometry [1].
 
     References
     ----------
