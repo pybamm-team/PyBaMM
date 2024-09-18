@@ -921,7 +921,7 @@ def get_parameter_values():
     Parameters for an LG M50 cell, from the paper :footcite:t:`ORegan2022`
 
     Parameters for a LiPF6 in EC:EMC (3:7 w:w) electrolyte are from the paper
-    :footcite:t:`landesfeind2019temperature` and references therein.
+    :footcite:t:`Landesfeind2019` and references therein.
     """
 
     return {

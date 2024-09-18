@@ -350,7 +350,7 @@ def get_parameter_values():
     :footcite:t:`Zhao2018`
 
     Parameters for SEI growth are from the papers :footcite:t:`Ramadass2004` and
-    :footcite:t:`safari2008multimodal`
+    :footcite:t:`Safari2008`
 
     .. note::
         Ramadass 2004 has mistakes in units and values of SEI parameters, corrected by
