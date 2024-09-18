@@ -77,6 +77,7 @@ jobs:
           brew analytics off
           brew install graphviz libomp
           brew reinstall gcc
+          echo "OpenMP_ROOT=$(brew --prefix)/opt/libomp" >> $GITHUB_ENV
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
