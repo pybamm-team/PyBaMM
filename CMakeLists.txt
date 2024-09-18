@@ -143,6 +143,13 @@ set_target_properties(
 )
 
 # openmp
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  execute_process(
+      COMMAND "brew --prefix"
+      OUTPUT_VARIABLE HOMEBREW_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
+endif()
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
