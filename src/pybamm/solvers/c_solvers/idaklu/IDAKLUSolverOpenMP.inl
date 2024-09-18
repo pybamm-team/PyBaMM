@@ -723,8 +723,8 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag) {
   if (flag < 0) {
-    auto message = (std::string("IDA failed with flag ") + std::to_string(flag)).c_str();
-    throw std::runtime_error(message);
+    auto message = std::string("IDA failed with flag ") + std::to_string(flag);
+    throw std::runtime_error(message.c_str());
   }
 }
 
