@@ -988,7 +988,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         rhs0 = rhs_alg0[: model.len_rhs]
 
-        # for the differential terms, ydot = -M^-1 * (rhs)
+        # for the differential terms, ydot = M^-1 * (rhs)
         ydot0[: model.len_rhs] = model.mass_matrix_inv.entries @ rhs0
 
         return ydot0

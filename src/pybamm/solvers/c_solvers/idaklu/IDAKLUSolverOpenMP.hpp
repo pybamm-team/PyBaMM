@@ -54,7 +54,7 @@ public:
   int const number_of_events;  // cppcheck-suppress unusedStructMember
   int number_of_timesteps;
   int precon_type;  // cppcheck-suppress unusedStructMember
-  N_Vector yy, yp, avtol;  // y, y', and absolute tolerance
+  N_Vector yy, yp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
   N_Vector *yyS;  // cppcheck-suppress unusedStructMember
   N_Vector *ypS;  // cppcheck-suppress unusedStructMember
   N_Vector id;              // rhs_alg_id
@@ -70,6 +70,7 @@ public:
   vector<realtype> res_dvar_dp;
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
+  bool is_ODE;  // cppcheck-suppress unusedStructMember
   int length_of_return_vector;  // cppcheck-suppress unusedStructMember
   vector<realtype> t;  // cppcheck-suppress unusedStructMember
   vector<vector<realtype>> y;  // cppcheck-suppress unusedStructMember
@@ -157,6 +158,27 @@ public:
    * @brief Print the solver statistics
    */
   void PrintStats();
+
+  /**
+   * @brief Set a consistent initialization for the system of equations
+   */
+  void ConsistentInitialization(
+    const realtype& t_val,
+    const realtype& t_next,
+    const int& icopt);
+
+  /**
+   * @brief Set a consistent initialization for DAEs
+   */
+  void ConsistentInitializationDAE(
+    const realtype& t_val,
+    const realtype& t_next,
+    const int& icopt);
+
+  /**
+   * @brief Set a consistent initialization for ODEs
+   */
+  void ConsistentInitializationODE(const realtype& t_val);
 
   /**
    * @brief Extend the adaptive arrays by 1
