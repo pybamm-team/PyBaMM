@@ -297,11 +297,10 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
 
   // Determine if the system is an ODE
   is_ODE = number_of_states > 0;
-  int ii;
-  for (ii = 0; ii < number_of_states; ii++) {
+  for (int ii = 0; ii < number_of_states; ii++) {
     const bool id_i = id_np_val[ii];
     id_val[ii] = id_i;
-    is_ODE &= id_i == 1;
+    is_ODE &= id_i;
   }
 
   // Variable types: differential (1) and algebraic (0)
