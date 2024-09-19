@@ -29,7 +29,8 @@ if idaklu_spec is not None:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         if idaklu_spec.loader:
             idaklu_spec.loader.exec_module(idaklu)
-    except ImportError:  # pragma: no cover
+    except ImportError as e:  # pragma: no cover
+        print(f"Error loading idaklu: {e}")
         idaklu_spec = None
 
 
@@ -78,8 +79,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options = {
                 # Print statistics of the solver after every solve
                 "print_stats": False,
-                # Number of threads available for OpenMP
+                # Number of threads available for OpenMP (must be greater than or equal to `num_solvers`)
                 "num_threads": 1,
+                # Number of solvers to use in parallel (for solving multiple sets of input parameters in parallel)
+                "num_solvers": num_threads,
                 # Evaluation engine to use for jax, can be 'jax'(native) or 'iree'
                 "jax_evaluator": "jax",
                 ## Linear solver interface
@@ -182,6 +185,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
+            "num_solvers": 1,
             "jax_evaluator": "jax",
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
@@ -209,6 +213,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if options is None:
             options = default_options
         else:
+            if "num_threads" in options and "num_solvers" not in options:
+                options["num_solvers"] = options["num_threads"]
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
@@ -443,7 +449,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if model.convert_to_format == "casadi":
             # Serialize casadi functions
-            idaklu_solver_fcn = idaklu.create_casadi_solver
+            idaklu_solver_fcn = idaklu.create_casadi_solver_group
             rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
             jac_times_cjmass = idaklu.generate_function(jac_times_cjmass.serialize())
             jac_rhs_algebraic_action = idaklu.generate_function(
@@ -457,7 +463,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             and self._options["jax_evaluator"] == "iree"
         ):
             # Convert Jax functions to MLIR (also, demote to single precision)
-            idaklu_solver_fcn = idaklu.create_iree_solver
+            idaklu_solver_fcn = idaklu.create_iree_solver_group
             pybamm.demote_expressions_to_32bit = True
             if pybamm.demote_expressions_to_32bit:
                 warnings.warn(
@@ -726,7 +732,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
         return pybamm.EvaluatorJax._demote_64_to_32(x)
 
-    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
+    @property
+    def supports_parallel_solve(self):
+        return True
+
+    def _integrate(self, model, t_eval, inputs_list=None, t_interp=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -736,22 +746,30 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to stop the integration due to a discontinuity in time.
-        inputs_dict : dict, optional
+        inputs_list: list of dict, optional
             Any input parameters to pass to the model when solving.
         t_interp : None, list or ndarray, optional
             The times (in seconds) at which to interpolate the solution. Defaults to `None`,
             which returns the adaptive time-stepping times.
         """
-        inputs_dict = inputs_dict or {}
-        # stack inputs
-        if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs = np.vstack(arrays_to_stack)
+        inputs_list = inputs_list or [{}]
+
+        # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
+        if inputs_list and inputs_list[0]:
+            inputs = np.vstack(
+                [
+                    np.hstack([np.array(x).reshape(-1) for x in inputs_dict.values()])
+                    for inputs_dict in inputs_list
+                ]
+            )
         else:
             inputs = np.array([[]])
 
-        y0full = model.y0full
-        ydot0full = model.ydot0full
+        # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
+        # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
+        # different initial conditions for different inputs (see https://github.com/pybamm-team/PyBaMM/pull/4260). For now we just repeat the same initial conditions for each input
+        y0full = np.vstack([model.y0full] * len(inputs_list))
+        ydot0full = np.vstack([model.ydot0full] * len(inputs_list))
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0full.size)
@@ -761,7 +779,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             model.convert_to_format == "jax"
             and self._options["jax_evaluator"] == "iree"
         ):
-            sol = self._setup["solver"].solve(
+            solns = self._setup["solver"].solve(
                 t_eval,
                 t_interp,
                 y0full,
@@ -773,6 +791,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
         integration_time = timer.time()
 
+        return [
+            self._post_process_solution(soln, model, integration_time, inputs_dict)
+            for soln, inputs_dict in zip(solns, inputs_list)
+        ]
+
+    def _post_process_solution(self, sol, model, integration_time, inputs_dict):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
         ]
@@ -818,7 +842,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             np.array([sol.t[-1]]),
             np.transpose(y_event)[:, np.newaxis],
             termination,
-            sensitivities=yS_out,
+            all_sensitivities=yS_out,
         )
         newsol.integration_time = integration_time
         if not self.output_variables:

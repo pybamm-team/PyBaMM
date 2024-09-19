@@ -2,10 +2,10 @@
 # Tests for the base model class
 #
 
+import pytest
 import os
 import platform
 import subprocess  # nosec
-import unittest
 from io import StringIO
 import sys
 
@@ -16,7 +16,7 @@ from numpy import testing
 import pybamm
 
 
-class TestBaseModel(unittest.TestCase):
+class TestBaseModel:
     def test_rhs_set_get(self):
         model = pybamm.BaseModel()
         rhs = {
@@ -24,7 +24,7 @@ class TestBaseModel(unittest.TestCase):
             pybamm.Symbol("d"): pybamm.Symbol("beta"),
         }
         model.rhs = rhs
-        self.assertEqual(rhs, model.rhs)
+        assert rhs == model.rhs
         # test domains
         rhs = {
             pybamm.Symbol("c", domain=["negative electrode"]): pybamm.Symbol(
@@ -35,9 +35,9 @@ class TestBaseModel(unittest.TestCase):
             ),
         }
         model.rhs = rhs
-        self.assertEqual(rhs, model.rhs)
+        assert rhs == model.rhs
         # non-matching domains should fail
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             model.rhs = {
                 pybamm.Symbol("c", domain=["positive electrode"]): pybamm.Symbol(
                     "alpha", domain=["negative electrode"]
@@ -48,7 +48,7 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         algebraic = {pybamm.Symbol("b"): pybamm.Symbol("c") - pybamm.Symbol("a")}
         model.algebraic = algebraic
-        self.assertEqual(algebraic, model.algebraic)
+        assert algebraic == model.algebraic
 
     def test_initial_conditions_set_get(self):
         model = pybamm.BaseModel()
@@ -57,22 +57,22 @@ class TestBaseModel(unittest.TestCase):
             pybamm.Symbol("d0"): pybamm.Symbol("delta"),
         }
         model.initial_conditions = initial_conditions
-        self.assertEqual(initial_conditions, model.initial_conditions)
+        assert initial_conditions == model.initial_conditions
 
         # Test number input
         c0 = pybamm.Symbol("c0")
         model.initial_conditions[c0] = 34
-        self.assertIsInstance(model.initial_conditions[c0], pybamm.Scalar)
-        self.assertEqual(model.initial_conditions[c0].value, 34)
+        assert isinstance(model.initial_conditions[c0], pybamm.Scalar)
+        assert model.initial_conditions[c0].value == 34
 
         # Variable in initial conditions should fail
-        with self.assertRaisesRegex(
-            TypeError, "Initial conditions cannot contain 'Variable' objects"
+        with pytest.raises(
+            TypeError, match="Initial conditions cannot contain 'Variable' objects"
         ):
             model.initial_conditions = {c0: pybamm.Variable("v")}
 
         # non-matching domains should fail
-        with self.assertRaises(pybamm.DomainError):
+        with pytest.raises(pybamm.DomainError):
             model.initial_conditions = {
                 pybamm.Symbol("c", domain=["positive electrode"]): pybamm.Symbol(
                     "alpha", domain=["negative electrode"]
@@ -85,7 +85,7 @@ class TestBaseModel(unittest.TestCase):
             "c": {"left": ("epsilon", "Dirichlet"), "right": ("eta", "Dirichlet")}
         }
         model.boundary_conditions = boundary_conditions
-        self.assertEqual(boundary_conditions, model.boundary_conditions)
+        assert boundary_conditions == model.boundary_conditions
 
         # Test number input
         c0 = pybamm.Symbol("c0")
@@ -93,29 +93,29 @@ class TestBaseModel(unittest.TestCase):
             "left": (-2, "Dirichlet"),
             "right": (4, "Dirichlet"),
         }
-        self.assertIsInstance(model.boundary_conditions[c0]["left"][0], pybamm.Scalar)
-        self.assertIsInstance(model.boundary_conditions[c0]["right"][0], pybamm.Scalar)
-        self.assertEqual(model.boundary_conditions[c0]["left"][0].value, -2)
-        self.assertEqual(model.boundary_conditions[c0]["right"][0].value, 4)
-        self.assertEqual(model.boundary_conditions[c0]["left"][1], "Dirichlet")
-        self.assertEqual(model.boundary_conditions[c0]["right"][1], "Dirichlet")
+        assert isinstance(model.boundary_conditions[c0]["left"][0], pybamm.Scalar)
+        assert isinstance(model.boundary_conditions[c0]["right"][0], pybamm.Scalar)
+        assert model.boundary_conditions[c0]["left"][0].value == -2
+        assert model.boundary_conditions[c0]["right"][0].value == 4
+        assert model.boundary_conditions[c0]["left"][1] == "Dirichlet"
+        assert model.boundary_conditions[c0]["right"][1] == "Dirichlet"
 
         # Check bad bc type
         bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
+        with pytest.raises(pybamm.ModelError, match="boundary condition"):
             model.boundary_conditions = bad_bcs
 
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
         variables = {"c": "alpha", "d": "beta"}
         model.variables = variables
-        self.assertEqual(variables, model.variables)
-        self.assertEqual(model.variable_names(), list(variables.keys()))
+        assert variables == model.variables
+        assert model.variable_names() == list(variables.keys())
 
     def test_jac_set_get(self):
         model = pybamm.BaseModel()
         model.jacobian = "test"
-        self.assertEqual(model.jacobian, "test")
+        assert model.jacobian == "test"
 
     def test_read_parameters(self):
         # Read parameters from different parts of the model
@@ -143,18 +143,15 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Test variables_and_events
-        self.assertIn("v+f+i", model.variables_and_events)
-        self.assertIn("Event: u=e", model.variables_and_events)
+        assert "v+f+i" in model.variables_and_events
+        assert "Event: u=e" in model.variables_and_events
 
-        self.assertEqual(
-            set([x.name for x in model.parameters]),
-            set([x.name for x in [a, b, c, d, e, f, g, h, i]]),
+        assert set([x.name for x in model.parameters]) == set(
+            [x.name for x in [a, b, c, d, e, f, g, h, i]]
         )
-        self.assertTrue(
-            all(
-                isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
-                for x in model.parameters
-            )
+        assert all(
+            isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
+            for x in model.parameters
         )
 
         model.variables = {
@@ -162,7 +159,8 @@ class TestBaseModel(unittest.TestCase):
         }
         model.print_parameter_info()
 
-    def test_get_parameter_info(self):
+    @pytest.mark.parametrize("symbols", ["c", "d", "e", "f", "h", "i"])
+    def test_get_parameter_info(self, symbols):
         model = pybamm.BaseModel()
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b", "test")
@@ -187,17 +185,28 @@ class TestBaseModel(unittest.TestCase):
         }
 
         parameter_info = model.get_parameter_info()
-        self.assertEqual(parameter_info["a"][1], "InputParameter")
-        self.assertEqual(parameter_info["b"][1], "InputParameter in ['test']")
-        self.assertIn("c", parameter_info)
-        self.assertIn("d", parameter_info)
-        self.assertIn("e", parameter_info)
-        self.assertIn("f", parameter_info)
-        self.assertEqual(parameter_info["g"][1], "Parameter")
-        self.assertIn("h", parameter_info)
-        self.assertIn("i", parameter_info)
+        assert parameter_info["a"][1] == "InputParameter"
+        assert parameter_info["b"][1] == "InputParameter in ['test']"
+        assert symbols in parameter_info
+        assert parameter_info["g"][1] == "Parameter"
 
-    def test_get_parameter_info_submodel(self):
+    @pytest.mark.parametrize(
+        "sub, key, parameter_value",
+        [
+            ("sub1", "a", "InputParameter"),
+            ("sub1", "w", "InputParameter"),
+            ("sub1", "e", "InputParameter"),
+            ("sub1", "g", "Parameter"),
+            ("sub1", "x", "Parameter"),
+            ("sub1", "f", "InputParameter in ['test']"),
+            ("sub2", "b", "InputParameter in ['test']"),
+            ("sub2", "h", "Parameter"),
+            ("sub1", "c", "FunctionParameter with inputs(s) ''"),
+            ("sub2", "d", "FunctionParameter with inputs(s) ''"),
+            ("sub2", "i", "FunctionParameter with inputs(s) ''"),
+        ],
+    )
+    def test_get_parameter_info_submodel(self, sub, key, parameter_value):
         submodel = pybamm.lithium_ion.SPM().submodels["electrolyte diffusion"]
 
         class SubModel1(pybamm.BaseSubModel):
@@ -270,34 +279,15 @@ class TestBaseModel(unittest.TestCase):
 
         expected_error_message = "Cannot use get_parameter_info"
 
-        with self.assertRaisesRegex(NotImplementedError, expected_error_message):
+        with pytest.raises(NotImplementedError, match=expected_error_message):
             submodel.get_parameter_info(by_submodel=True)
 
-        with self.assertRaisesRegex(NotImplementedError, expected_error_message):
+        with pytest.raises(NotImplementedError, match=expected_error_message):
             submodel.get_parameter_info(by_submodel=False)
 
-        self.assertIn("a", parameter_info["sub1"])
-        self.assertIn("b", parameter_info["sub2"])
-        self.assertEqual(parameter_info["sub1"]["a"][1], "InputParameter")
-        self.assertEqual(parameter_info["sub1"]["w"][1], "InputParameter")
-        self.assertEqual(parameter_info["sub1"]["e"][1], "InputParameter")
-        self.assertEqual(parameter_info["sub1"]["g"][1], "Parameter")
-        self.assertEqual(parameter_info["sub1"]["x"][1], "Parameter")
-        self.assertEqual(parameter_info["sub1"]["f"][1], "InputParameter in ['test']")
-        self.assertEqual(parameter_info["sub2"]["b"][1], "InputParameter in ['test']")
-        self.assertEqual(parameter_info["sub2"]["h"][1], "Parameter")
-        self.assertEqual(
-            parameter_info["sub1"]["c"][1],
-            "FunctionParameter with inputs(s) ''",
-        )
-        self.assertEqual(
-            parameter_info["sub2"]["d"][1],
-            "FunctionParameter with inputs(s) ''",
-        )
-        self.assertEqual(
-            parameter_info["sub2"]["i"][1],
-            "FunctionParameter with inputs(s) ''",
-        )
+        assert "a" in parameter_info["sub1"]
+        assert "b" in parameter_info["sub2"]
+        assert parameter_info[sub][key][1] == parameter_value
 
     def test_print_parameter_info(self):
         model = pybamm.BaseModel()
@@ -339,14 +329,31 @@ class TestBaseModel(unittest.TestCase):
         sys.stdout = sys.__stdout__
 
         result = captured_output.getvalue().strip()
-        self.assertIn("a", result)
-        self.assertIn("b", result)
-        self.assertIn("InputParameter", result)
-        self.assertIn("InputParameter in ['test']", result)
-        self.assertIn("Parameter", result)
-        self.assertIn("FunctionParameter with inputs(s) ''", result)
+        assert "a" in result
+        assert "b" in result
+        assert "InputParameter" in result
+        assert "InputParameter in ['test']" in result
+        assert "Parameter" in result
+        assert "FunctionParameter with inputs(s) ''" in result
 
-    def test_print_parameter_info_submodel(self):
+    @pytest.mark.parametrize(
+        "values",
+        [
+            "'sub1' submodel parameters:",
+            "'sub2' submodel parameters:",
+            "Parameter",
+            "InputParameter",
+            "FunctionParameter with inputs(s) ''",
+            "InputParameter in ['test']",
+            "g",
+            "a",
+            "c",
+            "h",
+            "b",
+            "d",
+        ],
+    )
+    def test_print_parameter_info_submodel(self, values):
         model = pybamm.BaseModel()
         a = pybamm.InputParameter("a")
         b = pybamm.InputParameter("b", "test")
@@ -385,18 +392,7 @@ class TestBaseModel(unittest.TestCase):
         sys.stdout = sys.__stdout__
 
         result = captured_output.getvalue().strip()
-        self.assertIn("'sub1' submodel parameters:", result)
-        self.assertIn("'sub2' submodel parameters:", result)
-        self.assertIn("Parameter", result)
-        self.assertIn("InputParameter", result)
-        self.assertIn("FunctionParameter with inputs(s) ''", result)
-        self.assertIn("InputParameter in ['test']", result)
-        self.assertIn("g", result)
-        self.assertIn("a", result)
-        self.assertIn("c", result)
-        self.assertIn("h", result)
-        self.assertIn("b", result)
-        self.assertIn("d", result)
+        assert values in result
 
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model
@@ -416,13 +412,10 @@ class TestBaseModel(unittest.TestCase):
         model.events = [pybamm.Event("u=e", u - e)]
         model.variables = {"v+f": v + f}
 
-        self.assertEqual(
-            set([x.name for x in model.input_parameters]),
-            set([x.name for x in [a, b, c, d, e, f]]),
+        assert set([x.name for x in model.input_parameters]) == set(
+            [x.name for x in [a, b, c, d, e, f]]
         )
-        self.assertTrue(
-            all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
-        )
+        assert all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
 
     def test_update(self):
         # model
@@ -452,19 +445,19 @@ class TestBaseModel(unittest.TestCase):
         model.update(submodel)
 
         # check
-        self.assertEqual(model.rhs[d], submodel.rhs[d])
-        self.assertEqual(model.initial_conditions[d], submodel.initial_conditions[d])
-        self.assertEqual(model.boundary_conditions[d], submodel.boundary_conditions[d])
-        self.assertEqual(model.variables["d"], submodel.variables["d"])
-        self.assertEqual(model.rhs[c], rhs[c])
-        self.assertEqual(model.initial_conditions[c], initial_conditions[c])
-        self.assertEqual(model.boundary_conditions[c], boundary_conditions[c])
-        self.assertEqual(model.variables["c"], variables["c"])
+        assert model.rhs[d] == submodel.rhs[d]
+        assert model.initial_conditions[d] == submodel.initial_conditions[d]
+        assert model.boundary_conditions[d] == submodel.boundary_conditions[d]
+        assert model.variables["d"] == submodel.variables["d"]
+        assert model.rhs[c] == rhs[c]
+        assert model.initial_conditions[c] == initial_conditions[c]
+        assert model.boundary_conditions[c] == boundary_conditions[c]
+        assert model.variables["c"] == variables["c"]
 
         # update with conflicting submodel
         submodel2 = pybamm.BaseModel()
         submodel2.rhs = {d: pybamm.div(pybamm.grad(d)) - 1}
-        with self.assertRaises(pybamm.ModelError):
+        with pytest.raises(pybamm.ModelError):
             model.update(submodel2)
 
         # update with multiple submodels
@@ -482,12 +475,12 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.update(submodel1, submodel2)
 
-        self.assertEqual(model.rhs[d], submodel1.rhs[d])
-        self.assertEqual(model.initial_conditions[d], submodel1.initial_conditions[d])
-        self.assertEqual(model.boundary_conditions[d], submodel1.boundary_conditions[d])
-        self.assertEqual(model.rhs[e], submodel2.rhs[e])
-        self.assertEqual(model.initial_conditions[e], submodel2.initial_conditions[e])
-        self.assertEqual(model.boundary_conditions[e], submodel2.boundary_conditions[e])
+        assert model.rhs[d] == submodel1.rhs[d]
+        assert model.initial_conditions[d] == submodel1.initial_conditions[d]
+        assert model.boundary_conditions[d] == submodel1.boundary_conditions[d]
+        assert model.rhs[e] == submodel2.rhs[e]
+        assert model.initial_conditions[e] == submodel2.initial_conditions[e]
+        assert model.boundary_conditions[e] == submodel2.boundary_conditions[e]
 
     def test_new_copy(self):
         model = pybamm.BaseModel(name="a model")
@@ -504,9 +497,9 @@ class TestBaseModel(unittest.TestCase):
         model.convert_to_format = "python"
 
         new_model = model.new_copy()
-        self.assertEqual(new_model.name, model.name)
-        self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.convert_to_format, model.convert_to_format)
+        assert new_model.name == model.name
+        assert new_model.use_jacobian == model.use_jacobian
+        assert new_model.convert_to_format == model.convert_to_format
 
     def test_check_no_repeated_keys(self):
         model = pybamm.BaseModel()
@@ -515,7 +508,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {var: -1}
         var = pybamm.Variable("var")
         model.algebraic = {var: var}
-        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
+        with pytest.raises(pybamm.ModelError, match="Multiple equations specified"):
             model.check_no_repeated_keys()
 
     def test_check_well_posedness_variables(self):
@@ -540,26 +533,26 @@ class TestBaseModel(unittest.TestCase):
         # Underdetermined model - not enough differential equations
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1}
         model.algebraic = {e: e - c - d}
-        with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
+        with pytest.raises(pybamm.ModelError, match="underdetermined"):
             model.check_well_posedness()
 
         # Underdetermined model - not enough algebraic equations
         model.algebraic = {}
-        with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
+        with pytest.raises(pybamm.ModelError, match="underdetermined"):
             model.check_well_posedness()
 
         # Overdetermined model - repeated keys
         model.algebraic = {c: c - d, d: e + d}
-        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+        with pytest.raises(pybamm.ModelError, match="overdetermined"):
             model.check_well_posedness()
         # Overdetermined model - extra keys in algebraic
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -d}
         model.algebraic = {e: c - d}
-        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+        with pytest.raises(pybamm.ModelError, match="overdetermined"):
             model.check_well_posedness()
         model.rhs = {c: 1, d: -1}
         model.algebraic = {e: c - d}
-        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+        with pytest.raises(pybamm.ModelError, match="overdetermined"):
             model.check_well_posedness()
 
         # After discretisation, don't check for overdetermined from extra algebraic keys
@@ -568,7 +561,7 @@ class TestBaseModel(unittest.TestCase):
         # passes with post_discretisation=True
         model.check_well_posedness(post_discretisation=True)
         # fails with post_discretisation=False (default)
-        with self.assertRaisesRegex(pybamm.ModelError, "extra algebraic keys"):
+        with pytest.raises(pybamm.ModelError, match="extra algebraic keys"):
             model.check_well_posedness()
 
         # after discretisation, algebraic equation without a StateVector fails
@@ -577,9 +570,9 @@ class TestBaseModel(unittest.TestCase):
             c: 1,
             d: pybamm.StateVector(slice(0, 15)) - pybamm.StateVector(slice(15, 30)),
         }
-        with self.assertRaisesRegex(
+        with pytest.raises(
             pybamm.ModelError,
-            "each algebraic equation must contain at least one StateVector",
+            match="each algebraic equation must contain at least one StateVector",
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -587,8 +580,8 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
-        with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of variable found"
+        with pytest.raises(
+            pybamm.ModelError, match="time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -596,8 +589,8 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.algebraic = {c: 2 * d - c, d: c * d.diff(pybamm.t) - d}
         model.initial_conditions = {c: 1, d: 1}
-        with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of variable found"
+        with pytest.raises(
+            pybamm.ModelError, match="time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -605,8 +598,8 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
-        with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of variable found"
+        with pytest.raises(
+            pybamm.ModelError, match="time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -616,8 +609,8 @@ class TestBaseModel(unittest.TestCase):
             d: 5 * pybamm.StateVector(slice(0, 15)) - 1,
             c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1,
         }
-        with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of state vector found"
+        with pytest.raises(
+            pybamm.ModelError, match="time derivative of state vector found"
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -625,8 +618,8 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1}
         model.initial_conditions = {c: 1}
-        with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of state vector found"
+        with pytest.raises(
+            pybamm.ModelError, match="time derivative of state vector found"
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -651,7 +644,7 @@ class TestBaseModel(unittest.TestCase):
         # Model with bad initial conditions (expect assertion error)
         d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {d: 3}
-        with self.assertRaisesRegex(pybamm.ModelError, "initial condition"):
+        with pytest.raises(pybamm.ModelError, match="initial condition"):
             model.check_well_posedness()
 
         # Algebraic well-posed model
@@ -686,14 +679,14 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
         model.variables = {"d": d}
-        with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
+        with pytest.raises(pybamm.ModelError, match="No key set for variable"):
             model.check_well_posedness()
 
         # check error is raised even if some modified form of d is in model.rhs
         two_d = 2 * d
         model.rhs[two_d] = -d
         model.initial_conditions[two_d] = 1
-        with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
+        with pytest.raises(pybamm.ModelError, match="No key set for variable"):
             model.check_well_posedness()
 
         # add d to rhs, fine
@@ -730,13 +723,13 @@ class TestBaseModel(unittest.TestCase):
         var_fn = casadi.Function("var", [t, x, z, p], [var])
 
         # Test that function values are as expected
-        self.assertEqual(x0_fn([0, 5]), 5)
-        self.assertEqual(z0_fn([0, 0]), 1)
-        self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
-        self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
+        assert x0_fn([0, 5]) == 5
+        assert z0_fn([0, 0]) == 1
+        assert rhs_fn(0, 3, 2, [7, 2]) == -21
+        assert alg_fn(0, 3, 2, [7, 2]) == 1
         np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
-        self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
+        assert var_fn(6, 3, 2, [7, 2]) == -1
 
         # Now change the order of input parameters
         out = model.export_casadi_objects(["a+b"], input_parameter_order=["q", "p"])
@@ -756,18 +749,16 @@ class TestBaseModel(unittest.TestCase):
         var_fn = casadi.Function("var", [t, x, z, p], [var])
 
         # Test that function values are as expected
-        self.assertEqual(x0_fn([5, 0]), 5)
-        self.assertEqual(z0_fn([0, 0]), 1)
-        self.assertEqual(rhs_fn(0, 3, 2, [2, 7]), -21)
-        self.assertEqual(alg_fn(0, 3, 2, [2, 7]), 1)
+        assert x0_fn([5, 0]) == 5
+        assert z0_fn([0, 0]) == 1
+        assert rhs_fn(0, 3, 2, [2, 7]) == -21
+        assert alg_fn(0, 3, 2, [2, 7]) == 1
         np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [9, 8])), [[-8, 0]])
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
-        self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
+        assert var_fn(6, 3, 2, [2, 7]) == -1
 
         # Test fails if order not specified
-        with self.assertRaisesRegex(
-            ValueError, "input_parameter_order must be specified"
-        ):
+        with pytest.raises(ValueError, match="input_parameter_order must be specified"):
             model.export_casadi_objects(["a+b"])
 
         # Fine if order is not specified if there is only one input parameter
@@ -787,16 +778,16 @@ class TestBaseModel(unittest.TestCase):
 
         # Test that function values are as expected
         # a + b - p = 3 + 2 - 7 = -2
-        self.assertEqual(var_fn(6, 3, 2, [7]), -2)
+        assert var_fn(6, 3, 2, [7]) == -2
 
         # Test fails if not discretised
         model = pybamm.lithium_ion.SPMe()
-        with self.assertRaisesRegex(
-            pybamm.DiscretisationError, "Cannot automatically discretise model"
+        with pytest.raises(
+            pybamm.DiscretisationError, match="Cannot automatically discretise model"
         ):
             model.export_casadi_objects(["Electrolyte concentration [mol.m-3]"])
 
-    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Skipped for Windows")
     def test_generate_casadi(self):
         model = pybamm.BaseModel()
         t = pybamm.t
@@ -825,13 +816,13 @@ class TestBaseModel(unittest.TestCase):
         var_fn = casadi.external("variables", "./test.so")
 
         # Test that function values are as expected
-        self.assertEqual(x0_fn([2, 5]), 5)
-        self.assertEqual(z0_fn([0, 0]), 1)
-        self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
-        self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
+        assert x0_fn([2, 5]) == 5
+        assert z0_fn([0, 0]) == 1
+        assert rhs_fn(0, 3, 2, [7, 2]) == -21
+        assert alg_fn(0, 3, 2, [7, 2]) == 1
         np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
-        self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
+        assert var_fn(6, 3, 2, [7, 2]) == -1
 
         # Remove generated files.
         os.remove("test.c")
@@ -863,10 +854,10 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Test original initial conditions
-        self.assertEqual(model.initial_conditions[var_scalar].value, 1)
-        self.assertEqual(model.initial_conditions[var_1D].value, 1)
-        self.assertEqual(model.initial_conditions[var_2D].value, 1)
-        self.assertEqual(model.initial_conditions[var_concat].value, 1)
+        assert model.initial_conditions[var_scalar].value == 1
+        assert model.initial_conditions[var_1D].value == 1
+        assert model.initial_conditions[var_2D].value == 1
+        assert model.initial_conditions[var_concat].value == 1
 
         # Discretise
         geometry = {
@@ -911,22 +902,22 @@ class TestBaseModel(unittest.TestCase):
         # Test new initial conditions (both in place and not)
         for mdl in [model, new_model]:
             var_scalar = mdl.variables["var_scalar"]
-            self.assertIsInstance(mdl.initial_conditions[var_scalar], pybamm.Vector)
-            self.assertEqual(mdl.initial_conditions[var_scalar].entries, 3)
+            assert isinstance(mdl.initial_conditions[var_scalar], pybamm.Vector)
+            assert mdl.initial_conditions[var_scalar].entries == 3
 
             var_1D = mdl.variables["var_1D"]
-            self.assertIsInstance(mdl.initial_conditions[var_1D], pybamm.Vector)
-            self.assertEqual(mdl.initial_conditions[var_1D].shape, (10, 1))
+            assert isinstance(mdl.initial_conditions[var_1D], pybamm.Vector)
+            assert mdl.initial_conditions[var_1D].shape == (10, 1)
             np.testing.assert_array_equal(mdl.initial_conditions[var_1D].entries, 3)
 
             var_2D = mdl.variables["var_2D"]
-            self.assertIsInstance(mdl.initial_conditions[var_2D], pybamm.Vector)
-            self.assertEqual(mdl.initial_conditions[var_2D].shape, (50, 1))
+            assert isinstance(mdl.initial_conditions[var_2D], pybamm.Vector)
+            assert mdl.initial_conditions[var_2D].shape == (50, 1)
             np.testing.assert_array_equal(mdl.initial_conditions[var_2D].entries, 3)
 
             var_concat = mdl.variables["var_concat"]
-            self.assertIsInstance(mdl.initial_conditions[var_concat], pybamm.Vector)
-            self.assertEqual(mdl.initial_conditions[var_concat].shape, (20, 1))
+            assert isinstance(mdl.initial_conditions[var_concat], pybamm.Vector)
+            assert mdl.initial_conditions[var_concat].shape == (20, 1)
             np.testing.assert_array_equal(mdl.initial_conditions[var_concat].entries, 3)
 
         # Test updating a discretised model (out-of-place)
@@ -934,30 +925,26 @@ class TestBaseModel(unittest.TestCase):
 
         # Test new initial conditions
         var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
-        self.assertIsInstance(
-            new_model_disc.initial_conditions[var_scalar], pybamm.Vector
-        )
-        self.assertEqual(new_model_disc.initial_conditions[var_scalar].entries, 3)
+        assert isinstance(new_model_disc.initial_conditions[var_scalar], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_scalar].entries == 3
 
         var_1D = list(new_model_disc.initial_conditions.keys())[1]
-        self.assertIsInstance(new_model_disc.initial_conditions[var_1D], pybamm.Vector)
-        self.assertEqual(new_model_disc.initial_conditions[var_1D].shape, (10, 1))
+        assert isinstance(new_model_disc.initial_conditions[var_1D], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_1D].shape == (10, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_1D].entries, 3
         )
 
         var_2D = list(new_model_disc.initial_conditions.keys())[2]
-        self.assertIsInstance(new_model_disc.initial_conditions[var_2D], pybamm.Vector)
-        self.assertEqual(new_model_disc.initial_conditions[var_2D].shape, (50, 1))
+        assert isinstance(new_model_disc.initial_conditions[var_2D], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_2D].shape == (50, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_2D].entries, 3
         )
 
         var_concat = list(new_model_disc.initial_conditions.keys())[3]
-        self.assertIsInstance(
-            new_model_disc.initial_conditions[var_concat], pybamm.Vector
-        )
-        self.assertEqual(new_model_disc.initial_conditions[var_concat].shape, (20, 1))
+        assert isinstance(new_model_disc.initial_conditions[var_concat], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_concat].entries, 3
         )
@@ -1008,22 +995,22 @@ class TestBaseModel(unittest.TestCase):
 
         # Test new initial conditions (both in place and not)
         var_scalar = new_model.variables["var_scalar"]
-        self.assertIsInstance(new_model.initial_conditions[var_scalar], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_scalar].entries, 3)
+        assert isinstance(new_model.initial_conditions[var_scalar], pybamm.Vector)
+        assert new_model.initial_conditions[var_scalar].entries == 3
 
         var_1D = new_model.variables["var_1D"]
-        self.assertIsInstance(new_model.initial_conditions[var_1D], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_1D].shape, (10, 1))
+        assert isinstance(new_model.initial_conditions[var_1D], pybamm.Vector)
+        assert new_model.initial_conditions[var_1D].shape == (10, 1)
         np.testing.assert_array_equal(new_model.initial_conditions[var_1D].entries, 3)
 
         var_2D = new_model.variables["var_2D"]
-        self.assertIsInstance(new_model.initial_conditions[var_2D], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_2D].shape, (50, 1))
+        assert isinstance(new_model.initial_conditions[var_2D], pybamm.Vector)
+        assert new_model.initial_conditions[var_2D].shape == (50, 1)
         np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 3)
 
         var_concat = new_model.variables["var_concat"]
-        self.assertIsInstance(new_model.initial_conditions[var_concat], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_concat].shape, (20, 1))
+        assert isinstance(new_model.initial_conditions[var_concat], pybamm.Vector)
+        assert new_model.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
             new_model.initial_conditions[var_concat].entries, 3
         )
@@ -1040,22 +1027,22 @@ class TestBaseModel(unittest.TestCase):
 
         # Test new initial conditions (both in place and not)
         var_scalar = new_model.variables["var_scalar"]
-        self.assertIsInstance(new_model.initial_conditions[var_scalar], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_scalar].entries, 5)
+        assert isinstance(new_model.initial_conditions[var_scalar], pybamm.Vector)
+        assert new_model.initial_conditions[var_scalar].entries == 5
 
         var_1D = new_model.variables["var_1D"]
-        self.assertIsInstance(new_model.initial_conditions[var_1D], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_1D].shape, (10, 1))
+        assert isinstance(new_model.initial_conditions[var_1D], pybamm.Vector)
+        assert new_model.initial_conditions[var_1D].shape == (10, 1)
         np.testing.assert_array_equal(new_model.initial_conditions[var_1D].entries, 5)
 
         var_2D = new_model.variables["var_2D"]
-        self.assertIsInstance(new_model.initial_conditions[var_2D], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_2D].shape, (50, 1))
+        assert isinstance(new_model.initial_conditions[var_2D], pybamm.Vector)
+        assert new_model.initial_conditions[var_2D].shape == (50, 1)
         np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 5)
 
         var_concat = new_model.variables["var_concat"]
-        self.assertIsInstance(new_model.initial_conditions[var_concat], pybamm.Vector)
-        self.assertEqual(new_model.initial_conditions[var_concat].shape, (20, 1))
+        assert isinstance(new_model.initial_conditions[var_concat], pybamm.Vector)
+        assert new_model.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
             new_model.initial_conditions[var_concat].entries, 5
         )
@@ -1066,30 +1053,26 @@ class TestBaseModel(unittest.TestCase):
 
         # Test new initial conditions
         var_scalar = next(iter(new_model_disc.initial_conditions.keys()))
-        self.assertIsInstance(
-            new_model_disc.initial_conditions[var_scalar], pybamm.Vector
-        )
-        self.assertEqual(new_model_disc.initial_conditions[var_scalar].entries, 5)
+        assert isinstance(new_model_disc.initial_conditions[var_scalar], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_scalar].entries == 5
 
         var_1D = list(new_model_disc.initial_conditions.keys())[1]
-        self.assertIsInstance(new_model_disc.initial_conditions[var_1D], pybamm.Vector)
-        self.assertEqual(new_model_disc.initial_conditions[var_1D].shape, (10, 1))
+        assert isinstance(new_model_disc.initial_conditions[var_1D], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_1D].shape == (10, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_1D].entries, 5
         )
 
         var_2D = list(new_model_disc.initial_conditions.keys())[2]
-        self.assertIsInstance(new_model_disc.initial_conditions[var_2D], pybamm.Vector)
-        self.assertEqual(new_model_disc.initial_conditions[var_2D].shape, (50, 1))
+        assert isinstance(new_model_disc.initial_conditions[var_2D], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_2D].shape == (50, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_2D].entries, 5
         )
 
         var_concat = list(new_model_disc.initial_conditions.keys())[3]
-        self.assertIsInstance(
-            new_model_disc.initial_conditions[var_concat], pybamm.Vector
-        )
-        self.assertEqual(new_model_disc.initial_conditions[var_concat].shape, (20, 1))
+        assert isinstance(new_model_disc.initial_conditions[var_concat], pybamm.Vector)
+        assert new_model_disc.initial_conditions[var_concat].shape == (20, 1)
         np.testing.assert_array_equal(
             new_model_disc.initial_conditions[var_concat].entries, 5
         )
@@ -1103,7 +1086,7 @@ class TestBaseModel(unittest.TestCase):
         var = pybamm.Scalar(1)
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
-        with self.assertRaisesRegex(NotImplementedError, "Variable must have type"):
+        with pytest.raises(NotImplementedError, match="Variable must have type"):
             model.set_initial_conditions_from({})
 
         var = pybamm.Variable(
@@ -1116,9 +1099,7 @@ class TestBaseModel(unittest.TestCase):
         )
         model.rhs = {var: -var}
         model.initial_conditions = {var: 1}
-        with self.assertRaisesRegex(
-            NotImplementedError, "Variable must be 0D, 1D, or 2D"
-        ):
+        with pytest.raises(NotImplementedError, match="Variable must be 0D, 1D, or 2D"):
             model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
 
         var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
@@ -1126,8 +1107,8 @@ class TestBaseModel(unittest.TestCase):
         var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.algebraic = {var_concat: -var_concat}
         model.initial_conditions = {var_concat: 1}
-        with self.assertRaisesRegex(
-            NotImplementedError, "Variable in concatenation must be 1D"
+        with pytest.raises(
+            NotImplementedError, match="Variable in concatenation must be 1D"
         ):
             model.set_initial_conditions_from({"var concat neg": np.ones((5, 6, 7))})
 
@@ -1136,20 +1117,20 @@ class TestBaseModel(unittest.TestCase):
         var = pybamm.Variable("var")
         model.rhs = {var: -var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
-        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+        with pytest.raises(pybamm.ModelError, match="must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
         var = pybamm.concatenation(
             pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
         )
         model.rhs = {var: -var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
-        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+        with pytest.raises(pybamm.ModelError, match="must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
 
     def test_set_variables_error(self):
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
-        with self.assertRaisesRegex(ValueError, "not var"):
+        with pytest.raises(ValueError, match="not var"):
             model.variables = {"not var": var}
 
     def test_build_submodels(self):
@@ -1202,23 +1183,23 @@ class TestBaseModel(unittest.TestCase):
             "submodel 1": Submodel1(None, "negative"),
             "submodel 2": Submodel2(None, "negative"),
         }
-        self.assertFalse(model._built)
+        assert not model._built
         model.build_model()
-        self.assertTrue(model._built)
+        assert model._built
         u = model.variables["u"]
         v = model.variables["v"]
-        self.assertEqual(model.rhs[u].value, 2)
-        self.assertEqual(model.algebraic[v], -1.0 + v)
+        assert model.rhs[u].value == 2
+        assert model.algebraic[v] == -1.0 + v
 
     def test_timescale_lengthscale_get_set_not_implemented(self):
         model = pybamm.BaseModel()
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.timescale
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.length_scales
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.timescale = 1
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.length_scales = 1
 
     def test_save_load_model(self):
@@ -1284,7 +1265,7 @@ class TestBaseModel(unittest.TestCase):
         testing.assert_array_equal(solution.all_ys, new_solution.all_ys)
 
         # raises warning if variables are saved without mesh
-        with self.assertWarns(pybamm.ModelWarning):
+        with pytest.warns(pybamm.ModelWarning):
             model_disc.save_model(
                 filename="test_base_model", variables=model_disc.variables
             )
@@ -1297,13 +1278,3 @@ class TestBaseModel(unittest.TestCase):
         new_model = pybamm.load_model("test_base_model.json")
 
         os.remove("test_base_model.json")
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

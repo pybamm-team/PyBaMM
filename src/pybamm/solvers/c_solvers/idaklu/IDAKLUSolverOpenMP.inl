@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "SolutionData.hpp"
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
@@ -86,11 +87,20 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
+  DEBUG("IDAKLUSolverOpenMP::AllocateVectors (num_threads = " << setup_opts.num_threads << ")");
   // Create vectors
-  yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-  yp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-  avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-  id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+  if (setup_opts.num_threads == 1) {
+    yy = N_VNew_Serial(number_of_states, sunctx);
+    yp = N_VNew_Serial(number_of_states, sunctx);
+    avtol = N_VNew_Serial(number_of_states, sunctx);
+    id = N_VNew_Serial(number_of_states, sunctx);
+  } else {
+    DEBUG("IDAKLUSolverOpenMP::AllocateVectors OpenMP");
+    yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    yp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+  }
 }
 
 template <class ExprSet>
@@ -290,6 +300,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
 
 template <class ExprSet>
 IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
+  DEBUG("IDAKLUSolverOpenMP::~IDAKLUSolverOpenMP");
   // Free memory
   if (sensitivity) {
       IDASensFree(ida_mem);
@@ -313,62 +324,23 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
 }
 
 template <class ExprSet>
-Solution IDAKLUSolverOpenMP<ExprSet>::solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs
+SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
+  const std::vector<realtype> &t_eval,
+  const std::vector<realtype> &t_interp,
+  const realtype *y0,
+  const realtype *yp0,
+  const realtype *inputs,
+  bool save_adaptive_steps,
+  bool save_interp_steps
 )
 {
   DEBUG("IDAKLUSolver::solve");
+  const int number_of_evals = t_eval.size();
+  const int number_of_interps = t_interp.size();
 
-  // If t_interp is empty, save all adaptive steps
-  bool save_adaptive_steps = t_interp_np.unchecked<1>().size() == 0;
-
-  // Process the time inputs
-  // 1. Get the sorted and unique t_eval vector
-  auto const t_eval = makeSortedUnique(t_eval_np);
-
-  // 2.1. Get the sorted and unique t_interp vector
-  auto const t_interp_unique_sorted = makeSortedUnique(t_interp_np);
-
-  // 2.2 Remove the t_eval values from t_interp
-  auto const t_interp_setdiff = setDiff(t_interp_unique_sorted, t_eval);
-
-  // 2.3 Finally, get the sorted and unique t_interp vector with t_eval values removed
-  auto const t_interp = makeSortedUnique(t_interp_setdiff);
-
-  int const number_of_evals = t_eval.size();
-  int const number_of_interps = t_interp.size();
-
-  // setDiff removes entries of t_interp that overlap with
-  // t_eval, so we need to check if we need to interpolate any unique points.
-  // This is not the same as save_adaptive_steps since some entries of t_interp
-  // may be removed by setDiff
-  bool save_interp_steps = number_of_interps > 0;
-
-  // 3. Check if the timestepping entries are valid
-  if (number_of_evals < 2) {
-    throw std::invalid_argument(
-      "t_eval must have at least 2 entries"
-    );
-  } else if (save_interp_steps) {
-    if (t_interp.front() < t_eval.front()) {
-      throw std::invalid_argument(
-        "t_interp values must be greater than the smallest t_eval value: "
-        + std::to_string(t_eval.front())
-      );
-    } else if (t_interp.back() > t_eval.back()) {
-      throw std::invalid_argument(
-        "t_interp values must be less than the greatest t_eval value: "
-        + std::to_string(t_eval.back())
-      );
-    }
+  if (t.size() < number_of_evals + number_of_interps) {
+    InitializeStorage(number_of_evals + number_of_interps);
   }
-
-  // Initialize length_of_return_vector, t, y, and yS
-  InitializeStorage(number_of_evals + number_of_interps);
 
   int i_save = 0;
 
@@ -386,24 +358,11 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     t_interp_next = t_interp[0];
   }
 
-  auto y0 = y0_np.unchecked<1>();
-  auto yp0 = yp0_np.unchecked<1>();
   auto n_coeffs = number_of_states + number_of_parameters * number_of_states;
 
-  if (y0.size() != n_coeffs) {
-    throw std::domain_error(
-      "y0 has wrong size. Expected " + std::to_string(n_coeffs) +
-      " but got " + std::to_string(y0.size()));
-  } else if (yp0.size() != n_coeffs) {
-    throw std::domain_error(
-      "yp0 has wrong size. Expected " + std::to_string(n_coeffs) +
-      " but got " + std::to_string(yp0.size()));
-  }
-
   // set inputs
-  auto p_inputs = inputs.unchecked<2>();
   for (int i = 0; i < functions->inputs.size(); i++) {
-    functions->inputs[i] = p_inputs(i, 0);
+    functions->inputs[i] = inputs[i];
   }
 
   // Setup consistent initialization
@@ -445,7 +404,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
   }
 
   if (sensitivity) {
-    CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
+    CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
   }
 
   // Store Consistent initialization
@@ -478,7 +437,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     bool hit_adaptive = save_adaptive_steps && retval == IDA_SUCCESS;
 
     if (sensitivity) {
-      CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
+      CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
     }
 
     if (hit_tinterp) {
@@ -499,7 +458,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
         // Reset the states and sensitivities at t = t_val
         CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
         if (sensitivity) {
-          CheckErrors(IDAGetSens(ida_mem, &t_val, yyS));
+          CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
         }
       }
 
@@ -543,8 +502,8 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     PrintStats();
   }
 
-  int const number_of_timesteps = i_save;
-  int count;
+  // store number of timesteps so we can generate the solution later
+  number_of_timesteps = i_save;
 
   // Copy the data to return as numpy arrays
 
@@ -554,43 +513,15 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     t_return[i] = t[i];
   }
 
-  py::capsule free_t_when_done(
-    t_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array t_ret = np_array(
-    number_of_timesteps,
-    &t_return[0],
-    free_t_when_done
-  );
-
   // States, y
   realtype *y_return = new realtype[number_of_timesteps * length_of_return_vector];
-  count = 0;
+  int count = 0;
   for (size_t i = 0; i < number_of_timesteps; i++) {
     for (size_t j = 0; j < length_of_return_vector; j++) {
       y_return[count] = y[i][j];
       count++;
     }
   }
-
-  py::capsule free_y_when_done(
-    y_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array y_ret = np_array(
-    number_of_timesteps * length_of_return_vector,
-    &y_return[0],
-    free_y_when_done
-  );
 
   // Sensitivity states, yS
   // Note: Ordering of vector is different if computing outputs vs returning
@@ -614,43 +545,7 @@ Solution IDAKLUSolverOpenMP<ExprSet>::solve(
     }
   }
 
-  py::capsule free_yS_when_done(
-    yS_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array yS_ret = np_array(
-    vector<ptrdiff_t> {
-      arg_sens0,
-      arg_sens1,
-      arg_sens2
-    },
-    &yS_return[0],
-    free_yS_when_done
-  );
-
-  // Final state slice, yterm
-  py::capsule free_yterm_when_done(
-    yterm_return,
-    [](void *f) {
-      realtype *vect = reinterpret_cast<realtype *>(f);
-      delete[] vect;
-    }
-  );
-
-  np_array y_term = np_array(
-    length_of_final_sv_slice,
-    &yterm_return[0],
-    free_yterm_when_done
-  );
-
-  // Store the solution
-  Solution sol(retval, t_ret, y_ret, yS_ret, y_term);
-
-  return sol;
+  return SolutionData(retval, number_of_timesteps, length_of_return_vector, arg_sens0, arg_sens1, arg_sens2, length_of_final_sv_slice, t_return, y_return, yS_return, yterm_return);
 }
 
 template <class ExprSet>
@@ -828,9 +723,8 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::CheckErrors(int const & flag) {
   if (flag < 0) {
-    auto message = (std::string("IDA failed with flag ") + std::to_string(flag)).c_str();
-    py::set_error(PyExc_ValueError, message);
-    throw py::error_already_set();
+    auto message = std::string("IDA failed with flag ") + std::to_string(flag);
+    throw std::runtime_error(message.c_str());
   }
 }
 

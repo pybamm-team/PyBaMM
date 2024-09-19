@@ -185,6 +185,10 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
+    @property
+    def supports_parallel_solve(self):
+        return True
+
     def _integrate(self, model, t_eval, inputs=None, t_interp=None):
         """
         Solve a model defined by dydt with initial conditions y0.
@@ -200,7 +204,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         Returns
         -------
-        object
+        list of `pybamm.Solution`
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
 
@@ -301,6 +305,4 @@ class JaxSolver(pybamm.BaseSolver):
             sol.integration_time = integration_time
             solutions.append(sol)
 
-        if len(solutions) == 1:
-            return solutions[0]
         return solutions
