@@ -63,6 +63,47 @@ class TestIDAKLUSolver:
             true_solution = 0.1 * solution.t
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
+    def test_multiple_inputs(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        rate = pybamm.InputParameter("rate")
+        model.rhs = {var: -rate * var}
+        model.initial_conditions = {var: 2}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        for num_threads, num_solvers in [
+            [1, None],
+            [2, None],
+            [8, None],
+            [8, 1],
+            [8, 2],
+            [8, 7],
+        ]:
+            options = {"num_threads": num_threads}
+            if num_solvers is not None:
+                options["num_solvers"] = num_solvers
+            solver = pybamm.IDAKLUSolver(rtol=1e-5, atol=1e-5, options=options)
+            t_interp = np.linspace(0, 1, 10)
+            t_eval = [t_interp[0], t_interp[-1]]
+            ninputs = 8
+            inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+            solutions = solver.solve(
+                model, t_eval, inputs=inputs_list, t_interp=t_interp
+            )
+
+            # check solution
+            for inputs, solution in zip(inputs_list, solutions):
+                print("checking solution", inputs, solution.all_inputs)
+                np.testing.assert_array_equal(solution.t, t_interp)
+                np.testing.assert_allclose(
+                    solution.y[0],
+                    2 * np.exp(-inputs["rate"] * solution.t),
+                    atol=1e-4,
+                    rtol=1e-4,
+                )
+
     def test_model_events(self):
         for form in ["casadi", "iree"]:
             if (form == "iree") and (not pybamm.has_jax() or not pybamm.has_iree()):
