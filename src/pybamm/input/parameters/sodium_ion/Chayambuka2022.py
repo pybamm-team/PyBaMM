@@ -10,7 +10,7 @@ D_p_data = pybamm.parameters.process_1D_data("D_p.csv", path=path)
 k_n_data = pybamm.parameters.process_1D_data("k_n.csv", path=path)
 k_p_data = pybamm.parameters.process_1D_data("k_p.csv", path=path)
 D_e_data = pybamm.parameters.process_1D_data("D_e.csv", path=path)
-kappa_e_data = pybamm.parameters.process_1D_data("kappa_e.csv", path=path)
+sigma_e_data = pybamm.parameters.process_1D_data("sigma_e.csv", path=path)
 
 
 def HC_ocp_Chayambuka2022(sto):
@@ -227,11 +227,12 @@ def electrolyte_diffusivity_Chayambuka2022(c_e, T):
         Solid diffusivity
     """
 
-    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
+    name, (x, y) = D_e_data
+    D_e = pybamm.Interpolant(x, y, c_e, name)
 
-    # Nyman et al. (2008) does not provide temperature dependence
+    # Chayambuka et al. (2022) does not provide temperature dependence
 
-    return D_c_e
+    return D_e
 
 
 def electrolyte_conductivity_Chayambuka2022(c_e, T):
@@ -258,11 +259,10 @@ def electrolyte_conductivity_Chayambuka2022(c_e, T):
         Solid diffusivity
     """
 
-    sigma_e = (
-        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
-    )
+    name, (x, y) = sigma_e_data
+    sigma_e = pybamm.Interpolant(x, y, c_e, name)
 
-    # Nyman et al. (2008) does not provide temperature dependence
+    # Chayambuka et al. (2022) does not provide temperature dependence
 
     return sigma_e
 
