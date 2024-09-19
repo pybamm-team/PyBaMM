@@ -1,19 +1,19 @@
 #
 # Test for the standard lead acid parameters
 #
+import pytest
 import os
 
 import pybamm
 from tests import get_discretisation_for_testing
 from tempfile import TemporaryDirectory
-import unittest
 
 
-class TestStandardParametersLeadAcid(unittest.TestCase):
+class TestStandardParametersLeadAcid:
     def test_scipy_constants(self):
         constants = pybamm.constants
-        self.assertAlmostEqual(constants.R.evaluate(), 8.314, places=3)
-        self.assertAlmostEqual(constants.F.evaluate(), 96485, places=0)
+        assert constants.R.evaluate() == pytest.approx(8.314, abs=0.001)
+        assert constants.F.evaluate() == pytest.approx(96485, abs=1)
 
     def test_print_parameters(self):
         with TemporaryDirectory() as dir_name:
@@ -30,17 +30,19 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # Volume change positive in negative electrode and negative in positive
         # electrode
-        self.assertLess(param_eval["n.DeltaVsurf"], 0)
-        self.assertGreater(param_eval["p.DeltaVsurf"], 0)
+        assert param_eval["n.DeltaVsurf"] < 0
+        assert param_eval["p.DeltaVsurf"] > 0
 
     def test_concatenated_parameters(self):
         # create
         param = pybamm.LeadAcidParameters()
         eps_param = param.epsilon_init
-        self.assertIsInstance(eps_param, pybamm.Concatenation)
-        self.assertEqual(
-            eps_param.domain, ["negative electrode", "separator", "positive electrode"]
-        )
+        assert isinstance(eps_param, pybamm.Concatenation)
+        assert eps_param.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues("Sulzer2019")
@@ -49,7 +51,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # test output
         submeshes = disc.mesh[("negative electrode", "separator", "positive electrode")]
-        self.assertEqual(processed_eps.shape, (submeshes.npts, 1))
+        assert processed_eps.shape == (submeshes.npts, 1)
 
     def test_current_functions(self):
         # create current functions
@@ -70,7 +72,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             }
         )
         current_density_eval = parameter_values.process_symbol(current_density)
-        self.assertAlmostEqual(current_density_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1))
+        assert current_density_eval.evaluate(t=3) == pytest.approx(2 / (8 * 0.1 * 0.1))
 
     def test_thermal_parameters(self):
         values = pybamm.lead_acid.BaseModel().default_parameter_values
@@ -78,18 +80,18 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         T = 300  # dummy temperature as the values are constant
 
         # Density
-        self.assertEqual(values.evaluate(param.n.rho_c_p_cc(T)), 11300 * 130)
-        self.assertEqual(values.evaluate(param.n.rho_c_p(T)), 11300 * 130)
-        self.assertEqual(values.evaluate(param.s.rho_c_p(T)), 1680 * 700)
-        self.assertEqual(values.evaluate(param.p.rho_c_p(T)), 9375 * 256)
-        self.assertEqual(values.evaluate(param.p.rho_c_p_cc(T)), 9375 * 256)
+        assert values.evaluate(param.n.rho_c_p_cc(T)) == 11300 * 130
+        assert values.evaluate(param.n.rho_c_p(T)) == 11300 * 130
+        assert values.evaluate(param.s.rho_c_p(T)) == 1680 * 700
+        assert values.evaluate(param.p.rho_c_p(T)) == 9375 * 256
+        assert values.evaluate(param.p.rho_c_p_cc(T)) == 9375 * 256
 
         # Thermal conductivity
-        self.assertEqual(values.evaluate(param.n.lambda_cc(T)), 35)
-        self.assertEqual(values.evaluate(param.n.lambda_(T)), 35)
-        self.assertEqual(values.evaluate(param.s.lambda_(T)), 0.04)
-        self.assertEqual(values.evaluate(param.p.lambda_(T)), 35)
-        self.assertEqual(values.evaluate(param.p.lambda_cc(T)), 35)
+        assert values.evaluate(param.n.lambda_cc(T)) == 35
+        assert values.evaluate(param.n.lambda_(T)) == 35
+        assert values.evaluate(param.s.lambda_(T)) == 0.04
+        assert values.evaluate(param.p.lambda_(T)) == 35
+        assert values.evaluate(param.p.lambda_cc(T)) == 35
 
     def test_functions_lead_acid(self):
         # Load parameters to be tested
@@ -112,17 +114,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         param_eval = parameter_values.print_parameters(parameters)
 
         # Known monotonicity for functions
-        self.assertGreater(param_eval["chi_1"], param_eval["chi_0.5"])
-        self.assertLess(param_eval["U_n_1"], param_eval["U_n_0.5"])
-        self.assertGreater(param_eval["U_p_1"], param_eval["U_p_0.5"])
-        self.assertGreater(param_eval["j0_Ox_1"], param_eval["j0_Ox_0.5"])
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert param_eval["chi_1"] > param_eval["chi_0.5"]
+        assert param_eval["U_n_1"] < param_eval["U_n_0.5"]
+        assert param_eval["U_p_1"] > param_eval["U_p_0.5"]
+        assert param_eval["j0_Ox_1"] > param_eval["j0_Ox_0.5"]

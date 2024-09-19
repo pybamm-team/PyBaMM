@@ -5,7 +5,7 @@ import numpy as np
 
 def graphite_diffusivity_Dualfoil1998(sto, T):
     """
-    Graphite diffusivity as a function of stochiometry [1, 2, 3].
+    Graphite diffusivity as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -20,7 +20,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature, [K]
 
@@ -72,10 +72,10 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
+def graphite_entropy_Enertech_Ai2020_function(sto):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
-    a temperature of 298.15K as a function of the stochiometry. The fit is taken
+    a temperature of 298.15K as a function of the stoichiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
 
@@ -89,7 +89,7 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     Parameters
     ----------
     sto: double
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     Returns
     -------
@@ -126,9 +126,9 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_s_max):
     return du_dT
 
 
-def graphite_volume_change_Ai2020(sto, c_s_max):
+def graphite_volume_change_Ai2020(sto):
     """
-    Graphite particle volume change as a function of stochiometry [1, 2].
+    Graphite particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -143,7 +143,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
     c_s_max : :class:`pybamm.Symbol`
         Maximum particle concentration [mol.m-3]
@@ -214,7 +214,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
 
 def lico2_diffusivity_Dualfoil1998(sto, T):
     """
-    LiCo2 diffusivity as a function of stochiometry, in this case the
+    LiCo2 diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Dualfoil [1].
 
     References
@@ -224,7 +224,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature, [K]
 
@@ -273,10 +273,10 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def lico2_entropic_change_Ai2020_function(sto, c_s_max):
+def lico2_entropic_change_Ai2020_function(sto):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open-circuit potential (OCP) at
-    a temperature of 298.15K as a function of the stochiometry. The fit is taken
+    a temperature of 298.15K as a function of the stoichiometry. The fit is taken
     from Ref [1], which is only accurate
     for 0.43 < sto < 0.9936.
 
@@ -290,7 +290,7 @@ def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     Parameters
     ----------
     sto: double
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     Returns
     -------
@@ -323,9 +323,9 @@ def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     return du_dT
 
 
-def lico2_volume_change_Ai2020(sto, c_s_max):
+def lico2_volume_change_Ai2020(sto):
     """
-    lico2 particle volume change as a function of stochiometry [1, 2].
+    lico2 particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -340,10 +340,8 @@ def lico2_volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
-    c_s_max : :class:`pybamm.Symbol`
-        Maximum particle concentration [mol.m-3]
 
     Returns
     -------
@@ -351,6 +349,7 @@ def lico2_volume_change_Ai2020(sto, c_s_max):
         volume change, dimensionless, normalised by particle volume
     """
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
+    c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
     t_change = omega * c_s_max * sto
     return t_change
 

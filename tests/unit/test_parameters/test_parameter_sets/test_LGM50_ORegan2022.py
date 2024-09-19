@@ -15,7 +15,7 @@ class TestORegan2022:
         fun_test = {
             # Positive electrode
             "Positive electrode OCP entropic change [V.K-1]": (
-                [0.5, c_p_max],
+                [0.5],
                 -9.7940e-07,
             ),
             "Positive electrode specific heat capacity [J.kg-1.K-1]": (
@@ -32,7 +32,7 @@ class TestORegan2022:
             "Positive electrode thermal conductivity [W.m-1.K-1]": ([T], 0.8047),
             # Negative electrode
             "Negative electrode OCP entropic change [V.K-1]": (
-                [0.5, c_n_max],
+                [0.5],
                 -2.6460e-07,
             ),
             "Negative electrode specific heat capacity [J.kg-1.K-1]": (
