@@ -397,16 +397,13 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   SetSolverOptions();
 
-  CheckErrors(IDAReInit(ida_mem, t0, yy, yp));
-  if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
-  }
-
   // Prepare first time step
   i_eval = 1;
   realtype t_eval_next = t_eval[i_eval];
 
+
   // Consistent initialization
+  ReinitializeIntegrator(t0);
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
     ConsistentInitialization(t0, t_eval_next, init_type);
@@ -489,6 +486,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       CheckErrors(IDASetStopTime(ida_mem, t_eval_next));
 
       // Reinitialize the solver to deal with the discontinuity at t = t_val.
+      ReinitializeIntegrator(t_val);
       ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
     }
 
@@ -568,16 +566,20 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
 }
 
 template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const realtype& t_val) {
+  DEBUG("IDAKLUSolver::ReinitializeIntegrator");
+  CheckErrors(IDAReInit(ida_mem, t_val, yy, yp));
+  if (sensitivity) {
+    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
+  }
+}
+
+template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
   const realtype& t_val,
   const realtype& t_next,
   const int& icopt) {
   DEBUG("IDAKLUSolver::ConsistentInitialization");
-
-  CheckErrors(IDAReInit(ida_mem, t_val, yy, yp));
-  if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
-  }
 
   if (is_ODE && icopt == IDA_YA_YDP_INIT) {
     ConsistentInitializationODE(t_val);

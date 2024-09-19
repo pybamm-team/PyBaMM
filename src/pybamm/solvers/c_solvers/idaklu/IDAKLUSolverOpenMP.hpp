@@ -160,6 +160,11 @@ public:
   void PrintStats();
 
   /**
+   * @brief Set a consistent initialization for ODEs
+   */
+  void ReinitializeIntegrator(const realtype& t_val);
+
+  /**
    * @brief Set a consistent initialization for the system of equations
    */
   void ConsistentInitialization(
