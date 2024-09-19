@@ -18,7 +18,7 @@ class ParameterSets(Mapping):
 
         >>> import pybamm
         >>> list(pybamm.parameter_sets)
-        ['Ai2020', 'Chen2020', ...]
+        ['Ai2020', 'Chayambuka2022', ...]
 
     Get the docstring for a parameter set:
 
