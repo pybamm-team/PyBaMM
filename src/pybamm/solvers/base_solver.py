@@ -1489,8 +1489,12 @@ class BaseSolver:
 
         # second pass: check if the extrapolation events are within the tolerance
         last_state = solution.last_state
-        t = last_state.all_ts[0][0]
-        y = last_state.all_ys[0][:, 0]
+        if solution.t_event:
+            t = solution.t_event[0]
+            y = solution.y_event[:, 0]
+        else:
+            t = last_state.all_ts[0][0]
+            y = last_state.all_ys[0][:, 0]
         inputs = last_state.all_inputs[0]
 
         if isinstance(y, casadi.DM):

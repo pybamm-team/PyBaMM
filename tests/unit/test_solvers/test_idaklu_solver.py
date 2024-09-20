@@ -1162,3 +1162,24 @@ class TestIDAKLUSolver:
                     match="Unsupported evaluation engine for convert_to_format=jax",
                 ):
                     _ = solver.solve(model, t_eval)
+
+    def test_extrapolation_events_with_output_variables(self):
+        # Make sure the extrapolation checks work with output variables
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        c = pybamm.Variable("c")
+        model.variables = {"v": v, "c": c}
+        model.rhs = {v: -1, c: 0}
+        model.initial_conditions = {v: 1, c: 2}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event",
+                v - 0.5,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.IDAKLUSolver(output_variables=["c"])
+        solver.set_up(model)
+
+        with pytest.warns(pybamm.SolverWarning, match="extrapolation occurred for"):
+            solver.solve(model, t_eval=[0, 1])
