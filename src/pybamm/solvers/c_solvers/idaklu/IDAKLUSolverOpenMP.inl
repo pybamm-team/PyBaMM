@@ -83,6 +83,10 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   if (this->setup_opts.preconditioner != "none") {
     precon_type = SUN_PREC_LEFT;
   }
+
+  // The default is to solve a DAE for generality. This may be changed
+  // to an ODE during the Initialize() call
+  is_ODE = false;
 }
 
 template <class ExprSet>
@@ -92,12 +96,14 @@ void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
   if (setup_opts.num_threads == 1) {
     yy = N_VNew_Serial(number_of_states, sunctx);
     yp = N_VNew_Serial(number_of_states, sunctx);
+    y_cache = N_VNew_Serial(number_of_states, sunctx);
     avtol = N_VNew_Serial(number_of_states, sunctx);
     id = N_VNew_Serial(number_of_states, sunctx);
   } else {
     DEBUG("IDAKLUSolverOpenMP::AllocateVectors OpenMP");
     yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     yp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    y_cache = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
   }
@@ -289,9 +295,13 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
   realtype *id_val;
   id_val = N_VGetArrayPointer(id);
 
-  int ii;
-  for (ii = 0; ii < number_of_states; ii++) {
+  // Determine if the system is an ODE
+  is_ODE = number_of_states > 0;
+  for (int ii = 0; ii < number_of_states; ii++) {
     id_val[ii] = id_np_val[ii];
+    // check if id_val[ii] approximately equals 1 (>0.999) handles
+    // cases where id_val[ii] is not exactly 1 due to numerical errors
+    is_ODE &= id_val[ii] > 0.999;
   }
 
   // Variable types: differential (1) and algebraic (0)
@@ -312,6 +322,7 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
   N_VDestroy(avtol);
   N_VDestroy(yy);
   N_VDestroy(yp);
+  N_VDestroy(y_cache);
   N_VDestroy(id);
 
   if (sensitivity) {
@@ -386,21 +397,16 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   SetSolverOptions();
 
-  CheckErrors(IDAReInit(ida_mem, t0, yy, yp));
-  if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
-  }
-
   // Prepare first time step
   i_eval = 1;
   realtype t_eval_next = t_eval[i_eval];
 
+
   // Consistent initialization
+  ReinitializeIntegrator(t0);
   int const init_type = solver_opts.init_all_y_ic ? IDA_Y_INIT : IDA_YA_YDP_INIT;
   if (solver_opts.calc_ic) {
-    DEBUG("IDACalcIC");
-    // IDACalcIC will throw a warning if it fails to find initial conditions
-    IDACalcIC(ida_mem, init_type, t_eval_next);
+    ConsistentInitialization(t0, t_eval_next, init_type);
   }
 
   if (sensitivity) {
@@ -480,12 +486,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       CheckErrors(IDASetStopTime(ida_mem, t_eval_next));
 
       // Reinitialize the solver to deal with the discontinuity at t = t_val.
-      // We must reinitialize the algebraic terms, so do not use init_type.
-      IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t_eval_next);
-      CheckErrors(IDAReInit(ida_mem, t_val, yy, yp));
-      if (sensitivity) {
-        CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
-      }
+      ReinitializeIntegrator(t_val);
+      ConsistentInitialization(t_val, t_eval_next, IDA_YA_YDP_INIT);
     }
 
     t_prev = t_val;
@@ -561,6 +563,53 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
   if (sensitivity) {
     yS.emplace_back(number_of_parameters, vector<realtype>(length_of_return_vector, 0.0));
   }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const realtype& t_val) {
+  DEBUG("IDAKLUSolver::ReinitializeIntegrator");
+  CheckErrors(IDAReInit(ida_mem, t_val, yy, yp));
+  if (sensitivity) {
+    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitialization(
+  const realtype& t_val,
+  const realtype& t_next,
+  const int& icopt) {
+  DEBUG("IDAKLUSolver::ConsistentInitialization");
+
+  if (is_ODE && icopt == IDA_YA_YDP_INIT) {
+    ConsistentInitializationODE(t_val);
+  } else {
+    ConsistentInitializationDAE(t_val, t_next, icopt);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationDAE(
+  const realtype& t_val,
+  const realtype& t_next,
+  const int& icopt) {
+  DEBUG("IDAKLUSolver::ConsistentInitializationDAE");
+  IDACalcIC(ida_mem, icopt, t_next);
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
+  const realtype& t_val) {
+  DEBUG("IDAKLUSolver::ConsistentInitializationODE");
+
+  // For ODEs where the mass matrix M = I, we can simplify the problem
+  // by analytically computing the yp values. If we take our implicit
+  // DAE system res(t,y,yp) = f(t,y) - I*yp, then yp = res(t,y,0). This
+  // avoids an expensive call to IDACalcIC.
+  realtype *y_cache_val = N_VGetArrayPointer(y_cache);
+  std::memset(y_cache_val, 0, number_of_states * sizeof(realtype));
+  // Overwrite yp
+  residual_eval<ExprSet>(t_val, yy, y_cache, yp, functions.get());
 }
 
 template <class ExprSet>
