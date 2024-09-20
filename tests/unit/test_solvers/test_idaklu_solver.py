@@ -1173,12 +1173,13 @@ class TestIDAKLUSolver:
         model.initial_conditions = {v: 1, c: 2}
         model.events.append(
             pybamm.Event(
-                "Ignored event",
-                v + 10,
+                "Triggered event",
+                v - 0.5,
                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
             )
         )
         solver = pybamm.IDAKLUSolver(output_variables=["c"])
         solver.set_up(model)
 
-        solver.solve(model, t_eval=[0, 1])
+        with pytest.warns(pybamm.SolverWarning, match="extrapolation occurred for"):
+            solver.solve(model, t_eval=[0, 1])
