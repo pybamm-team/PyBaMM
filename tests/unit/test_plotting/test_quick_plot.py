@@ -60,8 +60,20 @@ class TestQuickPlot:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         solver = model.default_solver
-        t_eval = np.linspace(0, 2, 100)
-        solution = solver.solve(model, t_eval)
+        t_eval = np.linspace(0, 2, 201)
+        if solver.supports_interp:
+            t_interp = t_eval
+        else:
+            t_interp = None
+
+        solution = solver.solve(model, t_eval, t_interp=t_interp)
+
+        if solution.hermite_interpolation:
+            t_linspace = np.linspace(t_eval[0], t_eval[-1], 100)
+            t_plot = np.union1d(t_eval, t_linspace)
+        else:
+            t_plot = t_eval
+
         quick_plot = pybamm.QuickPlot(
             solution,
             [
@@ -149,28 +161,28 @@ class TestQuickPlot:
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 1
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 60
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 60
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 3600
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 3600
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         with pytest.raises(ValueError, match="time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")

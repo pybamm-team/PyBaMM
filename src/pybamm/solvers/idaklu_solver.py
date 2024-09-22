@@ -30,6 +30,7 @@ if idaklu_spec is not None:
         if idaklu_spec.loader:
             idaklu_spec.loader.exec_module(idaklu)
     except ImportError as e:  # pragma: no cover
+        idaklu = None
         print(f"Error loading idaklu: {e}")
         idaklu_spec = None
 
@@ -133,6 +134,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "nonlinear_convergence_coefficient": 0.33,
                 # Suppress algebraic variables from error test
                 "suppress_algebraic_error": False,
+                # Store Hermite interpolation data for the solution.
+                # Note: this option is always disabled if output_variables are given
+                # or if t_interp values are specified
+                "hermite_interpolation": True,
                 ## Initial conditions calculation
                 # Positive constant in the Newton iteration convergence test within the
                 # initial condition calculation
@@ -201,6 +206,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "max_convergence_failures": 100,
             "nonlinear_convergence_coefficient": 0.33,
             "suppress_algebraic_error": False,
+            "hermite_interpolation": True,
             "nonlinear_convergence_coefficient_ic": 0.0033,
             "max_num_steps_ic": 50,
             "max_num_jacobians_ic": 40,
@@ -765,6 +771,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = np.array([[]])
 
+        save_adaptive_steps = t_interp is None or len(t_interp) == 0
+
         # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
         # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
         # different initial conditions for different inputs (see https://github.com/pybamm-team/PyBaMM/pull/4260). For now we just repeat the same initial conditions for each input
@@ -792,18 +800,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
         integration_time = timer.time()
 
         return [
-            self._post_process_solution(soln, model, integration_time, inputs_dict)
+            self._post_process_solution(
+                soln, model, integration_time, inputs_dict, save_adaptive_steps
+            )
             for soln, inputs_dict in zip(solns, inputs_list)
         ]
 
-    def _post_process_solution(self, sol, model, integration_time, inputs_dict):
+    def _post_process_solution(
+        self, sol, model, integration_time, inputs_dict, save_adaptive_steps
+    ):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
         ]
         sensitivity_names = self._setup["sensitivity_names"]
         number_of_timesteps = sol.t.size
         number_of_states = model.len_rhs_and_alg
-        if self.output_variables:
+        save_outputs_only = self.output_variables
+        if save_outputs_only:
             # Substitute empty vectors for state vector 'y'
             y_out = np.zeros((number_of_timesteps * number_of_states, 0))
             y_event = sol.y_term
@@ -834,6 +847,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
 
+        if (
+            self._options["hermite_interpolation"]
+            and save_adaptive_steps
+            and (not save_outputs_only)
+        ):
+            yp = sol.yp.reshape((number_of_timesteps, number_of_states)).T
+        else:
+            yp = None
+
         newsol = pybamm.Solution(
             sol.t,
             np.transpose(y_out),
@@ -843,10 +865,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             np.transpose(y_event)[:, np.newaxis],
             termination,
             all_sensitivities=yS_out,
+            all_yps=yp,
         )
+
         newsol.integration_time = integration_time
-        if not self.output_variables:
-            # print((newsol.y).shape)
+        if not save_outputs_only:
             return newsol
 
         # Populate variables and sensititivies dictionaries directly

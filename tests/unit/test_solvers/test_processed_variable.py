@@ -48,7 +48,7 @@ def process_and_check_2D_variable(
 
     var_casadi = to_casadi(var_sol, y_sol)
     model = tests.get_base_model_with_battery_geometry(**geometry_options)
-    processed_var = pybamm.ProcessedVariable(
+    processed_var = pybamm.process_variable(
         [var_sol],
         [var_casadi],
         pybamm.Solution(t_sol, y_sol, model, {}),
@@ -71,7 +71,7 @@ class TestProcessedVariable:
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
@@ -85,7 +85,7 @@ class TestProcessedVariable:
         t_sol = np.array([0])
         y_sol = np.array([1])[:, np.newaxis]
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
@@ -104,7 +104,7 @@ class TestProcessedVariable:
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
@@ -124,7 +124,7 @@ class TestProcessedVariable:
         y_sol = np.array([np.linspace(0, 5)])
         inputs = {"a": np.array([1.0])}
         var_casadi = to_casadi(var, y_sol, inputs=inputs)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), inputs),
@@ -151,7 +151,7 @@ class TestProcessedVariable:
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -162,7 +162,7 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(processed_var.entries, y_sol)
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        processed_eqn = pybamm.ProcessedVariable(
+        processed_eqn = pybamm.process_variable(
             [eqn_sol],
             [eqn_casadi],
             pybamm.Solution(
@@ -184,7 +184,7 @@ class TestProcessedVariable:
         x_s_edge = pybamm.Matrix(disc.mesh["separator"].edges, domain="separator")
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
-        processed_x_s_edge = pybamm.ProcessedVariable(
+        processed_x_s_edge = pybamm.process_variable(
             [x_s_edge],
             [x_s_casadi],
             pybamm.Solution(
@@ -202,7 +202,7 @@ class TestProcessedVariable:
         t_sol = np.array([0])
         y_sol = np.ones_like(x_sol)[:, np.newaxis]
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        processed_eqn2 = pybamm.ProcessedVariable(
+        processed_eqn2 = pybamm.process_variable(
             [eqn_sol],
             [eqn_casadi],
             pybamm.Solution(
@@ -242,7 +242,7 @@ class TestProcessedVariable:
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
-        pybamm.ProcessedVariable([c], [c_casadi], solution, warn=False)
+        pybamm.process_variable([c], [c_casadi], solution, warn=False)
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
@@ -352,7 +352,7 @@ class TestProcessedVariable:
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
-        processed_x_s_edge = pybamm.ProcessedVariable(
+        processed_x_s_edge = pybamm.process_variable(
             [x_s_edge],
             [x_s_casadi],
             pybamm.Solution(
@@ -388,7 +388,7 @@ class TestProcessedVariable:
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -414,7 +414,7 @@ class TestProcessedVariable:
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, u_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -442,7 +442,7 @@ class TestProcessedVariable:
         model = tests.get_base_model_with_battery_geometry(
             options={"dimensionality": 2}
         )
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(t_sol, u_sol, model, {}),
@@ -464,7 +464,7 @@ class TestProcessedVariable:
         t_sol = np.linspace(0, 1, 1000)
         y_sol = np.array([np.linspace(0, 5, 1000)])
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
             pybamm.Solution(
@@ -479,7 +479,7 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(processed_var(0.7), 3.5)
 
         eqn_casadi = to_casadi(eqn, y_sol)
-        processed_eqn = pybamm.ProcessedVariable(
+        processed_eqn = pybamm.process_variable(
             [eqn],
             [eqn_casadi],
             pybamm.Solution(
@@ -505,7 +505,7 @@ class TestProcessedVariable:
         t_sol = np.array([10])
         y_sol = np.array([[100]])
         eqn_casadi = to_casadi(eqn, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [eqn],
             [eqn_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
@@ -529,7 +529,7 @@ class TestProcessedVariable:
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -549,7 +549,7 @@ class TestProcessedVariable:
             processed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1]
         )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        processed_eqn = pybamm.ProcessedVariable(
+        processed_eqn = pybamm.process_variable(
             [eqn_sol],
             [eqn_casadi],
             pybamm.Solution(
@@ -571,7 +571,7 @@ class TestProcessedVariable:
         x_disc = disc.process_symbol(x)
         x_casadi = to_casadi(x_disc, y_sol)
 
-        processed_x = pybamm.ProcessedVariable(
+        processed_x = pybamm.process_variable(
             [x_disc],
             [x_casadi],
             pybamm.Solution(
@@ -587,7 +587,7 @@ class TestProcessedVariable:
         )
         r_n.mesh = disc.mesh["negative particle"]
         r_n_casadi = to_casadi(r_n, y_sol)
-        processed_r_n = pybamm.ProcessedVariable(
+        processed_r_n = pybamm.process_variable(
             [r_n],
             [r_n_casadi],
             pybamm.Solution(
@@ -608,7 +608,7 @@ class TestProcessedVariable:
         model = tests.get_base_model_with_battery_geometry(
             options={"particle size": "distribution"}
         )
-        processed_R_n = pybamm.ProcessedVariable(
+        processed_R_n = pybamm.process_variable(
             [R_n],
             [R_n_casadi],
             pybamm.Solution(t_sol, y_sol, model, {}),
@@ -631,7 +631,7 @@ class TestProcessedVariable:
         y_sol = x_sol[:, np.newaxis]
 
         eqn_casadi = to_casadi(eqn_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [eqn_sol],
             [eqn_casadi],
             pybamm.Solution(
@@ -687,12 +687,12 @@ class TestProcessedVariable:
             }
         )
         with pytest.raises(NotImplementedError, match="Spatial variable name"):
-            pybamm.ProcessedVariable(
+            pybamm.process_variable(
                 [var_sol],
                 [var_casadi],
                 pybamm.Solution(t_sol, y_sol, model, {}),
                 warn=False,
-            )
+            ).initialise()
 
     def test_processed_var_2D_interpolation(self):
         var = pybamm.Variable(
@@ -718,7 +718,7 @@ class TestProcessedVariable:
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -768,7 +768,7 @@ class TestProcessedVariable:
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -805,7 +805,7 @@ class TestProcessedVariable:
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -838,7 +838,7 @@ class TestProcessedVariable:
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -879,7 +879,7 @@ class TestProcessedVariable:
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -905,7 +905,7 @@ class TestProcessedVariable:
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
         var_casadi = to_casadi(var_sol, u_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -951,7 +951,7 @@ class TestProcessedVariable:
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
         var_casadi = to_casadi(var_sol, u_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(
@@ -1016,7 +1016,7 @@ class TestProcessedVariable:
                 "domain B": {z: {"min": 0, "max": 1}},
             }
         )
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var_sol],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, model, {}),
@@ -1062,7 +1062,7 @@ class TestProcessedVariable:
         var_casadi = to_casadi(var_sol, u_sol)
 
         with pytest.raises(NotImplementedError, match="Shape not recognized"):
-            pybamm.ProcessedVariable(
+            pybamm.process_variable(
                 [var_sol],
                 [var_casadi],
                 pybamm.Solution(
@@ -1080,7 +1080,7 @@ class TestProcessedVariable:
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
-        processed_var = pybamm.ProcessedVariable(
+        processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),

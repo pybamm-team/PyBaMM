@@ -9,6 +9,7 @@
 #include <pybind11/stl_bind.h>
 
 #include "idaklu/idaklu_solver.hpp"
+#include "idaklu/observe.hpp"
 #include "idaklu/IDAKLUSolverGroup.hpp"
 #include "idaklu/IdakluJax.hpp"
 #include "idaklu/common.hpp"
@@ -27,6 +28,7 @@ casadi::Function generate_casadi_function(const std::string &data)
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
+PYBIND11_MAKE_OPAQUE(std::vector<np_array_realtype>);
 PYBIND11_MAKE_OPAQUE(std::vector<Solution>);
 
 PYBIND11_MODULE(idaklu, m)
@@ -34,6 +36,7 @@ PYBIND11_MODULE(idaklu, m)
   m.doc() = "sundials solvers"; // optional module docstring
 
   py::bind_vector<std::vector<np_array>>(m, "VectorNdArray");
+  py::bind_vector<std::vector<np_array_realtype>>(m, "VectorRealtypeNdArray");
   py::bind_vector<std::vector<Solution>>(m, "VectorSolution");
 
   py::class_<IDAKLUSolverGroup>(m, "IDAKLUSolverGroup")
@@ -72,6 +75,27 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::return_value_policy::take_ownership);
 
+  m.def("observe_ND", &observe_ND<CasadiFunctions>,
+    "Observe ND variables",
+    py::arg("ts_np"),
+    py::arg("ys_np"),
+    py::arg("inputs_np"),
+    py::arg("funcs"),
+    py::arg("is_f_contiguous"),
+    py::arg("sizes"),
+    py::return_value_policy::take_ownership);
+
+  m.def("observe_hermite_interp_ND", &observe_hermite_interp_ND<CasadiFunctions>,
+    "Observe ND variables",
+    py::arg("t_interp_np"),
+    py::arg("ts_np"),
+    py::arg("ys_np"),
+    py::arg("yps_np"),
+    py::arg("inputs_np"),
+    py::arg("funcs"),
+    py::arg("sizes"),
+    py::return_value_policy::take_ownership);
+
 #ifdef IREE_ENABLE
   m.def("create_iree_solver_group", &create_idaklu_solver_group<IREEFunctions>,
     "Create a group of iree idaklu solver objects",
@@ -97,6 +121,27 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("dvar_dy_fcns"),
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
+    py::return_value_policy::take_ownership);
+
+  m.def("observe_ND", &observe_ND<IREEFunctions>,
+    "Observe ND variables",
+    py::arg("ts_np"),
+    py::arg("ys_np"),
+    py::arg("inputs_np"),
+    py::arg("funcs"),
+    py::arg("is_f_contiguous"),
+    py::arg("sizes"),
+    py::return_value_policy::take_ownership);
+
+  m.def("observe_hermite_interp_ND", &observe_hermite_interp_ND<IREEFunctions>,
+    "Observe ND variables",
+    py::arg("t_interp_np"),
+    py::arg("ts_np"),
+    py::arg("ys_np"),
+    py::arg("yps_np"),
+    py::arg("inputs_np"),
+    py::arg("funcs"),
+    py::arg("sizes"),
     py::return_value_policy::take_ownership);
 #endif
 
@@ -167,7 +212,9 @@ PYBIND11_MODULE(idaklu, m)
   py::class_<Solution>(m, "solution")
     .def_readwrite("t", &Solution::t)
     .def_readwrite("y", &Solution::y)
+    .def_readwrite("yp", &Solution::yp)
     .def_readwrite("yS", &Solution::yS)
+    .def_readwrite("ypS", &Solution::ypS)
     .def_readwrite("y_term", &Solution::y_term)
     .def_readwrite("flag", &Solution::flag);
 }

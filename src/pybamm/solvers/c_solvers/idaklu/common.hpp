@@ -27,12 +27,17 @@
 #include <sunmatrix/sunmatrix_sparse.h> /* access to sparse SUNMatrix           */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix           */
 
+#include <casadi/casadi.hpp>
+#include <casadi/core/function.hpp>
+#include <casadi/core/sparsity.hpp>
+
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
 // note: we rely on c_style ordering for numpy arrays so don't change this!
 using np_array = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
+using np_array_realtype = py::array_t<realtype>;
 using np_array_int = py::array_t<int64_t>;
 
 /**

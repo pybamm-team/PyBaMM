@@ -94,7 +94,7 @@ class TestProcessedVariableComputed:
 
         # Check cumtrapz workflow produces no errors
         processed_var.cumtrapz_ic = 1
-        processed_var.initialise_0D()
+        processed_var.entries
 
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
@@ -175,7 +175,7 @@ class TestProcessedVariableComputed:
             processed_var.mesh.edges,
             processed_var.mesh.nodes,
         )
-        processed_var.initialise_1D()
+        processed_var.entries
         processed_var.mesh.nodes, processed_var.mesh.edges = (
             processed_var.mesh.edges,
             processed_var.mesh.nodes,
@@ -192,7 +192,7 @@ class TestProcessedVariableComputed:
         ]
         for domain in domain_list:
             processed_var.domain[0] = domain
-            processed_var.initialise_1D()
+            processed_var.entries
 
     def test_processed_variable_1D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
@@ -330,7 +330,7 @@ class TestProcessedVariableComputed:
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
-        processed_x_s_edge = pybamm.ProcessedVariable(
+        processed_x_s_edge = pybamm.process_variable(
             [x_s_edge],
             [x_s_casadi],
             pybamm.Solution(
