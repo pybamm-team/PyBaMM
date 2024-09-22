@@ -75,7 +75,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::return_value_policy::take_ownership);
 
-  m.def("observe_ND", &observe_ND<CasadiFunctions>,
+  m.def("observe_ND", &observe_ND,
     "Observe ND variables",
     py::arg("ts_np"),
     py::arg("ys_np"),
@@ -85,7 +85,7 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("sizes"),
     py::return_value_policy::take_ownership);
 
-  m.def("observe_hermite_interp_ND", &observe_hermite_interp_ND<CasadiFunctions>,
+  m.def("observe_hermite_interp_ND", &observe_hermite_interp_ND,
     "Observe ND variables",
     py::arg("t_interp_np"),
     py::arg("ts_np"),
@@ -121,27 +121,6 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("dvar_dy_fcns"),
     py::arg("dvar_dp_fcns"),
     py::arg("options"),
-    py::return_value_policy::take_ownership);
-
-  m.def("observe_ND", &observe_ND<IREEFunctions>,
-    "Observe ND variables",
-    py::arg("ts_np"),
-    py::arg("ys_np"),
-    py::arg("inputs_np"),
-    py::arg("funcs"),
-    py::arg("is_f_contiguous"),
-    py::arg("sizes"),
-    py::return_value_policy::take_ownership);
-
-  m.def("observe_hermite_interp_ND", &observe_hermite_interp_ND<IREEFunctions>,
-    "Observe ND variables",
-    py::arg("t_interp_np"),
-    py::arg("ts_np"),
-    py::arg("ys_np"),
-    py::arg("yps_np"),
-    py::arg("inputs_np"),
-    py::arg("funcs"),
-    py::arg("sizes"),
     py::return_value_policy::take_ownership);
 #endif
 
