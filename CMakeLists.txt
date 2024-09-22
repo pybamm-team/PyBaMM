@@ -2,19 +2,6 @@ cmake_minimum_required(VERSION 3.13)
 cmake_policy(SET CMP0074 NEW)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)  # Default to RelWithDebInfo build type if not set
-endif()
-
-# Set optimization flags for Release builds
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")  # Max optimization
-endif()
-
-# Alternatively, you can also set optimization flags for different build types
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")  # No optimization, with debugging info
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2")  # Optimization with debugging info
-
 if(DEFINED ENV{VCPKG_ROOT_DIR} AND NOT DEFINED VCPKG_ROOT_DIR)
   set(VCPKG_ROOT_DIR "$ENV{VCPKG_ROOT_DIR}"
     CACHE STRING "Vcpkg root directory")

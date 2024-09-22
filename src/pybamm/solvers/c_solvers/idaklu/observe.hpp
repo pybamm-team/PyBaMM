@@ -26,7 +26,7 @@ void process_time_series(
     const vector<np_array_realtype>& ts_np,
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& inputs_np,
-    const vector<const typename ExprSet::BaseFunctionType*>& funcs,
+    const std::vector<typename ExprSet::BaseFunctionType*>& funcs,
     double* out,
     const bool is_f_contiguous,
     const int len
@@ -147,7 +147,7 @@ void process_and_interp_sorted_time_series(
     const vector<np_array_realtype>& ys_data_np,
     const vector<np_array_realtype>& yps_data_np,
     const vector<np_array_realtype>& inputs_np,
-    const vector<const typename ExprSet::BaseFunctionType*>& funcs,
+    const std::vector<typename ExprSet::BaseFunctionType*>& funcs,
     double* out,
     const int len
 ) {
@@ -297,7 +297,7 @@ const py::array_t<double> observe_hermite_interp_ND(
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& yps_np,
     const vector<np_array_realtype>& inputs_np,
-    const vector<const typename ExprSet::BaseFunctionType*>& funcs,
+    const std::vector<typename ExprSet::BaseFunctionType*>& funcs,
     const vector<int> sizes
 ) {
     const int size_tot = _setup_observables(sizes);
@@ -321,7 +321,7 @@ const py::array_t<double> observe_ND(
     const vector<np_array_realtype>& ts_np,
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& inputs_np,
-    const vector<const typename ExprSet::BaseFunctionType*>& funcs,
+    const std::vector<typename ExprSet::BaseFunctionType*>& funcs,
     const bool is_f_contiguous,
     const vector<int> sizes
 ) {
