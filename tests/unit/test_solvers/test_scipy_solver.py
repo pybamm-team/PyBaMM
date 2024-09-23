@@ -11,7 +11,7 @@ import sys
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
-        if pybamm.have_jax():
+        if pybamm.has_jax():
             formats = ["python", "jax"]
         else:
             formats = ["python"]
@@ -181,7 +181,7 @@ class TestScipySolver(unittest.TestCase):
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
-            step_sol_2.t, np.array([0, 1, 1 + 1e-9, 1.25, 1.5, 1.75, 2])
+            step_sol_2.t, np.array([0, 1, np.nextafter(1, np.inf), 1.25, 1.5, 1.75, 2])
         )
         np.testing.assert_array_almost_equal(
             step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
@@ -339,7 +339,7 @@ class TestScipySolver(unittest.TestCase):
             solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
     def test_model_solver_multiple_inputs_jax_format(self):
-        if pybamm.have_jax():
+        if pybamm.has_jax():
             # Create model
             model = pybamm.BaseModel()
             model.convert_to_format = "jax"

@@ -221,7 +221,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         pass
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         """
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the

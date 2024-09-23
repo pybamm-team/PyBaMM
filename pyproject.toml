@@ -3,9 +3,9 @@ requires = [
     "setuptools>=64",
     "wheel",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.5; platform_system!='Windows'",
+    "casadi>=3.6.6; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
-    # cross platforms, so updates to its minimum version here should be accompanied
+    # across platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
 ]
@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.5"
+version = "24.9.0"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -37,7 +37,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
-    "casadi>=3.6.5",
+    "casadi>=3.6.6",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",

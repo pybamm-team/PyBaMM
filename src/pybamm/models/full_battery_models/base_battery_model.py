@@ -619,14 +619,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                and options["particle mechanics"] == "none"
-                and options["loss of active material"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
-                    "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', 'loss of active material'"
+                    "'Fickian diffusion'."
                 )
 
         if options["surface temperature"] == "lumped":
@@ -753,7 +750,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the possible options with the ones currently selected
         """
         for key, value in self.items():
-            print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
+            print(rf"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
 
     def print_detailed_options(self):
         """
@@ -1034,7 +1031,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
-            submodel.set_events(self.variables)
+            submodel.add_events_from(self.variables)
             pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()

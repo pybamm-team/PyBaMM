@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import unittest
 
 
 values = {
@@ -33,7 +32,7 @@ values = {
 parameter_values = pybamm.ParameterValues(values)
 
 
-class TestEcmParameters(unittest.TestCase):
+class TestEcmParameters:
     def test_init_parameters(self):
         param = pybamm.EcmParameters()
 
@@ -54,13 +53,13 @@ class TestEcmParameters(unittest.TestCase):
         for symbol, key in simpled_mapped_parameters:
             value = parameter_values.evaluate(symbol)
             expected_value = values[key]
-            self.assertEqual(value, expected_value)
+            assert value == expected_value
 
         value = parameter_values.evaluate(param.initial_T_cell)
-        self.assertEqual(value, values["Initial temperature [K]"] - 273.15)
+        assert value == values["Initial temperature [K]"] - 273.15
 
         value = parameter_values.evaluate(param.initial_T_jig)
-        self.assertEqual(value, values["Initial temperature [K]"] - 273.15)
+        assert value == values["Initial temperature [K]"] - 273.15
 
         compatibility_parameters = [
             (param.n_electrodes_parallel, 1),
@@ -70,7 +69,7 @@ class TestEcmParameters(unittest.TestCase):
 
         for symbol, expected_value in compatibility_parameters:
             value = parameter_values.evaluate(symbol)
-            self.assertEqual(value, expected_value)
+            assert value == expected_value
 
     def test_function_parameters(self):
         param = pybamm.EcmParameters()
@@ -89,17 +88,7 @@ class TestEcmParameters(unittest.TestCase):
         for symbol, key in mapped_functions:
             value = parameter_values.evaluate(symbol)
             expected_value = values[key]
-            self.assertEqual(value, expected_value)
+            assert value == expected_value
 
         value = parameter_values.evaluate(param.T_amb(sym))
-        self.assertEqual(value, values["Ambient temperature [K]"] - 273.15)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert value == values["Ambient temperature [K]"] - 273.15
