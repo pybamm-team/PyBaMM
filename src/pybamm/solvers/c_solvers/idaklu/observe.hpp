@@ -16,7 +16,7 @@ namespace py = pybind11;
 /**
  * @brief Observe and Hermite interpolate ND variables
  */
-const py::array_t<double> observe_hermite_interp_ND(
+const np_array_realtype observe_hermite_interp_ND(
     const np_array_realtype& t_interp,
     const vector<np_array_realtype>& ts,
     const vector<np_array_realtype>& ys,
@@ -30,7 +30,7 @@ const py::array_t<double> observe_hermite_interp_ND(
 /**
  * @brief Observe ND variables
  */
-const py::array_t<double> observe_ND(
+const np_array_realtype observe_ND(
     const vector<np_array_realtype>& ts_np,
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& inputs_np,
