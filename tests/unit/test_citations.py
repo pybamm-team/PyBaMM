@@ -296,7 +296,7 @@ class TestCitations:
 
         citations._reset()
         assert "Reniers2019" not in citations._papers_to_cite
-        pybamm.active_material.LossActiveMaterial(None, "negative", None, True)
+        pybamm.active_material.LossActiveMaterial(None, "negative", None, True, None)
         assert "Reniers2019" in citations._papers_to_cite
         assert "Reniers2019" in citations._citation_tags.keys()
 
@@ -423,14 +423,14 @@ class TestCitations:
         assert "Virtanen2020" in citations._papers_to_cite
         assert "Virtanen2020" in citations._citation_tags.keys()
 
-        if pybamm.have_idaklu():
+        if pybamm.has_idaklu():
             citations._reset()
             assert "Hindmarsh2005" not in citations._papers_to_cite
             pybamm.IDAKLUSolver()
             assert "Hindmarsh2005" in citations._papers_to_cite
             assert "Hindmarsh2005" in citations._citation_tags.keys()
 
-    @pytest.mark.skipif(not pybamm.have_jax(), reason="jax or jaxlib is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_jax_citations(self):
         citations = pybamm.citations
         citations._reset()
