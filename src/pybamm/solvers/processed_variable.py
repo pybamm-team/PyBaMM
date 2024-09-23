@@ -85,58 +85,45 @@ class ProcessedVariable:
         self._entries_for_interp_raw = None
         self._coords_raw = None
 
-    def initialise(self, t=None):
-        t_observe, observe_raw = self._observe_raw_data(t)
-        if observe_raw and self._raw_data_initialized:
+    def initialise(self):
+        t = self.t_pts
+        if self._raw_data_initialized:
             entries = self._entries_raw
-            is_interpolated = False
             entries_for_interp = self._entries_for_interp_raw
             coords = self._coords_raw
         else:
-            entries, is_interpolated = self.observe(t_observe, observe_raw)
-            entries_for_interp, coords = self._interp_setup(entries, t_observe)
+            entries = self.observe()
+            entries_for_interp, coords = self._interp_setup(entries, t)
 
-            if (not self._raw_data_initialized) and observe_raw:
-                self._entries_raw = entries
-                self._entries_for_interp_raw = entries_for_interp
-                self._coords_raw = coords
-                self._raw_data_initialized = True
+            self._entries_raw = entries
+            self._entries_for_interp_raw = entries_for_interp
+            self._coords_raw = coords
+            self._raw_data_initialized = True
 
-        return t_observe, entries, is_interpolated, entries_for_interp, coords
+        return entries, entries_for_interp, coords
 
-    def observe(self, t, observe_raw):
+    def observe_and_interp(self, t):
+        """
+        Interpolate the variable at the given time points and y values.
+        """
+        entries = self._observe_hermite_cpp(t)
+        entries = self._observe_postfix(entries, t)
+        return entries
+
+    def observe(self):
         """
         Evaluate the base variable at the given time points and y values.
         """
+        t = self.t_pts
 
-        is_sorted = observe_raw or _is_sorted(t)
-        if not is_sorted:
-            idxs_sort = np.argsort(t)
-            t = t[idxs_sort]
-
-        if self.hermite_interpolation and not observe_raw:
-            pybamm.logger.debug(
-                "Observing and Hermite interpolating the variable in C++"
-            )
-            entries = self._observe_hermite_cpp(t)
-            is_interpolated = True
-        elif self._linear_observable_cpp(t):
-            pybamm.logger.debug("Observing the variable raw data in C++")
+        if self._linear_observable_cpp(t):
             entries = self._observe_raw_cpp()
-            is_interpolated = False
         else:
             pybamm.logger.debug("Observing the variable raw data in Python")
             entries = self._observe_raw_python()
-            is_interpolated = False
-
-        if not is_sorted:
-            idxs_unsort = np.arange(len(t))[idxs_sort]
-
-            t = t[idxs_unsort]
-            entries = entries[..., idxs_unsort]
 
         entries = self._observe_postfix(entries, t)
-        return entries, is_interpolated
+        return entries
 
     def _setup_cpp_inputs(self):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
@@ -172,6 +159,7 @@ class ProcessedVariable:
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
     def _observe_hermite_cpp(self, t):
+        pybamm.logger.debug("Observing and Hermite interpolating the variable in C++")
         self._check_interp(t)
 
         ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs()
@@ -181,6 +169,7 @@ class ProcessedVariable:
         )
 
     def _observe_raw_cpp(self):
+        pybamm.logger.debug("Observing the variable raw data in C++")
         ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_cpp_inputs()
         sizes = self._size(self.t_pts)
 
@@ -238,11 +227,25 @@ class ProcessedVariable:
         return xr.DataArray(entries, coords=coords)
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
-        t_observe, entries, is_interpolated, entries_for_interp, coords = (
-            self.initialise(t)
-        )
+        # 1. Check to see if we are interpolating exactly onto the solution time points
+        t_observe, observe_raw = self._observe_raw_data(t)
 
-        post_interpolate = (
+        # 2. Check if the time points are sorted and unique
+        is_sorted = observe_raw or _is_sorted(t_observe)
+
+        # Sort them if not
+        if not is_sorted:
+            idxs_sort = np.argsort(t)
+            t = t[idxs_sort]
+            idxs_unsort = np.arange(len(t))[idxs_sort]
+
+        hermite_interp = self.hermite_interpolation and not observe_raw
+        if hermite_interp:
+            entries = self.observe_and_interp(t_observe)
+        else:
+            entries, entries_for_interp, coords = self.initialise()
+
+        spatial_interp = (
             (x is not None)
             or (r is not None)
             or (y is not None)
@@ -250,25 +253,31 @@ class ProcessedVariable:
             or (R is not None)
         )
 
-        if is_interpolated and not post_interpolate:
-            return entries
-        return self._xr_interpolate(
-            t_observe,
-            entries_for_interp,
-            coords,
-            is_interpolated,
-            t,
-            x,
-            r,
-            y,
-            z,
-            R,
-            warn,
-        )
+        if hermite_interp and not spatial_interp:
+            processed_entries = entries
+        else:
+            if hermite_interp:
+                entries_for_interp, coords = self._interp_setup(entries, t_observe)
+            processed_entries = self._xr_interpolate(
+                entries_for_interp,
+                coords,
+                hermite_interp,
+                t,
+                x,
+                r,
+                y,
+                z,
+                R,
+                warn,
+            )
+
+        if not is_sorted:
+            processed_entries = processed_entries[..., idxs_unsort]
+
+        return processed_entries
 
     def _xr_interpolate(
         self,
-        t_observe,
         entries_for_interp,
         coords,
         is_interpolated,
@@ -284,16 +293,12 @@ class ProcessedVariable:
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
-        if is_interpolated:
-            xr_data_array = self._initialize_xr_data_array(entries_for_interp, coords)
-        else:
-            if self._xr_data_array_raw is None:
-                if not self._raw_data_initialized:
-                    self.initialise(t=None)
-                self._xr_data_array_raw = self._initialize_xr_data_array(
-                    self._entries_for_interp_raw, self._coords_raw
-                )
+
+        if not is_interpolated and self._xr_data_array_raw is not None:
             xr_data_array = self._xr_data_array_raw
+        else:
+            xr_data_array = self._initialize_xr_data_array(entries_for_interp, coords)
+
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
         if is_interpolated:
             kwargs["t"] = None
