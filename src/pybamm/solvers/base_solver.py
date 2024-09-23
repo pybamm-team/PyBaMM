@@ -140,8 +140,10 @@ class BaseSolver:
             model.calculate_sensitivities = []
 
         # see if we need to form the explicit sensitivity equations
+        # Skipping JaxSolver doesn't currently support sensitivities
         calculate_sensitivities_explicit = (
-            model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver)
+            model.calculate_sensitivities
+            and not isinstance(self, (pybamm.IDAKLUSolver, pybamm.JaxSolver))
         )
 
         self._set_up_model_sensitivities_inplace(
@@ -494,11 +496,7 @@ class BaseSolver:
         # if we have a mass matrix, we need to extend it
         def extend_mass_matrix(M):
             M_extend = [M.entries] * (num_parameters + 1)
-            M_extend_pybamm = pybamm.Matrix(block_diag(M_extend, format="csr"))
-            return M_extend_pybamm
-
-            model.mass_matrix = extend_mass_matrix(model.mass_matrix)
-            model.mass_matrix = extend_mass_matrix(model.mass_matrix)
+            return pybamm.Matrix(block_diag(M_extend, format="csr"))
 
         model.mass_matrix = extend_mass_matrix(model.mass_matrix)
 

@@ -52,7 +52,7 @@ class JaxSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        method="RK45",
+        method="BDF",
         root_method=None,
         rtol=1e-6,
         atol=1e-6,
