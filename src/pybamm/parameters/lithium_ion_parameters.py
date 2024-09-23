@@ -428,6 +428,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.L_tunneling = pybamm.Parameter(
             f"{pref}tunneling distance for electrons [m]"
         )
+
+        self.beta_tunnelling = pybamm.Parameter(f"{pref}Tunneling barrier factor [m-1]")
+
         self.L_sei_0 = self.L_inner_0 + self.L_outer_0
         self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")
         self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")

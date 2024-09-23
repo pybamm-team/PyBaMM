@@ -303,6 +303,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited",
                 "ec reaction limited (asymmetric)",
                 "Kolzenberg2020",
+                "tunnelling limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
