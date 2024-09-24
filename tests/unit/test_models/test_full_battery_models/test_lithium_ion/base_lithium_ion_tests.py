@@ -590,3 +590,20 @@ class BaseUnitTestLithiumIon:
             "lithium plating": (("none", "irreversible"), "none"),
         }
         self.check_well_posedness(options)
+
+    def test_well_posed_composite_LAM(self):
+        # phases with LAM degradation
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "SEI": "solvent-diffusion limited",
+            "loss of active material": "reaction-driven",
+        }
+        self.check_well_posedness(options)
+
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "loss of active material": "stress-driven",
+        }
+        self.check_well_posedness(options)
