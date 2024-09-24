@@ -60,6 +60,14 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_sei_reaction_limited(self):
         options = {"SEI": "reaction limited"}
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
+        parameter_values.update(
+            {
+                "Positive SEI growth transfer coefficient": 0.2,
+                "Current function [A]": -0.07826,
+            },
+            check_already_exists=False,
+        )
         self.run_basic_processing_test(options)
 
     def test_sei_asymmetric_reaction_limited(self):
@@ -76,18 +84,50 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_sei_solvent_diffusion_limited(self):
         options = {"SEI": "solvent-diffusion limited"}
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
+        parameter_values.update(
+            {
+                "Positive SEI growth transfer coefficient": 0.2,
+                "Current function [A]": -0.07826,
+            },
+            check_already_exists=False,
+        )
         self.run_basic_processing_test(options)
 
     def test_sei_electron_migration_limited(self):
         options = {"SEI": "electron-migration limited"}
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
+        parameter_values.update(
+            {
+                "Positive SEI growth transfer coefficient": 0.2,
+                "Current function [A]": -0.07826,
+            },
+            check_already_exists=False,
+        )
         self.run_basic_processing_test(options)
 
     def test_sei_interstitial_diffusion_limited(self):
         options = {"SEI": "interstitial-diffusion limited"}
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
+        parameter_values.update(
+            {
+                "Positive SEI growth transfer coefficient": 0.2,
+                "Current function [A]": -0.07826,
+            },
+            check_already_exists=False,
+        )
         self.run_basic_processing_test(options)
 
     def test_sei_ec_reaction_limited(self):
         options = {"SEI": "ec reaction limited"}
+        parameter_values = pybamm.ParameterValues("Ecker2015_graphite_halfcell")
+        parameter_values.update(
+            {
+                "Positive SEI growth transfer coefficient": 0.2,
+                "Current function [A]": -0.07826,
+            },
+            check_already_exists=False,
+        )
         self.run_basic_processing_test(options)
 
     def test_sei_asymmetric_ec_reaction_limited(self):
