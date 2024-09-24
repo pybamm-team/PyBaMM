@@ -330,7 +330,7 @@ def get_parameter_values():
         "Primary: Ratio of lithium moles to negative SEI moles": 2.0,
         "Primary: Negative inner SEI reaction proportion": 0.5,
         "Primary: Negative inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Primary: Negatuve outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Primary: Negative outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "Primary: Negative SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "Primary: Negative SEI resistivity [Ohm.m]": 200000.0,
         "Primary: Negative outer SEI solvent diffusivity [m2.s-1]"
