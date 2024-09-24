@@ -14,12 +14,15 @@ class TestOKane2022(unittest.TestCase):
 
         fun_test = {
             # Lithium plating
-            "Exchange-current density for plating [A.m-2]": ([1e3, 1e4, T], 9.6485e-2),
-            "Exchange-current density for stripping [A.m-2]": (
+            "Exchange-current density for negayive lithium plating [A.m-2]": (
+                [1e3, 1e4, T],
+                9.6485e-2,
+            ),
+            "Exchange-current density for negative lithium stripping [A.m-2]": (
                 [1e3, 1e4, T],
                 9.6485e-1,
             ),
-            "Dead lithium decay rate [s-1]": ([1e-8], 5e-7),
+            "Negative dead lithium decay rate [s-1]": ([1e-8], 5e-7),
             # Negative electrode
             "Negative particle diffusivity [m2.s-1]": ([sto, T], 3.3e-14),
             "Negative electrode exchange-current density [A.m-2]": (

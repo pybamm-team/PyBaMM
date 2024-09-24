@@ -382,7 +382,7 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
         param = pybamm.ParameterValues("Chen2020")
-        param["SEI kinetic rate constant [m.s-1]"] = 1e-14
+        param["Negative SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve(solver=pybamm.CasadiSolver())
         C = sol.summary_variables["Capacity [A.h]"]
@@ -404,7 +404,7 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
         param = pybamm.ParameterValues("Chen2020")
-        param["SEI kinetic rate constant [m.s-1]"] = 1e-14
+        param["Negative SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve(solver=pybamm.CasadiSolver())
         # all but the last value should be above the termination condition

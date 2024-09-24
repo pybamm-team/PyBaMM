@@ -372,7 +372,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} outer SEI solvent diffusivity [m2.s-1]"
         )
         self.c_sol = pybamm.Parameter(
-            f"{pref} Bulk solvent concentration for {domain} SEI [mol.m-3]"
+            f"{pref}Bulk solvent concentration for {domain} SEI [mol.m-3]"
         )
         self.U_inner = pybamm.Parameter(
             f"{pref}{Domain} inner SEI open-circuit potential [V]"
@@ -420,7 +420,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} EC initial concentration in electrolyte [mol.m-3]"
         )
         self.D_ec = pybamm.Parameter(
-            f"{pref} EC diffusivity through {domain} SEI [m2.s-1]"
+            f"{pref}EC diffusivity through {domain} SEI [m2.s-1]"
         )
         self.k_sei = pybamm.Parameter(
             f"{pref}{Domain} SEI kinetic rate constant [m.s-1]"
