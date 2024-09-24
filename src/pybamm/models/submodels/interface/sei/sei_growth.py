@@ -37,8 +37,8 @@ class SEIGrowth(BaseModel):
         SEI_option = getattr(self.options, domain)["SEI"]
         if SEI_option == "ec reaction limited":
             pybamm.citations.register("Yang2017")
-        elif SEI_option == "Kolzenberg2020":
-            pybamm.citations.register("von2020solid")
+        elif SEI_option == "VonKolzenberg2020":
+            pybamm.citations.register("VonKolzenberg2020")
         else:
             pybamm.citations.register("Marquis2020")
 
@@ -159,7 +159,10 @@ class SEIGrowth(BaseModel):
             L_tun = phase_param.L_tunneling
             L_app = (L_sei - L_tun) * ((L_sei - L_tun) > 0)
             L_mig = (
-                2 / F_RT * phase_param.kappa_Li_ion / (pybamm.AbsoluteValue(j) + 1e-38)
+                2
+                / F_RT
+                * phase_param.kappa_Li_ion
+                / pybamm.maximum(pybamm.AbsoluteValue(j), 1e-38)
             )
             LL_k = (1 - L_app / L_mig * pybamm.sign(j)) / (
                 1 - L_app / L_mig * pybamm.sign(j) + L_app / L_diff
