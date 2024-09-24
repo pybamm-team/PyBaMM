@@ -48,7 +48,7 @@ private:
 
 int setup_observable(const vector<int>& sizes) {
     if (sizes.empty()) {
-        throw std::invalid_argument("sizes must have at least one element");
+        throw std::invalid_argument("output array must have at least one element");
     }
 
     int size_tot = 1;
@@ -57,7 +57,7 @@ int setup_observable(const vector<int>& sizes) {
     }
 
     if (size_tot == 0) {
-        throw std::invalid_argument("sizes must have at least one element");
+        throw std::invalid_argument("output array must have at least one element");
     }
 
     return size_tot;
@@ -68,37 +68,23 @@ public:
     TimeSeriesProcessor(const vector<np_array_realtype>& _ts,
                         const vector<np_array_realtype>& _ys,
                         const vector<np_array_realtype>& _inputs,
-                        const std::vector<std::shared_ptr<const casadi::Function>>& _funcs,
+                        const vector<std::shared_ptr<const casadi::Function>>& _funcs,
                         realtype* _out,
-                        bool _is_f_contiguous,
+                        const bool _is_f_contiguous,
                         const int _len)
         : ts(_ts), ys(_ys), inputs(_inputs), funcs(_funcs),
           out(_out), is_f_contiguous(_is_f_contiguous), len(_len) {}
 
     void process() {
-        vector<realtype> y_buffer;
-        vector<const realtype*> args;
-        vector<realtype*> results;
-
-        int count = 0;
+        int i_out = 0;
         for (size_t i = 0; i < ts.size(); i++) {
             const auto& t = ts[i].unchecked<1>();
             const auto& y = ys[i].unchecked<2>();
             const auto input = inputs[i].data();
             const auto func = *funcs[i];
 
-            std::vector<casadi_int> iw(funcs[i]->sz_iw());
-            std::vector<realtype> w(funcs[i]->sz_w());
-            args.resize(funcs[i]->sz_arg());
+            resize_arrays(y.shape(0), funcs[i]);
             args[2] = input;
-
-            // Output buffer
-            results.resize(funcs[i]->sz_res());
-
-            int M = y.shape(0);
-            if (!is_f_contiguous && y_buffer.size() < M) {
-                y_buffer.resize(M);
-            }
 
             for (size_t j = 0; j < t.size(); j++) {
                 const realtype t_val = t(j);
@@ -106,11 +92,11 @@ public:
 
                 args[0] = &t_val;
                 args[1] = y_val;
-                results[0] = &out[count];
+                results[0] = &out[i_out];
 
-                func(casadi::get_ptr(args), casadi::get_ptr(results), casadi::get_ptr(iw), casadi::get_ptr(w), 0);
+                func(args.data(), results.data(), iw.data(), w.data(), 0);
 
-                count += len;
+                i_out += len;
             }
         }
     }
@@ -124,13 +110,28 @@ private:
         return out.data();
     }
 
+    void resize_arrays(const int M, std::shared_ptr<const casadi::Function> func) {
+        args.resize(func->sz_arg());
+        results.resize(func->sz_res());
+        iw.resize(func->sz_iw());
+        w.resize(func->sz_w());
+        if (!is_f_contiguous && y_buffer.size() < M) {
+            y_buffer.resize(M);
+        }
+    }
+
     const vector<np_array_realtype>& ts;
     const vector<np_array_realtype>& ys;
     const vector<np_array_realtype>& inputs;
-    const std::vector<std::shared_ptr<const casadi::Function>>& funcs;
+    const vector<std::shared_ptr<const casadi::Function>>& funcs;
     realtype* out;
-    bool is_f_contiguous;
+    const bool is_f_contiguous;
     int len;
+    vector<realtype> y_buffer;
+    vector<const realtype*> args;
+    vector<realtype*> results;
+    vector<casadi_int> iw;
+    vector<realtype> w;
 };
 
 class TimeSeriesInterpolator {
@@ -140,9 +141,9 @@ public:
                            const vector<np_array_realtype>& _ys_data,
                            const vector<np_array_realtype>& _yps_data,
                            const vector<np_array_realtype>& _inputs,
-                           const std::vector<std::shared_ptr<const casadi::Function>>& _funcs,
+                           const vector<std::shared_ptr<const casadi::Function>>& _funcs,
                            realtype* _out,
-                           int _len)
+                           const int _len)
         : t_interp_np(_t_interp_np), ts_data_np(_ts_data), ys_data_np(_ys_data),
           yps_data_np(_yps_data), inputs_np(_inputs), funcs(_funcs),
           out(_out), len(_len) {}
@@ -150,7 +151,7 @@ public:
     void process() {
         auto t_interp = t_interp_np.unchecked<1>();
         ssize_t i_interp = 0;
-        int count = 0;
+        int i_out = 0;
         ssize_t N_data = 0;
         const ssize_t N_interp = t_interp.size();
 
@@ -158,59 +159,41 @@ public:
             N_data += ts.size();
         }
 
-        // Preallocate vectors
-        vector<realtype> c, d, y_interp;
-
-        vector<const realtype*> args;
-        vector<realtype*> results;
-        vector<casadi_int> iw;
-        vector<realtype> w;
-
         // Main processing within bounds
-        process_within_bounds(i_interp, count, t_interp, N_interp, args, results, iw, w, y_interp, c, d);
+        process_within_bounds(i_interp, i_out, t_interp, N_interp);
 
         // Extrapolation for remaining points
         if (i_interp < N_interp) {
-            extrapolate_remaining(i_interp, count, t_interp, N_interp, args, results, iw, w, y_interp, c, d);
+            extrapolate_remaining(i_interp, i_out, t_interp, N_interp);
         }
     }
 
     void process_within_bounds(
             ssize_t& i_interp,
-            int& count,
+            int& i_out,
             const py::detail::unchecked_reference<realtype, 1>& t_interp,
-            const ssize_t N_interp,
-            vector<const realtype*>& args,
-            vector<realtype*>& results,
-            vector<casadi_int>& iw,
-            vector<realtype>& w,
-            vector<realtype>& y_interp,
-            vector<realtype>& c,
-            vector<realtype>& d
+            const ssize_t N_interp
         ) {
         for (size_t i = 0; i < ts_data_np.size(); i++) {
             const auto& t_data = ts_data_np[i].unchecked<1>();
+            const realtype t_data_final = t_data(t_data.size() - 1);
+            // Continue if t_interp(i_interp) <= t_data_final is not true for the first step
+            if (t_interp(i_interp) > t_data_final) {
+                continue;
+            }
+
             const auto& y_data = ys_data_np[i].unchecked<2>();
             const auto& yp_data = yps_data_np[i].unchecked<2>();
             const auto input = inputs_np[i].data();
             const auto func = *funcs[i];
-            const realtype t_data_final = t_data(t_data.size() - 1);
 
-            resize_arrays(y_interp, c, d, y_data.shape(0));
-
-            iw.resize(funcs[i]->sz_iw());
-            w.resize(funcs[i]->sz_w());
-            args.resize(funcs[i]->sz_arg());
-
-            args[1] = y_interp.data();
+            resize_arrays(y_data.shape(0), funcs[i]);
+            args[1] = y_buffer.data();
             args[2] = input;
-
-            // Output buffer
-            results.resize(funcs[i]->sz_res());
 
             ssize_t j = 0;
             ssize_t j_prev = -1;
-            auto itp = HermiteInterpolator(t_data, y_data, yp_data);
+            const auto itp = HermiteInterpolator(t_data, y_data, yp_data);
             while (i_interp < N_interp && t_interp(i_interp) <= t_data_final) {
                 for (; j < t_data.size() - 2; ++j) {
                     if (t_data(j) <= t_interp(i_interp) && t_interp(i_interp) <= t_data(j + 1)) {
@@ -223,13 +206,13 @@ public:
                     itp.compute_c_d(j, c, d);
                 }
 
-                itp.interpolate(y_interp, t_interp(i_interp), j, c, d);
+                itp.interpolate(y_buffer, t_interp(i_interp), j, c, d);
 
                 args[0] = &t_interp(i_interp);
-                results[0] = &out[count];
-                func(casadi::get_ptr(args), casadi::get_ptr(results), casadi::get_ptr(iw), casadi::get_ptr(w), 0);
+                results[0] = &out[i_out];
+                func(args.data(), results.data(), iw.data(), w.data(), 0);
 
-                count += len;
+                i_out += len;
                 ++i_interp;
                 j_prev = j;
             }
@@ -238,47 +221,43 @@ public:
 
     void extrapolate_remaining(
             ssize_t& i_interp,
-            int& count,
+            int& i_out,
             const py::detail::unchecked_reference<realtype, 1>& t_interp,
-            const ssize_t N_interp,
-            vector<const realtype*>& args,
-            vector<realtype*>& results,
-            vector<casadi_int>& iw,
-            vector<realtype>& w,
-            vector<realtype>& y_interp,
-            vector<realtype>& c,
-            vector<realtype>& d
+            const ssize_t N_interp
         ) {
         const auto& t_data = ts_data_np.back().unchecked<1>();
         const auto& y_data = ys_data_np.back().unchecked<2>();
         const auto& yp_data = yps_data_np.back().unchecked<2>();
-        const auto inputs_data = inputs_np.back().data();
+        const auto input = inputs_np.back().data();
         const auto func = *funcs.back();
         const ssize_t j = t_data.size() - 2;
 
-        resize_arrays(y_interp, c, d, y_data.shape(0));
-        iw.resize(funcs.back()->sz_iw());
-        w.resize(funcs.back()->sz_w());
-        args.resize(funcs.back()->sz_arg());
+        resize_arrays(y_data.shape(0), funcs.back());
+        args[1] = y_buffer.data();
+        args[2] = input;
 
-        auto itp = HermiteInterpolator(t_data, y_data, yp_data);
+        const auto itp = HermiteInterpolator(t_data, y_data, yp_data);
         itp.compute_c_d(j, c, d);
 
         for (; i_interp < N_interp; ++i_interp) {
             const realtype t_interp_next = t_interp(i_interp);
-            itp.interpolate(y_interp, t_interp_next, j, c, d);
+            itp.interpolate(y_buffer, t_interp_next, j, c, d);
 
             args[0] = &t_interp_next;
-            results[0] = &out[count];
-            func(casadi::get_ptr(args), casadi::get_ptr(results), casadi::get_ptr(iw), casadi::get_ptr(w), 0);
+            results[0] = &out[i_out];
+            func(args.data(), results.data(), iw.data(), w.data(), 0);
 
-            count += len;
+            i_out += len;
         }
     }
 
-    void resize_arrays(vector<realtype>& y_interp, vector<realtype>& c, vector<realtype>& d, const int M) {
-        if (y_interp.size() < M) {
-            y_interp.resize(M);
+    void resize_arrays(const int M, std::shared_ptr<const casadi::Function> func) {
+        args.resize(func->sz_arg());
+        results.resize(func->sz_res());
+        iw.resize(func->sz_iw());
+        w.resize(func->sz_w());
+        if (y_buffer.size() < M) {
+            y_buffer.resize(M);
             c.resize(M);
             d.resize(M);
         }
@@ -290,9 +269,16 @@ private:
     const vector<np_array_realtype>& ys_data_np;
     const vector<np_array_realtype>& yps_data_np;
     const vector<np_array_realtype>& inputs_np;
-    const std::vector<std::shared_ptr<const casadi::Function>>& funcs;
+    const vector<std::shared_ptr<const casadi::Function>>& funcs;
     realtype* out;
-    int len;
+    const int len;
+    vector<realtype> c;
+    vector<realtype> d;
+    vector<realtype> y_buffer;
+    vector<const realtype*> args;
+    vector<realtype*> results;
+    vector<casadi_int> iw;
+    vector<realtype> w;
 };
 
 const np_array_realtype observe_hermite_interp_ND(
@@ -302,7 +288,7 @@ const np_array_realtype observe_hermite_interp_ND(
     const vector<np_array_realtype>& yps_np,
     const vector<np_array_realtype>& inputs_np,
     const vector<std::string>& strings,
-    const vector<int> sizes
+    const vector<int>& sizes
 ) {
     const int size_tot = setup_observable(sizes);
     const auto& funcs = setup_casadi_funcs(strings);
@@ -320,7 +306,7 @@ const np_array_realtype observe_ND(
     const vector<np_array_realtype>& inputs_np,
     const vector<std::string>& strings,
     const bool is_f_contiguous,
-    const vector<int> sizes
+    const vector<int>& sizes
 ) {
     const int size_tot = setup_observable(sizes);
     const auto& funcs = setup_casadi_funcs(strings);
@@ -332,9 +318,9 @@ const np_array_realtype observe_ND(
     return out_array;
 }
 
-const std::vector<std::shared_ptr<const casadi::Function>> setup_casadi_funcs(const std::vector<std::string>& strings) {
+const vector<std::shared_ptr<const casadi::Function>> setup_casadi_funcs(const vector<std::string>& strings) {
     std::unordered_map<std::string, std::shared_ptr<casadi::Function>> function_cache;
-    std::vector<std::shared_ptr<const casadi::Function>> funcs(strings.size());
+    vector<std::shared_ptr<const casadi::Function>> funcs(strings.size());
 
     for (size_t i = 0; i < strings.size(); ++i) {
         const std::string& str = strings[i];
