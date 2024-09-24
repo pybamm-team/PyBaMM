@@ -86,13 +86,14 @@ class ProcessedVariable:
         self._coords_raw = None
 
     def initialise(self):
-        t = self.t_pts
         if self._raw_data_initialized:
             entries = self._entries_raw
             entries_for_interp = self._entries_for_interp_raw
             coords = self._coords_raw
         else:
-            entries = self.observe()
+            entries = self.observe_raw()
+
+            t = self.t_pts
             entries_for_interp, coords = self._interp_setup(entries, t)
 
             self._entries_raw = entries
@@ -107,23 +108,21 @@ class ProcessedVariable:
         Interpolate the variable at the given time points and y values.
         """
         entries = self._observe_hermite_cpp(t)
-        entries = self._observe_postfix(entries, t)
-        return entries
+        return self._observe_postfix(entries, t)
 
-    def observe(self):
+    def observe_raw(self):
         """
         Evaluate the base variable at the given time points and y values.
         """
         t = self.t_pts
 
-        if self._linear_observable_cpp(t):
+        # For small number of points, use Python
+        if pybamm.has_idaklu() and (t.size > 1):
             entries = self._observe_raw_cpp()
         else:
-            pybamm.logger.debug("Observing the variable raw data in Python")
             entries = self._observe_raw_python()
 
-        entries = self._observe_postfix(entries, t)
-        return entries
+        return self._observe_postfix(entries, t)
 
     def _setup_cpp_inputs(self):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
@@ -143,11 +142,7 @@ class ProcessedVariable:
 
         for i, vars in enumerate(self.base_variables_casadi):
             if vars not in funcs_unique:
-                funcs_unique[vars] = (
-                    pybamm.solvers.idaklu_solver.idaklu.generate_function(
-                        vars.serialize()
-                    )
-                )
+                funcs_unique[vars] = vars.serialize()
             funcs[i] = funcs_unique[vars]
 
         inputs = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(
@@ -218,17 +213,9 @@ class ProcessedVariable:
                 f"Spatial variable name not recognized for {spatial_variable}"
             )
 
-    def _initialize_xr_data_array(self, entries, coords):
-        """
-        Initialize the xarray DataArray for interpolation. We don't do this by
-        default as it has some overhead (~75 us) and sometimes we only need the entries
-        of the processed variable, not the xarray object for interpolation.
-        """
-        return xr.DataArray(entries, coords=coords)
-
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         # 1. Check to see if we are interpolating exactly onto the solution time points
-        t_observe, observe_raw = self._observe_raw_data(t)
+        t_observe, observe_raw = self._check_observe_raw(t)
 
         # 2. Check if the time points are sorted and unique
         is_sorted = observe_raw or _is_sorted(t_observe)
@@ -239,8 +226,8 @@ class ProcessedVariable:
             t = t[idxs_sort]
             idxs_unsort = np.arange(len(t))[idxs_sort]
 
-        hermite_interp = self.hermite_interpolation and not observe_raw
-        if hermite_interp:
+        time_interp = self.hermite_interpolation and not observe_raw
+        if time_interp:
             entries = self.observe_and_interp(t_observe)
         else:
             entries, entries_for_interp, coords = self.initialise()
@@ -253,15 +240,15 @@ class ProcessedVariable:
             or (R is not None)
         )
 
-        if hermite_interp and not spatial_interp:
+        if time_interp and not spatial_interp:
             processed_entries = entries
         else:
-            if hermite_interp:
+            if time_interp:
                 entries_for_interp, coords = self._interp_setup(entries, t_observe)
             processed_entries = self._xr_interpolate(
                 entries_for_interp,
                 coords,
-                hermite_interp,
+                time_interp,
                 t,
                 x,
                 r,
@@ -280,7 +267,7 @@ class ProcessedVariable:
         self,
         entries_for_interp,
         coords,
-        is_interpolated,
+        time_interp,
         t=None,
         x=None,
         r=None,
@@ -294,28 +281,30 @@ class ProcessedVariable:
         using interpolation
         """
 
-        if not is_interpolated and self._xr_data_array_raw is not None:
+        if not time_interp and self._xr_data_array_raw is not None:
             xr_data_array = self._xr_data_array_raw
         else:
-            xr_data_array = self._initialize_xr_data_array(entries_for_interp, coords)
+            xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
 
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
-        if is_interpolated:
+        if time_interp:
             kwargs["t"] = None
         # Remove any None arguments
         kwargs = {key: value for key, value in kwargs.items() if value is not None}
         # Use xarray interpolation, return numpy array
         return xr_data_array.interp(**kwargs).values
 
-    def _linear_observable_cpp(self, t):
+    def _check_observe_raw(self, t):
         """
-        For a small number of time points, it is faster to evaluate the base variable in
-        Python. For large number of time points, it is faster to evaluate the base
-        variable in C++.
-        """
-        return pybamm.has_idaklu() and (t is not None) and (np.asarray(t).size > 1)
+        Checks if the raw data should be observed exactly at the solution time points
 
-    def _observe_raw_data(self, t):
+        Args:
+            t (np.ndarray, list, None): time points to observe
+
+        Returns:
+            t_observe (np.ndarray): time points to observe
+            observe_raw (bool): True if observing the raw data
+        """
         observe_raw = (t is None) or (
             np.asarray(t).size == len(self.t_pts) and np.all(t == self.t_pts)
         )
@@ -349,10 +338,9 @@ class ProcessedVariable:
     @property
     def entries(self):
         """
-        Returns the raw data entries of the processed variable. This is the data that
-        is used for interpolation. If the processed variable has not been initialized
-        (i.e. the entries have not been calculated), then the processed variable is
-        initialized first.
+        Returns the raw data entries of the processed variable. If the processed
+        variable has not been initialized (i.e. the entries have not been
+        calculated), then the processed variable is initialized first.
         """
         if not self._raw_data_initialized:
             self.initialise()
@@ -469,6 +457,7 @@ class ProcessedVariable0D(ProcessedVariable):
         )
 
     def _observe_raw_python(self):
+        pybamm.logger.debug("Observing the variable raw data in Python")
         # initialise empty array of the correct size
         entries = np.empty(self._size(self.t_pts))
         idx = 0
@@ -546,6 +535,7 @@ class ProcessedVariable1D(ProcessedVariable):
         )
 
     def _observe_raw_python(self):
+        pybamm.logger.debug("Observing the variable raw data in Python")
         entries = np.empty(self._size(self.t_pts))
 
         # Evaluate the base_variable index-by-index
@@ -661,6 +651,7 @@ class ProcessedVariable2D(ProcessedVariable):
         """
         Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
         """
+        pybamm.logger.debug("Observing the variable raw data in Python")
         first_dim_size, second_dim_size, t_size = self._size(self.t_pts)
         entries = np.empty((first_dim_size, second_dim_size, t_size))
 
