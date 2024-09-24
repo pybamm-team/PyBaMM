@@ -16,7 +16,7 @@ class TestEcker2015(unittest.TestCase):
             # Lithium plating
             "Exchange-current density for negative lithium plating [A.m-2]": (
                 [1e3, 1e4, T],
-                9.6485e-3
+                9.6485e-3,
             ),
             "Exchange-current density for negative lithium stripping [A.m-2]": (
                 [1e3, 1e4, T],
