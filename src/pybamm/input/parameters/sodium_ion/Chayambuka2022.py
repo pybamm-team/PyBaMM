@@ -293,9 +293,7 @@ def get_parameter_values():
         "Negative particle diffusivity [m2.s-1]": HC_diffusivity_Chayambuka2022,
         "Negative electrode OCP [V]": HC_ocp_Chayambuka2022,
         "Negative electrode porosity": 0.51,
-        "Negative electrode active material volume fraction": 1
-        - 0.51
-        - 0.001,  # one minus active and inactive material volume fractions
+        "Negative electrode active material volume fraction": 0.489,  # 1 - 0.51 - 0.001
         "Negative particle radius [m]": 3.48e-6,
         "Negative electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Negative electrode Bruggeman coefficient (electrode)": 0,
@@ -309,9 +307,7 @@ def get_parameter_values():
         "Positive particle diffusivity [m2.s-1]": NVPF_diffusivity_Chayambuka2022,
         "Positive electrode OCP [V]": NVPF_ocp_Chayambuka2022,
         "Positive electrode porosity": 0.23,
-        "Positive electrode active material volume fraction": 1
-        - 0.23
-        - 0.22,  # one minus active and inactive material volume fractions
+        "Positive electrode active material volume fraction": 0.55,  # 1 - 0.23 - 0.22
         "Positive particle radius [m]": 0.59e-6,
         "Positive electrode Bruggeman coefficient (electrolyte)": 1.5,
         "Positive electrode Bruggeman coefficient (electrode)": 0,
