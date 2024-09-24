@@ -147,7 +147,7 @@ class SEIGrowth(BaseModel):
                 * pybamm.exp(-phase_param.beta_tunnelling * L_sei_inner)
             )
 
-        elif SEI_option == "Kolzenberg2020":
+        elif SEI_option == "VonKolzenberg2020":
             # Equation 19 in
             # von Kolzenberg L, Latz A, Horstmann B.
             # Solid electrolyte interphase during battery cycling:
