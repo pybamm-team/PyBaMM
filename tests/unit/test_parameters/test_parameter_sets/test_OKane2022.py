@@ -14,7 +14,7 @@ class TestOKane2022(unittest.TestCase):
 
         fun_test = {
             # Lithium plating
-            "Exchange-current density for negayive lithium plating [A.m-2]": (
+            "Exchange-current density for negative lithium plating [A.m-2]": (
                 [1e3, 1e4, T],
                 9.6485e-2,
             ),
