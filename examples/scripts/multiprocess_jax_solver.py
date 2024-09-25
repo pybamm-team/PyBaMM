@@ -26,7 +26,9 @@ solver = pybamm.JaxSolver(atol=1e-6, rtol=1e-6, method="BDF")
 values = np.linspace(0.01, 1.0, 1000)
 inputs = [{"Current function [A]": value} for value in values]
 
-# Run solve for all inputs
+# Run solve for all inputs, with a just-in-time compilation
+# occurring on the first solve. All sequential solves will
+# use the compiled code, for a large performance improvement.
 start_time = time.time()
 solution = solver.solve(model, t_eval, inputs=inputs)
 print(f"Time taken: {time.time() - start_time}")  # 1.2s

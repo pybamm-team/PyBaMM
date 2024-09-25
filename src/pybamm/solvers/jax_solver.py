@@ -73,6 +73,7 @@ class JaxSolver(pybamm.BaseSolver):
         if method not in method_options:
             raise ValueError(f"method must be one of {method_options}")
         self._ode_solver = method == "RK45"
+        self._requires_explicit_sensitivities = False
         self.extra_options = extra_options or {}
         self.name = f"JAX solver ({method})"
         self._cached_solves = dict()
