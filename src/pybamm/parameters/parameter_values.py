@@ -35,15 +35,7 @@ class ParameterValues:
 
     """
 
-    def __init__(self, values, chemistry=None):
-        if chemistry is not None:
-            raise ValueError(
-                "The 'chemistry' keyword argument has been deprecated. "
-                "Call `ParameterValues` with a dictionary dictionary of "
-                "parameter values, or the name of a parameter set (string), "
-                "as the single argument, e.g. `ParameterValues('Chen2020')`.",
-            )
-
+    def __init__(self, values):
         # add physical constants as default values
         self._dict_items = pybamm.FuzzyDict(
             {
