@@ -1049,5 +1049,4 @@ class TestParameterValues:
             values={"Negative particle radius [m]": 1e-6}
         )
         pv = [i for i in parameter_values]
-        print(pv)
         assert len(pv) == 5, "Should have 5 keys "
