@@ -189,6 +189,10 @@ class JaxSolver(pybamm.BaseSolver):
     def supports_parallel_solve(self):
         return True
 
+    @property
+    def requires_explicit_sensitivities(self):
+        return False
+
     def _integrate(self, model, t_eval, inputs=None, t_interp=None):
         """
         Solve a model defined by dydt with initial conditions y0.

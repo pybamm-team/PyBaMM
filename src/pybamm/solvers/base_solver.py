@@ -66,7 +66,6 @@ class BaseSolver:
         self._ode_solver = False
         self._algebraic_solver = False
         self._supports_interp = False
-        self._requires_explicit_sensitivities = True
         self._on_extrapolation = "warn"
         self.computed_var_fcns = {}
         self._mp_context = self.get_platform_context(platform.system())
@@ -93,7 +92,7 @@ class BaseSolver:
 
     @property
     def requires_explicit_sensitivities(self):
-        return False
+        return True
 
     @root_method.setter
     def root_method(self, method):
@@ -146,7 +145,7 @@ class BaseSolver:
 
         # see if we need to form the explicit sensitivity equations
         calculate_sensitivities_explicit = (
-            model.calculate_sensitivities and self.requires_explicit_sensitivities()
+            model.calculate_sensitivities and self.requires_explicit_sensitivities
         )
 
         self._set_up_model_sensitivities_inplace(
