@@ -28,14 +28,19 @@ inputs = [{"Current function [A]": value} for value in values]
 
 # Run solve for all inputs, with a just-in-time compilation
 # occurring on the first solve. All sequential solves will
-# use the compiled code, for a large performance improvement.
+# use the compiled code, with a large performance improvement.
 start_time = time.time()
-solution = solver.solve(model, t_eval, inputs=inputs)
-print(f"Time taken: {time.time() - start_time}")  # 1.2s
+sol = solver.solve(model, t_eval, inputs=inputs)
+print(f"Time taken: {time.time() - start_time}")  # 1.3s
+
+# Rerun the vectorised solve, showing performance improvement
+start_time = time.time()
+compiled_sol = solver.solve(model, t_eval, inputs=inputs)
+print(f"Compiled time taken: {time.time() - start_time}")  # 0.42s
 
 # Plot one of the solves
 plot = pybamm.QuickPlot(
-    solution[5],
+    sol[5],
     [
         "Negative particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
