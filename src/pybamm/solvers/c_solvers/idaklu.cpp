@@ -75,25 +75,25 @@ PYBIND11_MODULE(idaklu, m)
     py::arg("options"),
     py::return_value_policy::take_ownership);
 
-  m.def("observe_ND", &observe_ND,
-    "Observe ND variables",
-    py::arg("ts_np"),
-    py::arg("ys_np"),
-    py::arg("inputs_np"),
+  m.def("observe", &observe,
+    "Observe variables",
+    py::arg("ts"),
+    py::arg("ys"),
+    py::arg("inputs"),
     py::arg("funcs"),
     py::arg("is_f_contiguous"),
-    py::arg("sizes"),
+    py::arg("shape"),
     py::return_value_policy::take_ownership);
 
-  m.def("observe_hermite_interp_ND", &observe_hermite_interp_ND,
-    "Observe ND variables",
-    py::arg("t_interp_np"),
-    py::arg("ts_np"),
-    py::arg("ys_np"),
-    py::arg("yps_np"),
-    py::arg("inputs_np"),
+  m.def("observe_hermite_interp", &observe_hermite_interp,
+    "Observe and Hermite interpolate variables",
+    py::arg("t_interp"),
+    py::arg("ts"),
+    py::arg("ys"),
+    py::arg("yps"),
+    py::arg("inputs"),
     py::arg("funcs"),
-    py::arg("sizes"),
+    py::arg("shape"),
     py::return_value_policy::take_ownership);
 
 #ifdef IREE_ENABLE

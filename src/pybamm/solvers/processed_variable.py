@@ -158,18 +158,18 @@ class ProcessedVariable:
         self._check_interp(t)
 
         ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs()
-        sizes = self._size(t)
-        return pybamm.solvers.idaklu_solver.idaklu.observe_hermite_interp_ND(
-            t, ts, ys, yps, inputs, funcs, sizes
+        shapes = self._shape(t)
+        return pybamm.solvers.idaklu_solver.idaklu.observe_hermite_interp(
+            t, ts, ys, yps, inputs, funcs, shapes
         )
 
     def _observe_raw_cpp(self):
         pybamm.logger.debug("Observing the variable raw data in C++")
         ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_cpp_inputs()
-        sizes = self._size(self.t_pts)
+        shapes = self._shape(self.t_pts)
 
-        return pybamm.solvers.idaklu_solver.idaklu.observe_ND(
-            ts, ys, inputs, funcs, is_f_contiguous, sizes
+        return pybamm.solvers.idaklu_solver.idaklu.observe(
+            ts, ys, inputs, funcs, is_f_contiguous, shapes
         )
 
     def _observe_raw_python(self):
@@ -181,7 +181,7 @@ class ProcessedVariable:
     def _interp_setup(self, entries, t):
         pass  # pragma: no cover
 
-    def _size(self, t):
+    def _shape(self, t):
         pass  # pragma: no cover
 
     def _process_spatial_variable_names(self, spatial_variable):
@@ -459,7 +459,7 @@ class ProcessedVariable0D(ProcessedVariable):
     def _observe_raw_python(self):
         pybamm.logger.debug("Observing the variable raw data in Python")
         # initialise empty array of the correct size
-        entries = np.empty(self._size(self.t_pts))
+        entries = np.empty(self._shape(self.t_pts))
         idx = 0
         # Evaluate the base_variable index-by-index
         for ts, ys, inputs, base_var_casadi in zip(
@@ -488,7 +488,7 @@ class ProcessedVariable0D(ProcessedVariable):
 
         return entries_for_interp, coords_for_interp
 
-    def _size(self, t):
+    def _shape(self, t):
         return [len(t)]
 
 
@@ -536,7 +536,7 @@ class ProcessedVariable1D(ProcessedVariable):
 
     def _observe_raw_python(self):
         pybamm.logger.debug("Observing the variable raw data in Python")
-        entries = np.empty(self._size(self.t_pts))
+        entries = np.empty(self._shape(self.t_pts))
 
         # Evaluate the base_variable index-by-index
         idx = 0
@@ -588,7 +588,7 @@ class ProcessedVariable1D(ProcessedVariable):
 
         return entries_for_interp, coords_for_interp
 
-    def _size(self, t):
+    def _shape(self, t):
         t_size = len(t)
         space_size = self.base_eval_shape[0]
         return [space_size, t_size]
@@ -652,7 +652,7 @@ class ProcessedVariable2D(ProcessedVariable):
         Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
         """
         pybamm.logger.debug("Observing the variable raw data in Python")
-        first_dim_size, second_dim_size, t_size = self._size(self.t_pts)
+        first_dim_size, second_dim_size, t_size = self._shape(self.t_pts)
         entries = np.empty((first_dim_size, second_dim_size, t_size))
 
         # Evaluate the base_variable index-by-index
@@ -758,7 +758,7 @@ class ProcessedVariable2D(ProcessedVariable):
 
         return entries_for_interp, coords_for_interp
 
-    def _size(self, t):
+    def _shape(self, t):
         first_dim_size = self.first_dim_size
         second_dim_size = self.second_dim_size
         t_size = len(t)

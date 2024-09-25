@@ -9,7 +9,7 @@ public:
                        const py::detail::unchecked_reference<realtype, 2>& yp)
         : t(t), y(y), yp(yp) {}
 
-    void compute_c_d(size_t j, vector<realtype>& c, vector<realtype>& d) const {
+    void compute_c_d(const size_t j, vector<realtype>& c, vector<realtype>& d) const {
         // Called at the start of each interval
         const realtype h_full = t(j + 1) - t(j);
         const realtype inv_h = 1.0 / h_full;
@@ -27,16 +27,20 @@ public:
         }
     }
 
-    void interpolate(vector<realtype>& out, realtype t_interp, size_t j, vector<realtype>& c, vector<realtype>& d) const {
+    void interpolate(vector<realtype>& entries,
+    realtype t_interp,
+    const size_t j,
+    vector<realtype>& c,
+    vector<realtype>& d) const {
         // Must be called after compute_c_d
         const realtype h = t_interp - t(j);
         const realtype h2 = h * h;
         const realtype h3 = h2 * h;
 
-        for (size_t i = 0; i < out.size(); ++i) {
+        for (size_t i = 0; i < entries.size(); ++i) {
             realtype y_ij = y(i, j);
             realtype yp_ij = yp(i, j);
-            out[i] = y_ij + yp_ij * h + c[i] * h2 + d[i] * h3;
+            entries[i] = y_ij + yp_ij * h + c[i] * h2 + d[i] * h3;
         }
     }
 
@@ -46,21 +50,18 @@ private:
     const py::detail::unchecked_reference<realtype, 2>& yp;
 };
 
-int setup_observable(const vector<int>& sizes) {
-    if (sizes.empty()) {
+int _setup_len_spatial(const std::vector<int>& shape) {
+    // Calculate the product of all dimensions except the last (spatial dimensions)
+    int size_spatial = 1;
+    for (size_t i = 0; i < shape.size() - 1; ++i) {
+        size_spatial *= shape[i];
+    }
+
+    if (size_spatial == 0 || shape.back() == 0) {
         throw std::invalid_argument("output array must have at least one element");
     }
 
-    int size_tot = 1;
-    for (const auto& size : sizes) {
-        size_tot *= size;
-    }
-
-    if (size_tot == 0) {
-        throw std::invalid_argument("output array must have at least one element");
-    }
-
-    return size_tot;
+    return size_spatial;
 }
 
 class TimeSeriesProcessor {
@@ -69,14 +70,14 @@ public:
                         const vector<np_array_realtype>& _ys,
                         const vector<np_array_realtype>& _inputs,
                         const vector<std::shared_ptr<const casadi::Function>>& _funcs,
-                        realtype* _out,
+                        realtype* _entries,
                         const bool _is_f_contiguous,
-                        const int _len)
+                        const int _size_spatial)
         : ts(_ts), ys(_ys), inputs(_inputs), funcs(_funcs),
-          out(_out), is_f_contiguous(_is_f_contiguous), len(_len) {}
+          entries(_entries), is_f_contiguous(_is_f_contiguous), size_spatial(_size_spatial) {}
 
     void process() {
-        int i_out = 0;
+        int i_entries = 0;
         for (size_t i = 0; i < ts.size(); i++) {
             const auto& t = ts[i].unchecked<1>();
             const auto& y = ys[i].unchecked<2>();
@@ -92,22 +93,25 @@ public:
 
                 args[0] = &t_val;
                 args[1] = y_val;
-                results[0] = &out[i_out];
+                results[0] = &entries[i_entries];
 
                 func(args.data(), results.data(), iw.data(), w.data(), 0);
 
-                i_out += len;
+                i_entries += size_spatial;
             }
         }
     }
 
 private:
-    const realtype* copy_to_buffer(vector<realtype>& out, const py::detail::unchecked_reference<realtype, 2>& y, size_t j) {
-        for (size_t i = 0; i < out.size(); ++i) {
-            out[i] = y(i, j);
+    const realtype* copy_to_buffer(
+        vector<realtype>& entries,
+        const py::detail::unchecked_reference<realtype, 2>& y,
+        size_t j) {
+        for (size_t i = 0; i < entries.size(); ++i) {
+            entries[i] = y(i, j);
         }
 
-        return out.data();
+        return entries.data();
     }
 
     void resize_arrays(const int M, std::shared_ptr<const casadi::Function> func) {
@@ -124,9 +128,9 @@ private:
     const vector<np_array_realtype>& ys;
     const vector<np_array_realtype>& inputs;
     const vector<std::shared_ptr<const casadi::Function>>& funcs;
-    realtype* out;
+    realtype* entries;
     const bool is_f_contiguous;
-    int len;
+    int size_spatial;
     vector<realtype> y_buffer;
     vector<const realtype*> args;
     vector<realtype*> results;
@@ -136,22 +140,22 @@ private:
 
 class TimeSeriesInterpolator {
 public:
-    TimeSeriesInterpolator(const np_array_realtype& _t_interp_np,
+    TimeSeriesInterpolator(const np_array_realtype& _t_interp,
                            const vector<np_array_realtype>& _ts_data,
                            const vector<np_array_realtype>& _ys_data,
                            const vector<np_array_realtype>& _yps_data,
                            const vector<np_array_realtype>& _inputs,
                            const vector<std::shared_ptr<const casadi::Function>>& _funcs,
-                           realtype* _out,
-                           const int _len)
-        : t_interp_np(_t_interp_np), ts_data_np(_ts_data), ys_data_np(_ys_data),
+                           realtype* _entries,
+                           const int _size_spatial)
+        : t_interp_np(_t_interp), ts_data_np(_ts_data), ys_data_np(_ys_data),
           yps_data_np(_yps_data), inputs_np(_inputs), funcs(_funcs),
-          out(_out), len(_len) {}
+          entries(_entries), size_spatial(_size_spatial) {}
 
     void process() {
         auto t_interp = t_interp_np.unchecked<1>();
         ssize_t i_interp = 0;
-        int i_out = 0;
+        int i_entries = 0;
         ssize_t N_data = 0;
         const ssize_t N_interp = t_interp.size();
 
@@ -160,17 +164,17 @@ public:
         }
 
         // Main processing within bounds
-        process_within_bounds(i_interp, i_out, t_interp, N_interp);
+        process_within_bounds(i_interp, i_entries, t_interp, N_interp);
 
         // Extrapolation for remaining points
         if (i_interp < N_interp) {
-            extrapolate_remaining(i_interp, i_out, t_interp, N_interp);
+            extrapolate_remaining(i_interp, i_entries, t_interp, N_interp);
         }
     }
 
     void process_within_bounds(
             ssize_t& i_interp,
-            int& i_out,
+            int& i_entries,
             const py::detail::unchecked_reference<realtype, 1>& t_interp,
             const ssize_t N_interp
         ) {
@@ -209,10 +213,10 @@ public:
                 itp.interpolate(y_buffer, t_interp(i_interp), j, c, d);
 
                 args[0] = &t_interp(i_interp);
-                results[0] = &out[i_out];
+                results[0] = &entries[i_entries];
                 func(args.data(), results.data(), iw.data(), w.data(), 0);
 
-                i_out += len;
+                i_entries += size_spatial;
                 ++i_interp;
                 j_prev = j;
             }
@@ -221,7 +225,7 @@ public:
 
     void extrapolate_remaining(
             ssize_t& i_interp,
-            int& i_out,
+            int& i_entries,
             const py::detail::unchecked_reference<realtype, 1>& t_interp,
             const ssize_t N_interp
         ) {
@@ -244,10 +248,10 @@ public:
             itp.interpolate(y_buffer, t_interp_next, j, c, d);
 
             args[0] = &t_interp_next;
-            results[0] = &out[i_out];
+            results[0] = &entries[i_entries];
             func(args.data(), results.data(), iw.data(), w.data(), 0);
 
-            i_out += len;
+            i_entries += size_spatial;
         }
     }
 
@@ -270,8 +274,8 @@ private:
     const vector<np_array_realtype>& yps_data_np;
     const vector<np_array_realtype>& inputs_np;
     const vector<std::shared_ptr<const casadi::Function>>& funcs;
-    realtype* out;
-    const int len;
+    realtype* entries;
+    const int size_spatial;
     vector<realtype> c;
     vector<realtype> d;
     vector<realtype> y_buffer;
@@ -281,39 +285,39 @@ private:
     vector<realtype> w;
 };
 
-const np_array_realtype observe_hermite_interp_ND(
+const np_array_realtype observe_hermite_interp(
     const np_array_realtype& t_interp_np,
     const vector<np_array_realtype>& ts_np,
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& yps_np,
     const vector<np_array_realtype>& inputs_np,
     const vector<std::string>& strings,
-    const vector<int>& sizes
+    const vector<int>& shape
 ) {
-    const int size_tot = setup_observable(sizes);
+    const int size_spatial = _setup_len_spatial(shape);
     const auto& funcs = setup_casadi_funcs(strings);
-    py::array_t<realtype, py::array::f_style> out_array(sizes);
-    auto out = out_array.mutable_data();
+    py::array_t<realtype, py::array::f_style> out_array(shape);
+    auto entries = out_array.mutable_data();
 
-    TimeSeriesInterpolator(t_interp_np, ts_np, ys_np, yps_np, inputs_np, funcs, out, size_tot / sizes.back()).process();
+    TimeSeriesInterpolator(t_interp_np, ts_np, ys_np, yps_np, inputs_np, funcs, entries, size_spatial).process();
 
     return out_array;
 }
 
-const np_array_realtype observe_ND(
+const np_array_realtype observe(
     const vector<np_array_realtype>& ts_np,
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& inputs_np,
     const vector<std::string>& strings,
     const bool is_f_contiguous,
-    const vector<int>& sizes
+    const vector<int>& shape
 ) {
-    const int size_tot = setup_observable(sizes);
+    const int size_spatial = _setup_len_spatial(shape);
     const auto& funcs = setup_casadi_funcs(strings);
-    py::array_t<realtype, py::array::f_style> out_array(sizes);
-    auto out = out_array.mutable_data();
+    py::array_t<realtype, py::array::f_style> out_array(shape);
+    auto entries = out_array.mutable_data();
 
-    TimeSeriesProcessor(ts_np, ys_np, inputs_np, funcs, out, is_f_contiguous, size_tot / sizes.back()).process();
+    TimeSeriesProcessor(ts_np, ys_np, inputs_np, funcs, entries, is_f_contiguous, size_spatial).process();
 
     return out_array;
 }
