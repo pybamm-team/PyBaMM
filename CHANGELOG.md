@@ -19,7 +19,7 @@
 
 ## Breaking changes
 
-- Removed the deprecation warning for the chemistry argument in 
+- Removed the deprecation warning for the chemistry argument in
   ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))
 - The parameters "... electrode OCP entropic change [V.K-1]" and "... electrode volume change" are now expected to be functions of stoichiometry only instead of functions of both stoichiometry and maximum concentration ([#4427](https://github.com/pybamm-team/PyBaMM/pull/4427))
 - Renamed `set_events` function to `add_events_from` to better reflect its purpose. ([#4421](https://github.com/pybamm-team/PyBaMM/pull/4421))
