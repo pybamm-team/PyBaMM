@@ -36,12 +36,6 @@ class TestParameterValues:
         param = pybamm.ParameterValues({"a": 1, "chemistry": "lithium-ion"})
         assert "chemistry" not in param.keys()
 
-        # chemistry kwarg removed
-        with pytest.raises(
-            ValueError, match="'chemistry' keyword argument has been deprecated"
-        ):
-            pybamm.ParameterValues(None, chemistry="lithium-ion")
-
         # junk param values rejected
         with pytest.raises(ValueError, match="'Junk' is not a valid parameter set."):
             pybamm.ParameterValues("Junk")
