@@ -922,3 +922,9 @@ class ParameterValues:
                     file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
+
+    def __contains__(self, key):
+        return key in self._dict_items
+
+    def __iter__(self):
+        return iter(self._dict_items)

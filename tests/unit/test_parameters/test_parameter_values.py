@@ -17,6 +17,7 @@ from pybamm.input.parameters.lithium_ion.Marquis2019 import (
 )
 from pybamm.expression_tree.exceptions import OptionError
 import casadi
+from pybamm.parameters.parameter_values import ParameterValues
 
 
 class TestParameterValues:
@@ -1023,3 +1024,23 @@ class TestParameterValues:
             match="referring to the reaction at the surface of a lithium metal electrode",
         ):
             parameter_values.evaluate(param)
+
+    def test_contains_method(self):
+        """Test for __contains__ method to check the functionality of 'in' keyword"""
+        parameter_values = ParameterValues(
+            {"Negative particle radius [m]": 1e-6, "Positive particle radius [m]": 2e-6}
+        )
+        assert (
+            "Negative particle radius [m]" in parameter_values
+        ), "Key should be found in parameter_values"
+        assert (
+            "Invalid key" not in parameter_values
+        ), "Non-existent key should not be found"
+
+    def test_iter_method(self):
+        """Test for __iter__ method to check if we can iterate over keys"""
+        parameter_values = ParameterValues(
+            values={"Negative particle radius [m]": 1e-6}
+        )
+        pv = [i for i in parameter_values]
+        assert len(pv) == 5, "Should have 5 keys"
