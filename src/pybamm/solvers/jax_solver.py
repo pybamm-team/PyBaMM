@@ -31,10 +31,10 @@ class JaxSolver(pybamm.BaseSolver):
     Parameters
     ----------
     method: str, optional (see `jax.experimental.ode.odeint` for details)
-        * 'RK45' (default) uses jax.experimental.ode.odeint
-        * 'BDF' uses custom jax_bdf_integrate (see `jax_bdf_integrate.py` for details)
+        * 'BDF' (default) uses custom jax_bdf_integrate (see `jax_bdf_integrate.py` for details)
+        * 'RK45' uses jax.experimental.ode.odeint
     root_method: str, optional
-        Method to use to calculate consistent initial conditions. By default this uses
+        Method to use to calculate consistent initial conditions. By default, this uses
         the newton chord method internal to the jax bdf solver, otherwise choose from
         the set of default options defined in docs for pybamm.BaseSolver
     rtol : float, optional
@@ -52,7 +52,7 @@ class JaxSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        method="RK45",
+        method="BDF",
         root_method=None,
         rtol=1e-6,
         atol=1e-6,
@@ -188,6 +188,10 @@ class JaxSolver(pybamm.BaseSolver):
     @property
     def supports_parallel_solve(self):
         return True
+
+    @property
+    def requires_explicit_sensitivities(self):
+        return False
 
     def _integrate(self, model, t_eval, inputs=None, t_interp=None):
         """
