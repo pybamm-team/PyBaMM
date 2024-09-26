@@ -222,7 +222,7 @@ def run_scripts(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev]", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
 
