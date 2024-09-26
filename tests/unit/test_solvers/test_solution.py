@@ -21,8 +21,8 @@ class TestSolution:
         sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         np.testing.assert_array_equal(sol.t, t)
         np.testing.assert_array_equal(sol.y, y)
-        assert sol.t_event == None
-        assert sol.y_event == None
+        assert sol.t_event is None
+        assert sol.y_event is None
         assert sol.termination == "final time"
         assert sol.all_inputs == [{}]
         assert isinstance(sol.all_models[0], pybamm.BaseModel)
