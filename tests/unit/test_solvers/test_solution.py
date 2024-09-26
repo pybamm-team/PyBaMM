@@ -52,7 +52,7 @@ class TestSolution:
         log_capture = io.StringIO()
         handler = logging.StreamHandler(log_capture)
         handler.setLevel(logging.ERROR)
-        logger = logging.getLogger('pybamm.logger')
+        logger = logging.getLogger("pybamm.logger")
         logger.addHandler(handler)
         pybamm.Solution(ts, bad_ys, model, {})
         log_output = log_capture.getvalue()
@@ -124,11 +124,13 @@ class TestSolution:
 
         # radd failure
         with pytest.raises(
-            pybamm.SolverError, match="Only a Solution or None can be added to a Solution"
+            pybamm.SolverError,
+            match="Only a Solution or None can be added to a Solution",
         ):
             sol3 + 2
         with pytest.raises(
-            pybamm.SolverError, match="Only a Solution or None can be added to a Solution"
+            pybamm.SolverError,
+            match="Only a Solution or None can be added to a Solution",
         ):
             2 + sol3
 
@@ -140,9 +142,7 @@ class TestSolution:
             all_sensitivities={"test": [np.ones((1, 3))]},
         )
         sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {}, all_sensitivities=True)
-        with pytest.raises(
-            ValueError, match="Sensitivities must be of the same type"
-        ):
+        with pytest.raises(ValueError, match="Sensitivities must be of the same type"):
             sol3 = sol1 + sol2
         sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {}, all_sensitivities=False)
         sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
@@ -418,5 +418,3 @@ class TestSolution:
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
-
-
