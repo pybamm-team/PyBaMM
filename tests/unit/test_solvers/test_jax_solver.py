@@ -44,6 +44,11 @@ class TestJaxSolver:
 
             np.testing.assert_array_equal(second_solution.y, solution.y)
 
+            # Test passing `calculate_sensitivities`
+            solution_sens = solver.solve(model, t_eval, calculate_sensitivities=True)
+            np.testing.assert_array_equal(solution_sens.y, solution.y)
+            assert len(solution_sens.sensitivities) == 0
+
     def test_semi_explicit_model(self):
         # Create model
         model = pybamm.BaseModel()
