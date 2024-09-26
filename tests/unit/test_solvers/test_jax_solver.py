@@ -44,11 +44,6 @@ class TestJaxSolver:
 
             np.testing.assert_array_equal(second_solution.y, solution.y)
 
-            # Test passing `calculate_sensitivities`
-            solution_sens = solver.solve(model, t_eval, calculate_sensitivities=True)
-            np.testing.assert_array_equal(solution_sens.y, solution.y)
-            assert len(solution_sens.sensitivities) == 0
-
     def test_semi_explicit_model(self):
         # Create model
         model = pybamm.BaseModel()
@@ -242,3 +237,11 @@ class TestJaxSolver:
         y = solver({"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
+
+        # Reset solver, test passing `calculate_sensitivities`
+        for method in ["RK45", "BDF"]:
+            solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
+            solution_sens = solver.solve(
+                model, t_eval, inputs={"rate": 0.1}, calculate_sensitivities=True
+            )
+            assert len(solution_sens.sensitivities) == 0
