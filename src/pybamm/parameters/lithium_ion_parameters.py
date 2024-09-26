@@ -358,12 +358,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
         # SEI parameters
-        self.V_bar_inner = pybamm.Parameter(
-            f"{pref}Inner SEI partial molar volume [m3.mol-1]"
-        )
-        self.V_bar_outer = pybamm.Parameter(
-            f"{pref}Outer SEI partial molar volume [m3.mol-1]"
-        )
+        self.V_bar_sei = pybamm.Parameter(f"{pref}SEI partial molar volume [m3.mol-1]")
 
         self.j0_sei = pybamm.Parameter(
             f"{pref}SEI reaction exchange current density [A.m-2]"
@@ -383,21 +378,13 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.c_li_0 = pybamm.Parameter(
             f"{pref}Lithium interstitial reference concentration [mol.m-3]"
         )
-        self.L_inner_0 = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
-        self.L_outer_0 = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
-        self.L_inner_crack_0 = pybamm.Parameter(
-            f"{pref}Initial inner SEI on cracks thickness [m]"
-        )
-        self.L_outer_crack_0 = pybamm.Parameter(
-            f"{pref}Initial outer SEI on cracks thickness [m]"
+        self.L_sei_0 = pybamm.Parameter(f"{pref}Initial SEI thickness [m]")
+        self.L_sei_crack_0 = pybamm.Parameter(
+            f"{pref}Initial SEI on cracks thickness [m]"
         )
 
-        self.L_sei_0 = self.L_inner_0 + self.L_outer_0
         self.E_sei = pybamm.Parameter(f"{pref}SEI growth activation energy [J.mol-1]")
         self.alpha_SEI = pybamm.Parameter(f"{pref}SEI growth transfer coefficient")
-        self.inner_sei_proportion = pybamm.Parameter(
-            f"{pref}Inner SEI reaction proportion"
-        )
         self.z_sei = pybamm.Parameter(f"{pref}Ratio of lithium moles to SEI moles")
 
         # EC reaction
