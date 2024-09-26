@@ -19,6 +19,7 @@ class TestBaseSolver:
         assert solver.rtol == 1e-5
         solver.rtol = 1e-7
         assert solver.rtol == 1e-7
+        assert solver.requires_explicit_sensitivities
 
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
