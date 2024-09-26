@@ -105,8 +105,6 @@ dev = [
     "pytest-cov",
     # For doctest
     "pytest-doctestplus",
-    # For test parameterization
-    "parameterized>=0.9",
     # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",

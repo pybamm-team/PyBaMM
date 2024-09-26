@@ -1,11 +1,12 @@
 #
 # Tests for the Solution class
 #
+import pytest
 import os
-
+import io
+import logging
 import json
 import pybamm
-import unittest
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
@@ -13,23 +14,23 @@ from tests import get_discretisation_for_testing
 from tempfile import TemporaryDirectory
 
 
-class TestSolution(unittest.TestCase):
+class TestSolution:
     def test_init(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
         sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         np.testing.assert_array_equal(sol.t, t)
         np.testing.assert_array_equal(sol.y, y)
-        self.assertEqual(sol.t_event, None)
-        self.assertEqual(sol.y_event, None)
-        self.assertEqual(sol.termination, "final time")
-        self.assertEqual(sol.all_inputs, [{}])
-        self.assertIsInstance(sol.all_models[0], pybamm.BaseModel)
+        assert sol.t_event == None
+        assert sol.y_event == None
+        assert sol.termination == "final time"
+        assert sol.all_inputs == [{}]
+        assert isinstance(sol.all_models[0], pybamm.BaseModel)
 
     def test_sensitivities(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             pybamm.Solution(t, y, pybamm.BaseModel(), {}, sensitivities=1.0)
 
     def test_errors(self):
@@ -37,8 +38,8 @@ class TestSolution(unittest.TestCase):
         sol = pybamm.Solution(
             bad_ts, [np.ones((1, 3)), np.ones((1, 3))], pybamm.BaseModel(), {}
         )
-        with self.assertRaisesRegex(
-            ValueError, "Solution time vector must be strictly increasing"
+        with pytest.raises(
+            ValueError, match="Solution time vector must be strictly increasing"
         ):
             sol.set_t()
 
@@ -48,21 +49,27 @@ class TestSolution(unittest.TestCase):
         var = pybamm.StateVector(slice(0, 1))
         model.rhs = {var: 0}
         model.variables = {var.name: var}
-        with self.assertLogs() as captured:
-            pybamm.Solution(ts, bad_ys, model, {})
-        self.assertIn("exceeds the maximum", captured.records[0].getMessage())
+        log_capture = io.StringIO()
+        handler = logging.StreamHandler(log_capture)
+        handler.setLevel(logging.ERROR)
+        logger = logging.getLogger('pybamm.logger')
+        logger.addHandler(handler)
+        pybamm.Solution(ts, bad_ys, model, {})
+        log_output = log_capture.getvalue()
+        assert "exceeds the maximum" in log_output
+        logger.removeHandler(handler)
 
-        with self.assertRaisesRegex(
-            TypeError, "sensitivities arg needs to be a bool or dict"
+        with pytest.raises(
+            TypeError, match="sensitivities arg needs to be a bool or dict"
         ):
             pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities="bad")
 
         sol = pybamm.Solution(ts, bad_ys, model, {}, all_sensitivities={})
-        with self.assertRaisesRegex(TypeError, "sensitivities arg needs to be a bool"):
+        with pytest.raises(TypeError, match="sensitivities arg needs to be a bool"):
             sol.sensitivities = "bad"
-        with self.assertRaisesRegex(
+        with pytest.raises(
             NotImplementedError,
-            "Setting sensitivities is not supported if sensitivities are already provided as a dict",
+            match="Setting sensitivities is not supported if sensitivities are already provided as a dict",
         ):
             sol.sensitivities = True
 
@@ -84,7 +91,7 @@ class TestSolution(unittest.TestCase):
         sol_sum = sol1 + sol2
 
         # Test
-        self.assertEqual(sol_sum.integration_time, 0.8)
+        assert sol_sum.integration_time == 0.8
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(
             sol_sum.y, np.concatenate([y1, y2[:, 1:]], axis=1)
@@ -92,36 +99,36 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol_sum.all_inputs, [{"a": 1}, {"a": 2}])
 
         # Test sub-solutions
-        self.assertEqual(len(sol_sum.sub_solutions), 2)
+        assert len(sol_sum.sub_solutions) == 2
         np.testing.assert_array_equal(sol_sum.sub_solutions[0].t, t1)
         np.testing.assert_array_equal(sol_sum.sub_solutions[1].t, t2)
-        self.assertEqual(sol_sum.sub_solutions[0].all_models[0], sol_sum.all_models[0])
+        assert sol_sum.sub_solutions[0].all_models[0] == sol_sum.all_models[0]
         np.testing.assert_array_equal(sol_sum.sub_solutions[0].all_inputs[0]["a"], 1)
-        self.assertEqual(sol_sum.sub_solutions[1].all_models[0], sol2.all_models[0])
-        self.assertEqual(sol_sum.all_models[1], sol2.all_models[0])
+        assert sol_sum.sub_solutions[1].all_models[0] == sol2.all_models[0]
+        assert sol_sum.all_models[1] == sol2.all_models[0]
         np.testing.assert_array_equal(sol_sum.sub_solutions[1].all_inputs[0]["a"], 2)
 
         # Add solution already contained in existing solution
         t3 = np.array([2])
         y3 = np.ones((1, 1))
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
-        self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
+        assert (sol_sum + sol3).all_ts == sol_sum.copy().all_ts
 
         # add None
         sol4 = sol3 + None
-        self.assertEqual(sol3.all_ys, sol4.all_ys)
+        assert sol3.all_ys == sol4.all_ys
 
         # radd
         sol5 = None + sol3
-        self.assertEqual(sol3.all_ys, sol5.all_ys)
+        assert sol3.all_ys == sol5.all_ys
 
         # radd failure
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Only a Solution or None can be added to a Solution"
+        with pytest.raises(
+            pybamm.SolverError, match="Only a Solution or None can be added to a Solution"
         ):
             sol3 + 2
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Only a Solution or None can be added to a Solution"
+        with pytest.raises(
+            pybamm.SolverError, match="Only a Solution or None can be added to a Solution"
         ):
             2 + sol3
 
@@ -133,14 +140,14 @@ class TestSolution(unittest.TestCase):
             all_sensitivities={"test": [np.ones((1, 3))]},
         )
         sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {}, all_sensitivities=True)
-        with self.assertRaisesRegex(
-            ValueError, "Sensitivities must be of the same type"
+        with pytest.raises(
+            ValueError, match="Sensitivities must be of the same type"
         ):
             sol3 = sol1 + sol2
         sol1 = pybamm.Solution(t1, y3, pybamm.BaseModel(), {}, all_sensitivities=False)
         sol2 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {}, all_sensitivities={})
         sol3 = sol1 + sol2
-        self.assertFalse(sol3._all_sensitivities)
+        assert not sol3._all_sensitivities
 
     def test_add_solutions_different_models(self):
         # Set up first solution
@@ -160,8 +167,8 @@ class TestSolution(unittest.TestCase):
 
         # Test
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "The solution is made up from different models"
+        with pytest.raises(
+            pybamm.SolverError, match="The solution is made up from different models"
         ):
             sol_sum.y
 
@@ -176,14 +183,14 @@ class TestSolution(unittest.TestCase):
         sol1.integration_time = 0.3
 
         sol_copy = sol1.copy()
-        self.assertEqual(sol_copy.all_ts, sol1.all_ts)
+        assert sol_copy.all_ts == sol1.all_ts
         for ys_copy, ys1 in zip(sol_copy.all_ys, sol1.all_ys):
             np.testing.assert_array_equal(ys_copy, ys1)
-        self.assertEqual(sol_copy.all_inputs, sol1.all_inputs)
-        self.assertEqual(sol_copy.all_inputs_casadi, sol1.all_inputs_casadi)
-        self.assertEqual(sol_copy.set_up_time, sol1.set_up_time)
-        self.assertEqual(sol_copy.solve_time, sol1.solve_time)
-        self.assertEqual(sol_copy.integration_time, sol1.integration_time)
+        assert sol_copy.all_inputs == sol1.all_inputs
+        assert sol_copy.all_inputs_casadi == sol1.all_inputs_casadi
+        assert sol_copy.set_up_time == sol1.set_up_time
+        assert sol_copy.solve_time == sol1.solve_time
+        assert sol_copy.integration_time == sol1.integration_time
 
     def test_last_state(self):
         # Set up first solution
@@ -196,14 +203,14 @@ class TestSolution(unittest.TestCase):
         sol1.integration_time = 0.3
 
         sol_last_state = sol1.last_state
-        self.assertEqual(sol_last_state.all_ts[0], 2)
+        assert sol_last_state.all_ts[0] == 2
         np.testing.assert_array_equal(sol_last_state.all_ys[0], 2)
-        self.assertEqual(sol_last_state.all_inputs, sol1.all_inputs[-1:])
-        self.assertEqual(sol_last_state.all_inputs_casadi, sol1.all_inputs_casadi[-1:])
-        self.assertEqual(sol_last_state.all_models, sol1.all_models[-1:])
-        self.assertEqual(sol_last_state.set_up_time, 0)
-        self.assertEqual(sol_last_state.solve_time, 0)
-        self.assertEqual(sol_last_state.integration_time, 0)
+        assert sol_last_state.all_inputs == sol1.all_inputs[-1:]
+        assert sol_last_state.all_inputs_casadi == sol1.all_inputs_casadi[-1:]
+        assert sol_last_state.all_models == sol1.all_models[-1:]
+        assert sol_last_state.set_up_time == 0
+        assert sol_last_state.solve_time == 0
+        assert sol_last_state.integration_time == 0
 
     def test_cycles(self):
         model = pybamm.lithium_ion.SPM()
@@ -215,14 +222,14 @@ class TestSolution(unittest.TestCase):
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve()
-        self.assertEqual(len(sol.cycles), 2)
+        assert len(sol.cycles) == 2
         len_cycle_1 = len(sol.cycles[0].t)
 
-        self.assertIsInstance(sol.cycles[0], pybamm.Solution)
+        assert isinstance(sol.cycles[0], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[0].t, sol.t[:len_cycle_1])
         np.testing.assert_array_equal(sol.cycles[0].y, sol.y[:, :len_cycle_1])
 
-        self.assertIsInstance(sol.cycles[1], pybamm.Solution)
+        assert isinstance(sol.cycles[1], pybamm.Solution)
         np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
         np.testing.assert_allclose(sol.cycles[1].y, sol.y[:, len_cycle_1:])
 
@@ -230,7 +237,7 @@ class TestSolution(unittest.TestCase):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
         sol.set_up_time = 0.5
         sol.solve_time = 1.2
-        self.assertEqual(sol.total_time, 1.7)
+        assert sol.total_time == 1.7
 
     def test_getitem(self):
         model = pybamm.BaseModel()
@@ -244,13 +251,13 @@ class TestSolution(unittest.TestCase):
 
         # test create a new processed variable
         c_sol = solution["c"]
-        self.assertIsInstance(c_sol, pybamm.ProcessedVariable)
+        assert isinstance(c_sol, pybamm.ProcessedVariable)
         np.testing.assert_array_equal(c_sol.entries, c_sol(solution.t))
 
         # test call an already created variable
         solution.update("2c")
         twoc_sol = solution["2c"]
-        self.assertIsInstance(twoc_sol, pybamm.ProcessedVariable)
+        assert isinstance(twoc_sol, pybamm.ProcessedVariable)
         np.testing.assert_array_equal(twoc_sol.entries, twoc_sol(solution.t))
         np.testing.assert_array_equal(twoc_sol.entries, 2 * c_sol.entries)
 
@@ -283,12 +290,12 @@ class TestSolution(unittest.TestCase):
             solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
             # test save data
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 solution.save_data(f"{test_stub}.pickle")
 
             # set variables first then save
             solution.update(["c", "d"])
-            with self.assertRaisesRegex(ValueError, "pickle"):
+            with pytest.raises(ValueError, match="pickle"):
                 solution.save_data(to_format="pickle")
             solution.save_data(f"{test_stub}.pickle")
 
@@ -302,12 +309,12 @@ class TestSolution(unittest.TestCase):
             np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
             np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-            with self.assertRaisesRegex(ValueError, "matlab"):
+            with pytest.raises(ValueError, match="matlab"):
                 solution.save_data(to_format="matlab")
 
             # to matlab with bad variables name fails
             solution.update(["c + d"])
-            with self.assertRaisesRegex(ValueError, "Invalid character"):
+            with pytest.raises(ValueError, match="Invalid character"):
                 solution.save_data(f"{test_stub}.mat", to_format="matlab")
             # Works if providing alternative name
             solution.save_data(
@@ -319,8 +326,8 @@ class TestSolution(unittest.TestCase):
             np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
             # to csv
-            with self.assertRaisesRegex(
-                ValueError, "only 0D variables can be saved to csv"
+            with pytest.raises(
+                ValueError, match="only 0D variables can be saved to csv"
             ):
                 solution.save_data(f"{test_stub}.csv", to_format="csv")
             # only save "c" and "2c"
@@ -330,7 +337,7 @@ class TestSolution(unittest.TestCase):
             # check string is the same as the file
             with open(f"{test_stub}.csv") as f:
                 # need to strip \r chars for windows
-                self.assertEqual(csv_str.replace("\r", ""), f.read())
+                assert csv_str.replace("\r", "") == f.read()
 
             # read csv
             df = pd.read_csv(f"{test_stub}.csv")
@@ -344,7 +351,7 @@ class TestSolution(unittest.TestCase):
             # check string is the same as the file
             with open(f"{test_stub}.json") as f:
                 # need to strip \r chars for windows
-                self.assertEqual(json_str.replace("\r", ""), f.read())
+                assert json_str.replace("\r", "") == f.read()
 
             # check if string has the right values
             json_data = json.loads(json_str)
@@ -352,17 +359,15 @@ class TestSolution(unittest.TestCase):
             np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
 
             # raise error if format is unknown
-            with self.assertRaisesRegex(
-                ValueError, "format 'wrong_format' not recognised"
+            with pytest.raises(
+                ValueError, match="format 'wrong_format' not recognised"
             ):
                 solution.save_data(f"{test_stub}.csv", to_format="wrong_format")
 
             # test save whole solution
             solution.save(f"{test_stub}.pickle")
             solution_load = pybamm.load(f"{test_stub}.pickle")
-            self.assertEqual(
-                solution.all_models[0].name, solution_load.all_models[0].name
-            )
+            assert solution.all_models[0].name == solution_load.all_models[0].name
             np.testing.assert_array_equal(
                 solution["c"].entries, solution_load["c"].entries
             )
@@ -412,14 +417,6 @@ class TestSolution(unittest.TestCase):
         inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
-        self.assertEqual(len(time), 10)
+        assert len(time) == 10
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
