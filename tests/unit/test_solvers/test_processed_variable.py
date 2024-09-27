@@ -121,11 +121,12 @@ class TestProcessedVariable:
         t_sol = np.array([0])
         y_sol = np.array([1])[:, np.newaxis]
         yp_sol = np.array([1])[:, np.newaxis]
+        sol = self._sol_default(t_sol, y_sol, yp_sol, model)
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
             [var],
             [var_casadi],
-            self._sol_default(t_sol, y_sol, yp_sol, model),
+            sol,
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
 
@@ -137,6 +138,14 @@ class TestProcessedVariable:
         data2 = processed_var.data
 
         np.testing.assert_array_equal(data1, data2)
+
+        data_t1 = processed_var(sol.t)
+
+        assert processed_var._xr_data_array_raw is not None
+
+        data_t2 = processed_var(sol.t)
+
+        np.testing.assert_array_equal(data_t1, data_t2)
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_no_sensitivity(self, hermite_interp):

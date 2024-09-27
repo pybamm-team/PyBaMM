@@ -262,6 +262,7 @@ class ProcessedVariable:
             processed_entries = self._xr_interpolate(
                 entries_for_interp,
                 coords,
+                observe_raw,
                 t,
                 x,
                 r,
@@ -289,6 +290,7 @@ class ProcessedVariable:
         self,
         entries_for_interp,
         coords,
+        observe_raw,
         t=None,
         x=None,
         r=None,
@@ -301,7 +303,11 @@ class ProcessedVariable:
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
-        if t is not None and self._xr_data_array_raw is not None:
+        if observe_raw:
+            if self._xr_data_array_raw is None:
+                self._xr_data_array_raw = xr.DataArray(
+                    entries_for_interp, coords=coords
+                )
             xr_data_array = self._xr_data_array_raw
         else:
             xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
