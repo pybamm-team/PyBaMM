@@ -12,7 +12,7 @@ using std::vector;
 /**
  * @brief Observe and Hermite interpolate ND variables
  */
-const np_array_realtype observe_hermite_interp_ND(
+const np_array_realtype observe_hermite_interp(
     const np_array_realtype& t_interp,
     const vector<np_array_realtype>& ts,
     const vector<np_array_realtype>& ys,
@@ -26,7 +26,7 @@ const np_array_realtype observe_hermite_interp_ND(
 /**
  * @brief Observe ND variables
  */
-const np_array_realtype observe_ND(
+const np_array_realtype observe(
     const vector<np_array_realtype>& ts_np,
     const vector<np_array_realtype>& ys_np,
     const vector<np_array_realtype>& inputs_np,
@@ -37,6 +37,6 @@ const np_array_realtype observe_ND(
 
 const vector<std::shared_ptr<const casadi::Function>> setup_casadi_funcs(const vector<std::string>& strings);
 
-int _setup_len_space(const vector<int>& shape);
+int _setup_len_spatial(const vector<int>& shape);
 
 #endif // PYBAMM_CREATE_OBSERVE_HPP
