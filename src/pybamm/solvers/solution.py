@@ -639,9 +639,12 @@ class Solution:
             "enable_jacobian": False,
         }
 
+        # Casadi has a bug where it does not correctly handle arrays with
+        # zeros padded at the beginning or end. To avoid this, we add and
+        # subtract a small number to the variable to reinforce the
+        # variable bounds.
         epsilon = 5e-324
-        var_sym = var_sym - epsilon
-        var_sym = var_sym + epsilon
+        var_sym = (var_sym - epsilon) + epsilon
 
         var_casadi = casadi.Function(
             "variable",

@@ -1105,19 +1105,40 @@ class TestIDAKLUSolver:
 
     def test_interpolate_time_step_start_offset(self):
         model = pybamm.lithium_ion.SPM()
-        experiment = pybamm.Experiment(
-            [
-                "Discharge at C/10 for 10 seconds",
-                "Charge at C/10 for 10 seconds",
-            ],
-            period="1 seconds",
-        )
+
+        def experiment_setup(period=None):
+            return pybamm.Experiment(
+                [
+                    "Discharge at C/10 for 10 seconds",
+                    "Charge at C/10 for 10 seconds",
+                ],
+                period=period,
+            )
+
+        experiment_1s = experiment_setup(period="1 seconds")
         solver = pybamm.IDAKLUSolver()
-        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
-        sol = sim.solve()
+        sim_1s = pybamm.Simulation(model, experiment=experiment_1s, solver=solver)
+        sol_1s = sim_1s.solve()
         np.testing.assert_equal(
-            np.nextafter(sol.sub_solutions[0].t[-1], np.inf),
-            sol.sub_solutions[1].t[0],
+            np.nextafter(sol_1s.sub_solutions[0].t[-1], np.inf),
+            sol_1s.sub_solutions[1].t[0],
+        )
+
+        assert not sol_1s.hermite_interpolation
+
+        experiment = experiment_setup(period=None)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+        sol = sim.solve(model)
+
+        assert sol.hermite_interpolation
+
+        rtol = solver.rtol
+        atol = solver.atol
+        np.testing.assert_allclose(
+            sol_1s["Voltage [V]"].data,
+            sol["Voltage [V]"](sol_1s.t),
+            rtol=rtol,
+            atol=atol,
         )
 
     def test_python_idaklu_deprecation_errors(self):

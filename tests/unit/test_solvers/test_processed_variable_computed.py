@@ -57,7 +57,6 @@ def process_and_check_2D_variable(
         [var_casadi],
         [y_sol],
         pybamm.Solution(t_sol, y_sol, model, {}),
-        warn=False,
     )
     # NB: ProcessedVariableComputed does not interpret y in the same way as
     #  ProcessedVariable; a better test of equivalence is to check that the
@@ -82,7 +81,6 @@ class TestProcessedVariableComputed:
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
         # Assert that the processed variable is the same as the solution
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
@@ -111,7 +109,6 @@ class TestProcessedVariableComputed:
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
 
         # test no inputs (i.e. no sensitivity)
@@ -132,7 +129,6 @@ class TestProcessedVariableComputed:
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), inputs),
-            warn=False,
         )
 
         # test no sensitivity raises error
@@ -157,7 +153,6 @@ class TestProcessedVariableComputed:
             [var_casadi],
             [y_sol],
             sol,
-            warn=False,
         )
 
         # Ordering from idaklu with output_variables set is different to
@@ -220,7 +215,7 @@ class TestProcessedVariableComputed:
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
-        pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution, warn=False)
+        pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution)
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
@@ -336,7 +331,6 @@ class TestProcessedVariableComputed:
             pybamm.Solution(
                 t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
             ),
-            warn=False,
         )
         np.testing.assert_array_equal(
             x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
@@ -371,7 +365,6 @@ class TestProcessedVariableComputed:
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries,
@@ -408,7 +401,6 @@ class TestProcessedVariableComputed:
             [var_casadi],
             [u_sol],
             pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
@@ -434,5 +426,4 @@ class TestProcessedVariableComputed:
                 [var_casadi],
                 [u_sol],
                 pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
-                warn=False,
             )

@@ -28,9 +28,6 @@ class ProcessedVariable:
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    warn : bool, optional
-        Whether to raise warnings when trying to evaluate time and length scales.
-        Default is True.
     """
 
     def __init__(
@@ -38,7 +35,6 @@ class ProcessedVariable:
         base_variables,
         base_variables_casadi,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.base_variables = base_variables
@@ -55,7 +51,6 @@ class ProcessedVariable:
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
-        self.warn = warn
         self.cumtrapz_ic = cumtrapz_ic
 
         # Process spatial variables
@@ -101,14 +96,22 @@ class ProcessedVariable:
             self._coords_raw = coords
             self._raw_data_initialized = True
 
-        return entries, entries_for_interp, coords
-
-    def observe_and_interp(self, t):
+    def observe_and_interp(self, t, fill_value):
         """
         Interpolate the variable at the given time points and y values.
+        t must be a sorted array of time points.
         """
+
         entries = self._observe_hermite_cpp(t)
-        return self._observe_postfix(entries, t)
+        processed_entries = self._observe_postfix(entries, t)
+
+        tf = self.t_pts[-1]
+        if t[-1] > tf and fill_value != "extrapolate":
+            # fill the rest
+            idx = np.searchsorted(t, tf, side="right")
+            processed_entries[..., idx:] = fill_value
+
+        return processed_entries
 
     def observe_raw(self):
         """
@@ -155,7 +158,6 @@ class ProcessedVariable:
 
     def _observe_hermite_cpp(self, t):
         pybamm.logger.debug("Observing and Hermite interpolating the variable in C++")
-        self._check_interp(t)
 
         ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs()
         shapes = self._shape(t)
@@ -213,53 +215,73 @@ class ProcessedVariable:
                 f"Spatial variable name not recognized for {spatial_variable}"
             )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
-        # 1. Check to see if we are interpolating exactly onto the solution time points
+    def __call__(
+        self,
+        t=None,
+        x=None,
+        r=None,
+        y=None,
+        z=None,
+        R=None,
+        fill_value=np.nan,
+    ):
+        # Check to see if we are interpolating exactly onto the raw solution time points
         t_observe, observe_raw = self._check_observe_raw(t)
 
-        # 2. Check if the time points are sorted and unique
+        # Check if the time points are sorted and unique
         is_sorted = observe_raw or _is_sorted(t_observe)
 
         # Sort them if not
         if not is_sorted:
-            idxs_sort = np.argsort(t)
-            t = t[idxs_sort]
-            idxs_unsort = np.arange(len(t))[idxs_sort]
+            idxs_sort = np.argsort(t_observe)
+            t_observe = t_observe[idxs_sort]
 
-        time_interp = self.hermite_interpolation and not observe_raw
-        if time_interp:
-            entries = self.observe_and_interp(t_observe)
-        else:
-            entries, entries_for_interp, coords = self.initialise()
-
-        spatial_interp = (
-            (x is not None)
-            or (r is not None)
-            or (y is not None)
-            or (z is not None)
-            or (R is not None)
+        hermite_time_interp = (
+            pybamm.has_idaklu() and self.hermite_interpolation and not observe_raw
         )
 
-        if time_interp and not spatial_interp:
-            processed_entries = entries
-        else:
-            if time_interp:
+        if hermite_time_interp:
+            entries = self.observe_and_interp(t_observe, fill_value)
+
+        spatial_interp = any(a is not None for a in [x, r, y, z, R])
+
+        xr_interp = spatial_interp or not hermite_time_interp
+
+        if xr_interp:
+            if hermite_time_interp:
+                # Already interpolated in time
+                t = None
                 entries_for_interp, coords = self._interp_setup(entries, t_observe)
+            else:
+                self.initialise()
+                entries_for_interp, coords = (
+                    self._entries_for_interp_raw,
+                    self._coords_raw,
+                )
+
             processed_entries = self._xr_interpolate(
                 entries_for_interp,
                 coords,
-                time_interp,
                 t,
                 x,
                 r,
                 y,
                 z,
                 R,
-                warn,
+                fill_value,
             )
+        else:
+            processed_entries = entries
 
         if not is_sorted:
+            idxs_unsort = np.zeros_like(idxs_sort)
+            idxs_unsort[idxs_sort] = np.arange(len(t_observe))
+
             processed_entries = processed_entries[..., idxs_unsort]
+
+        # Remove a singleton time dimension if we interpolate in time with hermite
+        if hermite_time_interp and t_observe.size == 1:
+            processed_entries = np.squeeze(processed_entries, axis=-1)
 
         return processed_entries
 
@@ -267,32 +289,32 @@ class ProcessedVariable:
         self,
         entries_for_interp,
         coords,
-        time_interp,
         t=None,
         x=None,
         r=None,
         y=None,
         z=None,
         R=None,
-        warn=True,
+        fill_value=None,
     ):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
-
-        if not time_interp and self._xr_data_array_raw is not None:
+        if t is not None and self._xr_data_array_raw is not None:
             xr_data_array = self._xr_data_array_raw
         else:
             xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
 
         kwargs = {"t": t, "x": x, "r": r, "y": y, "z": z, "R": R}
-        if time_interp:
-            kwargs["t"] = None
+
         # Remove any None arguments
         kwargs = {key: value for key, value in kwargs.items() if value is not None}
+
         # Use xarray interpolation, return numpy array
-        return xr_data_array.interp(**kwargs).values
+        out = xr_data_array.interp(**kwargs, kwargs={"fill_value": fill_value}).values
+
+        return out
 
     def _check_observe_raw(self, t):
         """
@@ -318,22 +340,12 @@ class ProcessedVariable:
         else:
             t_observe = t
 
-        return t_observe, observe_raw
-
-    def _check_interp(self, t):
-        """
-        Check if the time points are sorted and unique
-
-        Args:
-            t (np.ndarray): array to check
-
-        Returns:
-            bool: True if array is sorted and unique
-        """
-        if t[0] < self.t_pts[0]:
+        if t_observe[0] < self.t_pts[0]:
             raise ValueError(
                 "The interpolation points must be greater than or equal to the initial solution time"
             )
+
+        return t_observe, observe_raw
 
     @property
     def entries(self):
@@ -444,7 +456,6 @@ class ProcessedVariable0D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.dimensions = 0
@@ -452,7 +463,6 @@ class ProcessedVariable0D(ProcessedVariable):
             base_variables,
             base_variables_casadi,
             solution,
-            warn=warn,
             cumtrapz_ic=cumtrapz_ic,
         )
 
@@ -512,9 +522,6 @@ class ProcessedVariable1D(ProcessedVariable):
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    warn : bool, optional
-        Whether to raise warnings when trying to evaluate time and length scales.
-        Default is True.
     """
 
     def __init__(
@@ -522,7 +529,6 @@ class ProcessedVariable1D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.dimensions = 1
@@ -530,7 +536,6 @@ class ProcessedVariable1D(ProcessedVariable):
             base_variables,
             base_variables_casadi,
             solution,
-            warn=warn,
             cumtrapz_ic=cumtrapz_ic,
         )
 
@@ -614,9 +619,6 @@ class ProcessedVariable2D(ProcessedVariable):
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    warn : bool, optional
-        Whether to raise warnings when trying to evaluate time and length scales.
-        Default is True.
     """
 
     def __init__(
@@ -624,7 +626,6 @@ class ProcessedVariable2D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.dimensions = 2
@@ -632,7 +633,6 @@ class ProcessedVariable2D(ProcessedVariable):
             base_variables,
             base_variables_casadi,
             solution,
-            warn=warn,
             cumtrapz_ic=cumtrapz_ic,
         )
         first_dim_nodes = self.mesh.nodes
@@ -785,9 +785,6 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    warn : bool, optional
-        Whether to raise warnings when trying to evaluate time and length scales.
-        Default is True.
     """
 
     def __init__(
@@ -795,7 +792,6 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         base_variables,
         base_variables_casadi,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.dimensions = 2
@@ -803,7 +799,6 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
             base_variables,
             base_variables_casadi,
             solution,
-            warn=warn,
             cumtrapz_ic=cumtrapz_ic,
         )
         y_sol = self.mesh.edges["y"]

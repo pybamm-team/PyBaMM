@@ -70,14 +70,16 @@ class TestSolution(unittest.TestCase):
         # Set up first solution
         t1 = np.linspace(0, 1)
         y1 = np.tile(t1, (20, 1))
-        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1})
+        yp1 = np.tile(t1, (30, 1))
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1}, all_yps=yp1)
         sol1.solve_time = 1.5
         sol1.integration_time = 0.3
 
         # Set up second solution
         t2 = np.linspace(1, 2)
         y2 = np.tile(t2, (20, 1))
-        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
+        yp2 = np.tile(t1, (30, 1))
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2}, all_yps=yp2)
         sol2.solve_time = 1
         sol2.integration_time = 0.5
 

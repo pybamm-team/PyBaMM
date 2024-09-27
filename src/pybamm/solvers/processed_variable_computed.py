@@ -45,7 +45,6 @@ class ProcessedVariableComputed:
         base_variables_casadi,
         base_variables_data,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.base_variables = base_variables
@@ -60,7 +59,6 @@ class ProcessedVariableComputed:
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
-        self.warn = warn
         self.cumtrapz_ic = cumtrapz_ic
 
         # Sensitivity starts off uninitialized, only set when called
@@ -424,7 +422,7 @@ class ProcessedVariableComputed:
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
