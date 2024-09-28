@@ -141,5 +141,3 @@ class TestCompareOutputs:
         # compare outputs
         comparison = StandardOutputComparison(solutions)
         comparison.test_all(skip_first_timestep=True)
-
-
