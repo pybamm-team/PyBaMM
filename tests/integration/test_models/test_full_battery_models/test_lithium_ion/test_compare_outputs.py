@@ -4,11 +4,10 @@
 
 import pybamm
 import numpy as np
-import unittest
 from tests import StandardOutputComparison
 
 
-class TestCompareOutputs(unittest.TestCase):
+class TestCompareOutputs:
     def test_compare_outputs_surface_form(self):
         # load models
         options = [
@@ -144,10 +143,3 @@ class TestCompareOutputs(unittest.TestCase):
         comparison.test_all(skip_first_timestep=True)
 
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

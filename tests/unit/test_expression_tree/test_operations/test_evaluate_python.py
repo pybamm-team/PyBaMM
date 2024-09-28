@@ -6,7 +6,6 @@ import pytest
 import pybamm
 
 from tests import get_discretisation_for_testing, get_1p1d_discretisation_for_testing
-import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
@@ -747,12 +746,3 @@ class TestEvaluate:
         with pytest.raises(NotImplementedError):
             A.multiply(v)
 
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
