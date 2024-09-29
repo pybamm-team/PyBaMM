@@ -196,6 +196,8 @@ extend-select = [
     "YTT",           # flake8-2020
     "TID252",        # relative-imports
     "S101",          # to identify use of assert statement
+    "PT027",         # remove unittest style assertion
+    "PT009",         # Use pytest.raises instead of unittest-style
 ]
 ignore = [
     "E741",        # Ambiguous variable name
