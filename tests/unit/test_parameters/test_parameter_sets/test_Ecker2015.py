@@ -40,6 +40,6 @@ class TestEcker2015:
         }
 
         for name, value in fun_test.items():
-            assert param.evaluate(param[name](*value[0])) == pytest.approx(value[1], abs=0.0001)
-
-
+            assert param.evaluate(param[name](*value[0])) == pytest.approx(
+                value[1], abs=0.0001
+            )

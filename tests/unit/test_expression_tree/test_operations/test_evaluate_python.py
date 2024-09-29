@@ -745,4 +745,3 @@ class TestEvaluate:
 
         with pytest.raises(NotImplementedError):
             A.multiply(v)
-
