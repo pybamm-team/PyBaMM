@@ -14,8 +14,6 @@ on:
 
 env:
   FORCE_COLOR: 3
-  PYBAMM_IDAKLU_EXPR_CASADI: ON
-  PYBAMM_IDAKLU_EXPR_IREE: ON
 
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
@@ -96,7 +94,6 @@ jobs:
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-  # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
     name: Doctests (ubuntu-latest / Python 3.11)
