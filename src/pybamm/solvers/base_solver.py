@@ -86,6 +86,14 @@ class BaseSolver:
     def root_method(self):
         return self._root_method
 
+    @property
+    def supports_parallel_solve(self):
+        return False
+
+    @property
+    def requires_explicit_sensitivities(self):
+        return True
+
     @root_method.setter
     def root_method(self, method):
         if method == "casadi":
@@ -137,7 +145,7 @@ class BaseSolver:
 
         # see if we need to form the explicit sensitivity equations
         calculate_sensitivities_explicit = (
-            model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver)
+            model.calculate_sensitivities and self.requires_explicit_sensitivities
         )
 
         self._set_up_model_sensitivities_inplace(
@@ -490,11 +498,7 @@ class BaseSolver:
         # if we have a mass matrix, we need to extend it
         def extend_mass_matrix(M):
             M_extend = [M.entries] * (num_parameters + 1)
-            M_extend_pybamm = pybamm.Matrix(block_diag(M_extend, format="csr"))
-            return M_extend_pybamm
-
-            model.mass_matrix = extend_mass_matrix(model.mass_matrix)
-            model.mass_matrix = extend_mass_matrix(model.mass_matrix)
+            return pybamm.Matrix(block_diag(M_extend, format="csr"))
 
         model.mass_matrix = extend_mass_matrix(model.mass_matrix)
 
@@ -896,17 +900,8 @@ class BaseSolver:
             pybamm.logger.verbose(
                 f"Calling solver for {t_eval[start_index]} < t < {t_eval[end_index - 1]}"
             )
-            ninputs = len(model_inputs_list)
-            if ninputs == 1:
-                new_solution = self._integrate(
-                    model,
-                    t_eval[start_index:end_index],
-                    model_inputs_list[0],
-                    t_interp=t_interp,
-                )
-                new_solutions = [new_solution]
-            elif model.convert_to_format == "jax":
-                # Jax can parallelize over the inputs efficiently
+            if self.supports_parallel_solve:
+                # Jax and IDAKLU solver can accept a list of inputs
                 new_solutions = self._integrate(
                     model,
                     t_eval[start_index:end_index],
@@ -914,18 +909,28 @@ class BaseSolver:
                     t_interp,
                 )
             else:
-                with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
-                    new_solutions = p.starmap(
-                        self._integrate,
-                        zip(
-                            [model] * ninputs,
-                            [t_eval[start_index:end_index]] * ninputs,
-                            model_inputs_list,
-                            [t_interp] * ninputs,
-                        ),
+                ninputs = len(model_inputs_list)
+                if ninputs == 1:
+                    new_solution = self._integrate(
+                        model,
+                        t_eval[start_index:end_index],
+                        model_inputs_list[0],
+                        t_interp=t_interp,
                     )
-                    p.close()
-                    p.join()
+                    new_solutions = [new_solution]
+                else:
+                    with mp.get_context(self._mp_context).Pool(processes=nproc) as p:
+                        new_solutions = p.starmap(
+                            self._integrate,
+                            zip(
+                                [model] * ninputs,
+                                [t_eval[start_index:end_index]] * ninputs,
+                                model_inputs_list,
+                                [t_interp] * ninputs,
+                            ),
+                        )
+                        p.close()
+                        p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -995,7 +1000,7 @@ class BaseSolver:
             )
 
         # Return solution(s)
-        if ninputs == 1:
+        if len(solutions) == 1:
             return solutions[0]
         else:
             return solutions
@@ -1350,7 +1355,13 @@ class BaseSolver:
         # Step
         pybamm.logger.verbose(f"Stepping for {t_start_shifted:.0f} < t < {t_end:.0f}")
         timer.reset()
-        solution = self._integrate(model, t_eval, model_inputs, t_interp)
+
+        # API for _integrate is different for JaxSolver and IDAKLUSolver
+        if self.supports_parallel_solve:
+            solutions = self._integrate(model, t_eval, [model_inputs], t_interp)
+            solution = solutions[0]
+        else:
+            solution = self._integrate(model, t_eval, model_inputs, t_interp)
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
@@ -1478,8 +1489,12 @@ class BaseSolver:
 
         # second pass: check if the extrapolation events are within the tolerance
         last_state = solution.last_state
-        t = last_state.all_ts[0][0]
-        y = last_state.all_ys[0][:, 0]
+        if solution.t_event:
+            t = solution.t_event[0]
+            y = solution.y_event[:, 0]
+        else:
+            t = last_state.all_ts[0][0]
+            y = last_state.all_ys[0][:, 0]
         inputs = last_state.all_inputs[0]
 
         if isinstance(y, casadi.DM):
