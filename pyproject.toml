@@ -6,7 +6,6 @@ requires = [
     # Note: the version of CasADi as a build-time dependency should be matched
     # across platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
-    "cmake>=3.13; platform_system!='Windows'",
     "pybind11>=2.13.4",
 ]
 build-backend = "scikit_build_core.build"
