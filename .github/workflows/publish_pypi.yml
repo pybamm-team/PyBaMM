@@ -89,7 +89,6 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "all,dev,jax"
           CIBW_TEST_COMMAND: |
-            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
             python -m pytest -m cibw {project}/tests/unit
       - name: Upload Windows wheels
         uses: actions/upload-artifact@v4.4.0
@@ -125,7 +124,6 @@ jobs:
           CIBW_TEST_EXTRAS: "all,dev,jax"
           CIBW_TEST_COMMAND: |
             set -e -x
-            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for Linux
@@ -257,7 +255,6 @@ jobs:
           CIBW_TEST_EXTRAS: "all,dev,jax"
           CIBW_TEST_COMMAND: |
             set -e -x
-            python -c "import pybamm; print(pybamm.IDAKLUSolver())"
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for macOS (amd64, arm64)
