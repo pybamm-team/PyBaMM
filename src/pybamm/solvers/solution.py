@@ -654,11 +654,11 @@ class Solution:
 
         # Some variables, like interpolants, cannot be expanded
         try:
-            var_casadi = var_casadi.expand()
-        except Exception:
-            pass
+            var_casadi_out = var_casadi.expand()
+        except RuntimeError:
+            var_casadi_out = var_casadi
 
-        return var_casadi
+        return var_casadi_out
 
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
