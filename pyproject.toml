@@ -105,12 +105,11 @@ dev = [
     "pytest-cov",
     # For doctest
     "pytest-doctestplus",
-    # For test parameterization
-    "parameterized>=0.9",
     # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
     "pytest-mock",
+    "pytest-subtests",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
@@ -241,6 +240,7 @@ minversion = "8"
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
+    "pytest-subtests",
 ]
 norecursedirs = 'pybind11*'
 addopts = [
