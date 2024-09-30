@@ -237,3 +237,11 @@ class TestJaxSolver:
         y = solver({"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
+
+        # Reset solver, test passing `calculate_sensitivities`
+        for method in ["RK45", "BDF"]:
+            solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
+            solution_sens = solver.solve(
+                model, t_eval, inputs={"rate": 0.1}, calculate_sensitivities=True
+            )
+            assert len(solution_sens.sensitivities) == 0
