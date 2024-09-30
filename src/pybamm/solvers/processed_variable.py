@@ -46,8 +46,6 @@ class ProcessedVariable:
         self.all_inputs = solution.all_inputs
         self.all_inputs_casadi = solution.all_inputs_casadi
 
-        self.hermite_interpolation = solution.hermite_interpolation
-
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
@@ -74,14 +72,13 @@ class ProcessedVariable:
         self.base_eval_size = self.base_variables[0].size
 
         # xr_data_array is initialized
-        self._raw_data_initialized = False
-        self._xr_data_array_raw = None
+        self._xr_array_raw = None
         self._entries_raw = None
         self._entries_for_interp_raw = None
         self._coords_raw = None
 
     def initialise(self):
-        if self._raw_data_initialized:
+        if self.entries_raw_initialized:
             entries = self._entries_raw
             entries_for_interp = self._entries_for_interp_raw
             coords = self._coords_raw
@@ -94,7 +91,6 @@ class ProcessedVariable:
             self._entries_raw = entries
             self._entries_for_interp_raw = entries_for_interp
             self._coords_raw = coords
-            self._raw_data_initialized = True
 
     def observe_and_interp(self, t, fill_value):
         """
@@ -304,11 +300,9 @@ class ProcessedVariable:
         using interpolation
         """
         if observe_raw:
-            if self._xr_data_array_raw is None:
-                self._xr_data_array_raw = xr.DataArray(
-                    entries_for_interp, coords=coords
-                )
-            xr_data_array = self._xr_data_array_raw
+            if not self.xr_array_raw_initialized:
+                self._xr_array_raw = xr.DataArray(entries_for_interp, coords=coords)
+            xr_data_array = self._xr_array_raw
         else:
             xr_data_array = xr.DataArray(entries_for_interp, coords=coords)
 
@@ -360,7 +354,7 @@ class ProcessedVariable:
         variable has not been initialized (i.e. the entries have not been
         calculated), then the processed variable is initialized first.
         """
-        if not self._raw_data_initialized:
+        if not self.entries_raw_initialized:
             self.initialise()
         return self._entries_raw
 
@@ -368,6 +362,14 @@ class ProcessedVariable:
     def data(self):
         """Same as entries, but different name"""
         return self.entries
+
+    @property
+    def entries_raw_initialized(self):
+        return self._entries_raw is not None
+
+    @property
+    def xr_array_raw_initialized(self):
+        return self._xr_array_raw is not None
 
     @property
     def sensitivities(self):
@@ -454,6 +456,10 @@ class ProcessedVariable:
 
         # Save attribute
         self._sensitivities = sensitivities
+
+    @property
+    def hermite_interpolation(self):
+        return self.all_yps is not None
 
 
 class ProcessedVariable0D(ProcessedVariable):

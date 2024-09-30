@@ -81,12 +81,7 @@ public:
         auto t_interp = t_interp_np.unchecked<1>();
         ssize_t i_interp = 0;
         int i_entries = 0;
-        ssize_t N_data = 0;
         const ssize_t N_interp = t_interp.size();
-
-        for (const auto& ts : ts_data_np) {
-            N_data += ts.size();
-        }
 
         // Main processing within bounds
         process_within_bounds(i_interp, i_entries, t_interp, N_interp);

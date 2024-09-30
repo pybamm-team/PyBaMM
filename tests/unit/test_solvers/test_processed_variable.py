@@ -133,7 +133,7 @@ class TestProcessedVariable:
         # check that repeated calls return the same data
         data1 = processed_var.data
 
-        assert processed_var._raw_data_initialized
+        assert processed_var.entries_raw_initialized
 
         data2 = processed_var.data
 
@@ -141,7 +141,7 @@ class TestProcessedVariable:
 
         data_t1 = processed_var(sol.t)
 
-        assert processed_var._xr_data_array_raw is not None
+        assert processed_var.xr_array_raw_initialized
 
         data_t2 = processed_var(sol.t)
 

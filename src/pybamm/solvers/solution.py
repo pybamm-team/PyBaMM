@@ -89,8 +89,7 @@ class Solution:
         self._all_ys_and_sens = all_ys
         self._all_models = all_models
 
-        self._hermite_interpolation = all_yps is not None
-        if self.hermite_interpolation and not isinstance(all_yps, list):
+        if (all_yps is not None) and not isinstance(all_yps, list):
             all_yps = [all_yps]
         self._all_yps = all_yps
 
@@ -419,7 +418,7 @@ class Solution:
 
     @property
     def hermite_interpolation(self):
-        return self._hermite_interpolation
+        return self.all_yps is not None
 
     @property
     def t_event(self):
@@ -565,8 +564,7 @@ class Solution:
 
         # Single variable
         if isinstance(variables, str):
-            self._update_variable(variables)
-            return
+            variables = [variables]
 
         # Process
         for variable in variables:
@@ -631,6 +629,7 @@ class Solution:
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
 
         opts = {
+            "cse": True,
             "inputs_check": False,
             "is_diff_in": [False, False, False],
             "is_diff_out": [False],
@@ -652,6 +651,12 @@ class Solution:
             [var_sym],
             opts,
         )
+
+        # Some variables, like interpolants, cannot be expanded
+        try:
+            var_casadi = var_casadi.expand()
+        except Exception:
+            pass
 
         return var_casadi
 
