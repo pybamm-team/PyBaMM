@@ -8,19 +8,16 @@ from typing import Union
 
 from functools import lru_cache
 
-import importlib.util
-import importlib
-
 logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
-idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-if idaklu_spec is not None:
-    try:
-        idaklu = importlib.util.module_from_spec(idaklu_spec)
-        if idaklu_spec.loader:
-            idaklu_spec.loader.exec_module(idaklu)
-    except ImportError:  # pragma: no cover
-        idaklu_spec = None
+try:
+    import pybammsolvers.idaklu as idaklu
+
+    idaklu_imported = True
+except ImportError as e:  # pragma: no cover
+    print(f"Error loading idaklu: {e}")
+    idaklu_imported = False
+
 
 if pybamm.has_jax():
     import jax
