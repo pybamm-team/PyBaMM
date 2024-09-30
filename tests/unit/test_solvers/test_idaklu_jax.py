@@ -7,7 +7,6 @@ import pytest
 import pybamm
 import numpy as np
 import unittest
-import pytest
 import sys
 
 testcase = []
