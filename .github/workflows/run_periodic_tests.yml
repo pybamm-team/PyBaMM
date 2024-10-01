@@ -72,11 +72,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        timeout-minutes: 10
-        if: matrix.os != 'windows-latest'
-        run: python -m nox -s pybamm-requires
-
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
@@ -150,10 +145,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
-
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
@@ -180,10 +171,6 @@ jobs:
 
       - name: Install nox
         run: python -m uv pip install nox[uv]
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts

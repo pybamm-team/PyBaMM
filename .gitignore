@@ -78,14 +78,6 @@ pyvenv.cfg
 .vscode
 .ruff_cache/
 
-# sundials
-sundials
-sundials4
-sundials-*
-SuiteSparse-*
-build_sundials
-KLU_module_deps
-
 # downloads
 *.gz
 

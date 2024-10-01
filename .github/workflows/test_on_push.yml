@@ -93,24 +93,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@v4
-        if: matrix.os != 'windows-latest'
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        timeout-minutes: 10
-        if: matrix.os != 'windows-latest'
-        run: python -m nox -s pybamm-requires
-
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
@@ -210,22 +192,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v4
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
-
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
@@ -265,22 +231,6 @@ jobs:
 
       - name: Install nox
         run: python -m uv pip install nox[uv]
-
-      - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v4
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts

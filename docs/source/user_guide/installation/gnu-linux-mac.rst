@@ -64,8 +64,7 @@ the environment and go back to your original system, just type:
 
    deactivate
 
-PyBaMM can be installed via pip. On macOS, it is necessary to install the `SUNDIALS <https://computing.llnl.gov/projects/sundials/>`__
-library beforehand.
+PyBaMM can be installed via pip.
 
 .. tab:: GNU/Linux
 

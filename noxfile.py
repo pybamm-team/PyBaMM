@@ -83,11 +83,6 @@ def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
-    session.run(
-        "pip",
-        "install",
-        "downloaded_wheels/pybammsolvers-0.0.1-cp312-cp312-macosx_11_0_arm64.whl",
-    )
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "unit")
 

@@ -4,7 +4,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 WORKDIR /
 
 RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-essential cmake pandoc texlive-latex-extra dvipng sudo
+RUN apt-get install -y libopenblas-dev gcc gfortran graphviz git make g++ build-essential pandoc texlive-latex-extra dvipng sudo
 RUN rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash pybamm && echo "pybamm:pybamm" | chpasswd && adduser pybamm sudo
@@ -28,11 +28,8 @@ RUN uv venv $VIRTUAL_ENV
 RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN uv pip install --upgrade setuptools wheel wget cmake
+RUN uv pip install --upgrade setuptools wheel wget
 
-RUN python scripts/install_KLU_Sundials.py && \
-rm -rf pybind11 && \
-git clone https://github.com/pybind/pybind11.git && \
-uv pip install -e ".[all,dev,docs,jax]";
+RUN uv pip install -e ".[all,dev,docs,jax]";
 
 ENTRYPOINT ["/bin/bash"]
