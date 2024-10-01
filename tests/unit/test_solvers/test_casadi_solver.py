@@ -1,13 +1,13 @@
+import pytest
 import pybamm
-import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
 
 
-class TestCasadiSolver(unittest.TestCase):
+class TestCasadiSolver:
     def test_bad_mode(self):
-        with self.assertRaisesRegex(ValueError, "invalid mode"):
+        with pytest.raises(ValueError, match="invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
 
     def test_model_solver(self):
@@ -102,7 +102,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # Safe mode, without grid (enforce events that won't be triggered)
         solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
-        with self.assertRaisesRegex(pybamm.SolverError, "Maximum number of decreased"):
+        with pytest.raises(pybamm.SolverError, match="Maximum number of decreased"):
             solver.solve(model, [0, 10])
 
     def test_model_solver_python(self):
@@ -143,9 +143,9 @@ class TestCasadiSolver(unittest.TestCase):
         # Solution fails early but manages to take some steps so we return it anyway
         # Check that the final solution does indeed stop before t=20
         t_eval = np.linspace(0, 20, 100)
-        with self.assertWarns(pybamm.SolverWarning):
+        with pytest.warns(pybamm.SolverWarning):
             solution = solver.solve(model_disc, t_eval)
-        self.assertLess(solution.t[-1], 20)
+        assert solution.t[-1] < 20
         # Solve with failure at t=0
         solver = pybamm.CasadiSolver(
             dt_max=1e-3, return_solution_if_failed_early=True, max_step_decrease_count=2
@@ -155,7 +155,7 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 20, 100)
         # This one should fail immediately and throw a `SolverError`
         # since no progress can be made from the first timestep
-        with self.assertRaisesRegex(pybamm.SolverError, "Maximum number of decreased"):
+        with pytest.raises(pybamm.SolverError, match="Maximum number of decreased"):
             solver.solve(model, t_eval)
 
     def test_model_solver_events(self):
@@ -289,7 +289,7 @@ class TestCasadiSolver(unittest.TestCase):
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
-            step_sol_2.t, np.array([0, 1, 1 + 1e-9, 1.25, 1.5, 1.75, 2])
+            step_sol_2.t, np.array([0, 1, np.nextafter(1, np.inf), 1.25, 1.5, 1.75, 2])
         )
         np.testing.assert_array_almost_equal(
             step_sol_2.y.full()[0], np.exp(0.1 * step_sol_2.t)
@@ -390,7 +390,7 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        self.assertLess(len(solution.t), len(t_eval))
+        assert len(solution.t) < len(t_eval)
         np.testing.assert_allclose(
             solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
         )
@@ -399,12 +399,12 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        self.assertLess(len(solution.t), len(t_eval))
+        assert len(solution.t) < len(t_eval)
         np.testing.assert_allclose(
             solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
         )
         solution = solver.solve(model, t_eval, inputs={"rate": 1.1})
-        self.assertLess(len(solution.t), len(t_eval))
+        assert len(solution.t) < len(t_eval)
         np.testing.assert_allclose(
             solution.y.full()[0], np.exp(-1.1 * solution.t), rtol=1e-04
         )
@@ -482,8 +482,8 @@ class TestCasadiSolver(unittest.TestCase):
 
         solver = pybamm.CasadiSolver()
         t_eval = np.linspace(0, 1)
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "Cannot use CasadiSolver to solve algebraic model"
+        with pytest.raises(
+            pybamm.SolverError, match="Cannot use CasadiSolver to solve algebraic model"
         ):
             solver.solve(model, t_eval)
 
@@ -507,7 +507,7 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver()
         t_eval = [0, 5]
 
-        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
             solver.solve(model, t_eval)
 
     def test_casadi_safe_no_termination(self):
@@ -532,7 +532,7 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe")
         solver.set_up(model)
 
-        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+        with pytest.raises(pybamm.SolverError, match="interpolation bounds"):
             solver.solve(model, t_eval=[0, 1])
 
     def test_modulo_non_smooth_events(self):
@@ -581,7 +581,7 @@ class TestCasadiSolver(unittest.TestCase):
         )
 
 
-class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
+class TestCasadiSolverODEsWithForwardSensitivityEquations:
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -931,7 +931,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             solution.sensitivities["q"],
             (0.1 * solution.t)[:, np.newaxis],
         )
-        self.assertTrue("r" not in solution.sensitivities)
+        assert "r" not in solution.sensitivities
         np.testing.assert_allclose(
             solution.sensitivities["all"],
             np.hstack(
@@ -949,8 +949,8 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             calculate_sensitivities=["r"],
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
-        self.assertTrue("p" not in solution.sensitivities)
-        self.assertTrue("q" not in solution.sensitivities)
+        assert "p" not in solution.sensitivities
+        assert "q" not in solution.sensitivities
         np.testing.assert_allclose(solution.sensitivities["r"], 1)
         np.testing.assert_allclose(
             solution.sensitivities["all"],
@@ -962,7 +962,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         )
 
 
-class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
+class TestCasadiSolverDAEsWithForwardSensitivityEquations:
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -1022,7 +1022,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
         )
         np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], 0.1 * solution.t)
+        np.testing.assert_allclose(np.array(solution.y)[0], 0.1 * solution.t)
         np.testing.assert_allclose(
             solution.sensitivities["p"], solution.t.reshape(-1, 1), atol=1e-7
         )
@@ -1066,8 +1066,8 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             solution.sensitivities["q"][::2],
             (0.1 * solution.t)[:, np.newaxis],
         )
-        self.assertTrue("r" not in solution.sensitivities)
-        self.assertTrue("s" not in solution.sensitivities)
+        assert "r" not in solution.sensitivities
+        assert "s" not in solution.sensitivities
         np.testing.assert_allclose(
             solution.sensitivities["all"],
             np.hstack(
@@ -1078,12 +1078,26 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             ),
         )
 
+    def test_solver_interpolation_warning(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
+        solver = pybamm.CasadiSolver()
 
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        # Check for warning with t_interp
+        t_eval = np.linspace(0, 1, 10)
+        t_interp = t_eval
+        with pytest.warns(
+            pybamm.SolverWarning,
+            match=f"Explicit interpolation times not implemented for {solver.name}",
+        ):
+            solver.solve(model, t_eval, t_interp=t_interp)

@@ -194,6 +194,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "surface form" : str
                 Whether to use the surface formulation of the problem. Can be "false"
                 (default), "differential" or "algebraic".
+            * "surface temperature" : str
+                Sets the surface temperature model to use. Can be "ambient" (default),
+                which sets the surface temperature equal to the ambient temperature, or
+                "lumped", which adds an ODE for the surface temperature (e.g. to model
+                internal heating of a thermal chamber).
             * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full". The 'cell geometry' option must be set to
@@ -278,7 +283,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "particle": [
                 "Fickian diffusion",
-                "fast diffusion",
                 "uniform profile",
                 "quadratic profile",
                 "quartic profile",
@@ -304,6 +308,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "SEI porosity change": ["false", "true"],
             "stress-induced diffusion": ["false", "true"],
             "surface form": ["false", "differential", "algebraic"],
+            "surface temperature": ["ambient", "lumped"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
             "transport efficiency": [
@@ -554,16 +559,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
 
         # Renamed options
-        if options["particle"] == "fast diffusion":
-            raise pybamm.OptionError(
-                "The 'fast diffusion' option has been renamed. "
-                "Use 'uniform profile' instead."
-            )
-        if options["SEI porosity change"] in [True, False]:
-            raise pybamm.OptionError(
-                "SEI porosity change must now be given in string format "
-                "('true' or 'false')"
-            )
         if options["working electrode"] == "negative":
             raise pybamm.OptionError(
                 "The 'negative' working electrode option has been removed because "
@@ -623,16 +618,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                and options["particle mechanics"] == "none"
-                and options["loss of active material"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
-                    "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', 'loss of active material'"
+                    "'Fickian diffusion'."
                 )
 
+        if options["surface temperature"] == "lumped":
+            if options["thermal"] not in ["isothermal", "lumped"]:
+                raise pybamm.OptionError(
+                    "lumped surface temperature model only compatible with isothermal "
+                    "or lumped thermal model"
+                )
         if "true" in options["SEI on cracks"]:
             sei_on_cr = options["SEI on cracks"]
             p_mechanics = options["particle mechanics"]
@@ -751,7 +749,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the possible options with the ones currently selected
         """
         for key, value in self.items():
-            print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
+            print(rf"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
 
     def print_detailed_options(self):
         """
@@ -1032,7 +1030,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
-            submodel.set_events(self.variables)
+            submodel.add_events_from(self.variables)
             pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()
@@ -1264,6 +1262,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["thermal"] = thermal_submodel(
             self.param, self.options, x_average
         )
+
+    def set_surface_temperature_submodel(self):
+        if self.options["surface temperature"] == "ambient":
+            submodel = pybamm.thermal.surface.Ambient
+        elif self.options["surface temperature"] == "lumped":
+            submodel = pybamm.thermal.surface.Lumped
+        self.submodels["surface temperature"] = submodel(self.param, self.options)
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in ["uniform"]:

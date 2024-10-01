@@ -66,7 +66,7 @@ class ProcessedVariable:
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
-        self.solution_sensitivities = solution.sensitivities
+        self.all_solution_sensitivities = solution._all_sensitivities
 
         # Store time
         self.t_pts = solution.t
@@ -75,43 +75,42 @@ class ProcessedVariable:
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
 
+        # xr_data_array is initialized
+        self._xr_data_array = None
+
         # handle 2D (in space) finite element variables differently
         if (
             self.mesh
             and "current collector" in self.domain
             and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
         ):
-            self.initialise_2D_scikit_fem()
+            return self.initialise_2D_scikit_fem()
 
         # check variable shape
-        else:
-            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
-                self.initialise_0D()
-            else:
-                n = self.mesh.npts
-                base_shape = self.base_eval_shape[0]
-                # Try some shapes that could make the variable a 1D variable
-                if base_shape in [n, n + 1]:
-                    self.initialise_1D()
-                else:
-                    # Try some shapes that could make the variable a 2D variable
-                    first_dim_nodes = self.mesh.nodes
-                    first_dim_edges = self.mesh.edges
-                    second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-                    if self.base_eval_size // len(second_dim_pts) in [
-                        len(first_dim_nodes),
-                        len(first_dim_edges),
-                    ]:
-                        self.initialise_2D()
-                    else:
-                        # Raise error for 3D variable
-                        raise NotImplementedError(
-                            f"Shape not recognized for {base_variables[0]}"
-                            + "(note processing of 3D variables is not yet implemented)"
-                        )
+        if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
+            return self.initialise_0D()
 
-        # xr_data_array is initialized when needed
-        self._xr_data_array = None
+        n = self.mesh.npts
+        base_shape = self.base_eval_shape[0]
+        # Try some shapes that could make the variable a 1D variable
+        if base_shape in [n, n + 1]:
+            return self.initialise_1D()
+
+        # Try some shapes that could make the variable a 2D variable
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_pts = self.base_variables[0].secondary_mesh.nodes
+        if self.base_eval_size // len(second_dim_pts) in [
+            len(first_dim_nodes),
+            len(first_dim_edges),
+        ]:
+            return self.initialise_2D()
+
+        # Raise error for 3D variable
+        raise NotImplementedError(
+            f"Shape not recognized for {base_variables[0]}"
+            + "(note processing of 3D variables is not yet implemented)"
+        )
 
     def initialise_0D(self):
         # initialise empty array of the correct size
@@ -405,7 +404,7 @@ class ProcessedVariable:
             return {}
         # Otherwise initialise and return sensitivities
         if self._sensitivities is None:
-            if self.solution_sensitivities != {}:
+            if self.all_solution_sensitivities:
                 self.initialise_sensitivity_explicit_forward()
             else:
                 raise ValueError(
@@ -418,48 +417,54 @@ class ProcessedVariable:
 
     def initialise_sensitivity_explicit_forward(self):
         "Set up the sensitivity dictionary"
-        inputs_stacked = self.all_inputs_casadi[0]
 
-        # Set up symbolic variables
-        t_casadi = casadi.MX.sym("t")
-        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
-        p_casadi = {
-            name: casadi.MX.sym(name, value.shape[0])
-            for name, value in self.all_inputs[0].items()
-        }
+        all_S_var = []
+        for ts, ys, inputs_stacked, inputs, base_variable, dy_dp in zip(
+            self.all_ts,
+            self.all_ys,
+            self.all_inputs_casadi,
+            self.all_inputs,
+            self.base_variables,
+            self.all_solution_sensitivities["all"],
+        ):
+            # Set up symbolic variables
+            t_casadi = casadi.MX.sym("t")
+            y_casadi = casadi.MX.sym("y", ys.shape[0])
+            p_casadi = {
+                name: casadi.MX.sym(name, value.shape[0])
+                for name, value in inputs.items()
+            }
 
-        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+            p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
-        # Convert variable to casadi format for differentiating
-        var_casadi = self.base_variables[0].to_casadi(
-            t_casadi, y_casadi, inputs=p_casadi
-        )
-        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
-        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+            # Convert variable to casadi format for differentiating
+            var_casadi = base_variable.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+            dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+            dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
 
-        # Convert to functions and evaluate index-by-index
-        dvar_dy_func = casadi.Function(
-            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
-        )
-        dvar_dp_func = casadi.Function(
-            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
-        )
-        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
+            # Convert to functions and evaluate index-by-index
+            dvar_dy_func = casadi.Function(
+                "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
+            )
+            dvar_dp_func = casadi.Function(
+                "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
+            )
             for idx, t in enumerate(ts):
                 u = ys[:, idx]
                 next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
                 next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-                if index == 0 and idx == 0:
+                if idx == 0:
                     dvar_dy_eval = next_dvar_dy_eval
                     dvar_dp_eval = next_dvar_dp_eval
                 else:
                     dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
                     dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
-        # Compute sensitivity
-        dy_dp = self.solution_sensitivities["all"]
-        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+            # Compute sensitivity
+            S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+            all_S_var.append(S_var)
 
+        S_var = casadi.vertcat(*all_S_var)
         sensitivities = {"all": S_var}
 
         # Add the individual sensitivity

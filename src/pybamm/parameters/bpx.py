@@ -214,9 +214,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         pybamm_dict[domain.pre_name + "conductivity [S.m-1]"] = 4e7
 
     # add a default heat transfer coefficient
-    pybamm_dict.update(
-        {"Total heat transfer coefficient [W.m-2.K-1]": 0}, check_already_exists=False
-    )
+    pybamm_dict.update({"Total heat transfer coefficient [W.m-2.K-1]": 0})
 
     # transport efficiency
     for domain in [negative_electrode, separator, positive_electrode]:
@@ -229,12 +227,6 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
 
     def _arrhenius(Ea, T):
         return exp(Ea / constants.R * (1 / T_ref - 1 / T))
-
-    def _entropic_change(sto, c_s_max, dUdT, constant=False):
-        if constant:
-            return dUdT
-        else:
-            return dUdT(sto)
 
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
@@ -286,25 +278,10 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 )
 
             # entropic change
-            dUdT = pybamm_dict[
-                phase_domain_pre_name + "entropic change coefficient [V.K-1]"
-            ]
-            if callable(dUdT):
+            dUdT = pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"]
+            if isinstance(dUdT, tuple):
                 pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(_entropic_change, dUdT=dUdT)
-                )
-            elif isinstance(dUdT, tuple):
-                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(
-                        _entropic_change,
-                        dUdT=partial(
-                            _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
-                        ),
-                    )
-                )
-            else:
-                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(_entropic_change, dUdT=dUdT, constant=True)
+                    partial(_interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1])
                 )
 
             # reaction rate
@@ -442,6 +419,10 @@ def _get_pybamm_name(pybamm_name, domain):
         pybamm_name = domain.short_pre_name + pybamm_name_lower
     elif pybamm_name.startswith("OCP"):
         pybamm_name = domain.pre_name + pybamm_name
+    elif pybamm_name.startswith("Entropic change"):
+        pybamm_name = domain.pre_name + pybamm_name.replace(
+            "Entropic change coefficient", "OCP entropic change"
+        )
     elif pybamm_name.startswith("Cation transference number"):
         pybamm_name = pybamm_name
     elif domain.pre_name != "":

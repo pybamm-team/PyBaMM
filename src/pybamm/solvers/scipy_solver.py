@@ -42,12 +42,12 @@ class ScipySolver(pybamm.BaseSolver):
             atol=atol,
             extrap_tol=extrap_tol,
         )
-        self.ode_solver = True
+        self._ode_solver = True
         self.extra_options = extra_options or {}
         self.name = f"Scipy solver ({method})"
         pybamm.citations.register("Virtanen2020")
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -150,7 +150,7 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event,
                 y_event,
                 termination,
-                sensitivities=bool(model.calculate_sensitivities),
+                all_sensitivities=bool(model.calculate_sensitivities),
             )
             sol.integration_time = integration_time
             return sol

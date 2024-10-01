@@ -13,7 +13,8 @@ from scipy.linalg import bandwidth
 import importlib
 import warnings
 
-if pybamm.have_jax():
+
+if pybamm.has_jax():
     import jax
     from jax import numpy as jnp
 
@@ -28,15 +29,16 @@ if idaklu_spec is not None:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         if idaklu_spec.loader:
             idaklu_spec.loader.exec_module(idaklu)
-    except ImportError:  # pragma: no cover
+    except ImportError as e:  # pragma: no cover
+        print(f"Error loading idaklu: {e}")
         idaklu_spec = None
 
 
-def have_idaklu():
+def has_idaklu():
     return idaklu_spec is not None
 
 
-def have_iree():
+def has_iree():
     try:
         import iree.compiler  # noqa: F401
 
@@ -77,8 +79,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
             options = {
                 # Print statistics of the solver after every solve
                 "print_stats": False,
-                # Number of threads available for OpenMP
+                # Number of threads available for OpenMP (must be greater than or equal to `num_solvers`)
                 "num_threads": 1,
+                # Number of solvers to use in parallel (for solving multiple sets of input parameters in parallel)
+                "num_solvers": num_threads,
                 # Evaluation engine to use for jax, can be 'jax'(native) or 'iree'
                 "jax_evaluator": "jax",
                 ## Linear solver interface
@@ -181,6 +185,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "precon_half_bandwidth": 5,
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
+            "num_solvers": 1,
             "jax_evaluator": "jax",
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
@@ -208,6 +213,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if options is None:
             options = default_options
         else:
+            if "num_threads" in options and "num_solvers" not in options:
+                options["num_solvers"] = options["num_threads"]
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
@@ -232,6 +239,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             output_variables,
         )
         self.name = "IDA KLU solver"
+        self._supports_interp = True
 
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
@@ -287,7 +295,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if ics_only:
             return base_set_up_return
 
+        if model.convert_to_format not in ["casadi", "jax"]:
+            msg = (
+                "The python-idaklu solver has been deprecated. "
+                "To use the IDAKLU solver set `convert_to_format = 'casadi'`, or `jax`"
+                " if using IREE."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+
         if model.convert_to_format == "jax":
+            if self._options["jax_evaluator"] != "iree":
+                raise pybamm.SolverError(
+                    "Unsupported evaluation engine for convert_to_format="
+                    f"{model.convert_to_format} "
+                    f"(jax_evaluator={self._options['jax_evaluator']})"
+                )
             mass_matrix = model.mass_matrix.entries.toarray()
         elif model.convert_to_format == "casadi":
             if self._options["jacobian"] == "dense":
@@ -295,19 +317,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
             else:
                 mass_matrix = casadi.DM(model.mass_matrix.entries)
         else:
-            mass_matrix = model.mass_matrix.entries
+            raise pybamm.SolverError(
+                "Unsupported option for convert_to_format="
+                f"{model.convert_to_format} "
+            )
 
         # construct residuals function by binding inputs
         if model.convert_to_format == "casadi":
             # TODO: do we need densify here?
             rhs_algebraic = model.rhs_algebraic_eval
-        else:
-
-            def resfn(t, y, inputs, ydot):
-                return (
-                    model.rhs_algebraic_eval(t, y, inputs_to_dict(inputs)).flatten()
-                    - mass_matrix @ ydot
-                )
 
         if not model.use_jacobian:
             raise pybamm.SolverError("KLU requires the Jacobian")
@@ -382,52 +400,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                         )
                     )
 
-        elif self._options["jax_evaluator"] == "jax":
-            t0 = 0 if t_eval is None else t_eval[0]
-            jac_y0_t0 = model.jac_rhs_algebraic_eval(t0, y0, inputs_dict)
-            if sparse.issparse(jac_y0_t0):
-
-                def jacfn(t, y, inputs, cj):
-                    j = (
-                        model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
-                        - cj * mass_matrix
-                    )
-                    return j
-
-            else:
-
-                def jacfn(t, y, inputs, cj):
-                    jac_eval = (
-                        model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
-                        - cj * mass_matrix
-                    )
-                    return sparse.csr_matrix(jac_eval)
-
-            class SundialsJacobian:
-                def __init__(self):
-                    self.J = None
-
-                    random = np.random.random(size=y0.size)
-                    J = jacfn(10, random, inputs, 20)
-                    self.nnz = J.nnz  # hoping nnz remains constant...
-
-                def jac_res(self, t, y, inputs, cj):
-                    # must be of form j_res = (dr/dy) - (cj) (dr/dy')
-                    # cj is just the input parameter
-                    # see p68 of the ida_guide.pdf for more details
-                    self.J = jacfn(t, y, inputs, cj)
-
-                def get_jac_data(self):
-                    return self.J.data
-
-                def get_jac_row_vals(self):
-                    return self.J.indices
-
-                def get_jac_col_ptrs(self):
-                    return self.J.indptr
-
-            jac_class = SundialsJacobian()
-
         num_of_events = len(model.terminate_events_eval)
 
         # rootfn needs to return an array of length num_of_events
@@ -444,15 +416,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     )
                 ],
             )
-        elif self._options["jax_evaluator"] == "jax":
-
-            def rootfn(t, y, inputs):
-                new_inputs = inputs_to_dict(inputs)
-                return_root = np.array(
-                    [event(t, y, new_inputs) for event in model.terminate_events_eval]
-                ).reshape(-1)
-
-                return return_root
 
         # get ids of rhs and algebraic variables
         if model.convert_to_format == "casadi":
@@ -479,301 +442,242 @@ class IDAKLUSolver(pybamm.BaseSolver):
             else:
                 sensfn = model.jacp_rhs_algebraic_eval
 
-        else:
-            # for the python solver we give it the full sensitivity equations
-            # required by IDAS
-            def sensfn(resvalS, t, y, inputs, yp, yS, ypS):
-                """
-                this function evaluates the sensitivity equations required by IDAS,
-                returning them in resvalS, which is preallocated as a numpy array of
-                size (np, n), where n is the number of states and np is the number of
-                parameters
-
-                The equations returned are:
-
-                 dF/dy * s_i + dF/dyd * sd_i + dFdp_i for i in range(np)
-
-                Parameters
-                ----------
-                resvalS: ndarray of shape (np, n)
-                    returns the sensitivity equations in this preallocated array
-                t: number
-                    time value
-                y: ndarray of shape (n)
-                    current state vector
-                yp: list (np) of ndarray of shape (n)
-                    current time derivative of state vector
-                yS: list (np) of ndarray of shape (n)
-                    current state vector of sensitivity equations
-                ypS: list (np) of ndarray of shape (n)
-                    current time derivative of state vector of sensitivity equations
-
-                """
-
-                new_inputs = inputs_to_dict(inputs)
-                dFdy = model.jac_rhs_algebraic_eval(t, y, new_inputs)
-                dFdyd = mass_matrix
-                dFdp = model.jacp_rhs_algebraic_eval(t, y, new_inputs)
-
-                for i, dFdp_i in enumerate(dFdp.values()):
-                    resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
-
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0.size)
 
         rtol = self.rtol
 
-        if model.convert_to_format == "casadi" or (
+        if model.convert_to_format == "casadi":
+            # Serialize casadi functions
+            idaklu_solver_fcn = idaklu.create_casadi_solver_group
+            rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
+            jac_times_cjmass = idaklu.generate_function(jac_times_cjmass.serialize())
+            jac_rhs_algebraic_action = idaklu.generate_function(
+                jac_rhs_algebraic_action.serialize()
+            )
+            rootfn = idaklu.generate_function(rootfn.serialize())
+            mass_action = idaklu.generate_function(mass_action.serialize())
+            sensfn = idaklu.generate_function(sensfn.serialize())
+        elif (
             model.convert_to_format == "jax"
             and self._options["jax_evaluator"] == "iree"
         ):
-            if model.convert_to_format == "casadi":
-                # Serialize casadi functions
-                idaklu_solver_fcn = idaklu.create_casadi_solver
-                rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
-                jac_times_cjmass = idaklu.generate_function(
-                    jac_times_cjmass.serialize()
+            # Convert Jax functions to MLIR (also, demote to single precision)
+            idaklu_solver_fcn = idaklu.create_iree_solver_group
+            pybamm.demote_expressions_to_32bit = True
+            if pybamm.demote_expressions_to_32bit:
+                warnings.warn(
+                    "Demoting expressions to 32-bit for MLIR conversion",
+                    stacklevel=2,
                 )
-                jac_rhs_algebraic_action = idaklu.generate_function(
-                    jac_rhs_algebraic_action.serialize()
+                jnpfloat = jnp.float32
+            else:  # pragma: no cover
+                jnpfloat = jnp.float64
+                raise pybamm.SolverError(
+                    "Demoting expressions to 32-bit is required for MLIR conversion"
+                    " at this time"
                 )
-                rootfn = idaklu.generate_function(rootfn.serialize())
-                mass_action = idaklu.generate_function(mass_action.serialize())
-                sensfn = idaklu.generate_function(sensfn.serialize())
-            elif (
-                model.convert_to_format == "jax"
-                and self._options["jax_evaluator"] == "iree"
-            ):
-                # Convert Jax functions to MLIR (also, demote to single precision)
-                idaklu_solver_fcn = idaklu.create_iree_solver
-                pybamm.demote_expressions_to_32bit = True
-                if pybamm.demote_expressions_to_32bit:
-                    warnings.warn(
-                        "Demoting expressions to 32-bit for MLIR conversion",
-                        stacklevel=2,
+
+            # input arguments (used for lowering)
+            t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnpfloat))
+            y0 = self._demote_64_to_32(model.y0)
+            inputs0 = self._demote_64_to_32(inputs_to_dict(inputs))
+            cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnpfloat))  # array
+            v0 = jnp.zeros(model.len_rhs_and_alg, jnpfloat)
+            mass_matrix = model.mass_matrix.entries.toarray()
+            mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
+
+            # rhs_algebraic
+            rhs_algebraic_demoted = model.rhs_algebraic_eval
+            rhs_algebraic_demoted._demote_constants()
+
+            def fcn_rhs_algebraic(t, y, inputs):
+                # function wraps an expression tree (and names MLIR module)
+                return rhs_algebraic_demoted(t, y, inputs)
+
+            rhs_algebraic = self._make_iree_function(
+                fcn_rhs_algebraic, t_eval, y0, inputs0
+            )
+
+            # jac_times_cjmass
+            jac_rhs_algebraic_demoted = rhs_algebraic_demoted.get_jacobian()
+
+            def fcn_jac_times_cjmass(t, y, p, cj):
+                return jac_rhs_algebraic_demoted(t, y, p) - cj * mass_matrix_demoted
+
+            sparse_eval = sparse.csc_matrix(
+                fcn_jac_times_cjmass(t_eval, y0, inputs0, cj)
+            )
+            jac_times_cjmass_nnz = sparse_eval.nnz
+            jac_times_cjmass_colptrs = sparse_eval.indptr
+            jac_times_cjmass_rowvals = sparse_eval.indices
+            jac_bw_lower, jac_bw_upper = bandwidth(
+                sparse_eval.todense()
+            )  # potentially slow
+            if jac_bw_upper <= 1:
+                jac_bw_upper = jac_bw_lower - 1
+            if jac_bw_lower <= 1:
+                jac_bw_lower = jac_bw_upper + 1
+            coo = sparse_eval.tocoo()  # convert to COOrdinate format for indexing
+
+            def fcn_jac_times_cjmass_sparse(t, y, p, cj):
+                return fcn_jac_times_cjmass(t, y, p, cj)[coo.row, coo.col]
+
+            jac_times_cjmass = self._make_iree_function(
+                fcn_jac_times_cjmass_sparse, t_eval, y0, inputs0, cj
+            )
+
+            # Mass action
+            def fcn_mass_action(v):
+                return mass_matrix_demoted @ v
+
+            mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
+            mass_action = self._make_iree_function(mass_action_demoted, v0)
+
+            # rootfn
+            for ix, _ in enumerate(model.terminate_events_eval):
+                model.terminate_events_eval[ix]._demote_constants()
+
+            def fcn_rootfn(t, y, inputs):
+                return jnp.array(
+                    [event(t, y, inputs) for event in model.terminate_events_eval],
+                    dtype=jnpfloat,
+                ).reshape(-1)
+
+            def fcn_rootfn_demoted(t, y, inputs):
+                return self._demote_64_to_32(fcn_rootfn)(t, y, inputs)
+
+            rootfn = self._make_iree_function(fcn_rootfn_demoted, t_eval, y0, inputs0)
+
+            # jac_rhs_algebraic_action
+            jac_rhs_algebraic_action_demoted = (
+                rhs_algebraic_demoted.get_jacobian_action()
+            )
+
+            def fcn_jac_rhs_algebraic_action(
+                t, y, p, v
+            ):  # sundials calls (t, y, inputs, v)
+                return jac_rhs_algebraic_action_demoted(
+                    t, y, v, p
+                )  # jvp calls (t, y, v, inputs)
+
+            jac_rhs_algebraic_action = self._make_iree_function(
+                fcn_jac_rhs_algebraic_action, t_eval, y0, inputs0, v0
+            )
+
+            # sensfn
+            if model.jacp_rhs_algebraic_eval is None:
+                sensfn = idaklu.IREEBaseFunctionType()  # empty equation
+            else:
+                sensfn_demoted = rhs_algebraic_demoted.get_sensitivities()
+
+                def fcn_sensfn(t, y, p):
+                    return sensfn_demoted(t, y, p)
+
+                sensfn = self._make_iree_function(
+                    fcn_sensfn, t_eval, jnp.zeros_like(y0), inputs0
+                )
+
+            # output_variables
+            self.var_idaklu_fcns = []
+            self.dvar_dy_idaklu_fcns = []
+            self.dvar_dp_idaklu_fcns = []
+            for key in self.output_variables:
+                fcn = self.computed_var_fcns[key]
+                fcn._demote_constants()
+                self.var_idaklu_fcns.append(
+                    self._make_iree_function(
+                        lambda t, y, p: fcn(t, y, p),  # noqa: B023
+                        t_eval,
+                        y0,
+                        inputs0,
                     )
-                    jnpfloat = jnp.float32
-                else:  # pragma: no cover
-                    jnpfloat = jnp.float64
-                    raise pybamm.SolverError(
-                        "Demoting expressions to 32-bit is required for MLIR conversion"
-                        " at this time"
-                    )
-
-                # input arguments (used for lowering)
-                t_eval = self._demote_64_to_32(jnp.array([0.0], dtype=jnpfloat))
-                y0 = self._demote_64_to_32(model.y0)
-                inputs0 = self._demote_64_to_32(inputs_to_dict(inputs))
-                cj = self._demote_64_to_32(jnp.array([1.0], dtype=jnpfloat))  # array
-                v0 = jnp.zeros(model.len_rhs_and_alg, jnpfloat)
-                mass_matrix = model.mass_matrix.entries.toarray()
-                mass_matrix_demoted = self._demote_64_to_32(mass_matrix)
-
-                # rhs_algebraic
-                rhs_algebraic_demoted = model.rhs_algebraic_eval
-                rhs_algebraic_demoted._demote_constants()
-
-                def fcn_rhs_algebraic(t, y, inputs):
-                    # function wraps an expression tree (and names MLIR module)
-                    return rhs_algebraic_demoted(t, y, inputs)
-
-                rhs_algebraic = self._make_iree_function(
-                    fcn_rhs_algebraic, t_eval, y0, inputs0
                 )
-
-                # jac_times_cjmass
-                jac_rhs_algebraic_demoted = rhs_algebraic_demoted.get_jacobian()
-
-                def fcn_jac_times_cjmass(t, y, p, cj):
-                    return jac_rhs_algebraic_demoted(t, y, p) - cj * mass_matrix_demoted
-
-                sparse_eval = sparse.csc_matrix(
-                    fcn_jac_times_cjmass(t_eval, y0, inputs0, cj)
-                )
-                jac_times_cjmass_nnz = sparse_eval.nnz
-                jac_times_cjmass_colptrs = sparse_eval.indptr
-                jac_times_cjmass_rowvals = sparse_eval.indices
-                jac_bw_lower, jac_bw_upper = bandwidth(
-                    sparse_eval.todense()
-                )  # potentially slow
-                if jac_bw_upper <= 1:
-                    jac_bw_upper = jac_bw_lower - 1
-                if jac_bw_lower <= 1:
-                    jac_bw_lower = jac_bw_upper + 1
-                coo = sparse_eval.tocoo()  # convert to COOrdinate format for indexing
-
-                def fcn_jac_times_cjmass_sparse(t, y, p, cj):
-                    return fcn_jac_times_cjmass(t, y, p, cj)[coo.row, coo.col]
-
-                jac_times_cjmass = self._make_iree_function(
-                    fcn_jac_times_cjmass_sparse, t_eval, y0, inputs0, cj
-                )
-
-                # Mass action
-                def fcn_mass_action(v):
-                    return mass_matrix_demoted @ v
-
-                mass_action_demoted = self._demote_64_to_32(fcn_mass_action)
-                mass_action = self._make_iree_function(mass_action_demoted, v0)
-
-                # rootfn
-                for ix, _ in enumerate(model.terminate_events_eval):
-                    model.terminate_events_eval[ix]._demote_constants()
-
-                def fcn_rootfn(t, y, inputs):
-                    return jnp.array(
-                        [event(t, y, inputs) for event in model.terminate_events_eval],
-                        dtype=jnpfloat,
-                    ).reshape(-1)
-
-                def fcn_rootfn_demoted(t, y, inputs):
-                    return self._demote_64_to_32(fcn_rootfn)(t, y, inputs)
-
-                rootfn = self._make_iree_function(
-                    fcn_rootfn_demoted, t_eval, y0, inputs0
-                )
-
-                # jac_rhs_algebraic_action
-                jac_rhs_algebraic_action_demoted = (
-                    rhs_algebraic_demoted.get_jacobian_action()
-                )
-
-                def fcn_jac_rhs_algebraic_action(
-                    t, y, p, v
-                ):  # sundials calls (t, y, inputs, v)
-                    return jac_rhs_algebraic_action_demoted(
-                        t, y, v, p
-                    )  # jvp calls (t, y, v, inputs)
-
-                jac_rhs_algebraic_action = self._make_iree_function(
-                    fcn_jac_rhs_algebraic_action, t_eval, y0, inputs0, v0
-                )
-
-                # sensfn
-                if model.jacp_rhs_algebraic_eval is None:
-                    sensfn = idaklu.IREEBaseFunctionType()  # empty equation
-                else:
-                    sensfn_demoted = rhs_algebraic_demoted.get_sensitivities()
-
-                    def fcn_sensfn(t, y, p):
-                        return sensfn_demoted(t, y, p)
-
-                    sensfn = self._make_iree_function(
-                        fcn_sensfn, t_eval, jnp.zeros_like(y0), inputs0
-                    )
-
-                # output_variables
-                self.var_idaklu_fcns = []
-                self.dvar_dy_idaklu_fcns = []
-                self.dvar_dp_idaklu_fcns = []
-                for key in self.output_variables:
-                    fcn = self.computed_var_fcns[key]
-                    fcn._demote_constants()
-                    self.var_idaklu_fcns.append(
+                # Convert derivative functions for sensitivities
+                if (len(inputs) > 0) and (model.calculate_sensitivities):
+                    dvar_dy = fcn.get_jacobian()
+                    self.dvar_dy_idaklu_fcns.append(
                         self._make_iree_function(
-                            lambda t, y, p: fcn(t, y, p),  # noqa: B023
+                            lambda t, y, p: dvar_dy(t, y, p),  # noqa: B023
+                            t_eval,
+                            y0,
+                            inputs0,
+                            sparse_index=True,
+                        )
+                    )
+                    dvar_dp = fcn.get_sensitivities()
+                    self.dvar_dp_idaklu_fcns.append(
+                        self._make_iree_function(
+                            lambda t, y, p: dvar_dp(t, y, p),  # noqa: B023
                             t_eval,
                             y0,
                             inputs0,
                         )
                     )
-                    # Convert derivative functions for sensitivities
-                    if (len(inputs) > 0) and (model.calculate_sensitivities):
-                        dvar_dy = fcn.get_jacobian()
-                        self.dvar_dy_idaklu_fcns.append(
-                            self._make_iree_function(
-                                lambda t, y, p: dvar_dy(t, y, p),  # noqa: B023
-                                t_eval,
-                                y0,
-                                inputs0,
-                                sparse_index=True,
-                            )
-                        )
-                        dvar_dp = fcn.get_sensitivities()
-                        self.dvar_dp_idaklu_fcns.append(
-                            self._make_iree_function(
-                                lambda t, y, p: dvar_dp(t, y, p),  # noqa: B023
-                                t_eval,
-                                y0,
-                                inputs0,
-                            )
-                        )
 
-                # Identify IREE library
-                iree_lib_path = os.path.join(iree.compiler.__path__[0], "_mlir_libs")
-                os.environ["IREE_COMPILER_LIB"] = os.path.join(
-                    iree_lib_path,
-                    next(f for f in os.listdir(iree_lib_path) if "IREECompiler" in f),
-                )
-
-                pybamm.demote_expressions_to_32bit = False
-            else:  # pragma: no cover
-                raise pybamm.SolverError(
-                    "Unsupported evaluation engine for convert_to_format='jax'"
-                )
-
-            self._setup = {
-                "solver_function": idaklu_solver_fcn,  # callable
-                "jac_bandwidth_upper": jac_bw_upper,  # int
-                "jac_bandwidth_lower": jac_bw_lower,  # int
-                "rhs_algebraic": rhs_algebraic,  # function
-                "jac_times_cjmass": jac_times_cjmass,  # function
-                "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,  # array
-                "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,  # array
-                "jac_times_cjmass_nnz": jac_times_cjmass_nnz,  # int
-                "jac_rhs_algebraic_action": jac_rhs_algebraic_action,  # function
-                "mass_action": mass_action,  # function
-                "sensfn": sensfn,  # function
-                "rootfn": rootfn,  # function
-                "num_of_events": num_of_events,  # int
-                "ids": ids,  # array
-                "sensitivity_names": sensitivity_names,
-                "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
-                "output_variables": self.output_variables,
-                "var_fcns": self.computed_var_fcns,
-                "var_idaklu_fcns": self.var_idaklu_fcns,
-                "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
-                "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
-            }
-
-            solver = self._setup["solver_function"](
-                number_of_states=len(y0),
-                number_of_parameters=self._setup["number_of_sensitivity_parameters"],
-                rhs_alg=self._setup["rhs_algebraic"],
-                jac_times_cjmass=self._setup["jac_times_cjmass"],
-                jac_times_cjmass_colptrs=self._setup["jac_times_cjmass_colptrs"],
-                jac_times_cjmass_rowvals=self._setup["jac_times_cjmass_rowvals"],
-                jac_times_cjmass_nnz=self._setup["jac_times_cjmass_nnz"],
-                jac_bandwidth_lower=jac_bw_lower,
-                jac_bandwidth_upper=jac_bw_upper,
-                jac_action=self._setup["jac_rhs_algebraic_action"],
-                mass_action=self._setup["mass_action"],
-                sens=self._setup["sensfn"],
-                events=self._setup["rootfn"],
-                number_of_events=self._setup["num_of_events"],
-                rhs_alg_id=self._setup["ids"],
-                atol=atol,
-                rtol=rtol,
-                inputs=len(inputs),
-                var_fcns=self._setup["var_idaklu_fcns"],
-                dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
-                dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
-                options=self._options,
+            # Identify IREE library
+            iree_lib_path = os.path.join(iree.compiler.__path__[0], "_mlir_libs")
+            os.environ["IREE_COMPILER_LIB"] = os.path.join(
+                iree_lib_path,
+                next(f for f in os.listdir(iree_lib_path) if "IREECompiler" in f),
             )
 
-            self._setup["solver"] = solver
-        else:
-            self._setup = {
-                "resfn": resfn,
-                "jac_class": jac_class,
-                "sensfn": sensfn,
-                "rootfn": rootfn,
-                "num_of_events": num_of_events,
-                "use_jac": 1,
-                "ids": ids,
-                "sensitivity_names": sensitivity_names,
-                "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
-            }
+            pybamm.demote_expressions_to_32bit = False
+        else:  # pragma: no cover
+            raise pybamm.SolverError(
+                "Unsupported evaluation engine for convert_to_format='jax'"
+            )
+
+        self._setup = {
+            "solver_function": idaklu_solver_fcn,  # callable
+            "jac_bandwidth_upper": jac_bw_upper,  # int
+            "jac_bandwidth_lower": jac_bw_lower,  # int
+            "rhs_algebraic": rhs_algebraic,  # function
+            "jac_times_cjmass": jac_times_cjmass,  # function
+            "jac_times_cjmass_colptrs": jac_times_cjmass_colptrs,  # array
+            "jac_times_cjmass_rowvals": jac_times_cjmass_rowvals,  # array
+            "jac_times_cjmass_nnz": jac_times_cjmass_nnz,  # int
+            "jac_rhs_algebraic_action": jac_rhs_algebraic_action,  # function
+            "mass_action": mass_action,  # function
+            "sensfn": sensfn,  # function
+            "rootfn": rootfn,  # function
+            "num_of_events": num_of_events,  # int
+            "ids": ids,  # array
+            "sensitivity_names": sensitivity_names,
+            "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
+            "output_variables": self.output_variables,
+            "var_fcns": self.computed_var_fcns,
+            "var_idaklu_fcns": self.var_idaklu_fcns,
+            "dvar_dy_idaklu_fcns": self.dvar_dy_idaklu_fcns,
+            "dvar_dp_idaklu_fcns": self.dvar_dp_idaklu_fcns,
+        }
+
+        solver = self._setup["solver_function"](
+            number_of_states=len(y0),
+            number_of_parameters=self._setup["number_of_sensitivity_parameters"],
+            rhs_alg=self._setup["rhs_algebraic"],
+            jac_times_cjmass=self._setup["jac_times_cjmass"],
+            jac_times_cjmass_colptrs=self._setup["jac_times_cjmass_colptrs"],
+            jac_times_cjmass_rowvals=self._setup["jac_times_cjmass_rowvals"],
+            jac_times_cjmass_nnz=self._setup["jac_times_cjmass_nnz"],
+            jac_bandwidth_lower=jac_bw_lower,
+            jac_bandwidth_upper=jac_bw_upper,
+            jac_action=self._setup["jac_rhs_algebraic_action"],
+            mass_action=self._setup["mass_action"],
+            sens=self._setup["sensfn"],
+            events=self._setup["rootfn"],
+            number_of_events=self._setup["num_of_events"],
+            rhs_alg_id=self._setup["ids"],
+            atol=atol,
+            rtol=rtol,
+            inputs=len(inputs),
+            var_fcns=self._setup["var_idaklu_fcns"],
+            dvar_dy_fcns=self._setup["dvar_dy_idaklu_fcns"],
+            dvar_dp_fcns=self._setup["dvar_dp_idaklu_fcns"],
+            options=self._options,
+        )
+
+        self._setup["solver"] = solver
 
         return base_set_up_return
 
@@ -828,7 +732,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
         return pybamm.EvaluatorJax._demote_64_to_32(x)
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    @property
+    def supports_parallel_solve(self):
+        return True
+
+    @property
+    def requires_explicit_sensitivities(self):
+        return False
+
+    def _integrate(self, model, t_eval, inputs_list=None, t_interp=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -837,59 +749,58 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
         t_eval : numeric type
-            The times at which to compute the solution
-        inputs_dict : dict, optional
+            The times at which to stop the integration due to a discontinuity in time.
+        inputs_list: list of dict, optional
             Any input parameters to pass to the model when solving.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
+            which returns the adaptive time-stepping times.
         """
-        inputs_dict = inputs_dict or {}
-        # stack inputs
-        if inputs_dict:
-            arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs = np.vstack(arrays_to_stack)
+        inputs_list = inputs_list or [{}]
+
+        # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
+        if inputs_list and inputs_list[0]:
+            inputs = np.vstack(
+                [
+                    np.hstack([np.array(x).reshape(-1) for x in inputs_dict.values()])
+                    for inputs_dict in inputs_list
+                ]
+            )
         else:
             inputs = np.array([[]])
 
-        y0full = model.y0full
-        ydot0full = model.ydot0full
+        # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
+        # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
+        # different initial conditions for different inputs (see https://github.com/pybamm-team/PyBaMM/pull/4260). For now we just repeat the same initial conditions for each input
+        y0full = np.vstack([model.y0full] * len(inputs_list))
+        ydot0full = np.vstack([model.ydot0full] * len(inputs_list))
 
         atol = getattr(model, "atol", self.atol)
         atol = self._check_atol_type(atol, y0full.size)
-        rtol = self.rtol
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi" or (
             model.convert_to_format == "jax"
             and self._options["jax_evaluator"] == "iree"
         ):
-            sol = self._setup["solver"].solve(
+            solns = self._setup["solver"].solve(
                 t_eval,
+                t_interp,
                 y0full,
                 ydot0full,
                 inputs,
             )
-        else:
-            sol = idaklu.solve_python(
-                t_eval,
-                y0full,
-                ydot0full,
-                self._setup["resfn"],
-                self._setup["jac_class"].jac_res,
-                self._setup["sensfn"],
-                self._setup["jac_class"].get_jac_data,
-                self._setup["jac_class"].get_jac_row_vals,
-                self._setup["jac_class"].get_jac_col_ptrs,
-                self._setup["jac_class"].nnz,
-                self._setup["rootfn"],
-                self._setup["num_of_events"],
-                self._setup["use_jac"],
-                self._setup["ids"],
-                atol,
-                rtol,
-                inputs,
-                self._setup["number_of_sensitivity_parameters"],
-            )
+        else:  # pragma: no cover
+            # Shouldn't ever reach this point
+            raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
         integration_time = timer.time()
 
+        return [
+            self._post_process_solution(soln, model, integration_time, inputs_dict)
+            for soln, inputs_dict in zip(solns, inputs_list)
+        ]
+
+    def _post_process_solution(self, sol, model, integration_time, inputs_dict):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
         ]
@@ -919,13 +830,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             yS_out = False
 
         # 0 = solved for all t_eval
-        if sol.flag == 0:
-            termination = "final time"
         # 2 = found root(s)
-        elif sol.flag == 2:
+        if sol.flag == 2:
             termination = "event"
+        elif sol.flag >= 0:
+            termination = "final time"
         else:
-            raise pybamm.SolverError("idaklu solver failed")
+            raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
 
         newsol = pybamm.Solution(
             sol.t,
@@ -935,10 +846,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             np.array([sol.t[-1]]),
             np.transpose(y_event)[:, np.newaxis],
             termination,
-            sensitivities=yS_out,
+            all_sensitivities=yS_out,
         )
         newsol.integration_time = integration_time
         if not self.output_variables:
+            # print((newsol.y).shape)
             return newsol
 
         # Populate variables and sensititivies dictionaries directly
@@ -1080,7 +992,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         rhs0 = rhs_alg0[: model.len_rhs]
 
-        # for the differential terms, ydot = -M^-1 * (rhs)
+        # for the differential terms, ydot = M^-1 * (rhs)
         ydot0[: model.len_rhs] = model.mass_matrix_inv.entries @ rhs0
 
         return ydot0
@@ -1138,6 +1050,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         *,
         output_variables=None,
         calculate_sensitivities=True,
+        t_interp=None,
     ):
         """JAXify the solver object
 
@@ -1149,12 +1062,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model to be solved
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None, the times in the model
-            are used.
+            The times at which to stop the integration due to a discontinuity in time.
         output_variables : list of str, optional
             The variables to be returned. If None, all variables in the model are used.
         calculate_sensitivities : bool, optional
             Whether to calculate sensitivities. Default is True.
+        t_interp : None, list or ndarray, optional
+            The times (in seconds) at which to interpolate the solution. Defaults to `None`,
+            which returns the adaptive time-stepping times.
         """
         obj = pybamm.IDAKLUJax(
             self,  # IDAKLU solver instance
@@ -1162,5 +1077,43 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=calculate_sensitivities,
+            t_interp=t_interp,
         )
         return obj
+
+    @staticmethod
+    def _solver_flag(flag):
+        flags = {
+            99: "IDA_WARNING: IDASolve succeeded but an unusual situation occurred.",
+            2: "IDA_ROOT_RETURN: IDASolve succeeded and found one or more roots.",
+            1: "IDA_TSTOP_RETURN: IDASolve succeeded by reaching the specified stopping point.",
+            0: "IDA_SUCCESS: Successful function return.",
+            -1: "IDA_TOO_MUCH_WORK: The solver took mxstep internal steps but could not reach tout.",
+            -2: "IDA_TOO_MUCH_ACC: The solver could not satisfy the accuracy demanded by the user for some internal step.",
+            -3: "IDA_ERR_FAIL: Error test failures occurred too many times during one internal time step or minimum step size was reached.",
+            -4: "IDA_CONV_FAIL: Convergence test failures occurred too many times during one internal time step or minimum step size was reached.",
+            -5: "IDA_LINIT_FAIL: The linear solver's initialization function failed.",
+            -6: "IDA_LSETUP_FAIL: The linear solver's setup function failed in an unrecoverable manner.",
+            -7: "IDA_LSOLVE_FAIL: The linear solver's solve function failed in an unrecoverable manner.",
+            -8: "IDA_RES_FAIL: The user-provided residual function failed in an unrecoverable manner.",
+            -9: "IDA_REP_RES_FAIL: The user-provided residual function repeatedly returned a recoverable error flag, but the solver was unable to recover.",
+            -10: "IDA_RTFUNC_FAIL: The rootfinding function failed in an unrecoverable manner.",
+            -11: "IDA_CONSTR_FAIL: The inequality constraints were violated and the solver was unable to recover.",
+            -12: "IDA_FIRST_RES_FAIL: The user-provided residual function failed recoverably on the first call.",
+            -13: "IDA_LINESEARCH_FAIL: The line search failed.",
+            -14: "IDA_NO_RECOVERY: The residual function, linear solver setup function, or linear solver solve function had a recoverable failure, but IDACalcIC could not recover.",
+            -15: "IDA_NLS_INIT_FAIL: The nonlinear solver's init routine failed.",
+            -16: "IDA_NLS_SETUP_FAIL: The nonlinear solver's setup routine failed.",
+            -20: "IDA_MEM_NULL: The ida mem argument was NULL.",
+            -21: "IDA_MEM_FAIL: A memory allocation failed.",
+            -22: "IDA_ILL_INPUT: One of the function inputs is illegal.",
+            -23: "IDA_NO_MALLOC: The ida memory was not allocated by a call to IDAInit.",
+            -24: "IDA_BAD_EWT: Zero value of some error weight component.",
+            -25: "IDA_BAD_K: The k-th derivative is not available.",
+            -26: "IDA_BAD_T: The time t is outside the last step taken.",
+            -27: "IDA_BAD_DKY: The vector argument where derivative should be stored is NULL.",
+        }
+
+        flag_unknown = "Unknown IDA flag."
+
+        return flags.get(flag, flag_unknown)

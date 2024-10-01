@@ -34,6 +34,7 @@ class SolveModel:
     solver: pybamm.BaseSolver
     model: pybamm.BaseModel
     t_eval: np.ndarray
+    t_interp: np.ndarray | None
 
     def solve_setup(self, parameter, model_, option, value, solver_class):
         import importlib
@@ -51,8 +52,13 @@ class SolveModel:
         self.model = model_({option: value})
         c_rate = 1
         tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
+        if self.solver.supports_interp:
+            self.t_eval = np.array([0, tmax])
+            self.t_interp = None
+        else:
+            nb_points = 500
+            self.t_eval = np.linspace(0, tmax, nb_points)
+            self.t_interp = None
         geometry = self.model.default_geometry
 
         # load parameter values and process model and geometry
@@ -77,7 +83,7 @@ class SolveModel:
         disc.process_model(self.model)
 
     def solve_model(self, _model, _params):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeBuildModelLossActiveMaterial:
@@ -109,7 +115,7 @@ class TimeSolveLossActiveMaterial(SolveModel):
         )
 
     def time_solve_model(self, _model, _params, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeBuildModelLithiumPlating:
@@ -141,7 +147,7 @@ class TimeSolveLithiumPlating(SolveModel):
         )
 
     def time_solve_model(self, _model, _params, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeBuildModelSEI:
@@ -187,7 +193,7 @@ class TimeSolveSEI(SolveModel):
         SolveModel.solve_setup(self, "Marquis2019", model, "SEI", params, solver_class)
 
     def time_solve_model(self, _model, _params, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeBuildModelParticle:
@@ -229,7 +235,7 @@ class TimeSolveParticle(SolveModel):
         )
 
     def time_solve_model(self, _model, _params, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeBuildModelThermal:
@@ -261,7 +267,7 @@ class TimeSolveThermal(SolveModel):
         )
 
     def time_solve_model(self, _model, _params, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeBuildModelSurfaceForm:
@@ -299,4 +305,4 @@ class TimeSolveSurfaceForm(SolveModel):
         )
 
     def time_solve_model(self, _model, _params, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)

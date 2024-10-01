@@ -1,10 +1,4 @@
-#
-# Tests for the create_from_bpx function
-#
-
-
 import tempfile
-import unittest
 import json
 import pybamm
 import copy
@@ -12,7 +6,8 @@ import numpy as np
 import pytest
 
 
-class TestBPX(unittest.TestCase):
+class TestBPX:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.base = {
             "Header": {
@@ -155,6 +150,15 @@ class TestBPX(unittest.TestCase):
                 sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data, atol=1e-7
             )
 
+    def test_no_already_exists_in_BPX(self):
+        with tempfile.NamedTemporaryFile(
+            suffix="test.json", delete=False, mode="w"
+        ) as test_file:
+            json.dump(copy.copy(self.base), test_file)
+            test_file.flush()
+            params = pybamm.ParameterValues.create_from_bpx(test_file.name)
+            assert "check_already_exists" not in params.keys()
+
     def test_constant_functions(self):
         bpx_obj = copy.copy(self.base)
         bpx_obj["Parameterisation"]["Electrolyte"].update(
@@ -193,13 +197,13 @@ class TestBPX(unittest.TestCase):
                 stos = [0, 1]
                 T = 298.15
                 p_vals = [func(sto, T) for sto in stos]
-                self.assertEqual(p_vals[0], p_vals[1])
+                assert p_vals[0] == p_vals[1]
 
             for electrode in ["Negative", "Positive"]:
                 D = param[f"{electrode} particle diffusivity [m2.s-1]"]
                 dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"]
                 check_constant_output(D)
-                check_constant_output(dUdT)
+                assert dUdT == 1
 
             kappa = param["Electrolyte conductivity [S.m-1]"]
             De = param["Electrolyte diffusivity [m2.s-1]"]
@@ -234,7 +238,7 @@ class TestBPX(unittest.TestCase):
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
+            # write to a temporary file so we can
             # get the source later on using inspect.getsource
             # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
@@ -246,23 +250,21 @@ class TestBPX(unittest.TestCase):
             # correct child
             c = pybamm.Variable("c")
             kappa = param["Electrolyte conductivity [S.m-1]"](c, 298.15)
-            self.assertIsInstance(kappa, pybamm.Interpolant)
-            self.assertEqual(kappa.children[0], c)
+            assert isinstance(kappa, pybamm.Interpolant)
+            assert kappa.children[0] == c
             # Check other parameters give interpolants
             D = param["Electrolyte diffusivity [m2.s-1]"](c, 298.15)
-            self.assertIsInstance(D, pybamm.Interpolant)
+            assert isinstance(D, pybamm.Interpolant)
             for electrode in ["Negative", "Positive"]:
                 D = param[f"{electrode} particle diffusivity [m2.s-1]"](c, 298.15)
-                self.assertIsInstance(D, pybamm.Interpolant)
+                assert isinstance(D, pybamm.Interpolant)
                 OCP = param[f"{electrode} electrode OCP [V]"](c)
-                self.assertIsInstance(OCP, pybamm.Interpolant)
-                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](
-                    c, 10000
-                )
-                self.assertIsInstance(dUdT, pybamm.Interpolant)
+                assert isinstance(OCP, pybamm.Interpolant)
+                dUdT = param[f"{electrode} electrode OCP entropic change [V.K-1]"](c)
+                assert isinstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
-        with self.assertRaisesRegex(ValueError, "Target SOC"):
+        with pytest.raises(ValueError, match="Target SOC"):
             pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
 
     def test_bpx_arrhenius(self):
@@ -301,7 +303,7 @@ class TestBPX(unittest.TestCase):
 
             calc_ratio = pybamm.exp(Ea / pybamm.constants.R * (1 / T_ref - 1 / T)).value
 
-            self.assertAlmostEqual(eval_ratio, calc_ratio)
+            assert eval_ratio == pytest.approx(calc_ratio)
 
         param_keys = [
             "Electrolyte conductivity [S.m-1]",
@@ -450,7 +452,7 @@ class TestBPX(unittest.TestCase):
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
-            with self.assertRaisesRegex(NotImplementedError, "PyBaMM does not support"):
+            with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
                 pybamm.ParameterValues.create_from_bpx(tmp.name)
 
     def test_bpx_user_defined(self):
@@ -474,21 +476,11 @@ class TestBPX(unittest.TestCase):
 
             param = pybamm.ParameterValues.create_from_bpx(tmp.name)
 
-            self.assertEqual(param["User-defined scalar parameter"], 1.0)
+            assert param["User-defined scalar parameter"] == 1.0
             var = pybamm.Variable("var")
-            self.assertIsInstance(
+            assert isinstance(
                 param["User-defined parameter data"](var), pybamm.Interpolant
             )
-            self.assertIsInstance(
+            assert isinstance(
                 param["User-defined parameter data function"](var), pybamm.Power
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

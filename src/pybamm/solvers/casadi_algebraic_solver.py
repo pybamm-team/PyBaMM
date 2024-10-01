@@ -25,7 +25,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         super().__init__()
         self.tol = tol
         self.name = "CasADi algebraic solver"
-        self.algebraic_solver = True
+        self._algebraic_solver = True
         self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
 
@@ -37,7 +37,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -170,7 +170,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             model,
             inputs_dict,
             termination="final time",
-            sensitivities=explicit_sensitivities,
+            all_sensitivities=explicit_sensitivities,
         )
         sol.integration_time = integration_time
         return sol

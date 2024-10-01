@@ -2,7 +2,8 @@
 #define PYBAMM_IDAKLU_CASADI_SOLVER_HPP
 
 #include "common.hpp"
-#include "Solution.hpp"
+#include "SolutionData.hpp"
+
 
 /**
  * Abstract base class for solutions that can use different solvers and vector
@@ -24,13 +25,17 @@ public:
   ~IDAKLUSolver() = default;
 
   /**
-   * @brief Abstract solver method that returns a Solution class
+   * @brief Abstract solver method that executes the solver
    */
-  virtual Solution solve(
-    np_array t_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs) = 0;
+  virtual SolutionData solve(
+    const std::vector<realtype> &t_eval,
+    const std::vector<realtype> &t_interp,
+    const realtype *y0,
+    const realtype *yp0,
+    const realtype *inputs,
+    bool save_adaptive_steps,
+    bool save_interp_steps
+  ) = 0;
 
   /**
    * Abstract method to initialize the solver, once vectors and solver classes

@@ -19,7 +19,7 @@ endif()
 
 project(idaklu)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
@@ -82,6 +82,8 @@ pybind11_add_module(idaklu
   src/pybamm/solvers/c_solvers/idaklu/idaklu_solver.hpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.cpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolver.hpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverGroup.cpp
+  src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverGroup.hpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.inl
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP.hpp
   src/pybamm/solvers/c_solvers/idaklu/IDAKLUSolverOpenMP_solvers.cpp
@@ -91,10 +93,11 @@ pybind11_add_module(idaklu
   src/pybamm/solvers/c_solvers/idaklu/IdakluJax.cpp
   src/pybamm/solvers/c_solvers/idaklu/IdakluJax.hpp
   src/pybamm/solvers/c_solvers/idaklu/common.hpp
-  src/pybamm/solvers/c_solvers/idaklu/python.hpp
-  src/pybamm/solvers/c_solvers/idaklu/python.cpp
+  src/pybamm/solvers/c_solvers/idaklu/common.cpp
   src/pybamm/solvers/c_solvers/idaklu/Solution.cpp
   src/pybamm/solvers/c_solvers/idaklu/Solution.hpp
+  src/pybamm/solvers/c_solvers/idaklu/SolutionData.cpp
+  src/pybamm/solvers/c_solvers/idaklu/SolutionData.hpp
   src/pybamm/solvers/c_solvers/idaklu/Options.hpp
   src/pybamm/solvers/c_solvers/idaklu/Options.cpp
   # IDAKLU expressions / function evaluation [abstract]
@@ -138,6 +141,23 @@ set_target_properties(
   INSTALL_RPATH "${CASADI_DIR}"
   INSTALL_RPATH_USE_LINK_PATH TRUE
 )
+
+# openmp
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  execute_process(
+      COMMAND "brew" "--prefix"
+      OUTPUT_VARIABLE HOMEBREW_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (OpenMP_ROOT)
+    set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
+  else()
+    set(OpenMP_ROOT "${HOMEBREW_PREFIX}/opt/libomp")
+  endif()
+endif()
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials

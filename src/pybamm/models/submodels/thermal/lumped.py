@@ -49,9 +49,9 @@ class Lumped(BaseThermal):
 
         # Newton cooling, accounting for surface area to volume ratio
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        T_amb = variables["Volume-averaged ambient temperature [K]"]
+        T_surf = variables["Surface temperature [K]"]
         V = variables["Cell thermal volume [m3]"]
-        Q_cool_W = -self.param.h_total * (T_vol_av - T_amb) * self.param.A_cooling
+        Q_cool_W = -self.param.h_total * (T_vol_av - T_surf) * self.param.A_cooling
         Q_cool_vol_av = Q_cool_W / V
 
         # Contact resistance heating Q_cr
@@ -67,8 +67,8 @@ class Lumped(BaseThermal):
         variables.update(
             {
                 # Lumped cooling
-                "Lumped total cooling [W.m-3]": Q_cool_vol_av,
-                "Lumped total cooling [W]": Q_cool_W,
+                "Surface total cooling [W.m-3]": Q_cool_vol_av,
+                "Surface total cooling [W]": Q_cool_W,
                 # Contact resistance
                 "Lumped contact resistance heating [W.m-3]": Q_cr_vol_av,
                 "Lumped contact resistance heating [W]": Q_cr_W,
@@ -79,7 +79,7 @@ class Lumped(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
         Q_vol_av = variables["Volume-averaged total heating [W.m-3]"]
-        Q_cool_vol_av = variables["Lumped total cooling [W.m-3]"]
+        Q_cool_vol_av = variables["Surface total cooling [W.m-3]"]
         Q_cr_vol_av = variables["Lumped contact resistance heating [W.m-3]"]
         rho_c_p_eff_av = variables[
             "Volume-averaged effective heat capacity [J.K-1.m-3]"

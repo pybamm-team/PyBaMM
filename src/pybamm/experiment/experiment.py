@@ -40,7 +40,7 @@ class Experiment:
     def __init__(
         self,
         operating_conditions: list[str | tuple[str]],
-        period: str = "1 minute",
+        period: str | None = None,
         temperature: float | None = None,
         termination: list[str] | None = None,
     ):
