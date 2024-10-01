@@ -6,6 +6,7 @@ import numpy as np
 import pybamm
 from scipy.integrate import cumulative_trapezoid
 import xarray as xr
+import bisect
 
 
 class ProcessedVariable:
@@ -23,7 +24,7 @@ class ProcessedVariable:
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variables_casadi : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
@@ -71,7 +72,6 @@ class ProcessedVariable:
         self.base_eval_shape = self.base_variables[0].shape
         self.base_eval_size = self.base_variables[0].size
 
-        # xr_data_array is initialized
         self._xr_array_raw = None
         self._entries_raw = None
         self._entries_for_interp_raw = None
@@ -79,18 +79,16 @@ class ProcessedVariable:
 
     def initialise(self):
         if self.entries_raw_initialized:
-            entries = self._entries_raw
-            entries_for_interp = self._entries_for_interp_raw
-            coords = self._coords_raw
-        else:
-            entries = self.observe_raw()
+            return
 
-            t = self.t_pts
-            entries_for_interp, coords = self._interp_setup(entries, t)
+        entries = self.observe_raw()
 
-            self._entries_raw = entries
-            self._entries_for_interp_raw = entries_for_interp
-            self._coords_raw = coords
+        t = self.t_pts
+        entries_for_interp, coords = self._interp_setup(entries, t)
+
+        self._entries_raw = entries
+        self._entries_for_interp_raw = entries_for_interp
+        self._coords_raw = coords
 
     def observe_and_interp(self, t, fill_value):
         """
@@ -116,46 +114,59 @@ class ProcessedVariable:
         t = self.t_pts
 
         # For small number of points, use Python
-        if pybamm.has_idaklu() and (t.size > 1):
+        if pybamm.has_idaklu():
             entries = self._observe_raw_cpp()
         else:
             entries = self._observe_raw_python()
 
         return self._observe_postfix(entries, t)
 
-    def _setup_cpp_inputs(self):
+    def _setup_cpp_inputs(self, t, full_range):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
-        ts = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(self.all_ts)
-        ys = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(self.all_ys)
+        ts = self.all_ts
+        ys = self.all_ys
+        yps = self.all_yps
+        inputs = self.all_inputs_casadi
+        # Find the indices of the time points to observe
+        if full_range:
+            idxs = range(len(ts))
+        else:
+            idxs = _find_ts_indices(ts, t)
+
+        if isinstance(idxs, list):
+            # Extract the time points and inputs
+            ts = [ts[idx] for idx in idxs]
+            ys = [ys[idx] for idx in idxs]
+            if self.hermite_interpolation:
+                yps = [yps[idx] for idx in idxs]
+            inputs = [self.all_inputs_casadi[idx] for idx in idxs]
+
+        is_f_contiguous = _is_f_contiguous(ys)
+
+        ts = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(ts)
+        ys = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(ys)
         if self.hermite_interpolation:
-            yps = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(
-                self.all_yps
-            )
+            yps = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(yps)
         else:
             yps = None
+        inputs = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(inputs)
 
         # Generate the serialized C++ functions only once
         funcs_unique = {}
-        funcs = [None] * len(self.base_variables_casadi)
-
-        for i, vars in enumerate(self.base_variables_casadi):
+        funcs = [None] * len(idxs)
+        for i in range(len(idxs)):
+            vars = self.base_variables_casadi[idxs[i]]
             if vars not in funcs_unique:
                 funcs_unique[vars] = vars.serialize()
             funcs[i] = funcs_unique[vars]
-
-        inputs = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(
-            self.all_inputs_casadi
-        )
-
-        is_f_contiguous = _is_f_contiguous(self.all_ys)
 
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
     def _observe_hermite_cpp(self, t):
         pybamm.logger.debug("Observing and Hermite interpolating the variable in C++")
 
-        ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs()
+        ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs(t, full_range=False)
         shapes = self._shape(t)
         return pybamm.solvers.idaklu_solver.idaklu.observe_hermite_interp(
             t, ts, ys, yps, inputs, funcs, shapes
@@ -163,7 +174,10 @@ class ProcessedVariable:
 
     def _observe_raw_cpp(self):
         pybamm.logger.debug("Observing the variable raw data in C++")
-        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_cpp_inputs()
+        t = self.t_pts
+        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_cpp_inputs(
+            t, full_range=True
+        )
         shapes = self._shape(self.t_pts)
 
         return pybamm.solvers.idaklu_solver.idaklu.observe(
@@ -171,16 +185,16 @@ class ProcessedVariable:
         )
 
     def _observe_raw_python(self):
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def _observe_postfix(self, entries, t):
         return entries
 
     def _interp_setup(self, entries, t):
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def _shape(self, t):
-        pass  # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def _process_spatial_variable_names(self, spatial_variable):
         if len(spatial_variable) == 0:
@@ -354,8 +368,7 @@ class ProcessedVariable:
         variable has not been initialized (i.e. the entries have not been
         calculated), then the processed variable is initialized first.
         """
-        if not self.entries_raw_initialized:
-            self.initialise()
+        self.initialise()
         return self._entries_raw
 
     @property
@@ -529,7 +542,7 @@ class ProcessedVariable1D(ProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variables_casadi : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
@@ -626,7 +639,7 @@ class ProcessedVariable2D(ProcessedVariable):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variables_casadi : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
@@ -792,7 +805,7 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variables_casadi : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
@@ -905,3 +918,43 @@ def _is_sorted(t):
         bool: True if array is sorted
     """
     return np.all(t[:-1] <= t[1:])
+
+
+def _find_ts_indices(ts, t):
+    """
+    Parameters:
+    - ts: A list of numpy arrays (each sorted) whose values are successively increasing.
+    - t: A sorted list or array of values to find within ts.
+
+    Returns:
+    - indices: A list of indices from `ts` such that at least one value of `t` falls within ts[idx].
+    """
+
+    indices = []
+
+    # Get the minimum and maximum values of the target values `t`
+    t_min, t_max = t[0], t[-1]
+
+    # Step 1: Use binary search to find the range of `ts` arrays where t_min and t_max could lie
+    low_idx = bisect.bisect_left([ts_arr[-1] for ts_arr in ts], t_min)
+    high_idx = bisect.bisect_right([ts_arr[0] for ts_arr in ts], t_max)
+
+    # Step 2: Iterate over the identified range
+    for idx in range(low_idx, high_idx):
+        ts_min, ts_max = ts[idx][0], ts[idx][-1]
+
+        # Binary search within `t` to check if any value falls within [ts_min, ts_max]
+        i = bisect.bisect_left(t, ts_min)
+        if i < len(t) and t[i] <= ts_max:
+            # At least one value of t is within ts[idx]
+            indices.append(idx)
+
+    # extrapolating
+    if (t[-1] > ts[-1][-1]) and (len(indices) == 0 or indices[-1] != len(ts) - 1):
+        indices.append(len(ts) - 1)
+
+    if len(indices) == len(ts):
+        # All indices are included
+        return range(len(ts))
+
+    return indices

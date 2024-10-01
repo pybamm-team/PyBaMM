@@ -147,6 +147,12 @@ class TestProcessedVariable:
 
         np.testing.assert_array_equal(data_t1, data_t2)
 
+        # check that C++ and Python give the same result
+        if pybamm.has_idaklu():
+            np.testing.assert_array_equal(
+                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+            )
+
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_no_sensitivity(self, hermite_interp):
         # without space

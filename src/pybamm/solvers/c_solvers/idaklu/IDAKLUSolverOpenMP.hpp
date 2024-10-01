@@ -207,12 +207,12 @@ public:
    * @brief Set the step values
    */
   void SetStep(
-  realtype &tval,
-  realtype *y_val,
-  realtype *yp_val,
-  vector<realtype *> const &yS_val,
-  vector<realtype *> const &ypS_val,
-  int &i_save
+    realtype &tval,
+    realtype *y_val,
+    realtype *yp_val,
+    vector<realtype *> const &yS_val,
+    vector<realtype *> const &ypS_val,
+    int &i_save
   );
 
   /**

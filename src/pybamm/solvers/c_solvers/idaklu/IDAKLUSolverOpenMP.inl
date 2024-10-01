@@ -1,10 +1,6 @@
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 #include <vector>
-
-// import the IDAMem class
-#include <ida/ida.h>
-
 #include "common.hpp"
 #include "SolutionData.hpp"
 
@@ -372,6 +368,8 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const int number_of_evals = t_eval.size();
   const int number_of_interps = t_interp.size();
 
+  // Hermite interpolation is only available when saving
+  // 1. adaptive steps and 2. the full solution
   save_hermite = (
     solver_opts.hermite_interpolation &&
     save_adaptive_steps &&

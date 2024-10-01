@@ -27,7 +27,7 @@ class ProcessedVariableComputed:
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variables_casadi : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     base_variable_data : list of :numpy:array

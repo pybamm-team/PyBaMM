@@ -616,7 +616,6 @@ class Solution:
             vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
         )
 
-        # Save variable
         self._variables[variable] = var
 
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
@@ -640,9 +639,9 @@ class Solution:
 
         # Casadi has a bug where it does not correctly handle arrays with
         # zeros padded at the beginning or end. To avoid this, we add and
-        # subtract a small number to the variable to reinforce the
-        # variable bounds.
-        epsilon = 5e-324
+        # subtract the same number to the variable to reinforce the
+        # variable bounds. This does not affect the answer
+        epsilon = 1.0
         var_sym = (var_sym - epsilon) + epsilon
 
         var_casadi = casadi.Function(
@@ -655,7 +654,9 @@ class Solution:
         # Some variables, like interpolants, cannot be expanded
         try:
             var_casadi_out = var_casadi.expand()
-        except RuntimeError:
+        except RuntimeError as error:
+            if "'eval_sx' not defined for" not in str(error):
+                raise error  # pragma: no cover
             var_casadi_out = var_casadi
 
         return var_casadi_out

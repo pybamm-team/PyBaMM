@@ -762,6 +762,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The times (in seconds) at which to interpolate the solution. Defaults to `None`,
             which returns the adaptive time-stepping times.
         """
+        if not (
+            model.convert_to_format == "casadi"
+            or (
+                model.convert_to_format == "jax"
+                and self._options["jax_evaluator"] == "iree"
+            )
+        ):  # pragma: no cover
+            # Shouldn't ever reach this point
+            raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
+
         inputs_list = inputs_list or [{}]
 
         # stack inputs so that they are a 2D array of shape (number_of_inputs, number_of_parameters)
@@ -775,8 +785,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = np.array([[]])
 
-        save_adaptive_steps = t_interp is None or len(t_interp) == 0
-
         # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
         # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
         # different initial conditions for different inputs (see https://github.com/pybamm-team/PyBaMM/pull/4260). For now we just repeat the same initial conditions for each input
@@ -787,32 +795,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol = self._check_atol_type(atol, y0full.size)
 
         timer = pybamm.Timer()
-        if model.convert_to_format == "casadi" or (
-            model.convert_to_format == "jax"
-            and self._options["jax_evaluator"] == "iree"
-        ):
-            solns = self._setup["solver"].solve(
-                t_eval,
-                t_interp,
-                y0full,
-                ydot0full,
-                inputs,
-            )
-        else:  # pragma: no cover
-            # Shouldn't ever reach this point
-            raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
+        solns = self._setup["solver"].solve(
+            t_eval,
+            t_interp,
+            y0full,
+            ydot0full,
+            inputs,
+        )
         integration_time = timer.time()
 
         return [
-            self._post_process_solution(
-                soln, model, integration_time, inputs_dict, save_adaptive_steps
-            )
+            self._post_process_solution(soln, model, integration_time, inputs_dict)
             for soln, inputs_dict in zip(solns, inputs_list)
         ]
 
-    def _post_process_solution(
-        self, sol, model, integration_time, inputs_dict, save_adaptive_steps
-    ):
+    def _post_process_solution(self, sol, model, integration_time, inputs_dict):
         number_of_sensitivity_parameters = self._setup[
             "number_of_sensitivity_parameters"
         ]
@@ -851,11 +848,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             raise pybamm.SolverError(f"FAILURE {self._solver_flag(sol.flag)}")
 
-        if (
-            self._options["hermite_interpolation"]
-            and save_adaptive_steps
-            and (not save_outputs_only)
-        ):
+        if sol.yp.size > 0:
             yp = sol.yp.reshape((number_of_timesteps, number_of_states)).T
         else:
             yp = None
