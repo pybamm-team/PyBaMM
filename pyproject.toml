@@ -84,6 +84,7 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
+    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
