@@ -86,6 +86,9 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   // The default is to solve a DAE for generality. This may be changed
   // to an ODE during the Initialize() call
   is_ODE = false;
+
+  // Will be overwritten during the solve() call
+  save_hermite = solver_opts.hermite_interpolation;
 }
 
 template <class ExprSet>

@@ -888,19 +888,22 @@ class Solution:
             return new_sol
 
         # Update list of sub-solutions
+        hermite_interpolation = (
+            other.hermite_interpolation and self.hermite_interpolation
+        )
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
             all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
             all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
-            if self.hermite_interpolation:
+            if hermite_interpolation:
                 all_yps = self.all_yps + [other.all_yps[0][:, 1:]] + other.all_yps[1:]
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
-            if self.hermite_interpolation:
+            if hermite_interpolation:
                 all_yps = self.all_yps + other.all_yps
 
-        if not self.hermite_interpolation:
+        if not hermite_interpolation:
             all_yps = None
 
         # sensitivities can be:
