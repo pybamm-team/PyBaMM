@@ -117,7 +117,9 @@ class ProcessedVariable:
         if pybamm.has_idaklu():
             entries = self._observe_raw_cpp()
         else:
-            entries = self._observe_raw_python()
+            # Fallback method for when IDAKLU is not available. To be removed
+            # when the C++ code is migrated to a new repo
+            entries = self._observe_raw_python()  # pragma: no cover
 
         return self._observe_postfix(entries, t)
 

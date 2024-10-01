@@ -94,6 +94,13 @@ class TestProcessedVariable:
             processed_var.entries,
             np.reshape(y_sol, [len(first_sol), len(second_sol), len(t_sol)]),
         )
+
+        # check that C++ and Python give the same result
+        if pybamm.has_idaklu():
+            np.testing.assert_array_equal(
+                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+            )
+
         return y_sol, first_sol, second_sol, t_sol, yp_sol
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -262,6 +269,12 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(
             processed_eqn2.entries, y_sol + x_sol[:, np.newaxis]
         )
+
+        # check that C++ and Python give the same result
+        if pybamm.has_idaklu():
+            np.testing.assert_array_equal(
+                processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
+            )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D_unknown_domain(self, hermite_interp):
