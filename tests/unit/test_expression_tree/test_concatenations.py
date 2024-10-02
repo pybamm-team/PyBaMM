@@ -2,7 +2,6 @@
 # Tests for the Concatenation class and subclasses
 #
 import pytest
-import unittest.mock as mock
 from tests import assert_domain_equal
 
 
@@ -377,7 +376,7 @@ class TestConcatenations:
         # Test concat_sym
         assert pybamm.Concatenation(a, b).to_equation() == func_symbol
 
-    def test_to_from_json(self):
+    def test_to_from_json(self, mocker):
         # test DomainConcatenation
         mesh = get_mesh_for_testing()
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -386,7 +385,7 @@ class TestConcatenations:
 
         json_dict = {
             "name": "domain_concatenation",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "domains": {
                 "primary": ["negative electrode", "separator", "positive electrode"],
                 "secondary": [],
@@ -429,7 +428,7 @@ class TestConcatenations:
 
         np_json = {
             "name": "numpy_concatenation",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
