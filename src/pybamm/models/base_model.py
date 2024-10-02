@@ -136,6 +136,7 @@ class BaseModel:
 
     @property
     def name(self):
+        """Returns the name of the model"""
         return self._name
 
     @name.setter
@@ -144,6 +145,8 @@ class BaseModel:
 
     @property
     def rhs(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the rhs."""
         return self._rhs
 
     @rhs.setter
@@ -152,6 +155,8 @@ class BaseModel:
 
     @property
     def algebraic(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the algebraic equations."""
         return self._algebraic
 
     @algebraic.setter
@@ -160,6 +165,8 @@ class BaseModel:
 
     @property
     def initial_conditions(self):
+        """Returns a dictionary mapping expressions (variables) to expressions representing
+        the initial conditions for the state variables y."""
         return self._initial_conditions
 
     @initial_conditions.setter
@@ -170,6 +177,7 @@ class BaseModel:
 
     @property
     def boundary_conditions(self):
+        """Returns a dictionary mapping expressions (variables) to expressions representing the boundary conditions."""
         return self._boundary_conditions
 
     @boundary_conditions.setter
@@ -178,6 +186,7 @@ class BaseModel:
 
     @property
     def variables(self):
+        """Returns a dictionary mapping strings to expressions of useful variables."""
         return self._variables
 
     @variables.setter
@@ -214,6 +223,9 @@ class BaseModel:
 
     @property
     def events(self):
+        """Returns a list of events. Each event can either cause the solver to terminate
+        or be used to inform the solver of the
+        existance of a discontinuity"""
         return self._events
 
     @events.setter
@@ -346,7 +358,7 @@ class BaseModel:
 
     @property
     def default_solver(self):
-        """Return default solver based on whether model is ODE/DAE or algebraic"""
+        """Returns default solver based on whether model is ODE/DAE or algebraic"""
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
