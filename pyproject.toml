@@ -84,6 +84,7 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
+    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
@@ -105,12 +106,11 @@ dev = [
     "pytest-cov",
     # For doctest
     "pytest-doctestplus",
-    # For test parameterization
-    "parameterized>=0.9",
     # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
     "pytest-mock",
+    "pytest-subtests",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
@@ -198,6 +198,8 @@ extend-select = [
     "YTT",           # flake8-2020
     "TID252",        # relative-imports
     "S101",          # to identify use of assert statement
+    "PT027",         # remove unittest style assertion
+    "PT009",         # Use pytest.raises instead of unittest-style
 ]
 ignore = [
     "E741",        # Ambiguous variable name
@@ -231,6 +233,7 @@ minversion = "8"
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
+    "pytest-subtests",
 ]
 norecursedirs = 'pybind11*'
 addopts = [
