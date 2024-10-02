@@ -419,14 +419,14 @@ class QuickPlot:
                 spatial_vars = self.spatial_variable_dict[key]
                 var_min = np.min(
                     [
-                        ax_min(var(self.ts_seconds[i], **spatial_vars, warn=False))
+                        ax_min(var(self.ts_seconds[i], **spatial_vars))
                         for i, variable_list in enumerate(variable_lists)
                         for var in variable_list
                     ]
                 )
                 var_max = np.max(
                     [
-                        ax_max(var(self.ts_seconds[i], **spatial_vars, warn=False))
+                        ax_max(var(self.ts_seconds[i], **spatial_vars))
                         for i, variable_list in enumerate(variable_lists)
                         for var in variable_list
                     ]
@@ -512,7 +512,7 @@ class QuickPlot:
                         full_t = self.ts_seconds[i]
                         (self.plots[key][i][j],) = ax.plot(
                             full_t / self.time_scaling_factor,
-                            variable(full_t, warn=False),
+                            variable(full_t),
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
@@ -548,7 +548,7 @@ class QuickPlot:
                             linestyle = self.linestyles[j]
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_spatial_variable[key],
-                            variable(t_in_seconds, **spatial_vars, warn=False),
+                            variable(t_in_seconds, **spatial_vars),
                             color=self.colors[i],
                             linestyle=linestyle,
                             zorder=10,
@@ -570,13 +570,13 @@ class QuickPlot:
                     y_name = next(iter(spatial_vars.keys()))[0]
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
-                    var = variable(t_in_seconds, **spatial_vars, warn=False)
+                    var = variable(t_in_seconds, **spatial_vars)
                 else:
                     x_name = next(iter(spatial_vars.keys()))[0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
-                    var = variable(t_in_seconds, **spatial_vars, warn=False).T
+                    var = variable(t_in_seconds, **spatial_vars).T
                 ax.set_xlabel(f"{x_name} [{self.spatial_unit}]")
                 ax.set_ylabel(f"{y_name} [{self.spatial_unit}]")
                 vmin, vmax = self.variable_limits[key]
@@ -710,7 +710,6 @@ class QuickPlot:
                         var = variable(
                             time_in_seconds,
                             **self.spatial_variable_dict[key],
-                            warn=False,
                         )
                         plot[i][j].set_ydata(var)
                         var_min = min(var_min, ax_min(var))
@@ -729,11 +728,11 @@ class QuickPlot:
                 if self.x_first_and_y_second[key] is False:
                     x = self.second_spatial_variable[key]
                     y = self.first_spatial_variable[key]
-                    var = variable(time_in_seconds, **spatial_vars, warn=False)
+                    var = variable(time_in_seconds, **spatial_vars)
                 else:
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
-                    var = variable(time_in_seconds, **spatial_vars, warn=False).T
+                    var = variable(time_in_seconds, **spatial_vars).T
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
                 if self.is_y_z[key] is True:
