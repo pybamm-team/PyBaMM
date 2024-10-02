@@ -84,6 +84,9 @@ class QuickPlot:
     variable_limits : str or dict of str, optional
         How to set the axis limits (for 0D or 1D variables) or colorbar limits (for 2D
         variables). Options are:
+    N_t_linear: int, optional
+        The number of linearly spaced time points added to the t axis for each sub-solution.
+        Note: this is only used if the solution has hermite interpolation enabled.
 
         - "fixed" (default): keep all axes fixes so that all data is visible
         - "tight": make axes tight to plot at each time
@@ -105,6 +108,7 @@ class QuickPlot:
         time_unit=None,
         spatial_unit="um",
         variable_limits="fixed",
+        N_t_linear=100,
     ):
         solutions = self.preprocess_solutions(solutions)
 
@@ -168,6 +172,19 @@ class QuickPlot:
         self.ts_seconds = [solution.t for solution in solutions]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
+
+        hermite_interp = all(sol.hermite_interpolation for sol in solutions)
+
+        def t_sample(sol):
+            if hermite_interp and N_t_linear > 2:
+                # Linearly spaced time points
+                t_linspace = np.linspace(sol.t[0], sol.t[-1], N_t_linear + 2)[1:-1]
+                t_plot = np.union1d(sol.t, t_linspace)
+            else:
+                t_plot = sol.t
+            return t_plot
+
+        self.ts_seconds = [t_sample(sol) for sol in solutions]
 
         # Set timescale
         if time_unit is None:
