@@ -43,9 +43,8 @@ class TestIDAKLUSolver:
             )
 
             # Test
-            t_eval = np.linspace(0, 3, 100)
-            t_interp = t_eval
-            solution = solver.solve(model, t_eval, t_interp=t_interp)
+            t_eval = [0, 3]
+            solution = solver.solve(model, t_eval)
 
             # test that final time is time of event
             # y = 0.1 t + y0 so y=0.2 when t=2
@@ -311,8 +310,7 @@ class TestIDAKLUSolver:
                     options={"jax_evaluator": "iree"} if form == "iree" else {},
                 )
 
-                t_interp = np.linspace(0, 3, 100)
-                t_eval = [t_interp[0], t_interp[-1]]
+                t_eval = [0, 3]
 
                 a_value = 0.1
 
@@ -321,7 +319,6 @@ class TestIDAKLUSolver:
                     t_eval,
                     inputs={"a": a_value},
                     calculate_sensitivities=True,
-                    t_interp=t_interp,
                 )
 
                 np.testing.assert_array_almost_equal(
@@ -638,7 +635,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(pybamm.SolverError, match="FAILURE IDA"):
+        with pytest.raises(ValueError, match="std::exception"):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
@@ -944,7 +941,7 @@ class TestIDAKLUSolver:
 
         # Mock a 1D current collector and initialise (none in the model)
         sol["x_s [m]"].domain = ["current collector"]
-        sol["x_s [m]"].initialise_1D()
+        sol["x_s [m]"].entries
 
     def test_with_output_variables_and_sensitivities(self):
         # Construct a model and solve for all variables, then test
@@ -1040,7 +1037,7 @@ class TestIDAKLUSolver:
 
             # Mock a 1D current collector and initialise (none in the model)
             sol["x_s [m]"].domain = ["current collector"]
-            sol["x_s [m]"].initialise_1D()
+            sol["x_s [m]"].entries
 
     def test_bad_jax_evaluator(self):
         model = pybamm.lithium_ion.DFN()
@@ -1108,19 +1105,40 @@ class TestIDAKLUSolver:
 
     def test_interpolate_time_step_start_offset(self):
         model = pybamm.lithium_ion.SPM()
-        experiment = pybamm.Experiment(
-            [
-                "Discharge at C/10 for 10 seconds",
-                "Charge at C/10 for 10 seconds",
-            ],
-            period="1 seconds",
-        )
+
+        def experiment_setup(period=None):
+            return pybamm.Experiment(
+                [
+                    "Discharge at C/10 for 10 seconds",
+                    "Charge at C/10 for 10 seconds",
+                ],
+                period=period,
+            )
+
+        experiment_1s = experiment_setup(period="1 seconds")
         solver = pybamm.IDAKLUSolver()
-        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
-        sol = sim.solve()
+        sim_1s = pybamm.Simulation(model, experiment=experiment_1s, solver=solver)
+        sol_1s = sim_1s.solve()
         np.testing.assert_equal(
-            np.nextafter(sol.sub_solutions[0].t[-1], np.inf),
-            sol.sub_solutions[1].t[0],
+            np.nextafter(sol_1s.sub_solutions[0].t[-1], np.inf),
+            sol_1s.sub_solutions[1].t[0],
+        )
+
+        assert not sol_1s.hermite_interpolation
+
+        experiment = experiment_setup(period=None)
+        sim = pybamm.Simulation(model, experiment=experiment, solver=solver)
+        sol = sim.solve(model)
+
+        assert sol.hermite_interpolation
+
+        rtol = solver.rtol
+        atol = solver.atol
+        np.testing.assert_allclose(
+            sol_1s["Voltage [V]"].data,
+            sol["Voltage [V]"](sol_1s.t),
+            rtol=rtol,
+            atol=atol,
         )
 
     def test_python_idaklu_deprecation_errors(self):

@@ -75,6 +75,7 @@ class Solution:
         y_event=None,
         termination="final time",
         all_sensitivities=False,
+        all_yps=None,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
@@ -87,6 +88,10 @@ class Solution:
         self._all_ys = all_ys
         self._all_ys_and_sens = all_ys
         self._all_models = all_models
+
+        if (all_yps is not None) and not isinstance(all_yps, list):
+            all_yps = [all_yps]
+        self._all_yps = all_yps
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -128,7 +133,7 @@ class Solution:
 
         # initialize empty variables and data
         self._variables = pybamm.FuzzyDict()
-        self.data = pybamm.FuzzyDict()
+        self._data = pybamm.FuzzyDict()
 
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
@@ -299,6 +304,13 @@ class Solution:
             return self._y
 
     @property
+    def data(self):
+        for k, v in self._variables.items():
+            if k not in self._data:
+                self._data[k] = v.data
+        return self._data
+
+    @property
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array"""
         try:
@@ -401,6 +413,14 @@ class Solution:
         return [casadi.vertcat(*inp.values()) for inp in self.all_inputs]
 
     @property
+    def all_yps(self):
+        return self._all_yps
+
+    @property
+    def hermite_interpolation(self):
+        return self.all_yps is not None
+
+    @property
     def t_event(self):
         """Time at which the event happens"""
         return self._t_event
@@ -434,6 +454,12 @@ class Solution:
             n_states = self.all_models[0].len_rhs_and_alg
             for key in self._all_sensitivities:
                 sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+
+        if self.all_yps is None:
+            all_yps = None
+        else:
+            all_yps = self.all_yps[0][:, :1]
+
         new_sol = Solution(
             self.all_ts[0][:1],
             self.all_ys[0][:, :1],
@@ -443,6 +469,7 @@ class Solution:
             None,
             "final time",
             all_sensitivities=sensitivities,
+            all_yps=all_yps,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
@@ -467,6 +494,12 @@ class Solution:
             n_states = self.all_models[-1].len_rhs_and_alg
             for key in self._all_sensitivities:
                 sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+
+        if self.all_yps is None:
+            all_yps = None
+        else:
+            all_yps = self.all_yps[-1][:, -1:]
+
         new_sol = Solution(
             self.all_ts[-1][-1:],
             self.all_ys[-1][:, -1:],
@@ -476,6 +509,7 @@ class Solution:
             self.y_event,
             self.termination,
             all_sensitivities=sensitivities,
+            all_yps=all_yps,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
@@ -528,57 +562,61 @@ class Solution:
         if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
             self.extract_explicit_sensitivities()
 
-        # Convert single entry to list
+        # Single variable
         if isinstance(variables, str):
             variables = [variables]
+
         # Process
-        for key in variables:
-            cumtrapz_ic = None
-            pybamm.logger.debug(f"Post-processing {key}")
-            vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
+        for variable in variables:
+            self._update_variable(variable)
 
-            # Iterate through all models, some may be in the list several times and
-            # therefore only get set up once
-            vars_casadi = []
-            for i, (model, ys, inputs, var_pybamm) in enumerate(
-                zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+    def _update_variable(self, variable):
+        cumtrapz_ic = None
+        pybamm.logger.debug(f"Post-processing {variable}")
+        vars_pybamm = [
+            model.variables_and_events[variable] for model in self.all_models
+        ]
+
+        # Iterate through all models, some may be in the list several times and
+        # therefore only get set up once
+        vars_casadi = []
+        for i, (model, ys, inputs, var_pybamm) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+        ):
+            if ys.size == 0 and var_pybamm.has_symbol_of_classes(
+                pybamm.expression_tree.state_vector.StateVector
             ):
-                if ys.size == 0 and var_pybamm.has_symbol_of_classes(
-                    pybamm.expression_tree.state_vector.StateVector
-                ):
-                    raise KeyError(
-                        f"Cannot process variable '{key}' as it was not part of the "
-                        "solve. Please re-run the solve with `output_variables` set to "
-                        "include this variable."
-                    )
-                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
-                    cumtrapz_ic = var_pybamm.initial_condition
-                    cumtrapz_ic = cumtrapz_ic.evaluate()
-                    var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(
-                        var_pybamm,
-                        inputs,
-                        ys.shape,
-                    )
-                    model._variables_casadi[key] = var_casadi
-                    vars_pybamm[i] = var_pybamm
-                elif key in model._variables_casadi:
-                    var_casadi = model._variables_casadi[key]
-                else:
-                    var_casadi = self.process_casadi_var(
-                        var_pybamm,
-                        inputs,
-                        ys.shape,
-                    )
-                    model._variables_casadi[key] = var_casadi
-                vars_casadi.append(var_casadi)
-            var = pybamm.ProcessedVariable(
-                vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
-            )
+                raise KeyError(
+                    f"Cannot process variable '{variable}' as it was not part of the "
+                    "solve. Please re-run the solve with `output_variables` set to "
+                    "include this variable."
+                )
+            elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
+                cumtrapz_ic = var_pybamm.initial_condition
+                cumtrapz_ic = cumtrapz_ic.evaluate()
+                var_pybamm = var_pybamm.child
+                var_casadi = self.process_casadi_var(
+                    var_pybamm,
+                    inputs,
+                    ys.shape,
+                )
+                model._variables_casadi[variable] = var_casadi
+                vars_pybamm[i] = var_pybamm
+            elif variable in model._variables_casadi:
+                var_casadi = model._variables_casadi[variable]
+            else:
+                var_casadi = self.process_casadi_var(
+                    var_pybamm,
+                    inputs,
+                    ys.shape,
+                )
+                model._variables_casadi[variable] = var_casadi
+            vars_casadi.append(var_casadi)
+        var = pybamm.process_variable(
+            vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
+        )
 
-            # Save variable and data
-            self._variables[key] = var
-            self.data[key] = var.data
+        self._variables[variable] = var
 
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
@@ -588,8 +626,40 @@ class Solution:
         }
         inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
-        var_casadi = casadi.Function("variable", [t_MX, y_MX, inputs_MX], [var_sym])
-        return var_casadi
+
+        opts = {
+            "cse": True,
+            "inputs_check": False,
+            "is_diff_in": [False, False, False],
+            "is_diff_out": [False],
+            "regularity_check": False,
+            "error_on_fail": False,
+            "enable_jacobian": False,
+        }
+
+        # Casadi has a bug where it does not correctly handle arrays with
+        # zeros padded at the beginning or end. To avoid this, we add and
+        # subtract the same number to the variable to reinforce the
+        # variable bounds. This does not affect the answer
+        epsilon = 1.0
+        var_sym = (var_sym - epsilon) + epsilon
+
+        var_casadi = casadi.Function(
+            "variable",
+            [t_MX, y_MX, inputs_MX],
+            [var_sym],
+            opts,
+        )
+
+        # Some variables, like interpolants, cannot be expanded
+        try:
+            var_casadi_out = var_casadi.expand()
+        except RuntimeError as error:
+            if "'eval_sx' not defined for" not in str(error):
+                raise error  # pragma: no cover
+            var_casadi_out = var_casadi
+
+        return var_casadi_out
 
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
@@ -818,13 +888,23 @@ class Solution:
             return new_sol
 
         # Update list of sub-solutions
+        hermite_interpolation = (
+            other.hermite_interpolation and self.hermite_interpolation
+        )
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
             all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
             all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+            if hermite_interpolation:
+                all_yps = self.all_yps + [other.all_yps[0][:, 1:]] + other.all_yps[1:]
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
+            if hermite_interpolation:
+                all_yps = self.all_yps + other.all_yps
+
+        if not hermite_interpolation:
+            all_yps = None
 
         # sensitivities can be:
         # - bool if not using sensitivities or using explicit sensitivities which still
@@ -859,6 +939,7 @@ class Solution:
             other.y_event,
             other.termination,
             all_sensitivities=all_sensitivities,
+            all_yps=all_yps,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -891,6 +972,7 @@ class Solution:
             self.y_event,
             self.termination,
             self._all_sensitivities,
+            self.all_yps,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -1001,6 +1083,7 @@ def make_cycle_solution(
         sum_sols.y_event,
         sum_sols.termination,
         sum_sols._all_sensitivities,
+        sum_sols.all_yps,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
