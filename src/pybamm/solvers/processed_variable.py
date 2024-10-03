@@ -1,6 +1,3 @@
-#
-# Processed Variable class
-#
 import casadi
 import numpy as np
 import pybamm

@@ -1,6 +1,3 @@
-#
-# Test setting up a simulation with an experiment
-#
 import pytest
 import casadi
 import pybamm
