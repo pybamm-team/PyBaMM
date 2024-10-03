@@ -12,11 +12,9 @@ logger = logging.getLogger("pybamm.solvers.idaklu_jax")
 
 try:
     import pybammsolvers.idaklu as idaklu
-
-    idaklu_imported = True
 except ImportError as e:  # pragma: no cover
+    idaklu = None
     print(f"Error loading idaklu: {e}")
-    idaklu_imported = False
 
 
 if pybamm.has_jax():

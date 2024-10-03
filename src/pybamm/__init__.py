@@ -200,8 +200,12 @@ from .pybamm_data import DataLoader
 
 # Fix Casadi import
 import os
+import re
 import sysconfig
-os.environ["CASADIPATH"] = os.path.join(sysconfig.get_path('purelib'), 'casadi')
+if sys.platform == "win32":
+    os.environ["CASADIPATH"] = re.escape(os.path.join(sysconfig.get_path('purelib'), 'casadi'))
+else:
+    os.environ["CASADIPATH"] = os.path.join(sysconfig.get_path('purelib'), 'casadi')
 
 __all__ = [
     "batch_study",
