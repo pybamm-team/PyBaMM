@@ -16,7 +16,16 @@ class BaseBasicModelTest:
             ]
         )
         sim = pybamm.Simulation(model, experiment=experiment)
-        sim.solve(calc_esoh=False)
+        sol = sim.solve(calc_esoh=False)
+
+        # Check the solve returned a solution
+        assert sol is not None
+
+        # Check that the solution contains the expected number of cycles
+        assert len(sol.cycles) == 3
+
+        # Check that the solution terminated because it reached final time
+        assert sol.termination == "final time"
 
 
 class TestBasicDFN(BaseBasicModelTest):
