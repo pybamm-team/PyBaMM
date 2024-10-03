@@ -149,6 +149,7 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       nonlinear_convergence_coefficient(RCONST(py_opts["nonlinear_convergence_coefficient"].cast<double>())),
       nonlinear_convergence_coefficient_ic(RCONST(py_opts["nonlinear_convergence_coefficient_ic"].cast<double>())),
       suppress_algebraic_error(py_opts["suppress_algebraic_error"].cast<sunbooleantype>()),
+      hermite_interpolation(py_opts["hermite_interpolation"].cast<sunbooleantype>()),
       // IDA initial conditions calculation
       calc_ic(py_opts["calc_ic"].cast<bool>()),
       init_all_y_ic(py_opts["init_all_y_ic"].cast<bool>()),
