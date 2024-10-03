@@ -1,4 +1,17 @@
 .idea
 .vscode
+cmake-build-*
 *.egg-info
 __pycache__
+.venv
+.env
+.nox
+
+setup.log
+install_KLU_Sundials
+.idaklu
+build
+
+# Extra directories for local work
+workspace
+deploy

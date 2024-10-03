@@ -1,0 +1,285 @@
+name: Build wheels
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "main"
+
+env:
+  CIBW_BUILD_VERBOSITY: 2
+  CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+  # Skip PyPy and MUSL builds in any and all jobs
+  CIBW_SKIP: "pp* *musllinux*"
+  FORCE_COLOR: 3
+
+jobs:
+  build_windows_wheels:
+    name: Wheels (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Get number of cores on Windows
+        id: get_num_cores
+        shell: python
+        run: |
+          from os import environ, cpu_count
+          num_cpus = cpu_count()
+          output_file = environ['GITHUB_OUTPUT']
+          with open(output_file, "a", encoding="utf-8") as output_stream:
+              output_stream.write(f"count={num_cpus}\n")
+
+      - name: Install vcpkg on Windows
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
+      - name: Build wheels on Windows
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: >
+            PYBAMMSOLVERS_USE_VCPKG=ON
+            VCPKG_ROOT_DIR=C:\vcpkg
+            VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
+            VCPKG_FEATURE_FLAGS=manifests,registries
+            CMAKE_GENERATOR="Visual Studio 17 2022"
+            CMAKE_GENERATOR_PLATFORM=x64
+            CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
+          CIBW_ARCHS: AMD64
+          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
+          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
+          CIBW_TEST_EXTRAS: "dev"
+          CIBW_TEST_COMMAND: |
+            python -m pytest {project}/tests
+      - name: Upload Windows wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels_windows
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_manylinux_wheels:
+    name: Wheels (linux-amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Build wheels on Linux
+        run: pipx run cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_BEFORE_ALL_LINUX: >
+            yum -y install openblas-devel lapack-devel &&
+            bash install_sundials.sh
+          CIBW_BEFORE_BUILD_LINUX: python -m pip install cmake casadi setuptools wheel
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
+          CIBW_TEST_EXTRAS: "dev"
+          CIBW_TEST_COMMAND: |
+            set -e -x
+            python -m pytest {project}/tests
+
+      - name: Upload wheels for Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels_manylinux
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_macos_wheels:
+    name: Wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel
+
+      - name: Build wheels on macOS
+        shell: bash
+        run: |
+            set -e -x
+
+            # Set LLVM-OpenMP URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-64/llvm-openmp-11.1.0-hda6cdc1_1.tar.bz2"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              OPENMP_URL="https://anaconda.org/conda-forge/llvm-openmp/11.1.0/download/osx-arm64/llvm-openmp-11.1.0-hf3c4609_1.tar.bz2"
+            fi
+
+            # Download gfortran with proper macOS minimum version (11.0)
+            if [[ $(uname -m) == "x86_64" ]]; then
+              GFORTRAN_URL="https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-x86_64-native.tar.gz"
+              KNOWN_SHA256="981367dd0ad4335613e91bbee453d60b6669f5d7e976d18c7bdb7f1966f26ae4 gfortran.tar.gz"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              GFORTRAN_URL="https://github.com/isuruf/gcc/releases/download/gcc-11.3.0-2/gfortran-darwin-arm64-native.tar.gz"
+              KNOWN_SHA256="84364eee32ba843d883fb8124867e2bf61a0cd73b6416d9897ceff7b85a24604 gfortran.tar.gz"
+            fi
+
+            # Validate gfortran tarball
+            curl -L $GFORTRAN_URL -o gfortran.tar.gz
+            if ! echo "$KNOWN_SHA256" != "$(shasum --algorithm 256 gfortran.tar.gz)"; then
+              echo "Checksum failed"
+              exit 1
+            fi
+
+            mkdir -p gfortran_installed
+            tar -xv -C gfortran_installed/ -f gfortran.tar.gz
+
+            if [[ $(uname -m) == "x86_64" ]]; then
+              export FC=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin/gfortran
+              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/bin:$PATH
+            elif [[ $(uname -m) == "arm64" ]]; then
+              export FC=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin/gfortran
+              export PATH=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/bin:$PATH
+            fi
+
+            # link libgfortran dylibs and place them in $SOLVER_LIB_PATH
+            # and then change rpath for each of them
+            # Note: libgcc_s.1.dylib not available on macOS arm64; skip for now
+            SOLVER_LIB_PATH=$(pwd)/.idaklu/lib
+            mkdir -p $SOLVER_LIB_PATH
+            if [[ $(uname -m) == "x86_64" ]]; then
+              lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-x86_64-native/lib
+              for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.dylib libgcc_s.1.1.dylib; do
+                cp $lib_dir/$lib $SOLVER_LIB_PATH/
+                install_name_tool -id $SOLVER_LIB_PATH/$lib $SOLVER_LIB_PATH/$lib
+                codesign --force --sign - $SOLVER_LIB_PATH/$lib
+              done
+            elif [[ $(uname -m) == "arm64" ]]; then
+              lib_dir=$(pwd)/gfortran_installed/gfortran-darwin-arm64-native/lib
+              for lib in libgfortran.5.dylib libgfortran.dylib libquadmath.0.dylib libquadmath.dylib libgcc_s.1.1.dylib; do
+                cp $lib_dir/$lib $SOLVER_LIB_PATH/.
+                install_name_tool -id $SOLVER_LIB_PATH/$lib $SOLVER_LIB_PATH/$lib
+                codesign --force --sign - $SOLVER_LIB_PATH/$lib
+              done
+            fi
+
+            export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
+
+            # Can't download LLVM-OpenMP directly, use conda/mamba and set environment variables
+            brew install miniforge
+            mamba create -n pybammsolvers-dev $OPENMP_URL
+            if [[ $(uname -m) == "x86_64" ]]; then
+              PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybammsolvers-dev"
+            elif [[ $(uname -m) == "arm64" ]]; then
+              PREFIX="/opt/homebrew/Caskroom/miniforge/base/envs/pybammsolvers-dev"
+            fi
+
+            # Copy libomp.dylib from PREFIX to $SOLVER_LIB_PATH, needed for wheel repair
+            cp $PREFIX/lib/libomp.dylib $SOLVER_LIB_PATH/.
+            install_name_tool -id $SOLVER_LIB_PATH/libomp.dylib $SOLVER_LIB_PATH/libomp.dylib
+            codesign --force --sign - $SOLVER_LIB_PATH/libomp.dylib
+
+            export CC=/usr/bin/clang
+            export CXX=/usr/bin/clang++
+            export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
+            export CFLAGS="$CFLAGS -I$PREFIX/include"
+            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
+            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
+
+            # cibuildwheel not recognising its environment variable, so set manually
+            export CIBUILDWHEEL="1"
+
+            python install_KLU_Sundials.py
+            python -m cibuildwheel --output-dir wheelhouse
+        env:
+          # 10.13 for Intel (macos-12/macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
+          CIBW_ARCHS_MACOS: auto
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
+          CIBW_REPAIR_WHEEL_COMMAND: |
+            if [[ $(uname -m) == "x86_64" ]]; then
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
+            elif [[ $(uname -m) == "arm64" ]]; then
+              # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
+              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
+              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
+            fi
+          CIBW_TEST_EXTRAS: "dev"
+          CIBW_TEST_COMMAND: |
+            set -e -x
+            python -m pytest {project}/tests
+
+      - name: Upload wheels for macOS (amd64, arm64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels_${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  build_sdist:
+    name: Build SDist
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Build SDist
+        run: pipx run build --sdist
+
+      - name: Upload SDist
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: sdist
+          path: ./dist/*.tar.gz
+          if-no-files-found: error
+
+  publish_pypi:
+    if: github.repository == 'pybamm-team/pybammsolvers'
+    name: Upload package to PyPI
+    needs: [
+      build_manylinux_wheels,
+      build_macos_wheels,
+      build_windows_wheels,
+      build_sdist
+    ]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pybammsolvers
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Sanity check downloaded artifacts
+        run: ls -lA artifacts/
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: artifacts/
