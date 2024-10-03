@@ -14,14 +14,14 @@ def disable():
     _posthog.disabled = True
 
 
-_opt_out = os.getenv("PYBAMM_OPTOUT_TELEMETRY", "false").lower()
+_opt_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower()
 if _opt_out != "false":  # pragma: no cover
     disable()
 
 
 def capture(event):  # pragma: no cover
     # don't capture events in automated testing
-    if pybamm.config.is_running_tests():
+    if pybamm.config.is_running_tests() or _posthog.disabled:
         return
 
     properties = {
@@ -31,11 +31,6 @@ def capture(event):  # pragma: no cover
 
     config = pybamm.config.read()
     if config:
-        user_id = config["uuid"]
-    else:
-        user_id = "anonymous-user-id"
-        properties["$process_person_profile"] = False
-
-    # setting $process_person_profile to False mean that we only track what events are
-    # being run and don't capture anything about the user
-    _posthog.capture(user_id, event, properties=properties)
+        if config["enable_telemetry"]:
+            user_id = config["uuid"]
+            _posthog.capture(user_id, event, properties=properties)

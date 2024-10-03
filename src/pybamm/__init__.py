@@ -227,3 +227,6 @@ __all__ = [
     "version",
     "pybamm_data",
 ]
+
+
+pybamm.config.generate()

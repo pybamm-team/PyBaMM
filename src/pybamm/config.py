@@ -2,6 +2,7 @@ import uuid
 import os
 import platformdirs
 from pathlib import Path
+import pybamm
 
 
 def is_running_tests():  # pragma: no cover
@@ -33,6 +34,34 @@ def is_running_tests():  # pragma: no cover
     return any(runner in sys.argv[0].lower() for runner in test_runners)
 
 
+def ask_user_opt_in():
+    """
+    Ask the user if they want to opt in to telemetry.
+
+    Returns
+    -------
+    bool
+        True if the user opts in, False otherwise.
+    """
+    print(
+        "PyBaMM can collect usage data and send it to the PyBaMM team to "
+        "help us improve the software.\n"
+        "We do not collect any sensitive information such as models, parameters, "
+        "or simulation results - only information on which parts of the code are "
+        "being used and how frequently.\n"
+        "This is entirely optional and does not impact the functionality of PyBaMM.\n"
+        "For more information, see https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry"
+    )
+    while True:
+        user_input = input("Do you want to enable telemetry? (Y/n): ").strip().lower()
+        if user_input in ["yes", "y"]:
+            return True
+        elif user_input in ["no", "n"]:
+            return False
+        else:
+            print("\nInvalid input. Please enter 'yes'/'y' or 'no'/'n'.")
+
+
 def generate():  # pragma: no cover
     if is_running_tests():
         return
@@ -41,8 +70,13 @@ def generate():  # pragma: no cover
     if read() is not None:
         return
 
+    # Ask the user if they want to opt in to telemetry
+    opt_in = ask_user_opt_in()
     config_file = Path(platformdirs.user_config_dir("pybamm")) / "config.yml"
-    write_uuid_to_file(config_file)
+    write_uuid_to_file(config_file, opt_in)
+
+    if opt_in:
+        pybamm.telemetry.capture("user-opted-in")
 
 
 def read():  # pragma: no cover
@@ -50,17 +84,17 @@ def read():  # pragma: no cover
     return read_uuid_from_file(config_file)
 
 
-def write_uuid_to_file(config_file):
+def write_uuid_to_file(config_file, opt_in):
     # Create the directory if it doesn't exist
     config_file.parent.mkdir(parents=True, exist_ok=True)
-
-    # Generate a UUID
-    unique_id = uuid.uuid4()
 
     # Write the UUID to the config file in YAML format
     with open(config_file, "w") as f:
         f.write("pybamm:\n")
-        f.write(f"  uuid: {unique_id}\n")
+        f.write(f"  enable_telemetry: {opt_in}\n")
+        if opt_in:
+            unique_id = uuid.uuid4()
+            f.write(f"  uuid: {unique_id}\n")
 
 
 def read_uuid_from_file(config_file):
