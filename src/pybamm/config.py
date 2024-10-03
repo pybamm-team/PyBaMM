@@ -7,10 +7,10 @@ import pybamm
 
 def is_running_tests():  # pragma: no cover
     """
-    Detect if the code is being run as part of a test suite.
+    Detect if the code is being run as part of a test suite or building docs with Sphinx.
 
     Returns:
-        bool: True if running tests, False otherwise.
+        bool: True if running tests or building docs, False otherwise.
     """
     import sys
 
@@ -31,7 +31,14 @@ def is_running_tests():  # pragma: no cover
 
     # Check for common test runner names in command-line arguments
     test_runners = ["pytest", "unittest", "nose", "trial", "nox", "tox"]
-    return any(runner in sys.argv[0].lower() for runner in test_runners)
+    if any(runner in sys.argv[0].lower() for runner in test_runners):
+        return True
+
+    # Check if building docs with Sphinx
+    if "sphinx" in sys.modules:
+        return True
+
+    return False
 
 
 def ask_user_opt_in():

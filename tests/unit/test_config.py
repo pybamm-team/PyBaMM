@@ -31,12 +31,12 @@ class TestConfig:
         else:
             assert config_dict["enable_telemetry"] is False
 
-    def test_ask_user_opt_in(self, monkeypatch):
-        # Mock the input function to always return "y"
-        monkeypatch.setattr("builtins.input", lambda _: "y")
+    @pytest.mark.parametrize("user_opted_in, user_input", [(True, "y"), (False, "n")])
+    def test_ask_user_opt_in(self, monkeypatch, user_opted_in, user_input):
+        # Mock the input function to return invalid input first, then valid input
+        inputs = iter(["invalid", user_input])
+        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
         # Call the function to ask the user if they want to opt in
         opt_in = pybamm.config.ask_user_opt_in()
-
-        # Check that the function returns True
-        assert opt_in is True
+        assert opt_in is user_opted_in
