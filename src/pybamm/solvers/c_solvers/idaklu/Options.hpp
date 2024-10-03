@@ -38,6 +38,7 @@ struct SolverOptions {
   double nonlinear_convergence_coefficient;
   double nonlinear_convergence_coefficient_ic;
   sunbooleantype suppress_algebraic_error;
+  bool hermite_interpolation;
   // IDA initial conditions calculation
   bool calc_ic;
   bool init_all_y_ic;

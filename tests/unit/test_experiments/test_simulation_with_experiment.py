@@ -83,8 +83,12 @@ class TestSimulationExperiment:
         assert len(sol.cycles) == 1
 
         # Test outputs
-        np.testing.assert_array_equal(sol.cycles[0].steps[0]["C-rate"].data, 1 / 20)
-        np.testing.assert_array_equal(sol.cycles[0].steps[1]["Current [A]"].data, -1)
+        np.testing.assert_array_almost_equal(
+            sol.cycles[0].steps[0]["C-rate"].data, 1 / 20
+        )
+        np.testing.assert_array_almost_equal(
+            sol.cycles[0].steps[1]["Current [A]"].data, -1
+        )
         np.testing.assert_array_almost_equal(
             sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, decimal=5
         )

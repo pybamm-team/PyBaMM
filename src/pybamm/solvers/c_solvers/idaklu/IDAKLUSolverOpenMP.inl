@@ -1,7 +1,6 @@
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 #include <vector>
-
 #include "common.hpp"
 #include "SolutionData.hpp"
 
@@ -48,7 +47,7 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   AllocateVectors();
   if (sensitivity) {
     yyS = N_VCloneVectorArray(number_of_parameters, yy);
-    ypS = N_VCloneVectorArray(number_of_parameters, yp);
+    yypS = N_VCloneVectorArray(number_of_parameters, yyp);
   }
   // set initial values
   realtype *atval = N_VGetArrayPointer(avtol);
@@ -58,14 +57,14 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
 
   for (int is = 0; is < number_of_parameters; is++) {
     N_VConst(RCONST(0.0), yyS[is]);
-    N_VConst(RCONST(0.0), ypS[is]);
+    N_VConst(RCONST(0.0), yypS[is]);
   }
 
   // create Matrix objects
   SetMatrix();
 
   // initialise solver
-  IDAInit(ida_mem, residual_eval<ExprSet>, 0, yy, yp);
+  IDAInit(ida_mem, residual_eval<ExprSet>, 0, yy, yyp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
@@ -87,6 +86,9 @@ IDAKLUSolverOpenMP<ExprSet>::IDAKLUSolverOpenMP(
   // The default is to solve a DAE for generality. This may be changed
   // to an ODE during the Initialize() call
   is_ODE = false;
+
+  // Will be overwritten during the solve() call
+  save_hermite = solver_opts.hermite_interpolation;
 }
 
 template <class ExprSet>
@@ -95,14 +97,14 @@ void IDAKLUSolverOpenMP<ExprSet>::AllocateVectors() {
   // Create vectors
   if (setup_opts.num_threads == 1) {
     yy = N_VNew_Serial(number_of_states, sunctx);
-    yp = N_VNew_Serial(number_of_states, sunctx);
+    yyp = N_VNew_Serial(number_of_states, sunctx);
     y_cache = N_VNew_Serial(number_of_states, sunctx);
     avtol = N_VNew_Serial(number_of_states, sunctx);
     id = N_VNew_Serial(number_of_states, sunctx);
   } else {
     DEBUG("IDAKLUSolverOpenMP::AllocateVectors OpenMP");
     yy = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
-    yp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
+    yyp = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     y_cache = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     avtol = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
     id = N_VNew_OpenMP(number_of_states, setup_opts.num_threads, sunctx);
@@ -125,6 +127,26 @@ void IDAKLUSolverOpenMP<ExprSet>::InitializeStorage(int const N) {
       vector<vector<realtype>>(
           number_of_parameters,
           vector<realtype>(length_of_return_vector, 0.0)
+      )
+  );
+
+  if (save_hermite) {
+    InitializeHermiteStorage(N);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::InitializeHermiteStorage(int const N) {
+  yp = vector<vector<realtype>>(
+      N,
+      vector<realtype>(number_of_states, 0.0)
+  );
+
+  ypS = vector<vector<vector<realtype>>>(
+      N,
+      vector<vector<realtype>>(
+          number_of_parameters,
+          vector<realtype>(number_of_states, 0.0)
       )
   );
 }
@@ -285,7 +307,7 @@ void IDAKLUSolverOpenMP<ExprSet>::Initialize() {
 
   if (sensitivity) {
     CheckErrors(IDASensInit(ida_mem, number_of_parameters, IDA_SIMULTANEOUS,
-      sensitivities_eval<ExprSet>, yyS, ypS));
+      sensitivities_eval<ExprSet>, yyS, yypS));
     CheckErrors(IDASensEEtolerances(ida_mem));
   }
 
@@ -321,13 +343,13 @@ IDAKLUSolverOpenMP<ExprSet>::~IDAKLUSolverOpenMP() {
   SUNMatDestroy(J);
   N_VDestroy(avtol);
   N_VDestroy(yy);
-  N_VDestroy(yp);
+  N_VDestroy(yyp);
   N_VDestroy(y_cache);
   N_VDestroy(id);
 
   if (sensitivity) {
     N_VDestroyVectorArray(yyS, number_of_parameters);
-    N_VDestroyVectorArray(ypS, number_of_parameters);
+    N_VDestroyVectorArray(yypS, number_of_parameters);
   }
 
   IDAFree(&ida_mem);
@@ -349,9 +371,15 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
   const int number_of_evals = t_eval.size();
   const int number_of_interps = t_interp.size();
 
-  if (t.size() < number_of_evals + number_of_interps) {
-    InitializeStorage(number_of_evals + number_of_interps);
-  }
+  // Hermite interpolation is only available when saving
+  // 1. adaptive steps and 2. the full solution
+  save_hermite = (
+    solver_opts.hermite_interpolation &&
+    save_adaptive_steps &&
+    !save_outputs_only
+  );
+
+  InitializeStorage(number_of_evals + number_of_interps);
 
   int i_save = 0;
 
@@ -378,12 +406,12 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
   // Setup consistent initialization
   realtype *y_val = N_VGetArrayPointer(yy);
-  realtype *yp_val = N_VGetArrayPointer(yp);
+  realtype *yp_val = N_VGetArrayPointer(yyp);
   vector<realtype *> yS_val(number_of_parameters);
   vector<realtype *> ypS_val(number_of_parameters);
   for (int p = 0 ; p < number_of_parameters; p++) {
     yS_val[p] = N_VGetArrayPointer(yyS[p]);
-    ypS_val[p] = N_VGetArrayPointer(ypS[p]);
+    ypS_val[p] = N_VGetArrayPointer(yypS[p]);
     for (int i = 0; i < number_of_states; i++) {
       yS_val[p][i] = y0[i + (p + 1) * number_of_states];
       ypS_val[p][i] = yp0[i + (p + 1) * number_of_states];
@@ -409,23 +437,27 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     ConsistentInitialization(t0, t_eval_next, init_type);
   }
 
-  if (sensitivity) {
-    CheckErrors(IDAGetSensDky(ida_mem, t_val, 0, yyS));
-  }
-
-  // Store Consistent initialization
-  SetStep(t0, y_val, yS_val, i_save);
-
   // Set the initial stop time
   IDASetStopTime(ida_mem, t_eval_next);
 
+  // Progress one step. This must be done before the while loop to ensure
+  // that we can run IDAGetDky at t0 for dky = 1
+  int retval = IDASolve(ida_mem, tf, &t_val, yy, yyp, IDA_ONE_STEP);
+
+  // Store consistent initialization
+  CheckErrors(IDAGetDky(ida_mem, t0, 0, yy));
+  if (sensitivity) {
+    CheckErrors(IDAGetSensDky(ida_mem, t0, 0, yyS));
+  }
+
+  SetStep(t0, y_val, yp_val, yS_val, ypS_val, i_save);
+
+  // Reset the states at t = t_val. Sensitivities are handled in the while-loop
+  CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
+
   // Solve the system
-  int retval;
   DEBUG("IDASolve");
   while (true) {
-    // Progress one step
-    retval = IDASolve(ida_mem, tf, &t_val, yy, yp, IDA_ONE_STEP);
-
     if (retval < 0) {
       // failed
       break;
@@ -448,18 +480,21 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
 
     if (hit_tinterp) {
       // Save the interpolated state at t_prev < t < t_val, for all t in t_interp
-      SetStepInterp(i_interp,
+      SetStepInterp(
+        i_interp,
         t_interp_next,
         t_interp,
         t_val,
         t_prev,
         t_eval_next,
         y_val,
+        yp_val,
         yS_val,
+        ypS_val,
         i_save);
     }
 
-    if (hit_adaptive || hit_teval || hit_event) {
+    if (hit_adaptive || hit_teval || hit_event || hit_final_time) {
       if (hit_tinterp) {
         // Reset the states and sensitivities at t = t_val
         CheckErrors(IDAGetDky(ida_mem, t_val, 0, yy));
@@ -469,11 +504,16 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       }
 
       // Save the current state at t_val
-      if (hit_adaptive) {
-        // Dynamically allocate memory for the adaptive step
-        ExtendAdaptiveArrays();
+      // First, check to make sure that the t_val is not equal to the current t value
+      // If it is, we don't want to save the current state twice
+      if (!hit_tinterp || t_val != t.back()) {
+        if (hit_adaptive) {
+          // Dynamically allocate memory for the adaptive step
+          ExtendAdaptiveArrays();
+        }
+
+        SetStep(t_val, y_val, yp_val, yS_val, ypS_val, i_save);
       }
-      SetStep(t_val, y_val, yS_val, i_save);
     }
 
     if (hit_final_time || hit_event) {
@@ -481,7 +521,7 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
       break;
     } else if (hit_teval) {
       // Set the next stop time
-      i_eval += 1;
+      i_eval++;
       t_eval_next = t_eval[i_eval];
       CheckErrors(IDASetStopTime(ida_mem, t_eval_next));
 
@@ -491,6 +531,9 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
 
     t_prev = t_val;
+
+    // Progress one step
+    retval = IDASolve(ida_mem, tf, &t_val, yy, yyp, IDA_ONE_STEP);
   }
 
   int const length_of_final_sv_slice = save_outputs_only ? number_of_states : 0;
@@ -547,7 +590,50 @@ SolutionData IDAKLUSolverOpenMP<ExprSet>::solve(
     }
   }
 
-  return SolutionData(retval, number_of_timesteps, length_of_return_vector, arg_sens0, arg_sens1, arg_sens2, length_of_final_sv_slice, t_return, y_return, yS_return, yterm_return);
+  realtype *yp_return = new realtype[(save_hermite ? 1 : 0) * (number_of_timesteps * number_of_states)];
+  realtype *ypS_return = new realtype[(save_hermite ? 1 : 0) * (arg_sens0 * arg_sens1 * arg_sens2)];
+  if (save_hermite) {
+    count = 0;
+    for (size_t i = 0; i < number_of_timesteps; i++) {
+      for (size_t j = 0; j < number_of_states; j++) {
+        yp_return[count] = yp[i][j];
+        count++;
+      }
+    }
+
+    // Sensitivity states, ypS
+    // Note: Ordering of vector is different if computing outputs vs returning
+    // the complete state vector
+    count = 0;
+    for (size_t idx0 = 0; idx0 < arg_sens0; idx0++) {
+      for (size_t idx1 = 0; idx1 < arg_sens1; idx1++) {
+        for (size_t idx2 = 0; idx2 < arg_sens2; idx2++) {
+          auto i = (save_outputs_only ? idx0 : idx1);
+          auto j = (save_outputs_only ? idx1 : idx2);
+          auto k = (save_outputs_only ? idx2 : idx0);
+
+          ypS_return[count] = ypS[i][k][j];
+          count++;
+        }
+      }
+    }
+  }
+
+  return SolutionData(
+    retval,
+    number_of_timesteps,
+    length_of_return_vector,
+    arg_sens0,
+    arg_sens1,
+    arg_sens2,
+    length_of_final_sv_slice,
+    save_hermite,
+    t_return,
+    y_return,
+    yp_return,
+    yS_return,
+    ypS_return,
+    yterm_return);
 }
 
 template <class ExprSet>
@@ -563,14 +649,30 @@ void IDAKLUSolverOpenMP<ExprSet>::ExtendAdaptiveArrays() {
   if (sensitivity) {
     yS.emplace_back(number_of_parameters, vector<realtype>(length_of_return_vector, 0.0));
   }
+
+  if (save_hermite) {
+    ExtendHermiteArrays();
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::ExtendHermiteArrays() {
+  DEBUG("IDAKLUSolver::ExtendHermiteArrays");
+  // States
+  yp.emplace_back(number_of_states, 0.0);
+
+  // Sensitivity
+  if (sensitivity) {
+    ypS.emplace_back(number_of_parameters, vector<realtype>(number_of_states, 0.0));
+  }
 }
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::ReinitializeIntegrator(const realtype& t_val) {
   DEBUG("IDAKLUSolver::ReinitializeIntegrator");
-  CheckErrors(IDAReInit(ida_mem, t_val, yy, yp));
+  CheckErrors(IDAReInit(ida_mem, t_val, yy, yyp));
   if (sensitivity) {
-    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, ypS));
+    CheckErrors(IDASensReInit(ida_mem, IDA_SIMULTANEOUS, yyS, yypS));
   }
 }
 
@@ -609,14 +711,16 @@ void IDAKLUSolverOpenMP<ExprSet>::ConsistentInitializationODE(
   realtype *y_cache_val = N_VGetArrayPointer(y_cache);
   std::memset(y_cache_val, 0, number_of_states * sizeof(realtype));
   // Overwrite yp
-  residual_eval<ExprSet>(t_val, yy, y_cache, yp, functions.get());
+  residual_eval<ExprSet>(t_val, yy, y_cache, yyp, functions.get());
 }
 
 template <class ExprSet>
 void IDAKLUSolverOpenMP<ExprSet>::SetStep(
   realtype &tval,
   realtype *y_val,
+  realtype *yp_val,
   vector<realtype *> const &yS_val,
+  vector<realtype *> const &ypS_val,
   int &i_save
 ) {
   // Set adaptive step results for y and yS
@@ -629,6 +733,10 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStep(
     SetStepOutput(tval, y_val, yS_val, i_save);
   } else {
     SetStepFull(tval, y_val, yS_val, i_save);
+
+    if (save_hermite) {
+      SetStepHermite(tval, yp_val, ypS_val, i_save);
+    }
   }
 
   i_save++;
@@ -644,7 +752,9 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
   realtype &t_prev,
   realtype const &t_eval_next,
   realtype *y_val,
+  realtype *yp_val,
   vector<realtype *> const &yS_val,
+  vector<realtype *> const &ypS_val,
   int &i_save
   ) {
   // Save the state at the requested time
@@ -657,7 +767,7 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepInterp(
     }
 
     // Memory is already allocated for the interpolated values
-    SetStep(t_interp_next, y_val, yS_val, i_save);
+    SetStep(t_interp_next, y_val, yp_val, yS_val, ypS_val, i_save);
 
     i_interp++;
     if (i_interp == (t_interp.size())) {
@@ -765,6 +875,50 @@ void IDAKLUSolverOpenMP<ExprSet>::SetStepOutputSensitivities(
       for (int spk=0; spk<dvar_dy->nnz_out(); spk++) {
         yS_back_paramk[dvar_k] += res_dvar_dy[spk] * yS_val[paramk][dvar_dy->get_col()[spk]];
       }
+    }
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::SetStepHermite(
+  realtype &tval,
+  realtype *yp_val,
+  vector<realtype *> const &ypS_val,
+  int &i_save
+) {
+  // Set adaptive step results for yp and ypS
+  DEBUG("IDAKLUSolver::SetStepHermite");
+
+  // States
+  CheckErrors(IDAGetDky(ida_mem, tval, 1, yyp));
+  auto &yp_back = yp[i_save];
+    for (size_t j = 0; j < length_of_return_vector; ++j) {
+    yp_back[j] = yp_val[j];
+
+  }
+
+  // Sensitivity
+  if (sensitivity) {
+    SetStepHermiteSensitivities(tval, yp_val, ypS_val, i_save);
+  }
+}
+
+template <class ExprSet>
+void IDAKLUSolverOpenMP<ExprSet>::SetStepHermiteSensitivities(
+  realtype &tval,
+  realtype *yp_val,
+  vector<realtype *> const &ypS_val,
+  int &i_save
+) {
+  DEBUG("IDAKLUSolver::SetStepHermiteSensitivities");
+
+  // Calculate sensitivities for the full ypS array
+  CheckErrors(IDAGetSensDky(ida_mem, tval, 1, yypS));
+  for (size_t j = 0; j < number_of_parameters; ++j) {
+    auto &ypS_back_j = ypS[i_save][j];
+    auto &ypSval_j = ypS_val[j];
+    for (size_t k = 0; k < number_of_states; ++k) {
+      ypS_back_j[k] = ypSval_j[k];
     }
   }
 }
