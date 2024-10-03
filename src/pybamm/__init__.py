@@ -158,7 +158,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
-from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_variable import ProcessedVariable, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
