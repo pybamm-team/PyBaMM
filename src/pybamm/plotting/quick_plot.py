@@ -184,7 +184,12 @@ class QuickPlot:
                 t_plot = sol.t
             return t_plot
 
-        self.ts_seconds = [t_sample(sol) for sol in solutions]
+        ts_seconds = []
+        for sol in solutions:
+            # Sample time points for each sub-solution
+            t_sol = [t_sample(sub_sol) for sub_sol in sol.sub_solutions]
+            ts_seconds.append(np.concatenate(t_sol))
+        self.ts_seconds = ts_seconds
 
         # Set timescale
         if time_unit is None:
