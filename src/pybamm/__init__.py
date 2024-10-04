@@ -122,7 +122,6 @@ from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
-from .parameters.parameter_sets import parameter_sets
 
 # Mesh and Discretisation classes
 from .discretisations.discretisation import Discretisation
@@ -197,6 +196,9 @@ from . import callbacks
 
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
+
+# Pybamm entry point API for parameter_sets and models
+from .entry_points import parameter_sets, Model, model_sets
 
 # Remove any imported modules, so we don't expose them as part of pybamm
 del sys
