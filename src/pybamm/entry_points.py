@@ -16,9 +16,9 @@ class EntryPoint(Mapping):
     Listing available parameter sets:
         >>> import pybamm
         >>> list(pybamm.parameter_sets)
-        ['Chen2020', ...]
-        >>> list(pybamm.models)
-        ['SPM', ...]
+        ['Ai2020', 'Chen2020', ...]
+        >>> list(pybamm.model_sets)
+        ['SPM']
 
     Get the docstring for a parameter set/model:
 
@@ -29,11 +29,14 @@ class EntryPoint(Mapping):
         :footcite:t:`rieger2016new` and references therein.
         ...
 
-        >>> print(pybamm.models.get_docstring("SPM"))
-        <BLANKLINE>
-        Single Particle Model (SPM) model of a lithium-ion battery, from :footcite:t:`Marquis2019`. This class differs from the :class:`pybamm.lithium_ion.SPM` model class in that it shows the whole model in a single class. This comes at the cost of flexibility in combining different physical effects, and in general the main SPM class should be used instead.
-        ...
         See also: :ref:`adding-parameter-sets`
+
+        >>> print(pybamm.model_sets.get_docstring("SPM"))
+        <BLANKLINE>
+        Single Particle Model (SPM) of a lithium-ion battery, from
+        :footcite:t:`Marquis2019`.
+        See :class:`pybamm.lithium_ion.BaseModel` for more details.
+        ...
     """
 
     _instances = 0
@@ -103,7 +106,7 @@ parameter_sets = EntryPoint(group="pybamm_parameter_sets")
 model_sets = EntryPoint(group="pybamm_models")
 
 
-def Model(model: str):
+def Model(model: str):  # doctest: +SKIP
     """
     Returns the loaded model object
 
@@ -119,9 +122,9 @@ def Model(model: str):
     --------
     Listing available models:
         >>> import pybamm
-        >>> list(pybamm.models)
-        ['SPM', ...]
-        >>> pybamm.Model('Author/Year')
-        <pybamm.models.input.SPM.SPM object>
+        >>> list(pybamm.model_sets)
+        ['SPM']
+        >>> pybamm.Model('SPM') # doctest: +SKIP
+        <pybamm.models.full_battery_models.lithium_ion.spm.SPM object>
     """
     return model_sets[model]
