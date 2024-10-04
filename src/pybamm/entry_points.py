@@ -95,19 +95,22 @@ class EntryPoint(Mapping):
 
     def __getattribute__(self, name):
         try:
-            return super().__getattribute__(name)
-        except AttributeError as error:
             # For backwards compatibility, parameter sets that used to be defined in
             # this file now return the name as a string, which will load the same
             # parameter set as before when passed to `ParameterValues`
-            if name in self:
+            # Bypass the overloaded __getitem__ and __iter__ to avoid recursion
+            _all_entries = super().__getattribute__("_all_entries")
+            if name in _all_entries:
                 msg = (
                     f"Parameter sets should be called directly by their name ({name}), "
                     f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
                 )
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
                 return name
-            raise error
+        except AttributeError:
+            pass  # Handle the attribute error normally
+
+        return super().__getattribute__(name)
 
 
 #: Singleton Instance of :class:EntryPoint initialised with pybamm_parameter_sets"""
