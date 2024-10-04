@@ -39,6 +39,8 @@ class SEIGrowth(BaseModel):
             pybamm.citations.register("Yang2017")
         elif SEI_option == "VonKolzenberg2020":
             pybamm.citations.register("VonKolzenberg2020")
+        elif SEI_option == "tunnelling limited":
+            pybamm.citations.register("Tang2012")
         else:
             pybamm.citations.register("Marquis2020")
 

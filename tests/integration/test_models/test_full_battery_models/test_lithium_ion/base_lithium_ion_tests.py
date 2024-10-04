@@ -204,6 +204,29 @@ class BaseIntegrationTestLithiumIon:
         }
         self.run_basic_processing_test(options)
 
+    def test_sei_VonKolzenberg2020(self):
+        options = {"SEI": "VonKolzenberg2020"}
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {
+                "tunneling distance for electrons [m]": 0,
+                "SEI lithium ion conductivity [S.m-1]": 1.0e-8,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_sei_tunnelling_limited(self):
+        options = {
+            "SEI": "tunnelling limited",
+        }
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values.update(
+            {"Tunneling barrier factor [m-1]": 6.0e9},
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_sei_asymmetric_ec_reaction_limited(self):
         options = {
             "SEI": "ec reaction limited (asymmetric)",
