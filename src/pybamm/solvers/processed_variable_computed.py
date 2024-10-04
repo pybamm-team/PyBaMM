@@ -27,7 +27,7 @@ class ProcessedVariableComputed:
         Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadis : list of :class:`casadi.Function`
+    base_variables_casadi : list of :class:`casadi.Function`
         A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     base_variable_data : list of :numpy:array
@@ -45,7 +45,6 @@ class ProcessedVariableComputed:
         base_variables_casadi,
         base_variables_data,
         solution,
-        warn=True,
         cumtrapz_ic=None,
     ):
         self.base_variables = base_variables
@@ -60,7 +59,6 @@ class ProcessedVariableComputed:
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
-        self.warn = warn
         self.cumtrapz_ic = cumtrapz_ic
 
         # Sensitivity starts off uninitialized, only set when called
@@ -82,33 +80,35 @@ class ProcessedVariableComputed:
             and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
         ):
             self.initialise_2D_scikit_fem()
+            return
 
         # check variable shape
-        else:
-            if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
-                self.initialise_0D()
-            else:
-                n = self.mesh.npts
-                base_shape = self.base_eval_shape[0]
-                # Try some shapes that could make the variable a 1D variable
-                if base_shape in [n, n + 1]:
-                    self.initialise_1D()
-                else:
-                    # Try some shapes that could make the variable a 2D variable
-                    first_dim_nodes = self.mesh.nodes
-                    first_dim_edges = self.mesh.edges
-                    second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-                    if self.base_eval_size // len(second_dim_pts) in [
-                        len(first_dim_nodes),
-                        len(first_dim_edges),
-                    ]:
-                        self.initialise_2D()
-                    else:
-                        # Raise error for 3D variable
-                        raise NotImplementedError(
-                            f"Shape not recognized for {base_variables[0]} "
-                            + "(note processing of 3D variables is not yet implemented)"
-                        )
+        if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
+            self.initialise_0D()
+            return
+
+        n = self.mesh.npts
+        base_shape = self.base_eval_shape[0]
+        # Try some shapes that could make the variable a 1D variable
+        if base_shape in [n, n + 1]:
+            self.initialise_1D()
+            return
+
+        # Try some shapes that could make the variable a 2D variable
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_pts = self.base_variables[0].secondary_mesh.nodes
+        if self.base_eval_size // len(second_dim_pts) not in [
+            len(first_dim_nodes),
+            len(first_dim_edges),
+        ]:
+            # Raise error for 3D variable
+            raise NotImplementedError(
+                f"Shape not recognized for {base_variables[0]} "
+                + "(note processing of 3D variables is not yet implemented)"
+            )
+
+        self.initialise_2D()
 
     def add_sensitivity(self, param, data):
         # unroll from sparse representation into n-d matrix
@@ -203,7 +203,7 @@ class ProcessedVariableComputed:
         self.entries = entries
         self.dimensions = 0
 
-    def initialise_1D(self, fixed_t=False):
+    def initialise_1D(self):
         entries = self.unroll_1D()
 
         # Get node and edge values
@@ -422,7 +422,7 @@ class ProcessedVariableComputed:
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
         """
         Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation

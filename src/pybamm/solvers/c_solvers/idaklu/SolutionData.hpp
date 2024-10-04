@@ -27,9 +27,12 @@ class SolutionData
       int arg_sens1,
       int arg_sens2,
       int length_of_final_sv_slice,
+      bool save_hermite,
       realtype *t_return,
       realtype *y_return,
+      realtype *yp_return,
       realtype *yS_return,
+      realtype *ypS_return,
       realtype *yterm_return):
       flag(flag),
       number_of_timesteps(number_of_timesteps),
@@ -38,9 +41,12 @@ class SolutionData
       arg_sens1(arg_sens1),
       arg_sens2(arg_sens2),
       length_of_final_sv_slice(length_of_final_sv_slice),
+      save_hermite(save_hermite),
       t_return(t_return),
       y_return(y_return),
+      yp_return(yp_return),
       yS_return(yS_return),
+      ypS_return(ypS_return),
       yterm_return(yterm_return)
     {}
 
@@ -64,9 +70,12 @@ private:
     int arg_sens1;
     int arg_sens2;
     int length_of_final_sv_slice;
+    bool save_hermite;
     realtype *t_return;
     realtype *y_return;
+    realtype *yp_return;
     realtype *yS_return;
+    realtype *ypS_return;
     realtype *yterm_return;
 };
 
