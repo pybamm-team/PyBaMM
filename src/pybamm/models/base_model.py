@@ -69,10 +69,12 @@ class BaseModel:
         Specifies the format to convert the expression trees representing the RHS,
         algebraic equations, Jacobian, and events.
         Options are:
+
             - None: retain PyBaMM expression tree structure.
             - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
             - "casadi": convert to CasADi expression tree for Jacobian calculation.
             - "jax": convert to JAX expression tree.
+
         Default is "casadi".
     is_discretised: bool
         Indicates whether the model has been discretized (default is False).
@@ -259,9 +261,6 @@ class BaseModel:
 
     @property
     def variables_and_events(self):
-        """
-        Returns variables and events in a single dictionary
-        """
         try:
             return self._variables_and_events
         except AttributeError:
