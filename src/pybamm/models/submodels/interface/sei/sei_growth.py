@@ -2,6 +2,7 @@
 # Class for SEI growth
 #
 import pybamm
+
 from .base_sei import BaseModel
 
 
@@ -166,8 +167,9 @@ class SEIGrowth(BaseModel):
                 * phase_param.kappa_Li_ion
                 / pybamm.maximum(pybamm.AbsoluteValue(j), 1e-38)
             )
-            LL_k = (1 - L_app / L_mig * pybamm.sign(j)) / (
-                1 - L_app / L_mig * pybamm.sign(j) + L_app / L_diff
+            sign_j = 2 * (j > 0) - 1
+            LL_k = (1 - L_app / L_mig * sign_j) / (
+                1 - L_app / L_mig * sign_j + L_app / L_diff
             )
             j_sei = -phase_param.j0_sei * LL_k * pybamm.exp(-alpha_SEI * eta_bar)
 

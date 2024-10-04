@@ -1,10 +1,10 @@
 #
 # Base integration tests for lithium-ion models
 #
+import numpy as np
+
 import pybamm
 import tests
-
-import numpy as np
 
 
 class BaseIntegrationTestLithiumIon:
@@ -210,7 +210,7 @@ class BaseIntegrationTestLithiumIon:
         parameter_values.update(
             {
                 "tunneling distance for electrons [m]": 0,
-                "SEI lithium ion conductivity [S.m-1]": 1.0e-8,
+                "SEI lithium ion conductivity [S.m-1]": 1.0e-7,
             },
             check_already_exists=False,
         )

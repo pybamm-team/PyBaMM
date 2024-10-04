@@ -1,11 +1,13 @@
-import pytest
-import pybamm
-import os
-import io
 import contextlib
+import io
+import os
 import warnings
-from pybtex.database import Entry
 from tempfile import NamedTemporaryFile
+
+import pytest
+from pybtex.database import Entry
+
+import pybamm
 
 
 @contextlib.contextmanager
@@ -284,10 +286,6 @@ class TestCitations:
         assert "VonKolzenberg2020" in citations._papers_to_cite
         citations._reset()
 
-        pybamm.lithium_ion.DFN(build=False, options={"SEI": "VonKolzenberg2020"})
-        assert "VonKolzenberg2020" in citations._papers_to_cite
-        citations._reset()
-
     def test_tang_2012(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
@@ -300,10 +298,6 @@ class TestCitations:
         citations._reset()
 
         pybamm.lithium_ion.SPM(build=False, options={"SEI": "tunnelling limited"})
-        assert "Tang2012" in citations._papers_to_cite
-        citations._reset()
-
-        pybamm.lithium_ion.DFN(build=False, options={"SEI": "tunnelling limited"})
         assert "Tang2012" in citations._papers_to_cite
         citations._reset()
 
