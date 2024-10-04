@@ -1,7 +1,5 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-- Deprecated `pybamm.Simulation.set_parameters` and `pybamm.Simulation.set_up_and_parameterise_experiment` functions in `pybamm.simulation.py`. ([#3752](https://github.com/pybamm-team/PyBaMM/pull/3752))
-
 ## Features
 
 - Added Hermite interpolation to the (`IDAKLUSolver`) that improves the accuracy and performance of post-processing variables. ([#4464](https://github.com/pybamm-team/PyBaMM/pull/4464))
@@ -23,6 +21,7 @@
 
 ## Breaking changes
 
+- Deprecated `pybamm.Simulation.set_parameters` and `pybamm.Simulation.     set_up_and_parameterise_experiment` functions in `pybamm.simulation.py`. ([#3752](https://github.com/pybamm-team/PyBaMM/pull/3752))
 - Removed the deprecation warning for the chemistry argument in
   ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))
 - The parameters "... electrode OCP entropic change [V.K-1]" and "... electrode volume change" are now expected to be functions of stoichiometry only instead of functions of both stoichiometry and maximum concentration ([#4427](https://github.com/pybamm-team/PyBaMM/pull/4427))
