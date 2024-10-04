@@ -19,29 +19,88 @@ class BaseModel:
     Attributes
     ----------
     name: str
-        A string giving the name of the model.
+        A string representing the name of the model.
+    rhs: dict
+        A dictionary mapping expressions (variables) to expressions that represent
+        the right-hand side (RHS) of the model's differential equations.
+    algebraic: dict
+        A dictionary mapping expressions (variables) to expressions that represent
+        the algebraic equations of the model.
+    initial_conditions: dict
+        A dictionary mapping expressions (variables) to expressions that represent
+        the initial conditions for the state variables.
     submodels: dict
         A dictionary of submodels that the model is composed of.
     boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions.
+        A dictionary mapping expressions (variables) to expressions representing
+        the boundary conditions of the model.
     variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables.
-    use_jacobian : bool
+        A dictionary mapping strings to expressions representing the model's useful variables.
+    variables_and_events: dict
+        A dictionary containing both the model's variables and events, where events
+        can trigger specific actions or terminations during model simulations.
+    events: list
+        A list of events that can trigger solver terminations or inform the solver
+        of discontinuities during simulations.
+    concatenated_rhs: expression
+        The concatenated right-hand side (RHS) expressions for the model after discretization.
+    concatenated_algebraic: expression
+        The concatenated algebraic equations for the model after discretization.
+    concatenated_initial_conditions: array
+        The initial conditions for all variables after discretization, providing the
+        initial values for the state variables.
+    mass_matrix: array
+        The mass matrix for the system of differential equations after discretization.
+    mass_matrix_inv: array
+        The inverse of the mass matrix for the differential equations after discretization.
+    jacobian: expression
+        The Jacobian matrix for the model, computed automatically if `use_jacobian` is True.
+    jacobian_rhs: expression
+        The Jacobian matrix for the right-hand side (RHS) part of the model, computed
+        if `use_jacobian` is True.
+    jacobian_algebraic: expression
+        The Jacobian matrix for the algebraic part of the model, computed automatically
+        during solver setup if `use_jacobian` is True.
+    options: dict
+        The model options dictionary that allows customization of the model's behavior.
+    use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
-    convert_to_format : str
-        Whether to convert the expression trees representing the rhs and
-        algebraic equations, Jacobain (if using) and events into a different format:
-
-        - None: keep PyBaMM expression tree structure.
-        - "python": convert into pure python code that will calculate the result of \
-        calling `evaluate(t, y)` on the given expression treeself.
-        - "casadi": convert into CasADi expression tree, which then uses CasADi's \
-        algorithm to calculate the Jacobian.
-        - "jax": convert into JAX expression tree
-
+    convert_to_format: str
+        Specifies the format to convert the expression trees representing the RHS,
+        algebraic equations, Jacobian, and events.
+        Options are:
+            - None: retain PyBaMM expression tree structure.
+            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
+            - "casadi": convert to CasADi expression tree for Jacobian calculation.
+            - "jax": convert to JAX expression tree.
         Default is "casadi".
+    is_discretised: bool
+        Indicates whether the model has been discretized (default is False).
+    geometry: pybamm.Geometry
+        The geometry of the model.
+    default_var_pts: dict
+        A dictionary of the default variable points for the model, which is empty by default.
+    default_geometry: dict
+        A dictionary of the default geometry for the model, which is empty by default.
+    default_submesh_types: dict
+        A dictionary of the default submesh types for the model, which is empty by default.
+    default_spatial_methods: dict
+        A dictionary of the default spatial methods for the model, which is empty by default.
+    default_solver: pybamm.Solver
+        The default solver for the model, based on whether it is an ODE/DAE or algebraic model.
+    default_quick_plot_variables: None or dict
+        The default variables for quick plotting (None by default).
+    default_parameter_values: pybamm.ParameterValues
+        The default parameter values for the model (an empty set of parameters by default).
+    parameters: list
+        A list of all parameter symbols used in the model.
+    input_parameters: list
+        A list of all input parameter symbols used in the model.
+    y_slices: None or list
+        Slices of the concatenated state vector after discretization, used to track
+        different submodels in the full concatenated solution vector.
+    param: dict
+        Dictionary to store parameter values for the model.
     """
 
     def __init__(self, name="Unnamed model"):
@@ -136,7 +195,6 @@ class BaseModel:
 
     @property
     def name(self):
-        """Returns the name of the model"""
         return self._name
 
     @name.setter
@@ -145,8 +203,6 @@ class BaseModel:
 
     @property
     def rhs(self):
-        """Returns a dictionary mapping expressions (variables) to expressions that represent
-        the rhs."""
         return self._rhs
 
     @rhs.setter
@@ -155,8 +211,6 @@ class BaseModel:
 
     @property
     def algebraic(self):
-        """Returns a dictionary mapping expressions (variables) to expressions that represent
-        the algebraic equations."""
         return self._algebraic
 
     @algebraic.setter
@@ -165,8 +219,6 @@ class BaseModel:
 
     @property
     def initial_conditions(self):
-        """Returns a dictionary mapping expressions (variables) to expressions representing
-        the initial conditions for the state variables y."""
         return self._initial_conditions
 
     @initial_conditions.setter
@@ -177,7 +229,6 @@ class BaseModel:
 
     @property
     def boundary_conditions(self):
-        """Returns a dictionary mapping expressions (variables) to expressions representing the boundary conditions."""
         return self._boundary_conditions
 
     @boundary_conditions.setter
@@ -186,7 +237,6 @@ class BaseModel:
 
     @property
     def variables(self):
-        """Returns a dictionary mapping strings to expressions of useful variables."""
         return self._variables
 
     @variables.setter
@@ -223,9 +273,6 @@ class BaseModel:
 
     @property
     def events(self):
-        """Returns a list of events. Each event can either cause the solver to terminate
-        or be used to inform the solver of the
-        existance of a discontinuity"""
         return self._events
 
     @events.setter
@@ -358,7 +405,6 @@ class BaseModel:
 
     @property
     def default_solver(self):
-        """Returns default solver based on whether model is ODE/DAE or algebraic"""
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
@@ -374,7 +420,6 @@ class BaseModel:
 
     @property
     def parameters(self):
-        """Returns all the parameters in the model"""
         self._parameters = self._find_symbols(
             (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
         )
@@ -382,7 +427,6 @@ class BaseModel:
 
     @property
     def input_parameters(self):
-        """Returns all the input parameters in the model"""
         if self._input_parameters is None:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
