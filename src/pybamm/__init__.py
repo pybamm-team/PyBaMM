@@ -200,11 +200,9 @@ from .pybamm_data import DataLoader
 
 # Fix Casadi import
 import os
+import pathlib
 import sysconfig
-if sys.platform == "win32":
-    os.environ["CASADIPATH"] = os.path.join(sysconfig.get_path('purelib'), 'casadi').replace("\\", "\\\\")
-else:
-    os.environ["CASADIPATH"] = os.path.join(sysconfig.get_path('purelib'), 'casadi')
+os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path('purelib')) / 'casadi')
 
 __all__ = [
     "batch_study",
