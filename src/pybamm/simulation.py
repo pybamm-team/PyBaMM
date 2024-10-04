@@ -253,7 +253,7 @@ class Simulation:
                 parameterised_model
             )
 
-    def set_parameters(self):
+    def _set_parameters(self):
         """
         A method to set the parameters in the model and the associated geometry.
         """
