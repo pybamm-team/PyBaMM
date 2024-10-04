@@ -257,7 +257,9 @@ class Simulation:
         """
         A method to set the parameters in the model and the associated geometry.
         """
-        msg = "pybamm.set_paramters is deprecated and not meant to be accessed by users."
+        msg = (
+            "pybamm.set_paramters is deprecated and not meant to be accessed by users."
+        )
         warnings(msg, DeprecationWarning)
         if self._model_with_set_params:
             return
