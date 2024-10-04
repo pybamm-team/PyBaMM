@@ -28,14 +28,33 @@ class BaseSubModel(pybamm.BaseModel):
 
     Attributes
     ----------
-    param: parameter class
-        The model parameter symbols
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
+    param : parameter class
+        The model parameter symbols.
+    domain : str
+        The domain of the submodel, could be either 'Negative', 'Positive', 'Separator', or None.
+    name : str
+        The name of the submodel.
+    external : bool
+        A boolean flag indicating whether the variables defined by the submodel will be
+        provided externally by the user. Set to False by default.
+    options : dict or pybamm.BatteryModelOptions
+        A dictionary or an instance of `pybamm.BatteryModelOptions` that stores configuration
+        options for the submodel.
+    domain_param : parameter class or None
+        A parameter object containing the relevant parameters for the model's domain.
+    phase_param : parameter class or None
+        A parameter object containing the parameters associated with a specific phase (if
+        applicable). If no phase is specified, it is set to None.
+    phase_name : str
+        A string representing the phase of the submodel, which could be "primary",
+        "secondary", or an empty string if there is only one phase.
+    phase : str or None
+        The current phase of the submodel, which could be "primary", "secondary", or None.
+    boundary_conditions : dict
+        A dictionary mapping variables to their respective boundary conditions.
+    variables : dict
+        A dictionary mapping variable names (strings) to expressions or objects that
+        represent the useful variables for the submodel.
     """
 
     def __init__(
@@ -94,6 +113,8 @@ class BaseSubModel(pybamm.BaseModel):
 
     @property
     def domain(self):
+        """Returns the current domain, which can be "negative", "separator", "positive", or None.
+        The domain is converted to lowercase and stored as '_Domain'. Raises DomainError for unrecognized values."""
         return self._domain
 
     @domain.setter
@@ -112,6 +133,7 @@ class BaseSubModel(pybamm.BaseModel):
 
     @property
     def domain_Domain(self):
+        """Returns a  tuple containing the current domain and its capitalized form."""
         return self._domain, self._Domain
 
     def get_parameter_info(self, by_submodel=False):
