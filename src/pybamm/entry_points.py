@@ -1,4 +1,5 @@
 import sys
+import warnings
 import importlib.metadata
 import textwrap
 from collections.abc import Mapping
@@ -96,6 +97,16 @@ class EntryPoint(Mapping):
         try:
             return super().__getattribute__(name)
         except AttributeError as error:
+            # For backwards compatibility, parameter sets that used to be defined in
+            # this file now return the name as a string, which will load the same
+            # parameter set as before when passed to `ParameterValues`
+            if name in self:
+                msg = (
+                    f"Parameter sets should be called directly by their name ({name}), "
+                    f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
+                )
+                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                return name
             raise error
 
 
