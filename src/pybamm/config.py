@@ -3,6 +3,7 @@ import os
 import platformdirs
 from pathlib import Path
 import pybamm
+from inputimeout import inputimeout, TimeoutOccurred
 
 
 def is_running_tests():  # pragma: no cover
@@ -41,9 +42,14 @@ def is_running_tests():  # pragma: no cover
     return False
 
 
-def ask_user_opt_in():
+def ask_user_opt_in(timeout=10):
     """
     Ask the user if they want to opt in to telemetry.
+
+    Parameters
+    ----------
+    timeout: float, optional
+        The timeout for the user to respond to the prompt. Default is 20 seconds.
 
     Returns
     -------
@@ -59,9 +65,21 @@ def ask_user_opt_in():
         "This is entirely optional and does not impact the functionality of PyBaMM.\n"
         "For more information, see https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry"
     )
+
     while True:
-        user_input = input("Do you want to enable telemetry? (Y/n): ").strip().lower()
-        if user_input in ["yes", "y"]:
+        try:
+            user_input = (
+                inputimeout(
+                    prompt="Do you want to enable telemetry? (Y/n): ", timeout=timeout
+                )
+                .strip()
+                .lower()
+            )
+        except TimeoutOccurred:
+            print("\nTimeout reached. Defaulting to not enabling telemetry.")
+            return False
+
+        if user_input in ["yes", "y", ""]:
             return True
         elif user_input in ["no", "n"]:
             return False

@@ -45,6 +45,7 @@ dependencies = [
     "pandas>=1.5.0",
     "pooch>=1.8.1",
     "posthog",
+    "inputimeout",
 ]
 
 [project.urls]

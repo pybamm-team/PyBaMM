@@ -1,4 +1,5 @@
 import pytest
+from inputimeout import TimeoutOccurred
 
 import pybamm
 import uuid
@@ -33,10 +34,23 @@ class TestConfig:
 
     @pytest.mark.parametrize("user_opted_in, user_input", [(True, "y"), (False, "n")])
     def test_ask_user_opt_in(self, monkeypatch, user_opted_in, user_input):
-        # Mock the input function to return invalid input first, then valid input
+        # Mock the inputimeout function to return invalid input first, then valid input
         inputs = iter(["invalid", user_input])
-        monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+        monkeypatch.setattr(
+            "pybamm.config.inputimeout", lambda prompt, timeout: next(inputs)
+        )
 
         # Call the function to ask the user if they want to opt in
         opt_in = pybamm.config.ask_user_opt_in()
         assert opt_in is user_opted_in
+
+    def test_ask_user_opt_in_timeout(self, monkeypatch):
+        # Mock the inputimeout function to raise a TimeoutOccurred exception
+        def mock_inputimeout(*args, **kwargs):
+            raise TimeoutOccurred
+
+        monkeypatch.setattr("pybamm.config.inputimeout", mock_inputimeout)
+
+        # Call the function to ask the user if they want to opt in
+        opt_in = pybamm.config.ask_user_opt_in()
+        assert opt_in is False
