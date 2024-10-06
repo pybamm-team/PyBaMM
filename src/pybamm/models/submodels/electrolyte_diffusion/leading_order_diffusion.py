@@ -52,8 +52,6 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         return variables
 
     def set_rhs(self, variables):
-        param = self.param
-
         c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
         T_av = variables["X-averaged cell temperature [K]"]
@@ -86,17 +84,24 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "reaction source terms [A.m-3]"
         ]
         source_terms = (
-            param.n.L * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
-            + param.p.L * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
-        ) / param.F
+            self.param.n.L
+            * (sum_s_j_n_0 - self.param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
+            + self.param.p.L
+            * (sum_s_j_p_0 - self.param.t_plus(c_e_av, T_av) * sum_a_j_p_0)
+        ) / self.param.F
 
         self.rhs = {
             c_e_av: 1
-            / (param.n.L * eps_n_av + param.s.L * eps_s_av + param.p.L * eps_p_av)
+            / (
+                self.param.n.L * eps_n_av
+                + self.param.s.L * eps_s_av
+                + self.param.p.L * eps_p_av
+            )
             * (
                 source_terms
-                - c_e_av * (param.n.L * deps_n_dt_av + param.p.L * deps_p_dt_av)
-                - c_e_av * param.s.L * div_Vbox_s_av
+                - c_e_av
+                * (self.param.n.L * deps_n_dt_av + self.param.p.L * deps_p_dt_av)
+                - c_e_av * self.param.s.L * div_Vbox_s_av
             )
         }
 

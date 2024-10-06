@@ -33,10 +33,9 @@ class BasicDFNHalfCell(BaseModel):
         options = {"working electrode": "positive"}
         super().__init__(options, name)
         pybamm.citations.register("Marquis2019")
-        # `param` is a class containing all the relevant parameters and functions for
+        # `self.param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
-        param = self.param
 
         ######################
         # Variables
@@ -69,14 +68,14 @@ class BasicDFNHalfCell(BaseModel):
         phi_e = pybamm.concatenation(phi_e_s, phi_e_w)
 
         # Constant temperature
-        T = param.T_init
+        T = self.param.T_init
 
         ######################
         # Other set-up
         ######################
 
         # Current density
-        i_cell = param.current_density_with_time
+        i_cell = self.param.current_density_with_time
 
         # Define particle surface concentration
         # Surf takes the surface value of a variable, i.e. its boundary value on the
@@ -94,39 +93,39 @@ class BasicDFNHalfCell(BaseModel):
         eps_w = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
-        b_e_s = param.s.b_e
-        b_e_w = param.p.b_e
+        b_e_s = self.param.s.b_e
+        b_e_w = self.param.p.b_e
 
         # Interfacial reactions
-        j0_w = param.p.prim.j0(c_e_w, c_s_surf_w, T)
-        U_w = param.p.prim.U
-        ne_w = param.p.prim.ne
+        j0_w = self.param.p.prim.j0(c_e_w, c_s_surf_w, T)
+        U_w = self.param.p.prim.U
+        ne_w = self.param.p.prim.ne
 
         # Particle diffusion parameters
-        D_w = param.p.prim.D
-        c_w_init = param.p.prim.c_init
+        D_w = self.param.p.prim.D
+        c_w_init = self.param.p.prim.c_init
 
         # Electrode equation parameters
         eps_s_w = pybamm.Parameter("Positive electrode active material volume fraction")
-        b_s_w = param.p.b_s
-        sigma_w = param.p.sigma
+        b_s_w = self.param.p.b_s
+        sigma_w = self.param.p.sigma
 
         # Other parameters (for outputs)
-        c_w_max = param.p.prim.c_max
-        L_w = param.p.L
+        c_w_max = self.param.p.prim.c_max
+        L_w = self.param.p.L
 
         eps = pybamm.concatenation(eps_s, eps_w)
         tor = pybamm.concatenation(eps_s**b_e_s, eps_w**b_e_w)
 
-        F_RT = param.F / (param.R * T)
-        RT_F = param.R * T / param.F
+        F_RT = self.param.F / (self.param.R * T)
+        RT_F = self.param.R * T / self.param.F
         sto_surf_w = c_s_surf_w / c_w_max
         j_w = (
             2
             * j0_w
             * pybamm.sinh(ne_w / 2 * F_RT * (phi_s_w - phi_e_w - U_w(sto_surf_w, T)))
         )
-        R_w = param.p.prim.R_typ
+        R_w = self.param.p.prim.R_typ
         a_w = 3 * eps_s_w / R_w
         a_j_w = a_w * j_w
         a_j_s = pybamm.PrimaryBroadcast(0, "separator")
@@ -135,7 +134,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # State of Charge
         ######################
-        I = param.current_with_time
+        I = self.param.current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
         self.rhs[Q] = I / 3600
@@ -154,7 +153,7 @@ class BasicDFNHalfCell(BaseModel):
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-j_w / pybamm.surf(D_w(c_s_w, T)) / param.F, "Neumann"),
+            "right": (-j_w / pybamm.surf(D_w(c_s_w, T)) / self.param.F, "Neumann"),
         }
         self.initial_conditions[c_s_w] = c_w_init
 
@@ -183,21 +182,23 @@ class BasicDFNHalfCell(BaseModel):
             ),
         }
         # multiply by Lx**2 to improve conditioning
-        self.algebraic[phi_s_w] = param.L_x**2 * (pybamm.div(i_s_w) + a_j_w)
+        self.algebraic[phi_s_w] = self.param.L_x**2 * (pybamm.div(i_s_w) + a_j_w)
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent
         # initial conditions
-        self.initial_conditions[phi_s_w] = param.p.prim.U_init
+        self.initial_conditions[phi_s_w] = self.param.p.prim.U_init
 
         ######################
         # Electrolyte concentration
         ######################
-        N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
+        N_e = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) + (1 - param.t_plus(c_e, T)) * a_j / param.F
+            -pybamm.div(N_e) + (1 - self.param.t_plus(c_e, T)) * a_j / self.param.F
         )
         dce_dx = (
-            -(1 - param.t_plus(c_e, T)) * i_cell / (tor * param.F * param.D_e(c_e, T))
+            -(1 - self.param.t_plus(c_e, T))
+            * i_cell
+            / (tor * self.param.F * self.param.D_e(c_e, T))
         )
 
         self.boundary_conditions[c_e] = {
@@ -205,7 +206,7 @@ class BasicDFNHalfCell(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[c_e] = param.c_e_init
+        self.initial_conditions[c_e] = self.param.c_e_init
         self.events.append(
             pybamm.Event(
                 "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
@@ -215,16 +216,16 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the electrolyte
         ######################
-        i_e = (param.kappa_e(c_e, T) * tor) * (
-            param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
+        i_e = (self.param.kappa_e(c_e, T) * tor) * (
+            self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e) - pybamm.grad(phi_e)
         )
         # multiply by Lx**2 to improve conditioning
-        self.algebraic[phi_e] = param.L_x**2 * (pybamm.div(i_e) - a_j)
+        self.algebraic[phi_e] = self.param.L_x**2 * (pybamm.div(i_e) - a_j)
 
         # reference potential
-        L_Li = param.n.L
-        sigma_Li = param.n.sigma
-        j_Li = param.j0_Li_metal(pybamm.boundary_value(c_e, "left"), c_w_max, T)
+        L_Li = self.param.n.L
+        sigma_Li = self.param.n.sigma
+        j_Li = self.param.j0_Li_metal(pybamm.boundary_value(c_e, "left"), c_w_max, T)
         eta_Li = 2 * RT_F * pybamm.arcsinh(i_cell / (2 * j_Li))
 
         phi_s_cn = 0
@@ -237,7 +238,7 @@ class BasicDFNHalfCell(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[phi_e] = -param.n.prim.U_init
+        self.initial_conditions[phi_e] = -self.param.n.prim.U_init
 
         ######################
         # (Some) variables
@@ -290,11 +291,15 @@ class BasicDFNHalfCell(BaseModel):
             "X-averaged positive particle surface concentration "
             "[mol.m-3]": c_s_surf_w_av,
             "Positive particle concentration [mol.m-3]": c_s_w,
-            "Total lithium in positive electrode [mol]": c_s_vol_av * L_w * param.A_cc,
+            "Total lithium in positive electrode [mol]": c_s_vol_av
+            * L_w
+            * self.param.A_cc,
             "Electrolyte concentration [mol.m-3]": c_e,
             "Separator electrolyte concentration [mol.m-3]": c_e_s,
             "Positive electrolyte concentration [mol.m-3]": c_e_w,
-            "Total lithium in electrolyte [mol]": c_e_total * param.L_x * param.A_cc,
+            "Total lithium in electrolyte [mol]": c_e_total
+            * self.param.L_x
+            * self.param.A_cc,
             "Current [A]": I,
             "Current variable [A]": I,  # for compatibility with pybamm.Experiment
             "Current density [A.m-2]": i_cell,

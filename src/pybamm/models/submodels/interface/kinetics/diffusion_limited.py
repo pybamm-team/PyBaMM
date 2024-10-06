@@ -12,7 +12,7 @@ class DiffusionLimited(BaseInterface):
 
     Parameters
     ----------
-    param :
+    self.param :
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
@@ -68,7 +68,6 @@ class DiffusionLimited(BaseInterface):
         return variables
 
     def _get_diffusion_limited_current_density(self, variables):
-        param = self.param
         if self.domain == "negative":
             if self.order == "leading":
                 j_p = variables[
@@ -81,10 +80,10 @@ class DiffusionLimited(BaseInterface):
                 c_ox_s = variables["Separator oxygen concentration [mol.m-3]"]
                 N_ox_neg_sep_interface = (
                     -pybamm.boundary_value(tor_s, "left")
-                    * param.D_ox
+                    * self.param.D_ox
                     * pybamm.boundary_gradient(c_ox_s, "left")
                 )
 
-                j = -N_ox_neg_sep_interface / -param.s_ox_Ox / param.n.L
+                j = -N_ox_neg_sep_interface / -self.param.s_ox_Ox / self.param.n.L
 
         return j
