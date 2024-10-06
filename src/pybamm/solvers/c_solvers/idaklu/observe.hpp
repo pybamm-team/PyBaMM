@@ -9,6 +9,11 @@
 #include <vector>
 using std::vector;
 
+#if defined(_MSC_VER)
+    #include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#endif
+
 /**
  * @brief Observe and Hermite interpolate ND variables
  */
