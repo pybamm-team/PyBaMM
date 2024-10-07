@@ -21,6 +21,7 @@
 
 ## Breaking changes
 
+- Removed all instances of `param = self.param` and now directly access `self.param` across the codebase. This change simplifies parameter references and enhances readability. ([#4484](https://github.com/pybamm-team/PyBaMM/pull/4494))
 - Removed the deprecation warning for the chemistry argument in
   ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))
 - The parameters "... electrode OCP entropic change [V.K-1]" and "... electrode volume change" are now expected to be functions of stoichiometry only instead of functions of both stoichiometry and maximum concentration ([#4427](https://github.com/pybamm-team/PyBaMM/pull/4427))
