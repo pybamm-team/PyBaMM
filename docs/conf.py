@@ -347,7 +347,7 @@ str(env.doc2path(env.docname, base=None)) %}
 {% set github_download_url = env.config.html_context.github_download_url %}
 {% set google_colab_url = env.config.html_context.google_colab_url %}
 
-{% set doc_path = str(env.doc2path(env.docname, base=None)) %}
+{% set doc_path = env.doc2path(env.docname, base=None) %}
 
 .. raw:: html
 
