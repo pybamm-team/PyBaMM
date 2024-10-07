@@ -7,7 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class RandomOverlappingCylinders(BaseModel):
     """Submodel for Random Overlapping Cylinders transport_efficiency,
-    :footcite:t:`tomadakis1993transport`, :footcite:t:`shen2007critical`
+    :footcite:t:`Tomadakis1993`, :footcite:t:`Shen2007`
 
     Parameters
     ----------
@@ -23,8 +23,8 @@ class RandomOverlappingCylinders(BaseModel):
         super().__init__(param, component, options=options)
 
     def get_coupled_variables(self, variables):
-        pybamm.citations.register("shen2007critical")
-        pybamm.citations.register("tomadakis1993transport")
+        pybamm.citations.register("Shen2007")
+        pybamm.citations.register("Tomadakis1993")
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:
