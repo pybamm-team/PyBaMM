@@ -28,26 +28,7 @@ class BaseBasicModelTest:
         assert sol.termination == "final time"
 
 
-class TestBasicSPM(BaseBasicModelTest):
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        self.model = pybamm.lithium_ion.BasicSPM()
-
-
 class TestBasicDFN(BaseBasicModelTest):
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.model = pybamm.lithium_ion.BasicDFN()
-
-
-class TestBasicDFNComposite(BaseBasicModelTest):
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        self.model = pybamm.lithium_ion.BasicDFNComposite()
-
-
-class TestBasicDFNHalfCell(BaseBasicModelTest):
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        options = {"working electrode": "positive"}
-        self.model = pybamm.lithium_ion.BasicDFNHalfCell(options)
+        self.model = pybamm.sodium_ion.BasicDFN()
