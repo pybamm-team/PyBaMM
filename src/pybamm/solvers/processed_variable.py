@@ -536,7 +536,9 @@ class ProcessedVariable0D(ProcessedVariable):
                 entries, self.t_pts, initial=float(self.time_integral.initial_condition)
             )
         else:
-            raise ValueError("time_integral method must be 'discrete' or 'continuous'")
+            raise ValueError(
+                "time_integral method must be 'discrete' or 'continuous'"
+            )  # pragma: no cover
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation
