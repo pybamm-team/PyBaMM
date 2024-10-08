@@ -274,18 +274,21 @@ class ProcessedVariable:
                     self._coords_raw,
                 )
 
-            processed_entries = self._xr_interpolate(
-                entries_for_interp,
-                coords,
-                observe_raw,
-                t,
-                x,
-                r,
-                y,
-                z,
-                R,
-                fill_value,
-            )
+            if self.time_integral is None:
+                processed_entries = self._xr_interpolate(
+                    entries_for_interp,
+                    coords,
+                    observe_raw,
+                    t,
+                    x,
+                    r,
+                    y,
+                    z,
+                    R,
+                    fill_value,
+                )
+            else:
+                processed_entries = entries_for_interp
         else:
             processed_entries = entries
 
