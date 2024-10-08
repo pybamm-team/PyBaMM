@@ -25,4 +25,4 @@ class ProcessedVariableTimeIntegral:
                 discrete_times=None,
             )
         else:
-            raise ValueError("Unsupported variable type")
+            raise ValueError("Unsupported variable type")  # pragma: no cover
