@@ -174,6 +174,11 @@ class Simulation:
                 % (2**32)
             )
 
+    def set_up_and_parameterise_experiment(self, solve_kwargs=None):
+        msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
+
     def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
         Create and parameterise the models for each step in the experiment.
@@ -182,8 +187,7 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         parameter_values = self._parameter_values.copy()
-        msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
-        warnings(msg, DeprecationWarning)
+
         # some parameters are used to control the experiment, and should not be
         # input parameters
         restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
@@ -252,6 +256,7 @@ class Simulation:
             self.experiment_unique_steps_to_model["Rest for padding"] = (
                 parameterised_model
             )
+
     def set_parameters(self):
         msg = (
             "pybamm.set_paramters is deprecated and not meant to be accessed by users."
