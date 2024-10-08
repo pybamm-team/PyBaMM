@@ -21,7 +21,7 @@ class TestRamadass2004:
                 1.4517,
             ),
             "Positive electrode OCP entropic change [V.K-1]": (
-                [sto, c_p_max],
+                [sto],
                 -3.4664e-5,
             ),
             "Positive electrode OCP [V]": ([sto], 4.1249),
@@ -32,7 +32,7 @@ class TestRamadass2004:
                 2.2007,
             ),
             "Negative electrode OCP entropic change [V.K-1]": (
-                [sto, c_n_max],
+                [sto],
                 -1.5079e-5,
             ),
             "Negative electrode OCP [V]": ([sto], 0.1215),

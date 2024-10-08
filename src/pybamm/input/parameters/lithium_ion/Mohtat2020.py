@@ -4,7 +4,7 @@ import numpy as np
 
 def graphite_diffusivity_PeymanMPM(sto, T):
     """
-    Graphite diffusivity as a function of stochiometry, in this case the
+    Graphite diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Peyman MPM.
 
     References
@@ -14,7 +14,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -34,7 +34,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 def graphite_ocp_PeymanMPM(sto):
     """
     Graphite Open-circuit Potential (OCP) as a function of the
-    stochiometry. The fit is taken from Peyman MPM [1].
+    stoichiometry. The fit is taken from Peyman MPM [1].
 
     References
     ----------
@@ -89,10 +89,10 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def graphite_entropic_change_PeymanMPM(sto, c_s_max):
+def graphite_entropic_change_PeymanMPM(sto):
     """
     Graphite entropic change in open-circuit potential (OCP) at a temperature of
-    298.15K as a function of the stochiometry taken from [1]
+    298.15K as a function of the stoichiometry taken from [1]
 
     References
     ----------
@@ -102,7 +102,7 @@ def graphite_entropic_change_PeymanMPM(sto, c_s_max):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-        Stochiometry of material (li-fraction)
+        stoichiometry of material (li-fraction)
 
     """
 
@@ -121,7 +121,7 @@ def graphite_entropic_change_PeymanMPM(sto, c_s_max):
 
 def NMC_diffusivity_PeymanMPM(sto, T):
     """
-    NMC diffusivity as a function of stochiometry, in this case the
+    NMC diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Peyman MPM.
 
     References
@@ -131,7 +131,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -151,7 +151,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 def NMC_ocp_PeymanMPM(sto):
     """
     Nickel Managanese Cobalt Oxide (NMC) Open-circuit Potential (OCP) as a
-    function of the stochiometry. The fit is taken from Peyman MPM.
+    function of the stoichiometry. The fit is taken from Peyman MPM.
 
     References
     ----------
@@ -160,7 +160,7 @@ def NMC_ocp_PeymanMPM(sto):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     """
 
@@ -209,7 +209,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_max, T
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def NMC_entropic_change_PeymanMPM(sto, c_s_max):
+def NMC_entropic_change_PeymanMPM(sto):
     """
     Nickel Manganese Cobalt (NMC) entropic change in open-circuit potential (OCP) at
     a temperature of 298.15K as a function of the OCP. The fit is taken from [1].
@@ -224,7 +224,7 @@ def NMC_entropic_change_PeymanMPM(sto, c_s_max):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-        Stochiometry of material (li-fraction)
+        stoichiometry of material (li-fraction)
 
     """
 
@@ -319,8 +319,8 @@ def get_parameter_values():
     and references therein.
 
     SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
     :footcite:t:`Yang2017`
 
     SEI parameters

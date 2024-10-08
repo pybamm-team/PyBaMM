@@ -2,8 +2,38 @@
 
 ## Features
 
+- Added Hermite interpolation to the (`IDAKLUSolver`) that improves the accuracy and performance of post-processing variables. ([#4464](https://github.com/pybamm-team/PyBaMM/pull/4464))
+- Added `BasicDFN` model for sodium-ion batteries ([#4451](https://github.com/pybamm-team/PyBaMM/pull/4451))
+- Added sensitivity calculation support for `pybamm.Simulation` and `pybamm.Experiment` ([#4415](https://github.com/pybamm-team/PyBaMM/pull/4415))
+- Added OpenMP parallelization to IDAKLU solver for lists of input parameters ([#4449](https://github.com/pybamm-team/PyBaMM/pull/4449))
+- Added phase-dependent particle options to LAM
+  ([#4369](https://github.com/pybamm-team/PyBaMM/pull/4369))
+- Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode (`SplitOCVR`). ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
+
+## Optimizations
+
+- Performance refactor of JAX BDF Solver with default Jax method set to `"BDF"`. ([#4456](https://github.com/pybamm-team/PyBaMM/pull/4456))
+- Improved performance of initialization and reinitialization of ODEs in the (`IDAKLUSolver`). ([#4453](https://github.com/pybamm-team/PyBaMM/pull/4453))
+- Removed the `start_step_offset` setting and disabled minimum `dt` warnings for drive cycles with the (`IDAKLUSolver`). ([#4416](https://github.com/pybamm-team/PyBaMM/pull/4416))
+
+## Bug Fixes
+
+- Fixed bug where IDAKLU solver failed when `output variables` were specified and an extrapolation event is present. ([#4440](https://github.com/pybamm-team/PyBaMM/pull/4440))
+
+## Breaking changes
+
+- Removed the deprecation warning for the chemistry argument in
+  ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))
+- The parameters "... electrode OCP entropic change [V.K-1]" and "... electrode volume change" are now expected to be functions of stoichiometry only instead of functions of both stoichiometry and maximum concentration ([#4427](https://github.com/pybamm-team/PyBaMM/pull/4427))
+- Renamed `set_events` function to `add_events_from` to better reflect its purpose. ([#4421](https://github.com/pybamm-team/PyBaMM/pull/4421))
+
+# [v24.9.0](https://github.com/pybamm-team/PyBaMM/tree/v24.9.0) - 2024-09-03
+
+## Features
+
 - Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
 - Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
+- Added lumped surface thermal model ([#4203](https://github.com/pybamm-team/PyBaMM/pull/4203))
 
 ## Optimizations
 

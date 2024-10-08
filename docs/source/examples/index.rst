@@ -54,6 +54,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
+    notebooks/models/graded-electrodes.ipynb
     notebooks/models/half-cell.ipynb
     notebooks/models/jelly-roll-model.ipynb
     notebooks/models/latexify.ipynb
@@ -67,6 +68,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/SEI-on-cracks.ipynb
     notebooks/models/simulate-3E-cell.ipynb
     notebooks/models/simulating-ORegan-2022-parameter-set.ipynb
+    notebooks/models/sodium-ion.ipynb
     notebooks/models/SPM.ipynb
     notebooks/models/SPMe.ipynb
     notebooks/models/submodel_cracking_DFN_or_SPM.ipynb

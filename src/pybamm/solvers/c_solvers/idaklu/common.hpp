@@ -31,8 +31,9 @@
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
-using np_array = py::array_t<realtype>;
-using np_array_dense = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
+// note: we rely on c_style ordering for numpy arrays so don't change this!
+using np_array = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
+using np_array_realtype = py::array_t<realtype>;
 using np_array_int = py::array_t<int64_t>;
 
 /**
@@ -83,12 +84,25 @@ std::vector<realtype> numpy2realtype(const np_array& input_np);
 /**
  * @brief Utility function to compute the set difference of two vectors
  */
-std::vector<realtype> setDiff(const std::vector<realtype>& A, const std::vector<realtype>& B);
+template <typename T1, typename T2>
+std::vector<realtype> setDiff(const T1 a_begin, const T1 a_end, const T2 b_begin, const T2 b_end) {
+    std::vector<realtype> result;
+    if (std::distance(a_begin, a_end) > 0) {
+      std::set_difference(a_begin, a_end, b_begin, b_end, std::back_inserter(result));
+    }
+    return result;
+}
 
 /**
  * @brief Utility function to make a sorted and unique vector
  */
-std::vector<realtype> makeSortedUnique(const std::vector<realtype>& input);
+template <typename T>
+std::vector<realtype> makeSortedUnique(const T input_begin, const T input_end) {
+    std::unordered_set<realtype> uniqueSet(input_begin, input_end); // Remove duplicates
+    std::vector<realtype> uniqueVector(uniqueSet.begin(), uniqueSet.end()); // Convert to vector
+    std::sort(uniqueVector.begin(), uniqueVector.end()); // Sort the vector
+    return uniqueVector;
+}
 
 std::vector<realtype> makeSortedUnique(const np_array& input_np);
 
@@ -126,8 +140,7 @@ std::vector<realtype> makeSortedUnique(const np_array& input_np);
   } \
   std::cout << "]" << std::endl;  }
 
-#define DEBUG_v(v, M) {\
-  int N = 2; \
+#define DEBUG_v(v, N) {\
   std::cout << #v << "[n=" << N << "] = ["; \
   for (int i = 0; i < N; i++) { \
     std::cout << v[i]; \

@@ -1,6 +1,7 @@
 #include "Options.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 
 
 using namespace std::string_literals;
@@ -11,9 +12,25 @@ SetupOptions::SetupOptions(py::dict &py_opts)
       precon_half_bandwidth(py_opts["precon_half_bandwidth"].cast<int>()),
       precon_half_bandwidth_keep(py_opts["precon_half_bandwidth_keep"].cast<int>()),
       num_threads(py_opts["num_threads"].cast<int>()),
+      num_solvers(py_opts["num_solvers"].cast<int>()),
       linear_solver(py_opts["linear_solver"].cast<std::string>()),
       linsol_max_iterations(py_opts["linsol_max_iterations"].cast<int>())
 {
+    if (num_solvers > num_threads)
+    {
+        throw std::domain_error(
+            "Number of solvers must be less than or equal to the number of threads"
+        );
+    }
+
+    // input num_threads is the overall number of threads to use. num_solvers of these
+    // will be used to run solvers in parallel, leaving num_threads  / num_solvers threads
+    // to be used by each solver. From here on num_threads is the number of threads to be used by each solver
+    num_threads = static_cast<int>(
+        std::floor(
+            static_cast<double>(num_threads) / static_cast<double>(num_solvers)
+        )
+    );
 
     using_sparse_matrix = true;
     using_banded_matrix = false;
@@ -132,6 +149,7 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       nonlinear_convergence_coefficient(RCONST(py_opts["nonlinear_convergence_coefficient"].cast<double>())),
       nonlinear_convergence_coefficient_ic(RCONST(py_opts["nonlinear_convergence_coefficient_ic"].cast<double>())),
       suppress_algebraic_error(py_opts["suppress_algebraic_error"].cast<sunbooleantype>()),
+      hermite_interpolation(py_opts["hermite_interpolation"].cast<sunbooleantype>()),
       // IDA initial conditions calculation
       calc_ic(py_opts["calc_ic"].cast<bool>()),
       init_all_y_ic(py_opts["init_all_y_ic"].cast<bool>()),

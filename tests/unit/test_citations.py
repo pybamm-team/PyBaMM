@@ -286,7 +286,7 @@ class TestCitations:
 
         citations._reset()
         assert "Reniers2019" not in citations._papers_to_cite
-        pybamm.active_material.LossActiveMaterial(None, "negative", None, True)
+        pybamm.active_material.LossActiveMaterial(None, "negative", None, True, None)
         assert "Reniers2019" in citations._papers_to_cite
         assert "Reniers2019" in citations._citation_tags.keys()
 

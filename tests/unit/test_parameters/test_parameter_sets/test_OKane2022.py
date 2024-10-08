@@ -2,11 +2,11 @@
 # Tests for O'Kane (2022) parameter set
 #
 
+import pytest
 import pybamm
-import unittest
 
 
-class TestOKane2022(unittest.TestCase):
+class TestOKane2022:
     def test_functions(self):
         param = pybamm.ParameterValues("OKane2022")
         sto = pybamm.Scalar(0.9)
@@ -27,7 +27,7 @@ class TestOKane2022(unittest.TestCase):
                 0.33947,
             ),
             "Negative electrode cracking rate": ([T], 3.9e-20),
-            "Negative electrode volume change": ([sto, 33133], 0.0897),
+            "Negative electrode volume change": ([sto], 0.0897),
             # Positive electrode
             "Positive particle diffusivity [m2.s-1]": ([sto, T], 4e-15),
             "Positive electrode exchange-current density [A.m-2]": (
@@ -36,20 +36,10 @@ class TestOKane2022(unittest.TestCase):
             ),
             "Positive electrode OCP [V]": ([sto], 3.5682),
             "Positive electrode cracking rate": ([T], 3.9e-20),
-            "Positive electrode volume change": ([sto, 63104], 0.70992),
+            "Positive electrode volume change": ([sto], 0.70992),
         }
 
         for name, value in fun_test.items():
-            self.assertAlmostEqual(
-                param.evaluate(param[name](*value[0])), value[1], places=4
+            assert param.evaluate(param[name](*value[0])) == pytest.approx(
+                value[1], abs=0.0001
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

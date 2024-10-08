@@ -75,6 +75,7 @@ from .models.full_battery_models.base_battery_model import (
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import equivalent_circuit
+from .models.full_battery_models import sodium_ion
 
 # Submodel classes
 from .models.submodels.base_submodel import BaseSubModel
@@ -157,7 +158,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
-from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_variable import ProcessedVariable, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver

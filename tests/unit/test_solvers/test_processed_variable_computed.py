@@ -6,12 +6,12 @@
 #  values itself since it does not have access to the full state vector
 #
 
+import pytest
 import casadi
 import pybamm
 import tests
 
 import numpy as np
-import unittest
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -57,7 +57,6 @@ def process_and_check_2D_variable(
         [var_casadi],
         [y_sol],
         pybamm.Solution(t_sol, y_sol, model, {}),
-        warn=False,
     )
     # NB: ProcessedVariableComputed does not interpret y in the same way as
     #  ProcessedVariable; a better test of equivalence is to check that the
@@ -68,7 +67,7 @@ def process_and_check_2D_variable(
     return y_sol, first_sol, second_sol, t_sol
 
 
-class TestProcessedVariableComputed(unittest.TestCase):
+class TestProcessedVariableComputed:
     def test_processed_variable_0D(self):
         # without space
         y = pybamm.StateVector(slice(0, 1))
@@ -82,7 +81,6 @@ class TestProcessedVariableComputed(unittest.TestCase):
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
         # Assert that the processed variable is the same as the solution
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
@@ -94,7 +92,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
 
         # Check cumtrapz workflow produces no errors
         processed_var.cumtrapz_ic = 1
-        processed_var.initialise_0D()
+        processed_var.entries
 
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
@@ -111,11 +109,10 @@ class TestProcessedVariableComputed(unittest.TestCase):
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
 
         # test no inputs (i.e. no sensitivity)
-        self.assertDictEqual(processed_var.sensitivities, {})
+        assert processed_var.sensitivities == {}
 
         # with parameter
         t = pybamm.t
@@ -132,11 +129,10 @@ class TestProcessedVariableComputed(unittest.TestCase):
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), inputs),
-            warn=False,
         )
 
         # test no sensitivity raises error
-        self.assertIsNone(processed_var.sensitivities)
+        assert processed_var.sensitivities is None
 
     def test_processed_variable_1D(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -157,7 +153,6 @@ class TestProcessedVariableComputed(unittest.TestCase):
             [var_casadi],
             [y_sol],
             sol,
-            warn=False,
         )
 
         # Ordering from idaklu with output_variables set is different to
@@ -175,7 +170,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
             processed_var.mesh.edges,
             processed_var.mesh.nodes,
         )
-        processed_var.initialise_1D()
+        processed_var.entries
         processed_var.mesh.nodes, processed_var.mesh.edges = (
             processed_var.mesh.edges,
             processed_var.mesh.nodes,
@@ -192,7 +187,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         ]
         for domain in domain_list:
             processed_var.domain[0] = domain
-            processed_var.initialise_1D()
+            processed_var.entries
 
     def test_processed_variable_1D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
@@ -220,7 +215,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
-        pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution, warn=False)
+        pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution)
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
@@ -330,13 +325,12 @@ class TestProcessedVariableComputed(unittest.TestCase):
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
-        processed_x_s_edge = pybamm.ProcessedVariable(
+        processed_x_s_edge = pybamm.process_variable(
             [x_s_edge],
             [x_s_casadi],
             pybamm.Solution(
                 t_sol, y_sol, tests.get_base_model_with_battery_geometry(), {}
             ),
-            warn=False,
         )
         np.testing.assert_array_equal(
             x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
@@ -371,7 +365,6 @@ class TestProcessedVariableComputed(unittest.TestCase):
             [var_casadi],
             [y_sol],
             pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries,
@@ -386,7 +379,7 @@ class TestProcessedVariableComputed(unittest.TestCase):
         np.testing.assert_array_equal(processed_var.unroll(), y_sol.reshape(10, 40, 1))
 
         # Check unroll function (3D)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             processed_var.dimensions = 3
             processed_var.unroll()
 
@@ -408,7 +401,6 @@ class TestProcessedVariableComputed(unittest.TestCase):
             [var_casadi],
             [u_sol],
             pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
-            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
@@ -428,21 +420,10 @@ class TestProcessedVariableComputed(unittest.TestCase):
         u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
         var_casadi = to_casadi(var_sol, u_sol)
 
-        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
+        with pytest.raises(NotImplementedError, match="Shape not recognized"):
             pybamm.ProcessedVariableComputed(
                 [var_sol],
                 [var_casadi],
                 [u_sol],
                 pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
-                warn=False,
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
