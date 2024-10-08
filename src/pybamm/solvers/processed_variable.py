@@ -262,11 +262,6 @@ class ProcessedVariable:
 
         xr_interp = spatial_interp or not hermite_time_interp
 
-        print("self.hermite_interpolation", self.hermite_interpolation)
-        print("observe_raw", observe_raw)
-        print("xr_interp", xr_interp)
-        print("hermite_time_interp", hermite_time_interp)
-
         if xr_interp:
             if hermite_time_interp:
                 # Already interpolated in time
@@ -353,7 +348,6 @@ class ProcessedVariable:
         """
         # if this is a time integral variable, t must be None and we observe either the
         # data times (for a discrete sum) or the solution times (for a continuous sum)
-        print("_check_observe_raw", self.time_integral)
         if self.time_integral is not None:
             if self.time_integral.method == "discrete":
                 # discrete sum should be observed at the discrete times
@@ -533,7 +527,6 @@ class ProcessedVariable0D(ProcessedVariable):
         if self.time_integral is None:
             return entries
         if self.time_integral.method == "discrete":
-            print("postfix discrete", entries.shape)
             return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
         elif self.time_integral.method == "continuous":
             return cumulative_trapezoid(
