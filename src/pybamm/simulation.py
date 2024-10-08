@@ -252,15 +252,17 @@ class Simulation:
             self.experiment_unique_steps_to_model["Rest for padding"] = (
                 parameterised_model
             )
+    def set_parameters(self):
+        msg = (
+            "pybamm.set_paramters is deprecated and not meant to be accessed by users."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        self._set_parameters()
 
     def _set_parameters(self):
         """
         A method to set the parameters in the model and the associated geometry.
         """
-        msg = (
-            "pybamm.set_paramters is deprecated and not meant to be accessed by users."
-        )
-        warnings(msg, DeprecationWarning)
         if self._model_with_set_params:
             return
 
