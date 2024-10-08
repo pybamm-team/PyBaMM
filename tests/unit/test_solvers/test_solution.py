@@ -420,3 +420,39 @@ class TestSolution:
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
+
+    def test_discrete_data_sum(self):
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+
+        solver = pybamm.IDAKLUSolver()
+        data_times = np.linspace(0, 1, 10)
+        t_eval = [data_times[0], data_times[-1]]
+        data_values = solver.solve(model, t_eval=t_eval, t_interp=data_times)[
+            "c"
+        ].entries
+
+        data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
+        data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
+
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["data_comparison"] = data_comparison
+
+        def expected_data_comparison(a):
+            y_sol = np.exp(-a * data_times)
+            return np.sum((y_sol - data_values) ** 2)
+
+        solver = pybamm.IDAKLUSolver()
+
+        for a in [0.5, 1.0, 2.0]:
+            print("---------------------a", a)
+            sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
+            np.testing.assert_array_almost_equal(
+                sol["data_comparison"](), expected_data_comparison(a), decimal=2
+            )
