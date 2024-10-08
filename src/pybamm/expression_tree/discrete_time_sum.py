@@ -31,7 +31,8 @@ class DiscreteTimeSum(pybamm.UnaryOperator):
     """
     A node in the expression tree representing a discrete time sum operator.
 
-    \sum_{i=0}^{N} f(y(t_i), t_i)
+    .. math::
+        \\sum_{i=0}^{N} f(y(t_i), t_i)
 
     where f is the expression given by the child, and the sum is over the discrete
     time points t_i. The set of time points is given by the :class:`pybamm.DiscreteTimeData` node,
