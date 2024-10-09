@@ -12,7 +12,7 @@ class DiffusionLimited(BaseInterface):
 
     Parameters
     ----------
-    self.param :
+    param :
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.

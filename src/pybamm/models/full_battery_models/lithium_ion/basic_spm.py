@@ -23,7 +23,7 @@ class BasicSPM(BaseModel):
     def __init__(self, name="Single Particle Model"):
         super().__init__({}, name)
         pybamm.citations.register("Marquis2019")
-        # `self.param` is a class containing all the relevant parameters and functions for
+        # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
 

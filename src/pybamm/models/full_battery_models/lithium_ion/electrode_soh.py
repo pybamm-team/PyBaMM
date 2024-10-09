@@ -276,7 +276,7 @@ class ElectrodeSOHSolver:
     ----------
     parameter_values : :class:`pybamm.ParameterValues.Parameters`
         The parameters of the simulation
-    self.param : :class:`pybamm.LithiumIonParameters`, optional
+    param : :class:`pybamm.LithiumIonParameters`, optional
         Specific instance of the symbolic lithium-ion parameter class. If not provided,
         the default set of symbolic lithium-ion parameters will be used.
     known_value : str, optional

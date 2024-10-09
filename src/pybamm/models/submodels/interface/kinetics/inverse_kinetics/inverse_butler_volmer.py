@@ -12,7 +12,7 @@ class InverseButlerVolmer(BaseInterface):
 
     Parameters
     ----------
-    self.param
+    param
         Model parameters
     domain : iter of str, optional
         The domain(s) in which to compute the interfacial current.
