@@ -458,5 +458,5 @@ class TestSolution:
             y_sol = np.exp(-a * data_times)
             expected = np.sum((y_sol - data_values) ** 2)
             np.testing.assert_array_almost_equal(
-                sol["data_comparison"](t=sol.t), expected, decimal=2
+                sol["data_comparison"](), expected, decimal=2
             )
