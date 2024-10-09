@@ -486,8 +486,8 @@ def get_parameter_values():
     by Dr. Simon O'Kane in the paper :footcite:t:`Richardson2020`
 
     SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
     :footcite:t:`Yang2017`
 
     .. note::

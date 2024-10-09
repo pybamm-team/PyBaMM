@@ -327,6 +327,8 @@ idaklu_ext = Extension(
         "src/pybamm/solvers/c_solvers/idaklu/Solution.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/Options.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/Options.cpp",
+        "src/pybamm/solvers/c_solvers/idaklu/observe.hpp",
+        "src/pybamm/solvers/c_solvers/idaklu/observe.cpp",
         "src/pybamm/solvers/c_solvers/idaklu.cpp",
     ],
 )
