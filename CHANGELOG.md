@@ -3,11 +3,13 @@
 ## Features
 
 - Added Hermite interpolation to the (`IDAKLUSolver`) that improves the accuracy and performance of post-processing variables. ([#4464](https://github.com/pybamm-team/PyBaMM/pull/4464))
+- Added `BasicDFN` model for sodium-ion batteries ([#4451](https://github.com/pybamm-team/PyBaMM/pull/4451))
 - Added sensitivity calculation support for `pybamm.Simulation` and `pybamm.Experiment` ([#4415](https://github.com/pybamm-team/PyBaMM/pull/4415))
 - Added OpenMP parallelization to IDAKLU solver for lists of input parameters ([#4449](https://github.com/pybamm-team/PyBaMM/pull/4449))
 - Added phase-dependent particle options to LAM
   ([#4369](https://github.com/pybamm-team/PyBaMM/pull/4369))
 - Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode (`SplitOCVR`). ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
+- Added the `pybamm.DiscreteTimeSum` expression node to sum an expression over a sequence of data times, and accompanying `pybamm.DiscreteTimeData` class to store the data times and values ([#4501](https://github.com/pybamm-team/PyBaMM/pull/4501))
 
 ## Optimizations
 
