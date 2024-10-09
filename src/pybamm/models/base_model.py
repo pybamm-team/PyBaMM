@@ -20,49 +20,8 @@ class BaseModel:
     ----------
     name: str
         A string representing the name of the model.
-    rhs: dict
-        A dictionary mapping expressions (variables) to expressions that represent
-        the right-hand side (RHS) of the model's differential equations.
-    algebraic: dict
-        A dictionary mapping expressions (variables) to expressions that represent
-        the algebraic equations of the model.
-    initial_conditions: dict
-        A dictionary mapping expressions (variables) to expressions that represent
-        the initial conditions for the state variables.
     submodels: dict
         A dictionary of submodels that the model is composed of.
-    boundary_conditions: dict
-        A dictionary mapping expressions (variables) to expressions representing
-        the boundary conditions of the model.
-    variables: dict
-        A dictionary mapping strings to expressions representing the model's useful variables.
-    variables_and_events: dict
-        A dictionary containing both the model's variables and events, where events
-        can trigger specific actions or terminations during model simulations.
-    events: list
-        A list of events that can trigger solver terminations or inform the solver
-        of discontinuities during simulations.
-    concatenated_rhs: expression
-        The concatenated right-hand side (RHS) expressions for the model after discretization.
-    concatenated_algebraic: expression
-        The concatenated algebraic equations for the model after discretization.
-    concatenated_initial_conditions: array
-        The initial conditions for all variables after discretization, providing the
-        initial values for the state variables.
-    mass_matrix: array
-        The mass matrix for the system of differential equations after discretization.
-    mass_matrix_inv: array
-        The inverse of the mass matrix for the differential equations after discretization.
-    jacobian: expression
-        The Jacobian matrix for the model, computed automatically if `use_jacobian` is True.
-    jacobian_rhs: expression
-        The Jacobian matrix for the right-hand side (RHS) part of the model, computed
-        if `use_jacobian` is True.
-    jacobian_algebraic: expression
-        The Jacobian matrix for the algebraic part of the model, computed automatically
-        during solver setup if `use_jacobian` is True.
-    options: dict
-        The model options dictionary that allows customization of the model's behavior.
     use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
     convert_to_format: str
@@ -77,32 +36,10 @@ class BaseModel:
 
         Default is "casadi".
     is_discretised: bool
-        Indicates whether the model has been discretized (default is False).
-    geometry: pybamm.Geometry
-        The geometry of the model.
-    default_var_pts: dict
-        A dictionary of the default variable points for the model, which is empty by default.
-    default_geometry: dict
-        A dictionary of the default geometry for the model, which is empty by default.
-    default_submesh_types: dict
-        A dictionary of the default submesh types for the model, which is empty by default.
-    default_spatial_methods: dict
-        A dictionary of the default spatial methods for the model, which is empty by default.
-    default_solver: pybamm.Solver
-        The default solver for the model, based on whether it is an ODE/DAE or algebraic model.
-    default_quick_plot_variables: None or dict
-        The default variables for quick plotting (None by default).
-    default_parameter_values: pybamm.ParameterValues
-        The default parameter values for the model (an empty set of parameters by default).
-    parameters: list
-        A list of all parameter symbols used in the model.
-    input_parameters: list
-        A list of all input parameter symbols used in the model.
+        Indicates whether the model has been discretised (default is False).
     y_slices: None or list
-        Slices of the concatenated state vector after discretization, used to track
+        Slices of the concatenated state vector after discretisation, used to track
         different submodels in the full concatenated solution vector.
-    param: dict
-        Dictionary to store parameter values for the model.
     """
 
     def __init__(self, name="Unnamed model"):
@@ -205,6 +142,8 @@ class BaseModel:
 
     @property
     def rhs(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the right-hand side (RHS) of the model's differential equations."""
         return self._rhs
 
     @rhs.setter
@@ -213,6 +152,8 @@ class BaseModel:
 
     @property
     def algebraic(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the algebraic equations of the model."""
         return self._algebraic
 
     @algebraic.setter
@@ -221,6 +162,8 @@ class BaseModel:
 
     @property
     def initial_conditions(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the initial conditions for the state variables."""
         return self._initial_conditions
 
     @initial_conditions.setter
@@ -231,6 +174,8 @@ class BaseModel:
 
     @property
     def boundary_conditions(self):
+        """Returns a dictionary mapping expressions (variables) to expressions representing
+        the boundary conditions of the model."""
         return self._boundary_conditions
 
     @boundary_conditions.setter
@@ -239,6 +184,7 @@ class BaseModel:
 
     @property
     def variables(self):
+        """Returns a dictionary mapping strings to expressions representing the model's useful variables."""
         return self._variables
 
     @variables.setter
@@ -261,6 +207,7 @@ class BaseModel:
 
     @property
     def variables_and_events(self):
+        """Returns a dictionary containing both models variables and events."""
         try:
             return self._variables_and_events
         except AttributeError:
@@ -272,6 +219,8 @@ class BaseModel:
 
     @property
     def events(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the initial conditions for the state variables."""
         return self._events
 
     @events.setter
@@ -280,6 +229,7 @@ class BaseModel:
 
     @property
     def concatenated_rhs(self):
+        """Returns the concatenated right-hand side (RHS) expressions for the model after discretisation."""
         return self._concatenated_rhs
 
     @concatenated_rhs.setter
@@ -288,6 +238,7 @@ class BaseModel:
 
     @property
     def concatenated_algebraic(self):
+        """Returns the concatenated algebraic equations for the model after discretisation."""
         return self._concatenated_algebraic
 
     @concatenated_algebraic.setter
@@ -296,6 +247,8 @@ class BaseModel:
 
     @property
     def concatenated_initial_conditions(self):
+        """Returns the initial conditions for all variables after discretization, providing the
+        initial values for the state variables."""
         return self._concatenated_initial_conditions
 
     @concatenated_initial_conditions.setter
@@ -304,6 +257,7 @@ class BaseModel:
 
     @property
     def mass_matrix(self):
+        """Returns the mass matrix for the system of differential equations after discretisation."""
         return self._mass_matrix
 
     @mass_matrix.setter
@@ -312,6 +266,7 @@ class BaseModel:
 
     @property
     def mass_matrix_inv(self):
+        """Returns the inverse of the mass matrix for the differential equations after discretisation."""
         return self._mass_matrix_inv
 
     @mass_matrix_inv.setter
@@ -320,6 +275,7 @@ class BaseModel:
 
     @property
     def jacobian(self):
+        """Returns the Jacobian matrix for the model, computed automatically if `use_jacobian` is True."""
         return self._jacobian
 
     @jacobian.setter
@@ -328,6 +284,8 @@ class BaseModel:
 
     @property
     def jacobian_rhs(self):
+        """Returns the Jacobian matrix for the right-hand side (RHS) part of the model, computed
+        if `use_jacobian` is True."""
         return self._jacobian_rhs
 
     @jacobian_rhs.setter
@@ -336,6 +294,8 @@ class BaseModel:
 
     @property
     def jacobian_algebraic(self):
+        """Returns the Jacobian matrix for the algebraic part of the model, computed automatically
+        during solver setup if `use_jacobian` is True."""
         return self._jacobian_algebraic
 
     @jacobian_algebraic.setter
@@ -344,6 +304,7 @@ class BaseModel:
 
     @property
     def param(self):
+        """Returns a dictionary to store parameter values for the model."""
         return self._param
 
     @param.setter
@@ -352,6 +313,7 @@ class BaseModel:
 
     @property
     def options(self):
+        """Returns the model options dictionary that allows customization of the model's behavior."""
         return self._options
 
     @options.setter
@@ -384,26 +346,32 @@ class BaseModel:
 
     @property
     def geometry(self):
+        """Returns the geometry of the model."""
         return self._geometry
 
     @property
     def default_var_pts(self):
+        """Returns a dictionary of the default variable points for the model, which is empty by default."""
         return {}
 
     @property
     def default_geometry(self):
+        """Returns a  dictionary of the default geometry for the model, which is empty by default."""
         return {}
 
     @property
     def default_submesh_types(self):
+        """Returns a dictionary of the default submesh types for the model, which is empty by default."""
         return {}
 
     @property
     def default_spatial_methods(self):
+        """Returns a dictionary of the default spatial methods for the model, which is empty by default."""
         return {}
 
     @property
     def default_solver(self):
+        """Returns the default solver for the model, based on whether it is an ODE/DAE or algebraic model."""
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
@@ -411,14 +379,17 @@ class BaseModel:
 
     @property
     def default_quick_plot_variables(self):
+        """Returns the default variables for quick plotting (None by default)."""
         return None
 
     @property
     def default_parameter_values(self):
+        """Returns the default parameter values for the model (an empty set of parameters by default)."""
         return pybamm.ParameterValues({})
 
     @property
     def parameters(self):
+        """Returns a  list of all parameter symbols used in the model."""
         self._parameters = self._find_symbols(
             (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
         )
@@ -426,6 +397,7 @@ class BaseModel:
 
     @property
     def input_parameters(self):
+        """Returns a list of all input parameter symbols used in the model."""
         if self._input_parameters is None:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters

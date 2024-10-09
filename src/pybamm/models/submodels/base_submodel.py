@@ -40,13 +40,6 @@ class BaseSubModel(pybamm.BaseModel):
     options : dict or pybamm.BatteryModelOptions
         A dictionary or an instance of `pybamm.BatteryModelOptions` that stores configuration
         options for the submodel.
-    domain_Domain : tuple
-        A tuple containing the current domain and its capitalized form.
-    domain_param : parameter class or None
-        A parameter object containing the relevant parameters for the model's domain.
-    phase_param : parameter class or None
-        A parameter object containing the parameters associated with a specific phase (if
-        applicable). If no phase is specified, it is set to None.
     phase_name : str
         A string representing the phase of the submodel, which could be "primary",
         "secondary", or an empty string if there is only one phase.
@@ -133,6 +126,7 @@ class BaseSubModel(pybamm.BaseModel):
 
     @property
     def domain_Domain(self):
+        """Returns a tuple containing the current domain and its capitalized form."""
         return self._domain, self._Domain
 
     def get_parameter_info(self, by_submodel=False):
