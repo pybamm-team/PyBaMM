@@ -85,9 +85,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
 
     gamma_0 = pybamm.Parameter("Dead lithium decay constant [s-1]")
-    L_inner_0 = pybamm.Parameter("Initial inner SEI thickness [m]")
-    L_outer_0 = pybamm.Parameter("Initial outer SEI thickness [m]")
-    L_sei_0 = L_inner_0 + L_outer_0
+    L_sei_0 = pybamm.Parameter("Initial SEI thickness [m]")
 
     gamma = gamma_0 * L_sei_0 / L_sei
 
@@ -524,8 +522,7 @@ def get_parameter_values():
         # sei
         "Ratio of lithium moles to SEI moles": 1.0,
         "Inner SEI reaction proportion": 0.0,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
         "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
@@ -535,10 +532,8 @@ def get_parameter_values():
         "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 0.0,
-        "Initial outer SEI thickness [m]": 5e-09,
-        "Initial inner SEI on cracks thickness [m]": 0,
-        "Initial outer SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
+        "Initial SEI thickness [m]": 5e-09,
+        "Initial SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,

@@ -132,7 +132,7 @@ class BaseModel(BaseInterface):
         else:
             if self.reaction_loc == "interface":
                 # m * (mol/m3) = mol/m2 (n is an interfacial quantity)
-                L_to_n = 1 / phase_param.V_bar
+                L_to_n = 1 / phase_param.V_bar_sei
                 L_to_n_0 = L_to_n
             else:
                 # m * (mol/m4) = mol/m3 (n is a bulk quantity)
