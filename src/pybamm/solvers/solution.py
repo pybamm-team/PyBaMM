@@ -571,7 +571,7 @@ class Solution:
             self._update_variable(variable)
 
     def _update_variable(self, variable):
-        cumtrapz_ic = None
+        time_integral = None
         pybamm.logger.debug(f"Post-processing {variable}")
         vars_pybamm = [
             model.variables_and_events[variable] for model in self.all_models
@@ -591,16 +591,22 @@ class Solution:
                     "solve. Please re-run the solve with `output_variables` set to "
                     "include this variable."
                 )
-            elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
-                cumtrapz_ic = var_pybamm.initial_condition
-                cumtrapz_ic = cumtrapz_ic.evaluate()
-                var_pybamm = var_pybamm.child
-                var_casadi = self.process_casadi_var(
-                    var_pybamm,
-                    inputs,
-                    ys.shape,
+            elif isinstance(
+                var_pybamm, (pybamm.ExplicitTimeIntegral, pybamm.DiscreteTimeSum)
+            ):
+                time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+                    var_pybamm
                 )
-                model._variables_casadi[variable] = var_casadi
+                var_pybamm = var_pybamm.child
+                if variable in model._variables_casadi:
+                    var_casadi = model._variables_casadi[variable]
+                else:
+                    var_casadi = self.process_casadi_var(
+                        var_pybamm,
+                        inputs,
+                        ys.shape,
+                    )
+                    model._variables_casadi[variable] = var_casadi
                 vars_pybamm[i] = var_pybamm
             elif variable in model._variables_casadi:
                 var_casadi = model._variables_casadi[variable]
@@ -613,7 +619,7 @@ class Solution:
                 model._variables_casadi[variable] = var_casadi
             vars_casadi.append(var_casadi)
         var = pybamm.process_variable(
-            vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
+            vars_pybamm, vars_casadi, self, time_integral=time_integral
         )
 
         self._variables[variable] = var
