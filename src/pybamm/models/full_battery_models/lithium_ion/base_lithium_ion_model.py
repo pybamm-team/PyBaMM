@@ -105,7 +105,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_degradation_variables(self):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""
-        param = self.param
 
         domains = [d for d in self.options.whole_cell_domains if d != "separator"]
         for domain in domains:
@@ -135,8 +134,8 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # LLI is usually defined based only on the percentage lithium lost from
         # particles
-        LLI = (1 - n_Li_particles / param.n_Li_particles_init) * 100
-        LLI_tot = (1 - n_Li / param.n_Li_init) * 100
+        LLI = (1 - n_Li_particles / self.param.n_Li_particles_init) * 100
+        LLI_tot = (1 - n_Li / self.param.n_Li_init) * 100
 
         self.variables.update(
             {
@@ -146,15 +145,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                 # Total lithium
                 "Total lithium [mol]": n_Li,
                 "Total lithium in particles [mol]": n_Li_particles,
-                "Total lithium capacity [A.h]": n_Li * param.F / 3600,
+                "Total lithium capacity [A.h]": n_Li * self.param.F / 3600,
                 "Total lithium capacity in particles [A.h]": n_Li_particles
-                * param.F
+                * self.param.F
                 / 3600,
                 # Lithium lost
-                "Total lithium lost [mol]": param.n_Li_init - n_Li,
-                "Total lithium lost from particles [mol]": param.n_Li_particles_init
+                "Total lithium lost [mol]": self.param.n_Li_init - n_Li,
+                "Total lithium lost from particles [mol]": self.param.n_Li_particles_init
                 - n_Li_particles,
-                "Total lithium lost from electrolyte [mol]": param.n_Li_e_init - n_Li_e,
+                "Total lithium lost from electrolyte [mol]": self.param.n_Li_e_init
+                - n_Li_e,
             }
         )
 
@@ -177,7 +177,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             {
                 "Total lithium lost to side reactions [mol]": n_Li_lost_reactions,
                 "Total capacity lost to side reactions [A.h]": n_Li_lost_reactions
-                * param.F
+                * self.param.F
                 / 3600,
             }
         )
@@ -502,9 +502,8 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "electrode manually."
             )
 
-        param = self.param
         if position is None:
-            position = param.n.L + param.s.L / 2
+            position = self.param.n.L + self.param.s.L / 2
 
         phi_e_ref = pybamm.EvaluateAt(
             self.variables["Electrolyte potential [V]"], position
