@@ -46,8 +46,6 @@ class ReactionDrivenODE(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        param = self.param
-
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
             domain_param = self.param.domain_params[domain.split()[0]]
@@ -59,14 +57,14 @@ class ReactionDrivenODE(BaseModel):
                         f"X-averaged {domain} volumetric "
                         "interfacial current density [A.m-3]"
                     ]
-                    depsdt_k_av = domain_param.DeltaVsurf * a_j_k_av / param.F
+                    depsdt_k_av = domain_param.DeltaVsurf * a_j_k_av / self.param.F
                     depsdt_k = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
                 else:
                     Domain = domain.capitalize()
                     a_j_k = variables[
                         f"{Domain} volumetric interfacial current density [A.m-3]"
                     ]
-                    depsdt_k = domain_param.DeltaVsurf * a_j_k / param.F
+                    depsdt_k = domain_param.DeltaVsurf * a_j_k / self.param.F
 
             depsdt_dict[domain] = depsdt_k
         variables.update(self._get_standard_porosity_change_variables(depsdt_dict))

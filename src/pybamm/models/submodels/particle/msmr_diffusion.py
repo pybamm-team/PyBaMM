@@ -136,7 +136,6 @@ class MSMRDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        param = self.param
 
         if self.size_distribution is False:
             if self.x_average is False:
@@ -236,7 +235,7 @@ class MSMRDiffusion(BaseParticle):
                 / dxdU,
                 f"{Domain} {phase_name}particle bc [V.m-1]": j
                 * R_nondim
-                / param.F
+                / self.param.F
                 / pybamm.surf(c_max * x * (1 - x) * f * D_eff),
             }
         )

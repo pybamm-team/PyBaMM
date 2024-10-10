@@ -170,9 +170,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             phi_s_p = variables["Positive electrode potential [V]"]
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             if self.options["contact resistance"] == "true":
-                param = self.param
                 I = variables["Current [A]"]
-                delta_phi_contact = I * param.R_contact
+                delta_phi_contact = I * self.param.R_contact
             else:
                 delta_phi_contact = pybamm.Scalar(0)
             variables.update(
