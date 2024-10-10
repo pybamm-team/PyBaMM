@@ -122,7 +122,7 @@ class SEIGrowth(BaseModel):
 
         elif SEI_option == "electron-migration limited":
             # Scott Marquis thesis (eq. 5.94)
-            eta_inner = delta_phi - phase_param.U_inner
+            eta_inner = delta_phi - phase_param.U_sei
             j_sei = (eta_inner < 0) * phase_param.kappa_inner * eta_inner / L_sei
         elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)

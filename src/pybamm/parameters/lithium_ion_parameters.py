@@ -365,15 +365,12 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
 
         self.R_sei = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
-        self.D_sol = pybamm.Parameter(f"{pref}Outer SEI solvent diffusivity [m2.s-1]")
+        self.D_sol = pybamm.Parameter(f"{pref}SEI solvent diffusivity [m2.s-1]")
         self.c_sol = pybamm.Parameter(f"{pref}Bulk solvent concentration [mol.m-3]")
-        self.U_inner = pybamm.Parameter(f"{pref}Inner SEI open-circuit potential [V]")
-        self.U_outer = pybamm.Parameter(f"{pref}Outer SEI open-circuit potential [V]")
-        self.kappa_inner = pybamm.Parameter(
-            f"{pref}Inner SEI electron conductivity [S.m-1]"
-        )
+        self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
+        self.kappa_inner = pybamm.Parameter(f"{pref}SEI electron conductivity [S.m-1]")
         self.D_li = pybamm.Parameter(
-            f"{pref}Inner SEI lithium interstitial diffusivity [m2.s-1]"
+            f"{pref}SEI lithium interstitial diffusivity [m2.s-1]"
         )
         self.c_li_0 = pybamm.Parameter(
             f"{pref}Lithium interstitial reference concentration [mol.m-3]"
@@ -393,7 +390,6 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         self.D_ec = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]")
         self.k_sei = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
-        self.U_sei = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
 
         # Lithium plating parameters
         self.c_Li_typ = pybamm.Parameter(
