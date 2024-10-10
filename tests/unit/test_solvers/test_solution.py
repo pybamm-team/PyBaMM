@@ -420,3 +420,43 @@ class TestSolution:
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
+
+    _solver_classes = [pybamm.CasadiSolver]
+    if pybamm.has_idaklu():
+        _solver_classes.append(pybamm.IDAKLUSolver)
+
+    @pytest.mark.parametrize("solver_class", _solver_classes)
+    def test_discrete_data_sum(self, solver_class):
+        model = pybamm.BaseModel(name="test_model")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+
+        data_times = np.linspace(0, 1, 10)
+        if solver_class == pybamm.IDAKLUSolver:
+            t_eval = [data_times[0], data_times[-1]]
+            t_interp = data_times
+        else:
+            t_eval = data_times
+            t_interp = None
+        solver = solver_class()
+        data_values = solver.solve(model, t_eval=t_eval, t_interp=t_interp)["c"].entries
+
+        data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
+        data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
+
+        model = pybamm.BaseModel(name="test_model2")
+        a = pybamm.InputParameter("a")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["data_comparison"] = data_comparison
+
+        solver = solver_class()
+        for a in [0.5, 1.0, 2.0]:
+            sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
+            y_sol = np.exp(-a * data_times)
+            expected = np.sum((y_sol - data_values) ** 2)
+            np.testing.assert_array_almost_equal(
+                sol["data_comparison"](), expected, decimal=2
+            )

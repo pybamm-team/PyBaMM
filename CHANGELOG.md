@@ -10,6 +10,7 @@
 - Added phase-dependent particle options to LAM
   ([#4369](https://github.com/pybamm-team/PyBaMM/pull/4369))
 - Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode (`SplitOCVR`). ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
+- Added the `pybamm.DiscreteTimeSum` expression node to sum an expression over a sequence of data times, and accompanying `pybamm.DiscreteTimeData` class to store the data times and values ([#4501](https://github.com/pybamm-team/PyBaMM/pull/4501))
 
 ## Optimizations
 
