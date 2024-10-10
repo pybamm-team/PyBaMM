@@ -378,7 +378,7 @@ def get_parameter_values():
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.0,  # Safari2009 sets absorbs the OCP into the reaction rate
+        "SEI open-circuit potential [V]": 0.0,  # absorbed into the reaction rate
         "SEI growth activation energy [J.mol-1]": 0.0,
         # cell
         "Negative current collector thickness [m]": 1.7e-05,
