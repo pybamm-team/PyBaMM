@@ -19,29 +19,27 @@ class BaseModel:
     Attributes
     ----------
     name: str
-        A string giving the name of the model.
+        A string representing the name of the model.
     submodels: dict
         A dictionary of submodels that the model is composed of.
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions.
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables.
-    use_jacobian : bool
+    use_jacobian: bool
         Whether to use the Jacobian when solving the model (default is True).
-    convert_to_format : str
-        Whether to convert the expression trees representing the rhs and
-        algebraic equations, Jacobain (if using) and events into a different format:
+    convert_to_format: str
+        Specifies the format to convert the expression trees representing the RHS,
+        algebraic equations, Jacobian, and events.
+        Options are:
 
-        - None: keep PyBaMM expression tree structure.
-        - "python": convert into pure python code that will calculate the result of \
-        calling `evaluate(t, y)` on the given expression treeself.
-        - "casadi": convert into CasADi expression tree, which then uses CasADi's \
-        algorithm to calculate the Jacobian.
-        - "jax": convert into JAX expression tree
+            - None: retain PyBaMM expression tree structure.
+            - "python": convert to Python code for evaluating `evaluate(t, y)` on expressions.
+            - "casadi": convert to CasADi expression tree for Jacobian calculation.
+            - "jax": convert to JAX expression tree.
 
         Default is "casadi".
+    is_discretised: bool
+        Indicates whether the model has been discretised (default is False).
+    y_slices: None or list
+        Slices of the concatenated state vector after discretisation, used to track
+        different submodels in the full concatenated solution vector.
     """
 
     def __init__(self, name="Unnamed model"):
@@ -144,6 +142,8 @@ class BaseModel:
 
     @property
     def rhs(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the right-hand side (RHS) of the model's differential equations."""
         return self._rhs
 
     @rhs.setter
@@ -152,6 +152,8 @@ class BaseModel:
 
     @property
     def algebraic(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the algebraic equations of the model."""
         return self._algebraic
 
     @algebraic.setter
@@ -160,6 +162,8 @@ class BaseModel:
 
     @property
     def initial_conditions(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the initial conditions for the state variables."""
         return self._initial_conditions
 
     @initial_conditions.setter
@@ -170,6 +174,8 @@ class BaseModel:
 
     @property
     def boundary_conditions(self):
+        """Returns a dictionary mapping expressions (variables) to expressions representing
+        the boundary conditions of the model."""
         return self._boundary_conditions
 
     @boundary_conditions.setter
@@ -178,6 +184,7 @@ class BaseModel:
 
     @property
     def variables(self):
+        """Returns a dictionary mapping strings to expressions representing the model's useful variables."""
         return self._variables
 
     @variables.setter
@@ -200,9 +207,7 @@ class BaseModel:
 
     @property
     def variables_and_events(self):
-        """
-        Returns variables and events in a single dictionary
-        """
+        """Returns a dictionary containing both models variables and events."""
         try:
             return self._variables_and_events
         except AttributeError:
@@ -214,6 +219,8 @@ class BaseModel:
 
     @property
     def events(self):
+        """Returns a dictionary mapping expressions (variables) to expressions that represent
+        the initial conditions for the state variables."""
         return self._events
 
     @events.setter
@@ -222,6 +229,7 @@ class BaseModel:
 
     @property
     def concatenated_rhs(self):
+        """Returns the concatenated right-hand side (RHS) expressions for the model after discretisation."""
         return self._concatenated_rhs
 
     @concatenated_rhs.setter
@@ -230,6 +238,7 @@ class BaseModel:
 
     @property
     def concatenated_algebraic(self):
+        """Returns the concatenated algebraic equations for the model after discretisation."""
         return self._concatenated_algebraic
 
     @concatenated_algebraic.setter
@@ -238,6 +247,8 @@ class BaseModel:
 
     @property
     def concatenated_initial_conditions(self):
+        """Returns the initial conditions for all variables after discretization, providing the
+        initial values for the state variables."""
         return self._concatenated_initial_conditions
 
     @concatenated_initial_conditions.setter
@@ -246,6 +257,7 @@ class BaseModel:
 
     @property
     def mass_matrix(self):
+        """Returns the mass matrix for the system of differential equations after discretisation."""
         return self._mass_matrix
 
     @mass_matrix.setter
@@ -254,6 +266,7 @@ class BaseModel:
 
     @property
     def mass_matrix_inv(self):
+        """Returns the inverse of the mass matrix for the differential equations after discretisation."""
         return self._mass_matrix_inv
 
     @mass_matrix_inv.setter
@@ -262,6 +275,7 @@ class BaseModel:
 
     @property
     def jacobian(self):
+        """Returns the Jacobian matrix for the model, computed automatically if `use_jacobian` is True."""
         return self._jacobian
 
     @jacobian.setter
@@ -270,6 +284,8 @@ class BaseModel:
 
     @property
     def jacobian_rhs(self):
+        """Returns the Jacobian matrix for the right-hand side (RHS) part of the model, computed
+        if `use_jacobian` is True."""
         return self._jacobian_rhs
 
     @jacobian_rhs.setter
@@ -278,6 +294,8 @@ class BaseModel:
 
     @property
     def jacobian_algebraic(self):
+        """Returns the Jacobian matrix for the algebraic part of the model, computed automatically
+        during solver setup if `use_jacobian` is True."""
         return self._jacobian_algebraic
 
     @jacobian_algebraic.setter
@@ -286,6 +304,7 @@ class BaseModel:
 
     @property
     def param(self):
+        """Returns a dictionary to store parameter values for the model."""
         return self._param
 
     @param.setter
@@ -294,6 +313,7 @@ class BaseModel:
 
     @property
     def options(self):
+        """Returns the model options dictionary that allows customization of the model's behavior."""
         return self._options
 
     @options.setter
@@ -326,27 +346,32 @@ class BaseModel:
 
     @property
     def geometry(self):
+        """Returns the geometry of the model."""
         return self._geometry
 
     @property
     def default_var_pts(self):
+        """Returns a dictionary of the default variable points for the model, which is empty by default."""
         return {}
 
     @property
     def default_geometry(self):
+        """Returns a  dictionary of the default geometry for the model, which is empty by default."""
         return {}
 
     @property
     def default_submesh_types(self):
+        """Returns a dictionary of the default submesh types for the model, which is empty by default."""
         return {}
 
     @property
     def default_spatial_methods(self):
+        """Returns a dictionary of the default spatial methods for the model, which is empty by default."""
         return {}
 
     @property
     def default_solver(self):
-        """Return default solver based on whether model is ODE/DAE or algebraic"""
+        """Returns the default solver for the model, based on whether it is an ODE/DAE or algebraic model."""
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
@@ -354,15 +379,17 @@ class BaseModel:
 
     @property
     def default_quick_plot_variables(self):
+        """Returns the default variables for quick plotting (None by default)."""
         return None
 
     @property
     def default_parameter_values(self):
+        """Returns the default parameter values for the model (an empty set of parameters by default)."""
         return pybamm.ParameterValues({})
 
     @property
     def parameters(self):
-        """Returns all the parameters in the model"""
+        """Returns a  list of all parameter symbols used in the model."""
         self._parameters = self._find_symbols(
             (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
         )
@@ -370,7 +397,7 @@ class BaseModel:
 
     @property
     def input_parameters(self):
-        """Returns all the input parameters in the model"""
+        """Returns a list of all input parameter symbols used in the model."""
         if self._input_parameters is None:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
