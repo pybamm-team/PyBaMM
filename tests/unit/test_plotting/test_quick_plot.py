@@ -5,12 +5,12 @@ import pytest
 import numpy as np
 from tempfile import TemporaryDirectory
 
-_solver_args = [pybamm.CasadiSolver()]
-if pybamm.has_idaklu():
-    _solver_args.append(pybamm.IDAKLUSolver())
-
 
 class TestQuickPlot:
+    _solver_args = [pybamm.CasadiSolver()]
+    if pybamm.has_idaklu():
+        _solver_args.append(pybamm.IDAKLUSolver())
+
     @pytest.mark.parametrize("solver", _solver_args)
     def test_simple_ode_model(self, solver):
         model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
