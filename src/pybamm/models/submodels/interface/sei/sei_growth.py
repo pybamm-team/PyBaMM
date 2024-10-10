@@ -160,7 +160,7 @@ class SEIGrowth(BaseModel):
             variables.update({name: c_ec, f"X-averaged {name}": c_ec_av})
 
         # All SEI growth mechanisms assumed to have Arrhenius dependence
-        Arrhenius = pybamm.exp(
+        arrhenius = pybamm.exp(
             phase_param.E_sei / self.param.R * (1 / self.param.T_ref - 1 / T)
         )
 
