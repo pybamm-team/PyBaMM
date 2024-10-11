@@ -64,6 +64,7 @@ coverage.xml
 htmlcov/
 
 # virtual environment
+.venv
 env/
 venv/
 venv3.5/
