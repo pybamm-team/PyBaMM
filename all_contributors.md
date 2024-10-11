@@ -122,6 +122,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/pipliggins"><img src="https://avatars.githubusercontent.com/u/55396775?v=4?s=100" width="100px;" alt="Pip Liggins"/><br /><sub><b>Pip Liggins</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=pipliggins" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=pipliggins" title="Tests">⚠️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/medha-14"><img src="https://avatars.githubusercontent.com/u/143182673?v=4?s=100" width="100px;" alt="Medha Bhardwaj"/><br /><sub><b>Medha Bhardwaj</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=medha-14" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://marcberliner.com"><img src="https://avatars.githubusercontent.com/u/34451391?v=4?s=100" width="100px;" alt="Marc Berliner"/><br /><sub><b>Marc Berliner</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=MarcBerliner" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=MarcBerliner" title="Documentation">📖</a> <a href="#infra-MarcBerliner" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+    </tr>
   </tbody>
 </table>
 
