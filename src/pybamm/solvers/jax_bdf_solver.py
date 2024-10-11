@@ -28,7 +28,7 @@ if pybamm.has_jax():
     MIN_FACTOR = 0.2
     MAX_FACTOR = 10
 
-    # https://github.com/google/jax/issues/4572#issuecomment-709809897
+    # https://github.com/jax-ml/jax/issues/4572#issuecomment-709809897
     def some_hash_function(x):
         return hash(str(x))
 
