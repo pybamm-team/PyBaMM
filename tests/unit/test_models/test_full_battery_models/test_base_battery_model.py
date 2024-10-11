@@ -478,6 +478,12 @@ class TestBaseBatteryModel:
         assert model.options["voltage as a state"] == "true"
         assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
 
+        model = pybamm.lithium_ion.SPM(
+            {"voltage as a state": "true", "operating mode": "voltage"}
+        )
+        assert model.options["voltage as a state"] == "true"
+        assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+
 
 class TestOptions:
     def test_print_options(self):
