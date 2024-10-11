@@ -12,12 +12,15 @@ import pytest
 def path():
     return os.path.abspath(os.path.dirname(__file__))
 
-@pytest.fixture(params=[
-    ("lico2_ocv_example", pybamm.parameters.process_1D_data),
-    ("lico2_diffusivity_Dualfoil1998_2D", pybamm.parameters.process_2D_data),
-    ("data_for_testing_2D", pybamm.parameters.process_2D_data_csv),
-    ("data_for_testing_3D", pybamm.parameters.process_3D_data_csv),
-])
+
+@pytest.fixture(
+    params=[
+        ("lico2_ocv_example", pybamm.parameters.process_1D_data),
+        ("lico2_diffusivity_Dualfoil1998_2D", pybamm.parameters.process_2D_data),
+        ("data_for_testing_2D", pybamm.parameters.process_2D_data_csv),
+        ("data_for_testing_3D", pybamm.parameters.process_3D_data_csv),
+    ]
+)
 def parameter_data(request, path):
     name, processing_function = request.param
     processed = processing_function(name, path)
@@ -32,10 +35,10 @@ class TestProcessParameterData:
     def test_processed_structure(self, parameter_data):
         """
         Test that the processed data has the correct structure.
-        
+
         Args:
             parameter_data: A tuple containing the name and processed data.
-        
+
         Asserts:
             - The second element of the processed data is a tuple.
             - The first element of the second item in the processed data is a numpy array.
@@ -48,8 +51,8 @@ class TestProcessParameterData:
 
         if len(processed[1][0]) > 1:
             assert isinstance(processed[1][0][1], np.ndarray)
-        
-        elif len(processed[1]) == 3:  
+
+        elif len(processed[1]) == 3:
             assert isinstance(processed[1][0][1], np.ndarray)
             assert isinstance(processed[1][0][2], np.ndarray)
 
