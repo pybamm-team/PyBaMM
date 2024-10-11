@@ -970,6 +970,17 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "MarcBerliner",
+      "name": "Marc Berliner",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34451391?v=4",
+      "profile": "http://marcberliner.com",
+      "contributions": [
+        "code",
+        "doc",
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
