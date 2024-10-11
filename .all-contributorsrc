@@ -979,7 +979,8 @@
       "contributions": [
         "code",
         "doc",
-        "infra"
+        "infra",
+        "maintenance"
       ]
     }
   ],
