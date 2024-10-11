@@ -19,7 +19,7 @@ class Lumped(pybamm.BaseSubModel):
 
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
-        pybamm.citations.register("lin2014lumped")
+        pybamm.citations.register("Lin2014")
 
     def get_fundamental_variables(self):
         T_surf = pybamm.Variable("Surface temperature [K]")

@@ -130,7 +130,6 @@ class FickianDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        param = self.param
 
         if self.size_distribution is False:
             if self.x_average is False:
@@ -208,7 +207,7 @@ class FickianDiffusion(BaseParticle):
                 * pybamm.div(N_s),
                 f"{Domain} {phase_name}particle bc [mol.m-4]": -j
                 * R_nondim
-                / param.F
+                / self.param.F
                 / pybamm.surf(D_eff),
             }
         )

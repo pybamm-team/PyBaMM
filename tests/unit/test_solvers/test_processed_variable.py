@@ -161,6 +161,67 @@ class TestProcessedVariable:
             )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
+    def test_processed_variable_0D_discrete_data(self, hermite_interp):
+        y = pybamm.StateVector(slice(0, 1))
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        data_const = 3.6
+        if hermite_interp:
+            yp_sol = 5 * np.ones_like(y_sol)
+        else:
+            yp_sol = None
+
+        # hermite interpolation can do order 2 interpolation, otherwise make sure result is linear
+        order = 2 if hermite_interp else 1
+
+        # data is same timepoints as solution
+        data_t = t_sol
+        data_v = -data_const * data_t
+        data = pybamm.DiscreteTimeData(data_t, data_v, "test_data")
+        var = (y - data) ** order
+        expected_entries = (y_sol - data_v) ** order
+        var.mesh = None
+        model = pybamm.BaseModel()
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        np.testing.assert_array_equal(processed_var.entries, expected_entries.flatten())
+        np.testing.assert_array_equal(processed_var(data_t), expected_entries.flatten())
+
+        # data is different timepoints as solution
+        data_t = np.linspace(0, 1, 7)
+        data_v = -data_const * data_t
+        y_sol_interp = (np.interp(data_t, t_sol, y_sol[0]),)
+        data_v_interp = np.interp(t_sol, data_t, data_v)
+        data = pybamm.DiscreteTimeData(data_t, data_v, "test_data")
+
+        # check data interp
+        np.testing.assert_array_almost_equal(
+            data.evaluate(t=t_sol).flatten(), data_v_interp
+        )
+
+        var = (y - data) ** order
+        expected = (y_sol_interp - data_v) ** order
+        expected_entries = (y_sol - data_v_interp) ** order
+        var.mesh = None
+        model = pybamm.BaseModel()
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.process_variable(
+            [var],
+            [var_casadi],
+            self._sol_default(t_sol, y_sol, yp_sol, model),
+        )
+        np.testing.assert_array_almost_equal(
+            processed_var.entries, expected_entries.flatten(), decimal=10
+        )
+        np.testing.assert_array_almost_equal(
+            processed_var(t=data_t), expected.flatten(), decimal=10
+        )
+
+    @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_no_sensitivity(self, hermite_interp):
         # without space
         t = pybamm.t

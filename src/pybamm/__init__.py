@@ -36,6 +36,7 @@ from .expression_tree.averages import _BaseAverage
 from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
+from .expression_tree.discrete_time_sum import *
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.scalar import Scalar
@@ -75,6 +76,7 @@ from .models.full_battery_models.base_battery_model import (
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import equivalent_circuit
+from .models.full_battery_models import sodium_ion
 
 # Submodel classes
 from .models.submodels.base_submodel import BaseSubModel
@@ -157,6 +159,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 # Solver classes
 from .solvers.solution import Solution, EmptySolution, make_cycle_solution
+from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
 from .solvers.processed_variable import ProcessedVariable, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
 from .solvers.base_solver import BaseSolver

@@ -176,7 +176,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     def chebyshev_differentiation_matrices(self, noe, dod):
         """
         Chebyshev differentiation matrices, from
-        :footcite:t:`baltensperger2003spectral`.
+        :footcite:t:`Baltensperger2003`.
 
         Parameters
         ----------
