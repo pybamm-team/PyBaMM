@@ -369,7 +369,7 @@ def get_parameter_values():
         "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI reaction exchange current density [A.m-2]": 1.5e-06,
         "SEI resistivity [Ohm.m]": 200000.0,
-        "SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "SEI solvent diffusivity [m2.s-1]": 2.5e-22,
         "Bulk solvent concentration [mol.m-3]": 2636.0,
         "SEI electron conductivity [S.m-1]": 8.95e-14,
         "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
