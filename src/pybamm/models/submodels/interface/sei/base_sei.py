@@ -218,7 +218,7 @@ class BaseModel(BaseInterface):
         elif self.reaction == "SEI on cracks":
             L_inner_cr = variables[f"{Domain} inner {reaction_name}thickness [m]"]
             L_outer_cr = variables[f"{Domain} outer {reaction_name}thickness [m]"]
-            roughness = variables[f"{Domain} electrode roughness ratio"]
+            roughness = variables[f"{Domain} electrode {self.phase_name}roughness ratio"]
 
             n_inner_cr = L_inner_cr * L_to_n_inner * (roughness - 1)
             n_outer_cr = L_outer_cr * L_to_n_outer * (roughness - 1)

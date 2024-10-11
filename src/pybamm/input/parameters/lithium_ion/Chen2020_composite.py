@@ -39,6 +39,81 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
+def graphite_volume_change_Ai2020(sto, c_s_max):
+    """
+    Graphite particle volume change as a function of stochiometry [1, 2].
+    References
+    ----------
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+     Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
+      DOI: 10.1149/2.0122001JES.
+     .. [2] Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
+     A new method to model the thickness change of a commercial pouch cell
+     during discharge. Journal of The Electrochemical Society, 163(8), A1566-A1575.
+    Parameters
+    ----------
+    sto: :class:`pybamm.Symbol`
+        Electrode stochiometry, dimensionless
+        should be R-averaged particle concentration
+    Returns
+    -------
+    t_change:class:`pybamm.Symbol`
+        volume change, dimensionless, normalised by particle volume
+    """
+    p1 = 145.907
+    p2 = -681.229
+    p3 = 1334.442
+    p4 = -1415.710
+    p5 = 873.906
+    p6 = -312.528
+    p7 = 60.641
+    p8 = -5.706
+    p9 = 0.386
+    p10 = -4.966e-05
+    t_change = 50*(
+        p1 * sto**9
+        + p2 * sto**8
+        + p3 * sto**7
+        + p4 * sto**6
+        + p5 * sto**5
+        + p6 * sto**4
+        + p7 * sto**3
+        + p8 * sto**2
+        + p9 * sto
+        + p10
+    )
+    """
+    omega = pybamm.Parameter("Primary: Negative electrode partial molar volume [m3.mol-1]")
+    t_change = omega * c_s_max * sto
+    """
+    return t_change
+def graphite_cracking_rate_Ai2020(T_dim):
+    """
+    Graphite particle cracking rate as a function of temperature [1, 2].
+    References
+    ----------
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+     Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
+      DOI: 10.1149/2.0122001JES.
+     .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+     Battery cycle life prediction with coupled chemical degradation and fatigue
+     mechanics. Journal of the Electrochemical Society, 159(10), A1730.
+    Parameters
+    ----------
+    T_dim: :class:`pybamm.Symbol`
+        temperature, [K]
+    Returns
+    -------
+    k_cr: :class:`pybamm.Symbol`
+        cracking rate, [m/(Pa.m0.5)^m_cr]
+        where m_cr is another Paris' law constant
+    """
+    k_cr = 3.9e-21
+    Eac_cr = 0  # to be implemented
+    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    return k_cr * arrhenius
 
 def silicon_ocp_lithiation_Mark2016(sto):
     """
@@ -128,6 +203,7 @@ def silicon_ocp_delithiation_Mark2016(sto):
     return U_delithiation
 
 
+
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -166,6 +242,109 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     arrhenius = np.exp(E_r / pybamm.constants.R * (1 / 298.15 - 1 / T))
 
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
+
+def silicon_volume_change_Ai2020(sto, c_s_max):
+    """
+    Silicon particle volume change as a function of stochiometry [1, 2].
+    References
+    ----------
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+     Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
+      DOI: 10.1149/2.0122001JES.
+     .. [2] Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
+     A new method to model the thickness change of a commercial pouch cell
+     during discharge. Journal of The Electrochemical Society, 163(8), A1566-A1575.
+    Parameters
+    ----------
+    sto: :class:`pybamm.Symbol`
+        Electrode stochiometry, dimensionless
+        should be R-averaged particle concentration
+    Returns
+    -------
+    t_change:class:`pybamm.Symbol`
+        volume change, dimensionless, normalised by particle volume
+    """
+    p1 = 145.907
+    p2 = -681.229
+    p3 = 1334.442
+    p4 = -1415.710
+    p5 = 873.906
+    p6 = -312.528
+    p7 = 60.641
+    p8 = -5.706
+    p9 = 0.386
+    p10 = -4.966e-05
+    t_change = 50*(
+        p1 * sto**9
+        + p2 * sto**8
+        + p3 * sto**7
+        + p4 * sto**6
+        + p5 * sto**5
+        + p6 * sto**4
+        + p7 * sto**3
+        + p8 * sto**2
+        + p9 * sto
+        + p10
+    )
+    """
+    omega = pybamm.Parameter("Secondary: Negative electrode partial molar volume [m3.mol-1]")
+    t_change = omega * c_s_max * sto
+    """
+    return t_change
+def silicon_cracking_rate_Ai2020(T_dim):
+    """
+    Silicon particle cracking rate as a function of temperature [1, 2].
+    References
+    ----------
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+     Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
+      DOI: 10.1149/2.0122001JES.
+     .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+     Battery cycle life prediction with coupled chemical degradation and fatigue
+     mechanics. Journal of the Electrochemical Society, 159(10), A1730.
+    Parameters
+    ----------
+    T_dim: :class:`pybamm.Symbol`
+        temperature, [K]
+    Returns
+    -------
+    k_cr: :class:`pybamm.Symbol`
+        cracking rate, [m/(Pa.m0.5)^m_cr]
+        where m_cr is another Paris' law constant
+    """
+    k_cr = 1.0e-22
+    Eac_cr = 0  # to be implemented
+    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    return k_cr * arrhenius
+def nmc_LGM50_ocp_Chen2020(sto):
+    """
+    LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
+    from [1].
+    References
+    ----------
+    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+    Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
+    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+    Electrochemical Society 167 (2020): 080534.
+    Parameters
+    ----------
+    sto: :class:`pybamm.Symbol`
+        Electrode stochiometry
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Open-circuit potential
+    """
+    u_eq = (
+        -0.8090 * sto
+        + 4.4875
+        - 0.0428 * np.tanh(18.5138 * (sto - 0.5542))
+        - 17.7326 * np.tanh(15.7890 * (sto - 0.3117))
+        + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
+    )
+    return u_eq
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
@@ -300,6 +479,58 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 
     return sigma_e
 
+def volume_change_Ai2020(sto, c_s_max):
+    """
+    Particle volume change as a function of stochiometry [1, 2].
+    References
+    ----------
+     .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+     Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
+      DOI: 10.1149/2.0122001JES.
+     .. [2] > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
+     A new method to model the thickness change of a commercial pouch cell
+     during discharge. Journal of The Electrochemical Society, 163(8), A1566-A1575.
+    Parameters
+    ----------
+    sto: :class:`pybamm.Symbol`
+        Electrode stochiometry, dimensionless
+        should be R-averaged particle concentration
+    Returns
+    -------
+    t_change:class:`pybamm.Symbol`
+        volume change, dimensionless, normalised by particle volume
+    """
+    omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
+    t_change = omega * c_s_max * sto
+    return t_change
+def cracking_rate_Ai2020(T_dim):
+    """
+    Particle cracking rate as a function of temperature [1, 2].
+    References
+    ----------
+     .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
+     Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
+      DOI: 10.1149/2.0122001JES.
+     .. [2] > Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+     Battery cycle life prediction with coupled chemical degradation and fatigue
+     mechanics. Journal of the Electrochemical Society, 159(10), A1730.
+    Parameters
+    ----------
+    T: :class:`pybamm.Symbol`
+        temperature, [K]
+    Returns
+    -------
+    k_cr: :class:`pybamm.Symbol`
+        cracking rate, [m/(Pa.m0.5)^m_cr]
+        where m_cr is another Paris' law constant
+    """
+    k_cr = 1.0e-22
+    Eac_cr = 0  # to be implemented
+    arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
+    return k_cr * arrhenius
+
 
 # Load data in the appropriate format
 path, _ = os.path.split(os.path.abspath(__file__))
@@ -327,46 +558,47 @@ def get_parameter_values():
     return {
         "chemistry": "lithium_ion",
         # sei
-        "Primary: Ratio of lithium moles to SEI moles": 2.0,
-        "Primary: Inner SEI reaction proportion": 0.5,
-        "Primary: Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Primary: Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Primary: SEI reaction exchange current density [A.m-2]": 1.5e-07,
-        "Primary: SEI resistivity [Ohm.m]": 200000.0,
-        "Primary: Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
-        "Primary: Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Primary: Inner SEI open-circuit potential [V]": 0.1,
-        "Primary: Outer SEI open-circuit potential [V]": 0.8,
-        "Primary: Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Primary: Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
-        "Primary: Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Primary: Initial inner SEI thickness [m]": 2.5e-09,
-        "Primary: Initial outer SEI thickness [m]": 2.5e-09,
-        "Primary: EC initial concentration in electrolyte [mol.m-3]": 4541.0,
-        "Primary: EC diffusivity [m2.s-1]": 2e-18,
-        "Primary: SEI kinetic rate constant [m.s-1]": 1e-12,
-        "Primary: SEI open-circuit potential [V]": 0.4,
-        "Primary: SEI growth activation energy [J.mol-1]": 0.0,
-        "Secondary: Ratio of lithium moles to SEI moles": 2.0,
-        "Secondary: Inner SEI reaction proportion": 0.5,
-        "Secondary: Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Secondary: Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Secondary: SEI reaction exchange current density [A.m-2]": 1.5e-07,
-        "Secondary: SEI resistivity [Ohm.m]": 200000.0,
-        "Secondary: Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
-        "Secondary: Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Secondary: Inner SEI open-circuit potential [V]": 0.1,
-        "Secondary: Outer SEI open-circuit potential [V]": 0.8,
-        "Secondary: Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Secondary: Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
-        "Secondary: Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Secondary: Initial inner SEI thickness [m]": 2.5e-09,
-        "Secondary: Initial outer SEI thickness [m]": 2.5e-09,
-        "Secondary: EC initial concentration in electrolyte [mol.m-3]": 4541.0,
-        "Secondary: EC diffusivity [m2.s-1]": 2e-18,
-        "Secondary: SEI kinetic rate constant [m.s-1]": 1e-12,
-        "Secondary: SEI open-circuit potential [V]": 0.4,
-        "Secondary: SEI growth activation energy [J.mol-1]": 0.0,
+        "Primary: Negative ratio of lithium moles to SEI moles": 2.0,
+        "Primary: Negative inner SEI reaction proportion": 0.5,
+        "Primary: Negative inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Primary: Negative outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Primary: Negative SEI reaction exchange current density [A.m-2]": 1.5e-07,
+        "Primary: Negative SEI resistivity [Ohm.m]": 200000.0,
+        "Primary: Negative outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Primary: Negative bulk solvent concentration [mol.m-3]": 2636.0,
+        "Primary: Negative inner SEI open-circuit potential [V]": 0.1,
+        "Primary: Negative outer SEI open-circuit potential [V]": 0.8,
+        "Primary: Negative inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Primary: Negative inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Primary: Negative lithium interstitial reference concentration [mol.m-3]": 15.0,
+        "Primary: Negative initial inner SEI thickness [m]": 2.5e-09,
+        "Primary: Negative initial outer SEI thickness [m]": 2.5e-09,
+        "Primary: Negative EC initial concentration in electrolyte [mol.m-3]": 4541.0,
+        "Primary: Negative EC diffusivity [m2.s-1]": 2e-18,
+        "Primary: Negative SEI kinetic rate constant [m.s-1]": 1e-12,
+        "Primary: Negative SEI open-circuit potential [V]": 0.4,
+        "Primary: Negative SEI growth activation energy [J.mol-1]": 0.0,
+        "Secondary: Negative ratio of lithium moles to SEI moles": 2.0,
+        "Secondary: Negative inner SEI reaction proportion": 0.5,
+        "Secondary: Negative inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Secondary: Negative outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "Secondary: Negative SEI reaction exchange current density [A.m-2]": 1.5e-07,
+        "Secondary: Negative SEI resistivity [Ohm.m]": 200000.0,
+        "Secondary: Negative outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "Secondary: Negative bulk solvent concentration [mol.m-3]": 2636.0,
+        "Secondary: Negative inner SEI open-circuit potential [V]": 0.1,
+        "Secondary: Negative outer SEI open-circuit potential [V]": 0.8,
+        "Secondary: Negative inner SEI electron conductivity [S.m-1]": 8.95e-14,
+        "Secondary: Negative inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "Secondary: Negative lithium interstitial reference concentration [mol.m-3]": 15.0,
+        "Secondary: Negative initial inner SEI thickness [m]": 2.5e-09,
+        "Secondary: Negative initial outer SEI thickness [m]": 2.5e-09,
+        "Secondary: Negative EC initial concentration in electrolyte [mol.m-3]": 4541.0,
+        "Secondary: Negative EC diffusivity [m2.s-1]": 2e-18,
+        "Secondary: Negative SEI kinetic rate constant [m.s-1]": 1e-12,
+        "Secondary: Negative SEI open-circuit potential [V]": 0.4,
+        "Secondary: Negative SEI growth activation energy [J.mol-1]": 0.0,
+        "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         # cell
         "Negative current collector thickness [m]": 1.2e-05,
@@ -409,6 +641,22 @@ def get_parameter_values():
         "Negative electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Negative electrode thermal conductivity [W.m-1.K-1]": 1.7,
         "Primary: Negative electrode OCP entropic change [V.K-1]": 0.0,
+        "Primary: Negative electrode Poisson's ratio": 0.3,
+        "Primary: Negative electrode Young's modulus [Pa]": 15000000000.0,
+        "Primary: Negative electrode reference concentration for free of deformation [mol.m-3]"
+        "": 0.0,
+        "Primary: Negative electrode partial molar volume [m3.mol-1]": 3.1e-06,
+        "Primary: Negative electrode volume change": graphite_volume_change_Ai2020,
+        "Primary: Negative electrode initial crack length [m]": 2e-08,
+        "Primary: Negative electrode initial crack width [m]": 1.5e-08,
+        "Primary: Negative electrode number of cracks per unit area [m-2]": 3180000000000000.0,
+        "Primary: Negative electrode Paris' law constant b": 1.12,
+        "Primary: Negative electrode Paris' law constant m": 2.2,
+        "Primary: Negative electrode cracking rate": graphite_cracking_rate_Ai2020,
+        "Negative electrode activation energy for cracking rate [J.mol-1]": 0,
+        "Primary: Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
+        "Primary: Negative electrode LAM constant exponential term": 2.0,
+        "Primary: Negative electrode critical stress [Pa]": 60000000.0,
         "Secondary: Maximum concentration in negative electrode [mol.m-3]": 278000.0,
         "Secondary: Initial concentration in negative electrode [mol.m-3]": 276610.0,
         "Secondary: Negative particle diffusivity [m2.s-1]": 1.67e-14,
@@ -422,6 +670,20 @@ def get_parameter_values():
         "": silicon_LGM50_electrolyte_exchange_current_density_Chen2020,
         "Secondary: Negative electrode density [kg.m-3]": 2650.0,
         "Secondary: Negative electrode OCP entropic change [V.K-1]": 0.0,
+        "Secondary: Negative electrode Poisson's ratio": 0.22,
+        "Secondary: Negative electrode Young's modulus [Pa]": 50000000000.0,
+        "Secondary: Negative electrode reference concentration for free of deformation [mol.m-3]": 0,
+        "Secondary: Negative electrode partial molar volume [m3.mol-1]": 1.20e-05,
+        "Secondary: Negative electrode volume change": silicon_volume_change_Ai2020,
+        "Secondary: Negative electrode initial crack length [m]": 2e-08,
+        "Secondary: Negative electrode initial crack width [m]": 1.5e-08,
+        "Secondary: Negative electrode number of cracks per unit area [m-2]": 3180000000000000.0,
+        "Secondary: Negative electrode Paris' law constant b": 1.12,
+        "Secondary: Negative electrode Paris' law constant m": 2.2,
+        "Secondary: Negative electrode cracking rate": silicon_cracking_rate_Ai2020,
+        "Secondary: Negative electrode LAM constant proportional term [s-1]": 2.7778e-07,
+        "Secondary: Negative electrode LAM constant exponential term": 2.0,
+        "Secondary: Negative electrode critical stress [Pa]": 720000000,
         # positive electrode
         "Positive electrode conductivity [S.m-1]": 0.18,
         "Maximum concentration in positive electrode [mol.m-3]": 63104.0,
@@ -440,6 +702,21 @@ def get_parameter_values():
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 700.0,
         "Positive electrode thermal conductivity [W.m-1.K-1]": 2.1,
         "Positive electrode OCP entropic change [V.K-1]": 0.0,
+        "Positive electrode Poisson's ratio": 0.2,
+        "Positive electrode Young's modulus [Pa]": 375000000000.0,
+        "Positive electrode reference concentration for free of deformation [mol.m-3]"
+        "": 0.0,
+        "Positive electrode partial molar volume [m3.mol-1]": 1.25e-05,
+        "Positive electrode volume change": volume_change_Ai2020,
+        "Positive electrode initial crack length [m]": 2e-08,
+        "Positive electrode initial crack width [m]": 1.5e-08,
+        "Positive electrode number of cracks per unit area [m-2]": 3180000000000000.0,
+        "Positive electrode Paris' law constant b": 1.12,
+        "Positive electrode Paris' law constant m": 2.2,
+        "Positive electrode cracking rate": cracking_rate_Ai2020,
+        "Positive electrode LAM constant proportional term [s-1]": 2.7778e-07,
+        "Positive electrode LAM constant exponential term": 2.0,
+        "Positive electrode critical stress [Pa]": 375000000.0,
         # separator
         "Separator porosity": 0.47,
         "Separator Bruggeman coefficient (electrolyte)": 1.5,
