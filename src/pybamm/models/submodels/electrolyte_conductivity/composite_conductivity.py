@@ -52,23 +52,22 @@ class Composite(BaseElectrolyteConductivity):
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
-        param = self.param
-        RT_F_av = param.R * T_av / param.F
-        RT_F_av_s = param.R * T_av_s / param.F
-        RT_F_av_p = param.R * T_av_p / param.F
+        RT_F_av = self.param.R * T_av / self.param.F
+        RT_F_av_s = self.param.R * T_av_s / self.param.F
+        RT_F_av_p = self.param.R * T_av_p / self.param.F
 
-        L_n = param.n.L
-        L_s = param.s.L
-        L_p = param.p.L
-        L_x = param.L_x
+        L_n = self.param.n.L
+        L_s = self.param.s.L
+        L_p = self.param.p.L
+        L_x = self.param.L_x
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_s_av = param.kappa_e(c_e_av, T_av) * tor_s_av
-        kappa_p_av = param.kappa_e(c_e_av, T_av) * tor_p_av
+        kappa_s_av = self.param.kappa_e(c_e_av, T_av) * tor_s_av
+        kappa_p_av = self.param.kappa_e(c_e_av, T_av) * tor_p_av
 
-        chi_av = param.chi(c_e_av, T_av)
+        chi_av = self.param.chi(c_e_av, T_av)
         chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
 
@@ -79,8 +78,8 @@ class Composite(BaseElectrolyteConductivity):
             x_n = pybamm.standard_spatial_vars.x_n
             chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
             T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
-            RT_F_av_n = param.R * T_av_n / param.F
-            kappa_n_av = param.kappa_e(c_e_av, T_av) * tor_n_av
+            RT_F_av_n = self.param.R * T_av_n / self.param.F
+            kappa_n_av = self.param.kappa_e(c_e_av, T_av) * tor_n_av
             i_e_n = i_boundary_cc * x_n / L_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
         i_e_p = i_boundary_cc * (L_x - x_p) / L_p

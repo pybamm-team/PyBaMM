@@ -29,9 +29,8 @@ class FunctionControl(BaseModel):
         self.control = control
 
     def get_fundamental_variables(self):
-        param = self.param
         # Current is a variable
-        i_var = pybamm.Variable("Current variable [A]", scale=param.Q)
+        i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
         if self.control in ["algebraic", "differential"]:
             I = i_var
         elif self.control == "differential with max":
@@ -41,13 +40,13 @@ class FunctionControl(BaseModel):
             I = pybamm.maximum(i_var, i_input)
 
         # Update derived variables
-        i_cell = I / (param.n_electrodes_parallel * param.A_cc)
+        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
 
         variables = {
             "Current variable [A]": i_var,
             "Total current density [A.m-2]": i_cell,
             "Current [A]": I,
-            "C-rate": I / param.Q,
+            "C-rate": I / self.param.Q,
         }
 
         return variables

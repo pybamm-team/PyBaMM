@@ -71,7 +71,6 @@ class SEIGrowth(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        param = self.param
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
         SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
@@ -107,7 +106,7 @@ class SEIGrowth(BaseModel):
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
         # Thermal prefactor for reaction, interstitial and EC models
-        F_RT = param.F / (param.R * T)
+        F_RT = self.param.F / (self.param.R * T)
 
         # Define alpha_SEI depending on whether it is symmetric or asymmetric. This
         # applies to "reaction limited" and "EC reaction limited"
@@ -127,12 +126,12 @@ class SEIGrowth(BaseModel):
         elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)
             j_sei = -(
-                phase_param.D_li * phase_param.c_li_0 * param.F / L_sei
+                phase_param.D_li * phase_param.c_li_0 * self.param.F / L_sei
             ) * pybamm.exp(-F_RT * delta_phi)
 
         elif SEI_option == "solvent-diffusion limited":
             # Scott Marquis thesis (eq. 5.91)
-            j_sei = -phase_param.D_sol * phase_param.c_sol * param.F / L_sei
+            j_sei = -phase_param.D_sol * phase_param.c_sol * self.param.F / L_sei
 
         elif SEI_option.startswith("ec reaction limited"):
             # we have a linear system for j and c
@@ -148,7 +147,7 @@ class SEIGrowth(BaseModel):
             k_exp = phase_param.k_sei * pybamm.exp(-alpha_SEI * F_RT * eta_SEI)
             L_over_D = L_sei / phase_param.D_ec
             c_0 = phase_param.c_ec_0
-            j_sei = -param.F * c_0 * k_exp / (1 + L_over_D * k_exp)
+            j_sei = -self.param.F * c_0 * k_exp / (1 + L_over_D * k_exp)
             c_ec = c_0 / (1 + L_over_D * k_exp)
 
             # Get variables related to the concentration
@@ -161,7 +160,9 @@ class SEIGrowth(BaseModel):
             variables.update({name: c_ec, f"X-averaged {name}": c_ec_av})
 
         # All SEI growth mechanisms assumed to have Arrhenius dependence
-        arrhenius = pybamm.exp(phase_param.E_sei / param.R * (1 / param.T_ref - 1 / T))
+        arrhenius = pybamm.exp(
+            phase_param.E_sei / self.param.R * (1 / self.param.T_ref - 1 / T)
+        )
 
         j_sei = arrhenius * j_sei
 
@@ -175,7 +176,6 @@ class SEIGrowth(BaseModel):
 
     def set_rhs(self, variables):
         phase_param = self.phase_param
-        param = self.param
         domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "x-average":
@@ -211,7 +211,7 @@ class SEIGrowth(BaseModel):
         # reaction
         # V_bar / a converts from SEI moles to SEI thickness
         # V_bar * j_sei / (F * z_sei) is the rate of SEI thickness change
-        dLdt_SEI = phase_param.V_bar_sei * j_sei / (param.F * phase_param.z_sei)
+        dLdt_SEI = phase_param.V_bar_sei * j_sei / (self.param.F * phase_param.z_sei)
 
         # we have to add the spreading rate to account for cracking
         self.rhs = {L_sei: -dLdt_SEI + spreading}
