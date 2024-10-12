@@ -49,7 +49,7 @@ def ask_user_opt_in(timeout=10):
     Parameters
     ----------
     timeout: float, optional
-        The timeout for the user to respond to the prompt. Default is 20 seconds.
+        The timeout for the user to respond to the prompt. Default is 10 seconds.
 
     Returns
     -------
