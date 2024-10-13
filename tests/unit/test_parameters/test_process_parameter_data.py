@@ -17,11 +17,11 @@ def parameters_path():
     ("data_for_testing_2D", pybamm.parameters.process_2D_data_csv),
     ("data_for_testing_3D", pybamm.parameters.process_3D_data_csv),
 ])
+
 def parameter_data(request, parameters_path):
     name, processing_function = request.param
     processed = processing_function(name, parameters_path)
     return name, processed
-
 
 class TestProcessParameterData:
     def test_processed_name(self, parameter_data):
