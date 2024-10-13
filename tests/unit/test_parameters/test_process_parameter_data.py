@@ -17,7 +17,7 @@ def parameters_path():
     ("data_for_testing_2D", pybamm.parameters.process_2D_data_csv),
     ("data_for_testing_3D", pybamm.parameters.process_3D_data_csv),
 ])
-def parameter_data(request, path):
+def parameter_data(request, parameters_path):
     name, processing_function = request.param
     processed = processing_function(name, parameters_path)
     return name, processed
@@ -36,8 +36,8 @@ class TestProcessParameterData:
 
         if len(processed[1][0]) > 1:
             assert isinstance(processed[1][0][1], np.ndarray)
-
-        elif len(processed[1]) == 3:
+        
+        elif len(processed[1]) == 3:  
             assert isinstance(processed[1][0][1], np.ndarray)
             assert isinstance(processed[1][0][2], np.ndarray)
 
