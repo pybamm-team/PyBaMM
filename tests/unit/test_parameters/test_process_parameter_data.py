@@ -2,28 +2,24 @@
 # Tests for the parameter processing functions
 #
 
-import os
 import numpy as np
 import pybamm
 import pytest
-
+from pathlib import Path
 
 @pytest.fixture
-def path():
-    return os.path.abspath(os.path.dirname(__file__))
+def parameters_path():
+    return Path(__file__).parent.resolve()
 
-
-@pytest.fixture(
-    params=[
-        ("lico2_ocv_example", pybamm.parameters.process_1D_data),
-        ("lico2_diffusivity_Dualfoil1998_2D", pybamm.parameters.process_2D_data),
-        ("data_for_testing_2D", pybamm.parameters.process_2D_data_csv),
-        ("data_for_testing_3D", pybamm.parameters.process_3D_data_csv),
-    ]
-)
+@pytest.fixture(params=[
+    ("lico2_ocv_example", pybamm.parameters.process_1D_data),
+    ("lico2_diffusivity_Dualfoil1998_2D", pybamm.parameters.process_2D_data),
+    ("data_for_testing_2D", pybamm.parameters.process_2D_data_csv),
+    ("data_for_testing_3D", pybamm.parameters.process_3D_data_csv),
+])
 def parameter_data(request, path):
     name, processing_function = request.param
-    processed = processing_function(name, path)
+    processed = processing_function(name, parameters_path)
     return name, processed
 
 
@@ -33,17 +29,6 @@ class TestProcessParameterData:
         assert processed[0] == name
 
     def test_processed_structure(self, parameter_data):
-        """
-        Test that the processed data has the correct structure.
-
-        Args:
-            parameter_data: A tuple containing the name and processed data.
-
-        Asserts:
-            - The second element of the processed data is a tuple.
-            - The first element of the second item in the processed data is a numpy array.
-            - Additional checks based on the shape of the processed data.
-        """
         name, processed = parameter_data
         assert isinstance(processed[1], tuple)
         assert isinstance(processed[1][0][0], np.ndarray)
