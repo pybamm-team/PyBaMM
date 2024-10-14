@@ -12,29 +12,28 @@ class BaseEffectiveResistance(pybamm.BaseModel):
     @property
     def default_geometry(self):
         geometry = {}
-        param = self.param
         if self.options["dimensionality"] == 1:
             geometry["current collector"] = {
-                "z": {"min": 0, "max": param.L_z},
+                "z": {"min": 0, "max": self.param.L_z},
                 "tabs": {
-                    "negative": {"z_centre": param.n.centre_z_tab},
-                    "positive": {"z_centre": param.p.centre_z_tab},
+                    "negative": {"z_centre": self.param.n.centre_z_tab},
+                    "positive": {"z_centre": self.param.p.centre_z_tab},
                 },
             }
         elif self.options["dimensionality"] == 2:
             geometry["current collector"] = {
-                "y": {"min": 0, "max": param.L_y},
-                "z": {"min": 0, "max": param.L_z},
+                "y": {"min": 0, "max": self.param.L_y},
+                "z": {"min": 0, "max": self.param.L_z},
                 "tabs": {
                     "negative": {
-                        "y_centre": param.n.centre_y_tab,
-                        "z_centre": param.n.centre_z_tab,
-                        "width": param.n.L_tab,
+                        "y_centre": self.param.n.centre_y_tab,
+                        "z_centre": self.param.n.centre_z_tab,
+                        "width": self.param.n.L_tab,
                     },
                     "positive": {
-                        "y_centre": param.p.centre_y_tab,
-                        "z_centre": param.p.centre_z_tab,
-                        "width": param.p.L_tab,
+                        "y_centre": self.param.p.centre_y_tab,
+                        "z_centre": self.param.p.centre_z_tab,
+                        "width": self.param.p.L_tab,
                     },
                 },
             }
@@ -131,11 +130,10 @@ class EffectiveResistance(BaseEffectiveResistance):
 
     def get_fundamental_variables(self):
         # Get necessary parameters
-        param = self.param
-        L_cn = param.n.L_cc
-        L_cp = param.p.L_cc
-        sigma_cn = param.n.sigma_cc
-        sigma_cp = param.p.sigma_cc
+        L_cn = self.param.n.L_cc
+        L_cp = self.param.p.L_cc
+        sigma_cn = self.param.n.sigma_cc
+        sigma_cp = self.param.p.sigma_cc
 
         # Set model variables: Note: we solve using a scaled version that is
         # better conditioned
@@ -273,13 +271,12 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         self.param = pybamm.LithiumIonParameters()
 
         # Get necessary parameters
-        param = self.param
-        L_cn = param.n.L_cc
-        L_cp = param.p.L_cc
-        L_tab_p = param.p.L_tab
+        L_cn = self.param.n.L_cc
+        L_cp = self.param.p.L_cc
+        L_tab_p = self.param.p.L_tab
         A_tab_p = L_cp * L_tab_p
-        sigma_cn = param.n.sigma_cc
-        sigma_cp = param.p.sigma_cc
+        sigma_cn = self.param.n.sigma_cc
+        sigma_cp = self.param.p.sigma_cc
 
         # Set model variables -- we solve a auxilliary problem in each current collector
         # then relate this to the potentials and resistances later
@@ -347,11 +344,10 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         processed potentials.
         """
         # Get evaluated parameters
-        param = self.param
-        L_cn = param_values.evaluate(param.n.L_cc)
-        L_cp = param_values.evaluate(param.p.L_cc)
-        sigma_cn = param_values.evaluate(param.n.sigma_cc)
-        sigma_cp = param_values.evaluate(param.p.sigma_cc)
+        L_cn = param_values.evaluate(self.param.n.L_cc)
+        L_cp = param_values.evaluate(self.param.p.L_cc)
+        sigma_cn = param_values.evaluate(self.param.n.sigma_cc)
+        sigma_cp = param_values.evaluate(self.param.p.sigma_cc)
 
         # Process unit solutions
         f_n = solution["Unit solution in negative current collector"]

@@ -28,7 +28,7 @@ if pybamm.has_jax():
     MIN_FACTOR = 0.2
     MAX_FACTOR = 10
 
-    # https://github.com/google/jax/issues/4572#issuecomment-709809897
+    # https://github.com/jax-ml/jax/issues/4572#issuecomment-709809897
     def some_hash_function(x):
         return hash(str(x))
 
@@ -68,7 +68,7 @@ if pybamm.has_jax():
     def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
         """
         Implements a Backward Difference formula (BDF) implicit multistep integrator.
-        The basic algorithm is derived in :footcite:t:`byrne1975polyalgorithm`. This
+        The basic algorithm is derived in :footcite:t:`Byrne1975`. This
         particular implementation follows that implemented in the Matlab routine ode15s
         described in :footcite:t:`shamphine1997matlab` and the SciPy implementation
         :footcite:t:`Virtanen2020`, which features the NDF formulas for improved
@@ -362,7 +362,7 @@ if pybamm.has_jax():
         comparing the predicted state against that using the provided function.
 
         Optimal step size based on the selected order is obtained using formula (4.12)
-        in :footcite:t:`hairer1993solving`.
+        in :footcite:t:`Hairer1993`.
 
         """
         scale = atol + jnp.abs(y0) * rtol
@@ -711,7 +711,7 @@ if pybamm.has_jax():
         return onp.block(blocks)
 
     # NOTE: the code below (except the docstring on jax_bdf_integrate and other minor
-    # edits), has been modified from the JAX library at https://github.com/google/jax.
+    # edits), has been modified from the JAX library at https://github.com/jax-ml/jax.
     # The main difference is the addition of support for semi-explicit dae index 1
     # problems via the addition of a mass matrix.
     # This is under an Apache license, a short form of which is given here:
@@ -926,14 +926,14 @@ if pybamm.has_jax():
 def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in :footcite:t:`byrne1975polyalgorithm`. This particular implementation
-    follows the Matlab routine ode15s described in :footcite:t:`shampine1997matlab`
-    and the SciPy implementation :footcite:t:`Virtanen2020` which features
-    the NDF formulas for improved stability, with associated differences in the
-    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}). This
-    implementation was based on that implemented in the SciPy library
-    :footcite:t:`Virtanen2020`, which also mainly follows :footcite:t:`shampine1997matlab`
-    but uses the more standard jacobian update.
+    is derived in :footcite:t:`Byrne1975`. This particular implementation
+    follows that implemented in the Matlab routine ode15s described in
+    :footcite:t:`Shampine1997` and the SciPy implementation
+    :footcite:t:`Virtanen2020` which features the NDF formulas for improved stability,
+    with associated differences in the error constants, and calculates the jacobian at
+    J(t_{n+1}, y^0_{n+1}). This implementation was based on that implemented in the
+    SciPy library :footcite:t:`Virtanen2020`, which also mainly follows
+    :footcite:t:`Shampine1997` but uses the more standard jacobian update.
 
     Parameters
     ----------

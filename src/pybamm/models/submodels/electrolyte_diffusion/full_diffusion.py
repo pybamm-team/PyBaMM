@@ -67,10 +67,8 @@ class Full(BaseElectrolyteDiffusion):
         v_box = variables["Volume-averaged velocity [m.s-1]"]
         T = variables["Cell temperature [K]"]
 
-        param = self.param
-
-        N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-        N_e_migration = param.t_plus(c_e, T) * i_e / param.F
+        N_e_diffusion = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
+        N_e_migration = self.param.t_plus(c_e, T) * i_e / self.param.F
         N_e_convection = c_e * v_box
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
@@ -106,7 +104,6 @@ class Full(BaseElectrolyteDiffusion):
         }
 
     def set_boundary_conditions(self, variables):
-        param = self.param
         c_e = variables["Electrolyte concentration [mol.m-3]"]
         c_e_conc = variables["Electrolyte concentration concatenation [mol.m-3]"]
         T = variables["Cell temperature [K]"]
@@ -118,7 +115,8 @@ class Full(BaseElectrolyteDiffusion):
             # assuming v_box = 0 for now
             return (
                 pybamm.boundary_value(
-                    -(1 - param.t_plus(c_e, T)) / (tor * param.D_e(c_e, T) * param.F),
+                    -(1 - self.param.t_plus(c_e, T))
+                    / (tor * self.param.D_e(c_e, T) * self.param.F),
                     side,
                 )
                 * i_boundary_cc
