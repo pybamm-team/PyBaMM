@@ -4,7 +4,6 @@
 
 import pybamm
 from tests import BaseUnitTestLithiumIonHalfCell
-import pytest
 
 
 class TestDFNHalfCell(BaseUnitTestLithiumIonHalfCell):
