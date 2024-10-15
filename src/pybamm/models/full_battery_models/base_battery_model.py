@@ -596,6 +596,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["stress-induced diffusion"] == "true"
                 #and options["particle mechanics"] == "none"
             ):
+                pass
                 # raise pybamm.OptionError(
                 #     "cannot have stress-induced diffusion without a particle "
                 #     "mechanics model"
