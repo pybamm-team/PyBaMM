@@ -217,7 +217,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables including the whole-cell electrolyte potentials
             and currents.
         """
-        param = self.param
 
         if self.options.electrode_types["negative"] == "planar":
             # No concentration overpotential in the counter electrode
@@ -229,7 +228,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
             T_n = variables["Negative electrode temperature [K]"]
             indef_integral_n = pybamm.IndefiniteIntegral(
-                param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n),
+                self.param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n),
                 pybamm.standard_spatial_vars.x_n,
             )
 
@@ -243,11 +242,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         # concentration overpotential
         indef_integral_s = pybamm.IndefiniteIntegral(
-            param.chiRT_over_Fc(c_e_s, T_s) * pybamm.grad(c_e_s),
+            self.param.chiRT_over_Fc(c_e_s, T_s) * pybamm.grad(c_e_s),
             pybamm.standard_spatial_vars.x_s,
         )
         indef_integral_p = pybamm.IndefiniteIntegral(
-            param.chiRT_over_Fc(c_e_p, T_p) * pybamm.grad(c_e_p),
+            self.param.chiRT_over_Fc(c_e_p, T_p) * pybamm.grad(c_e_p),
             pybamm.standard_spatial_vars.x_p,
         )
 

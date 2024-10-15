@@ -138,9 +138,20 @@ class TestUnaryOperators:
         )
 
         # Test from_json
-        with pytest.raises(NotImplementedError):
-            # signs are always scalar/array types in a discretised model
-            pybamm.Sign._from_json({})
+        c = pybamm.Multiplication(pybamm.Variable("a"), pybamm.Scalar(3))
+        sign_json = {
+            "name": "sign",
+            "id": 5341515228900508018,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [c],
+        }
+
+        assert pybamm.sign(c) == pybamm.Sign._from_json(sign_json)
 
     def test_floor(self, mocker):
         a = pybamm.Symbol("a")
@@ -723,6 +734,36 @@ class TestUnaryOperators:
         assert expr.name == "explicit time integral"
         assert expr.create_copy() == expr
         assert not expr.is_constant()
+
+    def test_discrete_time_sum(self):
+        times = np.array([1, 2, 3, 4, 5])
+        values = np.array([2, 2, 3, 3, 1])
+        data = pybamm.DiscreteTimeData(times, values, "test")
+        assert data.name == "test"
+        np.testing.assert_array_equal(data.x[0], times)
+        np.testing.assert_array_equal(data.y, values)
+
+        y = pybamm.StateVector(slice(0, 1))
+
+        # check that raises error if data is not present
+        with pytest.raises(pybamm.ModelError, match="must contain a DiscreteTimeData"):
+            pybamm.DiscreteTimeSum(2 * y)
+
+        # check that raises error if two data are present
+        data2 = pybamm.DiscreteTimeData(values, times, "test2")
+        with pytest.raises(pybamm.ModelError, match="only have one DiscreteTimeData"):
+            pybamm.DiscreteTimeSum(data + data2)
+
+        sum = pybamm.DiscreteTimeSum(2 * data - y)
+        np.testing.assert_array_equal(sum.sum_times, times)
+        np.testing.assert_array_equal(sum.sum_values, values)
+        y = np.array([1])
+
+        # evaluate should return the values to sum up
+        for i in range(len(times)):
+            eval = sum.evaluate(y=y, t=times[i])
+            expect = 2 * values[i] - y
+            np.testing.assert_array_equal(eval[0], expect)
 
     def test_to_from_json(self, mocker):
         # UnaryOperator

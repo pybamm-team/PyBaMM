@@ -86,24 +86,23 @@ class CurrentCollector1D(BaseThermal):
         }
 
     def set_boundary_conditions(self, variables):
-        param = self.param
         T_surf = variables["Surface temperature [K]"]
         T_av = variables["X-averaged cell temperature [K]"]
 
         # Find tab locations (top vs bottom)
-        L_y = param.L_y
-        L_z = param.L_z
-        neg_tab_z = param.n.centre_z_tab
-        pos_tab_z = param.p.centre_z_tab
+        L_y = self.param.L_y
+        L_z = self.param.L_z
+        neg_tab_z = self.param.n.centre_z_tab
+        pos_tab_z = self.param.p.centre_z_tab
         neg_tab_top_bool = pybamm.Equality(neg_tab_z, L_z)
         neg_tab_bottom_bool = pybamm.Equality(neg_tab_z, 0)
         pos_tab_top_bool = pybamm.Equality(pos_tab_z, L_z)
         pos_tab_bottom_bool = pybamm.Equality(pos_tab_z, 0)
 
         # Calculate tab vs non-tab area on top and bottom
-        neg_tab_area = param.n.L_tab * param.n.L_cc
-        pos_tab_area = param.p.L_tab * param.p.L_cc
-        total_area = param.L * param.L_y
+        neg_tab_area = self.param.n.L_tab * self.param.n.L_cc
+        pos_tab_area = self.param.p.L_tab * self.param.p.L_cc
+        total_area = self.param.L * self.param.L_y
         non_tab_top_area = (
             total_area
             - neg_tab_area * neg_tab_top_bool
@@ -118,10 +117,10 @@ class CurrentCollector1D(BaseThermal):
         # Calculate heat fluxes weighted by area
         # Note: can't do y-average of h_edge here since y isn't meshed. Evaluate at
         # midpoint.
-        q_tab_n = -param.n.h_tab * (T_av - T_surf)
-        q_tab_p = -param.p.h_tab * (T_av - T_surf)
-        q_edge_top = -param.h_edge(L_y / 2, L_z) * (T_av - T_surf)
-        q_edge_bottom = -param.h_edge(L_y / 2, 0) * (T_av - T_surf)
+        q_tab_n = -self.param.n.h_tab * (T_av - T_surf)
+        q_tab_p = -self.param.p.h_tab * (T_av - T_surf)
+        q_edge_top = -self.param.h_edge(L_y / 2, L_z) * (T_av - T_surf)
+        q_edge_bottom = -self.param.h_edge(L_y / 2, 0) * (T_av - T_surf)
         q_top = (
             q_tab_n * neg_tab_area * neg_tab_top_bool
             + q_tab_p * pos_tab_area * pos_tab_top_bool
@@ -136,7 +135,7 @@ class CurrentCollector1D(BaseThermal):
         # just use left and right for clarity
         # left = bottom of cell (z=0)
         # right = top of cell (z=L_z)
-        lambda_eff = param.lambda_eff(T_av)
+        lambda_eff = self.param.lambda_eff(T_av)
         self.boundary_conditions = {
             T_av: {
                 "left": (

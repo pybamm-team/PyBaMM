@@ -83,6 +83,7 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
+    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
@@ -150,6 +151,7 @@ Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_v
 Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
+Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
@@ -206,6 +208,8 @@ extend-select = [
     "YTT",           # flake8-2020
     "TID252",        # relative-imports
     "S101",          # to identify use of assert statement
+    "PT027",         # remove unittest style assertion
+    "PT009",         # Use pytest.raises instead of unittest-style
 ]
 ignore = [
     "E741",        # Ambiguous variable name

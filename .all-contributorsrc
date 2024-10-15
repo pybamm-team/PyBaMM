@@ -970,6 +970,27 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "MarcBerliner",
+      "name": "Marc Berliner",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34451391?v=4",
+      "profile": "http://marcberliner.com",
+      "contributions": [
+        "code",
+        "doc",
+        "infra",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "Aswinr24",
+      "name": "Aswinr24",
+      "avatar_url": "https://avatars.githubusercontent.com/u/135364633?v=4",
+      "profile": "https://github.com/Aswinr24",
+      "contributions": [
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,

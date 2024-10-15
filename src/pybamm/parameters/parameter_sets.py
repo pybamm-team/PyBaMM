@@ -17,7 +17,8 @@ class ParameterSets(Mapping):
 
 
         >>> import pybamm
-        >>> list(pybamm.parameter_sets) # doctest: +SKIP
+        >>> list(pybamm.parameter_sets)
+        ['Ai2020', 'Chayambuka2022', ...]
 
     Get the docstring for a parameter set:
 
@@ -25,7 +26,7 @@ class ParameterSets(Mapping):
         >>> print(pybamm.parameter_sets.get_docstring("Ai2020"))
         <BLANKLINE>
         Parameters for the Enertech cell (Ai2020), from the papers :footcite:t:`Ai2019`,
-        :footcite:t:`rieger2016new` and references therein.
+        :footcite:t:`Rieger2016` and references therein.
         ...
 
     See also: :ref:`adding-parameter-sets`
