@@ -78,7 +78,6 @@ class LithiumIonParameters(BaseParameters):
         self.voltage_high_cut = self.elec.voltage_high_cut
         self.ocp_soc_0 = self.elec.ocp_soc_0
         self.ocp_soc_100 = self.elec.ocp_soc_100
-        
 
         # Domain parameters
         for domain in self.domain_params.values():
@@ -269,7 +268,6 @@ class DomainLithiumIonParameters(BaseParameters):
         self.b_s = self.geo.b_s
         self.tau_s = self.geo.tau_s
 
-        
         # Utilisation parameters
         self.u_init = pybamm.Parameter(
             f"Initial {domain} electrode interface utilisation"
@@ -293,7 +291,6 @@ class DomainLithiumIonParameters(BaseParameters):
         return pybamm.FunctionParameter(
             f"{Domain} electrode conductivity [S.m-1]", inputs
         )
-
 
     def LAM_rate_current(self, i, T):
         """
@@ -490,13 +487,17 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Mechanical parameters
         self.nu = pybamm.Parameter(f"{pref}{Domain} electrode Poisson's ratio")
         self.c_0 = pybamm.Parameter(
-                f"{pref}{Domain} electrode reference concentration for free of deformation "
-                "[mol.m-3]"
+            f"{pref}{Domain} electrode reference concentration for free of deformation "
+            "[mol.m-3]"
         )
-        self.l_cr_0 = pybamm.Parameter(f"{pref}{Domain} electrode initial crack length [m]")
-        self.w_cr = pybamm.Parameter(f"{pref}{Domain} electrode initial crack width [m]")
+        self.l_cr_0 = pybamm.Parameter(
+            f"{pref}{Domain} electrode initial crack length [m]"
+        )
+        self.w_cr = pybamm.Parameter(
+            f"{pref}{Domain} electrode initial crack width [m]"
+        )
         self.rho_cr = pybamm.Parameter(
-                f"{pref}{Domain} electrode number of cracks per unit area [m-2]"
+            f"{pref}{Domain} electrode number of cracks per unit area [m-2]"
         )
         self.b_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant m")
@@ -768,24 +769,34 @@ class ParticleLithiumIonParameters(BaseParameters):
     def Omega(self, sto, T):
         """Dimensional partial molar volume of Li in solid solution [m3.mol-1]"""
         Domain = self.domain.capitalize()
-        inputs = {f"{self.phase_prefactor}{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        inputs = {
+            f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
+            "Temperature [K]": T,
+        }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode partial molar volume [m3.mol-1]", inputs
+            f"{self.phase_prefactor}{Domain} electrode partial molar volume [m3.mol-1]",
+            inputs,
         )
+
     def E(self, sto, T):
         """Dimensional Young's modulus"""
         Domain = self.domain.capitalize()
-        inputs = {f"{self.phase_prefactor}{Domain} particle stoichiometry": sto, "Temperature [K]": T}
+        inputs = {
+            f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
+            "Temperature [K]": T,
+        }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode Young's modulus [Pa]", inputs
         )
+
     def k_cr(self, T):
         """
         Cracking rate for the electrode;
         """
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} electrode cracking rate", {"Temperature [K]": T}
+            f"{self.phase_prefactor}{Domain} electrode cracking rate",
+            {"Temperature [K]": T},
         )
 
     def t_change(self, sto):
@@ -799,5 +810,3 @@ class ParticleLithiumIonParameters(BaseParameters):
                 f"{self.phase_prefactor}{Domain} electrode volume change",
             },
         )
-
-

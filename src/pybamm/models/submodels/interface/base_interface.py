@@ -306,9 +306,14 @@ class BaseInterface(pybamm.BaseSubModel):
         a_j_av = pybamm.x_average(a_j)
 
         if reaction_name == "SEI on cracks ":
-            roughness = variables[f"{Domain} electrode {self.phase_name}roughness ratio"] - 1
+            roughness = (
+                variables[f"{Domain} electrode {self.phase_name}roughness ratio"] - 1
+            )
             roughness_av = (
-                variables[f"X-averaged {domain} electrode {self.phase_name}roughness ratio"] - 1
+                variables[
+                    f"X-averaged {domain} electrode {self.phase_name}roughness ratio"
+                ]
+                - 1
             )
         else:
             roughness = 1
