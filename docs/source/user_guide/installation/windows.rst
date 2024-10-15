@@ -33,21 +33,21 @@ To install ``virtualenv``, type:
 
    python -m pip install virtualenv
 
-To create a virtual environment ``env`` within your current directory
+To create a virtual environment ``venv`` within your current directory
 type:
 
 .. code:: bash
 
-   python -m virtualenv env
+   python -m virtualenv venv
 
 You can then “activate” the environment using:
 
 .. code::
 
-   env\Scripts\activate.bat
+   venv\Scripts\activate.bat
 
 Now all the calls to pip described below will install PyBaMM and its
-dependencies into the environment ``env``. When you are ready to exit
+dependencies into the environment ``venv``. When you are ready to exit
 the environment and go back to your original system, just type:
 
 .. code:: bash

@@ -41,6 +41,7 @@ find_path(SUNDIALS_INCLUDE_DIR
     include
   PATHS
     ${SUNDIALS_ROOT}
+    ${INSTALL_DIR}
   )
 
 set(SUNDIALS_WANT_COMPONENTS
@@ -72,8 +73,9 @@ foreach(LIB ${SUNDIALS_WANT_COMPONENTS})
         PATH_SUFFIXES
             lib
             Lib
-	PATHS
-	    ${SUNDIALS_ROOT}
+        PATHS
+            ${SUNDIALS_ROOT}
+            ${INSTALL_DIR}
     )
 
     set(SUNDIALS_${LIB}_FOUND FALSE)

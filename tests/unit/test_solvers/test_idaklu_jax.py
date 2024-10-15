@@ -6,6 +6,8 @@ import pytest
 
 import pybamm
 import numpy as np
+import unittest
+import sys
 
 testcase = []
 if pybamm.has_idaklu() and pybamm.has_jax():
@@ -99,7 +101,11 @@ class TestIDAKLUJax_NoJax:
     not pybamm.has_idaklu() or not pybamm.has_jax(),
     reason="IDAKLU Solver and/or JAX are not available",
 )
-class TestIDAKLUJax:
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Problem with tests crashing workers on Windows",
+)
+class TestIDAKLUJax(unittest.TestCase):
     # Initialisation tests
 
     def test_initialise_twice(self):
