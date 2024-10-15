@@ -42,7 +42,7 @@ class JaxSolver(pybamm.BaseSolver):
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation
-        <https://github.com/google/jax/blob/master/jax/experimental/ode.py>`_
+        <https://github.com/jax-ml/jax/blob/master/jax/experimental/ode.py>`_
         for details.
     """
 
@@ -259,8 +259,8 @@ class JaxSolver(pybamm.BaseSolver):
         # sparse matrix support in JAX resulting in high memory usage, or a bug
         # in the BDF solver.
         #
-        # This issue on guthub appears related:
-        # https://github.com/google/jax/discussions/13930
+        # This issue on GitHub appears related:
+        # https://github.com/jax-ml/jax/discussions/13930
         #
         #     # Split input list based on the number of available xla devices
         #     device_count = jax.local_device_count()
