@@ -20,6 +20,7 @@
 
 ## Bug Fixes
 
+- Added `_from_json()` functionality to `Sign` which was erroneously omitted previously. ([#4517](https://github.com/pybamm-team/PyBaMM/pull/4517))
 - Fixed bug where IDAKLU solver failed when `output variables` were specified and an extrapolation event is present. ([#4440](https://github.com/pybamm-team/PyBaMM/pull/4440))
 
 ## Breaking changes
