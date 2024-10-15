@@ -4,10 +4,8 @@
 
 import pybamm
 from tests import BaseUnitTestLithiumIonHalfCell
-import pytest
 
 
 class TestDFNHalfCell(BaseUnitTestLithiumIonHalfCell):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup_method(self):
         self.model = pybamm.lithium_ion.DFN
