@@ -1,6 +1,3 @@
-#
-# Processed Variable class
-#
 from typing import Optional
 import casadi
 import numpy as np
