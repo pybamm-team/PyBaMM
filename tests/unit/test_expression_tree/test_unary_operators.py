@@ -138,9 +138,20 @@ class TestUnaryOperators:
         )
 
         # Test from_json
-        with pytest.raises(NotImplementedError):
-            # signs are always scalar/array types in a discretised model
-            pybamm.Sign._from_json({})
+        c = pybamm.Multiplication(pybamm.Variable("a"), pybamm.Scalar(3))
+        sign_json = {
+            "name": "sign",
+            "id": 5341515228900508018,
+            "domains": {
+                "primary": [],
+                "secondary": [],
+                "tertiary": [],
+                "quaternary": [],
+            },
+            "children": [c],
+        }
+
+        assert pybamm.sign(c) == pybamm.Sign._from_json(sign_json)
 
     def test_floor(self, mocker):
         a = pybamm.Symbol("a")
