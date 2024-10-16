@@ -384,7 +384,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}Initial SEI on cracks thickness [m]"
         )
         self.L_tunneling = pybamm.Parameter(
-            f"{pref}tunneling distance for electrons [m]"
+            f"{pref}Tunneling distance for electrons [m]"
         )
 
         self.beta_tunnelling = pybamm.Parameter(f"{pref}Tunneling barrier factor [m-1]")
