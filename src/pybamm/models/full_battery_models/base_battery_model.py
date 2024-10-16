@@ -211,6 +211,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "voltage as a state" : str
+                Whether to make a state for the voltage and solve an algebraic equation
+                for it. Default is "false".
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -324,6 +327,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "heterogeneous catalyst",
                 "cation-exchange membrane",
             ],
+            "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
