@@ -50,13 +50,12 @@ class Composite(BaseElectrolyteConductivity):
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
-        param = self.param
-        RT_F_av_s = param.R * T_av_s / param.F
-        RT_F_av_p = param.R * T_av_p / param.F
+        RT_F_av_s = self.param.R * T_av_s / self.param.F
+        RT_F_av_p = self.param.R * T_av_p / self.param.F
 
-        L_n = param.n.L
-        L_p = param.p.L
-        L_x = param.L_x
+        L_n = self.param.n.L
+        L_p = self.param.p.L
+        L_x = self.param.L_x
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
         x_p_edge = pybamm.standard_spatial_vars.x_p_edge
@@ -69,7 +68,7 @@ class Composite(BaseElectrolyteConductivity):
             x_n = pybamm.standard_spatial_vars.x_n
             x_n_edge = pybamm.standard_spatial_vars.x_n_edge
             T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
-            RT_F_av_n = param.R * T_av_n / param.F
+            RT_F_av_n = self.param.R * T_av_n / self.param.F
             # i_e_n = i_boundary_cc * x_n / L_n
             i_e_n_edge = i_boundary_cc * x_n_edge / L_n
         # i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
@@ -89,14 +88,14 @@ class Composite(BaseElectrolyteConductivity):
             # evaluate on node
 
             eta_c_n = -RT_F_av_n * pybamm.IndefiniteIntegral(
-                param.chi(c_e_n, T_av_n)
+                self.param.chi(c_e_n, T_av_n)
                 * self._derivative_macinnes_function(c_e_n)
                 * pybamm.grad(c_e_n),
                 x_n,
             )
 
             delta_phi_e_n = pybamm.IndefiniteIntegral(
-                i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
+                i_e_n_edge / (self.param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
             )
             phi_e_const = (
                 -delta_phi_n_av
@@ -109,13 +108,13 @@ class Composite(BaseElectrolyteConductivity):
             phi_e_dict["negative electrode"] = phi_e_n
 
         eta_c_s = -RT_F_av_s * pybamm.IndefiniteIntegral(
-            param.chi(c_e_s, T_av_s)
+            self.param.chi(c_e_s, T_av_s)
             * self._derivative_macinnes_function(c_e_s)
             * pybamm.grad(c_e_s),
             x_s,
         )
         delta_phi_e_s = pybamm.IndefiniteIntegral(
-            i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
+            i_e_s_edge / (self.param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
         )
 
         phi_e_s = (
@@ -126,13 +125,13 @@ class Composite(BaseElectrolyteConductivity):
         )
 
         eta_c_p = -RT_F_av_p * pybamm.IndefiniteIntegral(
-            param.chi(c_e_p, T_av_p)
+            self.param.chi(c_e_p, T_av_p)
             * self._derivative_macinnes_function(c_e_p)
             * pybamm.grad(c_e_p),
             x_p,
         )
         delta_phi_e_p = pybamm.IndefiniteIntegral(
-            i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
+            i_e_p_edge / (self.param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
         )
 
         phi_e_p = (
