@@ -74,7 +74,7 @@ class BaseStep:
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle
-        is_drive_cycle = isinstance(value, np.ndarray)
+        is_drive_cycle = isinstance(value, numpy.typing.NDArray)
         is_python_function = callable(value)
         if is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
@@ -260,7 +260,7 @@ class BaseStep:
         Default duration for the step is one day (24 hours) or the duration of the
         drive cycle
         """
-        if isinstance(value, np.ndarray):
+        if isinstance(value, numpy.typing.NDArray):
             t = value[:, 0]
             return t[-1]
         else:
