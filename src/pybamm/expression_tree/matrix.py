@@ -16,7 +16,7 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.ndarray | list[float] | csr_matrix,
+        entries: numpy.typing.NDArray | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,

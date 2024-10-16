@@ -75,8 +75,8 @@ class Event:
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: numpy.typing.NDArray | None = None,
+        y_dot: numpy.typing.NDArray | None = None,
         inputs: dict | None = None,
     ):
         """

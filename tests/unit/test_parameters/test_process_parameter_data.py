@@ -35,15 +35,15 @@ class TestProcessParameterData:
     def test_processed_structure(self, parameter_data):
         name, processed = parameter_data
         assert isinstance(processed[1], tuple)
-        assert isinstance(processed[1][0][0], np.ndarray)
-        assert isinstance(processed[1][1], np.ndarray)
+        assert isinstance(processed[1][0][0], numpy.typing.NDArray)
+        assert isinstance(processed[1][1], numpy.typing.NDArray)
 
         if len(processed[1][0]) > 1:
-            assert isinstance(processed[1][0][1], np.ndarray)
+            assert isinstance(processed[1][0][1], numpy.typing.NDArray)
 
         elif len(processed[1]) == 3:
-            assert isinstance(processed[1][0][1], np.ndarray)
-            assert isinstance(processed[1][0][2], np.ndarray)
+            assert isinstance(processed[1][0][1], numpy.typing.NDArray)
+            assert isinstance(processed[1][0][2], numpy.typing.NDArray)
 
     def test_error(self):
         with pytest.raises(FileNotFoundError, match="Could not find file"):
