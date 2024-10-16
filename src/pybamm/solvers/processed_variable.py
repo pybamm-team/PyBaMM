@@ -928,7 +928,9 @@ def _is_f_contiguous(all_ys):
         bool: True if all ys are f-contiguous
     """
 
-    return all(isinstance(y, numpy.typing.NDArray) and y.data.f_contiguous for y in all_ys)
+    return all(
+        isinstance(y, numpy.typing.NDArray) and y.data.f_contiguous for y in all_ys
+    )
 
 
 def _is_sorted(t):

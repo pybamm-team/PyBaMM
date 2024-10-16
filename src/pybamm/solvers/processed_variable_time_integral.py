@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, Union
-import numpy as np
 import pybamm
 
 
