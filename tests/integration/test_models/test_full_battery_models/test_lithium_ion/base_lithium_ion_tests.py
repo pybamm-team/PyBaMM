@@ -209,7 +209,7 @@ class BaseIntegrationTestLithiumIon:
         parameter_values = pybamm.ParameterValues("Chen2020")
         parameter_values.update(
             {
-                "tunneling distance for electrons [m]": 0,
+                "Tunneling distance for electrons [m]": 0,
                 "SEI lithium ion conductivity [S.m-1]": 1.0e-7,
             },
             check_already_exists=False,
