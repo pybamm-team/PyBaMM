@@ -138,3 +138,4 @@ results/
 
 # tests
 test_callback.log
+# .mypy_cache/
