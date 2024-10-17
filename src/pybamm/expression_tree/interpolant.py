@@ -43,8 +43,8 @@ class Interpolant(pybamm.Function):
 
     def __init__(
         self,
-        x: np.ndarray | Sequence[np.ndarray],
-        y: np.ndarray,
+        x: numpy.typing.NDArray | Sequence[numpy.typing.NDArray],
+        y: numpy.typing.NDArray,
         children: Sequence[pybamm.Symbol] | pybamm.Time,
         name: str | None = None,
         interpolator: str | None = "linear",
@@ -96,7 +96,7 @@ class Interpolant(pybamm.Function):
                 x1 = x[0]
             else:
                 x1 = x
-                x: list[np.ndarray] = [x]  # type: ignore[no-redef]
+                x: list[numpy.typing.NDArray] = [x]  # type: ignore[no-redef]
             x2 = None
             if x1.shape[0] != y.shape[0]:
                 raise ValueError(
@@ -269,7 +269,7 @@ class Interpolant(pybamm.Function):
     def _function_evaluate(self, evaluated_children):
         children_eval_flat = []
         for child in evaluated_children:
-            if isinstance(child, np.ndarray):
+            if isinstance(child, numpy.typing.NDArray):
                 children_eval_flat.append(child.flatten())
             else:
                 children_eval_flat.append(child)
