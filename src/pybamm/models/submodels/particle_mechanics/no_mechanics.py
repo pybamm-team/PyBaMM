@@ -22,7 +22,7 @@ class NoMechanics(BaseMechanics):
         Phase of the particle (default is "primary")
     """
 
-    def __init__(self, param, domain, options, phase="primary"):
+    def __init__(self, param, domain, options, phase):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
@@ -35,8 +35,8 @@ class NoMechanics(BaseMechanics):
         variables = self._get_standard_variables(zero)
         variables.update(
             {
-                f"{Domain} particle cracking rate [m.s-1]": zero,
-                f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
+                f"{Domain} {self.phase_name}particle cracking rate [m.s-1]": zero,
+                f"X-averaged {domain} {self.phase_name}particle cracking rate [m.s-1]": zero_av,
             }
         )
         return variables
