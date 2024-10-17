@@ -120,13 +120,13 @@ dev = [
 # Note: These must be kept in sync with the versions defined in pybamm/util.py, and
 #       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
-    "jax==0.4.31",
-    "jaxlib==0.4.31",
+    "jax==0.4.27",
+    "jaxlib==0.4.27",
 ]
 # For MLIR expression evaluation (IDAKLU Solver)
 iree = [
     # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
-    "iree-compiler==20240621.931",  # see IREE compatibility notes in noxfile.py
+    "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
 ]
 # Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [

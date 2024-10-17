@@ -40,7 +40,7 @@ def set_iree_state():
             # iree-compiler is currently only available as a wheel on macOS 13 (or
             # higher) and Python version 3.11
             mac_ver = int(platform.mac_ver()[0].split(".")[0])
-            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 13:
+            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 14:
                 warnings.warn(
                     (
                         "IREE is only supported on MacOS 13 (or higher) and Python"
@@ -113,7 +113,7 @@ def run_pybamm_requires(session):
                 "--depth=1",
                 "--recurse-submodules",
                 "--shallow-submodules",
-                "--branch=candidate-20240621.931",
+                "--branch=candidate-20240507.886",
                 "https://github.com/openxla/iree",
                 "iree/",
                 external=True,
