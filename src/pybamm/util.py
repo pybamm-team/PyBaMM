@@ -1,9 +1,3 @@
-#
-# Utility classes for PyBaMM
-#
-# The code in this file is adapted from Pints
-# (see https://github.com/pints-team/pints)
-#
 import importlib.util
 import importlib.metadata
 import numbers
@@ -19,8 +13,8 @@ import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
 # the extras dependencies in pyproject.toml, and therefore must be kept in sync.
-JAX_VERSION = "0.4.29"
-JAXLIB_VERSION = "0.4.29"
+JAX_VERSION = "0.4.31"
+JAXLIB_VERSION = "0.4.31"
 
 
 def root_dir():

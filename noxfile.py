@@ -113,7 +113,7 @@ def run_pybamm_requires(session):
                 "--depth=1",
                 "--recurse-submodules",
                 "--shallow-submodules",
-                "--branch=candidate-20240507.886",
+                "--branch=candidate-20240621.931",
                 "https://github.com/openxla/iree",
                 "iree/",
                 external=True,
