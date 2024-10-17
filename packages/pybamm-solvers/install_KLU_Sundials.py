@@ -21,7 +21,9 @@ def build_solvers():
     SUITESPARSE_CHECKSUM = (
         "7111b505c1207f6f4bd0be9740d0b2897e1146b845d73787df07901b4f5c1fb7"
     )
-    SUNDIALS_CHECKSUM = "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
+    SUNDIALS_CHECKSUM = (
+        "4e0b998dff292a2617e179609b539b511eb80836f5faacf800e688a886288502"
+    )
     DEFAULT_INSTALL_DIR = str(pathlib.Path(__file__).parent.resolve() / ".idaklu")
 
     def safe_remove_dir(path):
@@ -58,9 +60,9 @@ def build_solvers():
                 # if in CI, set RPATH to the install directory for SuiteSparse_config
                 # dylibs to find libomp.dylib when repairing the wheel
                 if os.environ.get("CIBUILDWHEEL") == "1":
-                    env["CMAKE_OPTIONS"] = (
-                        f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib"
-                    )
+                    env[
+                        "CMAKE_OPTIONS"
+                    ] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib"
                 else:
                     env["CMAKE_OPTIONS"] = f"-DCMAKE_INSTALL_PREFIX={install_dir}"
             else:
@@ -68,9 +70,9 @@ def build_solvers():
                 # INSTALL RPATH in order to ensure that the dynamic libraries are found
                 # at runtime just once. Otherwise, delocate complains about multiple
                 # references to the SuiteSparse_config dynamic library (auditwheel does not).
-                env["CMAKE_OPTIONS"] = (
-                    f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
-                )
+                env[
+                    "CMAKE_OPTIONS"
+                ] = f"-DCMAKE_INSTALL_PREFIX={install_dir} -DCMAKE_INSTALL_RPATH={install_dir}/lib -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
             subprocess.run(make_cmd, cwd=build_dir, env=env, shell=True, check=True)
             subprocess.run(install_cmd, cwd=build_dir, check=True)
 
@@ -106,7 +108,9 @@ def build_solvers():
                 OpenMP_C_LIB_NAMES = "omp"
                 OpenMP_omp_LIBRARY = "/opt/homebrew/opt/libomp/lib/libomp.dylib"
             elif platform.processor() == "i386":
-                OpenMP_C_FLAGS = "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
+                OpenMP_C_FLAGS = (
+                    "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include"
+                )
                 OpenMP_C_LIB_NAMES = "omp"
                 OpenMP_omp_LIBRARY = "/usr/local/opt/libomp/lib/libomp.dylib"
             else:
@@ -305,7 +309,9 @@ def build_solvers():
             "The '--force' option is activated: installation will be forced, ignoring any existing libraries."
         )
         safe_remove_dir(os.path.join(download_dir, "build_sundials"))
-        safe_remove_dir(os.path.join(download_dir, f"SuiteSparse-{SUITESPARSE_VERSION}"))
+        safe_remove_dir(
+            os.path.join(download_dir, f"SuiteSparse-{SUITESPARSE_VERSION}")
+        )
         safe_remove_dir(os.path.join(download_dir, f"sundials-{SUNDIALS_VERSION}"))
         sundials_found, suitesparse_found = False, False
     else:
@@ -333,6 +339,7 @@ def build_solvers():
             # Only SuiteSparse is missing, download and install it
             parallel_download([(SUITESPARSE_URL, SUITESPARSE_CHECKSUM)], download_dir)
             install_suitesparse(download_dir)
+
 
 if __name__ == "__main__":
     build_solvers()

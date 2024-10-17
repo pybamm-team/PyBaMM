@@ -19,11 +19,14 @@ license = {file = "LICENSE"}
 dynamic = ["version", "readme"]
 dependencies = [
     "casadi",
+    "numpy<2.0"
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "setuptools",
+    "wheel",
 ]
 
 [tool.setuptools.packages.find]

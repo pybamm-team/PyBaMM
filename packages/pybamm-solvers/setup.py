@@ -178,8 +178,9 @@ class CMakeBuild(build_ext):
 
 # ---------- end of CMake steps --------------------------------------------------------
 
+
 class CustomInstall(install):
-    """A custom install command to add 2 build options"""
+    """A custom installation command to add 2 build options"""
 
     user_options = [
         *install.user_options,
@@ -207,7 +208,7 @@ class CustomInstall(install):
 
 
 class bdist_wheel(orig.bdist_wheel):
-    """A custom install command to add 2 build options"""
+    """A custom installation command to add 2 build options"""
 
     user_options = [
         *orig.bdist_wheel.user_options,
@@ -231,52 +232,53 @@ class bdist_wheel(orig.bdist_wheel):
         orig.bdist_wheel.run(self)
 
 
-idaklu_ext = Extension(
-    name="pybammsolvers.idaklu",
-    # The sources list should mirror the list in CMakeLists.txt
-    sources=[
-        "src/pybammsolvers/idaklu_source/Expressions/Expressions.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/Base/Expression.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionSet.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionTypes.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionSparsity.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.cpp",
-        "src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEBaseFunction.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunction.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunctions.cpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunctions.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/iree_jit.cpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/iree_jit.hpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/ModuleParser.cpp",
-        "src/pybammsolvers/idaklu_source/Expressions/IREE/ModuleParser.hpp",
-        "src/pybammsolvers/idaklu_source/idaklu_solver.hpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolver.cpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolver.hpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolverGroup.cpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolverGroup.hpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP.inl",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP.hpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP_solvers.cpp",
-        "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP_solvers.hpp",
-        "src/pybammsolvers/idaklu_source/sundials_functions.inl",
-        "src/pybammsolvers/idaklu_source/sundials_functions.hpp",
-        "src/pybammsolvers/idaklu_source/IdakluJax.cpp",
-        "src/pybammsolvers/idaklu_source/IdakluJax.hpp",
-        "src/pybammsolvers/idaklu_source/common.hpp",
-        "src/pybammsolvers/idaklu_source/common.cpp",
-        "src/pybammsolvers/idaklu_source/Solution.cpp",
-        "src/pybammsolvers/idaklu_source/Solution.hpp",
-        "src/pybammsolvers/idaklu_source/SolutionData.cpp",
-        "src/pybammsolvers/idaklu_source/SolutionData.hpp",
-        "src/pybammsolvers/idaklu_source/observe.cpp",
-        "src/pybammsolvers/idaklu_source/observe.hpp",
-        "src/pybammsolvers/idaklu_source/Options.hpp",
-        "src/pybammsolvers/idaklu_source/Options.cpp",
-        "src/pybammsolvers/idaklu.cpp",
-    ],
-)
-ext_modules = [idaklu_ext]
+ext_modules = [
+    Extension(
+        name="pybammsolvers.idaklu",
+        # The sources list should mirror the list in CMakeLists.txt
+        sources=[
+            "src/pybammsolvers/idaklu_source/Expressions/Expressions.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/Base/Expression.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionSet.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionTypes.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/Base/ExpressionSparsity.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.cpp",
+            "src/pybammsolvers/idaklu_source/Expressions/Casadi/CasadiFunctions.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEBaseFunction.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunction.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunctions.cpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/IREEFunctions.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/iree_jit.cpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/iree_jit.hpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/ModuleParser.cpp",
+            "src/pybammsolvers/idaklu_source/Expressions/IREE/ModuleParser.hpp",
+            "src/pybammsolvers/idaklu_source/idaklu_solver.hpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolver.cpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolver.hpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolverGroup.cpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolverGroup.hpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP.inl",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP.hpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP_solvers.cpp",
+            "src/pybammsolvers/idaklu_source/IDAKLUSolverOpenMP_solvers.hpp",
+            "src/pybammsolvers/idaklu_source/sundials_functions.inl",
+            "src/pybammsolvers/idaklu_source/sundials_functions.hpp",
+            "src/pybammsolvers/idaklu_source/IdakluJax.cpp",
+            "src/pybammsolvers/idaklu_source/IdakluJax.hpp",
+            "src/pybammsolvers/idaklu_source/common.hpp",
+            "src/pybammsolvers/idaklu_source/common.cpp",
+            "src/pybammsolvers/idaklu_source/Solution.cpp",
+            "src/pybammsolvers/idaklu_source/Solution.hpp",
+            "src/pybammsolvers/idaklu_source/SolutionData.cpp",
+            "src/pybammsolvers/idaklu_source/SolutionData.hpp",
+            "src/pybammsolvers/idaklu_source/observe.cpp",
+            "src/pybammsolvers/idaklu_source/observe.hpp",
+            "src/pybammsolvers/idaklu_source/Options.hpp",
+            "src/pybammsolvers/idaklu_source/Options.cpp",
+            "src/pybammsolvers/idaklu.cpp",
+        ],
+    )
+]
 
 # Project metadata was moved to pyproject.toml (which is read by pip). However, custom
 # build commands and setuptools extension modules are still defined here.

@@ -208,7 +208,7 @@ jobs:
             python install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse
         env:
-          # 10.13 for Intel (macos-12/macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
+          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
@@ -253,7 +253,7 @@ jobs:
           if-no-files-found: error
 
   publish_pypi:
-    if: github.repository == 'pybamm-team/pybammsolvers'
+    if: ${{ github.event_name == 'release' && github.repository == 'pybamm-team/pybammsolvers' }}
     name: Upload package to PyPI
     needs: [
       build_manylinux_wheels,
@@ -279,7 +279,6 @@ jobs:
         run: ls -lA artifacts/
 
       - name: Publish to PyPI
-        if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: artifacts/

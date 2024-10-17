@@ -114,6 +114,7 @@ def run_pybamm_requires(session):
     else:
         session.error("nox -s idaklu-requires is only available on Linux & macOS.")
 
+
 @nox.session(name="unit")
 def run_unit(session):
     """Run the unit tests."""
@@ -131,4 +132,3 @@ def run_unit(session):
             silent=False,
         )
     session.run("pytest", "tests")
-

@@ -1,0 +1,59 @@
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "__init__.py",
+    "docs",
+    ".eggs",
+    ".git",
+    ".mypy_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+line-length = 88
+indent-width = 4
+
+target-version = "py310"
+
+[lint]
+select = [
+    "W",
+    "E",
+    "F",
+    "B",
+    "A",
+    "U",
+    "SLF",
+]
+ignore = [
+    "E501", # Line length check conflicted with the formatter
+    "B018", # Useless expression checks were a problem for notebooks
+    "B905", # Requires zip to have explict strict flag. Enable in the future
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
