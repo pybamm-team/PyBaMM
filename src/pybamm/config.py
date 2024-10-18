@@ -3,7 +3,8 @@ import os
 import platformdirs
 from pathlib import Path
 import pybamm
-from inputimeout import inputimeout, TimeoutOccurred
+import select
+import sys
 
 
 def is_running_tests():  # pragma: no cover
@@ -48,7 +49,7 @@ def ask_user_opt_in(timeout=10):
 
     Parameters
     ----------
-    timeout: float, optional
+    timeout : float, optional
         The timeout for the user to respond to the prompt. Default is 10 seconds.
 
     Returns
@@ -67,24 +68,20 @@ def ask_user_opt_in(timeout=10):
     )
 
     while True:
-        try:
-            user_input = (
-                inputimeout(
-                    prompt="Do you want to enable telemetry? (Y/n): ", timeout=timeout
-                )
-                .strip()
-                .lower()
-            )
-        except TimeoutOccurred:
+        print("Do you want to enable telemetry? (Y/n): ", end="", flush=True)
+
+        rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+        if rlist:
+            user_input = sys.stdin.readline().strip().lower()
+            if user_input in ["yes", "y", ""]:
+                return True
+            elif user_input in ["no", "n"]:
+                return False
+            else:
+                print("Invalid input. Please enter 'yes/y' for yes or 'no/n' for no.")
+        else:
             print("\nTimeout reached. Defaulting to not enabling telemetry.")
             return False
-
-        if user_input in ["yes", "y", ""]:
-            return True
-        elif user_input in ["no", "n"]:
-            return False
-        else:
-            print("\nInvalid input. Please enter 'yes'/'y' or 'no'/'n'.")
 
 
 def generate():  # pragma: no cover

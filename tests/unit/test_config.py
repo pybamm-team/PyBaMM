@@ -1,5 +1,6 @@
 import pytest
-from inputimeout import TimeoutOccurred
+import select
+import sys
 
 import pybamm
 import uuid
@@ -33,24 +34,73 @@ class TestConfig:
             assert config_dict["enable_telemetry"] is False
 
     @pytest.mark.parametrize("user_opted_in, user_input", [(True, "y"), (False, "n")])
-    def test_ask_user_opt_in(self, monkeypatch, user_opted_in, user_input):
-        # Mock the inputimeout function to return invalid input first, then valid input
-        inputs = iter(["invalid", user_input])
-        monkeypatch.setattr(
-            "pybamm.config.inputimeout", lambda prompt, timeout: next(inputs)
-        )
+    def test_ask_user_opt_in(self, monkeypatch, capsys, user_opted_in, user_input):
+        # Mock select.select to simulate user input
+        def mock_select(*args, **kwargs):
+            return [sys.stdin], [], []
+
+        monkeypatch.setattr(select, "select", mock_select)
+
+        # Mock sys.stdin.readline to return the desired input
+        monkeypatch.setattr(sys.stdin, "readline", lambda: user_input + "\n")
 
         # Call the function to ask the user if they want to opt in
         opt_in = pybamm.config.ask_user_opt_in()
+
+        # Check the result
         assert opt_in is user_opted_in
 
-    def test_ask_user_opt_in_timeout(self, monkeypatch):
-        # Mock the inputimeout function to raise a TimeoutOccurred exception
-        def mock_inputimeout(*args, **kwargs):
-            raise TimeoutOccurred
+        # Check that the prompt was printed
+        captured = capsys.readouterr()
+        assert "Do you want to enable telemetry? (Y/n):" in captured.out
 
-        monkeypatch.setattr("pybamm.config.inputimeout", mock_inputimeout)
+    def test_ask_user_opt_in_invalid_input(self, monkeypatch, capsys):
+        # Mock select.select to simulate user input and then timeout
+        def mock_select(*args, **kwargs):
+            nonlocal call_count
+            if call_count == 0:
+                call_count += 1
+                return [sys.stdin], [], []
+            else:
+                return [], [], []
+
+        monkeypatch.setattr(select, "select", mock_select)
+
+        # Mock sys.stdin.readline to return invalid input
+        monkeypatch.setattr(sys.stdin, "readline", lambda: "invalid\n")
+
+        # Initialize call count
+        call_count = 0
 
         # Call the function to ask the user if they want to opt in
-        opt_in = pybamm.config.ask_user_opt_in()
+        opt_in = pybamm.config.ask_user_opt_in(timeout=1)
+
+        # Check the result (should be False for timeout after invalid input)
         assert opt_in is False
+
+        # Check that the prompt, invalid input message, and timeout message were printed
+        captured = capsys.readouterr()
+        assert "Do you want to enable telemetry? (Y/n):" in captured.out
+        assert (
+            "Invalid input. Please enter 'yes/y' for yes or 'no/n' for no."
+            in captured.out
+        )
+        assert "Timeout reached. Defaulting to not enabling telemetry." in captured.out
+
+    def test_ask_user_opt_in_timeout(self, monkeypatch, capsys):
+        # Mock select.select to simulate a timeout
+        def mock_select(*args, **kwargs):
+            return [], [], []
+
+        monkeypatch.setattr(select, "select", mock_select)
+
+        # Call the function to ask the user if they want to opt in
+        opt_in = pybamm.config.ask_user_opt_in(timeout=1)
+
+        # Check the result (should be False for timeout)
+        assert opt_in is False
+
+        # Check that the prompt and timeout message were printed
+        captured = capsys.readouterr()
+        assert "Do you want to enable telemetry? (Y/n):" in captured.out
+        assert "Timeout reached. Defaulting to not enabling telemetry." in captured.out
