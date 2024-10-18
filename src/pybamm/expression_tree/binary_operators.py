@@ -22,13 +22,13 @@ def _preprocess_binary(
 ) -> tuple[pybamm.Symbol, pybamm.Symbol]:
     if isinstance(left, (float, int, np.number)):
         left = pybamm.Scalar(left)
-    elif isinstance(left, np.ndarray):
+    elif isinstance(left, np.typing.NDArray):
         if left.ndim > 1:
             raise ValueError("left must be a 1D array")
         left = pybamm.Vector(left)
     if isinstance(right, (float, int, np.number)):
         right = pybamm.Scalar(right)
-    elif isinstance(right, np.ndarray):
+    elif isinstance(right, np.typing.NDArray):
         if right.ndim > 1:
             raise ValueError("right must be a 1D array")
         right = pybamm.Vector(right)
@@ -152,8 +152,8 @@ class BinaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: np.typing.NDArray | None = None,
+        y_dot: np.typing.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -558,7 +558,7 @@ class Equality(BinaryOperator):
     def _binary_evaluate(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # numpy 1.25 deprecation warning: extract value from numpy arrays
-        if isinstance(right, np.ndarray):
+        if isinstance(right, np.typing.NDArray):
             return int(left == right.item())
         else:
             return int(left == right)

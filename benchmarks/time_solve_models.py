@@ -30,8 +30,8 @@ class TimeSolveSPM:
     )
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
-    t_eval: np.ndarray
-    t_interp: np.ndarray | None
+    t_eval: np.typing.NDArray
+    t_interp: np.typing.NDArray | None
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -96,7 +96,7 @@ class TimeSolveSPMe:
     )
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
-    t_eval: np.ndarray
+    t_eval: np.typing.NDArray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -160,7 +160,7 @@ class TimeSolveDFN:
     )
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
-    t_eval: np.ndarray
+    t_eval: np.typing.NDArray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()

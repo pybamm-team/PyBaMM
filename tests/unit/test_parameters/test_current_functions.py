@@ -90,11 +90,11 @@ class StandardCurrentFunctionTests:
     def test_output_type(self):
         for function in self.function_list:
             if self.always_array is True:
-                assert isinstance(function(0), np.ndarray)
+                assert isinstance(function(0), np.typing.NDArray)
             else:
                 assert isinstance(function(0), numbers.Number)
-            assert isinstance(function(np.zeros(3)), np.ndarray)
-            assert isinstance(function(np.zeros([3, 3])), np.ndarray)
+            assert isinstance(function(np.zeros(3)), np.typing.NDArray)
+            assert isinstance(function(np.zeros([3, 3])), np.typing.NDArray)
 
     def test_all(self):
         self.test_output_type()

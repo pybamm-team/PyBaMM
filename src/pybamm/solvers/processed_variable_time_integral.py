@@ -7,8 +7,8 @@ import pybamm
 @dataclass
 class ProcessedVariableTimeIntegral:
     method: Literal["discrete", "continuous"]
-    initial_condition: np.ndarray
-    discrete_times: Optional[np.ndarray]
+    initial_condition: np.typing.NDArray
+    discrete_times: Optional[np.typing.NDArray]
 
     @staticmethod
     def from_pybamm_var(
