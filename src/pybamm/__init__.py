@@ -201,8 +201,11 @@ from . import callbacks
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
 
-# Remove any imported modules, so we don't expose them as part of pybamm
-del sys
+# Fix Casadi import
+import os
+import pathlib
+import sysconfig
+os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path('purelib')) / 'casadi')
 
 __all__ = [
     "batch_study",
