@@ -1,5 +1,3 @@
-import sys
-
 from pybamm.version import __version__
 
 # Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
