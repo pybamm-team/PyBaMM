@@ -33,8 +33,8 @@ def build_model(parameter, model_, option, value):
 class SolveModel:
     solver: pybamm.BaseSolver
     model: pybamm.BaseModel
-    t_eval: np.ndarray
-    t_interp: np.ndarray | None
+    t_eval: numpy.typing.NDArray
+    t_interp: numpy.typing.NDArray | None
 
     def solve_setup(self, parameter, model_, option, value, solver_class):
         import importlib

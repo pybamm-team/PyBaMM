@@ -132,7 +132,7 @@ def is_matrix_x(expr: Symbol, x: int):
                     and np.all(result.__dict__["data"] == x)
                 )
             )
-        ) or (isinstance(result, np.ndarray) and np.all(result == x))
+        ) or (isinstance(result, numpy.typing.NDArray) and np.all(result == x))
     else:
         return False
 
@@ -168,18 +168,18 @@ def simplify_if_constant(symbol: pybamm.Symbol):
         if result is not None:
             if (
                 isinstance(result, numbers.Number)
-                or (isinstance(result, np.ndarray) and result.ndim == 0)
+                or (isinstance(result, numpy.typing.NDArray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
                 # type-narrow for Scalar
                 new_result = cast(float, result)
                 return pybamm.Scalar(new_result)
-            elif isinstance(result, np.ndarray) or issparse(result):
+            elif isinstance(result, numpy.typing.NDArray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
                     return pybamm.Vector(result, domains=symbol.domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
-                    if isinstance(result, np.ndarray) and np.all(result == 0):
+                    if isinstance(result, numpy.typing.NDArray) and np.all(result == 0):
                         result = csr_matrix(result)
                     return pybamm.Matrix(result, domains=symbol.domains)
 
@@ -759,8 +759,8 @@ class Symbol:
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: numpy.typing.NDArray | None = None,
+        y_dot: numpy.typing.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """
@@ -791,8 +791,8 @@ class Symbol:
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: numpy.typing.NDArray | None = None,
+        y_dot: numpy.typing.NDArray | None = None,
         inputs: dict | str | None = None,
     ) -> ChildValue:
         """Evaluate expression tree (wrapper to allow using dict of known values).

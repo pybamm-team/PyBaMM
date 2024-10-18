@@ -38,7 +38,7 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries: np.ndarray | list[float] | csr_matrix,
+        entries: numpy.typing.NDArray | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
@@ -144,8 +144,8 @@ class Array(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: numpy.typing.NDArray | None = None,
+        y_dot: numpy.typing.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
@@ -165,7 +165,7 @@ class Array(pybamm.Symbol):
         Method to serialise an Array object into JSON.
         """
 
-        if isinstance(self.entries, np.ndarray):
+        if isinstance(self.entries, numpy.typing.NDArray):
             matrix = self.entries.tolist()
         elif isinstance(self.entries, csr_matrix):
             matrix = {

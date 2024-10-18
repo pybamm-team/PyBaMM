@@ -21,7 +21,7 @@ class NumpyEncoder(json.JSONEncoder):
     """
 
     def default(self, obj):
-        if isinstance(obj, np.ndarray):
+        if isinstance(obj, numpy.typing.NDArray):
             return obj.tolist()
         # won't be called since we only need to convert numpy arrays
         return json.JSONEncoder.default(self, obj)  # pragma: no cover
