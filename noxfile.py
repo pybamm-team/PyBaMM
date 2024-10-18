@@ -2,7 +2,6 @@ import nox
 import os
 import sys
 import warnings
-import platform
 from pathlib import Path
 
 
