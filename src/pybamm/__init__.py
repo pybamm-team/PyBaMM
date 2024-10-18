@@ -1,5 +1,3 @@
-import sys
-
 from pybamm.version import __version__
 
 # Demote expressions to 32-bit floats/ints - option used for IDAKLU-MLIR compilation
@@ -201,8 +199,11 @@ from . import callbacks, telemetry, config
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
 
-# Remove any imported modules, so we don't expose them as part of pybamm
-del sys
+# Fix Casadi import
+import os
+import pathlib
+import sysconfig
+os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path('purelib')) / 'casadi')
 
 __all__ = [
     "batch_study",
