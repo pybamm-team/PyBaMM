@@ -152,3 +152,36 @@ class TestIDAKLUSolver:
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
+
+    def test_with_experiments(self):
+        for out_vars in [True, False]:
+            model = pybamm.lithium_ion.SPM()
+
+            if out_vars:
+                output_variables = [
+                    "Discharge capacity [A.h]",
+                    "Time [s]",
+                    "Current [A]",
+                    "Voltage [V]",
+                ]
+                solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+            else:
+                solver = pybamm.IDAKLUSolver()
+
+            experiment = pybamm.Experiment(
+                [
+                    (
+                        "Charge at 1C until 4.2 V",
+                        "Hold at 4.2 V until C/50",
+                        "Rest for 1 hour",
+                    )
+                ]
+            )
+
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=solver,
+            )
+
+            sim.solve()
