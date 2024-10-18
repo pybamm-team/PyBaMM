@@ -212,7 +212,8 @@ class Sign(UnaryOperator):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        raise NotImplementedError()
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        return cls(snippet["children"][0])
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
