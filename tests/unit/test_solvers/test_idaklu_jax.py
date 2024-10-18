@@ -312,7 +312,7 @@ class TestIDAKLUJax:
 
     @pytest.mark.parametrize("output_variables,idaklu_jax_solver,f,wrapper", testcase)
     def test_getvar_vector_array(self, output_variables, idaklu_jax_solver, f, wrapper):
-        # Per variable checks using a provided np.ndarray
+        # Per variable checks using a provided np.typing.NDArray
         if wrapper == jax.jit:
             return  # test does not involve a JAX expression
         array = np.array([sim[outvar](t_eval) for outvar in output_variables]).T

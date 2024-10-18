@@ -94,8 +94,8 @@ class Time(IndependentVariable):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: np.typing.NDArray | None = None,
+        y_dot: np.typing.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
