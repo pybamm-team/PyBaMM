@@ -500,9 +500,19 @@ class Solution:
         else:
             all_yps = self.all_yps[-1][:, -1:]
 
+        # check if all_ys is empty (i.e. if IDAKLU solver + output_variables used)
+        if isinstance(self.all_ys[-1], casadi.DM):
+            empty_ys = False
+        else:
+            empty_ys = not self.all_ys[-1].any()
+
         new_sol = Solution(
             self.all_ts[-1][-1:],
-            self.all_ys[-1][:, -1:],
+            (
+                self.all_ys[-1][:, -1:]
+                if not empty_ys
+                else self.y_event.reshape(len(self.y_event), 1)
+            ),
             self.all_models[-1:],
             self.all_inputs[-1:],
             self.t_event,
