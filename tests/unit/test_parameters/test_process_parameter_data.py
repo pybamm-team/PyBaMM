@@ -3,7 +3,6 @@ import numpy.typing as npt
 # Tests for the parameter processing functions
 #
 
-import numpy as np
 import pybamm
 import pytest
 from pathlib import Path

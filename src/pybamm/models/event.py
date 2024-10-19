@@ -2,7 +2,6 @@ import numpy.typing as npt
 from __future__ import annotations
 
 from enum import Enum
-import numpy as np
 
 from typing import TypeVar
 

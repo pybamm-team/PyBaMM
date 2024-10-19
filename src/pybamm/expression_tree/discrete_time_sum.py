@@ -1,6 +1,5 @@
 import numpy.typing as npt
 import pybamm
-import numpy as np
 
 
 class DiscreteTimeData(pybamm.Interpolant):
@@ -20,9 +19,7 @@ class DiscreteTimeData(pybamm.Interpolant):
 
     """
 
-    def __init__(
-        self, time_points: npt.NDArray, data: npt.NDArray, name: str
-    ):
+    def __init__(self, time_points: npt.NDArray, data: npt.NDArray, name: str):
         super().__init__(time_points, data, pybamm.t, name)
 
     def create_copy(self, new_children=None, perform_simplifications=True):

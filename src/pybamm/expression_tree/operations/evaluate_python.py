@@ -1,4 +1,5 @@
 import numpy.typing as npt
+
 #
 # Write a symbol to python
 #

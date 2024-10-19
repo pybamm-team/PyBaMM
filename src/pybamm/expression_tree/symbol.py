@@ -1,4 +1,5 @@
 import numpy.typing as npt
+
 #
 # Base Symbol Class for the expression tree
 #

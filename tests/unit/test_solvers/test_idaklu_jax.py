@@ -1,4 +1,3 @@
-import numpy.typing as npt
 #
 # Tests for the KLU-Jax interface class
 #

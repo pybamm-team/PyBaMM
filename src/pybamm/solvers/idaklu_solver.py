@@ -1,4 +1,5 @@
 import numpy.typing as npt
+
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
