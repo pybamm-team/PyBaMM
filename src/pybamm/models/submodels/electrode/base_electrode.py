@@ -119,7 +119,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         V_cc = phi_s_cp - phi_s_cn
 
         # Voltage
-        # Note phi_s_cn is always zero at the negative tab
+        # Note phi_s_cn is always zero at the negative tab by definition
         V = pybamm.boundary_value(phi_s_cp, "positive tab")
 
         # Voltage is local current collector potential difference at the tabs, in 1D
@@ -128,10 +128,12 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Negative current collector potential [V]": phi_s_cn,
             "Positive current collector potential [V]": phi_s_cp,
             "Local voltage [V]": V_cc,
+            "Voltage expression [V]": V - delta_phi_contact,
             "Terminal voltage [V]": V - delta_phi_contact,
-            "Voltage [V]": V - delta_phi_contact,
             "Contact overpotential [V]": delta_phi_contact,
         }
+        if self.options["voltage as a state"] == "false":
+            variables.update({"Voltage [V]": V - delta_phi_contact})
 
         return variables
 
@@ -170,9 +172,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             phi_s_p = variables["Positive electrode potential [V]"]
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             if self.options["contact resistance"] == "true":
-                param = self.param
                 I = variables["Current [A]"]
-                delta_phi_contact = I * param.R_contact
+                delta_phi_contact = I * self.param.R_contact
             else:
                 delta_phi_contact = pybamm.Scalar(0)
             variables.update(

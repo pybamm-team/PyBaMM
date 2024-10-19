@@ -9,7 +9,6 @@ nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
 nox.options.sessions = ["pre-commit", "unit"]
 
-
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
     "PYTHONIOENCODING": "utf-8",

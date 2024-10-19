@@ -58,9 +58,7 @@ class Full(BaseModel):
         # TODO: allow charge and convection?
         v_box = pybamm.Scalar(0)
 
-        param = self.param
-
-        N_ox_diffusion = -tor * param.D_ox * pybamm.grad(c_ox)
+        N_ox_diffusion = -tor * self.param.D_ox * pybamm.grad(c_ox)
 
         N_ox = N_ox_diffusion + c_ox * v_box
         # Flux in the negative electrode is zero
@@ -73,8 +71,6 @@ class Full(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        param = self.param
-
         eps_s = variables["Separator porosity"]
         eps_p = variables["Positive electrode porosity"]
         eps = pybamm.concatenation(eps_s, eps_p)
@@ -93,12 +89,12 @@ class Full(BaseModel):
         ]
         source_terms = pybamm.concatenation(
             pybamm.FullBroadcast(0, "separator", "current collector"),
-            param.s_ox_Ox * a_j_ox,
+            self.param.s_ox_Ox * a_j_ox,
         )
 
         self.rhs = {
             c_ox: (1 / eps)
-            * (-pybamm.div(N_ox) + source_terms / param.F - c_ox * deps_dt)
+            * (-pybamm.div(N_ox) + source_terms / self.param.F - c_ox * deps_dt)
         }
 
     def set_boundary_conditions(self, variables):

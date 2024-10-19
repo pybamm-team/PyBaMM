@@ -1,3 +1,4 @@
+from typing import Optional
 import casadi
 import numpy as np
 import pybamm
@@ -26,6 +27,8 @@ class ProcessedVariable:
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
+    time_integral : :class:`pybamm.ProcessedVariableTimeIntegral`, optional
+        Not none if the variable is to be time-integrated (default is None)
     """
 
     def __init__(
@@ -33,7 +36,7 @@ class ProcessedVariable:
         base_variables,
         base_variables_casadi,
         solution,
-        cumtrapz_ic=None,
+        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
         self.base_variables = base_variables
         self.base_variables_casadi = base_variables_casadi
@@ -47,7 +50,7 @@ class ProcessedVariable:
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
         self.domains = base_variables[0].domains
-        self.cumtrapz_ic = cumtrapz_ic
+        self.time_integral = time_integral
 
         # Process spatial variables
         geometry = solution.all_models[0].geometry
@@ -268,18 +271,21 @@ class ProcessedVariable:
                     self._coords_raw,
                 )
 
-            processed_entries = self._xr_interpolate(
-                entries_for_interp,
-                coords,
-                observe_raw,
-                t,
-                x,
-                r,
-                y,
-                z,
-                R,
-                fill_value,
-            )
+            if self.time_integral is None:
+                processed_entries = self._xr_interpolate(
+                    entries_for_interp,
+                    coords,
+                    observe_raw,
+                    t,
+                    x,
+                    r,
+                    y,
+                    z,
+                    R,
+                    fill_value,
+                )
+            else:
+                processed_entries = entries_for_interp
         else:
             processed_entries = entries
 
@@ -340,6 +346,16 @@ class ProcessedVariable:
             t_observe (np.ndarray): time points to observe
             observe_raw (bool): True if observing the raw data
         """
+        # if this is a time integral variable, t must be None and we observe either the
+        # data times (for a discrete sum) or the solution times (for a continuous sum)
+        if self.time_integral is not None:
+            if self.time_integral.method == "discrete":
+                # discrete sum should be observed at the discrete times
+                t = self.time_integral.discrete_times
+            else:
+                # assume we can do a sufficiently accurate trapezoidal integration at t_pts
+                t = self.t_pts
+
         observe_raw = (t is None) or (
             np.asarray(t).size == len(self.t_pts) and np.all(t == self.t_pts)
         )
@@ -480,14 +496,14 @@ class ProcessedVariable0D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        cumtrapz_ic=None,
+        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
         self.dimensions = 0
         super().__init__(
             base_variables,
             base_variables_casadi,
             solution,
-            cumtrapz_ic=cumtrapz_ic,
+            time_integral=time_integral,
         )
 
     def _observe_raw_python(self):
@@ -507,13 +523,19 @@ class ProcessedVariable0D(ProcessedVariable):
                 idx += 1
         return entries
 
-    def _observe_postfix(self, entries, _):
-        if self.cumtrapz_ic is None:
+    def _observe_postfix(self, entries, t):
+        if self.time_integral is None:
             return entries
-
-        return cumulative_trapezoid(
-            entries, self.t_pts, initial=float(self.cumtrapz_ic)
-        )
+        if self.time_integral.method == "discrete":
+            return np.sum(entries, axis=0, initial=self.time_integral.initial_condition)
+        elif self.time_integral.method == "continuous":
+            return cumulative_trapezoid(
+                entries, self.t_pts, initial=float(self.time_integral.initial_condition)
+            )
+        else:
+            raise ValueError(
+                "time_integral method must be 'discrete' or 'continuous'"
+            )  # pragma: no cover
 
     def _interp_setup(self, entries, t):
         # save attributes for interpolation
@@ -553,14 +575,14 @@ class ProcessedVariable1D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        cumtrapz_ic=None,
+        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
         self.dimensions = 1
         super().__init__(
             base_variables,
             base_variables_casadi,
             solution,
-            cumtrapz_ic=cumtrapz_ic,
+            time_integral=time_integral,
         )
 
     def _observe_raw_python(self):
@@ -650,14 +672,14 @@ class ProcessedVariable2D(ProcessedVariable):
         base_variables,
         base_variables_casadi,
         solution,
-        cumtrapz_ic=None,
+        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
         self.dimensions = 2
         super().__init__(
             base_variables,
             base_variables_casadi,
             solution,
-            cumtrapz_ic=cumtrapz_ic,
+            time_integral=time_integral,
         )
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
@@ -816,14 +838,14 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
         base_variables,
         base_variables_casadi,
         solution,
-        cumtrapz_ic=None,
+        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
     ):
         self.dimensions = 2
         super(ProcessedVariable2D, self).__init__(
             base_variables,
             base_variables_casadi,
             solution,
-            cumtrapz_ic=cumtrapz_ic,
+            time_integral=time_integral,
         )
         y_sol = self.mesh.edges["y"]
         z_sol = self.mesh.edges["z"]
