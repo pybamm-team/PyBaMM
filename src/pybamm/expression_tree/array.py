@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # NumpyArray class
 #
@@ -38,7 +39,7 @@ class Array(pybamm.Symbol):
 
     def __init__(
         self,
-        entries: np.typing.NDArray | list[float] | csr_matrix,
+        entries: npt.NDArray | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
@@ -144,8 +145,8 @@ class Array(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.typing.NDArray | None = None,
-        y_dot: np.typing.NDArray | None = None,
+        y: npt.NDArray | None = None,
+        y_dot: npt.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
@@ -165,7 +166,7 @@ class Array(pybamm.Symbol):
         Method to serialise an Array object into JSON.
         """
 
-        if isinstance(self.entries, np.typing.NDArray):
+        if isinstance(self.entries, npt.NDArray):
             matrix = self.entries.tolist()
         elif isinstance(self.entries, csr_matrix):
             matrix = {

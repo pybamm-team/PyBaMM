@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Matrix class
 #
@@ -16,7 +17,7 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.typing.NDArray | list[float] | csr_matrix,
+        entries: npt.NDArray | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,

@@ -1,3 +1,4 @@
+import numpy.typing as npt
 import pybamm
 import numpy as np
 import logging
@@ -90,7 +91,7 @@ class IDAKLUJax:
             A JAX expression with the following call signature:
                 f(t, inputs=None)
             where:
-                t : float | np.typing.NDArray
+                t : float | npt.NDArray
                     Time sample or vector of time samples
                 inputs : dict, optional
                     dictionary of input values, e.g.
@@ -108,7 +109,7 @@ class IDAKLUJax:
 
         Isolates a single variable from the model output.
         Can be called on a JAX expression (which returns a JAX expression), or on a
-        numeric (np.typing.NDArray) object (which returns a slice of the output).
+        numeric (npt.NDArray) object (which returns a slice of the output).
 
         Example call using default JAX expression, returns a JAX expression::
 
@@ -129,7 +130,7 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        f : Callable | np.typing.NDArray, optional
+        f : Callable | npt.NDArray, optional
             Expression or array from which to extract the target variable
         varname : str
             The name of the variable to extract
@@ -143,13 +144,13 @@ class IDAKLUJax:
                 f(t, inputs=None)
 
             where:
-                t : float | np.typing.NDArray
+                t : float | npt.NDArray
                     Time sample or vector of time samples
                 inputs : dict, optional
                     dictionary of input values, e.g.
                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
-        np.typing.NDArray
-            If called with a numeric (np.typing.NDArray) object, returns a slice of the output
+        npt.NDArray
+            If called with a numeric (npt.NDArray) object, returns a slice of the output
             corresponding to the target variable.
         """
 
@@ -193,7 +194,7 @@ class IDAKLUJax:
 
         Isolates a list of variables from the model output.
         Can be called on a JAX expression (which returns a JAX expression), or on a
-        numeric (np.typing.NDArray) object (which returns a slice of the output).
+        numeric (npt.NDArray) object (which returns a slice of the output).
 
         Example call using default JAX expression, returns a JAX expression::
 
@@ -214,7 +215,7 @@ class IDAKLUJax:
 
         Parameters
         ----------
-        f : Callable | np.typing.NDArray, optional
+        f : Callable | npt.NDArray, optional
             Expression or array from which to extract the target variables
         varname : list of str
             The names of the variables to extract
@@ -228,13 +229,13 @@ class IDAKLUJax:
                 f(t, inputs=None)
 
             where:
-                t : float | np.typing.NDArray
+                t : float | npt.NDArray
                     Time sample or vector of time samples
                 inputs : dict, optional
                     dictionary of input values, e.g.
                     {'Current function [A]': 0.222, 'Separator porosity': 0.3}
-        np.typing.NDArray
-            If called with a numeric (np.typing.NDArray) object, returns a slice of the output
+        npt.NDArray
+            If called with a numeric (npt.NDArray) object, returns a slice of the output
             corresponding to the target variables.
         """
 
@@ -274,18 +275,18 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: np.typing.NDArray = None,
+        t: npt.NDArray = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
-        Returns a numeric (np.typing.NDArray) object (not a JAX expression).
+        Returns a numeric (npt.NDArray) object (not a JAX expression).
         Parameters are inferred from the base object, but can be overridden.
 
         Parameters
         ----------
-        t : float | np.typing.NDArray
+        t : float | npt.NDArray
             Time sample or vector of time samples
         inputs : dict
             dictionary of input values
@@ -307,18 +308,18 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: np.typing.NDArray = None,
+        t: npt.NDArray = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
         """Helper function to compute the gradient of a jaxified expression
 
-        Returns a numeric (np.typing.NDArray) object (not a JAX expression).
+        Returns a numeric (npt.NDArray) object (not a JAX expression).
         Parameters are inferred from the base object, but can be overridden.
 
         Parameters
         ----------
-        t : float | np.typing.NDArray
+        t : float | npt.NDArray
             Time sample or vector of time samples
         inputs : dict
             dictionary of input values
@@ -400,7 +401,7 @@ class IDAKLUJax:
     def _jax_solve_array_inputs(self, t, inputs_array):
         """Wrapper for _jax_solve used by IDAKLU callback
 
-        This version assumes all parameters are provided as np.typing.NDArray vectors
+        This version assumes all parameters are provided as npt.NDArray vectors
         """
         logger.info("jax_solve_array_inputs")
         logger.debug(f"  t: {type(t)}, {t}")
@@ -411,9 +412,9 @@ class IDAKLUJax:
 
     def _jax_solve(
         self,
-        t: Union[float, np.typing.NDArray],
+        t: Union[float, npt.NDArray],
         *inputs,
-    ) -> np.typing.NDArray:
+    ) -> npt.NDArray:
         """Solver implementation used by f-bind"""
         logger.info("jax_solve")
         logger.debug(f"  t: {type(t)}, {t}")
@@ -425,7 +426,7 @@ class IDAKLUJax:
 
     def _jax_jvp_impl(
         self,
-        *args: Union[np.typing.NDArray],
+        *args: Union[npt.NDArray],
     ):
         """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
@@ -462,7 +463,7 @@ class IDAKLUJax:
     ):
         """Wrapper for JVP implementation used by IDAKLU callback
 
-        This version assumes all parameters are provided as np.typing.NDArray vectors
+        This version assumes all parameters are provided as npt.NDArray vectors
         """
         primals = primal_t, *tuple([k for k in primal_inputs])
         tangents = tangent_t, *tuple([k for k in tangent_inputs])
@@ -470,9 +471,9 @@ class IDAKLUJax:
 
     def _jax_vjp_impl(
         self,
-        y_bar: np.typing.NDArray,
+        y_bar: npt.NDArray,
         invar: Union[str, int],  # index or name of input variable
-        *primals: np.typing.NDArray,
+        *primals: npt.NDArray,
     ):
         """VJP implementation used by f_vjp bind"""
         logger.info("py:f_vjp_p_impl")
@@ -522,7 +523,7 @@ class IDAKLUJax:
     ):
         """Wrapper for VJP implementation used by IDAKLU callback
 
-        This version assumes all parameters are provided as np.typing.NDArray vectors
+        This version assumes all parameters are provided as npt.NDArray vectors
         """
         # Reshape y_bar
         logger.debug(f"Reshaping y_bar to ({y_bar_s0}, {y_bar_s1})")
@@ -630,7 +631,7 @@ class IDAKLUJax:
 
             Parameters
             ----------
-                t : float | np.typing.NDArray
+                t : float | npt.NDArray
                     Time sample or vector of time samples
                 inputs : dict, optional
                     dictionary of input values, e.g.

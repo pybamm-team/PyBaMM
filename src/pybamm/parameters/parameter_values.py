@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Parameter values for a simulation
 #
@@ -268,7 +269,7 @@ class ParameterValues:
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)
-            elif isinstance(value, tuple) and isinstance(value[1], np.typing.NDArray):
+            elif isinstance(value, tuple) and isinstance(value[1], npt.NDArray):
                 # If data is provided as a 2-column array (1D data),
                 # convert to two arrays for compatibility with 2D data
                 # see #1805

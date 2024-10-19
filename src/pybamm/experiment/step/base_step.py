@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Private classes and functions for experiment steps
 #
@@ -74,7 +75,7 @@ class BaseStep:
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle
-        is_drive_cycle = isinstance(value, np.typing.NDArray)
+        is_drive_cycle = isinstance(value, npt.NDArray)
         is_python_function = callable(value)
         if is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
@@ -260,7 +261,7 @@ class BaseStep:
         Default duration for the step is one day (24 hours) or the duration of the
         drive cycle
         """
-        if isinstance(value, np.typing.NDArray):
+        if isinstance(value, npt.NDArray):
             t = value[:, 0]
             return t[-1]
         else:

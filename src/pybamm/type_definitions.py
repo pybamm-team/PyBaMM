@@ -1,3 +1,4 @@
+import numpy.typing as npt
 from __future__ import annotations
 
 from typing import Union
@@ -9,8 +10,8 @@ import pybamm
 Numeric: TypeAlias = Union[int, float, np.number]
 
 # expression tree
-ChildValue: TypeAlias = Union[float, np.typing.NDArray]
-ChildSymbol: TypeAlias = Union[float, np.typing.NDArray, pybamm.Symbol]
+ChildValue: TypeAlias = Union[float, npt.NDArray]
+ChildSymbol: TypeAlias = Union[float, npt.NDArray, pybamm.Symbol]
 
 DomainType: TypeAlias = Union[list[str], str, None]
 AuxiliaryDomainType: TypeAlias = Union[dict[str, str], None]

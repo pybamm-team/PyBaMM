@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Scalar class
 #
@@ -53,7 +54,7 @@ class Scalar(pybamm.Symbol):
     def value(self, value):
         self._value = (
             np.float64(value.item())
-            if isinstance(value, np.typing.NDArray)
+            if isinstance(value, npt.NDArray)
             else np.float64(value)
         )
 
@@ -66,8 +67,8 @@ class Scalar(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.typing.NDArray | None = None,
-        y_dot: np.typing.NDArray | None = None,
+        y: npt.NDArray | None = None,
+        y_dot: npt.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""

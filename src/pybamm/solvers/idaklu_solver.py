@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
@@ -266,7 +267,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if isinstance(atol, float):
             atol = atol * np.ones(size)
-        elif not isinstance(atol, np.typing.NDArray):
+        elif not isinstance(atol, npt.NDArray):
             raise pybamm.SolverError(
                 "Absolute tolerances must be a numpy array or float"
             )
@@ -693,7 +694,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # Get sparsity pattern index outputs as needed
         try:
             fcn_eval = fcn(*args)
-            if not isinstance(fcn_eval, np.typing.NDArray):
+            if not isinstance(fcn_eval, npt.NDArray):
                 fcn_eval = jax.flatten_util.ravel_pytree(fcn_eval)[0]
             coo = sparse.coo_matrix(fcn_eval)
             iree_fcn.nnz = coo.nnz

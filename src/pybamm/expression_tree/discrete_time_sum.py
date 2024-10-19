@@ -1,3 +1,4 @@
+import numpy.typing as npt
 import pybamm
 import numpy as np
 
@@ -20,7 +21,7 @@ class DiscreteTimeData(pybamm.Interpolant):
     """
 
     def __init__(
-        self, time_points: np.typing.NDArray, data: np.typing.NDArray, name: str
+        self, time_points: npt.NDArray, data: npt.NDArray, name: str
     ):
         super().__init__(time_points, data, pybamm.t, name)
 

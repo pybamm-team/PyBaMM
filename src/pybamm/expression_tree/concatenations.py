@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Concatenation classes
 #
@@ -111,7 +112,7 @@ class Concatenation(pybamm.Symbol):
 
         return domains
 
-    def _concatenation_evaluate(self, children_eval: list[np.typing.NDArray]):
+    def _concatenation_evaluate(self, children_eval: list[npt.NDArray]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         if len(children_eval) == 0:
             return np.array([])
@@ -121,8 +122,8 @@ class Concatenation(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.typing.NDArray | None = None,
-        y_dot: np.typing.NDArray | None = None,
+        y: npt.NDArray | None = None,
+        y_dot: npt.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -366,7 +367,7 @@ class DomainConcatenation(Concatenation):
                 start = end
         return slices
 
-    def _concatenation_evaluate(self, children_eval: list[np.typing.NDArray]):
+    def _concatenation_evaluate(self, children_eval: list[npt.NDArray]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         # preallocate vector
         vector = np.empty((self._size, 1))

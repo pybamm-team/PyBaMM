@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Processed Variable class
 #
@@ -343,10 +344,10 @@ class ProcessedVariable:
         Checks if the raw data should be observed exactly at the solution time points
 
         Args:
-            t (np.typing.NDArray, list, None): time points to observe
+            t (npt.NDArray, list, None): time points to observe
 
         Returns:
-            t_observe (np.typing.NDArray): time points to observe
+            t_observe (npt.NDArray): time points to observe
             observe_raw (bool): True if observing the raw data
         """
         # if this is a time integral variable, t must be None and we observe either the
@@ -365,7 +366,7 @@ class ProcessedVariable:
 
         if observe_raw:
             t_observe = self.t_pts
-        elif not isinstance(t, np.typing.NDArray):
+        elif not isinstance(t, npt.NDArray):
             if not isinstance(t, list):
                 t = [t]
             t_observe = np.array(t)
@@ -922,13 +923,13 @@ def _is_f_contiguous(all_ys):
     Check if all the ys are f-contiguous in memory
 
     Args:
-        all_ys (list of np.typing.NDArray): list of all ys
+        all_ys (list of npt.NDArray): list of all ys
 
     Returns:
         bool: True if all ys are f-contiguous
     """
 
-    return all(isinstance(y, np.typing.NDArray) and y.data.f_contiguous for y in all_ys)
+    return all(isinstance(y, npt.NDArray) and y.data.f_contiguous for y in all_ys)
 
 
 def _is_sorted(t):
@@ -936,7 +937,7 @@ def _is_sorted(t):
     Check if an array is sorted
 
     Args:
-        t (np.typing.NDArray): array to check
+        t (npt.NDArray): array to check
 
     Returns:
         bool: True if array is sorted

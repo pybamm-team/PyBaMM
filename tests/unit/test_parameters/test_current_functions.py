@@ -1,3 +1,4 @@
+import numpy.typing as npt
 #
 # Tests for current input functions
 #
@@ -90,11 +91,11 @@ class StandardCurrentFunctionTests:
     def test_output_type(self):
         for function in self.function_list:
             if self.always_array is True:
-                assert isinstance(function(0), np.typing.NDArray)
+                assert isinstance(function(0), npt.NDArray)
             else:
                 assert isinstance(function(0), numbers.Number)
-            assert isinstance(function(np.zeros(3)), np.typing.NDArray)
-            assert isinstance(function(np.zeros([3, 3])), np.typing.NDArray)
+            assert isinstance(function(np.zeros(3)), npt.NDArray)
+            assert isinstance(function(np.zeros([3, 3])), npt.NDArray)
 
     def test_all(self):
         self.test_output_type()
