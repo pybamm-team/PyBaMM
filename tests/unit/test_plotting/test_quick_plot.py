@@ -73,7 +73,7 @@ class TestQuickPlot:
                 "c broadcasted positive electrode",
             ],
         )
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
@@ -92,7 +92,7 @@ class TestQuickPlot:
         # Test with different output variables
         quick_plot = pybamm.QuickPlot(solution, ["b broadcasted"])
         assert len(quick_plot.axis_limits) == 1
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
 
         quick_plot = pybamm.QuickPlot(
             solution,
@@ -105,7 +105,7 @@ class TestQuickPlot:
             ],
         )
         assert len(quick_plot.axis_limits) == 5
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
@@ -124,7 +124,7 @@ class TestQuickPlot:
 
         # Test longer name
         quick_plot = pybamm.QuickPlot(solution, ["Variable with a very long name"])
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
 
         # Test different inputs
         quick_plot = pybamm.QuickPlot(
@@ -154,7 +154,7 @@ class TestQuickPlot:
         quick_plot = pybamm.QuickPlot(solution, ["a"])
         assert quick_plot.time_scaling_factor == 1
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="seconds")
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         assert quick_plot.time_scaling_factor == 1
         np.testing.assert_array_almost_equal(
             quick_plot.plots[("a",)][0][0].get_xdata(), t_plot
@@ -163,7 +163,7 @@ class TestQuickPlot:
             quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         assert quick_plot.time_scaling_factor == 60
         np.testing.assert_array_almost_equal(
             quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 60
@@ -172,7 +172,7 @@ class TestQuickPlot:
             quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         assert quick_plot.time_scaling_factor == 3600
         np.testing.assert_array_almost_equal(
             quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 3600
@@ -201,7 +201,7 @@ class TestQuickPlot:
 
         # Test 2D variables
         quick_plot = pybamm.QuickPlot(solution, ["2D variable"])
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(0.01)
 
@@ -217,14 +217,14 @@ class TestQuickPlot:
             None,
             None,
         ]
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         quick_plot.slider_update(1)
 
         quick_plot = pybamm.QuickPlot(
             solution, ["2D variable"], variable_limits="tight"
         )
         assert quick_plot.variable_limits[("2D variable",)] == (None, None)
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         quick_plot.slider_update(1)
 
         quick_plot = pybamm.QuickPlot(
@@ -234,7 +234,7 @@ class TestQuickPlot:
         )
         assert quick_plot.axis_limits[("a",)][2:] == [1, 2]
         assert quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:] == [3, 4]
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         quick_plot.slider_update(1)
 
         quick_plot = pybamm.QuickPlot(
@@ -242,7 +242,7 @@ class TestQuickPlot:
         )
         assert quick_plot.axis_limits[("a",)][2:] == [None, None]
         assert quick_plot.axis_limits[("b broadcasted",)][2:] != [None, None]
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
         quick_plot.slider_update(1)
 
         with pytest.raises(
@@ -288,12 +288,12 @@ class TestQuickPlot:
         # pass only a simulation object
         # it should be converted to a list of corresponding solution
         quick_plot = pybamm.QuickPlot(sim)
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
 
         # mixed simulation and solution input
         # solution should be extracted from the simulation
         quick_plot = pybamm.QuickPlot([sim, sim.solution])
-        quick_plot.plot(0)
+        quick_plot.plot(0.0)
 
         # test creating a GIF
         with TemporaryDirectory() as dir_name:
@@ -336,7 +336,7 @@ class TestQuickPlot:
                 quick_plot = pybamm.QuickPlot(
                     solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
                 )
-                quick_plot.plot(0)
+                quick_plot.plot(0.0)
 
                 qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                     0
@@ -371,7 +371,7 @@ class TestQuickPlot:
                         ["Negative particle concentration [mol.m-3]"],
                         time_unit=unit,
                     )
-                    quick_plot.plot(0)
+                    quick_plot.plot(0.0)
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
@@ -411,7 +411,7 @@ class TestQuickPlot:
             quick_plot = pybamm.QuickPlot(
                 solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
             )
-            quick_plot.plot(0)
+            quick_plot.plot(0.0)
             qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
             c_e_eval = c_e(t_eval[0], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
             np.testing.assert_array_almost_equal(qp_data.T, c_e_eval)
@@ -456,7 +456,7 @@ class TestQuickPlot:
             quick_plot = pybamm.QuickPlot(
                 solution, ["Negative current collector potential [V]"], time_unit=unit
             )
-            quick_plot.plot(0)
+            quick_plot.plot(0.0)
             qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
                 0
             ][1]
