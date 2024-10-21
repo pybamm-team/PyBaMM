@@ -75,7 +75,7 @@ Each PyBaMM model contains continuous operators that must be discretised before 
 Logging
 -------
 
-PyBaMM uses the Python logging module to log messages at different levels of severity. Use the :function:`pybamm.set_logging_level` function to set the logging level for PyBaMM.
+PyBaMM uses the Python logging module to log messages at different levels of severity. Use the :func:`pybamm.set_logging_level` function to set the logging level for PyBaMM.
 
 
 ----------------------
