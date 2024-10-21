@@ -154,6 +154,7 @@ class TestIDAKLUSolver:
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
 
     def test_with_experiments(self):
+        summary_vars = []
         for out_vars in [True, False]:
             model = pybamm.lithium_ion.SPM()
 
@@ -184,4 +185,9 @@ class TestIDAKLUSolver:
                 solver=solver,
             )
 
-            sim.solve()
+            sol = sim.solve()
+            summary_vars.append(sol.summary_variables)
+
+        # check summary variables are the same if output variables are specified
+        for var in summary_vars[0].keys():
+            assert summary_vars[0][var] == summary_vars[1][var]

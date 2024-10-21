@@ -460,9 +460,20 @@ class Solution:
         else:
             all_yps = self.all_yps[0][:, :1]
 
+        # check if all_ys is empty (i.e. if IDAKLU solver + output_variables used)
+        if isinstance(self.all_ys[-1], casadi.DM):
+            empty_ys = False
+        else:
+            empty_ys = self.all_ys[0].shape[0] == 0
+
         new_sol = Solution(
             self.all_ts[0][:1],
-            self.all_ys[0][:, :1],
+            # Get first state from initial conditions if all_ys is empty
+            (
+                self.all_ys[0][:, :1]
+                if not empty_ys
+                else self.all_models[0].y0full.reshape(-1, 1)
+            ),
             self.all_models[:1],
             self.all_inputs[:1],
             None,
@@ -1148,29 +1159,19 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
     user_inputs = user_inputs or {}
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
-    first_state_available = True
-
-    if not any(arr.shape[0] > 0 for arr in cycle_solution.all_ys):
-        pybamm.logger.debug(
-            "No useable first_state because 'output_variables' used in solver, "
-            "skipping 'Change in' summary variables."
-        )
-        first_state_available = False
 
     # Summary variables
     summary_variables = model.summary_variables
+    first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
     for var in summary_variables:
+        data_first = first_state[var].data
         data_last = last_state[var].data
         cycle_summary_variables[var] = data_last[0]
-
-        if first_state_available:
-            first_state = cycle_solution.first_state
-            data_first = first_state[var].data
-            var_lowercase = var[0].lower() + var[1:]
-            cycle_summary_variables["Change in " + var_lowercase] = (
-                data_last[0] - data_first[0]
-            )
+        var_lowercase = var[0].lower() + var[1:]
+        cycle_summary_variables["Change in " + var_lowercase] = (
+            data_last[0] - data_first[0]
+        )
 
     # eSOH variables (full-cell lithium-ion model only, for now)
     if (
