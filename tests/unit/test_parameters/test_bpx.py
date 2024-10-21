@@ -7,8 +7,7 @@ import pytest
 
 
 class TestBPX:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup_method(self):
         self.base = {
             "Header": {
                 "BPX": 1.0,

@@ -2,6 +2,7 @@
 
 ## Features
 
+- Adds an option "voltage as a state" that can be "false" (default) or "true". If "true" adds an explicit algebraic equation for the voltage. ([#4507](https://github.com/pybamm-team/PyBaMM/pull/4507))
 - Improved `QuickPlot` accuracy for simulations with Hermite interpolation. ([#4483](https://github.com/pybamm-team/PyBaMM/pull/4483))
 - Added Hermite interpolation to the (`IDAKLUSolver`) that improves the accuracy and performance of post-processing variables. ([#4464](https://github.com/pybamm-team/PyBaMM/pull/4464))
 - Added `BasicDFN` model for sodium-ion batteries ([#4451](https://github.com/pybamm-team/PyBaMM/pull/4451))
@@ -20,6 +21,10 @@
 
 ## Bug Fixes
 
+- Disabled IREE on MacOS due to compatibility issues and added the CasADI
+  path to the environment to resolve issues on MacOS and Linux. Windows
+  users may still experience issues with interpolation. ([#4528](https://github.com/pybamm-team/PyBaMM/pull/4528))
+- Added `_from_json()` functionality to `Sign` which was erroneously omitted previously. ([#4517](https://github.com/pybamm-team/PyBaMM/pull/4517))
 - Fixed bug where IDAKLU solver failed when `output variables` were specified and an extrapolation event is present. ([#4440](https://github.com/pybamm-team/PyBaMM/pull/4440))
 
 ## Breaking changes
