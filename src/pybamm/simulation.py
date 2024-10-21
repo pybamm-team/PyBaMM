@@ -139,10 +139,19 @@ class Simulation:
         # Initialise instances of Simulation class with the same random seed
         self._set_random_seed()
 
+        # warn about using IDAKLU(output_varibles=...) with experiments
+        if self.operating_mode == "with experiment" and bool(
+            self._solver.output_variables
+        ):
+            warnings.warn(
+                "'Change in' summary variables for the Experiment will not be "
+                "automatically calculated when using 'output_variables' in the solver.",
+                pybamm.SolverWarning,
+                stacklevel=2,
+            )
+
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
-            import warnings
-
             warnings.filterwarnings("ignore")
 
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)

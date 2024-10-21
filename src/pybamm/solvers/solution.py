@@ -504,7 +504,7 @@ class Solution:
         if isinstance(self.all_ys[-1], casadi.DM):
             empty_ys = False
         else:
-            empty_ys = not self.all_ys[-1].any()
+            empty_ys = self.all_ys[-1].shape[0] == 0
 
         new_sol = Solution(
             self.all_ts[-1][-1:],
@@ -688,7 +688,7 @@ class Solution:
 
         Returns
         -------
-        :class:`pybamm.ProcessedVariable`
+        :class:`pybamm.ProcessedVariable` or :class:`pybamm.ProcessedVariableComputed`
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
@@ -972,6 +972,19 @@ class Solution:
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
 
+        # update variables which were derived at the solver stage
+        if other._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in other._variables.values()
+        ):
+            if not self._variables:
+                new_sol._variables = other._variables.copy()
+            elif self._variables:
+                new_sol._variables = {
+                    v: self._variables[v]._update(other._variables[v], new_sol)
+                    for v in self._variables.keys()
+                }
+
         return new_sol
 
     def __radd__(self, other):
@@ -997,6 +1010,13 @@ class Solution:
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
         new_sol.set_up_time = self.set_up_time
+
+        # copy over variables which were derived at the solver stage
+        if self._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in self._variables.values()
+        ):
+            new_sol._variables = self._variables.copy()
 
         return new_sol
 
@@ -1128,19 +1148,29 @@ def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
     user_inputs = user_inputs or {}
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
+    first_state_available = True
+
+    if not any(arr.shape[0] > 0 for arr in cycle_solution.all_ys):
+        pybamm.logger.debug(
+            "No useable first_state because 'output_variables' used in solver, "
+            "skipping 'Change in' summary variables."
+        )
+        first_state_available = False
 
     # Summary variables
     summary_variables = model.summary_variables
-    first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
     for var in summary_variables:
-        data_first = first_state[var].data
         data_last = last_state[var].data
         cycle_summary_variables[var] = data_last[0]
-        var_lowercase = var[0].lower() + var[1:]
-        cycle_summary_variables["Change in " + var_lowercase] = (
-            data_last[0] - data_first[0]
-        )
+
+        if first_state_available:
+            first_state = cycle_solution.first_state
+            data_first = first_state[var].data
+            var_lowercase = var[0].lower() + var[1:]
+            cycle_summary_variables["Change in " + var_lowercase] = (
+                data_last[0] - data_first[0]
+            )
 
     # eSOH variables (full-cell lithium-ion model only, for now)
     if (
