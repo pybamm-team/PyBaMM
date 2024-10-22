@@ -30,8 +30,8 @@ Parameters
 ----------
 
 PyBaMM models are parameterised by a set of parameters, which are stored in a :class:`ParameterValues` object. This object acts like a Python dictionary with a few extra PyBaMM specific features and methods.
-Parameters in a model are represented as either :class:`Parameter` objects or :class:`FunctionParameter` objects, and the values in the :class:`ParameterValues` object are inserted into the model when it is set up for solving
-to replace the :class:`Parameter` and :class:`FunctionParameter` objects. The values in the :class:`ParameterValues` object can be scalars, Python functions or expressions of type :class:`Symbol`.
+Parameters in a model are represented as either :class:`Parameter` objects or :class:`FunctionParameter` objects, and the values in the :class:`ParameterValues` object replace these objects in the model before it is solved.
+The values in the :class:`ParameterValues` object can be scalars, Python functions or expressions of type :class:`Symbol`.
 
 Experiments
 -----------
