@@ -7,7 +7,12 @@ from tempfile import TemporaryDirectory
 
 
 class TestQuickPlot:
-    def test_simple_ode_model(self):
+    _solver_args = [pybamm.CasadiSolver()]
+    if pybamm.has_idaklu():
+        _solver_args.append(pybamm.IDAKLUSolver())
+
+    @pytest.mark.parametrize("solver", _solver_args)
+    def test_simple_ode_model(self, solver):
         model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -48,9 +53,6 @@ class TestQuickPlot:
             "NaN variable": pybamm.Scalar(np.nan),
         }
 
-        # ODEs only (don't use Jacobian)
-        model.use_jacobian = False
-
         # Process and solve
         geometry = model.default_geometry
         param = model.default_parameter_values
@@ -59,7 +61,6 @@ class TestQuickPlot:
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        solver = model.default_solver
         t_eval = np.linspace(0, 2, 100)
         solution = solver.solve(model, t_eval)
         quick_plot = pybamm.QuickPlot(
@@ -142,6 +143,13 @@ class TestQuickPlot:
         assert quick_plot.n_rows == 2
         assert quick_plot.n_cols == 1
 
+        if solution.hermite_interpolation:
+            t_plot = np.union1d(
+                solution.t, np.linspace(solution.t[0], solution.t[-1], 100 + 2)[1:-1]
+            )
+        else:
+            t_plot = t_eval
+
         # Test different time units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
         assert quick_plot.time_scaling_factor == 1
@@ -149,28 +157,28 @@ class TestQuickPlot:
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 1
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 60
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 60
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 3600
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 3600
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         with pytest.raises(ValueError, match="time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
