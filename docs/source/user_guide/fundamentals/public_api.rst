@@ -3,6 +3,7 @@ Public API
 ----------
 
 .. module:: pybamm
+    :noindex:
 
 PyBaMM is a Python package for mathematical modelling and simulation of battery systems. The main classes and functions that are intended to be used by the user are described in this document.
 For a more detailed description of the classes and methods, see the [API documentation](api_docs).
@@ -12,7 +13,7 @@ Available PyBaMM models
 
 PyBaMM includes a number of pre-implemented models, which can be used as they are or modified to suit your needs. The main models are:
 
-- :class:`pybamm.lithium_ion.SPM`: Single Particle Model
+- :class:`lithium_ion.SPM`: Single Particle Model
 - :class:`lithium_ion.SPMe`: Single Particle Model with Electrolyte
 - :class:`lithium_ion.DFN`: Doyle-Fuller-Newman
 
@@ -26,7 +27,7 @@ Pass at least a :class:`BaseModel` object, and optionally the experiment, solver
 Any of these optional arguments not provided will be supplied by the defaults specified in the model.
 
 Parameters
------------
+----------
 
 PyBaMM models are parameterised by a set of parameters, which are stored in a :class:`ParameterValues` object. This object acts like a Python dictionary with a few extra PyBaMM specific features and methods.
 Parameters in a model are represented as either :class:`Parameter` objects or :class:`FunctionParameter` objects, and the values in the :class:`ParameterValues` object are inserted into the model when it is set up for solving
@@ -47,7 +48,7 @@ whereas the :class:`IDAKLUSolver` is PyBaMM specific. Both solvers have many opt
 When a model is solved, the solution is returned as a :class:`Solution` object.
 
 Plotting
--------
+--------
 
 A solution object can be plotted using the :meth:`Solution.plot` or :meth:`Simulation.plot` methods, which returns a :class:`QuickPlot` object.
 Note that the arguments to the plotting methods of both classes are the same as :class:`QuickPlot`.
