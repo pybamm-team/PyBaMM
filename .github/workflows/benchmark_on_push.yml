@@ -28,11 +28,8 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          python -m uv pip install --upgrade pip wheel setuptools wget cmake casadi numpy
+          python -m uv pip install --upgrade pip wheel setuptools wget numpy
           python -m uv pip install asv[virtualenv]
-
-      - name: Install SuiteSparse and SUNDIALS
-        run: python scripts/install_KLU_Sundials.py
 
       - name: Fetch base branch
         run: |
