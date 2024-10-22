@@ -6,7 +6,7 @@ Public API
     :noindex:
 
 PyBaMM is a Python package for mathematical modelling and simulation of battery systems. The main classes and functions that are intended to be used by the user are described in this document.
-For a more detailed description of the classes and methods, see the [API documentation](api_docs).
+For a more detailed description of the classes and methods, see the :doc:`API reference </source/api/index>`.
 
 Available PyBaMM models
 -----------------------
