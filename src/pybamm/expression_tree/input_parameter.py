@@ -1,3 +1,5 @@
+import numpy.typing as npt
+
 #
 # Parameter classes
 #
@@ -88,8 +90,8 @@ class InputParameter(pybamm.Symbol):
     def _base_evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray | None = None,
+        y_dot: npt.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         # inputs should be a dictionary

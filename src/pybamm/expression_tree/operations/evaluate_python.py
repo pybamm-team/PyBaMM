@@ -1,3 +1,5 @@
+import numpy.typing as npt
+
 #
 # Write a symbol to python
 #
@@ -539,7 +541,7 @@ class EvaluatorJax:
 
         # convert all numpy constants to device vectors
         for symbol_id in constants:
-            if isinstance(constants[symbol_id], np.ndarray):
+            if isinstance(constants[symbol_id], npt.NDArray):
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
 
         # get a list of constant arguments to input to the function
@@ -614,7 +616,7 @@ class EvaluatorJax:
             c = jax.numpy.int32(c)
         if isinstance(c, np.int64):
             c = c.astype(jax.numpy.int32)
-        if isinstance(c, np.ndarray):
+        if isinstance(c, npt.NDArray):
             if c.dtype == np.float64:
                 c = c.astype(jax.numpy.float32)
             if c.dtype == np.int64:

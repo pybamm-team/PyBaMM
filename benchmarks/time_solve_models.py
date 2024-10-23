@@ -1,3 +1,4 @@
+import numpy.typing as npt
 # Write the benchmarking functions here.
 # See "Writing benchmarks" in the asv docs for more information.
 
@@ -30,8 +31,8 @@ class TimeSolveSPM:
     )
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
-    t_eval: np.ndarray
-    t_interp: np.ndarray | None
+    t_eval: npt.NDArray
+    t_interp: npt.NDArray | None
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -96,7 +97,7 @@ class TimeSolveSPMe:
     )
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
-    t_eval: np.ndarray
+    t_eval: npt.NDArray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -160,7 +161,7 @@ class TimeSolveDFN:
     )
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
-    t_eval: np.ndarray
+    t_eval: npt.NDArray
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
