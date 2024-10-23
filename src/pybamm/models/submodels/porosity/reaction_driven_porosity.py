@@ -50,9 +50,9 @@ class ReactionDriven(BaseModel):
                 )
 
                 a_k = variables[
-                        f"{Domain} electrode {self.phase_name}"
-                        "surface area to volume ratio [m-1]"
-                    ]
+                    f"{Domain} electrode {self.phase_name}"
+                    "surface area to volume ratio [m-1]"
+                ]
 
                 # This assumes a thin film so curvature effects are neglected.
                 # They could be included (e.g. for a sphere it is
