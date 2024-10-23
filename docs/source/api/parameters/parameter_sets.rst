@@ -9,7 +9,7 @@ Parameters Sets
 PyBaMM provides :ref:`pre-defined parameters <bundled-parameter-sets>` for common
 chemistries, as well as, a growing set of :ref:`third-party parameter sets <third-party-parameter-sets>`.
 
-.. autoclass:: pybamm.parameters.parameter_sets.ParameterSets
+.. autoclass:: pybamm.entry_points.parameter_sets.ParameterSets
     :members:
 
 .. _adding-parameter-sets:

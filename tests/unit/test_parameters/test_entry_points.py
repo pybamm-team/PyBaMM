@@ -31,9 +31,35 @@ class TestParameterSets:
     def test_get_docstring(self):
         """Test that :meth:`pybamm.parameter_sets.get_doctstring` works"""
         docstring = pybamm.parameter_sets.get_docstring("Marquis2019")
+        print(docstring)
         assert re.search("Parameters for a Kokam SLPB78205130H cell", docstring)
 
     def test_iter(self):
         """Test that iterating `pybamm.parameter_sets` iterates over keys"""
         for k in pybamm.parameter_sets:
+            assert isinstance(k, str)
+
+
+class TestModelSets:
+    def test_all_registered(self):
+        """Check that all models have been registered with the
+        ``pybamm_models`` entry point"""
+        known_entry_points = set(
+            ep.name for ep in pybamm.model_sets.get_entries("pybamm_models")
+        )
+        assert set(pybamm.model_sets.keys()) == known_entry_points
+        assert len(known_entry_points) == len(pybamm.model_sets)
+
+    def test_get_docstring(self):
+        """Test that :meth:`pybamm.model_sets.get_doctstring` works"""
+        docstring = pybamm.model_sets.get_docstring("SPM")
+        print(docstring)
+        assert re.search(
+            "Single Particle Model",
+            docstring,
+        )
+
+    def test_iter(self):
+        """Test that iterating `pybamm.models` iterates over keys"""
+        for k in pybamm.model_sets:
             assert isinstance(k, str)
