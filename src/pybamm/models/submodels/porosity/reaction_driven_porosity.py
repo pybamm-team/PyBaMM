@@ -43,21 +43,21 @@ class ReactionDriven(BaseModel):
                 ]
 
                 L_tot = (
-                        (L_sei_k - L_sei_0)
-                        + L_pl_k
-                        + L_dead_k
-                        + L_sei_cr_k * (roughness_k - 1)
-                    )
+                    (L_sei_k - L_sei_0)
+                    + L_pl_k
+                    + L_dead_k
+                    + L_sei_cr_k * (roughness_k - 1)
+                )
 
                 a_k = variables[
                         f"{Domain} electrode {self.phase_name}"
                         "surface area to volume ratio [m-1]"
                     ]
 
-                    # This assumes a thin film so curvature effects are neglected.
-                    # They could be included (e.g. for a sphere it is
-                    # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
-                    # but it is not clear if it is relevant or not.
+                # This assumes a thin film so curvature effects are neglected.
+                # They could be included (e.g. for a sphere it is
+                # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
+                # but it is not clear if it is relevant or not.
                 delta_eps_k += -a_k * L_tot
 
             domain_param = self.param.domain_params[domain.split()[0]]
