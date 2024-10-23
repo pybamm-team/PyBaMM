@@ -235,6 +235,30 @@ class TestSolution:
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
 
+    def test_copy_with_computed_variables(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"2u": 2 * u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Set up first solution
+        t1 = np.linspace(0, 1, 50)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+
+        sol1 = solver.solve(model, t1)
+
+        sol2 = sol1.copy()
+
+        assert (
+            sol1._variables[k] == sol2._variables[k] for k in sol1._variables.keys()
+        )
+
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
