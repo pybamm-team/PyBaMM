@@ -174,6 +174,47 @@ class TestSolution:
         ):
             sol_sum.y
 
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
+    def test_add_solutions_with_computed_variables(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"2u": 2 * u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Set up first solution
+        t1 = np.linspace(0, 1, 50)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+
+        sol1 = solver.solve(model, t1)
+
+        # second solution
+        t2 = np.linspace(2, 3, 50)
+        sol2 = solver.solve(model, t2)
+
+        sol_sum = sol1 + sol2
+
+        # check varaibles concat appropriately
+        assert sol_sum["2u"].data[0] == sol1["2u"].data[0]
+        assert sol_sum["2u"].data[-1] == sol2["2u"].data[-1]
+        # Check functions still work
+        sol_sum["2u"].unroll()
+
+        # add a solution with computed variable to an empty solution
+        empty_sol = pybamm.Solution(
+            sol1.all_ts, sol1["2u"].base_variables_data, model, {u: 0, v: 1}
+        )
+
+        sol4 = empty_sol + sol2
+        assert sol4["2u"] == sol2["2u"]
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
