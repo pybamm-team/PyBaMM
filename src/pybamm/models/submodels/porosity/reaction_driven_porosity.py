@@ -50,7 +50,7 @@ class ReactionDriven(BaseModel):
                     )
 
                 a_k = variables[
-                        f"{Domain} electrode {phase_name}"
+                        f"{Domain} electrode {self.phase_name}"
                         "surface area to volume ratio [m-1]"
                     ]
 
