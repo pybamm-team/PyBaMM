@@ -135,15 +135,13 @@ class ProcessedVariable:
         inputs = self.all_inputs_casadi
 
         # Remove all empty ts
-        idxs_nonempty = np.where([ti.size > 0 for ti in ts])[0]
+        idxs = np.where([ti.size > 0 for ti in ts])[0]
 
         # Find the indices of the time points to observe
-        if full_range:
-            idxs = idxs_nonempty
-        else:
-            ts_nonempty = [ts[idx] for idx in idxs_nonempty]
+        if not full_range:
+            ts_nonempty = [ts[idx] for idx in idxs]
             idxs_subset = _find_ts_indices(ts_nonempty, t)
-            idxs = idxs_nonempty[idxs_subset]
+            idxs = idxs[idxs_subset]
 
         # Extract the time points and inputs
         ts = [ts[idx] for idx in idxs]
