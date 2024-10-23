@@ -140,6 +140,33 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             return pybamm.Matrix(matrix)
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Computes the square of the gradient of a symbol.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol for which to compute the gradient squared.
+        discretised_symbol : :class:`pybamm.Vector`
+            The discretised variable for which to compute the gradient squared.
+        boundary_conditions : dict
+            Boundary conditions for the symbol.
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            The gradient squared of the symbol.
+        """
+        domain = symbol.domain
+        gradient_matrix = self.gradient_matrix(domain, symbol.domains)
+
+        # Compute gradient squared: (∇u)^2 = u^T L^T L u
+        gradient_squared_matrix = gradient_matrix.T @ gradient_matrix
+        gradient_squared_result = gradient_squared_matrix @ discretised_symbol
+
+        return gradient_squared_result
+
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
