@@ -235,6 +235,9 @@ class TestSolution:
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
 
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
     def test_copy_with_computed_variables(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
