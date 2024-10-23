@@ -39,6 +39,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
+
 def graphite_volume_change_Ai2020(sto, c_s_max):
     """
     Graphite particle volume change as a function of stochiometry [1, 2].
@@ -71,7 +72,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     p8 = -5.706
     p9 = 0.386
     p10 = -4.966e-05
-    t_change = 50*(
+    t_change = 50 * (
         p1 * sto**9
         + p2 * sto**8
         + p3 * sto**7
@@ -88,6 +89,8 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     t_change = omega * c_s_max * sto
     """
     return t_change
+
+
 def graphite_cracking_rate_Ai2020(T_dim):
     """
     Graphite particle cracking rate as a function of temperature [1, 2].
@@ -114,6 +117,7 @@ def graphite_cracking_rate_Ai2020(T_dim):
     Eac_cr = 0  # to be implemented
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
 
 def silicon_ocp_lithiation_Mark2016(sto):
     """
@@ -203,7 +207,6 @@ def silicon_ocp_delithiation_Mark2016(sto):
     return U_delithiation
 
 
-
 def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
     c_e, c_s_surf, c_s_max, T
 ):
@@ -243,6 +246,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
 
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
+
 def silicon_volume_change_Ai2020(sto, c_s_max):
     """
     Silicon particle volume change as a function of stochiometry [1, 2].
@@ -275,7 +279,7 @@ def silicon_volume_change_Ai2020(sto, c_s_max):
     p8 = -5.706
     p9 = 0.386
     p10 = -4.966e-05
-    t_change = 50*(
+    t_change = 50 * (
         p1 * sto**9
         + p2 * sto**8
         + p3 * sto**7
@@ -292,6 +296,8 @@ def silicon_volume_change_Ai2020(sto, c_s_max):
     t_change = omega * c_s_max * sto
     """
     return t_change
+
+
 def silicon_cracking_rate_Ai2020(T_dim):
     """
     Silicon particle cracking rate as a function of temperature [1, 2].
@@ -318,6 +324,8 @@ def silicon_cracking_rate_Ai2020(T_dim):
     Eac_cr = 0  # to be implemented
     arrhenius = pybamm.exp(Eac_cr / pybamm.constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
+
+
 def nmc_LGM50_ocp_Chen2020(sto):
     """
     LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
@@ -345,7 +353,6 @@ def nmc_LGM50_ocp_Chen2020(sto):
         + 17.5842 * np.tanh(15.9308 * (sto - 0.3120))
     )
     return u_eq
-
 
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
@@ -446,6 +453,7 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
 
     return sigma_e
 
+
 def volume_change_Ai2020(sto, c_s_max):
     """
     Particle volume change as a function of stochiometry [1, 2].
@@ -471,6 +479,8 @@ def volume_change_Ai2020(sto, c_s_max):
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
     t_change = omega * c_s_max * sto
     return t_change
+
+
 def cracking_rate_Ai2020(T_dim):
     """
     Particle cracking rate as a function of temperature [1, 2].

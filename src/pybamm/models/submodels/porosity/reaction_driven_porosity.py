@@ -29,41 +29,18 @@ class ReactionDriven(BaseModel):
             if domain == "separator":
                 pass  # separator porosity does not change
             else:
-                dom = domain.split()[0]
-                Domain = dom.capitalize()
-                roughness_k = variables[f"{Domain} electrode roughness ratio"]
-                SEI_option = getattr(self.options, dom)["SEI"]
-                phases_option = getattr(self.options, dom)["particle phases"]
-                phases = self.options.phases[dom]
-                for phase in phases:
-                    if phases_option == "1" and phase == "primary":
-                        # `domain` has one phase
-                        phase_name = ""
-                        pref = ""
-                    else:
-                        # `domain` has more than one phase
-                        phase_name = phase + " "
-                        pref = phase.capitalize() + ": "
-                    L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
-                    if SEI_option == "none":
-                        L_sei_0 = pybamm.Scalar(0)
-                    else:
-                        L_inner_0 = pybamm.Parameter(
-                            f"{pref}Initial inner SEI thickness [m]"
-                        )
-                        L_outer_0 = pybamm.Parameter(
-                            f"{pref}Initial outer SEI thickness [m]"
-                        )
-                        L_sei_0 = L_inner_0 + L_outer_0
-                    L_pl_k = variables[
-                        f"{Domain} {phase_name}lithium plating thickness [m]"
-                    ]
-                    L_dead_k = variables[
-                        f"{Domain} {phase_name}dead lithium thickness [m]"
-                    ]
-                    L_sei_cr_k = variables[
-                        f"{Domain} total {phase_name}SEI on cracks thickness [m]"
-                    ]
+                Domain = domain.split()[0].capitalize()
+                L_sei_k = variables[f"{Domain} total SEI thickness [m]"]
+                if Domain == "Negative":
+                    L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
+                elif Domain == "Positive":
+                    L_sei_0 = self.param.p.prim.L_inner_0 + self.param.p.prim.L_outer_0
+                L_pl_k = variables[f"{Domain} lithium plating thickness [m]"]
+                L_dead_k = variables[f"{Domain} dead lithium thickness [m]"]
+                L_sei_cr_k = variables[f"{Domain} total SEI on cracks thickness [m]"]
+                roughness_k = variables[
+                    f"{Domain} electrode {self.phase_name}roughness ratio"
+                ]
 
                     L_tot = (
                         (L_sei_k - L_sei_0)
