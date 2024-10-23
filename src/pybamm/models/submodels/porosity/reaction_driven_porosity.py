@@ -25,36 +25,63 @@ class ReactionDriven(BaseModel):
     def get_coupled_variables(self, variables):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
+            delta_eps_k = 0
             if domain == "separator":
-                delta_eps_k = 0  # separator porosity does not change
+                pass  # separator porosity does not change
             else:
-                Domain = domain.split()[0].capitalize()
-                L_sei_k = variables[f"{Domain} total SEI thickness [m]"]
-                if Domain == "Negative":
-                    L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
-                elif Domain == "Positive":
-                    L_sei_0 = self.param.p.prim.L_inner_0 + self.param.p.prim.L_outer_0
-                L_pl_k = variables[f"{Domain} lithium plating thickness [m]"]
-                L_dead_k = variables[f"{Domain} dead lithium thickness [m]"]
-                L_sei_cr_k = variables[f"{Domain} total SEI on cracks thickness [m]"]
-                roughness_k = variables[f"{Domain} electrode {self.phase_name}roughness ratio"]
+                dom = domain.split()[0]
+                Domain = dom.capitalize()
+                roughness_k = variables[f"{Domain} electrode roughness ratio"]
+                SEI_option = getattr(self.options, dom)["SEI"]
+                phases_option = getattr(self.options, dom)["particle phases"]
+                phases = self.options.phases[dom]
+                for phase in phases:
+                    if phases_option == "1" and phase == "primary":
+                        # `domain` has one phase
+                        phase_name = ""
+                        pref = ""
+                    else:
+                        # `domain` has more than one phase
+                        phase_name = phase + " "
+                        pref = phase.capitalize() + ": "
+                    L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
+                    if SEI_option == "none":
+                        L_sei_0 = pybamm.Scalar(0)
+                    else:
+                        L_inner_0 = pybamm.Parameter(
+                            f"{pref}Initial inner SEI thickness [m]"
+                        )
+                        L_outer_0 = pybamm.Parameter(
+                            f"{pref}Initial outer SEI thickness [m]"
+                        )
+                        L_sei_0 = L_inner_0 + L_outer_0
+                    L_pl_k = variables[
+                        f"{Domain} {phase_name}lithium plating thickness [m]"
+                    ]
+                    L_dead_k = variables[
+                        f"{Domain} {phase_name}dead lithium thickness [m]"
+                    ]
+                    L_sei_cr_k = variables[
+                        f"{Domain} total {phase_name}SEI on cracks thickness [m]"
+                    ]
 
-                L_tot = (
-                    (L_sei_k - L_sei_0)
-                    + L_pl_k
-                    + L_dead_k
-                    + L_sei_cr_k * (roughness_k - 1)
-                )
+                    L_tot = (
+                        (L_sei_k - L_sei_0)
+                        + L_pl_k
+                        + L_dead_k
+                        + L_sei_cr_k * (roughness_k - 1)
+                    )
 
-                a_k = variables[
-                    f"{Domain} electrode surface area to volume ratio [m-1]"
-                ]
+                    a_k = variables[
+                        f"{Domain} electrode {phase_name}"
+                        "surface area to volume ratio [m-1]"
+                    ]
 
-                # This assumes a thin film so curvature effects are neglected.
-                # They could be included (e.g. for a sphere it is
-                # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
-                # but it is not clear if it is relevant or not.
-                delta_eps_k = -a_k * L_tot
+                    # This assumes a thin film so curvature effects are neglected.
+                    # They could be included (e.g. for a sphere it is
+                    # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
+                    # but it is not clear if it is relevant or not.
+                    delta_eps_k += -a_k * L_tot
 
             domain_param = self.param.domain_params[domain.split()[0]]
             eps_k = domain_param.epsilon_init + delta_eps_k
