@@ -10,6 +10,7 @@ import hashlib
 import warnings
 from functools import lru_cache
 from datetime import timedelta
+import pybamm.telemetry
 from pybamm.util import import_optional_dependency
 
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -450,6 +451,8 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
+        pybamm.telemetry.capture("simulation-solved")
+
         # Setup
         if solver is None:
             solver = self._solver
