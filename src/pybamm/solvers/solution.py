@@ -516,7 +516,7 @@ class Solution:
         if not self.variables_returned:
             all_ys = self.all_ys[-1][:, -1:]
         else:
-            # Get first state from initial conditions as all_ys is empty
+            # Get last state from y_event as all_ys is empty
             all_ys = self.y_event.reshape(len(self.y_event), 1)
 
         new_sol = Solution(

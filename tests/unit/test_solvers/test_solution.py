@@ -286,6 +286,39 @@ class TestSolution:
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
 
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
+    def test_first_last_state_empty_y(self):
+        # check that first and last state work when y is empty
+        # due to only variables being returned (required for experiments)
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"2u": 2 * u, "4u": 4 * u}
+        model._summary_variables = {"4u": model.variables["4u"]}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Set up first solution
+        t1 = np.linspace(0, 1, 50)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+
+        sol1 = solver.solve(model, t1)
+
+        np.testing.assert_array_equal(
+            sol1.first_state.all_ys[0], np.array([[0.0], [1.0]])
+        )
+        # check summay variables not in the solve can be evaluated at the final timestep
+        # via 'last_state
+        np.testing.assert_array_almost_equal(
+            sol1.last_state["4u"].entries, np.array([4.0])
+        )
+
     def test_cycles(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
