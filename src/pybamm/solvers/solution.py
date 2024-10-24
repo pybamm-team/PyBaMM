@@ -62,6 +62,10 @@ class Solution:
         True if sensitivities included as the solution of the explicit forwards
         equations.  False if no sensitivities included/wanted. Dict if sensitivities are
         provided as a dict of {parameter: [sensitivities]} pairs.
+    variables_returned: bool
+        Bool to indicate if `all_ys` contains the full state vector, or is empty because
+        only requested variables have been returned. True if `output_variables` is used
+        with a solver, otherwise False.
 
     """
 
@@ -76,6 +80,7 @@ class Solution:
         termination="final time",
         all_sensitivities=False,
         all_yps=None,
+        variables_returned=False,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
@@ -92,6 +97,8 @@ class Solution:
         if (all_yps is not None) and not isinstance(all_yps, list):
             all_yps = [all_yps]
         self._all_yps = all_yps
+
+        self.variables_returned = variables_returned
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -460,20 +467,15 @@ class Solution:
         else:
             all_yps = self.all_yps[0][:, :1]
 
-        # check if all_ys is empty (i.e. if IDAKLU solver + output_variables used)
-        if isinstance(self.all_ys[-1], casadi.DM):
-            empty_ys = False
+        if not self.variables_returned:
+            all_ys = self.all_ys[0][:, :1]
         else:
-            empty_ys = self.all_ys[0].shape[0] == 0
+            # Get first state from initial conditions as all_ys is empty
+            all_ys = self.all_models[0].y0full.reshape(-1, 1)
 
         new_sol = Solution(
             self.all_ts[0][:1],
-            # Get first state from initial conditions if all_ys is empty
-            (
-                self.all_ys[0][:, :1]
-                if not empty_ys
-                else self.all_models[0].y0full.reshape(-1, 1)
-            ),
+            all_ys,
             self.all_models[:1],
             self.all_inputs[:1],
             None,
@@ -481,6 +483,7 @@ class Solution:
             "final time",
             all_sensitivities=sensitivities,
             all_yps=all_yps,
+            variables_returned=self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
@@ -511,19 +514,15 @@ class Solution:
         else:
             all_yps = self.all_yps[-1][:, -1:]
 
-        # check if all_ys is empty (i.e. if IDAKLU solver + output_variables used)
-        if isinstance(self.all_ys[-1], casadi.DM):
-            empty_ys = False
+        if not self.variables_returned:
+            all_ys = self.all_ys[-1][:, -1:]
         else:
-            empty_ys = self.all_ys[-1].shape[0] == 0
+            # Get first state from initial conditions as all_ys is empty
+            all_ys = self.y_event.reshape(len(self.y_event), 1)
 
         new_sol = Solution(
             self.all_ts[-1][-1:],
-            (
-                self.all_ys[-1][:, -1:]
-                if not empty_ys
-                else self.y_event.reshape(len(self.y_event), 1)
-            ),
+            all_ys,
             self.all_models[-1:],
             self.all_inputs[-1:],
             self.t_event,
@@ -531,6 +530,7 @@ class Solution:
             self.termination,
             all_sensitivities=sensitivities,
             all_yps=all_yps,
+            variables_returned=self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
@@ -967,6 +967,7 @@ class Solution:
             other.termination,
             all_sensitivities=all_sensitivities,
             all_yps=all_yps,
+            variables_returned=other.variables_returned,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -990,7 +991,7 @@ class Solution:
         ):
             if not self._variables:
                 new_sol._variables = other._variables.copy()
-            elif self._variables:
+            else:
                 new_sol._variables = {
                     v: self._variables[v]._update(other._variables[v], new_sol)
                     for v in self._variables.keys()
@@ -1013,6 +1014,7 @@ class Solution:
             self.termination,
             self._all_sensitivities,
             self.all_yps,
+            self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -1131,6 +1133,7 @@ def make_cycle_solution(
         sum_sols.termination,
         sum_sols._all_sensitivities,
         sum_sols.all_yps,
+        sum_sols.variables_returned,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions

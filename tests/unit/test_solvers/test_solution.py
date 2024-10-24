@@ -206,6 +206,8 @@ class TestSolution:
         assert sol_sum["2u"].data[-1] == sol2["2u"].data[-1]
         # Check functions still work
         sol_sum["2u"].unroll()
+        # check solution still tagged as 'variables_returned'
+        assert sol_sum.variables_returned is True
 
         # add a solution with computed variable to an empty solution
         empty_sol = pybamm.Solution(
@@ -214,6 +216,7 @@ class TestSolution:
 
         sol4 = empty_sol + sol2
         assert sol4["2u"] == sol2["2u"]
+        assert sol4.variables_returned is True
 
     def test_copy(self):
         # Set up first solution
@@ -261,6 +264,7 @@ class TestSolution:
         assert (
             sol1._variables[k] == sol2._variables[k] for k in sol1._variables.keys()
         )
+        assert sol2.variables_returned is True
 
     def test_last_state(self):
         # Set up first solution
