@@ -483,7 +483,6 @@ class Solution:
             "final time",
             all_sensitivities=sensitivities,
             all_yps=all_yps,
-            variables_returned=self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
@@ -530,7 +529,6 @@ class Solution:
             self.termination,
             all_sensitivities=sensitivities,
             all_yps=all_yps,
-            variables_returned=self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
@@ -601,15 +599,11 @@ class Solution:
         # Iterate through all models, some may be in the list several times and
         # therefore only get set up once
         vars_casadi = []
-        for i, (model, ts, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ts, self.all_ys, self.all_inputs, vars_pybamm)
+        for i, (model, ys, inputs, var_pybamm) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
         ):
-            if (
-                ys.size == 0
-                and var_pybamm.has_symbol_of_classes(
-                    pybamm.expression_tree.state_vector.StateVector
-                )
-                and not ts.size == 0
+            if self.variables_returned and var_pybamm.has_symbol_of_classes(
+                pybamm.expression_tree.state_vector.StateVector
             ):
                 raise KeyError(
                     f"Cannot process variable '{variable}' as it was not part of the "

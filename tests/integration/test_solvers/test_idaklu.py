@@ -168,9 +168,10 @@ class TestIDAKLUSolver:
                     "Pressure [Pa]",  # 1D variable
                     "Positive particle effective diffusivity [m2.s-1]",  # 2D variable
                 ]
-                solver = pybamm.IDAKLUSolver(output_variables=output_variables)
             else:
-                solver = pybamm.IDAKLUSolver()
+                output_variables = None
+
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
 
             experiment = pybamm.Experiment(
                 [
