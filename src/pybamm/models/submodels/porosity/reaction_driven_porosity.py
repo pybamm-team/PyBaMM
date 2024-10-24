@@ -25,8 +25,9 @@ class ReactionDriven(BaseModel):
     def get_coupled_variables(self, variables):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
+            delta_eps_k = 0
             if domain == "separator":
-                delta_eps_k = 0  # separator porosity does not change
+                pass  # separator porosity does not change
             else:
                 Domain = domain.split()[0].capitalize()
                 L_sei_k = variables[f"{Domain} total SEI thickness [m]"]
@@ -37,7 +38,9 @@ class ReactionDriven(BaseModel):
                 L_pl_k = variables[f"{Domain} lithium plating thickness [m]"]
                 L_dead_k = variables[f"{Domain} dead lithium thickness [m]"]
                 L_sei_cr_k = variables[f"{Domain} total SEI on cracks thickness [m]"]
-                roughness_k = variables[f"{Domain} electrode roughness ratio"]
+                roughness_k = variables[
+                    f"{Domain} electrode {self.phase_name}roughness ratio"
+                ]
 
                 L_tot = (
                     (L_sei_k - L_sei_0)
@@ -47,14 +50,15 @@ class ReactionDriven(BaseModel):
                 )
 
                 a_k = variables[
-                    f"{Domain} electrode surface area to volume ratio [m-1]"
+                    f"{Domain} electrode {self.phase_name}"
+                    "surface area to volume ratio [m-1]"
                 ]
 
                 # This assumes a thin film so curvature effects are neglected.
                 # They could be included (e.g. for a sphere it is
                 # a_n * (L_tot + L_tot ** 2 / R_n + L_tot ** # 3 / (3 * R_n ** 2)))
                 # but it is not clear if it is relevant or not.
-                delta_eps_k = -a_k * L_tot
+                delta_eps_k += -a_k * L_tot
 
             domain_param = self.param.domain_params[domain.split()[0]]
             eps_k = domain_param.epsilon_init + delta_eps_k
