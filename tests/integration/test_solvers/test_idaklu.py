@@ -152,3 +152,55 @@ class TestIDAKLUSolver:
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
+
+    def test_with_experiments(self):
+        summary_vars = []
+        sols = []
+        for out_vars in [True, False]:
+            model = pybamm.lithium_ion.SPM()
+
+            if out_vars:
+                output_variables = [
+                    "Discharge capacity [A.h]",  # 0D variables
+                    "Time [s]",
+                    "Current [A]",
+                    "Voltage [V]",
+                    "Pressure [Pa]",  # 1D variable
+                    "Positive particle effective diffusivity [m2.s-1]",  # 2D variable
+                ]
+            else:
+                output_variables = None
+
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+
+            experiment = pybamm.Experiment(
+                [
+                    (
+                        "Charge at 1C until 4.2 V",
+                        "Hold at 4.2 V until C/50",
+                        "Rest for 1 hour",
+                    )
+                ]
+            )
+
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=solver,
+            )
+
+            sol = sim.solve()
+            sols.append(sol)
+            summary_vars.append(sol.summary_variables)
+
+        # check computed variables are propegated sucessfully
+        np.testing.assert_array_equal(
+            sols[0]["Pressure [Pa]"].data, sols[1]["Pressure [Pa]"].data
+        )
+        np.testing.assert_array_almost_equal(
+            sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data
+        )
+
+        # check summary variables are the same if output variables are specified
+        for var in summary_vars[0].keys():
+            assert summary_vars[0][var] == summary_vars[1][var]

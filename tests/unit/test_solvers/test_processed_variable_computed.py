@@ -1,7 +1,7 @@
 #
 # Tests for the Processed Variable Computed class
 #
-# This class forms a container for variables (and sensitivities) calculted
+# This class forms a container for variables (and sensitivities) calculated
 #  by the idaklu solver, and does not possesses any capability to calculate
 #  values itself since it does not have access to the full state vector
 #
@@ -76,11 +76,12 @@ class TestProcessedVariableComputed:
         t_sol = np.array([0])
         y_sol = np.array([1])[:, np.newaxis]
         var_casadi = to_casadi(var, y_sol)
+        sol = pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {})
         processed_var = pybamm.ProcessedVariableComputed(
             [var],
             [var_casadi],
             [y_sol],
-            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            sol,
         )
         # Assert that the processed variable is the same as the solution
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
@@ -93,6 +94,22 @@ class TestProcessedVariableComputed:
         # Check cumtrapz workflow produces no errors
         processed_var.cumtrapz_ic = 1
         processed_var.entries
+
+        # check _update
+        t_sol2 = np.array([1])
+        y_sol2 = np.array([2])[:, np.newaxis]
+        var_casadi = to_casadi(var, y_sol2)
+        sol_2 = pybamm.Solution(t_sol2, y_sol2, pybamm.BaseModel(), {})
+        processed_var2 = pybamm.ProcessedVariableComputed(
+            [var],
+            [var_casadi],
+            [y_sol2],
+            sol_2,
+        )
+
+        comb_sol = sol + sol_2
+        comb_var = processed_var._update(processed_var2, comb_sol)
+        np.testing.assert_array_equal(comb_var.entries, np.append(y_sol, y_sol2))
 
     # check empty sensitivity works
     def test_processed_variable_0D_no_sensitivity(self):
@@ -216,6 +233,60 @@ class TestProcessedVariableComputed:
         c.mesh = mesh["SEI layer"]
         c_casadi = to_casadi(c, y_sol)
         pybamm.ProcessedVariableComputed([c], [c_casadi], [y_sol], solution)
+
+    def test_processed_variable_1D_update(self):
+        # variable 1
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol1 = disc.process_symbol(x).entries[:, 0]
+        var_sol1 = disc.process_symbol(var)
+        t_sol1 = np.linspace(0, 1)
+        y_sol1 = np.ones_like(x_sol1)[:, np.newaxis] * np.linspace(0, 5)
+
+        var_casadi1 = to_casadi(var_sol1, y_sol1)
+        sol1 = pybamm.Solution(t_sol1, y_sol1, pybamm.BaseModel(), {})
+        processed_var1 = pybamm.ProcessedVariableComputed(
+            [var_sol1],
+            [var_casadi1],
+            [y_sol1],
+            sol1,
+        )
+
+        # variable 2 -------------------
+        var2 = pybamm.Variable("var2", domain=["negative electrode", "separator"])
+        z = pybamm.SpatialVariable("z", domain=["negative electrode", "separator"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var2])
+        z_sol2 = disc.process_symbol(z).entries[:, 0]
+        var_sol2 = disc.process_symbol(var2)
+        t_sol2 = np.linspace(2, 3)
+        y_sol2 = np.ones_like(z_sol2)[:, np.newaxis] * np.linspace(5, 1)
+
+        var_casadi2 = to_casadi(var_sol2, y_sol2)
+        sol2 = pybamm.Solution(t_sol2, y_sol2, pybamm.BaseModel(), {})
+        var_2 = pybamm.ProcessedVariableComputed(
+            [var_sol2],
+            [var_casadi2],
+            [y_sol2],
+            sol2,
+        )
+
+        comb_sol = sol1 + sol2
+        comb_var = processed_var1._update(var_2, comb_sol)
+
+        # Ordering from idaklu with output_variables set is different to
+        # the full solver
+        y_sol1 = y_sol1.reshape((y_sol1.shape[1], y_sol1.shape[0])).transpose()
+        y_sol2 = y_sol2.reshape((y_sol2.shape[1], y_sol2.shape[0])).transpose()
+
+        np.testing.assert_array_equal(
+            comb_var.entries, np.concatenate((y_sol1, y_sol2), axis=1)
+        )
+        np.testing.assert_array_equal(comb_var.entries, comb_var.data)
 
     def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(

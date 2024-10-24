@@ -1452,6 +1452,7 @@ class BaseSolver:
                 solution.t_event,
                 solution.y_event,
                 solution.termination,
+                variables_returned=solution.variables_returned,
             )
             event_sol.solve_time = 0
             event_sol.integration_time = 0
