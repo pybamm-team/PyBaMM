@@ -313,11 +313,11 @@ class QuickPlot:
             first_variable = first_solution[0]
             domain = first_variable.domain
             # check all other solutions against the first solution
-            for _idx, variable in enumerate(first_solution):
+            for idx, variable in enumerate(first_solution):
                 if variable.domain != domain:
                     raise ValueError(
                         "Mismatching variable domains. "
-                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[_idx]}' has domain '{variable.domain}'"
+                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[ idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
 
@@ -494,7 +494,7 @@ class QuickPlot:
         plt = import_optional_dependency("matplotlib.pyplot")
         gridspec = import_optional_dependency("matplotlib.gridspec")
 
-        if isinstance(t, float):
+        if isinstance(t, (int, float)):
             t = [t]
 
         self.fig = plt.figure(figsize=self.figsize)
@@ -538,7 +538,7 @@ class QuickPlot:
                         (self.plots[key][i][j],) = ax.plot(
                             full_t / self.time_scaling_factor,
                             variable(full_t),
-                            color=self.colors[i],  # Different colors for plot lines
+                            color=self.colors[i],
                             linestyle=linestyle,
                         )
                         variable_handles.append(self.plots[key][0][j])
@@ -547,7 +547,7 @@ class QuickPlot:
                 ax.set_ylim(y_min, y_max)
 
                 # Add vertical lines for each time in the list, using different colors for each time
-                for _idx, t_single in enumerate(t):
+                for idx, t_single in enumerate(t):
                     t_in_seconds = t_single * self.time_scaling_factor
                     (self.time_lines[key],) = ax.plot(
                         [
@@ -557,7 +557,7 @@ class QuickPlot:
                         [y_min, y_max],
                         "--",  # Dashed lines
                         lw=1.5,
-                        color=time_colors[_idx],  # Different color for each time
+                        color=time_colors[idx],  # Different color for each time
                         label=f"t = {t_single:.2f} {self.time_unit}",
                     )
                 ax.legend()
@@ -568,7 +568,7 @@ class QuickPlot:
                 spatial_var_name = next(iter(spatial_vars.keys()))
                 ax.set_xlabel(f"{spatial_var_name} [{self.spatial_unit}]")
 
-                for _idx, t_single in enumerate(t):
+                for idx, t_single in enumerate(t):
                     t_in_seconds = t_single * self.time_scaling_factor
 
                     for i, variable_list in enumerate(variable_lists):
@@ -581,9 +581,7 @@ class QuickPlot:
                             (self.plots[key][i][j],) = ax.plot(
                                 self.first_spatial_variable[key],
                                 variable(t_in_seconds, **spatial_vars),
-                                color=time_colors[
-                                    _idx
-                                ],  # Different color for each time
+                                color=time_colors[idx],  # Different color for each time
                                 linestyle=linestyle,
                                 label=f"t = {t_single:.2f} {self.time_unit}",  # Add time label
                                 zorder=10,
@@ -620,7 +618,8 @@ class QuickPlot:
                     self.plots[key][0][0] = contour_plot
                     self.colorbars[key] = self.fig.colorbar(contour_plot, ax=ax)
 
-                    # Add time to the colorbar title or axis title to indicate which time it represents
+                    self.plots[key][0][1] = var
+
                     ax.set_title(f"t = {t_single:.2f} {self.time_unit}")
 
         # Set global legend if there are multiple models
