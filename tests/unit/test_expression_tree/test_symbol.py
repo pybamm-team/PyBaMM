@@ -1,6 +1,7 @@
 #
 # Test for the Symbol class
 #
+import tempfile
 
 import pytest
 import os
@@ -393,15 +394,14 @@ class TestSymbol:
 
     def test_symbol_visualise(self):
         with TemporaryDirectory() as dir_name:
-            test_stub = os.path.join(dir_name, "test_visualize")
-            test_name = f"{test_stub}.png"
+            temp = tempfile.NamedTemporaryFile(dir=dir_name, prefix="test_visualize", suffix=".png")
             c = pybamm.Variable("c", "negative electrode")
             d = pybamm.Variable("d", "negative electrode")
             sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
-            sym.visualise(test_name)
-            assert os.path.exists(test_name)
+            sym.visualise(temp.name)
+            assert os.path.exists(temp.name)
             with pytest.raises(ValueError):
-                sym.visualise(test_stub)
+                sym.visualise(temp.name[:-4])
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var", domain="test")
