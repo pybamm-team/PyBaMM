@@ -1,9 +1,9 @@
+import numpy as np
 import numpy.typing as npt
 
 #
 # Parameter values for a simulation
 #
-import numpy as np
 import pybamm
 import numbers
 from pprint import pformat

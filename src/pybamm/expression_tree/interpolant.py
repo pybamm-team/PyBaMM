@@ -1,10 +1,10 @@
+import numpy as np
 import numpy.typing as npt
 
 #
 # Interpolating class
 #
 from __future__ import annotations
-import numpy as np
 from scipy import interpolate
 from collections.abc import Sequence
 import numbers

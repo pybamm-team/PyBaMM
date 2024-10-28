@@ -1,6 +1,6 @@
+import numpy as np
 import numpy.typing as npt
 import pybamm
-import numpy as np
 import logging
 import warnings
 import numbers

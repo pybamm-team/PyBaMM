@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -5,7 +6,6 @@ import numpy.typing as npt
 #
 from __future__ import annotations
 
-import numpy as np
 from scipy.sparse import csr_matrix, issparse
 import sympy
 import pybamm

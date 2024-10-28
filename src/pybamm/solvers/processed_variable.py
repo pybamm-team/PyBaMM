@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -5,7 +6,6 @@ import numpy.typing as npt
 #
 from typing import Optional
 import casadi
-import numpy as np
 import pybamm
 from scipy.integrate import cumulative_trapezoid
 import xarray as xr

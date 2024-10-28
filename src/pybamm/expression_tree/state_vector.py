@@ -1,10 +1,10 @@
+import numpy as np
 import numpy.typing as npt
 
 #
 # State Vector class
 #
 from __future__ import annotations
-import numpy as np
 from scipy.sparse import csr_matrix, vstack
 
 import pybamm

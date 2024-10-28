@@ -1,10 +1,10 @@
+import numpy as np
 import numpy.typing as npt
 
 #
 # Interface for discretisation
 #
 import pybamm
-import numpy as np
 from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv

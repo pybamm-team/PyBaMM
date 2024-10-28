@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 #
 # Tests for current input functions
@@ -5,7 +6,6 @@ import numpy.typing as npt
 
 import pybamm
 import numbers
-import numpy as np
 import pandas as pd
 import pytest
 from tests import no_internet_connection

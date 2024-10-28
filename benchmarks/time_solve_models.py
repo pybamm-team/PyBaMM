@@ -1,10 +1,10 @@
+import numpy as np
 import numpy.typing as npt
 # Write the benchmarking functions here.
 # See "Writing benchmarks" in the asv docs for more information.
 
 import pybamm
 from benchmarks.benchmark_utils import set_random_seed
-import numpy as np
 
 
 def solve_model_once(model, solver, t_eval, t_interp):

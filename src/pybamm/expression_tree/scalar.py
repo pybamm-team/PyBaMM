@@ -1,10 +1,10 @@
+import numpy as np
 import numpy.typing as npt
 
 #
 # Scalar class
 #
 from __future__ import annotations
-import numpy as np
 import sympy
 from typing import Literal
 

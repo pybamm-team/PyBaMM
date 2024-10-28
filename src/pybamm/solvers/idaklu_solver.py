@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -7,7 +8,6 @@ import numpy.typing as npt
 import os
 import casadi
 import pybamm
-import numpy as np
 import numbers
 import scipy.sparse as sparse
 from scipy.linalg import bandwidth

@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -7,7 +8,6 @@ import casadi
 import copy
 import json
 import numbers
-import numpy as np
 import pickle
 import pybamm
 import pandas as pd

@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -5,7 +6,6 @@ import numpy.typing as npt
 #
 from __future__ import annotations
 import numbers
-import numpy as np
 import scipy.sparse
 import pybamm
 

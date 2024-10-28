@@ -1,10 +1,10 @@
+import numpy as np
 import numpy.typing as npt
 
 #
 # Private classes and functions for experiment steps
 #
 import pybamm
-import numpy as np
 from datetime import datetime
 from .step_termination import _read_termination
 import numbers

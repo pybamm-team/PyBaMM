@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -7,7 +8,6 @@ from __future__ import annotations
 import copy
 from collections import defaultdict
 
-import numpy as np
 import sympy
 from scipy.sparse import issparse, vstack
 from collections.abc import Sequence

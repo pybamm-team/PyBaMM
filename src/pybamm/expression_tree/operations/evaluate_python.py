@@ -1,3 +1,4 @@
+import numpy as np
 import numpy.typing as npt
 
 #
@@ -8,7 +9,6 @@ import numbers
 from collections import OrderedDict
 from numpy.typing import ArrayLike
 
-import numpy as np
 import scipy.sparse
 
 import pybamm
