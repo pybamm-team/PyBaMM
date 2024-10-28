@@ -161,6 +161,36 @@ class TestScikitFiniteElement:
         ans = eqn_disc.evaluate(None, 3 * y**2)
         np.testing.assert_array_less(0, ans)
 
+    def test_gradient_squared(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32, include_particles=False)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        y = mesh["current collector"].coordinates[0, :]
+        z = mesh["current collector"].coordinates[1, :]
+
+        gradient_squared = pybamm.grad_squared(var)
+        grad_squared_disc = disc.process_symbol(gradient_squared)
+        evaluated_gradient_squared = grad_squared_disc.evaluate(
+            None, 3 * y**2 + 2 * z**2
+        )
+
+        expected_result = 36 * y**2 + 16 * z**2
+        expected_result = expected_result[:, np.newaxis]
+
+        try:
+            np.testing.assert_array_almost_equal(
+                evaluated_gradient_squared, expected_result
+            )
+        except AssertionError as e:
+            print("AssertionError:", e)
+
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32, include_particles=False)
         spatial_methods = {
