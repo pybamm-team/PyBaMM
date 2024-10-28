@@ -4,6 +4,8 @@ import sys
 
 import pybamm
 import uuid
+from pathlib import Path
+import platformdirs
 
 
 class TestConfig:
@@ -104,3 +106,52 @@ class TestConfig:
         captured = capsys.readouterr()
         assert "Do you want to enable telemetry? (Y/n):" in captured.out
         assert "Timeout reached. Defaulting to not enabling telemetry." in captured.out
+
+    def test_generate_and_read(self, monkeypatch, tmp_path):
+        # Mock is_running_tests to return False
+        monkeypatch.setattr(pybamm.config, "is_running_tests", lambda: False)
+
+        # Mock ask_user_opt_in to return True
+        monkeypatch.setattr(pybamm.config, "ask_user_opt_in", lambda: True)
+
+        # Mock telemetry capture
+        capture_called = False
+
+        def mock_capture(event):
+            nonlocal capture_called
+            assert event == "user-opted-in"
+            capture_called = True
+
+        monkeypatch.setattr(pybamm.telemetry, "capture", mock_capture)
+
+        # Mock config directory
+        monkeypatch.setattr(platformdirs, "user_config_dir", lambda x: str(tmp_path))
+
+        # Test generate() creates new config
+        pybamm.config.generate()
+
+        # Verify config was created
+        config = pybamm.config.read()
+        assert config is not None
+        assert config["enable_telemetry"] is True
+        assert "uuid" in config
+        assert capture_called is True
+
+        # Test generate() does nothing if config exists
+        capture_called = False
+        pybamm.config.generate()
+        assert capture_called is False
+
+    def test_read_uuid_from_file_no_file(self):
+        config_dict = pybamm.config.read_uuid_from_file(Path("nonexistent_file.yml"))
+        assert config_dict is None
+
+    def test_read_uuid_from_file_invalid_yaml(self, tmp_path):
+        # Create a temporary directory and file with invalid YAML content
+        invalid_yaml = tmp_path / "invalid_yaml.yml"
+        with open(invalid_yaml, "w") as f:
+            f.write("invalid: yaml: content:")
+
+        config_dict = pybamm.config.read_uuid_from_file(invalid_yaml)
+
+        assert config_dict is None

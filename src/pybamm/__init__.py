@@ -203,7 +203,8 @@ from .pybamm_data import DataLoader
 import os
 import pathlib
 import sysconfig
-os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path('purelib')) / 'casadi')
+
+os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
 
 __all__ = [
     "batch_study",
@@ -231,6 +232,5 @@ __all__ = [
     "version",
     "pybamm_data",
 ]
-
 
 pybamm.config.generate()

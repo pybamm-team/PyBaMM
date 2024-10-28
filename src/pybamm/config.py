@@ -3,8 +3,9 @@ import os
 import platformdirs
 from pathlib import Path
 import pybamm
-import select
 import sys
+import threading
+import time
 
 
 def is_running_tests():  # pragma: no cover
@@ -14,8 +15,6 @@ def is_running_tests():  # pragma: no cover
     Returns:
         bool: True if running tests or building docs, False otherwise.
     """
-    import sys
-
     # Check if pytest or unittest is running
     if any(
         test_module in sys.modules for test_module in ["pytest", "unittest", "nose"]
@@ -33,11 +32,14 @@ def is_running_tests():  # pragma: no cover
 
     # Check for common test runner names in command-line arguments
     test_runners = ["pytest", "unittest", "nose", "trial", "nox", "tox"]
-    if any(runner in sys.argv[0].lower() for runner in test_runners):
+    if any(runner in arg.lower() for arg in sys.argv for runner in test_runners):
         return True
 
     # Check if building docs with Sphinx
-    if "sphinx" in sys.modules:
+    if any(mod == "sphinx" or mod.startswith("sphinx.") for mod in sys.modules):
+        print(
+            f"Found Sphinx module: {[mod for mod in sys.modules if mod.startswith('sphinx')]}"
+        )
         return True
 
     return False
@@ -67,24 +69,47 @@ def ask_user_opt_in(timeout=10):
         "For more information, see https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry"
     )
 
-    while True:
-        print("Do you want to enable telemetry? (Y/n): ", end="", flush=True)
+    def get_input():
+        try:
+            user_input = (
+                input("Do you want to enable telemetry? (Y/n): ").strip().lower()
+            )
+            answer.append(user_input)
+        except Exception:
+            # Handle any input errors
+            pass
 
-        rlist, _, _ = select.select([sys.stdin], [], [], timeout)
-        if rlist:
-            user_input = sys.stdin.readline().strip().lower()
-            if user_input in ["yes", "y", ""]:
+    time_start = time.time()
+
+    while True:
+        if time.time() - time_start > timeout:
+            print("\nTimeout reached. Defaulting to not enabling telemetry.")
+            return False
+
+        answer = []
+        # Create and start input thread
+        input_thread = threading.Thread(target=get_input)
+        input_thread.daemon = True
+        input_thread.start()
+
+        # Wait for either timeout or input
+        input_thread.join(timeout)
+
+        if answer:
+            if answer[0] in ["yes", "y", ""]:
+                print("\nTelemetry enabled.\n")
                 return True
-            elif user_input in ["no", "n"]:
+            elif answer[0] in ["no", "n"]:
+                print("\nTelemetry disabled.\n")
                 return False
             else:
-                print("Invalid input. Please enter 'yes/y' for yes or 'no/n' for no.")
+                print("\nInvalid input. Please enter 'yes/y' for yes or 'no/n' for no.")
         else:
             print("\nTimeout reached. Defaulting to not enabling telemetry.")
             return False
 
 
-def generate():  # pragma: no cover
+def generate():
     if is_running_tests():
         return
 
@@ -101,7 +126,7 @@ def generate():  # pragma: no cover
         pybamm.telemetry.capture("user-opted-in")
 
 
-def read():  # pragma: no cover
+def read():
     config_file = Path(platformdirs.user_config_dir("pybamm")) / "config.yml"
     return read_uuid_from_file(config_file)
 
@@ -121,7 +146,7 @@ def write_uuid_to_file(config_file, opt_in):
 
 def read_uuid_from_file(config_file):
     # Check if the config file exists
-    if not config_file.exists():  # pragma: no cover
+    if not config_file.exists():
         return None
 
     # Read the UUID from the config file
@@ -134,5 +159,5 @@ def read_uuid_from_file(config_file):
 
         config = yaml.safe_load(content)
         return config["pybamm"]
-    except (yaml.YAMLError, ValueError):  # pragma: no cover
+    except (yaml.YAMLError, ValueError):
         return None
