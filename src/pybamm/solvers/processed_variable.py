@@ -135,19 +135,22 @@ class ProcessedVariable:
         ys = self.all_ys
         yps = self.all_yps
         inputs = self.all_inputs_casadi
-        # Find the indices of the time points to observe
-        if full_range:
-            idxs = range(len(ts))
-        else:
-            idxs = _find_ts_indices(ts, t)
 
-        if isinstance(idxs, list):
-            # Extract the time points and inputs
-            ts = [ts[idx] for idx in idxs]
-            ys = [ys[idx] for idx in idxs]
-            if self.hermite_interpolation:
-                yps = [yps[idx] for idx in idxs]
-            inputs = [self.all_inputs_casadi[idx] for idx in idxs]
+        # Remove all empty ts
+        idxs = np.where([ti.size > 0 for ti in ts])[0]
+
+        # Find the indices of the time points to observe
+        if not full_range:
+            ts_nonempty = [ts[idx] for idx in idxs]
+            idxs_subset = _find_ts_indices(ts_nonempty, t)
+            idxs = idxs[idxs_subset]
+
+        # Extract the time points and inputs
+        ts = [ts[idx] for idx in idxs]
+        ys = [ys[idx] for idx in idxs]
+        if self.hermite_interpolation:
+            yps = [yps[idx] for idx in idxs]
+        inputs = [self.all_inputs_casadi[idx] for idx in idxs]
 
         is_f_contiguous = _is_f_contiguous(ys)
 
@@ -978,9 +981,5 @@ def _find_ts_indices(ts, t):
     # extrapolating
     if (t[-1] > ts[-1][-1]) and (len(indices) == 0 or indices[-1] != len(ts) - 1):
         indices.append(len(ts) - 1)
-
-    if len(indices) == len(ts):
-        # All indices are included
-        return range(len(ts))
 
     return indices
