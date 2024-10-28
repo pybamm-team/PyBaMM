@@ -394,7 +394,9 @@ class TestSymbol:
 
     def test_symbol_visualise(self):
         with TemporaryDirectory() as dir_name:
-            temp = tempfile.NamedTemporaryFile(dir=dir_name, prefix="test_visualize", suffix=".png")
+            temp = tempfile.NamedTemporaryFile(
+                dir=dir_name, prefix="test_visualize", suffix=".png"
+            )
             c = pybamm.Variable("c", "negative electrode")
             d = pybamm.Variable("d", "negative electrode")
             sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
