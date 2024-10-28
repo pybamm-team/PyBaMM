@@ -580,11 +580,15 @@ class Solution:
         # Iterate through all models, some may be in the list several times and
         # therefore only get set up once
         vars_casadi = []
-        for i, (model, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+        for i, (model, ts, ys, inputs, var_pybamm) in enumerate(
+            zip(self.all_models, self.all_ts, self.all_ys, self.all_inputs, vars_pybamm)
         ):
-            if ys.size == 0 and var_pybamm.has_symbol_of_classes(
-                pybamm.expression_tree.state_vector.StateVector
+            if (
+                ys.size == 0
+                and var_pybamm.has_symbol_of_classes(
+                    pybamm.expression_tree.state_vector.StateVector
+                )
+                and not ts.size == 0
             ):
                 raise KeyError(
                     f"Cannot process variable '{variable}' as it was not part of the "
