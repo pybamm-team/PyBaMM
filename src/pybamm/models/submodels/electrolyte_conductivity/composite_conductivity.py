@@ -50,6 +50,7 @@ class Composite(BaseElectrolyteConductivity):
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
+        # RT_F_av = self.param.R * T_av / self.param.F
         RT_F_av_s = self.param.R * T_av_s / self.param.F
         RT_F_av_p = self.param.R * T_av_p / self.param.F
 
@@ -87,11 +88,24 @@ class Composite(BaseElectrolyteConductivity):
             # need to have current evaluated on edge as integral will make it
             # evaluate on node
 
+            # eps_c_e_n = variables["Negative electrode porosity times concentration [mol.m-3]"]
+            T_av_bc = pybamm.PrimaryBroadcast(
+                T_av, ["negative electrode", "separator", "positive electrode"]
+            )
+            RT_F_av_bc = self.param.R * T_av_bc / self.param.F
+            c_e = variables["Electrolyte concentration [mol.m-3]"]
             eta_c_n = -RT_F_av_n * pybamm.IndefiniteIntegral(
                 self.param.chi(c_e_n, T_av_n)
                 * self._derivative_macinnes_function(c_e_n)
                 * pybamm.grad(c_e_n),
                 x_n,
+            )
+
+            eta_c_n = -RT_F_av_bc * pybamm.IndefiniteIntegral(
+                self.param.chi(c_e, T_av_bc)
+                * self._derivative_macinnes_function(c_e)
+                * pybamm.grad(c_e),
+                pybamm.standard_spatial_vars.x,
             )
 
             delta_phi_e_n = pybamm.IndefiniteIntegral(
@@ -100,18 +114,22 @@ class Composite(BaseElectrolyteConductivity):
             phi_e_const = (
                 -delta_phi_n_av
                 + phi_s_n_av
-                + pybamm.x_average(eta_c_n)
+                # + pybamm.x_average(eta_c_n)
                 + pybamm.x_average(delta_phi_e_n)
             )
 
             phi_e_n = phi_e_const - (delta_phi_e_n + eta_c_n)
             phi_e_dict["negative electrode"] = phi_e_n
 
-        eta_c_s = -RT_F_av_s * pybamm.IndefiniteIntegral(
-            self.param.chi(c_e_s, T_av_s)
-            * self._derivative_macinnes_function(c_e_s)
-            * pybamm.grad(c_e_s),
-            x_s,
+        eta_c_s = (
+            -RT_F_av_s
+            * 0
+            * pybamm.IndefiniteIntegral(
+                self.param.chi(c_e_s, T_av_s)
+                * self._derivative_macinnes_function(c_e_s)
+                * pybamm.grad(c_e_s),
+                x_s,
+            )
         )
         delta_phi_e_s = pybamm.IndefiniteIntegral(
             i_e_s_edge / (self.param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
@@ -124,11 +142,15 @@ class Composite(BaseElectrolyteConductivity):
             - (delta_phi_e_s + eta_c_s)
         )
 
-        eta_c_p = -RT_F_av_p * pybamm.IndefiniteIntegral(
-            self.param.chi(c_e_p, T_av_p)
-            * self._derivative_macinnes_function(c_e_p)
-            * pybamm.grad(c_e_p),
-            x_p,
+        eta_c_p = (
+            -RT_F_av_p
+            * 0
+            * pybamm.IndefiniteIntegral(
+                self.param.chi(c_e_p, T_av_p)
+                * self._derivative_macinnes_function(c_e_p)
+                * pybamm.grad(c_e_p),
+                x_p,
+            )
         )
         delta_phi_e_p = pybamm.IndefiniteIntegral(
             i_e_p_edge / (self.param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
@@ -148,8 +170,10 @@ class Composite(BaseElectrolyteConductivity):
 
         # concentration overpotential
         eta_c_av = (
-            -pybamm.x_average(eta_c_p)
-            + pybamm.x_average(eta_c_n)
+            # -pybamm.x_average(eta_c_p)
+            # + pybamm.x_average(eta_c_n)
+            -pybamm.Integral(eta_c_p, x_p)
+            + pybamm.Integral(eta_c_n, x_n)
             - pybamm.boundary_value(eta_c_s, "right")
             - pybamm.boundary_value(eta_c_n, "right")
         )
@@ -171,41 +195,41 @@ class Composite(BaseElectrolyteConductivity):
 
         return variables
 
-    def set_boundary_conditions(self, variables):
-        # Define boundary conditions for electrolyte potential
-        super().set_boundary_conditions(variables)
+    # def set_boundary_conditions(self, variables):
+    #     # Define boundary conditions for electrolyte potential
+    #     super().set_boundary_conditions(variables)
 
-        # Define the boundary conditions for electrolyte concentration and potential
-        # so the gradients can be computed
-        if self.options.electrode_types["negative"] == "planar":
-            domains = ["Separator", "Positive"]
-        else:
-            domains = ["Negative", "Separator", "Positive"]
+    #     # Define the boundary conditions for electrolyte concentration and potential
+    #     # so the gradients can be computed
+    #     if self.options.electrode_types["negative"] == "planar":
+    #         domains = ["Separator", "Positive"]
+    #     else:
+    #         domains = ["Negative", "Separator", "Positive"]
 
-        var_names = [
-            # " electrode porosity times concentration [mol.m-3]",
-            " electrolyte concentration [mol.m-3]",
-            # " electrolyte potential [V]",
-        ]
+    #     var_names = [
+    #         # " electrode porosity times concentration [mol.m-3]",
+    #         " electrolyte concentration [mol.m-3]",
+    #         # " electrolyte potential [V]",
+    #     ]
 
-        for name in var_names:
-            for domain in domains:
-                full_var_name = domain + name
+    #     for name in var_names:
+    #         for domain in domains:
+    #             full_var_name = domain + name
 
-                # Fix inconcsistency in naming, where porosity times concentration is
-                # called "electrode porosity times concentration"
-                full_var_name = full_var_name.replace(
-                    "Separator electrode", "Separator"
-                )
-                var = variables[full_var_name]
-                self.boundary_conditions.update(
-                    {
-                        var: {
-                            "left": (pybamm.boundary_gradient(var, "left"), "Neumann"),
-                            "right": (
-                                pybamm.boundary_gradient(var, "right"),
-                                "Neumann",
-                            ),
-                        },
-                    }
-                )
+    #             # Fix inconcsistency in naming, where porosity times concentration is
+    #             # called "electrode porosity times concentration"
+    #             full_var_name = full_var_name.replace(
+    #                 "Separator electrode", "Separator"
+    #             )
+    #             var = variables[full_var_name]
+    #             self.boundary_conditions.update(
+    #                 {
+    #                     var: {
+    #                         "left": (pybamm.boundary_gradient(var, "left"), "Neumann"),
+    #                         "right": (
+    #                             pybamm.boundary_gradient(var, "right"),
+    #                             "Neumann",
+    #                         ),
+    #                     },
+    #                 }
+    #             )
