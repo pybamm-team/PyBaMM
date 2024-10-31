@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-13, macos-14, windows-latest ]
-        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
@@ -80,15 +80,15 @@ jobs:
         run: python -m nox -s pybamm-requires
 
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.13'
         run: python -m nox -s unit
 
       - name: Run coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         uses: codecov/codecov-action@v4.6.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -131,7 +131,7 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
-    name: Example notebooks (ubuntu-latest / Python 3.12)
+    name: Example notebooks (ubuntu-latest / Python 3.13)
 
     steps:
       - name: Check out PyBaMM repository
@@ -142,10 +142,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Set up uv
         run: python -m pip install uv
@@ -157,12 +157,12 @@ jobs:
         timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
-      - name: Run example notebooks tests for GNU/Linux with Python 3.12
+      - name: Run example notebooks tests for GNU/Linux with Python 3.13
         run: python -m nox -s examples
 
   run_scripts_tests:
     runs-on: ubuntu-latest
-    name: Example scripts (ubuntu-latest / Python 3.12)
+    name: Example scripts (ubuntu-latest / Python 3.13)
 
     steps:
       - name: Check out PyBaMM repository
@@ -173,10 +173,10 @@ jobs:
           sudo apt-get update
           sudo apt install gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Set up uv
         run: python -m pip install uv
@@ -188,5 +188,5 @@ jobs:
         timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
-      - name: Run example scripts tests for GNU/Linux with Python 3.12
+      - name: Run example scripts tests for GNU/Linux with Python 3.13
         run: python -m nox -s scripts
