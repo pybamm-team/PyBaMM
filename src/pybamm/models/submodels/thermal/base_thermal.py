@@ -143,8 +143,14 @@ class BaseThermal(pybamm.BaseSubModel):
             phase_names = ["primary ", "secondary "]
 
         if self.options.electrode_types["negative"] == "planar":
-            Q_rxn_n = pybamm.FullBroadcast(
-                0, ["negative electrode"], "current collector"
+            i_n = variables[
+                "Lithium metal total interfacial current density [A.m-2]"
+            ]
+            eta_r_n = variables[
+                "Lithium metal interface reaction overpotential [V]"
+            ]
+            Q_rxn_n = pybamm.PrimaryBroadcast(
+                i_n * eta_r_n / self.param.n.L, ["negative electrode"], "current collector"
             )
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
