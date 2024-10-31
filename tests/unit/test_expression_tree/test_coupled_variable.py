@@ -2,15 +2,15 @@
 # Tests for the CoupledVariable class
 #
 
-import pytest
 
 import numpy as np
 
 import pybamm
 
+
 def combine_models(list_of_models):
     model = pybamm.BaseModel()
-    
+
     for submodel in list_of_models:
         model.coupled_variables.update(submodel.coupled_variables)
         model.variables.update(submodel.variables)
@@ -18,7 +18,7 @@ def combine_models(list_of_models):
         model.algebraic.update(submodel.algebraic)
         model.initial_conditions.update(submodel.initial_conditions)
         model.boundary_conditions.update(submodel.boundary_conditions)
-    
+
     for name, coupled_variable in model.coupled_variables.items():
         if name in model.variables:
             for sym in model.rhs.values():
@@ -41,7 +41,7 @@ class TestCoupledVariable:
         model_2 = pybamm.BaseModel()
         model_2_var_1 = pybamm.Variable("a")
         model_2_var_2 = pybamm.CoupledVariable("b")
-        model_2.rhs[model_2_var_1] = - 0.2 * model_2_var_2
+        model_2.rhs[model_2_var_1] = -0.2 * model_2_var_2
         model_2.variables["a"] = model_2_var_1
         model_2.coupled_variables["b"] = model_2_var_2
         model_2.initial_conditions[model_2_var_1] = 1.0
@@ -60,7 +60,6 @@ class TestCoupledVariable:
         var_pts = {}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
-
         spatial_methods = {}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
@@ -70,7 +69,6 @@ class TestCoupledVariable:
         t = np.linspace(0, 10, 1000)
         solution = solver.solve(model, t)
 
-        np.testing.assert_almost_equal(solution["a"].entries, solution["b"].entries, decimal=10)
-
-
-
+        np.testing.assert_almost_equal(
+            solution["a"].entries, solution["b"].entries, decimal=10
+        )

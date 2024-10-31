@@ -187,7 +187,7 @@ class BaseModel:
     def coupled_variables(self):
         """Returns a dictionary mapping strings to expressions representing variables needed by the model but whose equations were set by other models."""
         return self._coupled_variables
-    
+
     @coupled_variables.setter
     def coupled_variables(self, coupled_variables):
         for name, var in coupled_variables.items():
@@ -195,7 +195,9 @@ class BaseModel:
                 isinstance(var, pybamm.CoupledVariable)
                 and var.name != name
                 # Exception if the variable is also there under its own name
-                and not (var.name in coupled_variables and coupled_variables[var.name] == var)
+                and not (
+                    var.name in coupled_variables and coupled_variables[var.name] == var
+                )
             ):
                 raise ValueError(
                     f"Coupled variable with name '{var.name}' is in coupled variables dictionary with "
