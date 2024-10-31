@@ -13,7 +13,7 @@ class CoupledVariable(pybamm.Symbol):
     name : str
         name of the node
     domain : iterable of str
-        list of domains that this variable is valid over
+        list of domains that this coupled variable is valid over
     """
 
     def __init__(
@@ -31,11 +31,9 @@ class CoupledVariable(pybamm.Symbol):
         return pybamm.evaluate_for_shape_using_domain(self.domains)
 
     def create_copy(self):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_input_parameter = CoupledVariable(
-            self.name, self.domain, expected_size=self._expected_size
-        )
-        return new_input_parameter
+        """Creates a new copy of the coupled variable."""
+        new_coupled_variable = CoupledVariable(self.name, self.domain)
+        return new_coupled_variable
 
     @property
     def children(self):
@@ -46,6 +44,7 @@ class CoupledVariable(pybamm.Symbol):
         self._children = expr
 
     def set_coupled_variable(self, symbol, expr):
+        """Sets the children of the coupled variable to the expression passed in expr. If the symbol is not the coupled variable, then it searches the children of the symbol for the coupled variable. The coupled variable will be replaced by its first child (symbol.children[0], which should be expr) in the discretisation step."""
         if self == symbol:
             symbol.children = [
                 expr,

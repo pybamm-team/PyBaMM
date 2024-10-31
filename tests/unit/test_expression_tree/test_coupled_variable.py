@@ -7,6 +7,8 @@ import numpy as np
 
 import pybamm
 
+import pytest
+
 
 def combine_models(list_of_models):
     model = pybamm.BaseModel()
@@ -72,3 +74,21 @@ class TestCoupledVariable:
         np.testing.assert_almost_equal(
             solution["a"].entries, solution["b"].entries, decimal=10
         )
+
+        assert set(model.list_coupled_variables()) == set(["a", "b"])
+
+    def test_create_copy(self):
+        a = pybamm.CoupledVariable("a")
+        b = a.create_copy()
+        assert a == b
+
+    def test_setter(self):
+        model = pybamm.BaseModel()
+        a = pybamm.CoupledVariable("a")
+        coupled_variables = {"a": a}
+        model.coupled_variables = coupled_variables
+        assert model.coupled_variables == coupled_variables
+
+        with pytest.raises(ValueError, match="Coupled variable with name"):
+            coupled_variables = {"b": a}
+            model.coupled_variables = coupled_variables

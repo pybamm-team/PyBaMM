@@ -206,7 +206,7 @@ class BaseModel:
         self._coupled_variables = coupled_variables
 
     def list_coupled_variables(self):
-        list(self._coupled_variables.keys())
+        return list(self._coupled_variables.keys())
 
     @property
     def variables(self):
