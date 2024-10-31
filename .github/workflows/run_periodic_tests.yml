@@ -131,7 +131,7 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
-    name: Example notebooks (ubuntu-latest / Python 3.13)
+    name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -142,10 +142,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.13
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: 3.13
+          python-version: 3.12
 
       - name: Set up uv
         run: python -m pip install uv
@@ -157,12 +157,12 @@ jobs:
         timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
-      - name: Run example notebooks tests for GNU/Linux with Python 3.13
+      - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
   run_scripts_tests:
     runs-on: ubuntu-latest
-    name: Example scripts (ubuntu-latest / Python 3.13)
+    name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -173,10 +173,10 @@ jobs:
           sudo apt-get update
           sudo apt install gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.13
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: 3.13
+          python-version: 3.12
 
       - name: Set up uv
         run: python -m pip install uv
@@ -188,5 +188,5 @@ jobs:
         timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
-      - name: Run example scripts tests for GNU/Linux with Python 3.13
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts
