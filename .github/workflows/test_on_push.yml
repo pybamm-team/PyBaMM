@@ -200,11 +200,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.13
+      - name: Set up Python 3.12
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.13
+          python-version: 3.12
           cache: 'pip'
 
       - name: Set up uv
@@ -229,7 +229,7 @@ jobs:
         timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
-      - name: Run example notebooks tests for GNU/Linux with Python 3.13
+      - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
   run_scripts_tests:
@@ -237,7 +237,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Example scripts (ubuntu-latest / Python 3.13)
+    name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -256,11 +256,11 @@ jobs:
           sudo dot -c
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
-      - name: Set up Python 3.13
+      - name: Set up Python 3.12
         id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.13
+          python-version: 3.12
           cache: 'pip'
 
       - name: Set up uv
@@ -285,5 +285,5 @@ jobs:
         timeout-minutes: 10
         run: python -m nox -s pybamm-requires
 
-      - name: Run example scripts tests for GNU/Linux with Python 3.13
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts
