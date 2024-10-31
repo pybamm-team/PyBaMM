@@ -11,7 +11,9 @@ class CoupledVariable(pybamm.Symbol):
     Parameters
     ----------
     name : str
-        The variable's name. If the
+        name of the node
+    domain : iterable of str
+        list of domains that this variable is valid over
     """
 
     def __init__(
