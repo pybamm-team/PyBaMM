@@ -85,8 +85,6 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_ohm_s = pybamm.concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
 
         # Ohmic heating in electrolyte
-        # TODO: change full stefan-maxwell conductivity so that i_e is always
-        # a Concatenation
         i_e = variables["Electrolyte current density [A.m-2]"]
         phi_e = variables["Electrolyte potential [V]"]
         if isinstance(i_e, pybamm.Concatenation):
