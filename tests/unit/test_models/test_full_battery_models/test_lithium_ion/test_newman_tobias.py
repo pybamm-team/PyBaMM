@@ -7,8 +7,7 @@ from tests import BaseUnitTestLithiumIon
 
 
 class TestNewmanTobias(BaseUnitTestLithiumIon):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup_method(self):
         self.model = pybamm.lithium_ion.NewmanTobias
 
     def test_electrolyte_options(self):
