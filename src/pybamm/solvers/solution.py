@@ -62,6 +62,10 @@ class Solution:
         True if sensitivities included as the solution of the explicit forwards
         equations.  False if no sensitivities included/wanted. Dict if sensitivities are
         provided as a dict of {parameter: [sensitivities]} pairs.
+    variables_returned: bool
+        Bool to indicate if `all_ys` contains the full state vector, or is empty because
+        only requested variables have been returned. True if `output_variables` is used
+        with a solver, otherwise False.
 
     """
 
@@ -76,6 +80,7 @@ class Solution:
         termination="final time",
         all_sensitivities=False,
         all_yps=None,
+        variables_returned=False,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
@@ -92,6 +97,8 @@ class Solution:
         if (all_yps is not None) and not isinstance(all_yps, list):
             all_yps = [all_yps]
         self._all_yps = all_yps
+
+        self.variables_returned = variables_returned
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -460,9 +467,15 @@ class Solution:
         else:
             all_yps = self.all_yps[0][:, :1]
 
+        if not self.variables_returned:
+            all_ys = self.all_ys[0][:, :1]
+        else:
+            # Get first state from initial conditions as all_ys is empty
+            all_ys = self.all_models[0].y0full.reshape(-1, 1)
+
         new_sol = Solution(
             self.all_ts[0][:1],
-            self.all_ys[0][:, :1],
+            all_ys,
             self.all_models[:1],
             self.all_inputs[:1],
             None,
@@ -500,9 +513,15 @@ class Solution:
         else:
             all_yps = self.all_yps[-1][:, -1:]
 
+        if not self.variables_returned:
+            all_ys = self.all_ys[-1][:, -1:]
+        else:
+            # Get last state from y_event as all_ys is empty
+            all_ys = self.y_event.reshape(len(self.y_event), 1)
+
         new_sol = Solution(
             self.all_ts[-1][-1:],
-            self.all_ys[-1][:, -1:],
+            all_ys,
             self.all_models[-1:],
             self.all_inputs[-1:],
             self.t_event,
@@ -580,15 +599,11 @@ class Solution:
         # Iterate through all models, some may be in the list several times and
         # therefore only get set up once
         vars_casadi = []
-        for i, (model, ts, ys, inputs, var_pybamm) in enumerate(
-            zip(self.all_models, self.all_ts, self.all_ys, self.all_inputs, vars_pybamm)
+        for i, (model, ys, inputs, var_pybamm) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
         ):
-            if (
-                ys.size == 0
-                and var_pybamm.has_symbol_of_classes(
-                    pybamm.expression_tree.state_vector.StateVector
-                )
-                and not ts.size == 0
+            if self.variables_returned and var_pybamm.has_symbol_of_classes(
+                pybamm.expression_tree.state_vector.StateVector
             ):
                 raise KeyError(
                     f"Cannot process variable '{variable}' as it was not part of the "
@@ -682,7 +697,7 @@ class Solution:
 
         Returns
         -------
-        :class:`pybamm.ProcessedVariable`
+        :class:`pybamm.ProcessedVariable` or :class:`pybamm.ProcessedVariableComputed`
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
@@ -950,6 +965,7 @@ class Solution:
             other.termination,
             all_sensitivities=all_sensitivities,
             all_yps=all_yps,
+            variables_returned=other.variables_returned,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -965,6 +981,19 @@ class Solution:
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
+
+        # update variables which were derived at the solver stage
+        if other._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in other._variables.values()
+        ):
+            if not self._variables:
+                new_sol._variables = other._variables.copy()
+            else:
+                new_sol._variables = {
+                    v: self._variables[v]._update(other._variables[v], new_sol)
+                    for v in self._variables.keys()
+                }
 
         return new_sol
 
@@ -983,6 +1012,7 @@ class Solution:
             self.termination,
             self._all_sensitivities,
             self.all_yps,
+            self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -991,6 +1021,13 @@ class Solution:
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
         new_sol.set_up_time = self.set_up_time
+
+        # copy over variables which were derived at the solver stage
+        if self._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in self._variables.values()
+        ):
+            new_sol._variables = self._variables.copy()
 
         return new_sol
 
@@ -1094,6 +1131,7 @@ def make_cycle_solution(
         sum_sols.termination,
         sum_sols._all_sensitivities,
         sum_sols.all_yps,
+        sum_sols.variables_returned,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
