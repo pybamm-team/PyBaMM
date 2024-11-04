@@ -44,7 +44,7 @@ You now have everything you need to start making changes!
 
 ### B. Writing your code
 
-6. PyBaMM is developed in [Python](https://www.python.org)), and makes heavy use of [NumPy](https://numpy.org/) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](https://www.rebeccabarter.com/blog/2023-09-11-from_r_to_python)).
+6. PyBaMM is developed in [Python](https://www.python.org), and makes heavy use of [NumPy](https://numpy.org/).
 7. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
 8. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are
    publicly visible and should still make sense a few months ahead in time.
@@ -116,7 +116,7 @@ PyBaMM provides a utility function `import_optional_dependency`, to check for th
 
 Optional dependencies should never be imported at the module level, but always inside methods. For example:
 
-```
+```python
 def use_pybtex(x,y,z):
     pybtex = import_optional_dependency("pybtex")
     ...
