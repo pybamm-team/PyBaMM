@@ -938,6 +938,11 @@ class Discretisation:
             if symbol._expected_size is None:
                 symbol._expected_size = expected_size
             return symbol.create_copy()
+
+        elif isinstance(symbol, pybamm.CoupledVariable):
+            new_symbol = self.process_symbol(symbol.children[0])
+            return new_symbol
+
         else:
             # Backup option: return the object
             return symbol
