@@ -1,11 +1,8 @@
 #
 # Test for the Symbol class
 #
-import tempfile
 
 import pytest
-import os
-from tempfile import TemporaryDirectory
 
 import numpy as np
 from scipy.sparse import csr_matrix, coo_matrix
