@@ -392,16 +392,17 @@ class TestSymbol:
             pybamm.grad(c).__repr__(),
         )
 
-    def test_symbol_visualise(self):
-        with TemporaryDirectory() as dir_name:
-            temp = tempfile.NamedTemporaryFile(dir=dir_name, prefix="test_visualize", suffix=".png")
-            c = pybamm.Variable("c", "negative electrode")
-            d = pybamm.Variable("d", "negative electrode")
-            sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
-            sym.visualise(temp.name)
-            assert os.path.exists(temp.name)
-            with pytest.raises(ValueError):
-                sym.visualise(temp.name[:-4])
+    @pytest.fixture(scope="session")
+    def test_symbol_visualise(self, tmp_path):
+        temp_file = tmp_path / "test_visualize.png"
+        c = pybamm.Variable("c", "negative electrode")
+        d = pybamm.Variable("d", "negative electrode")
+        sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
+        sym.visualise(str(temp_file))
+        assert temp_file.exists()
+
+        with pytest.raises(ValueError):
+            sym.visualise(str(temp_file.with_suffix("")))
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var", domain="test")
