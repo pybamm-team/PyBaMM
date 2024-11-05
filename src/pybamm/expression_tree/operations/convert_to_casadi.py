@@ -231,8 +231,6 @@ class CasadiConverter:
 
         else:
             raise TypeError(
-                f"""
-                Cannot convert symbol of type '{type(symbol)}' to CasADi. Symbols must all be
-                'linear algebra' at this stage.
-                """
+                f"Cannot convert symbol of type '{type(symbol)}' to CasADi. Symbols must all be"
+                "'linear algebra' at this stage."
             )

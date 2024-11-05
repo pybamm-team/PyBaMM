@@ -117,7 +117,7 @@ PyBaMM provides a utility function `import_optional_dependency`, to check for th
 Optional dependencies should never be imported at the module level, but always inside methods. For example:
 
 ```python
-def use_pybtex(x,y,z):
+def use_pybtex(x, y, z):
     pybtex = import_optional_dependency("pybtex")
     ...
 ```

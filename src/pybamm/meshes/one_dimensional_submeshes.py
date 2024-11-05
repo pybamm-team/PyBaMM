@@ -297,8 +297,8 @@ class UserSupplied1DSubMesh(SubMesh1D):
 
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
-                f"""User-suppled edges has should have length (npts + 1) but has length
-                {len(edges)}.Number of points (npts) for domain {spatial_var.domain} is {npts}.""".replace(
+                "User-suppled edges has should have length (npts + 1) but has length "
+                f"{len(edges)}.Number of points (npts) for domain {spatial_var.domain} is {npts}.".replace(
                     "\n                ", " "
                 )
             )
