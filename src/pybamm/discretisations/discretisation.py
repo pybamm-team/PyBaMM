@@ -500,7 +500,7 @@ class Discretisation:
 
         if domain != "current collector":
             raise pybamm.ModelError(
-                "Boundary conditions can only be applied on the tabs in the domain"
+                "Boundary conditions can only be applied on the tabs in the domain "
                 f"'current collector', but {symbol} has domain {domain}"
             )
         # Replace keys with "left" and "right" as appropriate for 1D meshes
