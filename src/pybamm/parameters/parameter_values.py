@@ -184,7 +184,7 @@ class ParameterValues:
         return self._dict_items.items()
 
     def pop(self, *args, **kwargs):
-        self._dict_items.pop(*args, **kwargs)
+        return self._dict_items.pop(*args, **kwargs)
 
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
