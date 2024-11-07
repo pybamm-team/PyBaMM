@@ -7,6 +7,7 @@ import pybamm
 import casadi
 import numpy as np
 from scipy import special
+from scipy import interpolate
 
 
 class CasadiConverter:
@@ -165,6 +166,18 @@ class CasadiConverter:
                             # for some reason, pybamm.Interpolant always returns a column vector, so match that
                             test = test.T
                         return test
+                    elif solver == "bspline":
+                        bspline = interpolate.make_interp_spline(
+                            symbol.x[0], symbol.y, k=3
+                        )
+                        knots = [bspline.t]
+                        coeffs = bspline.c.flatten()
+                        degree = [bspline.k]
+                        m = len(coeffs) // len(symbol.x[0])
+                        f = casadi.Function.bspline(
+                            symbol.name, knots, coeffs, degree, m
+                        )
+                        return f(converted_children[0])
                     else:
                         return casadi.interpolant(
                             "LUT", solver, symbol.x, symbol.y.flatten()
@@ -176,6 +189,20 @@ class CasadiConverter:
                             symbol.y.ravel(order="F"),
                             converted_children,
                         )
+                    elif solver == "bspline" and len(converted_children) == 2:
+                        bspline = interpolate.RectBivariateSpline(
+                            symbol.x[0], symbol.x[1], symbol.y
+                        )
+                        [tx, ty, c] = bspline.tck
+                        [kx, ky] = bspline.degrees
+                        knots = [tx, ty]
+                        coeffs = c
+                        degree = [kx, ky]
+                        m = 1
+                        f = casadi.Function.bspline(
+                            symbol.name, knots, coeffs, degree, m
+                        )
+                        return f(casadi.hcat(converted_children).T).T
                     else:
                         LUT = casadi.interpolant(
                             "LUT", solver, symbol.x, symbol.y.ravel(order="F")
