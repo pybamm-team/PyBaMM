@@ -69,7 +69,7 @@ def ask_user_opt_in(timeout=10):
         "For more information, see https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry"
     )
 
-    def get_input():
+    def get_input():  # pragma: no cover
         try:
             user_input = (
                 input("Do you want to enable telemetry? (Y/n): ").strip().lower()
