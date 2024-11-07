@@ -175,21 +175,22 @@ class TestScikitFiniteElement:
         y = mesh["current collector"].coordinates[0, :]
         z = mesh["current collector"].coordinates[1, :]
 
+        gradient = pybamm.grad(var)
+        grad_disc = disc.process_symbol(gradient)
+        grad_disc_y, grad_disc_z = grad_disc.children
+
         gradient_squared = pybamm.grad_squared(var)
-        grad_squared_disc = disc.process_symbol(gradient_squared)
-        evaluated_gradient_squared = grad_squared_disc.evaluate(
-            None, 3 * y**2 + 2 * z**2
-        )
+        gradient_squared_disc = disc.process_symbol(gradient_squared)
 
-        expected_result = 36 * y**2 + 16 * z**2
-        expected_result = expected_result[:, np.newaxis]
+        inner_product_y = grad_disc_y.evaluate(None, 5 * y + 6 * z)
+        inner_product_z = grad_disc_z.evaluate(None, 5 * y + 6 * z)
+        inner_product = inner_product_y**2 + inner_product_z**2
 
-        try:
-            np.testing.assert_array_almost_equal(
-                evaluated_gradient_squared, expected_result
-            )
-        except AssertionError as e:
-            print("AssertionError:", e)
+        grad_squared_result = gradient_squared_disc.evaluate(None, 5 * y + 6 * z)
+
+        np.testing.assert_array_almost_equal(grad_squared_result, inner_product)
+
+        np.testing.assert_array_less(0, grad_squared_result)
 
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32, include_particles=False)

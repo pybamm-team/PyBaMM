@@ -155,17 +155,19 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Vector`
+        float
             The gradient squared of the symbol.
         """
         domain = symbol.domain
         gradient_matrix = self.gradient_matrix(domain, symbol.domains)
 
-        # Compute gradient squared: (∇u)^2 = u^T L^T L u
+        # Compute gradient squared: (∇u)^2 = u^T (L^T L) u
         gradient_squared_matrix = gradient_matrix.T @ gradient_matrix
-        gradient_squared_result = gradient_squared_matrix @ discretised_symbol
+        gradient_squared_result = (
+            discretised_symbol.T @ gradient_squared_matrix @ discretised_symbol
+        )
 
-        return gradient_squared_result
+        return gradient_squared_result.item()
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
