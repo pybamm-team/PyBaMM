@@ -189,6 +189,20 @@ class CasadiConverter:
                             symbol.y.ravel(order="F"),
                             converted_children,
                         )
+                    elif solver == "bspline" and len(converted_children) == 2:
+                        bspline = interpolate.RectBivariateSpline(
+                            symbol.x[0], symbol.x[1], symbol.y
+                        )
+                        [tx, ty, c] = bspline.tck
+                        [kx, ky] = bspline.degrees
+                        knots = [tx, ty]
+                        coeffs = c
+                        degree = [kx, ky]
+                        m = 1
+                        f = casadi.Function.bspline(
+                            symbol.name, knots, coeffs, degree, m
+                        )
+                        return f(casadi.hcat(converted_children).T).T
                     else:
                         LUT = casadi.interpolant(
                             "LUT", solver, symbol.x, symbol.y.ravel(order="F")
