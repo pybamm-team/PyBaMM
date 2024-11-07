@@ -3,8 +3,6 @@
 #
 
 import pytest
-import os
-from tempfile import TemporaryDirectory
 
 import numpy as np
 from scipy.sparse import csr_matrix, coo_matrix
@@ -391,17 +389,17 @@ class TestSymbol:
             pybamm.grad(c).__repr__(),
         )
 
-    def test_symbol_visualise(self):
-        with TemporaryDirectory() as dir_name:
-            test_stub = os.path.join(dir_name, "test_visualize")
-            test_name = f"{test_stub}.png"
-            c = pybamm.Variable("c", "negative electrode")
-            d = pybamm.Variable("d", "negative electrode")
-            sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
-            sym.visualise(test_name)
-            assert os.path.exists(test_name)
-            with pytest.raises(ValueError):
-                sym.visualise(test_stub)
+    @pytest.fixture(scope="session")
+    def test_symbol_visualise(self, tmp_path):
+        temp_file = tmp_path / "test_visualize.png"
+        c = pybamm.Variable("c", "negative electrode")
+        d = pybamm.Variable("d", "negative electrode")
+        sym = pybamm.div(c * pybamm.grad(c)) + (c / d + c - d) ** 5
+        sym.visualise(str(temp_file))
+        assert temp_file.exists()
+
+        with pytest.raises(ValueError):
+            sym.visualise(str(temp_file.with_suffix("")))
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var", domain="test")
