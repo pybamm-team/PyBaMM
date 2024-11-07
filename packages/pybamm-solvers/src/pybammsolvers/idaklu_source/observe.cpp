@@ -100,6 +100,11 @@ public:
         ) {
         for (size_t i = 0; i < ts_data_np.size(); i++) {
             const auto& t_data = ts_data_np[i].unchecked<1>();
+            // Continue if there is no data
+            if (t_data.size() == 0) {
+                continue;
+            }
+
             const realtype t_data_final = t_data(t_data.size() - 1);
             realtype t_interp_next = t_interp(i_interp);
             // Continue if the next interpolation point is beyond the final data point
@@ -227,6 +232,10 @@ public:
         int i_entries = 0;
         for (size_t i = 0; i < ts.size(); i++) {
             const auto& t = ts[i].unchecked<1>();
+            // Continue if there is no data
+            if (t.size() == 0) {
+                continue;
+            }
             const auto& y = ys[i].unchecked<2>();
             const auto input = inputs[i].data();
             const auto func = *funcs[i];
