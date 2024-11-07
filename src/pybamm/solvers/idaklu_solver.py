@@ -857,6 +857,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             termination,
             all_sensitivities=yS_out,
             all_yps=yp,
+            variables_returned=bool(save_outputs_only),
         )
 
         newsol.integration_time = integration_time
