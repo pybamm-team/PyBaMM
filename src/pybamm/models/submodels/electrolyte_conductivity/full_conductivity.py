@@ -152,7 +152,7 @@ class Full(BaseElectrolyteConductivity):
                 phi_e_p: -self.param.n.prim.U_init,
             }
 
-    def set_boundary_conditions(self, variables):
+    def set_boundary_conditionsadsf(self, variables):
         phi_e = variables["Electrolyte potential [V]"]
         phi_e_n = variables["Negative electrolyte potential [V]"]
         phi_e_s = variables["Separator electrolyte potential [V]"]
@@ -171,34 +171,12 @@ class Full(BaseElectrolyteConductivity):
         i_e_n, i_e_s, i_e_p = i_e.orphans
 
         phi_e_n_lbc_value = pybamm.Scalar(0)
+
+        grad_phi_n = self.param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n) - i_e_n / (self.param.kappa_e(c_e_n, T_n) * tor_n)
+        grad_phi_s = self.param.chiRT_over_Fc(c_e_s, T_s) * pybamm.grad(c_e_s) - i_e_s / (self.param.kappa_e(c_e_s, T_s) * tor_s)
+        grad_phi_p = self.param.chiRT_over_Fc(c_e_p, T_p) * pybamm.grad(c_e_p) - i_e_p / (self.param.kappa_e(c_e_p, T_p) * tor_p)
         
-        i_e_n_rbc_value = pybamm.BoundaryValue(i_e_n, "right")
-        grad_c_e_n_rbc_value = pybamm.BoundaryGradient(c_e_n, "right")
-        phi_e_n_rbc_value = (
-            -self.param.chiRT_over_Fc(c_e_n, T_n) * grad_c_e_n_rbc_value
-            + i_e_n_rbc_value / (self.param.kappa_e(c_e_n, T_n) * tor_n)
-        )
 
-        i_e_s_lbc_value = pybamm.BoundaryValue(i_e_s, "left")
-        grad_c_e_s_lbc_value = pybamm.BoundaryGradient(c_e_s, "left")
-        phi_e_s_lbc_value = (
-            -self.param.chiRT_over_Fc(c_e_s, T_s) * grad_c_e_s_lbc_value
-            + i_e_s_lbc_value / (self.param.kappa_e(c_e_s, T_s) * tor_s)
-        )
-
-        i_e_s_rbc_value = pybamm.BoundaryValue(i_e_s, "right")
-        grad_c_e_s_rbc_value = pybamm.BoundaryGradient(c_e_s, "right")
-        phi_e_s_rbc_value = (
-            -self.param.chiRT_over_Fc(c_e_s, T_s) * grad_c_e_s_rbc_value
-            + i_e_s_rbc_value / (self.param.kappa_e(c_e_s, T_s) * tor_s)
-        )
-
-        i_e_p_lbc_value = pybamm.BoundaryValue(i_e_p, "left")
-        grad_c_e_p_lbc_value = pybamm.BoundaryGradient(c_e_p, "left")
-        phi_e_p_lbc_value = (
-            -self.param.chiRT_over_Fc(c_e_p, T_p) * grad_c_e_p_lbc_value
-            + i_e_p_lbc_value / (self.param.kappa_e(c_e_p, T_p) * tor_p)
-        )
 
         phi_e_p_rbc_value = pybamm.Scalar(0)
 
