@@ -500,8 +500,8 @@ class Discretisation:
 
         if domain != "current collector":
             raise pybamm.ModelError(
-                f"""Boundary conditions can only be applied on the tabs in the domain
-            'current collector', but {symbol} has domain {domain}"""
+                "Boundary conditions can only be applied on the tabs in the domain "
+                f"'current collector', but {symbol} has domain {domain}"
             )
         # Replace keys with "left" and "right" as appropriate for 1D meshes
         if isinstance(mesh, pybamm.SubMesh1D):
@@ -893,11 +893,9 @@ class Discretisation:
                 y_slices = self.y_slices[symbol]
             except KeyError as error:
                 raise pybamm.ModelError(
-                    f"""
-                    No key set for variable '{symbol.name}'. Make sure it is included in either
-                    model.rhs or model.algebraic in an unmodified form
-                    (e.g. not Broadcasted)
-                    """
+                    f"No key set for variable '{symbol.name}'. Make sure it is included in either "
+                    "model.rhs or model.algebraic in an unmodified form "
+                    "(e.g. not Broadcasted)"
                 ) from error
             # Add symbol's reference and multiply by the symbol's scale
             # so that the state vector is of order 1
@@ -938,6 +936,11 @@ class Discretisation:
             if symbol._expected_size is None:
                 symbol._expected_size = expected_size
             return symbol.create_copy()
+
+        elif isinstance(symbol, pybamm.CoupledVariable):
+            new_symbol = self.process_symbol(symbol.children[0])
+            return new_symbol
+
         else:
             # Backup option: return the object
             return symbol
