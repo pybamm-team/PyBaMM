@@ -121,8 +121,8 @@ dev = [
 # Note: These must be kept in sync with the versions defined in pybamm/util.py, and
 #       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
-    "jax==0.4.27",
-    "jaxlib==0.4.27",
+    "jax==0.4.35",
+    "jaxlib==0.4.35",
 ]
 # For MLIR expression evaluation (IDAKLU Solver)
 iree = [

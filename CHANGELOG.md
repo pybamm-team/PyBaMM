@@ -2,7 +2,7 @@
 
 ## Features
 
-- Added support for Python 3.13 (#4552)
+- Added support for Python 3.13 ([#4552](https://github.com/pybamm-team/PyBaMM/pull/4552))
 - Adds support to `pybamm.Experiment` for the `output_variables` option in the `IDAKLUSolver`. ([#4534](https://github.com/pybamm-team/PyBaMM/pull/4534))
 - Adds an option "voltage as a state" that can be "false" (default) or "true". If "true" adds an explicit algebraic equation for the voltage. ([#4507](https://github.com/pybamm-team/PyBaMM/pull/4507))
 - Improved `QuickPlot` accuracy for simulations with Hermite interpolation. ([#4483](https://github.com/pybamm-team/PyBaMM/pull/4483))
