@@ -159,13 +159,29 @@ class FiniteVolume(pybamm.SpatialMethod):
             The gradient squared of the symbol.
         """
         domain = symbol.domain
+
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
+            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
+                discretised_symbol, domain = self.add_ghost_nodes(
+                    symbol, discretised_symbol, bcs
+                )
+
         gradient_matrix = self.gradient_matrix(domain, symbol.domains)
 
-        # Compute gradient squared: (∇u)^2 = u^T (L^T L) u
+        # Compute gradient squared matrix: (∇u)^2 = u^T (L^T L) u
         gradient_squared_matrix = gradient_matrix.T @ gradient_matrix
         gradient_squared_result = (
             discretised_symbol.T @ gradient_squared_matrix @ discretised_symbol
         )
+
+        # Add Neumann boundary conditions if defined
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
+            if any(bc[1] == "Neumann" for bc in bcs.values()):
+                gradient_squared_result = self.add_neumann_values(
+                    symbol, gradient_squared_result, bcs, domain
+                )
 
         return gradient_squared_result.item()
 

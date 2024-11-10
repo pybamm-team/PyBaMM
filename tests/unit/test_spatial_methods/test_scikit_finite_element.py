@@ -187,10 +187,27 @@ class TestScikitFiniteElement:
         inner_product = inner_product_y**2 + inner_product_z**2
 
         grad_squared_result = gradient_squared_disc.evaluate(None, 5 * y + 6 * z)
-
         np.testing.assert_array_almost_equal(grad_squared_result, inner_product)
-
         np.testing.assert_array_less(0, grad_squared_result)
+
+        gradient_squared_disc_dirichlet = disc.process_symbol(gradient_squared)
+        grad_squared_result_dirichlet = gradient_squared_disc_dirichlet.evaluate(
+            None, 5 * y + 6 * z
+        )
+
+        np.testing.assert_array_almost_equal(
+            grad_squared_result_dirichlet, inner_product
+        )
+        np.testing.assert_array_less(0, grad_squared_result_dirichlet)
+
+        gradient_squared_disc_neumann = disc.process_symbol(gradient_squared)
+        grad_squared_result_neumann = gradient_squared_disc_neumann.evaluate(
+            None, 5 * y + 6 * z
+        )
+
+        np.testing.assert_array_almost_equal(grad_squared_result_neumann, inner_product)
+
+        np.testing.assert_array_less(0, grad_squared_result_neumann)
 
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32, include_particles=False)
