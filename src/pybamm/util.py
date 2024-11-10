@@ -14,8 +14,8 @@ import pybamm
 
 # Versions of jax and jaxlib compatible with PyBaMM. Note: these are also defined in
 # the extras dependencies in pyproject.toml, and therefore must be kept in sync.
-JAX_VERSION = "0.4.34" if sys.version_info.minor >= 13 else "0.4.27"
-JAXLIB_VERSION = "0.4.34" if sys.version_info.minor >= 13 else "0.4.27"
+JAX_VERSION = "0.4.27" if sys.version_info < (3, 10) else "0.4.34"
+JAXLIB_VERSION = "0.4.27" if sys.version_info < (3, 10) else "0.4.34"
 
 
 def root_dir():
