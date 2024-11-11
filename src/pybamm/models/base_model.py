@@ -1110,7 +1110,7 @@ class BaseModel:
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
                 raise pybamm.ModelError(
-                    f"""no initial condition given for variable '{var}'"""
+                    f"no initial condition given for variable '{var}'"
                 )
 
     def check_variables(self):
@@ -1132,11 +1132,9 @@ class BaseModel:
         for var in all_vars:
             if var not in vars_in_keys:
                 raise pybamm.ModelError(
-                    f"""
-                    No key set for variable '{var}'. Make sure it is included in either
-                    model.rhs or model.algebraic, in an unmodified form
-                    (e.g. not Broadcasted)
-                    """
+                    f"No key set for variable '{var}'. Make sure it is included in either "
+                    "model.rhs or model.algebraic, in an unmodified form "
+                    "(e.g. not Broadcasted)"
                 )
 
     def check_no_repeated_keys(self):
@@ -1550,9 +1548,7 @@ class BoundaryConditionsDict(dict):
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
-                        f"""
-                        boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'
-                        """
+                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
                     )
 
         return boundary_conditions
