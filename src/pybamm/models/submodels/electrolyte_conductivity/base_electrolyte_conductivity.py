@@ -94,9 +94,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
                 "separator",
                 "positive electrode",
             ]:
-                i_e_n, _, i_e_p = i_e.orphans
+                i_e_n, i_e_s, i_e_p = i_e.orphans
             elif self.options.whole_cell_domains == ["separator", "positive electrode"]:
-                _, i_e_p = i_e.orphans
+                i_e_s, i_e_p = i_e.orphans
                 i_e_n = None
 
             if i_e_n is not None:
@@ -106,6 +106,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             if i_e_p is not None:
                 variables.update(
                     {"Positive electrolyte current density [A.m-2]": i_e_p}
+                )
+            if i_e_s is not None:
+                variables.update(
+                    {"Separator electrolyte current density [A.m-2]": i_e_s}
                 )
 
         return variables
