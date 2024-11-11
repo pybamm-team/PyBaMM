@@ -147,9 +147,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         Parameters
         ----------
         symbol : :class:`pybamm.Symbol`
-            The symbol for which to compute the gradient squared.
+            The symbol to compute the square of the gradient for.
         discretised_symbol : :class:`pybamm.Vector`
-            The discretised variable for which to compute the gradient squared.
+            The discretised variable to compute the square of the gradient for.
         boundary_conditions : dict
             Boundary conditions for the symbol.
 
@@ -166,6 +166,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 discretised_symbol, domain = self.add_ghost_nodes(
                     symbol, discretised_symbol, bcs
                 )
+            elif any(bc[1] == "Neumann" for bc in bcs.values()):
+                # Neumann boundary conditions will be applied after computing the gradient squared
+                pass
 
         gradient_matrix = self.gradient_matrix(domain, symbol.domains)
 
@@ -176,12 +179,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         )
 
         # Add Neumann boundary conditions if defined
-        if symbol in boundary_conditions:
-            bcs = boundary_conditions[symbol]
-            if any(bc[1] == "Neumann" for bc in bcs.values()):
-                gradient_squared_result = self.add_neumann_values(
-                    symbol, gradient_squared_result, bcs, domain
-                )
+        if symbol in boundary_conditions and any(
+            bc[1] == "Neumann" for bc in bcs.values()
+        ):
+            gradient_squared_result = self.add_neumann_values(
+                symbol, gradient_squared_result, bcs, domain
+            )
 
         return gradient_squared_result.item()
 
