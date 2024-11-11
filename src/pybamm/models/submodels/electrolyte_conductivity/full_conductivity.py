@@ -54,7 +54,8 @@ class Full(BaseElectrolyteConductivity):
             c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
             phi_e_n = variables["Negative electrolyte potential [V]"]
             i_e_n = (self.param.kappa_e(c_e_n, T_n) * tor_n) * (
-                self.param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n) - pybamm.grad(phi_e_n)
+                self.param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n)
+                - pybamm.grad(phi_e_n)
             )
 
         T_s = variables["Separator temperature [K]"]
@@ -70,11 +71,13 @@ class Full(BaseElectrolyteConductivity):
         phi_e_p = variables["Positive electrolyte potential [V]"]
 
         i_e_s = (self.param.kappa_e(c_e_s, T_s) * tor_s) * (
-            self.param.chiRT_over_Fc(c_e_s, T_s) * pybamm.grad(c_e_s) - pybamm.grad(phi_e_s)
+            self.param.chiRT_over_Fc(c_e_s, T_s) * pybamm.grad(c_e_s)
+            - pybamm.grad(phi_e_s)
         )
 
         i_e_p = (self.param.kappa_e(c_e_p, T_p) * tor_p) * (
-            self.param.chiRT_over_Fc(c_e_p, T_p) * pybamm.grad(c_e_p) - pybamm.grad(phi_e_p)
+            self.param.chiRT_over_Fc(c_e_p, T_p) * pybamm.grad(c_e_p)
+            - pybamm.grad(phi_e_p)
         )
 
         i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
@@ -162,15 +165,26 @@ class Full(BaseElectrolyteConductivity):
 
         tor_s = variables["Separator electrolyte transport efficiency"]
         tor_p = variables["Positive electrolyte transport efficiency"]
-        
-        
-        kappa_tor_s_left = pybamm.boundary_value(self.param.kappa_e(c_e_s, T_s) * tor_s, "left")
-        kappa_tor_s_right = pybamm.boundary_value(self.param.kappa_e(c_e_s, T_s) * tor_s, "right")
-        kappa_tor_p_left = pybamm.boundary_value(self.param.kappa_e(c_e_p, T_p) * tor_p, "left")
 
-        chi_rt_over_fc_s_left = pybamm.boundary_value(self.param.chiRT_over_Fc(c_e_s, T_s), "left")
-        chi_rt_over_fc_s_right = pybamm.boundary_value(self.param.chiRT_over_Fc(c_e_s, T_s), "right")
-        chi_rt_over_fc_p_left = pybamm.boundary_value(self.param.chiRT_over_Fc(c_e_p, T_p), "left")
+        kappa_tor_s_left = pybamm.boundary_value(
+            self.param.kappa_e(c_e_s, T_s) * tor_s, "left"
+        )
+        kappa_tor_s_right = pybamm.boundary_value(
+            self.param.kappa_e(c_e_s, T_s) * tor_s, "right"
+        )
+        kappa_tor_p_left = pybamm.boundary_value(
+            self.param.kappa_e(c_e_p, T_p) * tor_p, "left"
+        )
+
+        chi_rt_over_fc_s_left = pybamm.boundary_value(
+            self.param.chiRT_over_Fc(c_e_s, T_s), "left"
+        )
+        chi_rt_over_fc_s_right = pybamm.boundary_value(
+            self.param.chiRT_over_Fc(c_e_s, T_s), "right"
+        )
+        chi_rt_over_fc_p_left = pybamm.boundary_value(
+            self.param.chiRT_over_Fc(c_e_p, T_p), "left"
+        )
 
         grad_c_e_s_left = pybamm.boundary_gradient(c_e_s, "left")
         grad_c_e_s_right = pybamm.boundary_gradient(c_e_s, "right")
@@ -179,11 +193,17 @@ class Full(BaseElectrolyteConductivity):
         grad_phi_e_s_left = pybamm.boundary_gradient(phi_e_s, "left")
         grad_phi_e_s_right = pybamm.boundary_gradient(phi_e_s, "right")
         grad_phi_e_p_left = pybamm.boundary_gradient(phi_e_p, "left")
-        
+
         # separator / positive electrode
-        phi_e_s_rbc = chi_rt_over_fc_s_right * grad_c_e_s_right - ((kappa_tor_p_left / kappa_tor_s_right) * (chi_rt_over_fc_p_left * grad_c_e_p_left - grad_phi_e_p_left))
-        phi_e_p_lbc = chi_rt_over_fc_p_left * grad_c_e_p_left - ((kappa_tor_s_right / kappa_tor_p_left) * (chi_rt_over_fc_s_right * grad_c_e_s_right - grad_phi_e_s_right))
-        
+        phi_e_s_rbc = chi_rt_over_fc_s_right * grad_c_e_s_right - (
+            (kappa_tor_p_left / kappa_tor_s_right)
+            * (chi_rt_over_fc_p_left * grad_c_e_p_left - grad_phi_e_p_left)
+        )
+        phi_e_p_lbc = chi_rt_over_fc_p_left * grad_c_e_p_left - (
+            (kappa_tor_s_right / kappa_tor_p_left)
+            * (chi_rt_over_fc_s_right * grad_c_e_s_right - grad_phi_e_s_right)
+        )
+
         # positive electrode / right
         phi_e_p_rbc = pybamm.Scalar(0)
         if self.options.electrode_types["negative"] == "porous":
@@ -191,10 +211,17 @@ class Full(BaseElectrolyteConductivity):
             c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
             T_n = variables["Negative electrode temperature [K]"]
             tor_n = variables["Negative electrolyte transport efficiency"]
-            kappa_tor_n_right = pybamm.boundary_value(self.param.kappa_e(c_e_n, T_n) * tor_n, "right")
-            chi_rt_over_fc_n_right = pybamm.boundary_value(self.param.chiRT_over_Fc(c_e_n, T_n), "right")
+            kappa_tor_n_right = pybamm.boundary_value(
+                self.param.kappa_e(c_e_n, T_n) * tor_n, "right"
+            )
+            chi_rt_over_fc_n_right = pybamm.boundary_value(
+                self.param.chiRT_over_Fc(c_e_n, T_n), "right"
+            )
             grad_c_e_n_right = pybamm.boundary_gradient(c_e_n, "right")
-            phi_e_n_rbc = chi_rt_over_fc_n_right * grad_c_e_n_right - ((kappa_tor_s_left / kappa_tor_n_right) * (chi_rt_over_fc_s_left * grad_c_e_s_left - grad_phi_e_s_left))
+            phi_e_n_rbc = chi_rt_over_fc_n_right * grad_c_e_n_right - (
+                (kappa_tor_s_left / kappa_tor_n_right)
+                * (chi_rt_over_fc_s_left * grad_c_e_s_left - grad_phi_e_s_left)
+            )
             phi_e_n_lbc = pybamm.Scalar(0)
             self.boundary_conditions[phi_e_n] = {
                 "left": (phi_e_n_lbc, "Neumann"),
@@ -215,4 +242,3 @@ class Full(BaseElectrolyteConductivity):
             "left": (phi_e_p_lbc, "Neumann"),
             "right": (phi_e_p_rbc, "Neumann"),
         }
-
