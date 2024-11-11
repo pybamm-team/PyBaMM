@@ -2,6 +2,8 @@
 # Base unit tests for lithium-ion half-cell models
 # This is achieved by using the {"working electrdode": "positive"} option
 #
+import pybamm
+import pytest
 
 
 class BaseUnitTestLithiumIonHalfCell:
@@ -81,8 +83,16 @@ class BaseUnitTestLithiumIonHalfCell:
 
     def test_well_posed_lumped_thermal(self):
         options = {"thermal": "lumped"}
-        self.check_well_posedness(options)
+        if self.model == pybamm.lithium_ion.DFN:
+            with pytest.raises(pybamm.OptionError):
+                self.check_well_posedness(options)
+        else:
+            self.check_well_posedness(options)
 
     def test_well_posed_lumped_thermal_hom(self):
         options = {"thermal": "lumped", "heat of mixing": "true"}
-        self.check_well_posedness(options)
+        if self.model == pybamm.lithium_ion.DFN:
+            with pytest.raises(pybamm.OptionError):
+                self.check_well_posedness(options)
+        else:
+            self.check_well_posedness(options)
