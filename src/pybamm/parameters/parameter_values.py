@@ -243,7 +243,7 @@ class ParameterValues:
                         f"Cannot update parameter '{name}' as it does not "
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
-                        + "param.update({{name: value}}, check_already_exists=False)"
+                        + "param.update({name: value}, check_already_exists=False)"
                     ) from err
             if isinstance(value, str):
                 if (
