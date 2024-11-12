@@ -48,20 +48,166 @@ def is_running_tests():  # pragma: no cover
     return False
 
 
-def ask_user_opt_in(timeout=10):
+def get_input_or_timeout(timeout):  # pragma: no cover
+    """
+    Cross-platform input with timeout, using various methods depending on the
+    environment. Works in Jupyter notebooks, Windows, and Unix-like systems.
+
+    Returns:
+
+    Args:
+        timeout (float): Timeout in seconds
+
+    Returns:
+        tuple: A tuple containing:
+            - str: The user input if received before the timeout, or None if the timeout was reached.
+            - bool: True if the timeout was reached, False otherwise.
+    """
+    # Check for telemetry disable flag
+    if os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false":
+        return None, True
+
+    if not (sys.stdin.isatty() or is_notebook()):
+        return None, True
+
+    # 1. special handling for Jupyter notebooks
+    if is_notebook():
+        try:
+            from ipywidgets import widgets
+            from IPython.display import display, clear_output
+
+            # Create buttons for yes/no
+            yes_button = widgets.Button(description="Yes")
+            no_button = widgets.Button(description="No")
+            output = widgets.Output()
+
+            # Variable to store the result
+            result = {"value": None, "set": False}
+
+            def on_yes_clicked(b):
+                with output:
+                    result["value"] = "yes"
+                    result["set"] = True
+                    clear_output()
+                    print("Telemetry enabled.")
+
+            def on_no_clicked(b):
+                with output:
+                    result["value"] = "no"
+                    result["set"] = True
+                    clear_output()
+                    print("Telemetry disabled.")
+
+            yes_button.on_click(on_yes_clicked)
+            no_button.on_click(on_no_clicked)
+
+            # Display the buttons
+            print("Do you want to enable telemetry?")
+            display(widgets.HBox([yes_button, no_button]))
+            display(output)
+
+            # Wait for button click or timeout
+            start_time = time.time()
+            while not result["set"] and (time.time() - start_time < timeout):
+                time.sleep(0.05)
+
+            if not result["set"]:
+                with output:
+                    clear_output()
+                    print("Timeout reached or negative input. Defaulting to not enabling telemetry.")
+                return None, True
+
+            return result["value"], False
+
+        except Exception:
+            # Fallback to regular input for Jupyter environments where widgets
+            # aren't available. This should be quite rare at this point but is
+            # included for completeness.
+            try:
+                from IPython.display import clear_output
+
+                user_input = input("Do you want to enable telemetry? (Y/n): ")
+                clear_output()
+                return user_input, False
+            except Exception:
+                return None, True
+
+    # 2. Windows-specific handling
+    if sys.platform == "win32":
+        try:
+            import msvcrt
+
+            start_time = time.time()
+            input_chars = []
+            sys.stdout.write("Do you want to enable telemetry? (Y/n): ")
+            sys.stdout.flush()
+
+            while time.time() - start_time < timeout:
+                if msvcrt.kbhit():
+                    char = msvcrt.getwche()
+                    if char in ("\r", "\n"):
+                        sys.stdout.write("\n")
+                        return "".join(input_chars), False
+                    input_chars.append(char)
+                time.sleep(0.1)
+            return None, True
+        except Exception:
+            return None, True
+    # POSIX-like systems will need to use termios
+    else:
+        try:
+            import termios
+            import tty
+            import select
+
+            # Save terminal settings for later
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                # Set terminal to raw mode
+                tty.setraw(sys.stdin.fileno())
+
+                sys.stdout.write("Do you want to enable telemetry? (Y/n): ")
+                sys.stdout.flush()
+
+                input_chars = []
+                start_time = time.time()
+
+                while time.time() - start_time < timeout:
+                    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+                    if rlist:
+                        char = sys.stdin.read(1)
+                        if char in ("\r", "\n"):
+                            sys.stdout.write("\n")
+                            return "".join(input_chars), False
+                        input_chars.append(char)
+                        sys.stdout.write(char)
+                        sys.stdout.flush()
+                return None, True
+
+            finally:
+                # Restore saved terminal settings
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+
+        except Exception:
+            return None, True
+
+    return None, True
+
+
+def ask_user_opt_in(timeout=10):  # pragma: no cover
     """
     Ask the user if they want to opt in to telemetry.
-
-    Parameters
-    ----------
-    timeout : float, optional
-        The timeout for the user to respond to the prompt. Default is 10 seconds.
-
-    Returns
-    -------
-    bool
-        True if the user opts in, False otherwise.
     """
+    # Check for telemetry disable flag first
+    if os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false":
+        return False
+
+    # Skip telemetry prompt in non-interactive environments
+    if not (sys.stdin.isatty() or is_notebook()):
+        False
+
     print(
         "PyBaMM can collect usage data and send it to the PyBaMM team to "
         "help us improve the software.\n"
@@ -72,44 +218,24 @@ def ask_user_opt_in(timeout=10):
         "For more information, see https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry"
     )
 
-    def get_input():  # pragma: no cover
-        try:
-            user_input = (
-                input("Do you want to enable telemetry? (Y/n): ").strip().lower()
-            )
-            answer.append(user_input)
-        except Exception:
-            # Handle any input errors
-            pass
+    user_input, timed_out = get_input_or_timeout(timeout)
 
-    time_start = time.time()
+    if timed_out:
+        print("\nTimeout reached. Defaulting to not enabling telemetry.")
+        return False
 
-    while True:
-        if time.time() - time_start > timeout:
-            print("\nTimeout reached. Defaulting to not enabling telemetry.")
-            return False
-
-        answer = []
-        # Create and start input thread
-        input_thread = threading.Thread(target=get_input)
-        input_thread.daemon = True
-        input_thread.start()
-
-        # Wait for either timeout or input
-        input_thread.join(timeout)
-
-        if answer:
-            if answer[0] in ["yes", "y", ""]:
-                print("\nTelemetry enabled.\n")
-                return True
-            elif answer[0] in ["no", "n"]:
-                print("\nTelemetry disabled.\n")
-                return False
-            else:
-                print("\nInvalid input. Please enter 'yes/y' for yes or 'no/n' for no.")
-        else:
-            print("\nTimeout reached. Defaulting to not enabling telemetry.")
-            return False
+    if user_input is None or not user_input:  # Empty input should mean a yes
+        print("\nTelemetry enabled.\n")
+        return True
+    elif user_input.lower() in ["y", "yes"]:
+        print("\nTelemetry enabled.\n")
+        return True
+    elif user_input.lower() in ["n", "no"]:
+        print("\nTelemetry disabled.\n")
+        return False
+    else:
+        print("\nInvalid input. Defaulting to not enabling telemetry.")
+        return False
 
 
 def generate():
@@ -121,7 +247,7 @@ def generate():
         return
 
     # Ask the user if they want to opt in to telemetry
-    opt_in = ask_user_opt_in()
+    opt_in = ask_user_opt_in(timeout=10)
     config_file = Path(platformdirs.user_config_dir("pybamm")) / "config.yml"
     write_uuid_to_file(config_file, opt_in)
 
