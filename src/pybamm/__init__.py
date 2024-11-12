@@ -21,6 +21,7 @@ from .util import (
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
+from . import config
 
 # Classes for the Expression Tree
 from .expression_tree.symbol import *
@@ -234,4 +235,4 @@ __all__ = [
     "pybamm_data",
 ]
 
-pybamm.config.generate()
+config.generate()
