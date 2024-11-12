@@ -73,3 +73,12 @@ glob:
 ../examples/notebooks/creating_models/5-half-cell-model.ipynb
 ../examples/notebooks/creating_models/6-a-simple-SEI-model.ipynb
 ```
+
+# Telemetry
+
+PyBaMM optionally collects anonymous usage data to help improve the library. This telemetry is opt-in and can be easily disabled. Here's what you need to know:
+
+- **What is collected**: Basic usage information like PyBaMM version, Python version, and which functions are run.
+- **Why**: To understand how PyBaMM is used and prioritize development efforts.
+- **Opt-out**: To disable telemetry, set the environment variable `PYBAMM_DISABLE_TELEMETRY=true` (or any value other than `false`) or use `pybamm.telemetry.disable()` in your code.
+- **Privacy**: No personal information (name, email, etc) or sensitive information (parameter values, simulation results, etc) is ever collected.
