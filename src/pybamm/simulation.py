@@ -16,24 +16,6 @@ from pybamm.util import import_optional_dependency
 from pybamm.expression_tree.operations.serialise import Serialise
 
 
-def is_notebook():
-    try:
-        shell = get_ipython().__class__.__name__
-        if shell == "ZMQInteractiveShell":  # pragma: no cover
-            # Jupyter notebook or qtconsole
-            cfg = get_ipython().config
-            nb = len(cfg["InteractiveShell"].keys()) == 0
-            return nb
-        elif shell == "TerminalInteractiveShell":  # pragma: no cover
-            return False  # Terminal running IPython
-        elif shell == "Shell":  # pragma: no cover
-            return True  # Google Colab notebook
-        else:  # pragma: no cover
-            return False  # Other type (?)
-    except NameError:
-        return False  # Probably standard Python interpreter
-
-
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
 
@@ -141,7 +123,7 @@ class Simulation:
         self._set_random_seed()
 
         # ignore runtime warnings in notebooks
-        if is_notebook():  # pragma: no cover
+        if pybamm.is_notebook():  # pragma: no cover
             import warnings
 
             warnings.filterwarnings("ignore")
