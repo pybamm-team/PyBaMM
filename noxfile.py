@@ -49,6 +49,7 @@ PYBAMM_ENV = {
     "IREE_INDEX_URL": os.getenv(
         "IREE_INDEX_URL", "https://iree.dev/pip-release-links.html"
     ),
+    "PYBAMM_DISABLE_TELEMETRY": "true",
 }
 VENV_DIR = Path("./venv").resolve()
 

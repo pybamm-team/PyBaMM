@@ -194,8 +194,8 @@ from .simulation import Simulation, load_sim, is_notebook
 # Batch Study
 from .batch_study import BatchStudy
 
-# Callbacks
-from . import callbacks
+# Callbacks, telemetry, config
+from . import callbacks, telemetry, config
 
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
@@ -204,12 +204,14 @@ from .pybamm_data import DataLoader
 import os
 import pathlib
 import sysconfig
-os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path('purelib')) / 'casadi')
+
+os.environ["CASADIPATH"] = str(pathlib.Path(sysconfig.get_path("purelib")) / "casadi")
 
 __all__ = [
     "batch_study",
     "callbacks",
     "citations",
+    "config",
     "discretisations",
     "doc_utils",
     "experiment",
@@ -225,8 +227,11 @@ __all__ = [
     "simulation",
     "solvers",
     "spatial_methods",
+    "telemetry",
     "type_definitions",
     "util",
     "version",
     "pybamm_data",
 ]
+
+pybamm.config.generate()
