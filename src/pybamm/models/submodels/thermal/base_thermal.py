@@ -417,16 +417,12 @@ class BaseThermal(pybamm.BaseSubModel):
             return pybamm.z_average(var)
         elif self.options["dimensionality"] == 2:
             return pybamm.yz_average(var)
-    
+
     def _get_i_e_for_half_cell_thermal(self, variables):
         c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
         c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
-        grad_phi_e_s = variables[
-            "Gradient of separator electrolyte potential [V.m-1]"
-        ]
-        grad_phi_e_p = variables[
-            "Gradient of positive electrolyte potential [V.m-1]"
-        ]
+        grad_phi_e_s = variables["Gradient of separator electrolyte potential [V.m-1]"]
+        grad_phi_e_p = variables["Gradient of positive electrolyte potential [V.m-1]"]
         grad_c_e_s = pybamm.grad(c_e_s)
         grad_c_e_p = pybamm.grad(c_e_p)
         T_s = variables["Separator temperature [K]"]
@@ -441,4 +437,3 @@ class BaseThermal(pybamm.BaseSubModel):
         )
         i_e = pybamm.concatenation(i_e_s, i_e_p)
         return i_e
-
