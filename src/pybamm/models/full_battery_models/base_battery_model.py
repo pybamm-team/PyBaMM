@@ -992,13 +992,14 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         if isinstance(self, pybamm.lithium_ion.DFN):
             if options["working electrode"] == "positive":
-                if (
-                    options["thermal"] == "lumped"
-                    or options["calculate heat source for isothermal models"] == "true"
-                ):
-                    raise pybamm.OptionError(
-                        "Due to a known bug, half-cell models are not currently compatible with thermal models."
-                    )
+                pass
+                # if (
+                #    options["thermal"] == "lumped"
+                #    or options["calculate heat source for isothermal models"] == "true"
+                # ):
+                #    raise pybamm.OptionError(
+                #        "Due to a known bug, half-cell models are not currently compatible with thermal models."
+            #     )
 
         self._options = options
 

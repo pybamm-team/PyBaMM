@@ -88,6 +88,32 @@ class BaseThermal(pybamm.BaseSubModel):
         # TODO: change full stefan-maxwell conductivity so that i_e is always
         # a Concatenation
         i_e = variables["Electrolyte current density [A.m-2]"]
+        # Special case for half cell -- i_e has to be a concatenation for this to work due to a mismatch with Q_ohm, so we make a new i_e which is a concatenation.
+        if (not isinstance(i_e, pybamm.Concatenation)) and (
+            self.options.electrode_types["negative"] == "planar"
+        ):
+            c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
+            c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
+            grad_phi_e_s = variables[
+                "Gradient of separator electrolyte potential [V.m-1]"
+            ]
+            grad_phi_e_p = variables[
+                "Gradient of positive electrolyte potential [V.m-1]"
+            ]
+            grad_c_e_s = pybamm.grad(c_e_s)
+            grad_c_e_p = pybamm.grad(c_e_p)
+            T_s = variables["Separator temperature [K]"]
+            T_p = variables["Positive electrode temperature [K]"]
+            tor_s = variables["Separator electrolyte transport efficiency"]
+            tor_p = variables["Positive electrolyte transport efficiency"]
+            i_e_s = (self.param.kappa_e(c_e_s, T_s) * tor_s) * (
+                self.param.chiRT_over_Fc(c_e_s, T_s) * grad_c_e_s - grad_phi_e_s
+            )
+            i_e_p = (self.param.kappa_e(c_e_p, T_p) * tor_p) * (
+                self.param.chiRT_over_Fc(c_e_p, T_p) * grad_c_e_p - grad_phi_e_p
+            )
+            i_e = pybamm.concatenation(i_e_s, i_e_p)
+
         phi_e = variables["Electrolyte potential [V]"]
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
