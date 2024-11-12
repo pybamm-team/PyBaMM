@@ -3,7 +3,6 @@ import os
 import pybamm
 import sys
 
-
 _posthog = Posthog(
     # this is the public, write only API key, so it's ok to include it here
     project_api_key="phc_bLZKBW03XjgiRhbWnPsnKPr0iw0z03fA6ZZYjxgW7ej",
