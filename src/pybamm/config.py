@@ -1,11 +1,14 @@
-import uuid
 import os
-import platformdirs
-from pathlib import Path
-import pybamm
 import sys
-import threading
 import time
+import uuid
+
+from pathlib import Path
+
+import pybamm
+import platformdirs
+
+from pybamm.util import is_notebook
 
 
 def is_running_tests():  # pragma: no cover
