@@ -183,18 +183,22 @@ def ask_user_opt_in(timeout=10):  # pragma: no cover
         print("\nTimeout reached. Defaulting to not enabling telemetry.")
         return False
 
-    if not user_input:  # Empty input should mean a yes
-        print("\nTelemetry enabled.\n")
-        return True
-    elif user_input.lower() in ["y", "yes"]:
-        print("\nTelemetry enabled.\n")
-        return True
-    elif user_input.lower() in ["n", "no"]:
-        print("\nTelemetry disabled.\n")
-        return False
-    else:
-        print("\nInvalid input. Defaulting to not enabling telemetry.")
-        return False
+    while True:
+        if user_input == "":  # Empty input should mean a no
+            print("Telemetry enabled.\n")
+            return False
+        elif user_input.lower() in ["y", "yes"]:
+            print("Telemetry enabled.\n")
+            return True
+        elif user_input.lower() in ["n", "no"]:
+            print("Telemetry disabled.")
+            return False
+        else:
+            print("Invalid input. Please enter 'Y/y' for yes or 'n/N' for no:")
+            user_input = get_input_or_timeout(timeout)
+            if user_input is None:
+                print("\nTimeout reached. Defaulting to not enabling telemetry.")
+                return False
 
 
 def generate():
