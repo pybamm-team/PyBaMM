@@ -29,16 +29,17 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "pybammsolvers",
     "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
-    "casadi>=3.6.6",
+    "casadi>=3.6.7",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
     "typing-extensions>=4.10.0",
     "pandas>=1.5.0",
     "pooch>=1.8.1",
-    "pybammsolvers",
+    "posthog",
 ]
 
 [project.urls]
