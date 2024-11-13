@@ -57,16 +57,21 @@ def get_input_or_timeout(timeout):  # pragma: no cover
         timeout (float): Timeout in seconds
 
     Returns:
-        tuple: A tuple containing:
-            - str: The user input if received before the timeout, or None if the timeout was reached.
-            - bool: True if the timeout was reached, False otherwise.
+        str | None: The user input if received before the timeout, or None if:
+            - The timeout was reached
+            - Telemetry is disabled via environment variable
+            - Running in a non-interactive environment
+            - An error occurred
+
+        The caller can distinguish between an empty response (user just pressed Enter)
+        which returns '', and a timeout/error which returns None.
     """
     # Check for telemetry disable flag
     if os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false":
-        return None, True
+        return None
 
     if not (sys.stdin.isatty() or is_notebook()):
-        return None, True
+        return None
 
     # 1. Handling for Jupyter notebooks. This is a simplified
     # implementation in comparison to widgets because notebooks
@@ -80,10 +85,10 @@ def get_input_or_timeout(timeout):  # pragma: no cover
             user_input = input("Do you want to enable telemetry? (Y/n): ")
             clear_output()
 
-            return user_input, False
+            return user_input
 
         except Exception:  # pragma: no cover
-            return None, True
+            return None
 
     # 2. Windows-specific handling
     if sys.platform == "win32":
@@ -100,12 +105,12 @@ def get_input_or_timeout(timeout):  # pragma: no cover
                     char = msvcrt.getwche()
                     if char in ("\r", "\n"):
                         sys.stdout.write("\n")
-                        return "".join(input_chars), False
+                        return "".join(input_chars)
                     input_chars.append(char)
                 time.sleep(0.1)
-            return None, True
+            return None
         except Exception:
-            return None, True
+            return None
 
     # 3. POSIX-like systems will need to use termios
     else:  # pragma: no cover
@@ -132,11 +137,11 @@ def get_input_or_timeout(timeout):  # pragma: no cover
                         char = sys.stdin.read(1)
                         if char in ("\r", "\n"):
                             sys.stdout.write("\n")
-                            return "".join(input_chars), False
+                            return "".join(input_chars)
                         input_chars.append(char)
                         sys.stdout.write(char)
                         sys.stdout.flush()
-                return None, True
+                return None
 
             finally:
                 # Restore saved terminal settings
@@ -145,9 +150,9 @@ def get_input_or_timeout(timeout):  # pragma: no cover
                 sys.stdout.flush()
 
         except Exception:  # pragma: no cover
-            return None, True
+            return None
 
-    return None, True
+    return None
 
 
 def ask_user_opt_in(timeout=10):  # pragma: no cover
@@ -172,13 +177,13 @@ def ask_user_opt_in(timeout=10):  # pragma: no cover
         "For more information, see https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry"
     )
 
-    user_input, timed_out = get_input_or_timeout(timeout)
+    user_input = get_input_or_timeout(timeout)
 
-    if timed_out:
+    if user_input is None:
         print("\nTimeout reached. Defaulting to not enabling telemetry.")
         return False
 
-    if user_input is None or not user_input:  # Empty input should mean a yes
+    if not user_input:  # Empty input should mean a yes
         print("\nTelemetry enabled.\n")
         return True
     elif user_input.lower() in ["y", "yes"]:

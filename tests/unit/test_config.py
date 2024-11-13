@@ -57,7 +57,7 @@ class TestConfig:
         # Mock get_input_or_timeout based on scenario
         def mock_get_input(timeout):
             print("Do you want to enable telemetry? (Y/n): ", end="")
-            return user_input, user_input is None
+            return user_input
 
         monkeypatch.setattr(pybamm.config, "get_input_or_timeout", mock_get_input)
 
