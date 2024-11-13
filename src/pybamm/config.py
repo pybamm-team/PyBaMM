@@ -159,13 +159,6 @@ def ask_user_opt_in(timeout=10):  # pragma: no cover
     """
     Ask the user if they want to opt in to telemetry.
     """
-    # Check for telemetry disable flag first
-    if os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false":
-        return False
-
-    # Skip telemetry prompt in non-interactive environments
-    if not (sys.stdin.isatty() or is_notebook()):
-        return False
 
     print(
         "PyBaMM can collect usage data and send it to the PyBaMM team to "
