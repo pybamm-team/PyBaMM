@@ -184,10 +184,7 @@ def ask_user_opt_in(timeout=10):  # pragma: no cover
         return False
 
     while True:
-        if user_input == "":  # Empty input should mean a no
-            print("Telemetry enabled.\n")
-            return False
-        elif user_input.lower() in ["y", "yes"]:
+        if user_input.lower() in ["y", "yes", ""]:
             print("Telemetry enabled.\n")
             return True
         elif user_input.lower() in ["n", "no"]:
@@ -210,7 +207,7 @@ def generate():
         return
 
     # Ask the user if they want to opt in to telemetry
-    opt_in = ask_user_opt_in(timeout=10)
+    opt_in = ask_user_opt_in()
     config_file = Path(platformdirs.user_config_dir("pybamm")) / "config.yml"
     write_uuid_to_file(config_file, opt_in)
 
