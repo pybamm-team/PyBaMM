@@ -36,16 +36,19 @@ class TestConfig:
             assert config_dict["enable_telemetry"] is False
 
     @pytest.mark.parametrize(
-        "user_input,expected_output,expected_message",
+        "input_sequence,expected_output,expected_messages",
         [
-            ("y", True, "Telemetry enabled"),
-            ("n", False, "Telemetry disabled"),
-            ("x", False, "Invalid input"),
-            (None, False, "Timeout reached"),
+            (["y"], True, ["Telemetry enabled"]),
+            (["n"], False, ["Telemetry disabled"]),
+            ([""], False, ["Telemetry enabled"]),
+            (["x", "y"], True, ["Invalid input", "Telemetry enabled"]),
+            (["x", "n"], False, ["Invalid input", "Telemetry disabled"]),
+            (["x", None], False, ["Invalid input", "Timeout reached"]),
+            ([None], False, ["Timeout reached"]),
         ],
     )
     def test_ask_user_opt_in_scenarios(
-        self, monkeypatch, capsys, user_input, expected_output, expected_message
+        self, monkeypatch, capsys, input_sequence, expected_output, expected_messages
     ):
         # mock is_running_tests to return False. This is done
         # temporarily here in order to prevent an early return.
@@ -54,10 +57,15 @@ class TestConfig:
         monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
         monkeypatch.setattr(pybamm.util, "is_notebook", lambda: False)
 
-        # Mock get_input_or_timeout based on scenario
+        # Mock get_input_or_timeout to return sequence of inputs
+        input_iter = iter(input_sequence)
+
         def mock_get_input(timeout):
             print("Do you want to enable telemetry? (Y/n): ", end="")
-            return user_input
+            try:
+                return next(input_iter)
+            except StopIteration:
+                return None
 
         monkeypatch.setattr(pybamm.config, "get_input_or_timeout", mock_get_input)
 
@@ -66,7 +74,8 @@ class TestConfig:
 
         assert "Do you want to enable telemetry?" in captured.out
         assert "PyBaMM can collect usage data" in captured.out
-        assert expected_message in captured.out
+        for message in expected_messages:
+            assert message in captured.out
         assert opt_in is expected_output
 
     @pytest.mark.parametrize(
