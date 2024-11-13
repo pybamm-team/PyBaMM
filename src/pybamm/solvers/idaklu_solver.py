@@ -487,9 +487,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
-    def _demote_64_to_32(self, x: pybamm.EvaluatorJax):
-        return pybamm.EvaluatorJax._demote_64_to_32(x)
-
     @property
     def supports_parallel_solve(self):
         return True
