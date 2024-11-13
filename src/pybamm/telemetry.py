@@ -9,6 +9,8 @@ _posthog = Posthog(
     host="https://us.i.posthog.com",
 )
 
+_posthog.log.setLevel("CRITICAL")
+
 
 def disable():
     _posthog.disabled = True

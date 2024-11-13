@@ -856,12 +856,17 @@ def _simplified_binary_broadcast_concatenation(
         elif isinstance(right, pybamm.Concatenation) and not isinstance(
             right, pybamm.ConcatenationVariable
         ):
-            return left.create_copy(
-                [
-                    operator(left_child, right_child)
-                    for left_child, right_child in zip(left.orphans, right.orphans)
-                ]
-            )
+            if len(left.orphans) == len(right.orphans):
+                return left.create_copy(
+                    [
+                        operator(left_child, right_child)
+                        for left_child, right_child in zip(left.orphans, right.orphans)
+                    ]
+                )
+            else:
+                raise AssertionError(
+                    "Concatenations must have the same number of children"
+                )
     if isinstance(right, pybamm.Concatenation) and not isinstance(
         right, pybamm.ConcatenationVariable
     ):
