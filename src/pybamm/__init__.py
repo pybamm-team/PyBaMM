@@ -173,7 +173,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, has_idaklu, has_iree
+from .solvers.idaklu_solver import IDAKLUSolver, has_idaklu
 
 # Experiments
 from .experiment.experiment import Experiment

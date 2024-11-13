@@ -101,18 +101,6 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
-.. _optional-iree-mlir-support:
-
-Optional - IREE / MLIR support
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Users can install ``iree`` (for MLIR just-in-time compilation) to use for main expression evaluation in the IDAKLU solver. Requires ``jax``.
-
-.. code:: bash
-
-   pip install "pybamm[iree,jax]"
-
-The ``pip install "pybamm[iree,jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``iree`` onto your system.
 
 Uninstall PyBaMM
 ----------------

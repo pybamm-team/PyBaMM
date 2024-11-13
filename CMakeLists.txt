@@ -53,27 +53,6 @@ if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON" )
   )
 endif()
 
-# Check IREE build flag
-if(NOT DEFINED PYBAMM_IDAKLU_EXPR_IREE)
-  set(PYBAMM_IDAKLU_EXPR_IREE OFF)
-endif()
-message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
-
-# IREE (MLIR expression evaluation) PyBaMM source files
-set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
-if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
-  add_compile_definitions(IREE_ENABLE)
-  # Source file list
-  set(IDAKLU_EXPR_IREE_SOURCE_FILES
-    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.cpp
-    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/iree_jit.hpp
-    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.cpp
-    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/IREEFunctions.hpp
-    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.cpp
-    src/pybamm/solvers/c_solvers/idaklu/Expressions/IREE/ModuleParser.hpp
-  )
-endif()
-
 # The complete (all dependencies) sources list should be mirrored in setup.py
 pybind11_add_module(idaklu
   # pybind11 interface
@@ -109,7 +88,6 @@ pybind11_add_module(idaklu
   src/pybamm/solvers/c_solvers/idaklu/observe.cpp
   # IDAKLU expressions - concrete implementations
   ${IDAKLU_EXPR_CASADI_SOURCE_FILES}
-  ${IDAKLU_EXPR_IREE_SOURCE_FILES}
 )
 
 if (NOT DEFINED USE_PYTHON_CASADI)
@@ -179,16 +157,3 @@ else()
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
-
-# IREE (MLIR compiler and runtime library) build settings
-if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
-  set(IREE_BUILD_COMPILER ON)
-  set(IREE_BUILD_TESTS OFF)
-  set(IREE_BUILD_SAMPLES OFF)
-  add_subdirectory(iree EXCLUDE_FROM_ALL)
-  set(IREE_COMPILER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/iree/compiler")
-  target_include_directories(idaklu SYSTEM PRIVATE "${IREE_COMPILER_ROOT}/bindings/c/iree/compiler")
-  target_compile_options(idaklu PRIVATE ${IREE_DEFAULT_COPTS})
-  target_link_libraries(idaklu PRIVATE iree_compiler_bindings_c_loader)
-  target_link_libraries(idaklu PRIVATE iree_runtime_runtime)
-endif()

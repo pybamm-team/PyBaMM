@@ -118,13 +118,12 @@ dev = [
     "importlib-metadata; python_version < '3.10'",
 ]
 # For the Jax solver.
-# Note: These must be kept in sync with the versions defined in pybamm/util.py, and
-#       must remain compatible with IREE (see noxfile.py for IREE compatibility).
+# Note: These must be kept in sync with the versions defined in pybamm/util.py
 jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-# Contains all optional dependencies, except for jax, iree, and dev dependencies
+# Contains all optional dependencies, except for jax and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
     "pybamm[examples,plot,cite,bpx,tqdm]",
