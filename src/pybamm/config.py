@@ -53,8 +53,6 @@ def get_input_or_timeout(timeout):  # pragma: no cover
     Cross-platform input with timeout, using various methods depending on the
     environment. Works in Jupyter notebooks, Windows, and Unix-like systems.
 
-    Returns:
-
     Args:
         timeout (float): Timeout in seconds
 
@@ -70,69 +68,27 @@ def get_input_or_timeout(timeout):  # pragma: no cover
     if not (sys.stdin.isatty() or is_notebook()):
         return None, True
 
-    # 1. special handling for Jupyter notebooks
+    # 1. Handling for Jupyter notebooks. This is a simplified
+    # implementation in comparison to widgets because notebooks
+    # are usually run interactively, and we don't need to worry
+    # about the event loop. The input is disabled when running
+    # tests due to the environment variable set.
     if is_notebook():  # pragma: no cover
         try:
-            from ipywidgets import widgets
-            from IPython.display import display, clear_output
+            from IPython.display import clear_output
 
-            # Create buttons for yes/no
-            yes_button = widgets.Button(description="Yes")
-            no_button = widgets.Button(description="No")
-            output = widgets.Output()
+            user_input = input("Do you want to enable telemetry? (Y/n): ")
+            clear_output()
 
-            # Variable to store the result
-            result = {"value": None, "set": False}
+            if user_input.lower() in ["y", "yes", ""]:
+                print("Telemetry enabled.")
+            elif user_input.lower() in ["n", "no"]:
+                print("Telemetry disabled.")
 
-            def on_yes_clicked(b):
-                with output:
-                    result["value"] = "yes"
-                    result["set"] = True
-                    clear_output()
-                    print("Telemetry enabled.")
-
-            def on_no_clicked(b):
-                with output:
-                    result["value"] = "no"
-                    result["set"] = True
-                    clear_output()
-                    print("Telemetry disabled.")
-
-            yes_button.on_click(on_yes_clicked)
-            no_button.on_click(on_no_clicked)
-
-            # Display the buttons
-            print("Do you want to enable telemetry?")
-            display(widgets.HBox([yes_button, no_button]))
-            display(output)
-
-            # Wait for button click or timeout
-            start_time = time.time()
-            while not result["set"] and (time.time() - start_time < timeout):
-                time.sleep(0.05)
-
-            if not result["set"]:
-                with output:
-                    clear_output()
-                    print(
-                        "Timeout reached or negative input. Defaulting to not enabling telemetry."
-                    )
-                return None, True
-
-            return result["value"], False
+            return user_input, False
 
         except Exception:  # pragma: no cover
-            # Fallback to regular input for Jupyter environments where widgets
-            # aren't available. This should be quite rare at this point but is
-            # included for completeness.
-            try:
-                from IPython.display import clear_output
-
-                user_input = input("Do you want to enable telemetry? (Y/n): ")
-                clear_output()
-                return user_input, False
-            except Exception:
-                return None, True
+            return None, True
 
     # 2. Windows-specific handling
     if sys.platform == "win32":
@@ -155,6 +111,7 @@ def get_input_or_timeout(timeout):  # pragma: no cover
             return None, True
         except Exception:
             return None, True
+
     # 3. POSIX-like systems will need to use termios
     else:  # pragma: no cover
         try:
