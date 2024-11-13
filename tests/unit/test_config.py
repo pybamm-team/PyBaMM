@@ -1,6 +1,6 @@
 import pytest
-import select
 import sys
+import os
 
 import pybamm
 import uuid
@@ -35,86 +35,60 @@ class TestConfig:
         else:
             assert config_dict["enable_telemetry"] is False
 
-    @pytest.mark.parametrize("user_opted_in, user_input", [(True, "y"), (False, "n")])
-    def test_ask_user_opt_in(self, monkeypatch, capsys, user_opted_in, user_input):
-        # Mock select.select to simulate user input
-        def mock_select(*args, **kwargs):
-            return [sys.stdin], [], []
 
-        monkeypatch.setattr(select, "select", mock_select)
+    @pytest.mark.parametrize(
+        "user_input,expected_output,expected_message",
+        [
+            ("y", True, "Telemetry enabled"),
+            ("n", False, "Telemetry disabled"),
+            ("x", False, "Invalid input"),
+            (None, False, "Timeout reached"),
+        ],
+    )
+    def test_ask_user_opt_in_scenarios(
+        self, monkeypatch, capsys, user_input, expected_output, expected_message
+    ):
+        # mock is_running_tests to return False. This is done
+        # temporarily here in order to prevent an early return.
+        monkeypatch.setattr(pybamm.config, "is_running_tests", lambda: False)
+        monkeypatch.setattr(os, "getenv", lambda x, y: "false")
+        monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+        monkeypatch.setattr(pybamm.util, "is_notebook", lambda: False)
 
-        # Mock sys.stdin.readline to return the desired input
-        monkeypatch.setattr(sys.stdin, "readline", lambda: user_input + "\n")
+        # Mock get_input_or_timeout based on scenario
+        def mock_get_input(timeout):
+            print("Do you want to enable telemetry? (Y/n): ", end="")
+            return user_input, user_input is None
 
-        # Call the function to ask the user if they want to opt in
-        opt_in = pybamm.config.ask_user_opt_in()
+        monkeypatch.setattr(pybamm.config, "get_input_or_timeout", mock_get_input)
 
-        # Check the result
-        assert opt_in is user_opted_in
-
-        # Check that the prompt was printed
-        captured = capsys.readouterr()
-        assert "Do you want to enable telemetry? (Y/n):" in captured.out
-
-    def test_ask_user_opt_in_invalid_input(self, monkeypatch, capsys):
-        # Mock select.select to simulate user input and then timeout
-        def mock_select(*args, **kwargs):
-            nonlocal call_count
-            if call_count == 0:
-                call_count += 1
-                return [sys.stdin], [], []
-            else:
-                return [], [], []
-
-        monkeypatch.setattr(select, "select", mock_select)
-
-        # Mock sys.stdin.readline to return invalid input
-        monkeypatch.setattr(sys.stdin, "readline", lambda: "invalid\n")
-
-        # Initialize call count
-        call_count = 0
-
-        # Call the function to ask the user if they want to opt in
         opt_in = pybamm.config.ask_user_opt_in(timeout=1)
-
-        # Check the result (should be False for timeout after invalid input)
-        assert opt_in is False
-
-        # Check that the prompt, invalid input message, and timeout message were printed
         captured = capsys.readouterr()
-        assert "Do you want to enable telemetry? (Y/n):" in captured.out
-        assert (
-            "Invalid input. Please enter 'yes/y' for yes or 'no/n' for no."
-            in captured.out
-        )
-        assert "Timeout reached. Defaulting to not enabling telemetry." in captured.out
 
-    def test_ask_user_opt_in_timeout(self, monkeypatch, capsys):
-        # Mock select.select to simulate a timeout
-        def mock_select(*args, **kwargs):
-            return [], [], []
+        assert "Do you want to enable telemetry?" in captured.out
+        assert "PyBaMM can collect usage data" in captured.out
+        assert expected_message in captured.out
+        assert opt_in is expected_output
 
-        monkeypatch.setattr(select, "select", mock_select)
 
-        # Call the function to ask the user if they want to opt in
-        opt_in = pybamm.config.ask_user_opt_in(timeout=1)
-
-        # Check the result (should be False for timeout)
-        assert opt_in is False
-
-        # Check that the prompt and timeout message were printed
-        captured = capsys.readouterr()
-        assert "Do you want to enable telemetry? (Y/n):" in captured.out
-        assert "Timeout reached. Defaulting to not enabling telemetry." in captured.out
-
-    def test_generate_and_read(self, monkeypatch, tmp_path):
+    @pytest.mark.parametrize(
+        "test_scenario",
+        [
+            "first_generation",  # Test first-time config generation
+            "config_exists",  # Test when config already exists
+        ],
+    )
+    def test_generate_and_read(self, monkeypatch, tmp_path, test_scenario, timeout=2):
         # Mock is_running_tests to return False
         monkeypatch.setattr(pybamm.config, "is_running_tests", lambda: False)
 
         # Mock ask_user_opt_in to return True
-        monkeypatch.setattr(pybamm.config, "ask_user_opt_in", lambda: True)
+        def mock_ask_user_opt_in(timeout=10):
+            return True
 
-        # Mock telemetry capture
+        monkeypatch.setattr(pybamm.config, "ask_user_opt_in", mock_ask_user_opt_in)
+
+        # Track if capture was called
         capture_called = False
 
         def mock_capture(event):
@@ -127,31 +101,49 @@ class TestConfig:
         # Mock config directory
         monkeypatch.setattr(platformdirs, "user_config_dir", lambda x: str(tmp_path))
 
-        # Test generate() creates new config
-        pybamm.config.generate()
+        if test_scenario == "first_generation":
+            # Test first-time generation
+            pybamm.config.generate()
 
-        # Verify config was created
-        config = pybamm.config.read()
-        assert config is not None
-        assert config["enable_telemetry"] is True
-        assert "uuid" in config
-        assert capture_called is True
+            # Verify config was created
+            config = pybamm.config.read()
+            assert config is not None
+            assert config["enable_telemetry"] is True
+            assert "uuid" in config
+            assert (
+                capture_called is True
+            )  # Should not ask for capturing telemetry when config exists
 
-        # Test generate() does nothing if config exists
-        capture_called = False
-        pybamm.config.generate()
-        assert capture_called is False
+        else:  # config_exists case
+            # First create a config
+            pybamm.config.generate()
+            capture_called = False  # Reset the flag
 
-    def test_read_uuid_from_file_no_file(self):
-        config_dict = pybamm.config.read_uuid_from_file(Path("nonexistent_file.yml"))
-        assert config_dict is None
+            # Now test that generating again does nothing
+            pybamm.config.generate()
+            assert (
+                capture_called is False
+            )  # Should not ask for capturing telemetry when config exists
 
-    def test_read_uuid_from_file_invalid_yaml(self, tmp_path):
-        # Create a temporary directory and file with invalid YAML content
-        invalid_yaml = tmp_path / "invalid_yaml.yml"
-        with open(invalid_yaml, "w") as f:
-            f.write("invalid: yaml: content:")
+    @pytest.mark.parametrize(
+        "file_scenario,expected_output",
+        [
+            ("nonexistent", None),
+            ("invalid_yaml", None),
+        ],
+    )
+    def test_read_uuid_from_file_scenarios(
+        self, tmp_path, file_scenario, expected_output
+    ):
+        if file_scenario == "nonexistent":
+            config_dict = pybamm.config.read_uuid_from_file(
+                Path("nonexistent_file.yml")
+            )
+        else:  # invalid_yaml
+            # Create a temporary directory and file with invalid YAML content
+            invalid_yaml = tmp_path / "invalid_yaml.yml"
+            with open(invalid_yaml, "w") as f:
+                f.write("invalid: yaml: content:")
+            config_dict = pybamm.config.read_uuid_from_file(invalid_yaml)
 
-        config_dict = pybamm.config.read_uuid_from_file(invalid_yaml)
-
-        assert config_dict is None
+        assert config_dict is expected_output
