@@ -165,7 +165,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "precon_half_bandwidth_keep": 5,
             "num_threads": 1,
             "num_solvers": 1,
-            "jax_evaluator": "jax",
             "linear_solver": "SUNLinSol_KLU",
             "linsol_max_iterations": 5,
             "epsilon_linear_tolerance": 0.05,
@@ -198,10 +197,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             for key, value in default_options.items():
                 if key not in options:
                     options[key] = value
-        if options["jax_evaluator"] not in ["jax"]:
-            raise pybamm.SolverError(
-                "Evaluation engine must be 'jax' for IDAKLU solver"
-            )
         self._options = options
 
         self.output_variables = [] if output_variables is None else output_variables
@@ -630,8 +625,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             else:  # pragma: no cover
                 raise pybamm.SolverError(
                     "Unsupported evaluation engine for convert_to_format="
-                    + f"{model.convert_to_format} "
-                    + f"(jax_evaluator={self._options['jax_evaluator']})"
+                    + f"{model.convert_to_format}"
                 )
             newsol._variables[var] = pybamm.ProcessedVariableComputed(
                 [model.variables_and_events[var]],

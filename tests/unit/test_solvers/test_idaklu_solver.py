@@ -979,21 +979,6 @@ class TestIDAKLUSolver:
         sol["x_s [m]"].domain = ["current collector"]
         sol["x_s [m]"].entries
 
-    def test_bad_jax_evaluator(self):
-        model = pybamm.lithium_ion.DFN()
-        model.convert_to_format = "jax"
-        with pytest.raises(pybamm.SolverError):
-            pybamm.IDAKLUSolver(options={"jax_evaluator": "bad_evaluator"})
-
-    def test_bad_jax_evaluator_output_variables(self):
-        model = pybamm.lithium_ion.DFN()
-        model.convert_to_format = "jax"
-        with pytest.raises(pybamm.SolverError):
-            pybamm.IDAKLUSolver(
-                options={"jax_evaluator": "bad_evaluator"},
-                output_variables=["Terminal voltage [V]"],
-            )
-
     def test_with_output_variables_and_event_termination(self):
         model = pybamm.lithium_ion.DFN()
         parameter_values = pybamm.ParameterValues("Chen2020")
