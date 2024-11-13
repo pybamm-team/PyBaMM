@@ -1,18 +1,12 @@
 # mypy: ignore-errors
-import os
 import casadi
 import pybamm
 import numpy as np
 import numbers
-import scipy.sparse as sparse
-from scipy.linalg import bandwidth
 
 import importlib
 import warnings
 
-
-if pybamm.has_jax():
-    from jax import numpy as jnp
 
 idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
@@ -283,7 +277,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if model.convert_to_format not in ["casadi", "jax"]:
             msg = (
-                "The python-idaklu and IREE solvers has been deprecated. "
+                "The python-idaklu and IREE solvers have been deprecated. "
                 "To use the IDAKLU solver set `convert_to_format = 'casadi'` or `jax`"
             )
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
@@ -520,9 +514,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The times (in seconds) at which to interpolate the solution. Defaults to `None`,
             which returns the adaptive time-stepping times.
         """
-        if not (
-            model.convert_to_format == "casadi"
-        ):  # pragma: no cover
+        if not (model.convert_to_format == "casadi"):  # pragma: no cover
             # Shouldn't ever reach this point
             raise pybamm.SolverError("Unsupported IDAKLU solver configuration.")
 

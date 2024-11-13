@@ -260,7 +260,6 @@ class TestIDAKLUSolver:
             sol.y[1:3], true_solution, err_msg=f"Failed for form {form}"
         )
 
-
     def test_sensitivities_initial_condition(self):
         form = "casadi"
         root_method = "casadi"
@@ -1083,7 +1082,7 @@ class TestIDAKLUSolver:
         )
 
     def test_python_idaklu_deprecation_errors(self):
-        for form in ["python", "", "jax"]:
+        for form in ["python", "jax"]:
             if form == "jax" and not pybamm.has_jax():
                 continue
 
@@ -1112,13 +1111,13 @@ class TestIDAKLUSolver:
                 ):
                     with pytest.raises(
                         DeprecationWarning,
-                        match="The python-idaklu solver has been deprecated.",
+                        match="The python-idaklu and IREE solvers have been deprecated.",
                     ):
                         _ = solver.solve(model, t_eval)
             elif form == "jax":
                 with pytest.raises(
                     pybamm.SolverError,
-                    match="Unsupported evaluation engine for convert_to_format=jax",
+                    match="Unsupported option for convert_to_format=jax",
                 ):
                     _ = solver.solve(model, t_eval)
 
