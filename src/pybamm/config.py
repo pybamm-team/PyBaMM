@@ -71,7 +71,7 @@ def get_input_or_timeout(timeout):  # pragma: no cover
         return None, True
 
     # 1. special handling for Jupyter notebooks
-    if is_notebook():
+    if is_notebook():  # pragma: no cover
         try:
             from ipywidgets import widgets
             from IPython.display import display, clear_output
@@ -114,12 +114,14 @@ def get_input_or_timeout(timeout):  # pragma: no cover
             if not result["set"]:
                 with output:
                     clear_output()
-                    print("Timeout reached or negative input. Defaulting to not enabling telemetry.")
+                    print(
+                        "Timeout reached or negative input. Defaulting to not enabling telemetry."
+                    )
                 return None, True
 
             return result["value"], False
 
-        except Exception:
+        except Exception:  # pragma: no cover
             # Fallback to regular input for Jupyter environments where widgets
             # aren't available. This should be quite rare at this point but is
             # included for completeness.
@@ -153,8 +155,8 @@ def get_input_or_timeout(timeout):  # pragma: no cover
             return None, True
         except Exception:
             return None, True
-    # POSIX-like systems will need to use termios
-    else:
+    # 3. POSIX-like systems will need to use termios
+    else:  # pragma: no cover
         try:
             import termios
             import tty
@@ -190,7 +192,7 @@ def get_input_or_timeout(timeout):  # pragma: no cover
                 sys.stdout.write("\n")
                 sys.stdout.flush()
 
-        except Exception:
+        except Exception:  # pragma: no cover
             return None, True
 
     return None, True
@@ -206,7 +208,7 @@ def ask_user_opt_in(timeout=10):  # pragma: no cover
 
     # Skip telemetry prompt in non-interactive environments
     if not (sys.stdin.isatty() or is_notebook()):
-        False
+        return False
 
     print(
         "PyBaMM can collect usage data and send it to the PyBaMM team to "
