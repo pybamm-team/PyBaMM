@@ -80,11 +80,6 @@ def get_input_or_timeout(timeout):  # pragma: no cover
             user_input = input("Do you want to enable telemetry? (Y/n): ")
             clear_output()
 
-            if user_input.lower() in ["y", "yes", ""]:
-                print("Telemetry enabled.")
-            elif user_input.lower() in ["n", "no"]:
-                print("Telemetry disabled.")
-
             return user_input, False
 
         except Exception:  # pragma: no cover
