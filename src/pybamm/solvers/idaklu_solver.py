@@ -249,18 +249,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # stack inputs
         if inputs_dict:
             arrays_to_stack = [np.array(x).reshape(-1, 1) for x in inputs_dict.values()]
-            inputs_sizes = [len(array) for array in arrays_to_stack]
             inputs = np.vstack(arrays_to_stack)
         else:
-            inputs_sizes = []
             inputs = np.array([[]])
-
-        def inputs_to_dict(inputs):
-            index = 0
-            for n, key in zip(inputs_sizes, inputs_dict.keys()):
-                inputs_dict[key] = inputs[index : (index + n)]
-                index += n
-            return inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
