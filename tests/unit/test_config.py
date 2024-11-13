@@ -35,7 +35,6 @@ class TestConfig:
         else:
             assert config_dict["enable_telemetry"] is False
 
-
     @pytest.mark.parametrize(
         "user_input,expected_output,expected_message",
         [
@@ -69,7 +68,6 @@ class TestConfig:
         assert "PyBaMM can collect usage data" in captured.out
         assert expected_message in captured.out
         assert opt_in is expected_output
-
 
     @pytest.mark.parametrize(
         "test_scenario",
