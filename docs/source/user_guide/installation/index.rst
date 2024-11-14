@@ -71,6 +71,7 @@ Package                                                             Minimum supp
 `typing-extensions <https://pypi.org/project/typing-extensions/>`__ 4.10.0
 `pandas <https://pypi.org/project/pandas/>`__                       1.5.0
 `pooch <https://www.fatiando.org/pooch/>`__                         1.8.1
+`posthog <https://posthog.com/>`__                                  3.6.5
 =================================================================== ==========================
 
 .. _install.optional_dependencies:
