@@ -16,14 +16,21 @@ def disable():
     _posthog.disabled = True
 
 
-_opt_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower()
-if _opt_out != "false":  # pragma: no cover
+def check_opt_out():
+    return os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
+
+
+if check_opt_out():  # pragma: no cover
     disable()
 
 
 def capture(event):  # pragma: no cover
     # don't capture events in automated testing
     if pybamm.config.is_running_tests() or _posthog.disabled:
+        return
+
+    if check_opt_out():
+        disable()
         return
 
     properties = {
