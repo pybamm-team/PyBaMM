@@ -145,7 +145,7 @@ def get_input_or_timeout(timeout):  # pragma: no cover
 
             finally:
                 # Restore saved terminal settings
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                termios.tcsetattr(sys.stdin, termios.TCSAFLUSH, old_settings)
                 sys.stdout.write("\n")
                 sys.stdout.flush()
 
