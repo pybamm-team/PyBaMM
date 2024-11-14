@@ -40,7 +40,7 @@ class TestConfig:
         [
             (["y"], True, ["Telemetry enabled"]),
             (["n"], False, ["Telemetry disabled"]),
-            ([""], False, ["Telemetry enabled"]),
+            ([""], True, ["Telemetry enabled"]),
             (["x", "y"], True, ["Invalid input", "Telemetry enabled"]),
             (["x", "n"], False, ["Invalid input", "Telemetry disabled"]),
             (["x", None], False, ["Invalid input", "Timeout reached"]),
