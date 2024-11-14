@@ -21,12 +21,15 @@ def is_running_tests():  # pragma: no cover
     ):
         return True
 
-    # Check for GitHub Actions environment variable
-    if "GITHUB_ACTIONS" in os.environ:
-        return True
-
     # Check for other common CI environment variables
-    ci_env_vars = ["CI", "TRAVIS", "CIRCLECI", "JENKINS_URL", "GITLAB_CI"]
+    ci_env_vars = [
+        "GITHUB_ACTIONS",
+        "CI",
+        "TRAVIS",
+        "CIRCLECI",
+        "JENKINS_URL",
+        "GITLAB_CI",
+    ]
     if any(var in os.environ for var in ci_env_vars):
         return True
 
