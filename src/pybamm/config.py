@@ -8,6 +8,14 @@ import threading
 import time
 
 
+def check_opt_out():
+    opt_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
+    config = pybamm.config.read()
+    if config:
+        opt_out = opt_out or not config["enable_telemetry"]
+    return opt_out
+
+
 def is_running_tests():  # pragma: no cover
     """
     Detect if the code is being run as part of a test suite or building docs with Sphinx.
@@ -15,11 +23,6 @@ def is_running_tests():  # pragma: no cover
     Returns:
         bool: True if running tests or building docs, False otherwise.
     """
-    # Check for common test runner names in command-line arguments
-    test_runners = ["pytest", "unittest", "nose", "trial", "nox", "tox"]
-    if any(runner in arg.lower() for arg in sys.argv for runner in test_runners):
-        return True
-
     # Check for other common CI environment variables
     ci_env_vars = [
         "GITHUB_ACTIONS",
@@ -28,12 +31,9 @@ def is_running_tests():  # pragma: no cover
         "CIRCLECI",
         "JENKINS_URL",
         "GITLAB_CI",
-        "CIBW_TEST_COMMAND",
     ]
     if any(var in os.environ for var in ci_env_vars):
         return True
-
-    assert False
 
     # Check if pytest or unittest is running
     if any(
@@ -116,7 +116,7 @@ def ask_user_opt_in(timeout=10):
 
 
 def generate():
-    if is_running_tests():
+    if is_running_tests() or check_opt_out():
         return
 
     # Check if the config file already exists

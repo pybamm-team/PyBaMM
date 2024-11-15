@@ -1,15 +1,6 @@
 from posthog import Posthog
-import os
 import pybamm
 import sys
-
-
-def check_opt_out():
-    opt_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
-    config = pybamm.config.read()
-    if config:
-        opt_out = opt_out or not config["enable_telemetry"]
-    return opt_out
 
 
 class MockTelemetry:
@@ -27,7 +18,7 @@ class MockTelemetry:
         pass
 
 
-if check_opt_out():
+if pybamm.config.check_opt_out():
     _posthog = MockTelemetry()
 else:
     _posthog = Posthog(
@@ -43,7 +34,7 @@ def disable():
     _posthog.disabled = True
 
 
-if check_opt_out():  # pragma: no cover
+if pybamm.config.check_opt_out():  # pragma: no cover
     disable()
 
 
@@ -52,7 +43,7 @@ def capture(event):  # pragma: no cover
     if pybamm.config.is_running_tests() or _posthog.disabled:
         return
 
-    if check_opt_out():
+    if pybamm.config.check_opt_out():
         disable()
         return
 
