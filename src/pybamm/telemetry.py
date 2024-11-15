@@ -5,13 +5,7 @@ import sys
 
 class MockTelemetry:
     def __init__(self):
-        class MockLog:
-            @staticmethod
-            def setLevel(_: str):
-                pass
-
         self.disabled = True
-        self.log = MockLog()
 
     @staticmethod
     def capture(**kwargs):
@@ -26,16 +20,11 @@ else:
         project_api_key="phc_bLZKBW03XjgiRhbWnPsnKPr0iw0z03fA6ZZYjxgW7ej",
         host="https://us.i.posthog.com",
     )
-
-_posthog.log.setLevel("CRITICAL")
+    _posthog.log.setLevel("CRITICAL")
 
 
 def disable():
     _posthog.disabled = True
-
-
-if pybamm.config.check_opt_out():  # pragma: no cover
-    disable()
 
 
 def capture(event):  # pragma: no cover
