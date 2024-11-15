@@ -806,7 +806,5 @@ class ParticleLithiumIonParameters(BaseParameters):
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} electrode volume change",
-            {
-                f"{self.phase_prefactor}{Domain} electrode volume change",
-            },
+            {f"{self.phase_prefactor}{Domain} electrode stoichiometry": sto},
         )
