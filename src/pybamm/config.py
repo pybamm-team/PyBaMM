@@ -23,6 +23,12 @@ def is_running_tests():  # pragma: no cover
     Returns:
         bool: True if running tests or building docs, False otherwise.
     """
+    # Check if pytest or unittest is running
+    if any(
+        test_module in sys.modules for test_module in ["pytest", "unittest", "nose"]
+    ):
+        return True
+
     # Check for other common CI environment variables
     ci_env_vars = [
         "GITHUB_ACTIONS",
@@ -33,12 +39,6 @@ def is_running_tests():  # pragma: no cover
         "GITLAB_CI",
     ]
     if any(var in os.environ for var in ci_env_vars):
-        return True
-
-    # Check if pytest or unittest is running
-    if any(
-        test_module in sys.modules for test_module in ["pytest", "unittest", "nose"]
-    ):
         return True
 
     # Check if building docs with Sphinx
