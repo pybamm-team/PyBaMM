@@ -28,7 +28,6 @@ def disable():
 
 
 def capture(event):  # pragma: no cover
-    # don't capture events in automated testing
     if pybamm.config.is_running_tests() or _posthog.disabled:
         return
 
