@@ -28,6 +28,7 @@ def is_running_tests():  # pragma: no cover
         "CIRCLECI",
         "JENKINS_URL",
         "GITLAB_CI",
+        "CIBW_ENVIRONMENT",
     ]
     if any(var in os.environ for var in ci_env_vars):
         return True
