@@ -5,12 +5,11 @@ import sys
 
 
 def check_opt_out():
-    opt_env_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
-    config_opt_out = True
+    opt_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
     config = pybamm.config.read()
     if config:
-        config_opt_out = config["enable_telemetry"]
-    return opt_env_out or config_opt_out
+        opt_out = opt_out or not config["enable_telemetry"]
+    return opt_out
 
 
 class MockTelemetry:
