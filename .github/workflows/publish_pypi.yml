@@ -18,6 +18,7 @@ on:
 
 # Set options available for all jobs that use cibuildwheel
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   # Increase pip debugging output, equivalent to `pip -vv`
   CIBW_BUILD_VERBOSITY: 2
   # Disable build isolation to allow pre-installing build-time dependencies.
