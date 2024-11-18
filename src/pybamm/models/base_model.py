@@ -207,6 +207,17 @@ class BaseModel:
 
     def list_coupled_variables(self):
         return list(self._coupled_variables.keys())
+    
+    def link_coupled_variables(self):
+        """
+        A method to link the coupled variables contained in self._coupled_variables to variables which should exist in model.variables.
+        """
+        for name, coupled_variable in self._coupled_variables.items():
+            if name in self._variables:
+                for sym in self._rhs.values():
+                    coupled_variable.set_coupled_variable(sym, self._variables[name])
+                for sym in self._algebraic.values():
+                    coupled_variable.set_coupled_variable(sym, self._variables[name])
 
     @property
     def variables(self):
@@ -829,6 +840,23 @@ class BaseModel:
             )
 
         pybamm.logger.info(f"Start building {self.name}")
+        for name, submodel in self.submodels.items():
+            try:
+                pybamm.logger.debug(
+                    f"Attempting to build {name} submodel ({self.name}) using build method"
+                )
+                submodel.build()
+                self.variables.update(submodel.variables)
+                self.rhs.update(submodel.rhs)
+                self.algebraic.update(submodel.algebraic)
+                self.initial_conditions.update(submodel.initial_conditions)
+                self.boundary_conditions.update(submodel.boundary_conditions)
+                self.events += submodel.events
+            except NotImplementedError:
+                pybamm.logger.debug(
+                    f"Failed to build {name} submodel ({self.name}) using build method"
+                )
+                continue
 
         if self._built_fundamental is False:
             self.build_fundamental()
@@ -836,6 +864,8 @@ class BaseModel:
         self.build_coupled_variables()
 
         self.build_model_equations()
+
+        self.link_coupled_variables()
 
     def set_initial_conditions_from(self, solution, inplace=True, return_type="model"):
         """
