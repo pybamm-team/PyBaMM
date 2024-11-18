@@ -218,6 +218,8 @@ class BaseModel:
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._algebraic.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
+                for sym in self._initial_conditions.values():
+                    coupled_variable.set_coupled_variable(sym, self._variables[name])
 
     @property
     def variables(self):
@@ -802,6 +804,8 @@ class BaseModel:
     def build_model_equations(self, submodels_built):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
+            if submodel_name in submodels_built:
+                continue
             pybamm.logger.verbose(
                 f"Setting rhs for {submodel_name} submodel ({self.name})"
             )
@@ -849,6 +853,7 @@ class BaseModel:
                 )
                 submodel.build()
                 self.variables.update(submodel.variables)
+                self.coupled_variables.update(submodel.coupled_variables)
                 self.rhs.update(submodel.rhs)
                 self.algebraic.update(submodel.algebraic)
                 self.initial_conditions.update(submodel.initial_conditions)

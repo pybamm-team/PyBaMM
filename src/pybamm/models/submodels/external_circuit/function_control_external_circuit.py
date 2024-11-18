@@ -28,7 +28,51 @@ class FunctionControl(BaseModel):
         self.external_circuit_function = external_circuit_function
         self.control = control
 
-    def get_fundamental_variables(self):
+    def build(self):
+        # Current is a variable
+        i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
+        if self.control in ["algebraic", "differential"]:
+            I = i_var
+        elif self.control == "differential with max":
+            i_input = pybamm.FunctionParameter(
+                "CCCV current function [A]", {"Time [s]": pybamm.t}
+            )
+            I = pybamm.maximum(i_var, i_input)
+
+        # Update derived variables
+        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
+
+        self.variables = {
+            "Current variable [A]": i_var,
+            "Total current density [A.m-2]": i_cell,
+            "Current [A]": I,
+            "C-rate": I / self.param.Q,
+        }
+        if self.options.get("voltage as a state") == "true":
+            V = pybamm.Variable("Voltage [V]")
+            self.variables.update({"Voltage [V]": V})
+            self.initial_conditions[V] = self.param.ocv_init
+
+        # Initial condition as a guess for consistent initial conditions
+        self.initial_conditions[i_cell] = self.param.Q
+
+        # External circuit submodels are always equations on the current
+        # The external circuit function should provide an update law for the current
+        # based on current/voltage/power/etc.
+        if "differential" in self.control:
+            self.rhs[i_cell] = self.external_circuit_function(self.variables)
+
+        # External circuit submodels are always equations on the current
+        # The external circuit function should fix either the current, or the voltage,
+        # or a combination (e.g. I*V for power control)
+        if self.control == "algebraic":
+            self.algebraic[i_cell] = self.external_circuit_function(self.variables)
+        if self.options.get("voltage as a state") == "true":
+            V_expression = pybamm.CoupledVariable("Voltage expression [V]")
+            self.coupled_variables.update({"Voltage expression [V]": V_expression})
+            self.algebraic[V] = V - V_expression
+
+    def get_fundamental_variables_LEGACY(self):
         # Current is a variable
         i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
         if self.control in ["algebraic", "differential"]:
@@ -54,7 +98,7 @@ class FunctionControl(BaseModel):
 
         return variables
 
-    def set_initial_conditions(self, variables):
+    def set_initial_conditions_LEGACY(self, variables):
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Current variable [A]"]
         self.initial_conditions[i_cell] = self.param.Q
@@ -62,7 +106,7 @@ class FunctionControl(BaseModel):
             V = variables["Voltage [V]"]
             self.initial_conditions[V] = self.param.ocv_init
 
-    def set_rhs(self, variables):
+    def set_rhs_LEGACY(self, variables):
         # External circuit submodels are always equations on the current
         # The external circuit function should provide an update law for the current
         # based on current/voltage/power/etc.
@@ -70,7 +114,7 @@ class FunctionControl(BaseModel):
             i_cell = variables["Current variable [A]"]
             self.rhs[i_cell] = self.external_circuit_function(variables)
 
-    def set_algebraic(self, variables):
+    def set_algebraic_LEGACY(self, variables):
         # External circuit submodels are always equations on the current
         # The external circuit function should fix either the current, or the voltage,
         # or a combination (e.g. I*V for power control)
@@ -92,7 +136,8 @@ class VoltageFunctionControl(FunctionControl):
         super().__init__(param, self.constant_voltage, options, control="algebraic")
 
     def constant_voltage(self, variables):
-        V = variables["Voltage [V]"]
+        V = pybamm.CoupledVariable("Voltage [V]")
+        self.coupled_variables.update({"Voltage [V]": V})
         return V - pybamm.FunctionParameter(
             "Voltage function [V]", {"Time [s]": pybamm.t}
         )
@@ -105,8 +150,10 @@ class PowerFunctionControl(FunctionControl):
         super().__init__(param, self.constant_power, options, control=control)
 
     def constant_power(self, variables):
-        I = variables["Current [A]"]
-        V = variables["Voltage [V]"]
+        I = pybamm.CoupledVariable("Current [A]")
+        self.coupled_variables.update({"Current [A]": I})
+        V = pybamm.CoupledVariable("Voltage [V]")
+        self.coupled_variables.update({"Voltage [V]": V})
         P = V * I
         P_applied = pybamm.FunctionParameter(
             "Power function [W]", {"Time [s]": pybamm.t}
@@ -126,8 +173,10 @@ class ResistanceFunctionControl(FunctionControl):
         super().__init__(param, self.constant_resistance, options, control=control)
 
     def constant_resistance(self, variables):
-        I = variables["Current [A]"]
-        V = variables["Voltage [V]"]
+        I = pybamm.CoupledVariable("Current [A]")
+        self.coupled_variables.update({"Current [A]": I})
+        V = pybamm.CoupledVariable("Voltage [V]")
+        self.coupled_variables.update({"Voltage [V]": V})
         R = V / I
         R_applied = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t}
@@ -158,11 +207,14 @@ class CCCVFunctionControl(FunctionControl):
         # seconds
         K_aw = 1  # anti-windup
         Q = self.param.Q
-        I_var = variables["Current variable [A]"]
-        I = variables["Current [A]"]
+        I_var = pybamm.CoupledVariable("Current variable [A]")
+        self.coupled_variables.update({"Current variable [A]": I_var})
+        I = pybamm.CoupledVariable("Current [A]")
+        self.coupled_variables.update({"Current [A]": I})
 
         K_V = 1
-        V = variables["Voltage [V]"]
+        V = pybamm.CoupledVariable("Voltage [V]")
+        self.coupled_variables.update({"Voltage [V]": V})
         V_CCCV = pybamm.Parameter("Voltage function [V]")
 
         return -K_aw / Q * (I_var - I) + K_V * (V - V_CCCV)

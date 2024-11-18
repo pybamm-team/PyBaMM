@@ -474,6 +474,14 @@ class ParameterValues:
             new_variables[variable] = self.process_symbol(equation)
         model.variables = new_variables
 
+        new_coupled_variables = {}
+        for variable, equation in unprocessed_model.coupled_variables.items():
+            pybamm.logger.verbose(
+                f"Processing parameters for {variable!r} (coupled variables)"
+            )
+            new_coupled_variables[variable] = self.process_symbol(equation)
+        model.coupled_variables = new_coupled_variables
+
         new_events = []
         for event in unprocessed_model.events:
             pybamm.logger.verbose(f"Processing parameters for event '{event.name}''")
@@ -763,6 +771,9 @@ class ParameterValues:
 
         elif isinstance(symbol, numbers.Number):
             return pybamm.Scalar(symbol)
+
+        elif isinstance(symbol, pybamm.CoupledVariable):
+            return self.process_symbol(symbol.children[0])
 
         else:
             # Backup option: return the object

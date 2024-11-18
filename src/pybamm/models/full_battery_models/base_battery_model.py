@@ -1014,6 +1014,8 @@ class BaseBatteryModel(pybamm.BaseModel):
     def build_model_equations(self, submodels_built):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
+            if submodel_name in submodels_built:
+                continue
             pybamm.logger.verbose(
                 f"Setting rhs for {submodel_name} submodel ({self.name})"
             )
