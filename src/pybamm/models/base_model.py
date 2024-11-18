@@ -207,7 +207,7 @@ class BaseModel:
 
     def list_coupled_variables(self):
         return list(self._coupled_variables.keys())
-    
+
     def link_coupled_variables(self):
         """
         A method to link the coupled variables contained in self._coupled_variables to variables which should exist in model.variables.
@@ -737,7 +737,7 @@ class BaseModel:
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
 
-    def build_fundamental(self):
+    def build_fundamental(self, submodels_built):
         # Get the fundamental variables
         self._variables_by_submodel = {submodel: {} for submodel in self.submodels}
         for submodel_name, submodel in self.submodels.items():
@@ -752,7 +752,7 @@ class BaseModel:
 
         self._built_fundamental = True
 
-    def build_coupled_variables(self):
+    def build_coupled_variables(self, submodels_built):
         # Note: pybamm will try to get the coupled variables for the submodels in the
         # order they are set by the user. If this fails for a particular submodel,
         # return to it later and try again. If setting coupled variables fails and
@@ -799,7 +799,7 @@ class BaseModel:
         # Convert variables back into FuzzyDict
         self.variables = pybamm.FuzzyDict(self._variables)
 
-    def build_model_equations(self):
+    def build_model_equations(self, submodels_built):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.verbose(
@@ -840,6 +840,8 @@ class BaseModel:
             )
 
         pybamm.logger.info(f"Start building {self.name}")
+        # submodels built can eventually be removed -- it just serves to prevent later functions from being called.
+        submodels_built = []
         for name, submodel in self.submodels.items():
             try:
                 pybamm.logger.debug(
@@ -852,6 +854,7 @@ class BaseModel:
                 self.initial_conditions.update(submodel.initial_conditions)
                 self.boundary_conditions.update(submodel.boundary_conditions)
                 self.events += submodel.events
+                submodels_built.append(name)
             except NotImplementedError:
                 pybamm.logger.debug(
                     f"Failed to build {name} submodel ({self.name}) using build method"
@@ -859,11 +862,11 @@ class BaseModel:
                 continue
 
         if self._built_fundamental is False:
-            self.build_fundamental()
+            self.build_fundamental(submodels_built)
 
-        self.build_coupled_variables()
+        self.build_coupled_variables(submodels_built)
 
-        self.build_model_equations()
+        self.build_model_equations(submodels_built)
 
         self.link_coupled_variables()
 

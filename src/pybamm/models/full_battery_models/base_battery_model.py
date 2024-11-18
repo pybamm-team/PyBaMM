@@ -1011,7 +1011,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 2:
             self.variables.update({"y [m]": var.y, "z [m]": var.z})
 
-    def build_model_equations(self):
+    def build_model_equations(self, submodels_built):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.verbose(
