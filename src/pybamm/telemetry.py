@@ -8,7 +8,7 @@ class MockTelemetry:
         self.disabled = True
 
     @staticmethod
-    def capture(**kwargs): # pragma: no cover
+    def capture(**kwargs):  # pragma: no cover
         pass
 
 
