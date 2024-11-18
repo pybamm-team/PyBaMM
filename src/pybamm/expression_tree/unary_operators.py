@@ -212,7 +212,8 @@ class Sign(UnaryOperator):
 
     @classmethod
     def _from_json(cls, snippet: dict):
-        raise NotImplementedError()
+        """See :meth:`pybamm.UnaryOperator._from_json()`."""
+        return cls(snippet["children"][0])
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -991,8 +992,8 @@ class BoundaryOperator(SpatialOperator):
         if side in ["negative tab", "positive tab"]:
             if child.domain[0] != "current collector":
                 raise pybamm.ModelError(
-                    f"""Can only take boundary value on the tabs in the domain
-                'current collector', but {child} has domain {child.domain[0]}"""
+                    "Can only take boundary value on the tabs in the domain "
+                    f"'current collector', but {child} has domain {child.domain[0]}"
                 )
         self.side = side
         # boundary value of a child takes the primary domain from secondary domain

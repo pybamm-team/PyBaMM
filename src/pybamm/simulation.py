@@ -10,6 +10,7 @@ import hashlib
 import warnings
 from functools import lru_cache
 from datetime import timedelta
+import pybamm.telemetry
 from pybamm.util import import_optional_dependency
 
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -461,6 +462,8 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
+        pybamm.telemetry.capture("simulation-solved")
+
         # Setup
         if solver is None:
             solver = self._solver
@@ -530,14 +533,12 @@ class Simulation:
                     dt_eval_max = np.max(np.diff(t_eval))
                     if dt_eval_max > np.nextafter(dt_data_min, np.inf):
                         warnings.warn(
-                            f"""
-                            The largest timestep in t_eval ({dt_eval_max}) is larger than
-                            the smallest timestep in the data ({dt_data_min}). The returned
-                            solution may not have the correct resolution to accurately
-                            capture the input. Try refining t_eval. Alternatively,
-                            passing t_eval = None automatically sets t_eval to be the
-                            points in the data.
-                            """,
+                            f"The largest timestep in t_eval ({dt_eval_max}) is larger than "
+                            f"the smallest timestep in the data ({dt_data_min}). The returned "
+                            "solution may not have the correct resolution to accurately "
+                            "capture the input. Try refining t_eval. Alternatively, "
+                            "passing t_eval = None automatically sets t_eval to be the "
+                            "points in the data.",
                             pybamm.SolverWarning,
                             stacklevel=2,
                         )

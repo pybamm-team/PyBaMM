@@ -174,6 +174,50 @@ class TestSolution:
         ):
             sol_sum.y
 
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
+    def test_add_solutions_with_computed_variables(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"2u": 2 * u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Set up first solution
+        t1 = np.linspace(0, 1, 50)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+
+        sol1 = solver.solve(model, t1)
+
+        # second solution
+        t2 = np.linspace(2, 3, 50)
+        sol2 = solver.solve(model, t2)
+
+        sol_sum = sol1 + sol2
+
+        # check varaibles concat appropriately
+        assert sol_sum["2u"].data[0] == sol1["2u"].data[0]
+        assert sol_sum["2u"].data[-1] == sol2["2u"].data[-1]
+        # Check functions still work
+        sol_sum["2u"].unroll()
+        # check solution still tagged as 'variables_returned'
+        assert sol_sum.variables_returned is True
+
+        # add a solution with computed variable to an empty solution
+        empty_sol = pybamm.Solution(
+            sol1.all_ts, sol1["2u"].base_variables_data, model, {u: 0, v: 1}
+        )
+
+        sol4 = empty_sol + sol2
+        assert sol4["2u"] == sol2["2u"]
+        assert sol4.variables_returned is True
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
@@ -194,6 +238,34 @@ class TestSolution:
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
 
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
+    def test_copy_with_computed_variables(self):
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"2u": 2 * u}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Set up first solution
+        t1 = np.linspace(0, 1, 50)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+
+        sol1 = solver.solve(model, t1)
+
+        sol2 = sol1.copy()
+
+        assert (
+            sol1._variables[k] == sol2._variables[k] for k in sol1._variables.keys()
+        )
+        assert sol2.variables_returned is True
+
     def test_last_state(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
@@ -213,6 +285,39 @@ class TestSolution:
         assert sol_last_state.set_up_time == 0
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
+
+    @pytest.mark.skipif(
+        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
+    )
+    def test_first_last_state_empty_y(self):
+        # check that first and last state work when y is empty
+        # due to only variables being returned (required for experiments)
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.variables = {"2u": 2 * u, "4u": 4 * u}
+        model._summary_variables = {"4u": model.variables["4u"]}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Set up first solution
+        t1 = np.linspace(0, 1, 50)
+        solver = pybamm.IDAKLUSolver(output_variables=["2u"])
+
+        sol1 = solver.solve(model, t1)
+
+        np.testing.assert_array_equal(
+            sol1.first_state.all_ys[0], np.array([[0.0], [1.0]])
+        )
+        # check summay variables not in the solve can be evaluated at the final timestep
+        # via 'last_state
+        np.testing.assert_array_almost_equal(
+            sol1.last_state["4u"].entries, np.array([4.0])
+        )
 
     def test_cycles(self):
         model = pybamm.lithium_ion.SPM()
@@ -420,3 +525,43 @@ class TestSolution:
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
+
+    _solver_classes = [pybamm.CasadiSolver]
+    if pybamm.has_idaklu():
+        _solver_classes.append(pybamm.IDAKLUSolver)
+
+    @pytest.mark.parametrize("solver_class", _solver_classes)
+    def test_discrete_data_sum(self, solver_class):
+        model = pybamm.BaseModel(name="test_model")
+        c = pybamm.Variable("c")
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables["c"] = c
+
+        data_times = np.linspace(0, 1, 10)
+        if solver_class == pybamm.IDAKLUSolver:
+            t_eval = [data_times[0], data_times[-1]]
+            t_interp = data_times
+        else:
+            t_eval = data_times
+            t_interp = None
+        solver = solver_class()
+        data_values = solver.solve(model, t_eval=t_eval, t_interp=t_interp)["c"].entries
+
+        data = pybamm.DiscreteTimeData(data_times, data_values, "test_data")
+        data_comparison = pybamm.DiscreteTimeSum((c - data) ** 2)
+
+        model = pybamm.BaseModel(name="test_model2")
+        a = pybamm.InputParameter("a")
+        model.rhs = {c: -a * c}
+        model.initial_conditions = {c: 1}
+        model.variables["data_comparison"] = data_comparison
+
+        solver = solver_class()
+        for a in [0.5, 1.0, 2.0]:
+            sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
+            y_sol = np.exp(-a * data_times)
+            expected = np.sum((y_sol - data_values) ** 2)
+            np.testing.assert_array_almost_equal(
+                sol["data_comparison"](), expected, decimal=2
+            )
