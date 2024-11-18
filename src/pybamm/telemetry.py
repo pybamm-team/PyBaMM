@@ -14,7 +14,7 @@ class MockTelemetry:
 
 if pybamm.config.check_opt_out():
     _posthog = MockTelemetry()
-else:
+else:  # pragma: no cover
     _posthog = Posthog(
         # this is the public, write only API key, so it's ok to include it here
         project_api_key="phc_bLZKBW03XjgiRhbWnPsnKPr0iw0z03fA6ZZYjxgW7ej",
@@ -42,4 +42,4 @@ def capture(event):  # pragma: no cover
             "pybamm_version": pybamm.__version__,
         }
         user_id = config["uuid"]
-        _posthog.capture(user_id, event, properties=properties)
+        _posthog.capture(distinct_id=user_id, event=event, properties=properties)

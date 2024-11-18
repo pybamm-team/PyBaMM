@@ -8,8 +8,12 @@ import threading
 import time
 
 
+def check_env_opt_out():
+    return os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
+
+
 def check_opt_out():
-    opt_out = os.getenv("PYBAMM_DISABLE_TELEMETRY", "false").lower() != "false"
+    opt_out = check_env_opt_out()
     config = pybamm.config.read()
     if config:
         opt_out = opt_out or not config["enable_telemetry"]
