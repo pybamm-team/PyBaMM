@@ -443,6 +443,12 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
+        new_variables = {}
+        for variable, equation in unprocessed_model.variables.items():
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
+            new_variables[variable] = self.process_symbol(equation)
+        model.variables = new_variables
+
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")
@@ -467,12 +473,6 @@ class ParameterValues:
         model.initial_conditions = new_initial_conditions
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
-
-        new_variables = {}
-        for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
-            new_variables[variable] = self.process_symbol(equation)
-        model.variables = new_variables
 
         # new_coupled_variables = {}
         # for variable, equation in unprocessed_model.coupled_variables.items():

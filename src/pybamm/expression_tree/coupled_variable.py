@@ -53,7 +53,6 @@ class CoupledVariable(pybamm.Symbol):
         else:
             for child in symbol.children:
                 self.set_coupled_variable(child, expr)
-        symbol.set_id()
 
 
 # This function is used when a user passes in an arbitrary expression and we need to find the coupled variables, which have not been saved in the model.
