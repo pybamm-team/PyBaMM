@@ -18,6 +18,10 @@ on:
       ncommits:
         description: "Number of commits to benchmark between commit_start and commit_end"
         default: "100"
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest

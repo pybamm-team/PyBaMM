@@ -18,6 +18,7 @@ on:
 
 # Set options available for all jobs that use cibuildwheel
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   # Increase pip debugging output, equivalent to `pip -vv`
   CIBW_BUILD_VERBOSITY: 2
   # Disable build isolation to allow pre-installing build-time dependencies.
@@ -72,6 +73,7 @@ jobs:
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
             PYBAMM_USE_VCPKG=ON
             VCPKG_ROOT_DIR=C:\vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
@@ -109,6 +111,8 @@ jobs:
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
+          CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_BUILD_LINUX: python -m pip install setuptools wheel
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
@@ -150,6 +154,8 @@ jobs:
 
             python -m cibuildwheel --output-dir wheelhouse
         env:
+          CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
           # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
