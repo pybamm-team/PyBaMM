@@ -410,9 +410,14 @@ class CustomStepImplicit(BaseStepImplicit):
         self.kwargs = kwargs
 
     def get_submodel(self, model):
-        return pybamm.external_circuit.FunctionControl(
+        cv = pybamm.expression_tree.coupled_variable.find_and_save_coupled_variables(
+            self.current_rhs_function(None)
+        )
+        submodel = pybamm.external_circuit.FunctionControl(
             model.param, self.current_rhs_function, model.options, control=self.control
         )
+        submodel.coupled_variables = cv
+        return submodel
 
     def copy(self):
         return CustomStepImplicit(

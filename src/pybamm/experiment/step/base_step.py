@@ -440,6 +440,7 @@ class BaseStepExplicit(BaseStep):
         new_parameter_values["Current function [A]"] = self.current_value(
             new_model.variables
         )
+        new_model.link_coupled_variables()
         return new_model, new_parameter_values
 
 

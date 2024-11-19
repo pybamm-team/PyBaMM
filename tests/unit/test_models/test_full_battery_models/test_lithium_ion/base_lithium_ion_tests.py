@@ -414,8 +414,8 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_external_circuit_function(self):
         def external_circuit_function(variables):
-            I = variables["Current [A]"]
-            V = variables["Voltage [V]"]
+            I = pybamm.CoupledVariable("Current [A]")
+            V = pybamm.CoupledVariable("Voltage [V]")
             return (
                 V
                 + I
@@ -429,8 +429,8 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_external_circuit_function_1plus1D(self):
         def external_circuit_function(variables):
-            I = variables["Current [A]"]
-            V = variables["Voltage [V]"]
+            I = pybamm.CoupledVariable("Current [A]")
+            V = pybamm.CoupledVariable("Voltage [V]")
             return (
                 V
                 + I
@@ -448,8 +448,8 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_external_circuit_function_2plus1D(self):
         def external_circuit_function(variables):
-            I = variables["Current [A]"]
-            V = variables["Voltage [V]"]
+            I = pybamm.CoupledVariable("Current [A]")
+            V = pybamm.CoupledVariable("Voltage [V]")
             return (
                 V
                 + I

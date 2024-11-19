@@ -1152,6 +1152,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             model = pybamm.external_circuit.FunctionControl(
                 self.param, self.options["operating mode"], self.options
             )
+            expr = self.options["operating mode"](None)
+            coupled_variables = (
+                pybamm.expression_tree.coupled_variable.find_and_save_coupled_variables(
+                    expr
+                )
+            )
+            model.coupled_variables.update(coupled_variables)
         self.submodels["external circuit"] = model
         self.submodels["discharge and throughput variables"] = (
             pybamm.external_circuit.DischargeThroughput(self.param, self.options)

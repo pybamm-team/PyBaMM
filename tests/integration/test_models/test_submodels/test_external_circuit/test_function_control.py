@@ -8,7 +8,7 @@ import pybamm
 class TestFunctionControl:
     def test_constant_current(self):
         def constant_current(variables):
-            I = variables["Current [A]"]
+            I = pybamm.CoupledVariable("Current [A]")
             return I + 1
 
         # load models
@@ -53,7 +53,7 @@ class TestFunctionControl:
 
     def test_constant_voltage(self):
         def constant_voltage(variables):
-            V = variables["Voltage [V]"]
+            V = pybamm.CoupledVariable("Voltage [V]")
             return V - 4.08
 
         # load models
@@ -95,8 +95,8 @@ class TestFunctionControl:
 
     def test_constant_power(self):
         def constant_power(variables):
-            I = variables["Current [A]"]
-            V = variables["Voltage [V]"]
+            I = pybamm.CoupledVariable("Current [A]")
+            V = pybamm.CoupledVariable("Voltage [V]")
             return I * V - 4
 
         # load models
@@ -132,8 +132,8 @@ class TestFunctionControl:
 
     def test_constant_resistance(self):
         def constant_resistance(variables):
-            I = variables["Current [A]"]
-            V = variables["Voltage [V]"]
+            I = pybamm.CoupledVariable("Current [A]")
+            V = pybamm.CoupledVariable("Voltage [V]")
             return V / I - 2
 
         # load models

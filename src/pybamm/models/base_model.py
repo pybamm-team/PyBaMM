@@ -213,13 +213,25 @@ class BaseModel:
         A method to link the coupled variables contained in self._coupled_variables to variables which should exist in model.variables.
         """
         for name, coupled_variable in self._coupled_variables.items():
+            pybamm.logger.debug(f"linking coupled variable {name}")
             if name in self._variables:
+                pybamm.logger.debug(
+                    f"coupled variable found for variable {name}: {self._variables[name]}"
+                )
+                for sym in self._variables.values():
+                    coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._rhs.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._algebraic.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._initial_conditions.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
+                # for bc in self._boundary_conditions.values():
+                #    for side in ["left", "right"]:
+                #        sym = bc[side][0]
+                #        coupled_variable.set_coupled_variable(sym, self._variables[name])
+            else:
+                raise ValueError(f"coupled variable {name} not found in variables")
 
     @property
     def variables(self):
@@ -712,6 +724,7 @@ class BaseModel:
         new_model._algebraic = self.algebraic.copy()
         new_model._initial_conditions = self.initial_conditions.copy()
         new_model._boundary_conditions = self.boundary_conditions.copy()
+        new_model._coupled_variables = self.coupled_variables.copy()
         new_model._variables = self.variables.copy()
         new_model._events = self.events.copy()
         new_model._variables_casadi = self._variables_casadi.copy()
