@@ -72,60 +72,6 @@ class FunctionControl(BaseModel):
             self.coupled_variables.update({"Voltage expression [V]": V_expression})
             self.algebraic[V] = V - V_expression
 
-    def get_fundamental_variables_LEGACY(self):
-        # Current is a variable
-        i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
-        if self.control in ["algebraic", "differential"]:
-            I = i_var
-        elif self.control == "differential with max":
-            i_input = pybamm.FunctionParameter(
-                "CCCV current function [A]", {"Time [s]": pybamm.t}
-            )
-            I = pybamm.maximum(i_var, i_input)
-
-        # Update derived variables
-        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
-
-        variables = {
-            "Current variable [A]": i_var,
-            "Total current density [A.m-2]": i_cell,
-            "Current [A]": I,
-            "C-rate": I / self.param.Q,
-        }
-        if self.options.get("voltage as a state") == "true":
-            V = pybamm.Variable("Voltage [V]")
-            variables.update({"Voltage [V]": V})
-
-        return variables
-
-    def set_initial_conditions_LEGACY(self, variables):
-        # Initial condition as a guess for consistent initial conditions
-        i_cell = variables["Current variable [A]"]
-        self.initial_conditions[i_cell] = self.param.Q
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            self.initial_conditions[V] = self.param.ocv_init
-
-    def set_rhs_LEGACY(self, variables):
-        # External circuit submodels are always equations on the current
-        # The external circuit function should provide an update law for the current
-        # based on current/voltage/power/etc.
-        if "differential" in self.control:
-            i_cell = variables["Current variable [A]"]
-            self.rhs[i_cell] = self.external_circuit_function(variables)
-
-    def set_algebraic_LEGACY(self, variables):
-        # External circuit submodels are always equations on the current
-        # The external circuit function should fix either the current, or the voltage,
-        # or a combination (e.g. I*V for power control)
-        if self.control == "algebraic":
-            i_cell = variables["Current variable [A]"]
-            self.algebraic[i_cell] = self.external_circuit_function(variables)
-        if self.options.get("voltage as a state") == "true":
-            V = variables["Voltage [V]"]
-            V_expression = variables["Voltage expression [V]"]
-            self.algebraic[V] = V - V_expression
-
 
 class VoltageFunctionControl(FunctionControl):
     """

@@ -45,23 +45,6 @@ class ExplicitPowerControl(BaseModel):
             }
         )
 
-    def get_coupled_variables_LEGACY(self, variables):
-        # Current is given as applied power divided by voltage
-        V = variables["Voltage [V]"]
-        P = pybamm.FunctionParameter("Power function [W]", {"Time [s]": pybamm.t})
-        I = P / V
-
-        # Update derived variables
-        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
-
-        variables = {
-            "Total current density [A.m-2]": i_cell,
-            "Current [A]": I,
-            "C-rate": I / self.param.Q,
-        }
-
-        return variables
-
 
 class ExplicitResistanceControl(BaseModel):
     """External circuit with current set explicitly to hit target resistance."""
@@ -82,22 +65,3 @@ class ExplicitResistanceControl(BaseModel):
                 "C-rate": I / self.param.Q,
             }
         )
-
-    def get_coupled_variables_LEGACY(self, variables):
-        # Current is given as applied voltage divided by resistance
-        V = variables["Voltage [V]"]
-        R = pybamm.FunctionParameter(
-            "Resistance function [Ohm]", {"Time [s]": pybamm.t}
-        )
-        I = V / R
-
-        # Update derived variables
-        i_cell = I / (self.param.n_electrodes_parallel * self.param.A_cc)
-
-        variables = {
-            "Total current density [A.m-2]": i_cell,
-            "Current [A]": I,
-            "C-rate": I / self.param.Q,
-        }
-
-        return variables
