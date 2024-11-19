@@ -54,19 +54,19 @@ class FunctionControl(BaseModel):
             self.initial_conditions[V] = self.param.ocv_init
 
         # Initial condition as a guess for consistent initial conditions
-        self.initial_conditions[i_cell] = self.param.Q
+        self.initial_conditions[i_var] = self.param.Q
 
         # External circuit submodels are always equations on the current
         # The external circuit function should provide an update law for the current
         # based on current/voltage/power/etc.
         if "differential" in self.control:
-            self.rhs[i_cell] = self.external_circuit_function(self.variables)
+            self.rhs[i_var] = self.external_circuit_function(self.variables)
 
         # External circuit submodels are always equations on the current
         # The external circuit function should fix either the current, or the voltage,
         # or a combination (e.g. I*V for power control)
         if self.control == "algebraic":
-            self.algebraic[i_cell] = self.external_circuit_function(self.variables)
+            self.algebraic[i_var] = self.external_circuit_function(self.variables)
         if self.options.get("voltage as a state") == "true":
             V_expression = pybamm.CoupledVariable("Voltage expression [V]")
             self.coupled_variables.update({"Voltage expression [V]": V_expression})
