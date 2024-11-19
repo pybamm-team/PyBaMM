@@ -465,39 +465,15 @@ class BaseStepImplicit(BaseStep):
         submodel = self.get_submodel(new_model)
         variables = new_model.variables
         coupled_variables = new_model.coupled_variables
-        try:
-            submodel.build()
-            variables.update(submodel.variables)
-            coupled_variables.update(submodel.coupled_variables)
-            new_model.rhs.update(submodel.rhs)
-            new_model.algebraic.update(submodel.algebraic)
-            new_model.initial_conditions.update(submodel.initial_conditions)
-            new_model.boundary_conditions.update(submodel.boundary_conditions)
-            if "Current [A]" in submodel.variables:
-                new_parameter_values["Current function [A]"] = submodel.variables[
-                    "Current [A]"
-                ]
-            elif "Current [A]" in submodel.coupled_variables:
-                new_parameter_values["Current function [A]"] = (
-                    submodel.coupled_variables["Current [A]"]
-                )
-            else:
-                raise ValueError("Current function [A] not found in submodel")
-            new_model.link_coupled_variables()
-        except NotImplementedError:
-            submodel.variables = submodel.get_fundamental_variables()
-            variables.update(submodel.variables)
-            submodel.variables.update(submodel.get_coupled_variables(variables))
-            variables.update(submodel.variables)
-            submodel.set_rhs(variables)
-            submodel.set_algebraic(variables)
-            submodel.set_initial_conditions(variables)
-            new_model.rhs.update(submodel.rhs)
-            new_model.algebraic.update(submodel.algebraic)
-            new_model.initial_conditions.update(submodel.initial_conditions)
-            new_parameter_values["Current function [A]"] = submodel.variables[
-                "Current [A]"
-            ]
+        submodel.build()
+        variables.update(submodel.variables)
+        coupled_variables.update(submodel.coupled_variables)
+        new_model.rhs.update(submodel.rhs)
+        new_model.algebraic.update(submodel.algebraic)
+        new_model.initial_conditions.update(submodel.initial_conditions)
+        new_model.boundary_conditions.update(submodel.boundary_conditions)
+        new_parameter_values["Current function [A]"] = submodel.variables["Current [A]"]
+        new_model.link_coupled_variables()
 
         # Update any other parameters as necessary
         new_parameter_values.update(
