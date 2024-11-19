@@ -260,7 +260,7 @@ class Simulation:
 
     def set_parameters(self):
         msg = (
-            "pybamm.set_paramters is deprecated and not meant to be accessed by users."
+            "pybamm.set_parameters is deprecated and not meant to be accessed by users."
         )
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         self._set_parameters()
@@ -366,7 +366,7 @@ class Simulation:
         if self.steps_to_built_models:
             return
         else:
-            self.set_up_and_parameterise_experiment(solve_kwargs)
+            self._set_up_and_parameterise_experiment(solve_kwargs)
 
             # Can process geometry with default parameter values (only electrical
             # parameters change between parameter values)
