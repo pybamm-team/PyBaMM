@@ -336,7 +336,7 @@ def no_internet_connection():
         conn = socket.create_connection((host, 80), 2)
         conn.close()
         return False
-    except socket.gaierror:
+    except (socket.gaierror, TimeoutError):
         return True
 
 

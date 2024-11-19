@@ -126,11 +126,6 @@ class ProcessedVariableComputed:
             nnz = sp.nnz()
             numel = sp.numel()
             row = sp.row()
-        elif "nnz" in dir(self.base_variables_casadi[0]):  # IREE fcn
-            sp = self.base_variables_casadi[0]
-            nnz = sp.nnz
-            numel = sp.numel
-            row = sp.row
         if nnz != numel:
             data = [None] * len(realdata)
             for datak in range(len(realdata)):
