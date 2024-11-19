@@ -257,5 +257,5 @@ class BaseSubModel(pybamm.BaseModel):
         set_initial_conditions, and add_events_from.
         """
         raise NotImplementedError(
-            "Submodel build method not implemented for submodel {}.".format(self.name)
+            f"Submodel build method not implemented for submodel {self.name}."
         )
