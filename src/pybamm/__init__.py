@@ -4,10 +4,10 @@ from pybamm.version import __version__
 demote_expressions_to_32bit = False
 
 # Utility classes and methods
-from .util import root_dir
 from .util import Timer, TimerTime, FuzzyDict
 from .util import (
     root_dir,
+    is_notebook,
     load,
     is_constant_and_can_evaluate,
 )
@@ -190,7 +190,7 @@ from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 
 # Simulation
-from .simulation import Simulation, load_sim, is_notebook
+from .simulation import Simulation, load_sim
 
 # Batch Study
 from .batch_study import BatchStudy

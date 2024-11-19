@@ -22,6 +22,24 @@ def root_dir():
     return str(pathlib.Path(pybamm.__path__[0]).parent.parent)
 
 
+def is_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == "ZMQInteractiveShell":  # pragma: no cover
+            # Jupyter notebook or qtconsole
+            cfg = get_ipython().config
+            nb = len(cfg["InteractiveShell"].keys()) == 0
+            return nb
+        elif shell == "TerminalInteractiveShell":  # pragma: no cover
+            return False  # Terminal running IPython
+        elif shell == "Shell":  # pragma: no cover
+            return True  # Google Colab notebook
+        else:  # pragma: no cover
+            return False  # Other type (?)
+    except NameError:
+        return False  # Probably standard Python interpreter
+
+
 def get_git_commit_info():
     """
     Get the git commit info for the current PyBaMM version, e.g. v22.8-39-gb25ce8c41
