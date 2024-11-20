@@ -226,6 +226,9 @@ class BaseModel:
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._initial_conditions.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
+                for event in self.events:
+                    sym = event.expression
+                    coupled_variable.set_coupled_variable(sym, self._variables[name])
                 # for bc in self._boundary_conditions.values():
                 #    for side in ["left", "right"]:
                 #        sym = bc[side][0]

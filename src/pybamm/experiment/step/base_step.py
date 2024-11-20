@@ -4,6 +4,9 @@
 import pybamm
 import numpy as np
 from datetime import datetime
+
+import pybamm.expression_tree
+import pybamm.expression_tree.coupled_variable
 from .step_termination import _read_termination
 import numbers
 
@@ -349,6 +352,7 @@ class BaseStep:
         new_parameter_values = parameter_values.copy()
         new_model, new_parameter_values = self.set_up(new_model, new_parameter_values)
         self.update_model_events(new_model)
+        new_model.link_coupled_variables()
 
         # Update temperature
         if self.temperature is not None:
@@ -364,6 +368,12 @@ class BaseStep:
     def update_model_events(self, new_model):
         for term in self.termination:
             event = term.get_event(new_model.variables, self)
+            coupled_variables_from_event = (
+                pybamm.expression_tree.coupled_variable.find_and_save_coupled_variables(
+                    event.expression
+                )
+            )
+            new_model.coupled_variables.update(coupled_variables_from_event)
             if event is not None:
                 new_model.events.append(event)
 
