@@ -368,12 +368,13 @@ class BaseStep:
     def update_model_events(self, new_model):
         for term in self.termination:
             event = term.get_event(new_model.variables, self)
-            coupled_variables_from_event = (
-                pybamm.expression_tree.coupled_variable.find_and_save_coupled_variables(
-                    event.expression
+            if event is not None:
+                coupled_variables_from_event = (
+                    pybamm.expression_tree.coupled_variable.find_and_save_coupled_variables(
+                        event.expression
+                    )
                 )
-            )
-            new_model.coupled_variables.update(coupled_variables_from_event)
+                new_model.coupled_variables.update(coupled_variables_from_event)
             if event is not None:
                 new_model.events.append(event)
 
