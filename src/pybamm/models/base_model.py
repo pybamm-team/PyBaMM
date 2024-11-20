@@ -232,7 +232,9 @@ class BaseModel:
                 for bc in self._boundary_conditions.values():
                     for side in bc.keys():
                         sym = bc[side][0]
-                        coupled_variable.set_coupled_variable(sym, self._variables[name])
+                        coupled_variable.set_coupled_variable(
+                            sym, self._variables[name]
+                        )
             else:
                 raise ValueError(f"coupled variable {name} not found in variables")
 
