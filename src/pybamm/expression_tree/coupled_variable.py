@@ -1,6 +1,11 @@
 import pybamm
 
-from pybamm.type_definitions import DomainType
+from pybamm.type_definitions import (
+    DomainType,
+    AuxiliaryDomainType,
+    DomainsType,
+    Numeric,
+)
 
 
 class CoupledVariable(pybamm.Symbol):
@@ -20,8 +25,10 @@ class CoupledVariable(pybamm.Symbol):
         self,
         name: str,
         domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
     ) -> None:
-        super().__init__(name, domain=domain)
+        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains)
 
     def _evaluate_for_shape(self):
         """
