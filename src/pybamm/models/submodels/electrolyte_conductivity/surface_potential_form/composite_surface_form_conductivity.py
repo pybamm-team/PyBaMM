@@ -67,6 +67,8 @@ class BaseModel(Composite):
         self.initial_conditions = {delta_phi: delta_phi_init}
 
     def set_boundary_conditions(self, variables):
+        super().set_boundary_conditions(variables)
+
         if self.domain == "negative":
             phi_e = variables["Electrolyte potential [V]"]
             self.boundary_conditions = {
