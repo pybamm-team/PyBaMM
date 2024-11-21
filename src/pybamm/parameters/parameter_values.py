@@ -443,6 +443,12 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
+        new_variables = {}
+        for variable, equation in unprocessed_model.variables.items():
+            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
+            new_variables[variable] = self.process_symbol(equation)
+        model.variables = new_variables
+
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.verbose(f"Processing parameters for {variable!r} (rhs)")
@@ -468,11 +474,13 @@ class ParameterValues:
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
-        new_variables = {}
-        for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.verbose(f"Processing parameters for {variable!r} (variables)")
-            new_variables[variable] = self.process_symbol(equation)
-        model.variables = new_variables
+        # new_coupled_variables = {}
+        # for variable, equation in unprocessed_model.coupled_variables.items():
+        #    pybamm.logger.verbose(
+        #        f"Processing parameters for {variable!r} (coupled variables)"
+        #    )
+        #    new_coupled_variables[variable] = self.process_symbol(equation)
+        # model.coupled_variables = new_coupled_variables
 
         new_events = []
         for event in unprocessed_model.events:
@@ -763,6 +771,9 @@ class ParameterValues:
 
         elif isinstance(symbol, numbers.Number):
             return pybamm.Scalar(symbol)
+
+        elif isinstance(symbol, pybamm.CoupledVariable):
+            return self.process_symbol(symbol.children[0])
 
         else:
             # Backup option: return the object

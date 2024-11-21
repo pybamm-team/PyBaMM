@@ -944,7 +944,8 @@ class TestSimulationExperiment:
 
         # Implicit control (algebraic)
         def custom_step_voltage(variables):
-            return 100 * (variables["Voltage [V]"] - 4.2)
+            V = pybamm.CoupledVariable("Voltage [V]")
+            return 100 * (V - 4.2)
 
         for control in ["differential"]:
             with subtests.test(control=control):

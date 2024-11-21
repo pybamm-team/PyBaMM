@@ -4,6 +4,9 @@
 import pybamm
 import numpy as np
 from datetime import datetime
+
+import pybamm.expression_tree
+import pybamm.expression_tree.coupled_variable
 from .step_termination import _read_termination
 import numbers
 
@@ -349,6 +352,7 @@ class BaseStep:
         new_parameter_values = parameter_values.copy()
         new_model, new_parameter_values = self.set_up(new_model, new_parameter_values)
         self.update_model_events(new_model)
+        new_model.link_coupled_variables()
 
         # Update temperature
         if self.temperature is not None:
@@ -364,6 +368,11 @@ class BaseStep:
     def update_model_events(self, new_model):
         for term in self.termination:
             event = term.get_event(new_model.variables, self)
+            if event is not None:
+                coupled_variables_from_event = pybamm.expression_tree.coupled_variable.find_and_save_coupled_variables(
+                    event.expression
+                )
+                new_model.coupled_variables.update(coupled_variables_from_event)
             if event is not None:
                 new_model.events.append(event)
 
@@ -440,6 +449,7 @@ class BaseStepExplicit(BaseStep):
         new_parameter_values["Current function [A]"] = self.current_value(
             new_model.variables
         )
+        new_model.link_coupled_variables()
         return new_model, new_parameter_values
 
 
@@ -463,19 +473,17 @@ class BaseStepImplicit(BaseStep):
         # Build the new submodel and update the model with it
         submodel = self.get_submodel(new_model)
         variables = new_model.variables
-        submodel.variables = submodel.get_fundamental_variables()
+        coupled_variables = new_model.coupled_variables
+        submodel.build()
         variables.update(submodel.variables)
-        submodel.variables.update(submodel.get_coupled_variables(variables))
-        variables.update(submodel.variables)
-        submodel.set_rhs(variables)
-        submodel.set_algebraic(variables)
-        submodel.set_initial_conditions(variables)
+        coupled_variables.update(submodel.coupled_variables)
         new_model.rhs.update(submodel.rhs)
         new_model.algebraic.update(submodel.algebraic)
         new_model.initial_conditions.update(submodel.initial_conditions)
-
-        # Set the "current function" to be the variable defined in the submodel
+        new_model.boundary_conditions.update(submodel.boundary_conditions)
         new_parameter_values["Current function [A]"] = submodel.variables["Current [A]"]
+        new_model.link_coupled_variables()
+
         # Update any other parameters as necessary
         new_parameter_values.update(
             self.get_parameter_values(variables), check_already_exists=False

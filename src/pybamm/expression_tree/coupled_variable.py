@@ -1,6 +1,10 @@
 import pybamm
 
-from pybamm.type_definitions import DomainType
+from pybamm.type_definitions import (
+    DomainType,
+    AuxiliaryDomainType,
+    DomainsType,
+)
 
 
 class CoupledVariable(pybamm.Symbol):
@@ -20,8 +24,12 @@ class CoupledVariable(pybamm.Symbol):
         self,
         name: str,
         domain: DomainType = None,
+        auxiliary_domains: AuxiliaryDomainType = None,
+        domains: DomainsType = None,
     ) -> None:
-        super().__init__(name, domain=domain)
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
 
     def _evaluate_for_shape(self):
         """
@@ -33,6 +41,7 @@ class CoupledVariable(pybamm.Symbol):
     def create_copy(self):
         """Creates a new copy of the coupled variable."""
         new_coupled_variable = CoupledVariable(self.name, self.domain)
+        new_coupled_variable.children = self.children.copy()
         return new_coupled_variable
 
     @property
@@ -45,11 +54,24 @@ class CoupledVariable(pybamm.Symbol):
 
     def set_coupled_variable(self, symbol, expr):
         """Sets the children of the coupled variable to the expression passed in expr. If the symbol is not the coupled variable, then it searches the children of the symbol for the coupled variable. The coupled variable will be replaced by its first child (symbol.children[0], which should be expr) in the discretisation step."""
-        if self == symbol:
+        if isinstance(symbol, CoupledVariable) and symbol.name == self.name:
             symbol.children = [
                 expr,
             ]
         else:
             for child in symbol.children:
                 self.set_coupled_variable(child, expr)
-        symbol.set_id()
+
+
+# This function is used when a user passes in an arbitrary expression and we need to find the coupled variables, which have not been saved in the model.
+def find_and_save_coupled_variables(symbol, coupled_variables=None):
+    if coupled_variables is None:
+        coupled_variables = {}
+    if isinstance(symbol, pybamm.CoupledVariable):
+        coupled_variables[symbol.name] = symbol
+    elif isinstance(symbol, pybamm.Symbol):
+        for child in symbol.children:
+            coupled_variables.update(
+                find_and_save_coupled_variables(child, coupled_variables)
+            )
+    return coupled_variables

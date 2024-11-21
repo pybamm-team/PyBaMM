@@ -249,3 +249,13 @@ class BaseSubModel(pybamm.BaseModel):
             The variables in the whole model.
         """
         pass
+
+    def build(self):
+        """
+        A method to build the submodel. Replaces get_fundamental_variables,
+        get_coupled_variables, set_rhs, set_algebraic, set_boundary_conditions,
+        set_initial_conditions, and add_events_from.
+        """
+        raise NotImplementedError(
+            f"Submodel build method not implemented for submodel {self.name}."
+        )
