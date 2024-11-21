@@ -62,9 +62,8 @@ class XAverage(_BaseAverage):
 
 class YZAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
-        y = pybamm.SpatialVariable(domain="current collector")
-        z = pybamm.SpatialVariable(domain="current collector")
-        integration_variable: list[pybamm.IndependentVariable] = [y, z]
+        yz = pybamm.SpatialVariable("current collector")
+        integration_variable: list[pybamm.IndependentVariable] = [yz]
         super().__init__(child, "yz-average", integration_variable)
 
     def _unary_new_copy(

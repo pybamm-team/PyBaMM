@@ -43,8 +43,12 @@ class LeadingOrder(BaseModel):
         L_n = self.param.n.L
         L_p = self.param.p.L
         L_x = self.param.L_x
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
+        x_n = pybamm.SpatialVariable(
+            "negative electrode", auxiliary_domains={"secondary": "current collector"}
+        )
+        x_p = pybamm.SpatialVariable(
+            "positive electrode", auxiliary_domains={"secondary": "current collector"}
+        )
 
         if self.domain == "negative":
             phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")

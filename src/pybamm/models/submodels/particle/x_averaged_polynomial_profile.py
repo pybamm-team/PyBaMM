@@ -152,10 +152,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # variable r which only has "... particle" and "current
         # collector" as domains
         r = pybamm.SpatialVariable(
-            f"r_{domain[0]}",
             domain=[f"{domain} particle"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="spherical polar",
         )
         if self.name == "uniform profile":
             # The concentration is uniform

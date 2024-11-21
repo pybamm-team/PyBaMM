@@ -233,21 +233,6 @@ class TestMesh:
             mesh["positive electrode"].edges[-1],
         )
 
-    def test_mesh_coord_sys(self, submesh_types):
-        param = get_param()
-
-        geometry = pybamm.battery_geometry()
-        param.process_geometry(geometry)
-
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        for submesh in mesh.values():
-            if not isinstance(submesh, pybamm.SubMesh0D):
-                assert submesh.coord_sys in pybamm.KNOWN_COORD_SYS
-
     def test_unimplemented_meshes(self):
         var_pts = {"x_n": 10, "y": 10}
         geometry = {

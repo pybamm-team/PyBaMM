@@ -7,7 +7,6 @@ import pybamm
 def battery_geometry(
     include_particles=True,
     options=None,
-    form_factor="pouch",
 ):
     """
     A convenience function to create battery geometries.
@@ -39,9 +38,9 @@ def battery_geometry(
 
     # Set up electrode/separator/electrode geometry
     geometry = {
-        "negative electrode": pybamm.Domain1D((0, L_n)),
-        "separator": pybamm.Domain1D((L_n, L_n_L_s)),
-        "positive electrode": pybamm.Domain1D((L_n_L_s, geo.L_x)),
+        "negative electrode": pybamm.Domain({"x": (0, L_n)}),
+        "separator": pybamm.Domain({"x": (L_n, L_n_L_s)}),
+        "positive electrode": pybamm.Domain({"x": (L_n_L_s, geo.L_x)}),
     }
 
     # Add particle domains
@@ -51,8 +50,9 @@ def battery_geometry(
                 geo_domain = geo.domain_params[domain]
                 geometry.update(
                     {
-                        f"{domain} particle": pybamm.Domain1D(
-                            (0, geo_domain.prim.R_typ), coord_sys="spherical polar"
+                        f"{domain} particle": pybamm.Domain(
+                            {"r": (0, geo_domain.prim.R_typ)},
+                            coord_sys="spherical polar",
                         )
                     }
                 )
@@ -60,11 +60,13 @@ def battery_geometry(
                 if phases >= 2:
                     geometry.update(
                         {
-                            f"{domain} primary particle": pybamm.Domain1D(
-                                (0, geo_domain.prim.R_typ), coord_sys="spherical polar"
+                            f"{domain} primary particle": pybamm.Domain(
+                                {"r": (0, geo_domain.prim.R_typ)},
+                                coord_sys="spherical polar",
                             ),
-                            f"{domain} secondary particle": pybamm.Domain1D(
-                                (0, geo_domain.sec.R_typ), coord_sys="spherical polar"
+                            f"{domain} secondary particle": pybamm.Domain(
+                                {"r": (0, geo_domain.sec.R_typ)},
+                                coord_sys="spherical polar",
                             ),
                         }
                     )
@@ -74,54 +76,44 @@ def battery_geometry(
                     R_min = getattr(geo_domain, f"{domain} particle").R_min
                     R_max = getattr(geo_domain, f"{domain} particle").R_max
                     geometry.update(
-                        {f"{domain} particle size": pybamm.Domain1D((R_min, R_max))}
+                        {
+                            f"{domain} particle size": pybamm.Domain(
+                                {"R": (R_min, R_max)}, coord_sys="cartesian"
+                            )
+                        }
                     )
 
     # Add current collector domains
-    # current_collector_dimension = options["dimensionality"]
-    # if form_factor == "pouch":
-    #     if current_collector_dimension == 0:
-    #         geometry["current collector"] = {"z": {"position": 1}}
-    #     elif current_collector_dimension == 1:
-    #         geometry["current collector"] = {
-    #             "z": {"min": 0, "max": geo.L_z},
-    #             "tabs": {
-    #                 "negative": {"z_centre": geo.n.centre_z_tab},
-    #                 "positive": {"z_centre": geo.p.centre_z_tab},
-    #             },
-    #         }
-    #     elif current_collector_dimension == 2:
-    #         geometry["current collector"] = {
-    #             "y": {"min": 0, "max": geo.L_y},
-    #             "z": {"min": 0, "max": geo.L_z},
-    #             "tabs": {
-    #                 "negative": {
-    #                     "y_centre": geo.n.centre_y_tab,
-    #                     "z_centre": geo.n.centre_z_tab,
-    #                     "width": geo.n.L_tab,
-    #                 },
-    #                 "positive": {
-    #                     "y_centre": geo.p.centre_y_tab,
-    #                     "z_centre": geo.p.centre_z_tab,
-    #                     "width": geo.p.L_tab,
-    #                 },
-    #             },
-    #         }
-    # elif form_factor == "cylindrical":
-    #     if current_collector_dimension == 0:
-    #         geometry["current collector"] = {"r_macro": {"position": 1}}
-    #     elif current_collector_dimension == 1:
-    #         geometry["current collector"] = {
-    #             "r_macro": {"min": geo.r_inner, "max": 1},
-    #         }
-    #     else:
-    #         raise pybamm.GeometryError(
-    #             f"Invalid current collector dimension '{current_collector_dimension}' (should be 0 or 1 for "
-    #             "a 'cylindrical' battery geometry)"
-    #         )
-    # else:
-    #     raise pybamm.GeometryError(
-    #         f"Invalid form factor '{form_factor}' (should be 'pouch' or 'cylindrical'"
-    #     )
+    current_collector_dimension = options["dimensionality"]
+    if current_collector_dimension == 0:
+        geometry["current collector"] = pybamm.Domain({"z": 1})
+    elif current_collector_dimension == 1:
+        geometry["current collector"] = pybamm.Domain(
+            {"z": (0, geo.L_z)},
+            properties={
+                "tabs": {
+                    "negative": {"z_centre": geo.n.centre_z_tab},
+                    "positive": {"z_centre": geo.p.centre_z_tab},
+                }
+            },
+        )
+    elif current_collector_dimension == 2:
+        geometry["current collector"] = pybamm.Domain(
+            {"y": (0, geo.L_y), "z": (0, geo.L_z)},
+            properties={
+                "tabs": {
+                    "negative": {
+                        "y_centre": geo.n.centre_y_tab,
+                        "z_centre": geo.n.centre_z_tab,
+                        "width": geo.n.L_tab,
+                    },
+                    "positive": {
+                        "y_centre": geo.p.centre_y_tab,
+                        "z_centre": geo.p.centre_z_tab,
+                        "width": geo.p.L_tab,
+                    },
+                },
+            },
+        )
 
     return pybamm.Geometry(geometry)

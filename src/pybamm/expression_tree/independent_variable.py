@@ -2,13 +2,12 @@
 # IndependentVariable class
 #
 from __future__ import annotations
+from typing import Optional
 import sympy
 import numpy as np
 
 import pybamm
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
-
-KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -127,6 +126,9 @@ class SpatialVariable(IndependentVariable):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
+    dimension : str, optional
+        Dimension of the spatial variable, used to identify the spatial variable in
+        geometries with multiple dimensions.
     """
 
     def __init__(
@@ -134,10 +136,12 @@ class SpatialVariable(IndependentVariable):
         domain: DomainType,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
+        dimension: Optional[str] = None,
     ) -> None:
         super().__init__(
             domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
+        self.dimension = dimension
 
     def create_copy(
         self,
@@ -145,7 +149,7 @@ class SpatialVariable(IndependentVariable):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(domains=self.domains)
+        return self.__class__(domains=self.domains, dimension=self.dimension)
 
 
 class SpatialVariableEdge(SpatialVariable):

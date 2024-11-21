@@ -96,7 +96,7 @@ class Uniform1DSubMesh(SubMesh1D):
     """
 
     def __init__(self, domain, npts):
-        bounds = domain.bounds
+        bounds = domain.dimension_bounds[0]
         edges = np.linspace(*bounds, npts + 1)
         coord_sys = domain.coord_sys
         super().__init__(edges, coord_sys=coord_sys)

@@ -1,5 +1,12 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Breaking changes
+
+- Removed standard spatial variables. `SpatialVariable` objects should be created explicitly instead. Also, `SpatialVariable` objects no longer take in a "name", and the coordinate system is now specified in the geometry instead of in the spatial variable
+- Refactored the geometry classes to use a custom `Domain` class that can be used to create 1D, 2D, and 3D domains, including tabs.
+- Removed the "macroscale" spatial method helper
+-
+
 # [v24.11.0](https://github.com/pybamm-team/PyBaMM/tree/v24.11.0) - 2024-11-20
 
 ## Features

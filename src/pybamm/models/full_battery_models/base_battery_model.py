@@ -904,7 +904,9 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_spatial_methods(self):
         base_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume(),
+            "negative electrode": pybamm.FiniteVolume(),
+            "separator": pybamm.FiniteVolume(),
+            "positive electrode": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
             "negative primary particle": pybamm.FiniteVolume(),

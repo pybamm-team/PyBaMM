@@ -61,7 +61,7 @@ class ProcessedVariable:
         for domain_level, domain_names in self.domains.items():
             variables = []
             for domain in domain_names:
-                variables += list(geometry[domain].keys())
+                variables += list(geometry[domain].dimension_names)
             self.spatial_variables[domain_level] = variables
 
         # Sensitivity starts off uninitialized, only set when called
@@ -208,26 +208,15 @@ class ProcessedVariable:
         if len(spatial_variable) == 0:
             return None
 
-        # Extract names
-        raw_names = []
-        for var in spatial_variable:
-            # Ignore tabs in domain names
-            if var == "tabs":
-                continue
-            if isinstance(var, str):
-                raw_names.append(var)
-            else:
-                raw_names.append(var.name)
-
         # Rename battery variables to match PyBaMM convention
-        if all([var.startswith("r") for var in raw_names]):
+        if all([var == "r" for var in spatial_variable]):
             return "r"
-        elif all([var.startswith("x") for var in raw_names]):
+        elif all([var == "x" for var in spatial_variable]):
             return "x"
-        elif all([var.startswith("R") for var in raw_names]):
+        elif all([var == "R" for var in spatial_variable]):
             return "R"
-        elif len(raw_names) == 1:
-            return raw_names[0]
+        elif len(spatial_variable) == 1:
+            return spatial_variable[0]
         else:
             raise NotImplementedError(
                 f"Spatial variable name not recognized for {spatial_variable}"

@@ -24,8 +24,8 @@ class Isothermal(BaseThermal):
     def get_fundamental_variables(self):
         # Set the x-averaged temperature to the ambient temperature, which can be
         # specified as a function of space (y, z) only and time
-        y = pybamm.SpatialVariable(domain="current collector")
-        z = pybamm.SpatialVariable(domain="current collector")
+        y = pybamm.SpatialVariable(domain="current collector", dimension="y")
+        z = pybamm.SpatialVariable(domain="current collector", dimension="z")
         # Broadcast t to be the same size as y and z (to catch cases where the ambient
         # temperature is a function of time only)
         t_broadcast = pybamm.PrimaryBroadcast(pybamm.t, "current collector")

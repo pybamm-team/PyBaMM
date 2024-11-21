@@ -112,7 +112,6 @@ def get_mesh_for_testing(
         "r_p": rpts,
         "y": ypts,
         "z": zpts,
-        "r_macro": rcellpts,
         "R_n": Rpts,
         "R_p": Rpts,
     }

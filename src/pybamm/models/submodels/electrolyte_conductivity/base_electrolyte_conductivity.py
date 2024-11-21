@@ -229,7 +229,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             T_n = variables["Negative electrode temperature [K]"]
             indef_integral_n = pybamm.IndefiniteIntegral(
                 self.param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n),
-                pybamm.standard_spatial_vars.x_n,
+                pybamm.SpatialVariable(
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                ),
             )
 
         phi_e_p = variables["Positive electrolyte potential [V]"]
@@ -243,11 +246,16 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         # concentration overpotential
         indef_integral_s = pybamm.IndefiniteIntegral(
             self.param.chiRT_over_Fc(c_e_s, T_s) * pybamm.grad(c_e_s),
-            pybamm.standard_spatial_vars.x_s,
+            pybamm.SpatialVariable(
+                "separator", auxiliary_domains={"secondary": "current collector"}
+            ),
         )
         indef_integral_p = pybamm.IndefiniteIntegral(
             self.param.chiRT_over_Fc(c_e_p, T_p) * pybamm.grad(c_e_p),
-            pybamm.standard_spatial_vars.x_p,
+            pybamm.SpatialVariable(
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            ),
         )
 
         integral_n = indef_integral_n

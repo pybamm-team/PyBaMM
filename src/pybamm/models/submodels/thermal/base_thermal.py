@@ -43,8 +43,8 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # Get the ambient temperature, which can be specified as a function of space
         # (y, z) only and time
-        y = pybamm.SpatialVariable(domain="current collector")
-        z = pybamm.SpatialVariable(domain="current collector")
+        y = pybamm.SpatialVariable(domain="current collector", dimension="y")
+        z = pybamm.SpatialVariable(domain="current collector", dimension="z")
         T_amb = self.param.T_amb(y, z, pybamm.t)
         T_amb_av = self._yz_average(T_amb)
 
