@@ -33,9 +33,8 @@ class ConstantSEI(BaseModel):
     def get_fundamental_variables(self):
         domain = self.domain.lower()
         # Constant thicknesses
-        L_inner = self.phase_param.L_inner_0
-        L_outer = self.phase_param.L_outer_0
-        variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        L_sei = self.phase_param.L_sei_0
+        variables = self._get_standard_thickness_variables(L_sei)
 
         # Reactions
         if self.reaction_loc == "interface":
@@ -44,7 +43,7 @@ class ConstantSEI(BaseModel):
             zero = pybamm.FullBroadcast(
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
-        variables.update(self._get_standard_reaction_variables(zero, zero))
+        variables.update(self._get_standard_reaction_variables(zero))
 
         return variables
 
