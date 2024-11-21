@@ -773,7 +773,10 @@ class ParameterValues:
             return pybamm.Scalar(symbol)
 
         elif isinstance(symbol, pybamm.CoupledVariable):
-            return self.process_symbol(symbol.children[0])
+            try:
+                return self.process_symbol(symbol.children[0])
+            except IndexError:
+                raise ValueError(f"Coupled variable {symbol.name} has no children")
 
         else:
             # Backup option: return the object
