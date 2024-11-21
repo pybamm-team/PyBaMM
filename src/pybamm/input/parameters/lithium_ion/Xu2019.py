@@ -36,7 +36,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
 def nmc_ocp_Xu2019(sto):
     """
     Nickel Managanese Cobalt Oxide (NMC) Open-circuit Potential (OCP) as a
-    function of the stochiometry, from [1].
+    function of the stoichiometry, from [1].
 
     References
     ----------
@@ -48,7 +48,7 @@ def nmc_ocp_Xu2019(sto):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     """
 
@@ -201,8 +201,8 @@ def get_parameter_values():
     ^^^^^^^^^^^^^^^^^^^^^^
 
     SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
     :footcite:t:`Yang2017`.
 
     .. note::

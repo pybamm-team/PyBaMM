@@ -4,7 +4,6 @@
 import numpy as np
 import pybamm
 import pytest
-import unittest.mock as mock
 
 
 class TestInputParameter:
@@ -49,12 +48,12 @@ class TestInputParameter:
         with pytest.raises(KeyError):
             a.evaluate()
 
-    def test_to_from_json(self):
+    def test_to_from_json(self, mocker):
         a = pybamm.InputParameter("a")
 
         json_dict = {
             "name": "a",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "domain": [],
             "expected_size": 1,
         }

@@ -1,6 +1,3 @@
-#
-# Parameter values for a simulation
-#
 import numpy as np
 import pybamm
 import numbers
@@ -35,15 +32,7 @@ class ParameterValues:
 
     """
 
-    def __init__(self, values, chemistry=None):
-        if chemistry is not None:
-            raise ValueError(
-                "The 'chemistry' keyword argument has been deprecated. "
-                "Call `ParameterValues` with a dictionary dictionary of "
-                "parameter values, or the name of a parameter set (string), "
-                "as the single argument, e.g. `ParameterValues('Chen2020')`.",
-            )
-
+    def __init__(self, values):
         # add physical constants as default values
         self._dict_items = pybamm.FuzzyDict(
             {
@@ -192,7 +181,7 @@ class ParameterValues:
         return self._dict_items.items()
 
     def pop(self, *args, **kwargs):
-        self._dict_items.pop(*args, **kwargs)
+        return self._dict_items.pop(*args, **kwargs)
 
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
@@ -254,7 +243,7 @@ class ParameterValues:
                         f"Cannot update parameter '{name}' as it does not "
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
-                        + "param.update({{name: value}}, check_already_exists=False)"
+                        + "param.update({name: value}, check_already_exists=False)"
                     ) from err
             if isinstance(value, str):
                 if (
@@ -930,3 +919,9 @@ class ParameterValues:
                     file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
+
+    def __contains__(self, key):
+        return key in self._dict_items
+
+    def __iter__(self):
+        return iter(self._dict_items)

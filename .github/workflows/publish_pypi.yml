@@ -18,6 +18,7 @@ on:
 
 # Set options available for all jobs that use cibuildwheel
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   # Increase pip debugging output, equivalent to `pip -vv`
   CIBW_BUILD_VERBOSITY: 2
   # Disable build isolation to allow pre-installing build-time dependencies.
@@ -75,6 +76,7 @@ jobs:
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
             PYBAMM_USE_VCPKG=ON
             VCPKG_ROOT_DIR=C:\vcpkg
             VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
@@ -92,7 +94,7 @@ jobs:
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
             python -m pytest -m cibw {project}/tests/unit
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: wheels_windows
           path: ./wheelhouse/*.whl
@@ -116,6 +118,8 @@ jobs:
       - name: Build wheels on Linux
         run: pipx run cibuildwheel --output-dir wheelhouse
         env:
+          CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_ALL_LINUX: >
             yum -y install openblas-devel lapack-devel &&
@@ -129,7 +133,7 @@ jobs:
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for Linux
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: wheels_manylinux
           path: ./wheelhouse/*.whl
@@ -242,7 +246,9 @@ jobs:
             python scripts/install_KLU_Sundials.py
             python -m cibuildwheel --output-dir wheelhouse
         env:
-          # 10.13 for Intel (macos-12/macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
+          CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
+          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
@@ -261,7 +267,7 @@ jobs:
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -281,7 +287,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: sdist
           path: ./dist/*.tar.gz

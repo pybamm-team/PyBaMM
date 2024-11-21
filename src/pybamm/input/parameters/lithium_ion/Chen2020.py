@@ -4,7 +4,7 @@ import numpy as np
 
 def graphite_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 Graphite open-circuit potential as a function of stochiometry, fit taken
+    LG M50 Graphite open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
     References
@@ -17,7 +17,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
@@ -75,7 +75,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
+    LG M50 NMC open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
     References
@@ -88,7 +88,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
@@ -213,8 +213,8 @@ def get_parameter_values():
     therein.
 
     SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
     :footcite:t:`Yang2017`
 
     .. note::

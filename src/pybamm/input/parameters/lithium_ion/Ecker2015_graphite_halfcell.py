@@ -34,7 +34,7 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
 
 def graphite_diffusivity_Ecker2015(sto, T):
     """
-    Graphite diffusivity as a function of stochiometry [1, 2, 3].
+    Graphite diffusivity as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -51,7 +51,7 @@ def graphite_diffusivity_Ecker2015(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -72,7 +72,7 @@ def graphite_diffusivity_Ecker2015(sto, T):
 
 def graphite_ocp_Ecker2015(sto):
     """
-    Graphite OCP as a function of stochiometry [1, 2, 3].
+    Graphite OCP as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -89,7 +89,7 @@ def graphite_ocp_Ecker2015(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------

@@ -52,10 +52,11 @@ public:
   int const number_of_states;  // cppcheck-suppress unusedStructMember
   int const number_of_parameters;  // cppcheck-suppress unusedStructMember
   int const number_of_events;  // cppcheck-suppress unusedStructMember
+  int number_of_timesteps;
   int precon_type;  // cppcheck-suppress unusedStructMember
-  N_Vector yy, yp, avtol;  // y, y', and absolute tolerance
+  N_Vector yy, yyp, y_cache, avtol;  // y, y', y cache vector, and absolute tolerance
   N_Vector *yyS;  // cppcheck-suppress unusedStructMember
-  N_Vector *ypS;  // cppcheck-suppress unusedStructMember
+  N_Vector *yypS;  // cppcheck-suppress unusedStructMember
   N_Vector id;              // rhs_alg_id
   realtype rtol;
   int const jac_times_cjmass_nnz;  // cppcheck-suppress unusedStructMember
@@ -69,10 +70,14 @@ public:
   vector<realtype> res_dvar_dp;
   bool const sensitivity;  // cppcheck-suppress unusedStructMember
   bool const save_outputs_only; // cppcheck-suppress unusedStructMember
+  bool save_hermite;  // cppcheck-suppress unusedStructMember
+  bool is_ODE;  // cppcheck-suppress unusedStructMember
   int length_of_return_vector;  // cppcheck-suppress unusedStructMember
   vector<realtype> t;  // cppcheck-suppress unusedStructMember
   vector<vector<realtype>> y;  // cppcheck-suppress unusedStructMember
+  vector<vector<realtype>> yp;  // cppcheck-suppress unusedStructMember
   vector<vector<vector<realtype>>> yS;  // cppcheck-suppress unusedStructMember
+  vector<vector<vector<realtype>>> ypS;  // cppcheck-suppress unusedStructMember
   SetupOptions const setup_opts;
   SolverOptions const solver_opts;
 
@@ -106,12 +111,16 @@ public:
   /**
    * @brief The main solve method that solves for each variable and time step
    */
-  Solution solve(
-    np_array t_eval_np,
-    np_array t_interp_np,
-    np_array y0_np,
-    np_array yp0_np,
-    np_array_dense inputs) override;
+  SolutionData solve(
+    const std::vector<realtype> &t_eval,
+    const std::vector<realtype> &t_interp,
+    const realtype *y0,
+    const realtype *yp0,
+    const realtype *inputs,
+    bool save_adaptive_steps,
+    bool save_interp_steps
+  ) override;
+
 
   /**
    * @brief Concrete implementation of initialization method
@@ -139,6 +148,11 @@ public:
   void InitializeStorage(int const N);
 
   /**
+   * @brief Initialize the storage for Hermite interpolation
+   */
+  void InitializeHermiteStorage(int const N);
+
+  /**
    * @brief Apply user-configurable IDA options
    */
   void SetSolverOptions();
@@ -154,17 +168,50 @@ public:
   void PrintStats();
 
   /**
+   * @brief Set a consistent initialization for ODEs
+   */
+  void ReinitializeIntegrator(const realtype& t_val);
+
+  /**
+   * @brief Set a consistent initialization for the system of equations
+   */
+  void ConsistentInitialization(
+    const realtype& t_val,
+    const realtype& t_next,
+    const int& icopt);
+
+  /**
+   * @brief Set a consistent initialization for DAEs
+   */
+  void ConsistentInitializationDAE(
+    const realtype& t_val,
+    const realtype& t_next,
+    const int& icopt);
+
+  /**
+   * @brief Set a consistent initialization for ODEs
+   */
+  void ConsistentInitializationODE(const realtype& t_val);
+
+  /**
    * @brief Extend the adaptive arrays by 1
    */
   void ExtendAdaptiveArrays();
 
   /**
+   * @brief Extend the Hermite interpolation info by 1
+   */
+  void ExtendHermiteArrays();
+
+  /**
    * @brief Set the step values
    */
   void SetStep(
-    realtype &t_val,
+    realtype &tval,
     realtype *y_val,
+    realtype *yp_val,
     vector<realtype *> const &yS_val,
+    vector<realtype *> const &ypS_val,
     int &i_save
   );
 
@@ -179,7 +226,9 @@ public:
     realtype &t_prev,
     realtype const &t_next,
     realtype *y_val,
+    realtype *yp_val,
     vector<realtype *> const &yS_val,
+    vector<realtype *> const &ypS_val,
     int &i_save
   );
 
@@ -220,6 +269,26 @@ public:
     realtype &t_val,
     realtype *y_val,
     const vector<realtype*> &yS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save the output function results at the requested time
+   */
+  void SetStepHermite(
+    realtype &t_val,
+    realtype *yp_val,
+    const vector<realtype*> &ypS_val,
+    int &i_save
+  );
+
+  /**
+   * @brief Save the output function sensitivities at the requested time
+   */
+  void SetStepHermiteSensitivities(
+    realtype &t_val,
+    realtype *yp_val,
+    const vector<realtype*> &ypS_val,
     int &i_save
   );
 

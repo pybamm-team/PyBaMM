@@ -341,7 +341,7 @@ nbsphinx_prolog = r"""
 
 {% set github_docname =
 'github/pybamm-team/pybamm/blob/develop/docs/' +
-env.doc2path(env.docname, base=None) %}
+env.doc2path(env.docname, base=None) | string() %}
 
 {% set notebooks_version = env.config.html_context.notebooks_version %}
 {% set github_download_url = env.config.html_context.github_download_url %}

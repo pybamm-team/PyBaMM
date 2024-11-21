@@ -8,9 +8,9 @@ import pybamm
 import numpy as np
 import hashlib
 import warnings
-import sys
 from functools import lru_cache
 from datetime import timedelta
+import pybamm.telemetry
 from pybamm.util import import_optional_dependency
 
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -175,7 +175,12 @@ class Simulation:
                 % (2**32)
             )
 
-    def set_up_and_parameterise_experiment(self):
+    def set_up_and_parameterise_experiment(self, solve_kwargs=None):
+        msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
+
+    def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
         Create and parameterise the models for each step in the experiment.
 
@@ -183,6 +188,46 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         parameter_values = self._parameter_values.copy()
+
+        # some parameters are used to control the experiment, and should not be
+        # input parameters
+        restrict_list = {"Initial temperature [K]", "Ambient temperature [K]"}
+        for step in self.experiment.steps:
+            if issubclass(step.__class__, pybamm.experiment.step.BaseStepImplicit):
+                restrict_list.update(step.get_parameter_values([]).keys())
+            elif issubclass(step.__class__, pybamm.experiment.step.BaseStepExplicit):
+                restrict_list.update(["Current function [A]"])
+        for key in restrict_list:
+            if key in parameter_values.keys() and isinstance(
+                parameter_values[key], pybamm.InputParameter
+            ):
+                raise pybamm.ModelError(
+                    f"Cannot use '{key}' as an input parameter in this experiment. "
+                    f"This experiment is controlled via the following parameters: {restrict_list}. "
+                    f"None of these parameters are able to be input parameters."
+                )
+
+        if (
+            solve_kwargs is not None
+            and "calculate_sensitivities" in solve_kwargs
+            and solve_kwargs["calculate_sensitivities"]
+        ):
+            for step in self.experiment.steps:
+                if any(
+                    [
+                        isinstance(
+                            term,
+                            pybamm.experiment.step.step_termination.BaseTermination,
+                        )
+                        for term in step.termination
+                    ]
+                ):
+                    pybamm.logger.warning(
+                        f"Step '{step}' has a termination condition based on an event. Sensitivity calculation will be inaccurate "
+                        "if the time of each step event changes rapidly with respect to the parameters. "
+                    )
+                    break
+
         # Set the initial temperature to be the temperature of the first step
         # We can set this globally for all steps since any subsequent steps will either
         # start at the temperature at the end of the previous step (if non-isothermal
@@ -214,10 +259,16 @@ class Simulation:
             )
 
     def set_parameters(self):
+        msg = (
+            "pybamm.set_parameters is deprecated and not meant to be accessed by users."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        self._set_parameters()
+
+    def _set_parameters(self):
         """
         A method to set the parameters in the model and the associated geometry.
         """
-
         if self._model_with_set_params:
             return
 
@@ -304,7 +355,7 @@ class Simulation:
             # rebuilt model so clear solver setup
             self._solver._model_set_up = {}
 
-    def build_for_experiment(self, initial_soc=None, inputs=None):
+    def build_for_experiment(self, initial_soc=None, inputs=None, solve_kwargs=None):
         """
         Similar to :meth:`Simulation.build`, but for the case of simulating an
         experiment, where there may be several models and solvers to build.
@@ -315,7 +366,7 @@ class Simulation:
         if self.steps_to_built_models:
             return
         else:
-            self.set_up_and_parameterise_experiment()
+            self._set_up_and_parameterise_experiment(solve_kwargs)
 
             # Can process geometry with default parameter values (only electrical
             # parameters change between parameter values)
@@ -411,6 +462,8 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
+        pybamm.telemetry.capture("simulation-solved")
+
         # Setup
         if solver is None:
             solver = self._solver
@@ -464,9 +517,9 @@ class Simulation:
                 # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
-                elif (
-                    set(np.round(time_data, 12)).issubset(set(np.round(t_eval, 12)))
-                ) is False:
+                elif not isinstance(solver, pybamm.IDAKLUSolver) and not set(
+                    np.round(time_data, 12)
+                ).issubset(set(np.round(t_eval, 12))):
                     warnings.warn(
                         """
                         t_eval does not contain all of the time points in the data
@@ -478,16 +531,14 @@ class Simulation:
                     )
                     dt_data_min = np.min(np.diff(time_data))
                     dt_eval_max = np.max(np.diff(t_eval))
-                    if dt_eval_max > dt_data_min + sys.float_info.epsilon:
+                    if dt_eval_max > np.nextafter(dt_data_min, np.inf):
                         warnings.warn(
-                            f"""
-                            The largest timestep in t_eval ({dt_eval_max}) is larger than
-                            the smallest timestep in the data ({dt_data_min}). The returned
-                            solution may not have the correct resolution to accurately
-                            capture the input. Try refining t_eval. Alternatively,
-                            passing t_eval = None automatically sets t_eval to be the
-                            points in the data.
-                            """,
+                            f"The largest timestep in t_eval ({dt_eval_max}) is larger than "
+                            f"the smallest timestep in the data ({dt_data_min}). The returned "
+                            "solution may not have the correct resolution to accurately "
+                            "capture the input. Try refining t_eval. Alternatively, "
+                            "passing t_eval = None automatically sets t_eval to be the "
+                            "points in the data.",
                             pybamm.SolverWarning,
                             stacklevel=2,
                         )
@@ -498,7 +549,9 @@ class Simulation:
 
         elif self.operating_mode == "with experiment":
             callbacks.on_experiment_start(logs)
-            self.build_for_experiment(initial_soc=initial_soc, inputs=inputs)
+            self.build_for_experiment(
+                initial_soc=initial_soc, inputs=inputs, solve_kwargs=kwargs
+            )
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
@@ -581,7 +634,7 @@ class Simulation:
                             + timedelta(seconds=float(current_solution.t[-1]))
                         )
                     ).total_seconds()
-                    if rest_time > pybamm.settings.step_start_offset:
+                    if rest_time > 0:
                         # logs["step operating conditions"] = "Initial rest for padding"
                         # callbacks.on_step_start(logs)
 
@@ -738,7 +791,7 @@ class Simulation:
                                 + timedelta(seconds=float(step_solution.t[-1]))
                             )
                         ).total_seconds()
-                        if rest_time > pybamm.settings.step_start_offset:
+                        if rest_time > 0:
                             logs["step number"] = (step_num, cycle_length)
                             logs["step operating conditions"] = "Rest for padding"
                             callbacks.on_step_start(logs)

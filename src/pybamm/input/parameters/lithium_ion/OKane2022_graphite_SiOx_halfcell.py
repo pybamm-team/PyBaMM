@@ -126,7 +126,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
 
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
-    LG M50 Graphite diffusivity as a function of stochiometry, in this case the
+    LG M50 Graphite diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from [1].
 
     References
@@ -139,7 +139,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
     T: :class:`pybamm.Symbol`
        Dimensional temperature
 
@@ -195,9 +195,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def graphite_volume_change_Ai2020(sto, c_s_max):
+def graphite_volume_change_Ai2020(sto):
     """
-    Graphite particle volume change as a function of stochiometry [1, 2].
+    Graphite particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -212,7 +212,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
     Returns
     -------

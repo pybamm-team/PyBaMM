@@ -210,6 +210,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "voltage as a state" : str
+                Whether to make a state for the voltage and solve an algebraic equation
+                for it. Default is "false".
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -321,6 +324,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "heterogeneous catalyst",
                 "cation-exchange membrane",
             ],
+            "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
@@ -618,14 +622,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                and options["particle mechanics"] == "none"
-                and options["loss of active material"] == "none"
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
                     "'false', 'particle size' must be 'single', 'particle' must be "
-                    "'Fickian diffusion'. Also the following must "
-                    "be 'none': 'particle mechanics', 'loss of active material'"
+                    "'Fickian diffusion'."
                 )
 
         if options["surface temperature"] == "lumped":
@@ -752,7 +753,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the possible options with the ones currently selected
         """
         for key, value in self.items():
-            print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
+            print(rf"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
 
     def print_detailed_options(self):
         """
@@ -988,7 +989,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
-
         self._options = options
 
     def set_standard_output_variables(self):
@@ -1033,7 +1033,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 f"Setting initial conditions for {submodel_name} submodel ({self.name})"
             )
             submodel.set_initial_conditions(self.variables)
-            submodel.set_events(self.variables)
+            submodel.add_events_from(self.variables)
             pybamm.logger.verbose(f"Updating {submodel_name} submodel ({self.name})")
             self.update(submodel)
             self.check_no_repeated_keys()

@@ -13,6 +13,7 @@ on:
     - cron: "0 3 * * *"
 
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
   PYBAMM_IDAKLU_EXPR_CASADI: ON
   PYBAMM_IDAKLU_EXPR_IREE: ON
@@ -31,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-12, macos-14, windows-latest ]
+        os: [ ubuntu-latest, macos-13, macos-14, windows-latest ]
         python-version: [ "3.9", "3.10", "3.11", "3.12" ]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
@@ -46,7 +47,7 @@ jobs:
           sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
+        if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
         env:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
@@ -89,7 +90,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@v5.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 

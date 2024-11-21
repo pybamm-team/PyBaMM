@@ -4,7 +4,7 @@ import numpy as np
 
 def graphite_diffusivity_Ecker2015(sto, T):
     """
-    Graphite diffusivity as a function of stochiometry [1, 2, 3].
+    Graphite diffusivity as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -21,7 +21,7 @@ def graphite_diffusivity_Ecker2015(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -42,7 +42,7 @@ def graphite_diffusivity_Ecker2015(sto, T):
 
 def graphite_ocp_Ecker2015(sto):
     """
-    Graphite OCP as a function of stochiometry [1, 2, 3].
+    Graphite OCP as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -59,7 +59,7 @@ def graphite_ocp_Ecker2015(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
@@ -152,7 +152,7 @@ def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, c_s_m
 
 def nco_diffusivity_Ecker2015(sto, T):
     """
-    NCO diffusivity as a function of stochiometry [1, 2, 3].
+    NCO diffusivity as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -169,7 +169,7 @@ def nco_diffusivity_Ecker2015(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -190,7 +190,7 @@ def nco_diffusivity_Ecker2015(sto, T):
 
 def nco_ocp_Ecker2015(sto):
     """
-    NCO OCP as a function of stochiometry [1, 2, 3].
+    NCO OCP as a function of stoichiometry [1, 2, 3].
 
     References
     ----------
@@ -207,7 +207,7 @@ def nco_ocp_Ecker2015(sto):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     """
 
@@ -488,8 +488,8 @@ def get_parameter_values():
     by Dr. Simon O'Kane in the paper :footcite:t:`Richardson2020`
 
     SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
     :footcite:t:`Yang2017`
 
     .. note::

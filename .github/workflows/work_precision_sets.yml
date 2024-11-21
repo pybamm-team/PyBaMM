@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks_on_release:
     if: github.repository_owner == 'pybamm-team'
@@ -27,7 +30,7 @@ jobs:
           python benchmarks/work_precision_sets/time_vs_reltols.py
           python benchmarks/work_precision_sets/time_vs_abstols.py
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           delete-branch: true
           branch-suffix: short-commit-hash

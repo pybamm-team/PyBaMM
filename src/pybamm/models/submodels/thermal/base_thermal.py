@@ -34,7 +34,6 @@ class BaseThermal(pybamm.BaseSubModel):
         For more information about this method in general,
         see :meth:`pybamm.base_submodel._get_standard_fundamental_variables`
         """
-        param = self.param
 
         # The variable T is the concatenation of the temperature in the middle domains
         # (e.g. negative electrode, separator and positive electrode for a full cell),
@@ -46,7 +45,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # (y, z) only and time
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        T_amb = param.T_amb(y, z, pybamm.t)
+        T_amb = self.param.T_amb(y, z, pybamm.t)
         T_amb_av = self._yz_average(T_amb)
 
         variables = {
@@ -69,8 +68,6 @@ class BaseThermal(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_coupled_variables(self, variables):
-        param = self.param
-
         # Ohmic heating in solid
         i_s_p = variables["Positive electrode current density [A.m-2]"]
         phi_s_p = variables["Positive electrode potential [V]"]
@@ -78,7 +75,7 @@ class BaseThermal(pybamm.BaseSubModel):
         if self.options.electrode_types["negative"] == "planar":
             i_boundary_cc = variables["Current collector current density [A.m-2]"]
             T_n = variables["Negative electrode temperature [K]"]
-            Q_ohm_s_n = i_boundary_cc**2 / param.n.sigma(T_n)
+            Q_ohm_s_n = i_boundary_cc**2 / self.param.n.sigma(T_n)
         else:
             i_s_n = variables["Negative electrode current density [A.m-2]"]
             phi_s_n = variables["Negative electrode potential [V]"]
@@ -91,6 +88,12 @@ class BaseThermal(pybamm.BaseSubModel):
         # TODO: change full stefan-maxwell conductivity so that i_e is always
         # a Concatenation
         i_e = variables["Electrolyte current density [A.m-2]"]
+        # Special case for half cell -- i_e has to be a concatenation for this to work due to a mismatch with Q_ohm, so we make a new i_e which is a concatenation.
+        if (not isinstance(i_e, pybamm.Concatenation)) and (
+            self.options.electrode_types["negative"] == "planar"
+        ):
+            i_e = self._get_i_e_for_half_cell_thermal(variables)
+
         phi_e = variables["Electrolyte potential [V]"]
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
@@ -146,8 +149,12 @@ class BaseThermal(pybamm.BaseSubModel):
             phase_names = ["primary ", "secondary "]
 
         if self.options.electrode_types["negative"] == "planar":
-            Q_rxn_n = pybamm.FullBroadcast(
-                0, ["negative electrode"], "current collector"
+            i_n = variables["Lithium metal total interfacial current density [A.m-2]"]
+            eta_r_n = variables["Lithium metal interface reaction overpotential [V]"]
+            Q_rxn_n = pybamm.PrimaryBroadcast(
+                i_n * eta_r_n / self.param.n.L,
+                ["negative electrode"],
+                "current collector",
             )
             Q_rev_n = pybamm.FullBroadcast(
                 0, ["negative electrode"], "current collector"
@@ -199,11 +206,11 @@ class BaseThermal(pybamm.BaseSubModel):
         # Compute the integrated heat source per unit simulated electrode-pair area
         # in W.m-2. Note: this can still be a function of y and z for
         # higher-dimensional pouch cell models
-        Q_ohm_Wm2 = Q_ohm_av * param.L
-        Q_rxn_Wm2 = Q_rxn_av * param.L
-        Q_rev_Wm2 = Q_rev_av * param.L
-        Q_mix_Wm2 = Q_mix_av * param.L
-        Q_Wm2 = Q_av * param.L
+        Q_ohm_Wm2 = Q_ohm_av * self.param.L
+        Q_rxn_Wm2 = Q_rxn_av * self.param.L
+        Q_rev_Wm2 = Q_rev_av * self.param.L
+        Q_mix_Wm2 = Q_mix_av * self.param.L
+        Q_Wm2 = Q_av * self.param.L
 
         # Now average over the electrode height and width
         Q_ohm_Wm2_av = self._yz_average(Q_ohm_Wm2)
@@ -216,8 +223,8 @@ class BaseThermal(pybamm.BaseSubModel):
         # the product of electrode height * electrode width * electrode stack thickness
         # Note: we multiply by the number of electrode pairs, since the Q_xx_Wm2_av
         # variables are per electrode pair
-        n_elec = param.n_electrodes_parallel
-        A = param.L_y * param.L_z  # *modelled* electrode area
+        n_elec = self.param.n_electrodes_parallel
+        A = self.param.L_y * self.param.L_z  # *modelled* electrode area
         Q_ohm_W = Q_ohm_Wm2_av * n_elec * A
         Q_rxn_W = Q_rxn_Wm2_av * n_elec * A
         Q_rev_W = Q_rev_Wm2_av * n_elec * A
@@ -226,7 +233,7 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # Compute volume-averaged heat source terms over the *entire cell volume*, not
         # the product of electrode height * electrode width * electrode stack thickness
-        V = param.V_cell  # *actual* cell volume
+        V = self.param.V_cell  # *actual* cell volume
         Q_ohm_vol_av = Q_ohm_W / V
         Q_rxn_vol_av = Q_rxn_W / V
         Q_rev_vol_av = Q_rev_W / V
@@ -235,7 +242,7 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # Effective heat capacity
         T_vol_av = variables["Volume-averaged cell temperature [K]"]
-        rho_c_p_eff_av = param.rho_c_p_eff(T_vol_av)
+        rho_c_p_eff_av = self.param.rho_c_p_eff(T_vol_av)
 
         variables.update(
             {
@@ -314,7 +321,6 @@ class BaseThermal(pybamm.BaseSubModel):
 
     def _heat_of_mixing(self, variables):
         """Compute heat of mixing source terms."""
-        param = self.param
 
         if self.options["heat of mixing"] == "true":
             F = pybamm.constants.F.value
@@ -339,8 +345,10 @@ class BaseThermal(pybamm.BaseSubModel):
                     T_n = variables["Negative electrode temperature [K]"]
                 T_n_part = pybamm.PrimaryBroadcast(T_n, ["negative particle"])
                 dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
-                D_n = param.n.prim.D(c_n, T_n_part)
-                dUeq_n = param.n.prim.U(c_n / param.n.prim.c_max, T_n_part).diff(c_n)
+                D_n = self.param.n.prim.D(c_n, T_n_part)
+                dUeq_n = self.param.n.prim.U(
+                    c_n / self.param.n.prim.c_max, T_n_part
+                ).diff(c_n)
                 integrand_r_n = D_n * dc_n_dr2 * dUeq_n
                 integration_variable_r_n = [
                     pybamm.SpatialVariable("r", domain=integrand_r_n.domain)
@@ -360,8 +368,10 @@ class BaseThermal(pybamm.BaseSubModel):
                 T_p = variables["Positive electrode temperature [K]"]
             T_p_part = pybamm.PrimaryBroadcast(T_p, ["positive particle"])
             dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
-            D_p = param.p.prim.D(c_p, T_p_part)
-            dUeq_p = param.p.prim.U(c_p / param.p.prim.c_max, T_p_part).diff(c_p)
+            D_p = self.param.p.prim.D(c_p, T_p_part)
+            dUeq_p = self.param.p.prim.U(c_p / self.param.p.prim.c_max, T_p_part).diff(
+                c_p
+            )
             integrand_r_p = D_p * dc_p_dr2 * dUeq_p
             integration_variable_r_p = [
                 pybamm.SpatialVariable("r", domain=integrand_r_p.domain)
@@ -407,3 +417,23 @@ class BaseThermal(pybamm.BaseSubModel):
             return pybamm.z_average(var)
         elif self.options["dimensionality"] == 2:
             return pybamm.yz_average(var)
+
+    def _get_i_e_for_half_cell_thermal(self, variables):
+        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
+        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
+        grad_phi_e_s = variables["Gradient of separator electrolyte potential [V.m-1]"]
+        grad_phi_e_p = variables["Gradient of positive electrolyte potential [V.m-1]"]
+        grad_c_e_s = pybamm.grad(c_e_s)
+        grad_c_e_p = pybamm.grad(c_e_p)
+        T_s = variables["Separator temperature [K]"]
+        T_p = variables["Positive electrode temperature [K]"]
+        tor_s = variables["Separator electrolyte transport efficiency"]
+        tor_p = variables["Positive electrolyte transport efficiency"]
+        i_e_s = (self.param.kappa_e(c_e_s, T_s) * tor_s) * (
+            self.param.chiRT_over_Fc(c_e_s, T_s) * grad_c_e_s - grad_phi_e_s
+        )
+        i_e_p = (self.param.kappa_e(c_e_p, T_p) * tor_p) * (
+            self.param.chiRT_over_Fc(c_e_p, T_p) * grad_c_e_p - grad_phi_e_p
+        )
+        i_e = pybamm.concatenation(i_e_s, i_e_p)
+        return i_e
