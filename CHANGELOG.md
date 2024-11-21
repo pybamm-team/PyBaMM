@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v24.11.0](https://github.com/pybamm-team/PyBaMM/tree/v24.11.0) - 2024-11-20
+
 ## Features
 
 - Added `CoupledVariable` which provides a placeholder variable whose equation can be elsewhere in the model. ([#4556](https://github.com/pybamm-team/PyBaMM/pull/4556))
@@ -33,6 +35,7 @@
 
 ## Breaking changes
 
+- Deprecated `pybamm.Simulation.set_parameters` and `pybamm.Simulation.     set_up_and_parameterise_experiment` functions in `pybamm.simulation.py`. ([#3752](https://github.com/pybamm-team/PyBaMM/pull/3752))
 - Removed all instances of `param = self.param` and now directly access `self.param` across the codebase. This change simplifies parameter references and enhances readability. ([#4484](https://github.com/pybamm-team/PyBaMM/pull/4494))
 - Removed the deprecation warning for the chemistry argument in
   ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))

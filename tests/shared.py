@@ -338,12 +338,12 @@ def no_internet_connection():
         conn = socket.create_connection((host, 80), 2)
         conn.close()
         return False
-    except socket.gaierror:
+    except (socket.gaierror, TimeoutError):
         return True
 
 
 def assert_domain_equal(a, b):
-    "Check that two domains are equal, ignoring empty domains"
+    """Check that two domains are equal, ignoring empty domains"""
     a_dict = {k: v for k, v in a.items() if v != []}
     b_dict = {k: v for k, v in b.items() if v != []}
     assert a_dict == b_dict
