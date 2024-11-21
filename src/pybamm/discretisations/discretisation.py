@@ -49,13 +49,6 @@ class Discretisation:
         if mesh is None:
             self._spatial_methods = {}
         else:
-            # Unpack macroscale to the constituent subdomains
-            if "macroscale" in spatial_methods.keys():
-                method = spatial_methods["macroscale"]
-                spatial_methods["negative electrode"] = method
-                spatial_methods["separator"] = method
-                spatial_methods["positive electrode"] = method
-
             self._spatial_methods = spatial_methods
             for domain, method in self._spatial_methods.items():
                 method.build(mesh)

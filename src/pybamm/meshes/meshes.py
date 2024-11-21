@@ -28,17 +28,6 @@ class Mesh(dict):
         # Save geometry
         self.geometry = geometry
 
-        # Preprocess var_pts
-        var_pts_input = var_pts
-        var_pts = {}
-        for key, value in var_pts_input.items():
-            if isinstance(key, str):
-                key = getattr(pybamm.standard_spatial_vars, key)
-            var_pts[key] = value
-
-        # convert var_pts to an id dict
-        var_name_pts = {var.name: pts for var, pts in var_pts.items()}
-
         # create submesh_pts from var_pts
         submesh_pts = {}
         for domain in geometry:
@@ -48,66 +37,26 @@ class Mesh(dict):
                 submesh_types[domain], pybamm.MeshGenerator
             ) and issubclass(submesh_types[domain], pybamm.SubMesh):
                 submesh_types[domain] = pybamm.MeshGenerator(submesh_types[domain])
+
             # Zero dimensional submesh case (only one point)
             if issubclass(submesh_types[domain].submesh_type, pybamm.SubMesh0D):
                 submesh_pts[domain] = 1
             # other cases
             else:
-                submesh_pts[domain] = {}
-                if len(list(geometry[domain].keys())) > 3:
-                    raise pybamm.GeometryError("Too many keys provided")
-                for var in list(geometry[domain].keys()):
-                    if var in ["primary", "secondary"]:
-                        raise pybamm.GeometryError(
-                            "Geometry should no longer be given keys 'primary' or "
-                            "'secondary'. See pybamm.battery_geometry() for example"
-                        )
-                    # skip over tabs key
-                    if var != "tabs":
-                        if isinstance(var, str):
-                            var = getattr(pybamm.standard_spatial_vars, var)
-                        # Raise error if the number of points for a particular
-                        # variable haven't been provided, unless that variable
-                        # doesn't appear in the geometry
-                        if (
-                            var.name not in var_name_pts.keys()
-                            and var.domain[0] in geometry.keys()
-                        ):
-                            raise KeyError(
-                                f"Points not given for a variable in domain '{domain}'"
-                            )
-                        # Otherwise add to the dictionary of submesh points
-                        submesh_pts[domain][var.name] = var_name_pts[var.name]
+                submesh_pts[domain] = var_pts[domain]
         self.submesh_pts = submesh_pts
 
         # evaluate any expressions in geometry
-        for domain in geometry:
-            for spatial_variable, spatial_limits in geometry[domain].items():
-                # process tab information if using 1 or 2D current collectors
-                if spatial_variable == "tabs":
-                    for tab, position_info in spatial_limits.items():
-                        for position_size, sym in position_info.items():
-                            if isinstance(sym, pybamm.Symbol):
-                                sym_eval = sym.evaluate()
-                                geometry[domain]["tabs"][tab][position_size] = sym_eval
-                else:
-                    for lim, sym in spatial_limits.items():
-                        if isinstance(sym, pybamm.Symbol):
-                            try:
-                                sym_eval = sym.evaluate()
-                            except NotImplementedError as error:
-                                if sym.has_symbol_of_classes(pybamm.Parameter):
-                                    raise pybamm.DiscretisationError(
-                                        "Parameter values have not yet been set for "
-                                        "geometry. Make sure that something like "
-                                        "`param.process_geometry(geometry)` has been "
-                                        "run."
-                                    ) from error
-                                else:
-                                    raise error
-                        elif isinstance(sym, numbers.Number):
-                            sym_eval = sym
-                        geometry[domain][spatial_variable][lim] = sym_eval
+        for name, geo_domain in geometry.items():
+            # # process tab information if using 1 or 2D current collectors
+            # if spatial_variable == "tabs":
+            #     for tab, position_info in spatial_limits.items():
+            #         for position_size, sym in position_info.items():
+            #             if isinstance(sym, pybamm.Symbol):
+            #                 sym_eval = sym.evaluate()
+            #                 geometry[domain]["tabs"][tab][position_size] = sym_eval
+            # else:
+            geometry[name] = geo_domain.evaluate()
 
         # Create submeshes
         self.base_domains = []

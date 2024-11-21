@@ -310,7 +310,8 @@ class ParameterValues:
             {
                 "Initial concentration in {} electrode [mol.m-3]".format(
                     options["working electrode"]
-                ): x * c_max
+                ): x
+                * c_max
             }
         )
         return parameter_values
@@ -575,18 +576,19 @@ class ParameterValues:
                 )
             return new_sym
 
-        for domain in geometry:
-            for spatial_variable, spatial_limits in geometry[domain].items():
-                # process tab information if using 1 or 2D current collectors
-                if spatial_variable == "tabs":
-                    for tab, position_info in spatial_limits.items():
-                        for position_size, sym in position_info.items():
-                            geometry[domain]["tabs"][tab][position_size] = (
-                                process_and_check(sym)
-                            )
-                else:
-                    for lim, sym in spatial_limits.items():
-                        geometry[domain][spatial_variable][lim] = process_and_check(sym)
+        for name, geometry_domain in geometry.items():
+            geometry[name] = geometry_domain.process_parameters(self)
+            # for spatial_variable, spatial_limits in geometry[domain].items():
+            #     # process tab information if using 1 or 2D current collectors
+            #     if spatial_variable == "tabs":
+            #         for tab, position_info in spatial_limits.items():
+            #             for position_size, sym in position_info.items():
+            #                 geometry[domain]["tabs"][tab][position_size] = (
+            #                     process_and_check(sym)
+            #                 )
+            #     else:
+            #         for lim, sym in spatial_limits.items():
+            #             geometry[domain][spatial_variable][lim] = process_and_check(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

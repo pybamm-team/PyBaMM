@@ -218,7 +218,9 @@ class DomainLithiumIonParameters(BaseParameters):
         self.h_tab = self.therm.h_tab
 
         if domain == "separator":
-            x = pybamm.standard_spatial_vars.x_s
+            x = pybamm.SpatialVariable(
+                domain="separator", auxiliary_domains={"secondary": "current collector"}
+            )
             self.epsilon_init = pybamm.FunctionParameter(
                 "Separator porosity", {"Through-cell distance (x) [m]": x}
             )
@@ -229,10 +231,8 @@ class DomainLithiumIonParameters(BaseParameters):
         self.lambda_cc = self.therm.lambda_cc
 
         x = pybamm.SpatialVariable(
-            f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="cartesian",
         )
 
         # Macroscale geometry
@@ -429,19 +429,15 @@ class ParticleLithiumIonParameters(BaseParameters):
         # Spatial variables for parameters that depend on position within the cell
         # and/or particle
         x = pybamm.SpatialVariable(
-            f"x_{domain[0]}",
             domain=[f"{domain} electrode"],
             auxiliary_domains={"secondary": "current collector"},
-            coord_sys="cartesian",
         )
         r = pybamm.SpatialVariable(
-            f"r_{domain[0]}",
             domain=[f"{domain} {self.phase_name}particle"],
             auxiliary_domains={
                 "secondary": f"{domain} electrode",
                 "tertiary": "current collector",
             },
-            coord_sys="spherical polar",
         )
 
         # Microscale geometry

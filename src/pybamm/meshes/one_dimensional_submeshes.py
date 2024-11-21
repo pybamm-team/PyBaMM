@@ -56,15 +56,11 @@ class SubMesh1D(SubMesh):
             # tabs have already been calculated by a serialised model
             self.tabs = tabs
 
-    def read_lims(self, lims):
+    def read_domain(self, domain):
         # Separate limits and tabs
         # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
         # "None" and nothing is removed from lims
-        tabs = lims.pop("tabs", None)
-
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
+        tabs = domain.tabs
 
         ((spatial_var, spatial_lims),) = lims.items()
 
@@ -91,23 +87,19 @@ class Uniform1DSubMesh(SubMesh1D):
 
     Parameters
     ----------
-    lims : dict
-        A dictionary that contains the limits of the spatial variables
+    domain : :class:`pybamm.Domain`
+        The domain to generate a submesh for
     npts : dict
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
     """
 
-    def __init__(self, lims, npts):
-        spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.name]
-
-        edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
-
-        coord_sys = spatial_var.coord_sys
-
-        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
+    def __init__(self, domain, npts):
+        bounds = domain.bounds
+        edges = np.linspace(*bounds, npts + 1)
+        coord_sys = domain.coord_sys
+        super().__init__(edges, coord_sys=coord_sys)
 
     @classmethod
     def _from_json(cls, snippet: dict):

@@ -149,11 +149,10 @@ class ParticleGeometricParameters(BaseParameters):
 
     @property
     def R(self):
-        if self.domain == "negative":
-            x = pybamm.standard_spatial_vars.x_n
-        elif self.domain == "positive":
-            x = pybamm.standard_spatial_vars.x_p
-
+        x = pybamm.SpatialVariable(
+            f"{self.domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
         inputs = {"Through-cell distance (x) [m]": x}
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(

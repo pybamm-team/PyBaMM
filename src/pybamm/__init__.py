@@ -104,10 +104,10 @@ from .models.submodels.interface import lithium_plating
 from .models.submodels.interface import interface_utilisation
 from .models.submodels.interface import open_circuit_potential
 
-# Geometry
+# Geometry and domains
 from .geometry.geometry import Geometry
 from .geometry.battery_geometry import battery_geometry
-
+from .geometry.domains import Domain, Domain1D
 from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 

@@ -15,7 +15,9 @@ method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
 spatial_methods = {
     "negative particle": pybamm.FiniteVolume(method_options),
     "positive particle": pybamm.FiniteVolume(method_options),
-    "macroscale": pybamm.FiniteVolume(method_options),
+    "negative electrode": pybamm.FiniteVolume(method_options),
+    "separator": pybamm.FiniteVolume(method_options),
+    "positive electrode": pybamm.FiniteVolume(method_options),
     "current collector": pybamm.ZeroDimensionalSpatialMethod(),
 }
 sim_quad = pybamm.Simulation(

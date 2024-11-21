@@ -71,13 +71,11 @@ class FickianDiffusion(BaseParticle):
                     scale=self.phase_param.c_max,
                 )
                 R = pybamm.SpatialVariable(
-                    f"R_{domain[0]}",
                     domain=[f"{domain} {phase_name}particle size"],
                     auxiliary_domains={
                         "secondary": f"{domain} electrode",
                         "tertiary": "current collector",
                     },
-                    coord_sys="cartesian",
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
@@ -97,10 +95,8 @@ class FickianDiffusion(BaseParticle):
                     scale=self.phase_param.c_max,
                 )
                 R = pybamm.SpatialVariable(
-                    f"R_{domain[0]}",
                     domain=[f"{domain} {phase_name}particle size"],
                     auxiliary_domains={"secondary": "current collector"},
-                    coord_sys="cartesian",
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[

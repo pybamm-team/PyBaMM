@@ -97,11 +97,19 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().set_standard_output_variables()
 
         # Particle concentration position
-        var = pybamm.standard_spatial_vars
-        if self.options.electrode_types["negative"] == "porous":
-            self.variables.update({"r_n [m]": var.r_n})
-        if self.options.electrode_types["positive"] == "porous":
-            self.variables.update({"r_p [m]": var.r_p})
+        for domain in ["negative", "positive"]:
+            if self.options.electrode_types[domain] == "porous":
+                self.variables.update(
+                    {
+                        f"r_{domain[0]} [m]": pybamm.SpatialVariable(
+                            domain=f"{domain} particle",
+                            auxiliary_domains={
+                                "secondary": f"{domain} electrode",
+                                "tertiary": "current collector",
+                            },
+                        )
+                    }
+                )
 
     def set_degradation_variables(self):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""

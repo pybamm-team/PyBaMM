@@ -852,23 +852,29 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_var_pts(self):
         base_var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 20,
-            "r_p": 20,
-            "r_n_prim": 20,
-            "r_p_prim": 20,
-            "r_n_sec": 20,
-            "r_p_sec": 20,
-            "y": 10,
-            "z": 10,
-            "R_n": 30,
-            "R_p": 30,
+            "negative electrode": 20,
+            "separator": 20,
+            "positive electrode": 20,
+            "negative particle": 20,
+            "positive particle": 20,
+            "negative primary particle": 20,
+            "positive primary particle": 20,
+            "negative secondary particle": 20,
+            "positive secondary particle": 20,
+            # "y": 10,
+            # "z": 10,
+            "negative particle size": 30,
+            "positive particle size": 30,
         }
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
-            base_var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
+            base_var_pts.update(
+                {
+                    "negative electrode": 10,
+                    "separator": 10,
+                    "positive electrode": 10,
+                }
+            )
         return base_var_pts
 
     @property
@@ -1002,14 +1008,37 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
 
         # Spatial
-        var = pybamm.standard_spatial_vars
         self.variables.update(
-            {"x [m]": var.x, "x_n [m]": var.x_n, "x_s [m]": var.x_s, "x_p [m]": var.x_p}
+            {
+                "x [m]": pybamm.SpatialVariable(
+                    domain=["negative electrode", "separator", "positive electrode"],
+                    auxiliary_domains={"secondary": "current collector"},
+                ),
+                "x_n [m]": pybamm.SpatialVariable(
+                    domain="negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                ),
+                "x_s [m]": pybamm.SpatialVariable(
+                    domain="separator",
+                    auxiliary_domains={"secondary": "current collector"},
+                ),
+                "x_p [m]": pybamm.SpatialVariable(
+                    domain="positive electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                ),
+            }
         )
         if self.options["dimensionality"] == 1:
-            self.variables.update({"z [m]": var.z})
+            self.variables.update(
+                {"z [m]": pybamm.SpatialVariable(domain="current collector")}
+            )
         elif self.options["dimensionality"] == 2:
-            self.variables.update({"y [m]": var.y, "z [m]": var.z})
+            self.variables.update(
+                {
+                    "y [m]": pybamm.SpatialVariable(domain="current collector"),
+                    "z [m]": pybamm.SpatialVariable(domain="current collector"),
+                }
+            )
 
     def build_model_equations(self):
         # Set model equations
