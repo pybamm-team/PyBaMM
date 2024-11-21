@@ -479,13 +479,13 @@ class QuickPlot:
             ):  # pragma: no cover
                 raise ValueError(f"Axis limits cannot be NaN for variables '{key}'")
 
-    def plot(self, t, dynamic=False):
+    def plot(self, t: float | list[float], dynamic: bool = False):
         """Produces a quick plot with the internal states at time t.
 
         Parameters
         ----------
-        t : float or list
-            Dimensional time (in 'time_units') at which to plot. Can be a single time or a list of times.
+        t : float or list of float
+        Dimensional time (in 'time_units') at which to plot. Can be a single time or a list of times.
         dynamic : bool, optional
             Determine whether to allocate space for a slider at the bottom of the plot when generating a dynamic plot.
             If True, creates a dynamic plot with a slider.
@@ -494,7 +494,7 @@ class QuickPlot:
         plt = import_optional_dependency("matplotlib.pyplot")
         gridspec = import_optional_dependency("matplotlib.gridspec")
 
-        if isinstance(t, (int, float)):
+        if not isinstance(t, list):
             t = [t]
 
         self.fig = plt.figure(figsize=self.figsize)
@@ -597,7 +597,7 @@ class QuickPlot:
                 spatial_vars = self.spatial_variable_dict[key]
                 variable = variable_lists[0][0]
 
-                for _idx, t_single in enumerate(t):
+                for t_single in t:
                     t_in_seconds = t_single * self.time_scaling_factor
                     x = self.first_spatial_variable[key]
                     y = self.second_spatial_variable[key]
