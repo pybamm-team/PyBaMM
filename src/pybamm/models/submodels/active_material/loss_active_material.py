@@ -28,7 +28,7 @@ class LossActiveMaterial(BaseModel):
         pybamm.citations.register("Reniers2019")
         self.x_average = x_average
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
         phase = self.phase_name
 
@@ -56,33 +56,36 @@ class LossActiveMaterial(BaseModel):
                 f"in {domain} electrode [mol]": lli_due_to_lam
             }
         )
-        return variables
 
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        deps_solid_dt = 0
+        deps_solid_dt = pybamm.Scalar(0)
         lam_option = getattr(getattr(self.options, domain), self.phase)[
             "loss of active material"
         ]
+        phase_name = phase
         if "stress" in lam_option:
             # obtain the rate of loss of active materials (LAM) by stress
             # This is loss of active material model by mechanical effects
             if self.x_average is True:
-                stress_t_surf = variables[
-                    f"X-averaged {domain} {phase_name}particle surface tangential stress [Pa]"
-                ]
-                stress_r_surf = variables[
-                    f"X-averaged {domain} {phase_name}particle surface radial stress [Pa]"
-                ]
+                stress_t_surf = pybamm.CoupledVariable(
+                    f"X-averaged {domain} {phase_name}particle surface tangential stress [Pa]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({stress_t_surf.name: stress_t_surf})
+                stress_r_surf = pybamm.CoupledVariable(
+                    f"X-averaged {domain} {phase_name}particle surface radial stress [Pa]",
+                )
+                self.coupled_variables.update({stress_r_surf.name: stress_r_surf})
             else:
-                stress_t_surf = variables[
-                    f"{Domain} {phase_name}particle surface tangential stress [Pa]"
-                ]
-                stress_r_surf = variables[
-                    f"{Domain} {phase_name}particle surface radial stress [Pa]"
-                ]
+                stress_t_surf = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle surface tangential stress [Pa]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({stress_t_surf.name: stress_t_surf})
+                stress_r_surf = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle surface radial stress [Pa]",
+                )
+                self.coupled_variables.update({stress_r_surf.name: stress_r_surf})
 
             beta_LAM = self.phase_param.beta_LAM
             stress_critical = self.phase_param.stress_critical
@@ -100,28 +103,46 @@ class LossActiveMaterial(BaseModel):
             deps_solid_dt += j_stress_LAM
 
         if "reaction" in lam_option:
-            beta_LAM_sei = self.phase_param.beta_LAM_sei
-            if self.x_average is True:
-                a_j_sei = variables[
-                    f"X-averaged {domain} electrode {phase_name}SEI "
-                    "volumetric interfacial current density [A.m-3]"
-                ]
+            if self.options["SEI"] == "none":
+                deps_solid_dt = pybamm.FullBroadcast(
+                    pybamm.Scalar(0), f"{domain} electrode", "current collector"
+                )
             else:
-                a_j_sei = variables[
-                    f"{Domain} electrode {phase_name}SEI volumetric "
-                    "interfacial current density [A.m-3]"
-                ]
-
-            j_stress_reaction = beta_LAM_sei * a_j_sei / self.param.F
-            deps_solid_dt += j_stress_reaction
+                beta_LAM_sei = self.phase_param.beta_LAM_sei
+                if self.x_average is True:
+                    a_j_sei = pybamm.CoupledVariable(
+                        f"X-averaged {domain} electrode {phase_name}SEI "
+                        "volumetric interfacial current density [A.m-3]",
+                        domain=f"{domain} electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                    self.coupled_variables.update({a_j_sei.name: a_j_sei})
+                else:
+                    a_j_sei = pybamm.CoupledVariable(
+                        f"{Domain} electrode {phase_name}SEI volumetric "
+                        "interfacial current density [A.m-3]",
+                        domain=f"{domain} electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                    self.coupled_variables.update({a_j_sei.name: a_j_sei})
+                j_stress_reaction = beta_LAM_sei * a_j_sei / self.param.F
+                deps_solid_dt += j_stress_reaction
 
         if "current" in lam_option:
             # obtain the rate of loss of active materials (LAM) driven by current
             if self.x_average is True:
-                T = variables[f"X-averaged {domain} electrode temperature [K]"]
+                T = pybamm.CoupledVariable(
+                    f"X-averaged {domain} electrode temperature [K]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({T.name: T})
             else:
-                T = variables[f"{Domain} electrode temperature [K]"]
-
+                T = pybamm.CoupledVariable(
+                    f"{Domain} electrode temperature [K]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({T.name: T})
             j_current_LAM = self.domain_param.LAM_rate_current(
                 self.param.current_density_with_time, T
             )
@@ -130,11 +151,6 @@ class LossActiveMaterial(BaseModel):
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
 
         if self.x_average is True:
             eps_solid = variables[
@@ -161,9 +177,11 @@ class LossActiveMaterial(BaseModel):
             f"in {domain} electrode [mol]"
         ]
         # Multiply by mol.m-3 * m3 to get mol
-        c_s_av = variables[
-            f"Average {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
+        c_s_av = pybamm.CoupledVariable(
+            f"Average {domain} {phase_name}particle concentration [mol.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({c_s_av.name: c_s_av})
         V = self.domain_param.L * self.param.A_cc
 
         self.rhs = {
@@ -171,10 +189,6 @@ class LossActiveMaterial(BaseModel):
             lli_due_to_lam: -c_s_av * V * pybamm.x_average(deps_solid_dt),
             eps_solid: deps_solid_dt,
         }
-
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
 
         eps_solid_init = self.phase_param.epsilon_s
 
@@ -194,3 +208,5 @@ class LossActiveMaterial(BaseModel):
             f"in {domain} electrode [mol]"
         ]
         self.initial_conditions[lli_due_to_lam] = pybamm.Scalar(0)
+
+        self.variables.update(variables)

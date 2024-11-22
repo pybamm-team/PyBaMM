@@ -58,6 +58,11 @@ class CoupledVariable(pybamm.Symbol):
             symbol.children = [
                 expr,
             ]
+            if self.domains != expr.domains:
+                self.domains = expr.domains
+                # raise pybamm.DomainError(
+                #     f"Domain of {self.name} ({self.domains}) does not match domain of {expr.name} ({expr.domains})"
+                # )
         else:
             for child in symbol.children:
                 self.set_coupled_variable(child, expr)

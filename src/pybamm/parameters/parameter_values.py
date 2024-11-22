@@ -726,6 +726,11 @@ class ParameterValues:
         # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
+            if (
+                new_child.name
+                == "Negative electrode primary open-circuit potential [V]"
+            ):
+                print("here we go!")
             new_symbol = symbol.create_copy(new_children=[new_child])
             # x_average can sometimes create a new symbol with electrode thickness
             # parameters, so we process again to make sure these parameters are set
@@ -775,8 +780,10 @@ class ParameterValues:
         elif isinstance(symbol, pybamm.CoupledVariable):
             try:
                 return self.process_symbol(symbol.children[0])
-            except IndexError:
-                raise ValueError(f"Coupled variable {symbol.name} has no children")
+            except IndexError as e:
+                raise ValueError(
+                    f"Coupled variable {symbol.name} has no children"
+                ) from e
 
         else:
             # Backup option: return the object

@@ -20,14 +20,10 @@ class Total(pybamm.BaseSubModel):
     def __init__(self, param, domain, options):
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
-        # Creates "total" active material volume fraction and capacity variables
-        # by summing up all the phases
+    def build(self):
         domain, Domain = self.domain_Domain
-
         phases = self.options.phases[domain]
-        # For each of the variables, the variable name without the phase name
-        # is constructed by summing all of the variable names with the phases
+        zero = pybamm.Scalar(0)
         for variable_template in [
             f"{Domain} electrode {{}}active material volume fraction",
             f"X-averaged {domain} electrode {{}}active material volume fraction",
@@ -36,17 +32,32 @@ class Total(pybamm.BaseSubModel):
             "volume fraction change [s-1]",
             f"Loss of lithium due to loss of {{}}active material in {domain} electrode [mol]",
         ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
-            )
-            variables[variable_template.format("")] = sumvar
+            sumvar = zero
+            for phase in phases:
+                # It would be nice if we had a systematic way to set the domain for these things.
+                if "X-averaged" in variable_template:
+                    var = pybamm.CoupledVariable(
+                        variable_template.format(phase + " "),
+                        domain="current collector",
+                    )
+                elif "of lithium" in variable_template:
+                    var = pybamm.CoupledVariable(variable_template.format(phase + " "))
+                else:
+                    var = pybamm.CoupledVariable(
+                        variable_template.format(phase + " "),
+                        domain=f"{domain} electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                self.coupled_variables.update({var.name: var})
+                sumvar += var
+            self.variables.update({variable_template.format(""): sumvar})
 
         if self.options["particle shape"] != "no particles":
-            # capacity doesn't fit the template so needs to be done separately
-            C = sum(
-                variables[f"{Domain} electrode {phase} phase capacity [A.h]"]
-                for phase in phases
-            )
-            variables.update({f"{Domain} electrode capacity [A.h]": C})
-
-        return variables
+            C = zero
+            for phase in phases:
+                var = pybamm.CoupledVariable(
+                    f"{Domain} electrode {phase} phase capacity [A.h]"
+                )
+                self.coupled_variables.update({var.name: var})
+                C += var
+            self.variables.update({f"{Domain} electrode capacity [A.h]": C})
