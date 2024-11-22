@@ -7,22 +7,22 @@ import pybamm
 import numpy as np
 
 
-def get_param():
-    return pybamm.ParameterValues(
-        {
-            "Negative electrode thickness [m]": 0.1,
-            "Separator thickness [m]": 0.2,
-            "Positive electrode thickness [m]": 0.3,
-            "Negative particle radius [m]": 0.4,
-            "Positive particle radius [m]": 0.5,
-        }
-    )
-
-
 class TestMesh:
     @pytest.fixture(scope="class")
-    def submesh_types(self):
-        submesh_types = {
+    def parameter_values(cls):
+        return pybamm.ParameterValues(
+            {
+                "Negative electrode thickness [m]": 0.1,
+                "Separator thickness [m]": 0.2,
+                "Positive electrode thickness [m]": 0.3,
+                "Negative particle radius [m]": 0.4,
+                "Positive particle radius [m]": 0.5,
+            }
+        )
+
+    @pytest.fixture(scope="class")
+    def submesh_types(cls):
+        return {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
@@ -30,62 +30,43 @@ class TestMesh:
             "positive particle": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.SubMesh0D,
         }
-        return submesh_types
 
-    def test_mesh_creation_no_parameters(self):
-        r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
-
-        geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+    @pytest.fixture(scope="class")
+    def var_pts(cls):
+        return {
+            "negative electrode": 10,
+            "separator": 10,
+            "positive electrode": 12,
+            "negative particle": 5,
+            "positive particle": 6,
         }
 
-        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
-        var_pts = {r: 20}
+    @pytest.fixture(scope="class")
+    def mesh(cls, parameter_values, submesh_types, var_pts):
+        geometry = pybamm.battery_geometry()
+        parameter_values.process_geometry(geometry)
+        return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+    def test_mesh_creation_no_parameters(self, submesh_types, var_pts):
+        geometry = {"negative particle": {"r": (0, 1)}}
+
+        var_pts = {"negative particle": 20}
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        # check geometry
-        assert mesh.geometry == geometry
 
         # check boundary locations
         assert mesh["negative particle"].edges[0] == 0
         assert mesh["negative particle"].edges[-1] == 1
 
         # check number of edges and nodes
-        assert len(mesh["negative particle"].nodes) == var_pts[r]
+        assert len(mesh["negative particle"].nodes) == var_pts["negative particle"]
         assert (
             len(mesh["negative particle"].edges)
             == len(mesh["negative particle"].nodes) + 1
         )
 
-        # errors if old format
-        geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
-        }
-        with pytest.raises(
-            pybamm.GeometryError, match="Geometry should no longer be given keys"
-        ):
-            mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-    def test_mesh_creation(self, submesh_types):
-        param = get_param()
-
-        geometry = pybamm.battery_geometry()
-        param.process_geometry(geometry)
-
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        # check geometry
-        assert mesh.geometry == geometry
-
+    def test_mesh_creation(self, mesh):
         # check boundary locations
         assert mesh["negative electrode"].edges[0] == 0
         assert mesh["positive electrode"].edges[-1] == pytest.approx(0.6)
@@ -97,13 +78,12 @@ class TestMesh:
             if domain != "current collector":
                 assert len(mesh[domain].edges) == len(mesh[domain].nodes) + 1
 
-    def test_init_failure(self, submesh_types):
+    def test_init_failure(self, submesh_types, var_pts):
         geometry = pybamm.battery_geometry()
 
         with pytest.raises(KeyError, match="Points not given"):
             pybamm.Mesh(geometry, submesh_types, {})
 
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12}
         geometry = pybamm.battery_geometry(options={"dimensionality": 1})
         with pytest.raises(KeyError, match="Points not given"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -111,71 +91,28 @@ class TestMesh:
         # Not processing geometry parameters
         geometry = pybamm.battery_geometry()
 
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
         with pytest.raises(pybamm.DiscretisationError, match="Parameter values"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # Geometry has an unrecognized variable type
-        geometry["negative electrode"] = {
-            "x_n": {"min": 0, "max": pybamm.Variable("var")}
-        }
+        geometry["negative electrode"] = {"x": (0, pybamm.Variable("var"))}
         with pytest.raises(NotImplementedError, match="for symbol var"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
-    def test_mesh_sizes(self, submesh_types):
-        param = get_param()
+    def test_mesh_sizes(self, mesh, var_pts):
+        assert mesh["negative electrode"].npts == var_pts["negative electrode"]
+        assert mesh["separator"].npts == var_pts["separator"]
+        assert mesh["positive electrode"].npts == var_pts["positive electrode"]
 
-        geometry = pybamm.battery_geometry()
-        param.process_geometry(geometry)
+        assert (
+            len(mesh["negative electrode"].edges) - 1 == var_pts["negative electrode"]
+        )
+        assert len(mesh["separator"].edges) - 1 == var_pts["separator"]
+        assert (
+            len(mesh["positive electrode"].edges) - 1 == var_pts["positive electrode"]
+        )
 
-        # provide mesh properties
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        assert mesh["negative electrode"].npts == var_pts["x_n"]
-        assert mesh["separator"].npts == var_pts["x_s"]
-        assert mesh["positive electrode"].npts == var_pts["x_p"]
-
-        assert len(mesh["negative electrode"].edges) - 1 == var_pts["x_n"]
-        assert len(mesh["separator"].edges) - 1 == var_pts["x_s"]
-        assert len(mesh["positive electrode"].edges) - 1 == var_pts["x_p"]
-
-    def test_mesh_sizes_using_standard_spatial_vars(self, submesh_types):
-        param = get_param()
-
-        geometry = pybamm.battery_geometry()
-        param.process_geometry(geometry)
-
-        # provide mesh properties
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
-        assert mesh["negative electrode"].npts == var_pts[var.x_n]
-        assert mesh["separator"].npts == var_pts[var.x_s]
-        assert mesh["positive electrode"].npts == var_pts[var.x_p]
-
-        assert len(mesh["negative electrode"].edges) - 1 == var_pts[var.x_n]
-        assert len(mesh["separator"].edges) - 1 == var_pts[var.x_s]
-        assert len(mesh["positive electrode"].edges) - 1 == var_pts[var.x_p]
-
-    def test_combine_submeshes(self, submesh_types):
-        param = get_param()
-
-        geometry = pybamm.battery_geometry()
-        param.process_geometry(geometry)
-
-        # provide mesh properties
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
+    def test_combine_submeshes(self, mesh):
         # create submesh
         submesh = mesh[("negative electrode", "separator")]
         assert submesh.edges[0] == 0
@@ -191,12 +128,13 @@ class TestMesh:
         with pytest.raises(pybamm.DomainError):
             mesh.combine_submeshes("negative electrode", "positive electrode")
 
+    def test_combine_submeshes_errors(self, parameter_values, submesh_types, var_pts):
         # test errors
         geometry = {
-            "negative electrode": {"x_n": {"min": 0, "max": 0.5}},
-            "negative particle": {"r_n": {"min": 0.5, "max": 1}},
+            "negative electrode": {"x": (0, 0.5)},
+            "negative particle": {"r": (0.5, 1)},
         }
-        param.process_geometry(geometry)
+        parameter_values.process_geometry(geometry)
 
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -208,18 +146,7 @@ class TestMesh:
         ):
             mesh.combine_submeshes()
 
-    def test_ghost_cells(self, submesh_types):
-        param = get_param()
-
-        geometry = pybamm.battery_geometry()
-        param.process_geometry(geometry)
-
-        # provide mesh properties
-        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
-
-        # create mesh
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-
+    def test_ghost_cells(self, mesh):
         np.testing.assert_array_equal(
             mesh["negative electrode_left ghost cell"].edges[1],
             mesh["negative electrode"].edges[0],
@@ -234,13 +161,8 @@ class TestMesh:
         )
 
     def test_unimplemented_meshes(self):
-        var_pts = {"x_n": 10, "y": 10}
-        geometry = {
-            "negative electrode": {
-                "x_n": {"min": 0, "max": 1},
-                "y": {"min": 0, "max": 1},
-            }
-        }
+        var_pts = {"negative electrode": (10, 10)}
+        geometry = {"negative electrode": {"x": (0, 1), "y": (0, 1)}}
         submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
         with pytest.raises(pybamm.GeometryError):
             pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -318,16 +240,10 @@ class TestMesh:
         assert mesh["current collector"].tabs["positive tab"] == "left"
 
     def test_to_json(self):
-        r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
-
-        geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-        }
+        geometry = {"negative particle": {"r": (0, 1)}}
 
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
-        var_pts = {r: 20}
+        var_pts = {"negative particle": 20}
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -335,7 +251,7 @@ class TestMesh:
         mesh_json = mesh.to_json()
 
         expected_json = {
-            "submesh_pts": {"negative particle": {"r": 20}},
+            "submesh_pts": {"negative particle": 20},
             "base_domains": ["negative particle"],
         }
 

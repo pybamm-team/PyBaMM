@@ -17,13 +17,12 @@ parameters = [
 
 def compute_discretisation(model, param):
     var_pts = {
-        pybamm.standard_spatial_vars.x_n: 20,
-        pybamm.standard_spatial_vars.x_s: 20,
-        pybamm.standard_spatial_vars.x_p: 20,
-        pybamm.standard_spatial_vars.r_n: 30,
-        pybamm.standard_spatial_vars.r_p: 30,
-        pybamm.standard_spatial_vars.y: 10,
-        pybamm.standard_spatial_vars.z: 10,
+        "negative electrode": 20,
+        "separator": 20,
+        "positive electrode": 20,
+        "negative particle": 30,
+        "positive particle": 30,
+        "current collector": (10, 10),
     }
     geometry = model.default_geometry
     param.process_geometry(geometry)

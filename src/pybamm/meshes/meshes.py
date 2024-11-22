@@ -25,7 +25,7 @@ class Mesh(dict):
         super().__init__()
 
         # Save geometry
-        self.geometry = geometry
+        self.geometry = pybamm.Geometry(geometry)
 
         # create submesh_pts from var_pts
         submesh_pts = {}

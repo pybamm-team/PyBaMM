@@ -56,18 +56,13 @@ class SubMesh1D(SubMesh):
             # tabs have already been calculated by a serialised model
             self.tabs = tabs
 
-    def read_domain(self, domain):
+    def read_bounds(self, domain):
         # Separate limits and tabs
-        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
-        # "None" and nothing is removed from lims
-        tabs = domain.tabs
+        bounds = domain.dimension_bounds
+        if len(bounds) > 1:
+            raise pybamm.GeometryError("Domain has more than one dimension")
 
-        ((spatial_var, spatial_lims),) = lims.items()
-
-        if isinstance(spatial_var, str):
-            spatial_var = getattr(pybamm.standard_spatial_vars, spatial_var)
-
-        return spatial_var, spatial_lims, tabs
+        return bounds[0]
 
     def to_json(self):
         json_dict = {
@@ -93,13 +88,16 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
     """
 
-    def __init__(self, domain, npts):
-        bounds = domain.dimension_bounds[0]
-        edges = np.linspace(*bounds, npts + 1)
+    def __init__(self, domain, npts, tabs=None):
+        bounds = self.read_bounds(domain)
+        edges = np.linspace(bounds[0], bounds[1], npts + 1)
         coord_sys = domain.coord_sys
-        super().__init__(edges, coord_sys=coord_sys)
+        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
     @classmethod
     def _from_json(cls, snippet: dict):
@@ -165,14 +163,15 @@ class Exponential1DSubMesh(SubMesh1D):
         The factor (alpha) which appears in the exponential. If side is "symmetric"
         then the default stretch is 1.15. If side is "left" or "right" then the
         default stretch is 2.3.
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
     """
 
-    def __init__(self, lims, npts, side="symmetric", stretch=None):
-        spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        a = spatial_lims["min"]
-        b = spatial_lims["max"]
-        npts = npts[spatial_var.name]
-        coord_sys = spatial_var.coord_sys
+    def __init__(self, domain, npts, side="symmetric", stretch=None, tabs=None):
+        bounds = self.read_bounds(domain)
+        a, b = bounds
+        coord_sys = domain.coord_sys
 
         # Set stretch if not provided
         if not stretch:
@@ -244,21 +243,19 @@ class Chebyshev1DSubMesh(SubMesh1D):
         the tabs
     """
 
-    def __init__(self, lims, npts, tabs=None):
-        spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.name]
+    def __init__(self, domain, npts, tabs=None):
+        bounds = self.read_bounds(domain)
 
         # Create N Chebyshev nodes in the interval (a,b)
         N = npts - 1
         ii = np.array(range(1, N + 1))
-        a = spatial_lims["min"]
-        b = spatial_lims["max"]
+        a, b = bounds
         x_cheb = (a + b) / 2 + (b - a) / 2 * np.cos((2 * ii - 1) * np.pi / 2 / N)
 
         # Append the boundary nodes. Note: we need to flip the order the Chebyshev
         # nodes as they are created in descending order.
         edges = np.concatenate(([a], np.flip(x_cheb), [b]))
-        coord_sys = spatial_var.coord_sys
+        coord_sys = domain.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
@@ -278,40 +275,36 @@ class UserSupplied1DSubMesh(SubMesh1D):
         is npts, and the number of edges is npts+1.
     edges : array_like
         The array of points which correspond to the edges of the mesh.
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
     """
 
-    def __init__(self, lims, npts, edges=None):
+    def __init__(self, domain, npts, edges=None, tabs=None):
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
-        spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.name]
+        bounds = self.read_bounds(domain)
 
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
-                "User-suppled edges has should have length (npts + 1) but has length "
-                f"{len(edges)}.Number of points (npts) for domain {spatial_var.domain} is {npts}.".replace(
-                    "\n                ", " "
-                )
+                f"User-suppled edges has should have length (npts + 1) but has length "
+                f"{len(edges)}. Number of points (npts) for domain is {npts}."
             )
 
         # check end points of edges agree with spatial_lims
-        if edges[0] != spatial_lims["min"]:
+        if edges[0] != bounds[0]:
             raise pybamm.GeometryError(
-                """First entry of edges is {}, but should be equal to {}
-                 for domain {}.""".format(
-                    edges[0], spatial_lims["min"], spatial_var.domain
-                )
+                f"First entry of edges is {edges[0]}, but should be equal to "
+                f"{bounds[0]}."
             )
-        if edges[-1] != spatial_lims["max"]:
+        if edges[-1] != bounds[1]:
             raise pybamm.GeometryError(
-                """Last entry of edges is {}, but should be equal to {}
-                for domain {}.""".format(
-                    edges[-1], spatial_lims["max"], spatial_var.domain
-                )
+                f"Last entry of edges is {edges[-1]}, but should be equal to "
+                f"{bounds[1]}."
             )
 
-        coord_sys = spatial_var.coord_sys
+        coord_sys = domain.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
@@ -337,39 +330,37 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         this submesh. The default is 2, the same as the default for the
         SpectralVolume class. If the orders of the submesh and the
         Spectral Volume method don't match, the method will fail.
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
     """
 
-    def __init__(self, lims, npts, edges=None, order=2):
-        spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.name]
+    def __init__(self, domain, npts, edges=None, order=2, tabs=None):
+        bounds = self.read_bounds(domain)
 
         # default: Spectral Volumes of equal size
         if edges is None:
-            edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
+            edges = np.linspace(bounds[0], bounds[1], npts + 1)
         # check that npts + 1 equals number of user-supplied edges
         elif (npts + 1) != len(edges):
             raise pybamm.GeometryError(
                 "User-suppled edges should have length (npts + 1) but has len"
-                f"gth {len(edges)}. Number of points (npts) for domain {spatial_var.domain} is {npts}."
+                f"gth {len(edges)}. Number of points (npts) is {npts}."
             )
 
         # check end points of edges agree with spatial_lims
-        if edges[0] != spatial_lims["min"]:
+        if edges[0] != bounds[0]:
             raise pybamm.GeometryError(
-                """First entry of edges is {}, but should be equal to {}
-                 for domain {}.""".format(
-                    edges[0], spatial_lims["min"], spatial_var.domain
-                )
+                f"First entry of edges is {edges[0]}, but should be equal to "
+                f"{bounds[0]}."
             )
-        if edges[-1] != spatial_lims["max"]:
+        if edges[-1] != bounds[1]:
             raise pybamm.GeometryError(
-                """Last entry of edges is {}, but should be equal to {}
-                for domain {}.""".format(
-                    edges[-1], spatial_lims["max"], spatial_var.domain
-                )
+                f"Last entry of edges is {edges[-1]}, but should be equal to "
+                f"{bounds[1]}."
             )
 
-        coord_sys = spatial_var.coord_sys
+        coord_sys = domain.coord_sys
 
         array = np.array(
             [

@@ -861,18 +861,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive primary particle": 20,
             "negative secondary particle": 20,
             "positive secondary particle": 20,
-            # "y": 10,
-            # "z": 10,
             "negative particle size": 30,
             "positive particle size": 30,
         }
+        if self.options["dimensionality"] == 1:
+            base_var_pts.update({"current collector": 10})
         # Reduce the default points for 2D current collectors
-        if self.options["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             base_var_pts.update(
                 {
                     "negative electrode": 10,
                     "separator": 10,
                     "positive electrode": 10,
+                    "current collector": (10, 10),
                 }
             )
         return base_var_pts

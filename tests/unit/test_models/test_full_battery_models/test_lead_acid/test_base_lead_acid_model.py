@@ -6,14 +6,6 @@ import pytest
 
 
 class TestBaseLeadAcidModel:
-    def test_default_geometry(self):
-        model = pybamm.lead_acid.BaseModel({"dimensionality": 0})
-        assert model.default_geometry["current collector"]["z"]["position"] == 1
-        model = pybamm.lead_acid.BaseModel({"dimensionality": 1})
-        assert model.default_geometry["current collector"]["z"]["min"] == 0
-        model = pybamm.lead_acid.BaseModel({"dimensionality": 2})
-        assert model.default_geometry["current collector"]["y"]["min"] == 0
-
     def test_incompatible_options(self):
         with pytest.raises(
             pybamm.OptionError,

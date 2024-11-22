@@ -20,9 +20,7 @@ class NoDiffusion(pybamm.BaseSubModel):
 
     def get_coupled_variables(self, variables):
         z = pybamm.PrimaryBroadcast(variables["SoC"], "ECMD particle")
-        x = pybamm.SpatialVariable(
-            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
-        )
+        x = pybamm.SpatialVariable("ECMD particle")
         z_surf = pybamm.surf(z)
         eta_diffusion = pybamm.Scalar(0)
 
@@ -58,13 +56,8 @@ class DiffusionElement(pybamm.BaseSubModel):
 
     def get_fundamental_variables(self):
         z = pybamm.Variable("Distributed SoC", domain="ECMD particle")
-        x = pybamm.SpatialVariable(
-            "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"
-        )
-        variables = {
-            "Distributed SoC": z,
-            "x ECMD": x,
-        }
+        x = pybamm.SpatialVariable("ECMD particle")
+        variables = {"Distributed SoC": z, "x ECMD": x}
         return variables
 
     def get_coupled_variables(self, variables):

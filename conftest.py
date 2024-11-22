@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import pybamm
+from tests import get_mesh_for_testing
 
 
 def pytest_addoption(parser):
@@ -56,3 +57,21 @@ def set_debug_value():
 @pytest.fixture(autouse=True)
 def disable_telemetry():
     pybamm.telemetry.disable()
+
+
+@pytest.fixture
+def finite_volume_methods():
+    return {
+        "negative electrode": pybamm.FiniteVolume(),
+        "separator": pybamm.FiniteVolume(),
+        "positive electrode": pybamm.FiniteVolume(),
+        "negative particle": pybamm.FiniteVolume(),
+        "positive particle": pybamm.FiniteVolume(),
+        "current collector": pybamm.FiniteVolume(),
+    }
+
+
+@pytest.fixture(scope="function")
+def finite_volume_discretisation(finite_volume_methods):
+    mesh = get_mesh_for_testing()
+    return pybamm.Discretisation(mesh, finite_volume_methods)

@@ -399,9 +399,7 @@ def size_average(
     else:
         if f_a_dist is None:
             geo = pybamm.geometric_parameters
-            R = pybamm.SpatialVariable(
-                "R", domains=symbol.domains, coord_sys="cartesian"
-            )
+            R = pybamm.SpatialVariable(domains=symbol.domains)
             if ["negative particle size"] in symbol.domains.values():
                 f_a_dist = geo.n.prim.f_a_dist(R)
             elif ["positive particle size"] in symbol.domains.values():

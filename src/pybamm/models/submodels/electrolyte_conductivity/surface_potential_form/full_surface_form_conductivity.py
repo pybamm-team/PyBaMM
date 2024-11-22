@@ -68,7 +68,10 @@ class BaseModel(BaseElectrolyteConductivity):
             phi_e = phi_s - delta_phi
 
         elif self.domain == "separator":
-            x_s = pybamm.standard_spatial_vars.x_s
+            x_s = pybamm.SpatialVariable(
+                "separator",
+                auxiliary_domains={"secondary": "current collector"},
+            )
 
             i_boundary_cc = variables["Current collector current density [A.m-2]"]
             c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]

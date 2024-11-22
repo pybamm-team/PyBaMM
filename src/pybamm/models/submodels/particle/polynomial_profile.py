@@ -51,13 +51,11 @@ class PolynomialProfile(BaseParticle):
                 scale=self.phase_param.c_max,
             )
             r = pybamm.SpatialVariable(
-                f"r_{domain[0]}",
                 domain=[f"{domain} particle"],
                 auxiliary_domains={
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                coord_sys="spherical polar",
             )
             R = self.phase_param.R
         else:
@@ -72,23 +70,19 @@ class PolynomialProfile(BaseParticle):
                 scale=self.phase_param.c_max,
             )
             r = pybamm.SpatialVariable(
-                f"r_{domain[0]}",
                 domain=[f"{domain} particle"],
                 auxiliary_domains={
                     "secondary": f"{domain} particle size",
                     "tertiary": f"{domain} electrode",
                     "quaternary": "current collector",
                 },
-                coord_sys="spherical polar",
             )
             R = pybamm.SpatialVariable(
-                f"R_{domain[0]}",
                 domain=[f"{domain} particle size"],
                 auxiliary_domains={
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                coord_sys="cartesian",
             )
 
             variables = self._get_distribution_variables(R)
@@ -197,13 +191,11 @@ class PolynomialProfile(BaseParticle):
             current = variables["Total current density [A.m-2]"]
             D_eff = self._get_effective_diffusivity(c_s, T, current)
             r = pybamm.SpatialVariable(
-                f"r_{domain[0]}",
                 domain=[f"{domain} particle"],
                 auxiliary_domains={
                     "secondary": f"{domain} electrode",
                     "tertiary": "current collector",
                 },
-                coord_sys="spherical polar",
             )
             R = variables[f"{Domain} particle radius [m]"]
             variables.update(self._get_standard_diffusivity_variables(D_eff))

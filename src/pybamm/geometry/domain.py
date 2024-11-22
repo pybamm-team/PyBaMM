@@ -201,3 +201,10 @@ class Domain:
             return bound
         else:
             raise ValueError(f"Unknown type for bounds: {type(bound)}")
+
+    def __eq__(self, other):
+        return (
+            self.dimensions == other.dimensions
+            and self.properties == other.properties
+            and self.coord_sys == other.coord_sys
+        )

@@ -13,13 +13,12 @@ class TestThevenin:
 
     def test_default_properties(self):
         model = pybamm.equivalent_circuit.Thevenin()
-        x = model.variables["x ECMD"]
 
         # test var_pts
-        assert model.default_var_pts == {x: 20}
+        assert model.default_var_pts == {"ECMD particle": 20}
 
         # test geometry
-        assert model.default_geometry == {"ECMD particle": {x: {"min": 0, "max": 1}}}
+        assert model.default_geometry == {"ECMD particle": {"x": (0, 1)}}
 
         # test spatial methods
         assert isinstance(

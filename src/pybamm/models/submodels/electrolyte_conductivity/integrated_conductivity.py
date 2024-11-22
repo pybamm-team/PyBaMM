@@ -62,11 +62,26 @@ class Integrated(BaseElectrolyteConductivity):
         L_n = self.param.n.L
         L_p = self.param.p.L
         L_x = self.param.L_x
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_s = pybamm.standard_spatial_vars.x_s
-        x_p = pybamm.standard_spatial_vars.x_p
-        x_n_edge = pybamm.standard_spatial_vars.x_n_edge
-        x_p_edge = pybamm.standard_spatial_vars.x_p_edge
+        x_n = pybamm.SpatialVariable(
+            "negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_s = pybamm.SpatialVariable(
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_p = pybamm.SpatialVariable(
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_n_edge = pybamm.SpatialVariableEdge(
+            "negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_p_edge = pybamm.SpatialVariableEdge(
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
 
         chi_av = self.param.chi(c_e_av, T_av)
         chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")

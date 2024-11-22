@@ -566,28 +566,10 @@ class ParameterValues:
         geometry : dict
             Geometry specs to assign parameter values to
         """
-
-        def process_and_check(sym):
-            new_sym = self.process_symbol(sym)
-            if not isinstance(new_sym, pybamm.Scalar):
-                raise ValueError(
-                    "Geometry parameters must be Scalars after parameter processing"
-                )
-            return new_sym
-
         for name, geometry_domain in geometry.items():
+            if isinstance(geometry_domain, dict):
+                geometry_domain = pybamm.Domain(geometry_domain)
             geometry[name] = geometry_domain.process_parameters(self)
-            # for spatial_variable, spatial_limits in geometry[domain].items():
-            #     # process tab information if using 1 or 2D current collectors
-            #     if spatial_variable == "tabs":
-            #         for tab, position_info in spatial_limits.items():
-            #             for position_size, sym in position_info.items():
-            #                 geometry[domain]["tabs"][tab][position_size] = (
-            #                     process_and_check(sym)
-            #                 )
-            #     else:
-            #         for lim, sym in spatial_limits.items():
-            #             geometry[domain][spatial_variable][lim] = process_and_check(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

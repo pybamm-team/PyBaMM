@@ -73,8 +73,8 @@ def battery_geometry(
 
                 # Add particle size domains
                 if getattr(options, domain)["particle size"] == "distribution":
-                    R_min = getattr(geo_domain, f"{domain} particle").R_min
-                    R_max = getattr(geo_domain, f"{domain} particle").R_max
+                    R_min = geo_domain.prim.R_min
+                    R_max = geo_domain.prim.R_max
                     geometry.update(
                         {
                             f"{domain} particle size": pybamm.Domain(

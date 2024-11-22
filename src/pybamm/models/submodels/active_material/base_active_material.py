@@ -80,10 +80,13 @@ class BaseModel(pybamm.BaseSubModel):
             if domain_options["particle size"] == "single":
                 R = self.phase_param.R
             elif domain_options["particle size"] == "distribution":
-                if self.domain == "negative":
-                    R_ = pybamm.standard_spatial_vars.R_n
-                elif self.domain == "positive":
-                    R_ = pybamm.standard_spatial_vars.R_p
+                R_ = pybamm.SpatialVariable(
+                    f"{domain} particle size",
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
                 R = pybamm.size_average(R_)
 
             R_av = pybamm.x_average(R)

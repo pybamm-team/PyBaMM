@@ -207,10 +207,8 @@ class TestProcessedVariableComputed:
             processed_var.entries
 
     def test_processed_variable_1D_unknown_domain(self):
-        x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
-        geometry = pybamm.Geometry(
-            {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-        )
+        x = pybamm.SpatialVariable("SEI layer")
+        geometry = pybamm.Geometry({"SEI layer": {"x": (0, 1)}})
 
         submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
         var_pts = {x: 100}

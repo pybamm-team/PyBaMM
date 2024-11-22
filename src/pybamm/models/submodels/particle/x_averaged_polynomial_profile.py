@@ -53,10 +53,8 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # spatial variable R with only "current collector" as secondary
             # domain
             R = pybamm.SpatialVariable(
-                f"R_{domain[0]}",
                 domain=[f"{domain} particle size"],
                 auxiliary_domains={"secondary": "current collector"},
-                coord_sys="cartesian",
             )
             variables = self._get_distribution_variables(R)
 

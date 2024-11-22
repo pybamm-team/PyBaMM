@@ -133,7 +133,7 @@ class SpatialVariable(IndependentVariable):
 
     def __init__(
         self,
-        domain: DomainType,
+        domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
         dimension: Optional[str] = None,

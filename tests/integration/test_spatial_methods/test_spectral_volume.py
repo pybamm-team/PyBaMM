@@ -3,6 +3,19 @@
 #
 import pybamm
 import numpy as np
+import pytest
+
+
+@pytest.fixture
+def spectral_volume_methods():
+    return {
+        "negative electrode": pybamm.FiniteVolume(),
+        "separator": pybamm.FiniteVolume(),
+        "positive electrode": pybamm.FiniteVolume(),
+        "negative particle": pybamm.FiniteVolume(),
+        "positive particle": pybamm.FiniteVolume(),
+        "current collector": pybamm.FiniteVolume(),
+    }
 
 
 def get_mesh_for_testing(
@@ -74,11 +87,10 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
 
 
 class TestSpectralVolumeConvergence:
-    def test_grad_div_broadcast(self):
+    def test_grad_div_broadcast(self, spectral_volume_methods):
         # create mesh and discretisation
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
         mesh = get_mesh_for_testing()
-        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc = pybamm.Discretisation(mesh, spectral_volume_methods)
 
         a = pybamm.PrimaryBroadcast(1, "negative electrode")
         grad_a = disc.process_symbol(pybamm.grad(a))
@@ -94,7 +106,11 @@ class TestSpectralVolumeConvergence:
     def test_cartesian_spherical_grad_convergence(self):
         # note that grad function is the same for cartesian and spherical
         order = 2
-        spatial_methods = {"macroscale": pybamm.SpectralVolume(order=order)}
+        spatial_methods = {
+            "negative electrode": pybamm.SpectralVolume(order=order),
+            "separator": pybamm.SpectralVolume(order=order),
+            "positive electrode": pybamm.SpectralVolume(order=order),
+        }
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         # Define variable
@@ -145,15 +161,14 @@ class TestSpectralVolumeConvergence:
             rates = np.log2(err_boundary[:-1] / err_boundary[1:])
             np.testing.assert_array_less(0.98 * np.ones_like(rates), rates)
 
-    def test_cartesian_div_convergence(self):
+    def test_cartesian_div_convergence(self, spectral_volume_methods):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
 
         # Function for convergence testing
         def get_error(n):
             # create mesh and discretisation
             mesh = get_mesh_for_testing(n)
-            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spectral_volume_methods)
             submesh = mesh[whole_cell]
             x = submesh.nodes
             x_edge = pybamm.standard_spatial_vars.x_edge
@@ -180,15 +195,14 @@ class TestSpectralVolumeConvergence:
         rates = np.log2(err_norm[:-1] / err_norm[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
-    def test_spherical_div_convergence_quadratic(self):
+    def test_spherical_div_convergence_quadratic(self, spectral_volume_methods):
         # test div( r**2 * sin(r) ) == 2/r*sin(r) + cos(r)
-        spatial_methods = {"negative particle": pybamm.SpectralVolume()}
 
         # Function for convergence testing
         def get_error(n):
             # create mesh and discretisation (single particle)
             mesh = get_mesh_for_testing(rpts=n)
-            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spectral_volume_methods)
             submesh = mesh["negative particle"]
             r = submesh.nodes
             r_edge = pybamm.SpatialVariableEdge("r_n", domain=["negative particle"])
@@ -217,13 +231,12 @@ class TestSpectralVolumeConvergence:
 
     def test_spherical_div_convergence_linear(self):
         # test div( r*sin(r) ) == 3*sin(r) + r*cos(r)
-        spatial_methods = {"negative particle": pybamm.SpectralVolume()}
 
         # Function for convergence testing
         def get_error(n):
             # create mesh and discretisation (single particle)
             mesh = get_mesh_for_testing(rpts=n)
-            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spectral_volume_methods)
             submesh = mesh["negative particle"]
             r = submesh.nodes
             r_edge = pybamm.SpatialVariableEdge("r_n", domain=["negative particle"])
@@ -250,15 +263,14 @@ class TestSpectralVolumeConvergence:
         rates = np.log2(err_norm[:-1] / err_norm[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
 
-    def test_p2d_spherical_convergence_quadratic(self):
+    def test_p2d_spherical_convergence_quadratic(self, spectral_volume_methods):
         # test div( r**2 * sin(r) ) == 2/r*sin(r) + cos(r)
-        spatial_methods = {"negative particle": pybamm.SpectralVolume()}
 
         # Function for convergence testing
         def get_error(m):
             # create mesh and discretisation p2d, uniform in x
             mesh = get_p2d_mesh_for_testing(3, m)
-            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spectral_volume_methods)
             submesh = mesh["negative particle"]
             r = submesh.nodes
             r_edge = pybamm.standard_spatial_vars.r_n_edge
@@ -284,18 +296,13 @@ class TestSpectralVolumeConvergence:
         rates = np.log2(err_norm[:-1] / err_norm[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
-    def test_p2d_with_x_dep_bcs_spherical_convergence(self):
+    def test_p2d_with_x_dep_bcs_spherical_convergence(self, spectral_volume_methods):
         # test div_r( sin(r) * x ) == (2/r*sin(r) + cos(r)) * x
-        spatial_methods = {
-            "negative particle": pybamm.SpectralVolume(),
-            "negative electrode": pybamm.SpectralVolume(),
-        }
-
         # Function for convergence testing
         def get_error(m):
             # create mesh and discretisation p2d, x-dependent
             mesh = get_p2d_mesh_for_testing(6, m)
-            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spectral_volume_methods)
             submesh_r = mesh["negative particle"]
             r = submesh_r.nodes
             r_edge = pybamm.standard_spatial_vars.r_n_edge

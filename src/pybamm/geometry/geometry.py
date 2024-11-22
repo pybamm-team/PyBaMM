@@ -17,7 +17,7 @@ class Geometry(dict):
 
     .. code-block:: python
 
-       {"negative electrode": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}}
+       {"negative electrode": {"x": (0, l_n)}}
 
     Parameters
     ----------
@@ -28,6 +28,9 @@ class Geometry(dict):
     """
 
     def __init__(self, geometry):
+        for k, v in geometry.items():
+            if isinstance(v, dict):
+                geometry[k] = pybamm.Domain(v)
         super().__init__(**geometry)
         self._parameters = None
 
