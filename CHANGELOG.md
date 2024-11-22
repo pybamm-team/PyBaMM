@@ -6,6 +6,7 @@
 - Refactored the geometry classes to use a custom `Domain` class that can be used to create 1D, 2D, and 3D domains, including tabs.
 - Removed the "macroscale" spatial method helper
 - `var_pts` keys should now be domain names (e.g. `"negative particle"`) instead of spatial variable names (e.g. `"r_n"`)
+- Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
 
 # [v24.11.0](https://github.com/pybamm-team/PyBaMM/tree/v24.11.0) - 2024-11-20
 
