@@ -6,7 +6,7 @@
 
 ## Bug Fixes
 
-- Added some dependencies which were left out of the `pyproject.toml` file ([#000](https://github.com/pybamm-team/PyBaMM/pull/0000))
+- Added some dependencies which were left out of the `pyproject.toml` file ([#4602](https://github.com/pybamm-team/PyBaMM/pull/4602))
 
 ## Breaking changes
 
