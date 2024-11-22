@@ -121,14 +121,17 @@ class EffectiveResistance(BaseEffectiveResistance):
         self.options = options
         self.param = pybamm.LithiumIonParameters()
 
-        self.variables = self.get_fundamental_variables()
-        self.set_algebraic(self.variables)
-        self.set_boundary_conditions(self.variables)
-        self.set_initial_conditions(self.variables)
+        self.variables = self._get_fundamental_variables()
+        self._set_algebraic(self.variables)
+        self._set_boundary_conditions(self.variables)
+        self._set_initial_conditions(self.variables)
 
         pybamm.citations.register("Timms2021")
 
-    def get_fundamental_variables(self):
+    def build(self):
+        pass
+
+    def _get_fundamental_variables(self):
         # Get necessary parameters
         L_cn = self.param.n.L_cc
         L_cp = self.param.p.L_cc
@@ -176,7 +179,7 @@ class EffectiveResistance(BaseEffectiveResistance):
 
         return variables
 
-    def set_algebraic(self, variables):
+    def _set_algebraic(self, variables):
         R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
         R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
         self.algebraic = {
@@ -184,7 +187,7 @@ class EffectiveResistance(BaseEffectiveResistance):
             R_cp_scaled: pybamm.laplacian(R_cp_scaled) - pybamm.source(1, R_cp_scaled),
         }
 
-    def set_boundary_conditions(self, variables):
+    def _set_boundary_conditions(self, variables):
         R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
         R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
 
@@ -211,7 +214,7 @@ class EffectiveResistance(BaseEffectiveResistance):
                 },
             }
 
-    def set_initial_conditions(self, variables):
+    def _set_initial_conditions(self, variables):
         R_cn_scaled = variables["Scaled negative current collector resistance [Ohm]"]
         R_cp_scaled = variables["Scaled positive current collector resistance [Ohm]"]
         self.initial_conditions = {

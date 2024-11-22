@@ -25,7 +25,7 @@ class CurrentDriven(BaseModel):
         super().__init__(param, domain, options)
         self.reaction_loc = reaction_loc
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":
@@ -47,47 +47,31 @@ class CurrentDriven(BaseModel):
             )
         variables = self._get_standard_interface_utilisation_variables(u)
 
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-
         if self.reaction_loc == "full electrode":
-            u = variables[f"{Domain} electrode interface utilisation variable"]
-            a_j = variables[
-                f"{Domain} electrode volumetric interfacial current density [A.m-3]"
-            ]
+            a_j = pybamm.CoupledVariable(
+                f"{Domain} electrode volumetric interfacial current density [A.m-3]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
         elif self.reaction_loc == "x-average":
-            u = variables[
-                f"X-averaged {domain} electrode interface utilisation variable"
-            ]
-            a_j = variables[
+            a_j = pybamm.CoupledVariable(
                 f"X-averaged {domain} electrode volumetric "
-                "interfacial current density [A.m-3]"
-            ]
+                "interfacial current density [A.m-3]",
+                domain="current collector",
+            )
         else:
-            u = variables["Lithium metal interface utilisation variable"]
-            a_j = variables["Lithium metal total interfacial current density [A.m-2]"]
-
+            a_j = pybamm.CoupledVariable(
+                "Lithium metal total interfacial current density [A.m-2]",
+                domain="current collector",
+            )
         beta = self.domain_param.beta_utilisation
 
         self.rhs = {u: beta * u * a_j / self.param.F}
 
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-
-        if self.reaction_loc == "full electrode":
-            u = variables[f"{Domain} electrode interface utilisation variable"]
-        elif self.reaction_loc == "x-average":
-            u = variables[
-                f"X-averaged {domain} electrode interface utilisation variable"
-            ]
-        else:
-            u = variables["Lithium metal interface utilisation variable"]
-
         u_init = self.domain_param.u_init
 
         self.initial_conditions = {u: u_init}
+        self.variables.update(variables)
 
     def add_events_from(self, variables):
         domain, Domain = self.domain_Domain

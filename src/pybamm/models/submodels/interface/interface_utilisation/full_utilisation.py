@@ -19,9 +19,9 @@ class Full(BaseModel):
         A dictionary of options to be passed to the model.
     """
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain = self.domain
         u = pybamm.FullBroadcast(1, f"{domain} electrode", "current collector")
 
         variables = self._get_standard_interface_utilisation_variables(u)
-        return variables
+        self.variables.update(variables)
