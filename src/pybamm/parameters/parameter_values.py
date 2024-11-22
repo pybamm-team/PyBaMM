@@ -1,6 +1,3 @@
-#
-# Parameter values for a simulation
-#
 import numpy as np
 import pybamm
 import numbers
@@ -184,7 +181,7 @@ class ParameterValues:
         return self._dict_items.items()
 
     def pop(self, *args, **kwargs):
-        self._dict_items.pop(*args, **kwargs)
+        return self._dict_items.pop(*args, **kwargs)
 
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
@@ -246,7 +243,7 @@ class ParameterValues:
                         f"Cannot update parameter '{name}' as it does not "
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
-                        + "param.update({{name: value}}, check_already_exists=False)"
+                        + "param.update({name: value}, check_already_exists=False)"
                     ) from err
             if isinstance(value, str):
                 if (
