@@ -939,6 +939,9 @@ class TestIDAKLUSolver:
             with pytest.raises(KeyError):
                 sol[varname].data
 
+        # Check Solution is marked
+        assert sol.variables_returned is True
+
         # Mock a 1D current collector and initialise (none in the model)
         sol["x_s [m]"].domain = ["current collector"]
         sol["x_s [m]"].entries

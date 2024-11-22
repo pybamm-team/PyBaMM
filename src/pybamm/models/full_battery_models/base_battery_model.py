@@ -992,7 +992,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
-
         self._options = options
 
     def set_standard_output_variables(self):
