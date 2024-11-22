@@ -21,7 +21,7 @@ class ReactionDrivenODE(BaseModel):
     def __init__(self, param, options, x_average):
         super().__init__(param, options)
         self.x_average = x_average
-    
+
     def build(self):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
@@ -43,7 +43,7 @@ class ReactionDrivenODE(BaseModel):
             eps_dict[domain] = eps_k
         variables = self._get_standard_porosity_variables(eps_dict)
         self.variables.update(variables)
-    
+
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:
             domain_param = self.param.domain_params[domain.split()[0]]
@@ -53,9 +53,14 @@ class ReactionDrivenODE(BaseModel):
                 if self.x_average is True:
                     a_j_k_av = pybamm.CoupledVariable(
                         f"X-averaged {domain} volumetric "
-                        "interfacial current density [A.m-3]"
+                        "interfacial current density [A.m-3]",
+                        domain="current collector",
                     )
-                    self.coupled_variables.update({f"X-averaged {domain} volumetric interfacial current density [A.m-3]": a_j_k_av})
+                    self.coupled_variables.update(
+                        {
+                            f"X-averaged {domain} volumetric interfacial current density [A.m-3]": a_j_k_av
+                        }
+                    )
                     depsdt_k_av = domain_param.DeltaVsurf * a_j_k_av / self.param.F
                     depsdt_k = pybamm.PrimaryBroadcast(depsdt_k_av, domain)
                 else:
@@ -65,22 +70,28 @@ class ReactionDrivenODE(BaseModel):
                         domain=domain,
                         auxiliary_domains={"secondary": "current collector"},
                     )
-                    self.coupled_variables.update({f"{Domain} volumetric interfacial current density [A.m-3]": a_j_k})
+                    self.coupled_variables.update(
+                        {
+                            f"{Domain} volumetric interfacial current density [A.m-3]": a_j_k
+                        }
+                    )
                     depsdt_k = domain_param.DeltaVsurf * a_j_k / self.param.F
 
             depsdt_dict[domain] = depsdt_k
         self.variables.update(self._get_standard_porosity_change_variables(depsdt_dict))
-    
+
         if self.x_average is True:
             for domain in self.options.whole_cell_domains:
                 eps_av = self.variables[f"X-averaged {domain} porosity"]
-                deps_dt_av = self.variables[f"X-averaged {domain} porosity change [s-1]"]
+                deps_dt_av = self.variables[
+                    f"X-averaged {domain} porosity change [s-1]"
+                ]
                 self.rhs.update({eps_av: deps_dt_av})
         else:
             eps = self.variables["Porosity"]
-            #self.coupled_variables.update({f"Porosity": eps})
+            # self.coupled_variables.update({f"Porosity": eps})
             deps_dt = self.variables["Porosity change"]
-            #self.coupled_variables.update({f"Porosity change": deps_dt})
+            # self.coupled_variables.update({f"Porosity change": deps_dt})
             self.rhs = {eps: deps_dt}
 
         if self.x_average is True:
