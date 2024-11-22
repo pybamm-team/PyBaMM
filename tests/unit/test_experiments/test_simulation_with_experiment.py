@@ -406,6 +406,7 @@ class TestSimulationExperiment:
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve(solver=pybamm.CasadiSolver())
+        C = sol.summary_variables["Capacity [A.h]"]
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
 
