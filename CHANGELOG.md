@@ -2,7 +2,7 @@
 
 ## Features
 
-- Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points.([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
+- Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points. ([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
 
 ## Breaking changes
 
