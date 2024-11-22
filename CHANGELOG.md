@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points.([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
+
 ## Breaking changes
 
 - Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
@@ -20,7 +24,6 @@
 - Added phase-dependent particle options to LAM ([#4369](https://github.com/pybamm-team/PyBaMM/pull/4369))
 - Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode (`SplitOCVR`). ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
 - Added the `pybamm.DiscreteTimeSum` expression node to sum an expression over a sequence of data times, and accompanying `pybamm.DiscreteTimeData` class to store the data times and values ([#4501](https://github.com/pybamm-team/PyBaMM/pull/4501))
-- Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points.([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
 
 ## Optimizations
 

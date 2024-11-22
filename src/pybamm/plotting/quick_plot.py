@@ -1,6 +1,7 @@
 #
 # Class for quick plotting of variables from models
 #
+from __future__ import annotations
 import os
 import numpy as np
 import pybamm
@@ -317,7 +318,7 @@ class QuickPlot:
                 if variable.domain != domain:
                     raise ValueError(
                         "Mismatching variable domains. "
-                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[ idx]}' has domain '{variable.domain}'"
+                        f"'{variable_tuple[0]}' has domain '{domain}', but '{variable_tuple[idx]}' has domain '{variable.domain}'"
                     )
                 self.spatial_variable_dict[variable_tuple] = {}
 
@@ -485,7 +486,7 @@ class QuickPlot:
         Parameters
         ----------
         t : float or list of float
-        Dimensional time (in 'time_units') at which to plot. Can be a single time or a list of times.
+            Dimensional time (in 'time_units') at which to plot. Can be a single time or a list of times.
         dynamic : bool, optional
             Determine whether to allocate space for a slider at the bottom of the plot when generating a dynamic plot.
             If True, creates a dynamic plot with a slider.
