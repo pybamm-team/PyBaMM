@@ -21,7 +21,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def build(self):
         c_e_av = pybamm.Variable(
             "X-averaged electrolyte concentration [mol.m-3]",
             domain="current collector",
@@ -41,48 +41,77 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         )
         variables.update(self._get_standard_flux_variables(N_e))
 
-        return variables
-
-    def get_coupled_variables(self, variables):
         c_e = variables["Electrolyte concentration [mol.m-3]"]
-        eps = variables["Porosity"]
+
+        eps = pybamm.CoupledVariable(
+            "Porosity",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({eps.name: eps})
 
         variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
-        return variables
-
-    def set_rhs(self, variables):
         c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
-        T_av = variables["X-averaged cell temperature [K]"]
+        T_av = pybamm.CoupledVariable(
+            "X-averaged cell temperature [K]", domain="current collector"
+        )
+        self.coupled_variables.update({T_av.name: T_av})
 
-        eps_n_av = variables["X-averaged negative electrode porosity"]
-        eps_s_av = variables["X-averaged separator porosity"]
-        eps_p_av = variables["X-averaged positive electrode porosity"]
+        eps_n_av = pybamm.CoupledVariable(
+            "X-averaged negative electrode porosity", domain="current collector"
+        )
+        self.coupled_variables.update({eps_n_av.name: eps_n_av})
+        eps_s_av = pybamm.CoupledVariable(
+            "X-averaged separator porosity", domain="current collector"
+        )
+        self.coupled_variables.update({eps_s_av.name: eps_s_av})
+        eps_p_av = pybamm.CoupledVariable(
+            "X-averaged positive electrode porosity", domain="current collector"
+        )
+        self.coupled_variables.update({eps_p_av.name: eps_p_av})
+        deps_n_dt_av = pybamm.CoupledVariable(
+            "X-averaged negative electrode porosity change [s-1]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({deps_n_dt_av.name: deps_n_dt_av})
+        deps_p_dt_av = pybamm.CoupledVariable(
+            "X-averaged positive electrode porosity change [s-1]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({deps_p_dt_av.name: deps_p_dt_av})
+        div_Vbox_s_av = pybamm.CoupledVariable(
+            "X-averaged separator transverse volume-averaged acceleration [m.s-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({div_Vbox_s_av.name: div_Vbox_s_av})
 
-        deps_n_dt_av = variables["X-averaged negative electrode porosity change [s-1]"]
-        deps_p_dt_av = variables["X-averaged positive electrode porosity change [s-1]"]
-
-        div_Vbox_s_av = variables[
-            "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
-        ]
-
-        sum_a_j_n_0 = variables[
+        sum_a_j_n_0 = pybamm.CoupledVariable(
             "Sum of x-averaged negative electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
-        sum_a_j_p_0 = variables[
+            "interfacial current densities [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j_n_0.name: sum_a_j_n_0})
+        sum_a_j_p_0 = pybamm.CoupledVariable(
             "Sum of x-averaged positive electrode volumetric "
             "interfacial current densities [A.m-3]"
-        ]
-        sum_s_j_n_0 = variables[
+        )
+        self.coupled_variables.update({sum_a_j_p_0.name: sum_a_j_p_0})
+        sum_s_j_n_0 = pybamm.CoupledVariable(
             "Sum of x-averaged negative electrode electrolyte "
-            "reaction source terms [A.m-3]"
-        ]
-        sum_s_j_p_0 = variables[
+            "reaction source terms [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_s_j_n_0.name: sum_s_j_n_0})
+        sum_s_j_p_0 = pybamm.CoupledVariable(
             "Sum of x-averaged positive electrode electrolyte "
-            "reaction source terms [A.m-3]"
-        ]
+            "reaction source terms [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_s_j_p_0.name: sum_s_j_p_0})
         source_terms = (
             self.param.n.L
             * (sum_s_j_n_0 - self.param.t_plus(c_e_av, T_av) * sum_a_j_n_0)
@@ -104,7 +133,6 @@ class LeadingOrder(BaseElectrolyteDiffusion):
                 - c_e_av * self.param.s.L * div_Vbox_s_av
             )
         }
-
-    def set_initial_conditions(self, variables):
         c_e = variables["X-averaged electrolyte concentration [mol.m-3]"]
         self.initial_conditions = {c_e: self.param.c_e_init}
+        self.variables.update(variables)

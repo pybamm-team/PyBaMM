@@ -22,7 +22,7 @@ class Full(BaseElectrolyteDiffusion):
     def __init__(self, param, options=None):
         super().__init__(param, options)
 
-    def get_fundamental_variables(self):
+    def build(self):
         eps_c_e_dict = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
@@ -40,14 +40,21 @@ class Full(BaseElectrolyteDiffusion):
             eps_c_e_dict
         )
 
-        return variables
-
-    def get_coupled_variables(self, variables):
         c_e_dict = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
-            eps_k = variables[f"{Domain} porosity"]
-            eps_c_e_k = variables[f"{Domain} porosity times concentration [mol.m-3]"]
+            eps_k = pybamm.CoupledVariable(
+                f"{Domain} porosity",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({eps_k.name: eps_k})
+            eps_c_e_k = pybamm.CoupledVariable(
+                f"{Domain} porosity times concentration [mol.m-3]",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({eps_c_e_k.name: eps_c_e_k})
             c_e_k = eps_c_e_k / eps_k
             c_e_dict[domain] = c_e_k
 
@@ -56,16 +63,50 @@ class Full(BaseElectrolyteDiffusion):
         )
         variables.update(self._get_standard_domain_concentration_variables(c_e_dict))
 
-        c_e = (
-            variables["Porosity times concentration [mol.m-3]"] / variables["Porosity"]
+        eps = pybamm.concatenation(
+            *[
+                self.coupled_variables[f"{domain.capitalize()} porosity"]
+                for domain in self.options.whole_cell_domains
+            ]
         )
+
+        c_e = variables["Porosity times concentration [mol.m-3]"] / eps
         variables.update(self._get_standard_whole_cell_concentration_variables(c_e))
 
         # Whole domain
-        tor = variables["Electrolyte transport efficiency"]
-        i_e = variables["Electrolyte current density [A.m-2]"]
-        v_box = variables["Volume-averaged velocity [m.s-1]"]
-        T = variables["Cell temperature [K]"]
+        tor = pybamm.CoupledVariable(
+            "Electrolyte transport efficiency",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({tor.name: tor})
+
+        i_e = pybamm.CoupledVariable(
+            "Electrolyte current density [A.m-2]",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({i_e.name: i_e})
+        v_box = pybamm.CoupledVariable(
+            "Volume-averaged velocity [m.s-1]",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({v_box.name: v_box})
+        T = pybamm.CoupledVariable(
+            "Cell temperature [K]",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({T.name: T})
 
         N_e_diffusion = -tor * self.param.D_e(c_e, T) * pybamm.grad(c_e)
         N_e_migration = self.param.t_plus(c_e, T) * i_e / self.param.F
@@ -82,33 +123,37 @@ class Full(BaseElectrolyteDiffusion):
             }
         )
 
-        return variables
-
-    def set_rhs(self, variables):
         eps_c_e = variables["Porosity times concentration [mol.m-3]"]
-        c_e = variables["Electrolyte concentration [mol.m-3]"]
-        N_e = variables["Electrolyte flux [mol.m-2.s-1]"]
-        div_Vbox = variables["Transverse volume-averaged acceleration [m.s-2]"]
+        div_Vbox = pybamm.CoupledVariable(
+            "Transverse volume-averaged acceleration [m.s-2]",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({div_Vbox.name: div_Vbox})
 
-        sum_s_a_j = variables["Sum of electrolyte reaction source terms [A.m-3]"]
-        sum_s_a_j.print_name = "aj"
+        sum_s_a_j = pybamm.CoupledVariable(
+            "Sum of electrolyte reaction source terms [A.m-3]",
+            domains={
+                "primary": self.options.whole_cell_domains,
+                "secondary": "current collector",
+            },
+        )
+        self.coupled_variables.update({sum_s_a_j.name: sum_s_a_j})
         source_terms = sum_s_a_j / self.param.F
 
         self.rhs = {eps_c_e: -pybamm.div(N_e) + source_terms - c_e * div_Vbox}
 
-    def set_initial_conditions(self, variables):
-        eps_c_e = variables["Porosity times concentration [mol.m-3]"]
-
         self.initial_conditions = {
             eps_c_e: self.param.epsilon_init * self.param.c_e_init
         }
-
-    def set_boundary_conditions(self, variables):
-        c_e = variables["Electrolyte concentration [mol.m-3]"]
         c_e_conc = variables["Electrolyte concentration concatenation [mol.m-3]"]
-        T = variables["Cell temperature [K]"]
-        tor = variables["Electrolyte transport efficiency"]
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
 
         def flux_bc(side):
             # returns the flux at a separator/electrode interface
@@ -140,3 +185,5 @@ class Full(BaseElectrolyteDiffusion):
             c_e: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")},
             c_e_conc: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")},
         }
+
+        self.variables.update(variables)
