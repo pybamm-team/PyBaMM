@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v24.11.1](https://github.com/pybamm-team/PyBaMM/tree/v24.11.1) - 2024-11-22
+
 ## Features
 
 - Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points. ([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
