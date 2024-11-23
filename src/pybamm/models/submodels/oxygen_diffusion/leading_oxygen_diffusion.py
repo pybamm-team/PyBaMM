@@ -19,7 +19,7 @@ class LeadingOrder(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def build(self):
         c_ox_av = pybamm.Variable(
             "X-averaged oxygen concentration [mol.m-3]", domain="current collector"
         )
@@ -27,9 +27,8 @@ class LeadingOrder(BaseModel):
         c_ox_s = pybamm.PrimaryBroadcast(c_ox_av, "separator")
         c_ox_p = pybamm.PrimaryBroadcast(c_ox_av, "positive electrode")
 
-        return self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
+        variables = self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
 
-    def get_coupled_variables(self, variables):
         N_ox = pybamm.FullBroadcast(
             0,
             ["negative electrode", "separator", "positive electrode"],
@@ -38,26 +37,45 @@ class LeadingOrder(BaseModel):
 
         variables.update(self._get_standard_flux_variables(N_ox))
 
-        return variables
+        eps_n_av = pybamm.CoupledVariable(
+            "X-averaged negative electrode porosity",
+            domain="current collector"
+        )
+        self.coupled_variables.update({eps_n_av.name: eps_n_av})
+        eps_s_av = pybamm.CoupledVariable(
+            "X-averaged separator porosity",
+            domain="current collector",
+        )
+        self.coupled_variables.update({eps_s_av.name: eps_s_av})
+        eps_p_av = pybamm.CoupledVariable(
+            "X-averaged positive electrode porosity",
+            domain="current collector",
+        )
+        self.coupled_variables.update({eps_p_av.name: eps_p_av})
 
-    def set_rhs(self, variables):
-        c_ox_av = variables["X-averaged oxygen concentration [mol.m-3]"]
+        deps_n_dt_av = pybamm.CoupledVariable(
+            "X-averaged negative electrode porosity change [s-1]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({deps_n_dt_av.name: deps_n_dt_av})
+        deps_p_dt_av = pybamm.CoupledVariable(
+            "X-averaged positive electrode porosity change [s-1]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({deps_p_dt_av.name: deps_p_dt_av})
 
-        eps_n_av = variables["X-averaged negative electrode porosity"]
-        eps_s_av = variables["X-averaged separator porosity"]
-        eps_p_av = variables["X-averaged positive electrode porosity"]
-
-        deps_n_dt_av = variables["X-averaged negative electrode porosity change [s-1]"]
-        deps_p_dt_av = variables["X-averaged positive electrode porosity change [s-1]"]
-
-        a_j_ox_n_av = variables[
+        a_j_ox_n_av = pybamm.CoupledVariable(
             "X-averaged negative electrode oxygen "
-            "volumetric interfacial current density [A.m-3]"
-        ]
-        a_j_ox_p_av = variables[
+            "volumetric interfacial current density [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({a_j_ox_n_av.name: a_j_ox_n_av})
+        a_j_ox_p_av = pybamm.CoupledVariable(
             "X-averaged positive electrode oxygen "
-            "volumetric interfacial current density [A.m-3]"
-        ]
+            "volumetric interfacial current density [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({a_j_ox_p_av.name: a_j_ox_p_av})
 
         source_terms = (
             self.param.n.L * self.param.s_ox_Ox * a_j_ox_n_av
@@ -77,7 +95,5 @@ class LeadingOrder(BaseModel):
                 * (self.param.n.L * deps_n_dt_av + self.param.p.L * deps_p_dt_av)
             )
         }
-
-    def set_initial_conditions(self, variables):
-        c_ox = variables["X-averaged oxygen concentration [mol.m-3]"]
-        self.initial_conditions = {c_ox: self.param.c_ox_init}
+        self.initial_conditions = {c_ox_av: self.param.c_ox_init}
+        self.variables.update(variables)

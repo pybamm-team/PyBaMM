@@ -23,7 +23,7 @@ class Full(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def build(self):
         # Oxygen concentration (oxygen concentration is zero in the negative electrode)
         c_ox_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         c_ox_s = pybamm.Variable(
@@ -45,16 +45,22 @@ class Full(BaseModel):
             self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
         )
 
-        return variables
-
-    def get_coupled_variables(self, variables):
-        tor_s = variables["Separator electrolyte transport efficiency"]
-        tor_p = variables["Positive electrolyte transport efficiency"]
+        tor_s = pybamm.CoupledVariable(
+            "Separator electrolyte transport efficiency",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_s.name: tor_s})  
+        tor_p = pybamm.CoupledVariable(
+            "Positive electrolyte transport efficiency",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_p.name: tor_p})
         tor = pybamm.concatenation(tor_s, tor_p)
 
-        c_ox = variables[
-            "Separator and positive electrode oxygen concentration [mol.m-3]"
-        ]
+        c_ox = c_ox_s_p
+
         # TODO: allow charge and convection?
         v_box = pybamm.Scalar(0)
 
@@ -68,50 +74,56 @@ class Full(BaseModel):
 
         variables.update(self._get_standard_flux_variables(N_ox))
 
-        return variables
-
-    def set_rhs(self, variables):
-        eps_s = variables["Separator porosity"]
-        eps_p = variables["Positive electrode porosity"]
-        eps = pybamm.concatenation(eps_s, eps_p)
-
-        deps_dt_s = variables["Separator porosity change [s-1]"]
-        deps_dt_p = variables["Positive electrode porosity change [s-1]"]
+        deps_dt_s = pybamm.CoupledVariable(
+            "Separator porosity change [s-1]",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({deps_dt_s.name: deps_dt_s})
+        deps_dt_p = pybamm.CoupledVariable(
+            "Positive electrode porosity change [s-1]",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({deps_dt_p.name: deps_dt_p})
         deps_dt = pybamm.concatenation(deps_dt_s, deps_dt_p)
 
-        c_ox = variables[
-            "Separator and positive electrode oxygen concentration [mol.m-3]"
-        ]
+
         N_ox = variables["Oxygen flux [mol.m-2.s-1]"].orphans[1]
 
-        a_j_ox = variables[
-            "Positive electrode oxygen volumetric interfacial current density [A.m-3]"
-        ]
+        a_j_ox = pybamm.CoupledVariable(
+            "Positive electrode oxygen volumetric interfacial current density [A.m-3]",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({a_j_ox.name: a_j_ox})
         source_terms = pybamm.concatenation(
             pybamm.FullBroadcast(0, "separator", "current collector"),
             self.param.s_ox_Ox * a_j_ox,
         )
 
+        eps_s = pybamm.CoupledVariable(
+            "Separator porosity",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({eps_s.name: eps_s})
+        eps_p = pybamm.CoupledVariable(
+            "Positive electrode porosity",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({eps_p.name: eps_p})
+        eps = pybamm.concatenation(eps_s, eps_p)
         self.rhs = {
             c_ox: (1 / eps)
             * (-pybamm.div(N_ox) + source_terms / self.param.F - c_ox * deps_dt)
         }
-
-    def set_boundary_conditions(self, variables):
-        c_ox = variables[
-            "Separator and positive electrode oxygen concentration [mol.m-3]"
-        ]
-
         self.boundary_conditions = {
             c_ox: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-
-    def set_initial_conditions(self, variables):
-        c_ox = variables[
-            "Separator and positive electrode oxygen concentration [mol.m-3]"
-        ]
-
         self.initial_conditions = {c_ox: self.param.c_ox_init}
+        self.variables.update(variables)

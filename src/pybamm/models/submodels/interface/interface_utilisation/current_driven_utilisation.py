@@ -53,17 +53,20 @@ class CurrentDriven(BaseModel):
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
+            self.coupled_variables.update({a_j.name: a_j})
         elif self.reaction_loc == "x-average":
             a_j = pybamm.CoupledVariable(
                 f"X-averaged {domain} electrode volumetric "
                 "interfacial current density [A.m-3]",
                 domain="current collector",
             )
+            self.coupled_variables.update({a_j.name: a_j})
         else:
             a_j = pybamm.CoupledVariable(
                 "Lithium metal total interfacial current density [A.m-2]",
                 domain="current collector",
             )
+            self.coupled_variables.update({a_j.name: a_j})
         beta = self.domain_param.beta_utilisation
 
         self.rhs = {u: beta * u * a_j / self.param.F}

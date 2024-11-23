@@ -18,7 +18,7 @@ class NoOxygen(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def build(self):
         c_ox_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
         c_ox_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         c_ox_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
@@ -33,4 +33,4 @@ class NoOxygen(BaseModel):
 
         variables.update(self._get_standard_flux_variables(N_e))
 
-        return variables
+        self.variables.update(variables)
