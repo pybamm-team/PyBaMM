@@ -41,24 +41,61 @@ class BaseMechanics(pybamm.BaseSubModel):
         phase_name = self.phase_name
         phase_param = self.phase_param
 
-        c_s_rav = variables[
-            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-        ]
-        sto_rav = variables[f"R-averaged {domain} {phase_name}particle concentration"]
-        c_s_surf = variables[
-            f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-        ]
-        T_xav = variables["X-averaged cell temperature [K]"]
+        c_s_rav = pybamm.CoupledVariable(
+            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_s_rav.name: c_s_rav})
+
+        c_s_surf = pybamm.CoupledVariable(
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_s_surf.name: c_s_surf})
+
+        T_xav = pybamm.CoupledVariable(
+            "X-averaged cell temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T_xav.name: T_xav})
+
+        T_electrode = pybamm.CoupledVariable(
+            f"{Domain} electrode temperature [K]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T_electrode.name: T_electrode})
+
         T = pybamm.PrimaryBroadcast(
-            variables[f"{Domain} electrode temperature [K]"],
+            T_electrode,
             [f"{domain} {phase_name}particle"],
         )
-        eps_s = variables[
-            f"{Domain} electrode {phase_name}active material volume fraction"
-        ]
+        eps_s = pybamm.CoupledVariable(
+            f"{Domain} electrode {phase_name}active material volume fraction",
+            domain=f"{domain} electrode",
+        )
+        self.coupled_variables.update({eps_s.name: eps_s})
 
         # use a tangential approximation for omega
-        sto = variables[f"{Domain} {phase_name}particle concentration"]
+        sto = pybamm.CoupledVariable(
+            f"{Domain} {phase_name}particle concentration",
+            domains={
+                "primary": f"{domain} particle",
+                "secondary": f"{domain} electrode",
+                "tertiary": "current collector",
+            },
+        )
+        self.coupled_variables.update({sto.name: sto})
+
+        sto_rav = pybamm.CoupledVariable(
+            f"R-averaged {domain} {phase_name}particle concentration",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({sto_rav.name: sto_rav})
+
         Omega = pybamm.r_average(phase_param.Omega(sto, T))
         R0 = phase_param.R
         c_0 = domain_param.c_0
@@ -100,10 +137,11 @@ class BaseMechanics(pybamm.BaseSubModel):
             }
         )
 
-        if (
-            f"{Domain} primary thickness change [m]" in variables
-            and f"{Domain} secondary thickness change [m]" in variables
-        ):
+        # if (
+        #    f"{Domain} primary thickness change [m]" in variables
+        #    and f"{Domain} secondary thickness change [m]" in variables
+        # ):
+        if False:
             variables[f"{Domain} thickness change [m]"] = (
                 variables[f"{Domain} primary thickness change [m]"]
                 + variables[f"{Domain} secondary thickness change [m]"]
@@ -130,9 +168,12 @@ class BaseMechanics(pybamm.BaseSubModel):
         phase_name = self.phase_name
 
         l_cr = variables[f"{Domain} particle crack length [m]"]
-        a = variables[
-            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-        ]
+        a = pybamm.CoupledVariable(
+            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({a.name: a})
         rho_cr = self.domain_param.rho_cr
         w_cr = self.domain_param.w_cr
         roughness = 1 + 2 * l_cr * rho_cr * w_cr  # ratio of cracks to normal surface

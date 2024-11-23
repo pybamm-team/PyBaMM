@@ -29,7 +29,7 @@ class SwellingOnly(BaseMechanics):
         pybamm.citations.register("Ai2019")
         pybamm.citations.register("Deshpande2012")
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
 
         zero = pybamm.FullBroadcast(
@@ -43,9 +43,6 @@ class SwellingOnly(BaseMechanics):
                 f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
             }
         )
-        return variables
-
-    def get_coupled_variables(self, variables):
         variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
-        return variables
+        self.variables.update(variables)

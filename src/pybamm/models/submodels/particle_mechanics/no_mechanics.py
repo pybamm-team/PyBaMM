@@ -25,7 +25,7 @@ class NoMechanics(BaseMechanics):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
 
         zero = pybamm.FullBroadcast(
@@ -39,8 +39,5 @@ class NoMechanics(BaseMechanics):
                 f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
             }
         )
-        return variables
-
-    def get_coupled_variables(self, variables):
         variables.update(self._get_standard_surface_variables(variables))
-        return variables
+        self.variables.update(variables)
