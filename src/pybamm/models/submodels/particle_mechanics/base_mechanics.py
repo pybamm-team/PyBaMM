@@ -75,6 +75,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         eps_s = pybamm.CoupledVariable(
             f"{Domain} electrode {phase_name}active material volume fraction",
             domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         self.coupled_variables.update({eps_s.name: eps_s})
 
