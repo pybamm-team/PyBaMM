@@ -15,6 +15,9 @@ on:
   # workflow manually
   workflow_dispatch:
 
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest

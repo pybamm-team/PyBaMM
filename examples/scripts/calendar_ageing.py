@@ -25,7 +25,7 @@ for model in models:
 
     sim = pb.Simulation(model, parameter_values=parameter_values)
 
-    solver = pb.CasadiSolver(mode="fast")
+    solver = pb.IDAKLUSolver()
 
     years = 30
     days = years * 365

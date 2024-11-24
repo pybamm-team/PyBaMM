@@ -36,8 +36,8 @@ class NoSEI(BaseModel):
             zero = pybamm.FullBroadcast(
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
-        variables = self._get_standard_thickness_variables(zero, zero)
-        variables.update(self._get_standard_reaction_variables(zero, zero))
+        variables = self._get_standard_thickness_variables(zero)
+        variables.update(self._get_standard_reaction_variables(zero))
         return variables
 
     def get_coupled_variables(self, variables):

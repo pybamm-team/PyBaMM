@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.9.0"
+version = "24.11.1"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -45,6 +45,8 @@ dependencies = [
     "pandas>=1.5.0",
     "pooch>=1.8.1",
     "posthog",
+    "pyyaml",
+    "platformdirs",
 ]
 
 [project.urls]
