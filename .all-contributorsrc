@@ -991,6 +991,15 @@
       "contributions": [
         "test"
       ]
+    },
+    {
+      "login": "isaacbasil",
+      "name": "isaacbasil",
+      "avatar_url": "https://avatars.githubusercontent.com/u/123981577?v=4",
+      "profile": "https://github.com/isaacbasil",
+      "contributions": [
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
