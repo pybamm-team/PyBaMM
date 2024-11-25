@@ -108,10 +108,8 @@ class TestConfig:
         assert "Timeout reached. Defaulting to not enabling telemetry." in captured.out
 
     def test_generate_and_read(self, monkeypatch, tmp_path):
-        # Mock is_running_tests to return False
         monkeypatch.setattr(pybamm.config, "is_running_tests", lambda: False)
-
-        # Mock ask_user_opt_in to return True
+        monkeypatch.setattr(pybamm.config, "check_opt_out", lambda: False)
         monkeypatch.setattr(pybamm.config, "ask_user_opt_in", lambda: True)
 
         # Mock telemetry capture
@@ -155,3 +153,17 @@ class TestConfig:
         config_dict = pybamm.config.read_uuid_from_file(invalid_yaml)
 
         assert config_dict is None
+
+    def test_check_opt_out(self, monkeypatch):
+        monkeypatch.setattr(pybamm.config, "read", lambda: {"enable_telemetry": True})
+        monkeypatch.setattr(pybamm.config, "check_env_opt_out", lambda: True)
+        assert pybamm.config.check_opt_out() is True
+        monkeypatch.setattr(pybamm.config, "read", lambda: {"enable_telemetry": False})
+        monkeypatch.setattr(pybamm.config, "check_env_opt_out", lambda: True)
+        assert pybamm.config.check_opt_out() is True
+        monkeypatch.setattr(pybamm.config, "read", lambda: {"enable_telemetry": True})
+        monkeypatch.setattr(pybamm.config, "check_env_opt_out", lambda: False)
+        assert pybamm.config.check_opt_out() is False
+        monkeypatch.setattr(pybamm.config, "read", lambda: {"enable_telemetry": False})
+        monkeypatch.setattr(pybamm.config, "check_env_opt_out", lambda: False)
+        assert pybamm.config.check_opt_out() is True

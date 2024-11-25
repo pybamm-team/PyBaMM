@@ -63,6 +63,7 @@ def get_initial_stoichiometry_half_cell(
     parameter_values,
     param=None,
     options=None,
+    tol=1e-6,
     inputs=None,
     **kwargs,
 ):
@@ -80,7 +81,14 @@ def get_initial_stoichiometry_half_cell(
         must be between V_min and V_max.
     parameter_values : pybamm.ParameterValues
         The parameter values to use in the calculation
-
+    param : :class:`pybamm.LithiumIonParameters`, optional
+        The symbolic parameter set to use for the simulation.
+        If not provided, the default parameter set will be used.
+    tol : float, optional
+        The tolerance for the solver used to compute the initial stoichiometries.
+        Default is 1e-6.
+    inputs : dict, optional
+        A dictionary of input parameters passed to the model.
     Returns
     -------
     x
@@ -94,7 +102,7 @@ def get_initial_stoichiometry_half_cell(
         V_min = parameter_values.evaluate(param.voltage_low_cut)
         V_max = parameter_values.evaluate(param.voltage_high_cut)
 
-        if not V_min <= V_init <= V_max:
+        if not V_min - tol <= V_init <= V_max + tol:
             raise ValueError(
                 f"Initial voltage {V_init}V is outside the voltage limits "
                 f"({V_min}, {V_max})"
@@ -113,7 +121,9 @@ def get_initial_stoichiometry_half_cell(
         soc_model.initial_conditions[soc] = (V_init - V_min) / (V_max - V_min)
         soc_model.variables["soc"] = soc
         parameter_values.process_model(soc_model)
-        initial_soc = pybamm.AlgebraicSolver().solve(soc_model, [0])["soc"].data[0]
+        initial_soc = (
+            pybamm.AlgebraicSolver(tol=tol).solve(soc_model, [0])["soc"].data[0]
+        )
     elif isinstance(initial_value, (int, float)):
         initial_soc = initial_value
         if not 0 <= initial_soc <= 1:

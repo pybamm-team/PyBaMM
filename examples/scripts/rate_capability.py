@@ -16,9 +16,8 @@ voltage_av = np.zeros_like(C_rates)
 for i, C_rate in enumerate(C_rates):
     experiment = pybamm.Experiment(
         [f"Discharge at {C_rate:.4f}C until 3.2V"],
-        period=f"{10 / C_rate:.4f} seconds",
     )
-    sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+    sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.IDAKLUSolver())
     sim.solve()
 
     time = sim.solution["Time [s]"].entries

@@ -1,6 +1,25 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+- Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
+
+## Breaking changes
+
+- Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
+
+# [v24.11.1](https://github.com/pybamm-team/PyBaMM/tree/v24.11.1) - 2024-11-22
+
+## Features
+
+- Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points. ([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
+
+## Bug Fixes
+
+- Added some dependencies which were left out of the `pyproject.toml` file ([#4602](https://github.com/pybamm-team/PyBaMM/pull/4602))
+
+# [v24.11.0](https://github.com/pybamm-team/PyBaMM/tree/v24.11.0) - 2024-11-20
+
+## Features
 
 - Added `CoupledVariable` which provides a placeholder variable whose equation can be elsewhere in the model. ([#4556](https://github.com/pybamm-team/PyBaMM/pull/4556))
 - Adds support to `pybamm.Experiment` for the `output_variables` option in the `IDAKLUSolver`. ([#4534](https://github.com/pybamm-team/PyBaMM/pull/4534))
@@ -33,6 +52,7 @@
 
 ## Breaking changes
 
+- Deprecated `pybamm.Simulation.set_parameters` and `pybamm.Simulation.     set_up_and_parameterise_experiment` functions in `pybamm.simulation.py`. ([#3752](https://github.com/pybamm-team/PyBaMM/pull/3752))
 - Removed all instances of `param = self.param` and now directly access `self.param` across the codebase. This change simplifies parameter references and enhances readability. ([#4484](https://github.com/pybamm-team/PyBaMM/pull/4494))
 - Removed the deprecation warning for the chemistry argument in
   ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))

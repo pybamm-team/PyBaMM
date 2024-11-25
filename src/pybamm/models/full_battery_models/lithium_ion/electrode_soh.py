@@ -673,7 +673,7 @@ class ElectrodeSOHSolver:
             V_min = parameter_values.evaluate(self.param.ocp_soc_0)
             V_max = parameter_values.evaluate(self.param.ocp_soc_100)
 
-            if not V_min <= V_init <= V_max:
+            if not V_min - tol <= V_init <= V_max + tol:
                 raise ValueError(
                     f"Initial voltage {V_init}V is outside the voltage limits "
                     f"({V_min}, {V_max})"
@@ -881,7 +881,6 @@ def get_initial_stoichiometries(
         :class:`pybamm.BatteryModelOptions`.
     tol : float, optional
         The tolerance for the solver used to compute the initial stoichiometries.
-        A lower value results in higher precision but may increase computation time.
         Default is 1e-6.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
