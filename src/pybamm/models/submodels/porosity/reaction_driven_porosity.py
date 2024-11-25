@@ -52,13 +52,9 @@ class ReactionDriven(BaseModel):
                     if SEI_option == "none":
                         L_sei_0 = pybamm.Scalar(0)
                     else:
-                        L_inner_0 = pybamm.Parameter(
-                            f"{pref}Initial inner SEI thickness [m]"
+                        L_sei_0 = pybamm.Parameter(
+                            f"{pref}Initial SEI thickness [m]"
                         )
-                        L_outer_0 = pybamm.Parameter(
-                            f"{pref}Initial outer SEI thickness [m]"
-                        )
-                        L_sei_0 = L_inner_0 + L_outer_0
                     L_pl_k = variables[
                         f"{Domain} {phase_name}lithium plating thickness [m]"
                     ]
