@@ -31,14 +31,10 @@ class ReactionDriven(BaseModel):
             else:
                 dom = domain.split()[0]
                 Domain = dom.capitalize()
-                L_sei_k = variables[f"{Domain} total SEI thickness [m]"]
                 if Domain == "Negative":
                     L_sei_0 = self.param.n.prim.L_sei_0
                 elif Domain == "Positive":
                     L_sei_0 = self.param.p.prim.L_sei_0
-                L_pl_k = variables[f"{Domain} lithium plating thickness [m]"]
-                L_dead_k = variables[f"{Domain} dead lithium thickness [m]"]
-                L_sei_cr_k = variables[f"{Domain} total SEI on cracks thickness [m]"]
                 roughness_k = variables[f"{Domain} electrode roughness ratio"]
                 SEI_option = getattr(self.options, dom)["SEI"]
                 phases_option = getattr(self.options, dom)["particle phases"]
