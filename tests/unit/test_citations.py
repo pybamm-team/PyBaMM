@@ -38,7 +38,6 @@ class TestCitations:
 
         # Test key error
         with pytest.raises(KeyError):
-            # this should raise key error
             citations._parse_citation("not a citation")
 
         # Test unknown citations at registration
