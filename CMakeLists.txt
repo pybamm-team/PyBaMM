@@ -19,6 +19,20 @@ endif()
 
 project(idaklu)
 
+# add an OpenMP option: we'll keep this ON by default, except for Emscripten builds
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(PYBAMM_OPENMP_DEFAULT OFF)
+else()
+  set(PYBAMM_OPENMP_DEFAULT ON)
+endif()
+
+option(PYBAMM_OPENMP "Enable OpenMP support" ${PYBAMM_OPENMP_DEFAULT})
+message(STATUS "PYBAMM_OPENMP set to: ${PYBAMM_OPENMP}")
+
+if(PYBAMM_OPENMP)
+  add_compile_definitions(PYBAMM_OPENMP)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -145,20 +159,22 @@ set_target_properties(
 )
 
 # openmp
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  execute_process(
-      COMMAND "brew" "--prefix"
-      OUTPUT_VARIABLE HOMEBREW_PREFIX
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if (OpenMP_ROOT)
-    set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
-  else()
-    set(OpenMP_ROOT "${HOMEBREW_PREFIX}/opt/libomp")
+if(PYBAMM_OPENMP)
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    execute_process(
+        COMMAND "brew" "--prefix"
+        OUTPUT_VARIABLE HOMEBREW_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (OpenMP_ROOT)
+      set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
+    else()
+      set(OpenMP_ROOT "${HOMEBREW_PREFIX}/opt/libomp")
+    endif()
   endif()
-endif()
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+  find_package(OpenMP)
+  if(OpenMP_CXX_FOUND)
+      target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+  endif()
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
