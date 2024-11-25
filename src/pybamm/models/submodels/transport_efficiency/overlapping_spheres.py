@@ -22,14 +22,19 @@ class OverlappingSpheres(BaseModel):
     def __init__(self, param, component, options=None):
         super().__init__(param, component, options=options)
 
-    def get_coupled_variables(self, variables):
+    def build(self):
         pybamm.citations.register("Shen2007")
         pybamm.citations.register("Weissberg1963")
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:
                 Domain = domain.capitalize()
-                eps_k = variables[f"{Domain} porosity"]
+                eps_k = pybamm.CoupledVariable(
+                    f"{Domain} porosity",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({eps_k.name: eps_k})
                 tor_k = 1 - pybamm.Log(eps_k * 0.5)
                 tor_dict[domain] = tor_k
         elif self.component == "Electrode":
@@ -39,9 +44,14 @@ class OverlappingSpheres(BaseModel):
                     tor_k = pybamm.FullBroadcast(0, "separator", "current collector")
                 else:
                     Domain = domain.capitalize()
-                    phi_k = 1 - variables[f"{Domain} porosity"]
+                    eps_k = pybamm.CoupledVariable(
+                        f"{Domain} porosity",
+                        domain=domain,
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                    self.coupled_variables.update({eps_k.name: eps_k})
+                    phi_k = 1 - eps_k
                     tor_k = 1 - pybamm.Log(phi_k * 0.5)
                 tor_dict[domain] = tor_k
-        variables.update(self._get_standard_transport_efficiency_variables(tor_dict))
-
-        return variables
+        variables = self._get_standard_transport_efficiency_variables(tor_dict)
+        self.variables.update(variables)
