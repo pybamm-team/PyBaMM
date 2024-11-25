@@ -616,8 +616,8 @@ class Integral(SpatialOperator):
     where :math:`u\\in\\text{domain}` is a spatial variable, :math:`u_{min}` and :math:`u_{max}` are the values of
     :math:`u` at the left-hand and right-hand boundaries of the domain respectively, and :math:`dq` is given by, \n
     :math:`dq=du` for cartesian coordinates, \n
-    :math:`dq=2\pi udu` for cylindrical coordinates, \n
-    :math:`dq=4\pi u^2 du` for spherical coordinates.
+    :math:`dq=2\\pi udu` for cylindrical coordinates, \n
+    :math:`dq=4\\pi u^2 du` for spherical coordinates.
 
     Parameters
     ----------
