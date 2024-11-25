@@ -6,8 +6,8 @@
 ## Breaking changes
 
 - Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
-- Moved the IDAKLU solver to a standalone `pybammsolvers` package. This will 
-  make pybamm a pure python package and make installing and using the solver 
+- Moved the IDAKLU solver to a standalone `pybammsolvers` package. This will
+  make pybamm a pure python package and make installing and using the solver
   easier. ([#4487](https://github.com/pybamm-team/PyBaMM/pull/4487))
 
 # [v24.11.1](https://github.com/pybamm-team/PyBaMM/tree/v24.11.1) - 2024-11-22
