@@ -824,7 +824,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         if bcs is None:
             bcs = {}
 
-        extrap_order = self.options["extrapolation"]["order"]
+        extrap_order_gradient = self.options["extrapolation"]["order"]["gradient"]
+        extrap_order_value = self.options["extrapolation"]["order"]["value"]
         use_bcs = self.options["extrapolation"]["use bcs"]
 
         nodes = submesh.nodes
@@ -850,7 +851,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 additive = bcs[child][symbol.side][0]
 
             elif symbol.side == "left":
-                if extrap_order == "linear":
+                if extrap_order_value == "linear":
                     # to find value at x* use formula:
                     # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
 
@@ -868,7 +869,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
                         additive = pybamm.Scalar(0)
 
-                elif extrap_order == "quadratic":
+                elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
@@ -895,7 +896,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif symbol.side == "right":
-                if extrap_order == "linear":
+                if extrap_order_value == "linear":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
@@ -917,7 +918,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
-                elif extrap_order == "quadratic":
+                elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
@@ -958,14 +959,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                 additive = bcs[child][symbol.side][0]
 
             elif symbol.side == "left":
-                if extrap_order == "linear":
+                if extrap_order_gradient == "linear":
                     # f'(x*) = (f_2 - f_1) / dx1
                     sub_matrix = (1 / dx1) * csr_matrix(
                         ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
                     )
                     additive = pybamm.Scalar(0)
 
-                elif extrap_order == "quadratic":
+                elif extrap_order_gradient == "quadratic":
                     a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
                     b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
                     c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2**2)
@@ -978,7 +979,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif symbol.side == "right":
-                if extrap_order == "linear":
+                if extrap_order_gradient == "linear":
                     # use formula:
                     # f'(x*) = (f_N - f_Nm1) / dxNm1
                     sub_matrix = (1 / dxNm1) * csr_matrix(
@@ -987,7 +988,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
                     additive = pybamm.Scalar(0)
 
-                elif extrap_order == "quadratic":
+                elif extrap_order_gradient == "quadratic":
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
                     b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
                     c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2**2)

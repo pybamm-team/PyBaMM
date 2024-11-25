@@ -59,8 +59,10 @@ def get_errors(function, method_options, pts, bcs=None):
 class TestExtrapolation:
     def test_convergence_without_bcs(self):
         # all tests are performed on x in [0, 1]
-        linear = {"extrapolation": {"order": "linear"}}
-        quad = {"extrapolation": {"order": "quadratic"}}
+        linear = {"extrapolation": {"order": {"gradient": "linear", "value": "linear"}}}
+        quad = {
+            "extrapolation": {"order": {"gradient": "quadratic", "value": "quadratic"}}
+        }
 
         def x_squared(x):
             y = x**2
@@ -147,8 +149,18 @@ class TestExtrapolation:
 
         bcs = {"left": (left_val, "Dirichlet"), "right": (right_flux, "Neumann")}
 
-        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
-        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+        linear = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        quad = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
         l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
         l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
 
@@ -202,8 +214,18 @@ class TestExtrapolation:
 
         bcs = {"left": (left_flux, "Neumann"), "right": (right_val, "Dirichlet")}
 
-        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
-        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+        linear = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        quad = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
         l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
         l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
 
@@ -237,7 +259,12 @@ class TestExtrapolation:
     def test_linear_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "linear", "use bcs": True}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -308,7 +335,12 @@ class TestExtrapolation:
     def test_quadratic_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -402,7 +434,12 @@ class TestExtrapolation:
         rpts = 10
         var_pts = {"r_n": rpts, "r_p": rpts}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {"negative particle": pybamm.FiniteVolume(method_options)}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -429,7 +466,12 @@ class TestExtrapolation:
     def test_extrapolate_2d_models(self):
         # create discretisation
         mesh = get_p2d_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),

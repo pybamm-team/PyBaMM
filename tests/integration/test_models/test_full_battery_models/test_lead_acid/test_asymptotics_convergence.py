@@ -28,7 +28,12 @@ class TestAsymptoticConvergence:
         var_pts = {"x_n": 3, "x_s": 3, "x_p": 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
 
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
