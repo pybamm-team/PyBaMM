@@ -4,6 +4,7 @@
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
 
 ## Breaking changes
+- Separated extrapolation options for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`, and updated the default to be "linear" for the value and quadratic for the gradient. ([#4614](https://github.com/pybamm-team/PyBaMM/pull/4614))
 
 - Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
 

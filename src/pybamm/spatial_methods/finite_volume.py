@@ -26,8 +26,11 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     Parameters
     ----------
-    mesh : :class:`pybamm.Mesh`
-        Contains all the submeshes for discretisation
+    options : dict-like, optional
+        A dictionary of options to be passed to the spatial method. The only option
+        currently available is "extrapolation", which has options for "order" and "use_bcs".
+        It sets the order separately for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`.
+        Default is "linear" for the value and quadratic for the gradient.
     """
 
     def __init__(self, options=None):
