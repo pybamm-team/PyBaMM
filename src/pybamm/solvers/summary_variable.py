@@ -66,7 +66,6 @@ class SummaryVariables:
         try:
             return self._all_variables
         except AttributeError:
-
             base_vars = self._possible_variables.copy()
             base_vars.extend(
                 f"Change in {var[0].lower() + var[1:]}"
