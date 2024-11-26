@@ -125,6 +125,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="http://marcberliner.com"><img src="https://avatars.githubusercontent.com/u/34451391?v=4?s=100" width="100px;" alt="Marc Berliner"/><br /><sub><b>Marc Berliner</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=MarcBerliner" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=MarcBerliner" title="Documentation">📖</a> <a href="#infra-MarcBerliner" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#maintenance-MarcBerliner" title="Maintenance">🚧</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Aswinr24"><img src="https://avatars.githubusercontent.com/u/135364633?v=4?s=100" width="100px;" alt="Aswinr24"/><br /><sub><b>Aswinr24</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Aswinr24" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/isaacbasil"><img src="https://avatars.githubusercontent.com/u/123981577?v=4?s=100" width="100px;" alt="isaacbasil"/><br /><sub><b>isaacbasil</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=isaacbasil" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
