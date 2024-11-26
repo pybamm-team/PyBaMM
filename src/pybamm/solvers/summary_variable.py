@@ -43,6 +43,27 @@ class SummaryVariables:
             self.last_state = solution.last_state
             self.cycles = None
 
+    @property
+    def all_variables(self):
+        try:
+            return self._all_variables
+        except AttributeError:
+
+            base_vars = self._possible_variables.copy()
+            for var in self._possible_variables:
+                var_lowercase = var[0].lower() + var[1:]
+                base_vars.append("Change in " + var_lowercase)
+
+            if self._esoh_variables:
+                base_vars.extend(self._esoh_variables)
+            elif self.esoh_solver is not None:
+                _ = self.esoh_solver._get_electrode_soh_sims_full().model
+                esoh_variables = _.variables.keys()
+                base_vars.extend(esoh_variables)
+
+            self._all_variables = base_vars
+            return self._all_variables
+
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
         only when they are called.
