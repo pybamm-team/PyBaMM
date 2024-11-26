@@ -564,15 +564,9 @@ class Solution:
         self._initial_start_time = value
 
     def set_summary_variables(self, all_summary_variables):
-        summary_variables = {var: [] for var in all_summary_variables[0]}
-        for sum_vars in all_summary_variables:
-            for name, value in sum_vars.items():
-                summary_variables[name].append(value)
-
-        summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
-        self.all_summary_variables = all_summary_variables
-        self._summary_variables = pybamm.FuzzyDict(
-            {name: np.array(value) for name, value in summary_variables.items()}
+        self.all_summary_variables = all_summary_variables  # what's this used for?
+        self._summary_variables = pybamm.SummaryVariables(
+            self, cycle_summary_variables=all_summary_variables
         )
 
     def update(self, variables):
@@ -1142,8 +1136,11 @@ def make_cycle_solution(
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = _get_cycle_summary_variables(
-        cycle_solution, esoh_solver, user_inputs=inputs
+    # possibly better to initially load the SummaryVariable object at the start, using
+    # the summary_variables list directly, so solution is only passed when you actually
+    # need part of the result
+    cycle_summary_variables = pybamm.SummaryVariables(
+        cycle_solution, esoh_solver=esoh_solver, user_inputs=inputs
     )
 
     cycle_first_state = cycle_solution.first_state
@@ -1154,46 +1151,3 @@ def make_cycle_solution(
         cycle_solution = None
 
     return cycle_solution, cycle_summary_variables, cycle_first_state
-
-
-def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
-    user_inputs = user_inputs or {}
-    model = cycle_solution.all_models[0]
-    cycle_summary_variables = pybamm.FuzzyDict({})
-
-    # Summary variables
-    summary_variables = model.summary_variables
-    first_state = cycle_solution.first_state
-    last_state = cycle_solution.last_state
-    for var in summary_variables:
-        data_first = first_state[var].data
-        data_last = last_state[var].data
-        cycle_summary_variables[var] = data_last[0]
-        var_lowercase = var[0].lower() + var[1:]
-        cycle_summary_variables["Change in " + var_lowercase] = (
-            data_last[0] - data_first[0]
-        )
-
-    # eSOH variables (full-cell lithium-ion model only, for now)
-    if (
-        esoh_solver is not None
-        and isinstance(model, pybamm.lithium_ion.BaseModel)
-        and model.options.electrode_types["negative"] == "porous"
-        and "Negative electrode capacity [A.h]" in model.variables
-        and "Positive electrode capacity [A.h]" in model.variables
-    ):
-        Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
-        Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
-        Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
-        all_inputs = {**user_inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        try:
-            esoh_sol = esoh_solver.solve(inputs=all_inputs)
-        except pybamm.SolverError as error:  # pragma: no cover
-            raise pybamm.SolverError(
-                "Could not solve for summary variables, run "
-                "`sim.solve(calc_esoh=False)` to skip this step"
-            ) from error
-
-        cycle_summary_variables.update(esoh_sol)
-
-    return cycle_summary_variables

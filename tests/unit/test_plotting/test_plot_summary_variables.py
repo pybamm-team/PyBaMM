@@ -45,9 +45,9 @@ class TestPlotSummaryVariables:
 
             cycle_number, var = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(
-                cycle_number, sol.summary_variables["Cycle number"]
+                cycle_number, sol.summary_variables.cycle_number
             )
-            np.testing.assert_array_equal(var, sol.summary_variables[output_var])
+            np.testing.assert_allclose(sol.summary_variables[output_var], var)
 
         axes = pybamm.plot_summary_variables(
             [sol, sol], labels=["SPM", "SPM"], show_plot=False
@@ -62,12 +62,12 @@ class TestPlotSummaryVariables:
 
             cycle_number, var = ax.get_lines()[0].get_data()
             np.testing.assert_array_equal(
-                cycle_number, sol.summary_variables["Cycle number"]
+                cycle_number, sol.summary_variables.cycle_number
             )
             np.testing.assert_array_equal(var, sol.summary_variables[output_var])
 
             cycle_number, var = ax.get_lines()[1].get_data()
             np.testing.assert_array_equal(
-                cycle_number, sol.summary_variables["Cycle number"]
+                cycle_number, sol.summary_variables.cycle_number
             )
             np.testing.assert_array_equal(var, sol.summary_variables[output_var])
