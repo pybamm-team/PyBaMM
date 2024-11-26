@@ -23,6 +23,7 @@ class SummaryVariables:
         self.user_inputs = user_inputs or {}
         self.model = solution.all_models[0]
         self.esoh_solver = esoh_solver
+        self._esoh_variables = []
         self._variables = {}  # make fuzzy dict?
         self._possible_variables = self.model.summary_variables  # minus esoh variables
         self.cycle_number = None
@@ -62,7 +63,7 @@ class SummaryVariables:
         base_key = base_key[0].upper() + base_key[1:]
 
         # return it if it exists
-        if base_key in self._variables:
+        if base_key in self._variables or key in self._esoh_variables:
             return self._variables[key]
         elif base_key not in self._possible_variables:
             # check it's not a relevant eSOH variable
@@ -73,13 +74,15 @@ class SummaryVariables:
                 and "Negative electrode capacity [A.h]" in self.model.variables
                 and "Positive electrode capacity [A.h]" in self.model.variables
             ):
-                esoh_vars = self.esoh_solver._get_electrode_soh_sims_full().model.variables.keys()
-                if key in esoh_vars:
+                esoh_sim = self.esoh_solver._get_electrode_soh_sims_full().model
+                self._esoh_variables = esoh_sim.variables.keys()
+                if key in self._esoh_variables:
                     self.update_esoh()
                     return self._variables[key]
                 else:
                     raise KeyError(
-                        f"Variable '{key}' is not a summary variable or an eSOH variable."
+                        f"Variable '{key}' is not a summary variable or an eSOH "
+                        "variable."
                     )
             else:
                 raise KeyError(f"Variable '{key}' is not a summary variable.")
@@ -128,8 +131,7 @@ class SummaryVariables:
             esoh_sol = self.esoh_solver.solve(inputs=all_inputs)
         except pybamm.SolverError as error:  # pragma: no cover
             raise pybamm.SolverError(
-                "Could not solve for summary variables, run "
-                "`sim.solve(calc_esoh=False)` to skip this step"
+                "Could not solve for eSOH summary variables"
             ) from error
 
         return esoh_sol

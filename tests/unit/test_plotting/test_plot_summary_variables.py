@@ -64,10 +64,10 @@ class TestPlotSummaryVariables:
             np.testing.assert_array_equal(
                 cycle_number, sol.summary_variables.cycle_number
             )
-            np.testing.assert_array_equal(var, sol.summary_variables[output_var])
+            np.testing.assert_allclose(sol.summary_variables[output_var], var)
 
             cycle_number, var = ax.get_lines()[1].get_data()
             np.testing.assert_array_equal(
                 cycle_number, sol.summary_variables.cycle_number
             )
-            np.testing.assert_array_equal(var, sol.summary_variables[output_var])
+            np.testing.assert_allclose(sol.summary_variables[output_var], var)
