@@ -563,7 +563,8 @@ class Solution:
         """Updates the initial start time of the experiment"""
         self._initial_start_time = value
 
-    def set_summary_variables(self, all_summary_variables):
+    def update_summary_variables(self, all_summary_variables):
+        # called to create single SV object for whole experiment.
         self.all_summary_variables = all_summary_variables  # what's this used for?
         self._summary_variables = pybamm.SummaryVariables(
             self, cycle_summary_variables=all_summary_variables
