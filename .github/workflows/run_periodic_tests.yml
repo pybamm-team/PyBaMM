@@ -1,13 +1,7 @@
-# Run all unit tests and integration tests for all Python versions
-# and platforms at 3am UTC every day and on PRs to the main branch
 name: Scheduled
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-
   # Run every day at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
@@ -27,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  run_tests:
+  run_unit_integration_and_coverage_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,7 +38,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
@@ -100,6 +95,8 @@ jobs:
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
@@ -111,7 +108,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install graphviz pandoc texlive-latex-extra dvipng
+          sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -132,6 +129,8 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
@@ -141,7 +140,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -163,6 +162,8 @@ jobs:
 
   run_scripts_tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
@@ -172,7 +173,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
