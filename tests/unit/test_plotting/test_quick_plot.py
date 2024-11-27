@@ -252,41 +252,6 @@ class TestQuickPlot:
                 solution, ["a", "b broadcasted"], variable_limits="bad variable limits"
             )
 
-        # Test with a list of times
-        # Test for a 0D variable
-        quick_plot = pybamm.QuickPlot(solution, ["a"])
-        quick_plot.plot(t=[0, 1, 2])
-        assert len(quick_plot.plots[("a",)]) == 1
-
-        # Test for a 1D variable
-        quick_plot = pybamm.QuickPlot(solution, ["c broadcasted"])
-
-        time_list = [0.5, 1.5, 2.5]
-        quick_plot.plot(time_list)
-
-        ax = quick_plot.fig.axes[0]
-        lines = ax.get_lines()
-
-        variable_key = ("c broadcasted",)
-        if variable_key in quick_plot.variables:
-            num_variables = len(quick_plot.variables[variable_key][0])
-        else:
-            raise KeyError(
-                f"'{variable_key}' is not in quick_plot.variables. Available keys: "
-                + str(quick_plot.variables.keys())
-            )
-
-        expected_lines = len(time_list) * num_variables
-
-        assert (
-            len(lines) == expected_lines
-        ), f"Expected {expected_lines} superimposed lines, but got {len(lines)}"
-
-        # Test for a 2D variable
-        quick_plot = pybamm.QuickPlot(solution, ["2D variable"])
-        quick_plot.plot(t=[0, 1, 2])
-        assert len(quick_plot.plots[("2D variable",)]) == 1
-
         # Test errors
         with pytest.raises(ValueError, match="Mismatching variable domains"):
             pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
