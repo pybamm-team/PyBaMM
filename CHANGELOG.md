@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v24.11.2](https://github.com/pybamm-team/PyBaMM/tree/v24.11.2) - 2024-11-27
+
 ## Bug fixes
 
 - Reverted modifications to quickplot from [#4529](https://github.com/pybamm-team/PyBaMM/pull/4529) which caused issues with the plots displaying correct variable names. ([#4622](https://github.com/pybamm-team/PyBaMM/pull/4622))
