@@ -564,8 +564,7 @@ class Solution:
         self._initial_start_time = value
 
     def update_summary_variables(self, all_summary_variables):
-        # called to create single SV object for whole experiment.
-        self.all_summary_variables = all_summary_variables  # what's this used for?
+        self.all_summary_variables = all_summary_variables
         self._summary_variables = pybamm.SummaryVariables(
             self, cycle_summary_variables=all_summary_variables
         )
@@ -1137,9 +1136,6 @@ def make_cycle_solution(
 
     cycle_solution.steps = step_solutions
 
-    # possibly better to initially load the SummaryVariable object at the start, using
-    # the summary_variables list directly, so solution is only passed when you actually
-    # need part of the result
     cycle_summary_variables = pybamm.SummaryVariables(
         cycle_solution, esoh_solver=esoh_solver, user_inputs=inputs
     )

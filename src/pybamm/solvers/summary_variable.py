@@ -4,17 +4,20 @@
 from __future__ import annotations
 import pybamm
 import numpy as np
+from typing import Any
 
 
 class SummaryVariables:
     """
     Class for managing and calculating summary variables from a PyBaMM solution.
+    Summary variables are only calculated when simulations are run with PyBaMM
+    Experiments.
 
     Parameters
     ----------
     solution : :class:`pybamm.Solution`
         The solution object to be used for creating the processed variables.
-    cycle_summary_variables : list, optional
+    cycle_summary_variables : list[pybamm.SummaryVariables], optional
         A list of cycle summary variables.
     esoh_solver : :class:`pybamm.lithium_ion.ElectrodeSOHSolver`, optional
         Solver for electrode state-of-health (eSOH) calculations.
@@ -23,15 +26,29 @@ class SummaryVariables:
     """
 
     def __init__(
-        self, solution, cycle_summary_variables=None, esoh_solver=None, user_inputs=None
+        self,
+        solution: pybamm.Solution,
+        cycle_summary_variables: list[SummaryVariables] | None = None,
+        esoh_solver: pybamm.lithium_ion.ElectrodeSOHSolver = None,
+        user_inputs: dict[str, Any] = None,
     ):
         self.user_inputs = user_inputs or {}
-        self.model = solution.all_models[0]
         self.esoh_solver = esoh_solver
         self._variables = {}  # Store computed variables
-        self._esoh_variables = []
-        self._possible_variables = self.model.summary_variables  # minus esoh variables
         self.cycle_number = None
+
+        model = solution.all_models[0]
+        self._possible_variables = model.summary_variables  # minus esoh variables
+        self._esoh_variables = []  # Store eSOH variable names
+
+        # Flag if eSOH calculations are needed
+        self.calc_esoh = (
+            self.esoh_solver is not None
+            and isinstance(model, pybamm.lithium_ion.BaseModel)
+            and model.options.electrode_types["negative"] == "porous"
+            and "Negative electrode capacity [A.h]" in model.variables
+            and "Positive electrode capacity [A.h]" in model.variables
+        )
 
         # Initialize based on cycle information
         if cycle_summary_variables:
@@ -41,17 +58,8 @@ class SummaryVariables:
             self.last_state = solution.last_state
             self.cycles = None
 
-        # Flag if eSOH calculations are needed
-        self.calc_esoh = (
-            self.esoh_solver is not None
-            and isinstance(self.model, pybamm.lithium_ion.BaseModel)
-            and self.model.options.electrode_types["negative"] == "porous"
-            and "Negative electrode capacity [A.h]" in self.model.variables
-            and "Positive electrode capacity [A.h]" in self.model.variables
-        )
-
-    def _initialize_for_cycles(self, cycle_summary_variables):
-        """Initialize attributes for cycle-based calculations."""
+    def _initialize_for_cycles(self, cycle_summary_variables: list[SummaryVariables]):
+        """Initialize attributes for when multiple cycles are provided."""
         self.first_state = None
         self.last_state = None
         self.cycles = cycle_summary_variables
@@ -62,7 +70,7 @@ class SummaryVariables:
 
     @property
     def all_variables(self):
-        """Return all possible summary variables, including eSOH variables."""
+        """Return names of all possible summary variables, including eSOH variables."""
         try:
             return self._all_variables
         except AttributeError:
@@ -83,7 +91,7 @@ class SummaryVariables:
             self._all_variables = base_vars
             return self._all_variables
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> float | list[float]:
         """
         Access or compute a summary variable by its name.
 
@@ -94,7 +102,7 @@ class SummaryVariables:
 
         Returns
         -------
-        float or np.array
+        float or list[float]
         """
 
         if key in self._variables:
@@ -114,7 +122,7 @@ class SummaryVariables:
                 self.update(base_key)
             return self._variables[key]
 
-    def update(self, var):
+    def update(self, var: str):
         """Compute and store a variable and its change."""
         var_lowercase = var[0].lower() + var[1:]
         if self.cycles:
@@ -122,7 +130,7 @@ class SummaryVariables:
         else:
             self._update(var, var_lowercase)
 
-    def _update_multiple_cycles(self, var, var_lowercase):
+    def _update_multiple_cycles(self, var: str, var_lowercase: str):
         """Update variables for where more than one cycle exists."""
         var_cycle = [cycle[var] for cycle in self.cycles]
         change_var_cycle = [
@@ -131,8 +139,8 @@ class SummaryVariables:
         self._variables[var] = var_cycle
         self._variables[f"Change in {var_lowercase}"] = change_var_cycle
 
-    def _update(self, var, var_lowercase):
-        """Update variables for state-based data."""
+    def _update(self, var: str, var_lowercase: str):
+        """Create variable `var` for a single cycle."""
         data_first = self.first_state[var].data
         data_last = self.last_state[var].data
         self._variables[var] = data_last[0]
@@ -150,7 +158,7 @@ class SummaryVariables:
         else:
             self._variables.update(self._get_esoh_variables())
 
-    def _get_esoh_variables(self):
+    def _get_esoh_variables(self) -> dict[str, float]:
         """Compute eSOH variables for a single solution."""
         Q_n = self.last_state["Negative electrode capacity [A.h]"].data[0]
         Q_p = self.last_state["Positive electrode capacity [A.h]"].data[0]
