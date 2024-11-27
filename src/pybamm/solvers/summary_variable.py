@@ -29,8 +29,8 @@ class SummaryVariables:
         self,
         solution: pybamm.Solution,
         cycle_summary_variables: list[SummaryVariables] | None = None,
-        esoh_solver: pybamm.lithium_ion.ElectrodeSOHSolver = None,
-        user_inputs: dict[str, Any] = None,
+        esoh_solver: pybamm.lithium_ion.ElectrodeSOHSolver | None = None,
+        user_inputs: dict[str, Any] | None = None,
     ):
         self.user_inputs = user_inputs or {}
         self.esoh_solver = esoh_solver
