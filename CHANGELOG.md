@@ -5,8 +5,8 @@
 
 ## Bug fixes
 
-- Reverted modifications to quickplot from 
-  [#4529](https://github.com/pybamm-team/PyBaMM/pull/4529) which caused 
+- Reverted modifications to quickplot from
+  [#4529](https://github.com/pybamm-team/PyBaMM/pull/4529) which caused
   issues with the plots displaying correct variable names. ([]())
 
 ## Breaking changes
