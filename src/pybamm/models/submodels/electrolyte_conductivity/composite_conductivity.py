@@ -60,8 +60,14 @@ class Composite(BaseElectrolyteConductivity):
         L_s = self.param.s.L
         L_p = self.param.p.L
         L_x = self.param.L_x
-        x_s = pybamm.standard_spatial_vars.x_s
-        x_p = pybamm.standard_spatial_vars.x_p
+        x_s = pybamm.SpatialVariable(
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_p = pybamm.SpatialVariable(
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
 
         # bulk conductivities
         kappa_s_av = self.param.kappa_e(c_e_av, T_av) * tor_s_av
@@ -75,7 +81,10 @@ class Composite(BaseElectrolyteConductivity):
         if self.options.electrode_types["negative"] == "planar":
             i_e_n = None
         else:
-            x_n = pybamm.standard_spatial_vars.x_n
+            x_n = pybamm.SpatialVariable(
+                domain="negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
             chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
             T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
             RT_F_av_n = self.param.R * T_av_n / self.param.F

@@ -55,8 +55,8 @@ class CurrentCollector1D(BaseThermal):
         T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating [W.m-3]"]
         T_surf = variables["Surface temperature [K]"]
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
+        y = pybamm.SpatialVariable("current collector", dimension="y")
+        z = pybamm.SpatialVariable("current collector", dimension="z")
 
         # Calculate cooling, accounting for surface area to volume ratio of pouch cell
         edge_area = self.param.L_z * self.param.L

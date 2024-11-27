@@ -33,8 +33,14 @@ class Composite(BaseModel):
         L_n = self.param.n.L
         L_p = self.param.p.L
         L_x = self.param.L_x
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
+        x_n = pybamm.SpatialVariable(
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_p = pybamm.SpatialVariable(
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
 
         tor = variables[f"X-averaged {domain} electrode transport efficiency"]
         phi_s_cn = variables["Negative current collector potential [V]"]

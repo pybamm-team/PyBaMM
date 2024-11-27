@@ -80,8 +80,8 @@ class OneDimensionalX(BaseThermal):
         Q_cn = variables["Negative current collector Ohmic heating [W.m-3]"]
         Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
         T_surf = variables["Surface temperature [K]"]
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
+        y = pybamm.SpatialVariable("current collector", dimension="y")
+        z = pybamm.SpatialVariable("current collector", dimension="z")
 
         # Define volumetric heat capacity for electrode/separator/electrode sandwich
         rho_c_p = pybamm.concatenation(

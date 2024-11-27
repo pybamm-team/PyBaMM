@@ -2,13 +2,12 @@
 # IndependentVariable class
 #
 from __future__ import annotations
+from typing import Optional
 import sympy
 import numpy as np
 
 import pybamm
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
-
-KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -19,8 +18,6 @@ class IndependentVariable(pybamm.Symbol):
 
     Parameters
     ----------
-    name : str
-        name of the node
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict, optional
@@ -34,13 +31,15 @@ class IndependentVariable(pybamm.Symbol):
 
     def __init__(
         self,
-        name: str,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
     ) -> None:
         super().__init__(
-            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+            name="independent variable",
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
         )
 
     @classmethod
@@ -75,9 +74,6 @@ class Time(IndependentVariable):
     """
     A node in the expression tree representing time.
     """
-
-    def __init__(self):
-        super().__init__("time")
 
     @classmethod
     def _from_json(cls, snippet: dict):
@@ -121,11 +117,8 @@ class SpatialVariable(IndependentVariable):
 
     Parameters
     ----------
-    name : str
-        name of the node (e.g. "x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p")
     domain : iterable of str
-        list of domains that this variable is valid over (e.g. "cartesian", "spherical
-        polar")
+        list of domains that this variable is valid over (e.g. "negative electrode")
     auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
@@ -133,42 +126,22 @@ class SpatialVariable(IndependentVariable):
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
+    dimension : str, optional
+        Dimension of the spatial variable, used to identify the spatial variable in
+        geometries with multiple dimensions.
     """
 
     def __init__(
         self,
-        name: str,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        coord_sys=None,
+        dimension: Optional[str] = None,
     ) -> None:
-        self.coord_sys = coord_sys
         super().__init__(
-            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+            domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
-        domain = self.domain
-
-        if domain == []:
-            raise ValueError("domain must be provided")
-
-        # Check symbol name vs domain name
-        if name == "r_n" and not all(n in domain[0] for n in ["negative", "particle"]):
-            # catches "negative particle", "negative secondary particle", etc
-            raise pybamm.DomainError(
-                "domain must be negative particle if name is 'r_n'"
-            )
-        elif name == "r_p" and not all(
-            n in domain[0] for n in ["positive", "particle"]
-        ):
-            # catches "positive particle", "positive secondary particle", etc
-            raise pybamm.DomainError(
-                "domain must be positive particle if name is 'r_p'"
-            )
-        elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
-            ["particle" in dom for dom in domain]
-        ):
-            raise pybamm.DomainError(f"domain cannot be particle if name is '{name}'")
+        self.dimension = dimension
 
     def create_copy(
         self,
@@ -176,7 +149,7 @@ class SpatialVariable(IndependentVariable):
         perform_simplifications=True,
     ):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
+        return self.__class__(domains=self.domains, dimension=self.dimension)
 
 
 class SpatialVariableEdge(SpatialVariable):
@@ -186,29 +159,21 @@ class SpatialVariableEdge(SpatialVariable):
 
     Parameters
     ----------
-    name : str
-        name of the node (e.g. "x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p")
     domain : iterable of str
         list of domains that this variable is valid over (e.g. "cartesian", "spherical
         polar")
     auxiliary_domains : dict, optional
-        dictionary of auxiliary domains, defaults to empty dict
-    domains : dict
-        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
-        'domain' and 'auxiliary_domains', or just 'domains', should be provided
-        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
-        deprecated.
     """
 
     def __init__(
         self,
-        name: str,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
-        coord_sys=None,
     ) -> None:
-        super().__init__(name, domain, auxiliary_domains, domains, coord_sys)
+        super().__init__(
+            domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
 
     def _evaluates_on_edges(self, dimension):
         return True

@@ -168,11 +168,12 @@ class EffectiveResistance(BaseEffectiveResistance):
         }
 
         # Add spatial variables
-        var = pybamm.standard_spatial_vars
+        y = pybamm.SpatialVariable("current collector", dimension="y")
+        z = pybamm.SpatialVariable("current collector", dimension="z")
         if self.options["dimensionality"] == 1:
-            variables.update({"z [m]": var.z})
+            variables.update({"z [m]": z})
         elif self.options["dimensionality"] == 2:
-            variables.update({"y [m]": var.y, "z [m]": var.z})
+            variables.update({"y [m]": y, "z [m]": z})
 
         return variables
 
@@ -330,8 +331,9 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         }
 
         # Add spatial variables
-        var = pybamm.standard_spatial_vars
-        self.variables.update({"y [m]": var.y, "z [m]": var.z})
+        y = pybamm.SpatialVariable("current collector", dimension="y")
+        z = pybamm.SpatialVariable("current collector", dimension="z")
+        self.variables.update({"y [m]": y, "z [m]": z})
 
         pybamm.citations.register("Timms2021")
 

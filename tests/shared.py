@@ -112,7 +112,6 @@ def get_mesh_for_testing(
         "r_p": rpts,
         "y": ypts,
         "z": zpts,
-        "r_macro": rcellpts,
         "R_n": Rpts,
         "R_p": Rpts,
     }
@@ -235,7 +234,9 @@ def get_discretisation_for_testing(
     if mesh is None:
         mesh = get_mesh_for_testing(xpts=xpts, rpts=rpts)
     spatial_methods = {
-        "macroscale": SpatialMethodForTesting(),
+        "negative electrode": SpatialMethodForTesting(),
+        "separator": SpatialMethodForTesting(),
+        "positive electrode": SpatialMethodForTesting(),
         "negative particle": SpatialMethodForTesting(),
         "positive particle": SpatialMethodForTesting(),
         "negative particle size": SpatialMethodForTesting(),

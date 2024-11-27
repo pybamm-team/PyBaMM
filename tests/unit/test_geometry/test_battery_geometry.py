@@ -48,15 +48,6 @@ class TestBatteryGeometry:
         geometry = pybamm.battery_geometry()
         assert "negative particle size" not in geometry
 
-        geometry = pybamm.battery_geometry(form_factor="cylindrical")
-        assert geometry["current collector"]["r_macro"]["position"] == 1
-
-        geometry = pybamm.battery_geometry(
-            form_factor="cylindrical", options={"dimensionality": 1}
-        )
-        assert geometry["current collector"]["r_macro"]["min"] == geo.r_inner
-        assert geometry["current collector"]["r_macro"]["max"] == 1
-
         options = {"particle phases": "2"}
         geometry = pybamm.battery_geometry(options=options)
         geo = pybamm.GeometricParameters(options=options)

@@ -26,8 +26,14 @@ class SurfaceForm(BaseModel):
     def get_coupled_variables(self, variables):
         Domain = self.domain.capitalize()
 
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
+        x_n = pybamm.SpatialVariable(
+            "negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x_p = pybamm.SpatialVariable(
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
         i_e = variables[f"{Domain} electrolyte current density [A.m-2]"]
         tor = variables[f"{Domain} electrode transport efficiency"]

@@ -26,7 +26,7 @@ class Uniform(BaseTransverseModel):
 
     def get_coupled_variables(self, variables):
         # Set up
-        z = pybamm.standard_spatial_vars.z
+        z = pybamm.SpatialVariable("current collector")
 
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator

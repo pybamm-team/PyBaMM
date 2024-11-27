@@ -53,8 +53,8 @@ class ThermalParameters(BaseParameters):
 
     def T_amb_av(self, t):
         """YZ-averaged ambient temperature [K]"""
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
+        y = pybamm.SpatialVariable("current collector", dimension="y")
+        z = pybamm.SpatialVariable("current collector", dimension="z")
         return pybamm.yz_average(self.T_amb(y, z, t))
 
     def h_edge(self, y, z):

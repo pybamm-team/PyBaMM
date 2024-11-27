@@ -30,7 +30,9 @@ class TestAsymptoticConvergence:
 
         method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume(method_options),
+            "negative electrode": pybamm.FiniteVolume(method_options),
+            "separator": pybamm.FiniteVolume(method_options),
+            "positive electrode": pybamm.FiniteVolume(method_options),
             "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
         }
         loqs_disc = pybamm.Discretisation(mesh, spatial_methods)

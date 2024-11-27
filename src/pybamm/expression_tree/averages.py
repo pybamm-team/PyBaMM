@@ -31,11 +31,17 @@ class _BaseAverage(pybamm.Integral):
 class XAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
-            x = pybamm.standard_spatial_vars.x_n
+            x = pybamm.SpatialVariable(
+                domain="negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
         elif all(n in child.domain[0] for n in ["positive", "particle"]):
-            x = pybamm.standard_spatial_vars.x_p
+            x = pybamm.SpatialVariable(
+                domain="positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
         else:
-            x = pybamm.SpatialVariable("x", domain=child.domain)
+            x = pybamm.SpatialVariable(domain=child.domain)
         integration_variable = x
         super().__init__(child, "x-average", integration_variable)
 
@@ -56,9 +62,8 @@ class XAverage(_BaseAverage):
 
 class YZAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
-        integration_variable: list[pybamm.IndependentVariable] = [y, z]
+        yz = pybamm.SpatialVariable("current collector")
+        integration_variable: list[pybamm.IndependentVariable] = [yz]
         super().__init__(child, "yz-average", integration_variable)
 
     def _unary_new_copy(
@@ -79,7 +84,7 @@ class YZAverage(_BaseAverage):
 class ZAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
         integration_variable: list[pybamm.IndependentVariable] = [
-            pybamm.standard_spatial_vars.z
+            pybamm.SpatialVariable(domain="current collector")
         ]
         super().__init__(child, "z-average", integration_variable)
 
@@ -101,7 +106,7 @@ class ZAverage(_BaseAverage):
 class RAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
         integration_variable: list[pybamm.IndependentVariable] = [
-            pybamm.SpatialVariable("r", child.domain)
+            pybamm.SpatialVariable(domain=child.domain)
         ]
         super().__init__(child, "r-average", integration_variable)
 
@@ -122,7 +127,7 @@ class RAverage(_BaseAverage):
 
 class SizeAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol, f_a_dist) -> None:
-        R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
+        R = pybamm.SpatialVariable(domain=child.domain)
         integration_variable: list[pybamm.IndependentVariable] = [R]
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
@@ -394,9 +399,7 @@ def size_average(
     else:
         if f_a_dist is None:
             geo = pybamm.geometric_parameters
-            R = pybamm.SpatialVariable(
-                "R", domains=symbol.domains, coord_sys="cartesian"
-            )
+            R = pybamm.SpatialVariable(domains=symbol.domains)
             if ["negative particle size"] in symbol.domains.values():
                 f_a_dist = geo.n.prim.f_a_dist(R)
             elif ["positive particle size"] in symbol.domains.values():

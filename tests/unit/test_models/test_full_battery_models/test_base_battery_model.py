@@ -102,11 +102,11 @@ class TestBaseBatteryModel:
 
     def test_default_geometry(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
-        assert model.default_geometry["current collector"]["z"]["position"] == 1
+        assert model.default_geometry["current collector"].dimensions["z"][0] == 1
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        assert model.default_geometry["current collector"]["z"]["min"] == 0
+        assert model.default_geometry["current collector"].dimensions["z"][0] == 0
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        assert model.default_geometry["current collector"]["y"]["min"] == 0
+        assert model.default_geometry["current collector"].dimensions["y"][0] == 0
 
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
@@ -127,24 +127,29 @@ class TestBaseBatteryModel:
 
     def test_default_var_pts(self):
         var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 20,
-            "r_n_prim": 20,
-            "r_n_sec": 20,
-            "r_p": 20,
-            "r_p_prim": 20,
-            "r_p_sec": 20,
-            "y": 10,
-            "z": 10,
-            "R_n": 30,
-            "R_p": 30,
+            "negative electrode": 20,
+            "separator": 20,
+            "positive electrode": 20,
+            "negative particle": 20,
+            "negative primary particle": 20,
+            "negative secondary particle": 20,
+            "positive particle": 20,
+            "positive primary particle": 20,
+            "positive secondary particle": 20,
+            "negative particle size": 30,
+            "positive particle size": 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         assert var_pts == model.default_var_pts
 
-        var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
+        var_pts.update(
+            {
+                "negative electrode": 10,
+                "separator": 10,
+                "positive electrode": 10,
+                "current collector": (10, 10),
+            }
+        )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         assert var_pts == model.default_var_pts
 

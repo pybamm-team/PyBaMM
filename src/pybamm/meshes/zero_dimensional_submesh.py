@@ -14,25 +14,25 @@ class SubMesh0D(SubMesh):
 
     Parameters
     ----------
-    position : dict
-        A dictionary that contains the position of the 0D submesh (a signle point)
-        in space
+    domain : :class:`pybamm.Domain`
+        The domain to generate a submesh for
     npts : dict, optional
         Number of points to be used. Included for compatibility with other meshes,
         but ignored by this mesh class
     """
 
-    def __init__(self, position, npts=None):
-        # Remove tabs
-        position.pop("tabs", None)
-
+    def __init__(self, domain, npts=None):
         # check that only one variable passed in
-        if len(position) != 1:
+        if len(domain.dimensions) != 1:
             raise pybamm.GeometryError("position should only contain a single variable")
 
+        # check that the bounds are equal
+        bounds = domain.dimension_bounds[0]
+        if bounds[0] != bounds[1]:
+            raise pybamm.GeometryError("Bounds are not equal")
+
         # extract the position
-        position = next(iter(position.values()))
-        spatial_position = position["position"]
+        spatial_position = bounds[0]
         self.nodes = np.array([spatial_position])
         self.edges = np.array([spatial_position])
         self.coord_sys = None

@@ -120,7 +120,7 @@ class TestAlgebraicSolver:
         solution = solver._integrate(model, np.array([0]))
         np.testing.assert_array_almost_equal(solution.y, sol)
 
-    def test_model_solver(self):
+    def test_model_solver(self, finite_volume_discretisation):
         # Create model
         model = pybamm.BaseModel()
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -129,8 +129,7 @@ class TestAlgebraicSolver:
         model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
         model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
         model.variables = {"var1": var1, "var2": var2}
-        disc = get_discretisation_for_testing()
-        disc.process_model(model)
+        finite_volume_discretisation.process_model(model)
 
         sol = np.concatenate((np.ones(100) * 3, np.ones(100) * 6))[:, np.newaxis]
 

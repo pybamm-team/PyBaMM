@@ -26,30 +26,32 @@ class Explicit(BaseThroughCellModel):
             a_j_k_av = variables[
                 f"X-averaged {domain} volumetric interfacial current density [A.m-3]"
             ]
+            x = pybamm.SpatialVariable(
+                f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
             if domain == "negative electrode":
-                x_n = pybamm.standard_spatial_vars.x_n
                 DeltaV_k = self.param.n.DeltaV
                 p_k = (
                     -DeltaV_k
                     * a_j_k_av
                     / self.param.F
-                    * (-(x_n**2) + self.param.n.L**2)
+                    * (-(x**2) + self.param.n.L**2)
                     / 2
                     + p_s
                 )
-                v_box_k = -DeltaV_k * a_j_k_av / self.param.F * x_n
+                v_box_k = -DeltaV_k * a_j_k_av / self.param.F * x
             elif domain == "positive electrode":
-                x_p = pybamm.standard_spatial_vars.x_p
                 DeltaV_k = self.param.p.DeltaV
                 p_k = (
                     -DeltaV_k
                     * a_j_k_av
                     / self.param.F
-                    * ((x_p - 1) ** 2 - self.param.p.L**2)
+                    * ((x - 1) ** 2 - self.param.p.L**2)
                     / 2
                     + p_s
                 )
-                v_box_k = -DeltaV_k * a_j_k_av / self.param.F * (x_p - self.param.L_x)
+                v_box_k = -DeltaV_k * a_j_k_av / self.param.F * (x - self.param.L_x)
             div_v_box_k = pybamm.PrimaryBroadcast(
                 -DeltaV_k * a_j_k_av / self.param.F, domain
             )
@@ -70,7 +72,10 @@ class Explicit(BaseThroughCellModel):
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
         # Simple formula for velocity in the separator
-        x_s = pybamm.standard_spatial_vars.x_s
+        x_s = pybamm.SpatialVariable(
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
         v_box_s = div_v_box_s_av * (x_s - self.param.n.L) + v_box_n_right
 
         variables.update(

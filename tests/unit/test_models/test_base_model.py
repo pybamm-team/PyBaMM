@@ -861,16 +861,16 @@ class TestBaseModel:
 
         # Discretise
         geometry = {
-            "negative electrode": {"x_n": {"min": 0, "max": 1}},
-            "separator": {"x_s": {"min": 1, "max": 2}},
-            "negative particle": {"r_n": {"min": 0, "max": 1}},
+            "negative electrode": {"x": (0, 1)},
+            "separator": {"x": (1, 2)},
+            "negative particle": {"r": (0, 1)},
         }
         submeshes = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
         }
-        var_pts = {"x_n": 10, "x_s": 10, "r_n": 5}
+        var_pts = {"negative electrode": 10, "separator": 10, "negative particle": 5}
         mesh = pybamm.Mesh(geometry, submeshes, var_pts)
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume(),

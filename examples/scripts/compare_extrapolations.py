@@ -1,11 +1,6 @@
 import pybamm
 
-
-x_n = pybamm.standard_spatial_vars.x_n
-x_s = pybamm.standard_spatial_vars.x_s
-x_p = pybamm.standard_spatial_vars.x_p
-
-var_pts = {x_n: 10, x_s: 3, x_p: 10}
+var_pts = {"negative electrode": 10, "separator": 3, "positive electrode": 10}
 model_lin = pybamm.lead_acid.Full()
 sim_lin = pybamm.Simulation(model_lin, var_pts=var_pts)
 sim_lin.solve([0, 3600])
@@ -15,7 +10,9 @@ method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
 spatial_methods = {
     "negative particle": pybamm.FiniteVolume(method_options),
     "positive particle": pybamm.FiniteVolume(method_options),
-    "macroscale": pybamm.FiniteVolume(method_options),
+    "negative electrode": pybamm.FiniteVolume(method_options),
+    "separator": pybamm.FiniteVolume(method_options),
+    "positive electrode": pybamm.FiniteVolume(method_options),
     "current collector": pybamm.ZeroDimensionalSpatialMethod(),
 }
 sim_quad = pybamm.Simulation(

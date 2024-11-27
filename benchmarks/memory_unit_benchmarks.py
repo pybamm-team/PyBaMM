@@ -57,13 +57,7 @@ class MemParameteriseModel(MemCreateExpression):
             }
         )
 
-        self.r = pybamm.SpatialVariable(
-            "r", domain=["negative particle"], coord_sys="spherical polar"
-        )
-
-        self.geometry = {
-            "negative particle": {self.r: {"min": pybamm.Scalar(0), "max": self.R}}
-        }
+        self.geometry = {"negative particle": {"r": (0, self.R)}}
         param.process_model(self.model)
         param.process_geometry(self.geometry)
         return param

@@ -277,13 +277,11 @@ class TestUnaryOperators:
         assert yz_average_broad_a.evaluate() == np.array([1])
 
         a = pybamm.Variable("a", domain=["current collector"])
-        y = pybamm.SpatialVariable("y", ["current collector"])
-        z = pybamm.SpatialVariable("z", ["current collector"])
+        yz = pybamm.SpatialVariable("current collector")
 
         yz_av_a = pybamm.yz_average(a)
         assert isinstance(yz_av_a, pybamm.YZAverage)
-        assert yz_av_a.integration_variable[0].domain == y.domain
-        assert yz_av_a.integration_variable[1].domain == z.domain
+        assert yz_av_a.integration_variable[0] == yz
         assert yz_av_a.domain == []
 
         z_av_a = pybamm.z_average(a)
