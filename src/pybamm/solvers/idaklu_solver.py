@@ -1,6 +1,3 @@
-#
-# Solver class using sundials with the KLU sparse linear solver
-#
 # mypy: ignore-errors
 import os
 import casadi
@@ -10,7 +7,6 @@ import numbers
 import scipy.sparse as sparse
 from scipy.linalg import bandwidth
 
-import importlib
 import warnings
 
 
@@ -23,20 +19,18 @@ if pybamm.has_jax():
     except ImportError:  # pragma: no cover
         pass
 
-idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-if idaklu_spec is not None:
-    try:
-        idaklu = importlib.util.module_from_spec(idaklu_spec)
-        if idaklu_spec.loader:
-            idaklu_spec.loader.exec_module(idaklu)
-    except ImportError as e:  # pragma: no cover
-        idaklu = None
-        print(f"Error loading idaklu: {e}")
-        idaklu_spec = None
+try:
+    import pybammsolvers.idaklu as idaklu
+
+    idaklu_imported = True
+except ImportError as e:  # pragma: no cover
+    idaklu = None
+    print(f"Error loading idaklu: {e}")
+    idaklu_imported = False
 
 
 def has_idaklu():
-    return idaklu_spec is not None
+    return idaklu_imported
 
 
 def has_iree():
@@ -232,7 +226,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         self.output_variables = [] if output_variables is None else output_variables
 
-        if idaklu_spec is None:  # pragma: no cover
+        if not has_idaklu():  # pragma: no cover
             raise ImportError("KLU is not installed")
 
         super().__init__(

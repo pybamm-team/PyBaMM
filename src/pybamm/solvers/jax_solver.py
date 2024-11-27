@@ -1,9 +1,5 @@
-#
-# Solver class using Scipy's adaptive time stepper
-#
 import numpy as onp
 import asyncio
-
 import pybamm
 
 if pybamm.has_jax():
