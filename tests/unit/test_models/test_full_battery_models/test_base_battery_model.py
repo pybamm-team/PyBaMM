@@ -41,7 +41,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
-'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)'])
+'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)', 'VonKolzenberg2020', 'tunnelling limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 'SEI on cracks': 'false' (possible: ['false', 'true'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
@@ -51,6 +51,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'transport efficiency': 'Bruggeman' (possible: ['Bruggeman', 'ordered packing', 'hyperbola of revolution', 'overlapping spheres', 'tortuosity factor', 'random overlapping cylinders', 'heterogeneous catalyst', 'cation-exchange membrane'])
+'voltage as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'positive'])
 'x-average side reactions': 'false' (possible: ['false', 'true'])
 """
@@ -471,6 +472,17 @@ class TestBaseBatteryModel:
             )
 
         os.remove("test_base_battery_model.json")
+
+    def test_voltage_as_state(self):
+        model = pybamm.lithium_ion.SPM({"voltage as a state": "true"})
+        assert model.options["voltage as a state"] == "true"
+        assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
+
+        model = pybamm.lithium_ion.SPM(
+            {"voltage as a state": "true", "operating mode": "voltage"}
+        )
+        assert model.options["voltage as a state"] == "true"
+        assert isinstance(model.variables["Voltage [V]"], pybamm.Variable)
 
 
 class TestOptions:

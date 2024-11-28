@@ -1,6 +1,7 @@
 #
-# Processed Variable class
+# Processed Variable Computed class
 #
+from __future__ import annotations
 import casadi
 import numpy as np
 import pybamm
@@ -450,3 +451,27 @@ class ProcessedVariableComputed:
         if len(self.all_inputs[0]) == 0:
             return {}
         return self._sensitivities
+
+    def _update(
+        self, other: pybamm.ProcessedVariableComputed, new_sol: pybamm.Solution
+    ) -> pybamm.ProcessedVariableComputed:
+        """
+        Returns a new ProcessedVariableComputed object that is the result of appending
+        the data from other to this object. Used exclusively in running experiments, to
+        append the data from one cycle to the next.
+
+        Parameters
+        ----------
+        other : :class:`pybamm.ProcessedVariableComputed`
+            The other ProcessedVariableComputed object to append to this one
+        new_sol : :class:`pybamm.Solution`
+            The new solution object to be used to create the processed variables
+        """
+
+        bv = self.base_variables + other.base_variables
+        bvc = self.base_variables_casadi + other.base_variables_casadi
+        bvd = self.base_variables_data + other.base_variables_data
+
+        new_var = self.__class__(bv, bvc, bvd, new_sol)
+
+        return new_var

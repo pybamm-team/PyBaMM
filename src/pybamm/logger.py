@@ -24,6 +24,17 @@ LOG_FORMATTER = logging.Formatter(datefmt="%Y-%m-%d %H:%M:%S", fmt=FORMAT)
 
 
 def set_logging_level(level):
+    """
+    Set the logging level for PyBaMM
+
+    Parameters
+    ----------
+
+    level: str
+        The logging level to set. Should be one of 'DEBUG', 'INFO', 'WARNING',
+        'ERROR', 'CRITICAL'
+
+    """
     logger.setLevel(level)
 
 

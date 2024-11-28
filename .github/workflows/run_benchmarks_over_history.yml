@@ -18,6 +18,10 @@ on:
       ncommits:
         description: "Number of commits to benchmark between commit_start and commit_end"
         default: "100"
+
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
@@ -46,7 +50,7 @@ jobs:
           ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v4.4.1
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: asv_over_history_results
           path: results

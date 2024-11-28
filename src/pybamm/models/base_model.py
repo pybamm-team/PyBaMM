@@ -56,6 +56,7 @@ class BaseModel:
         self._boundary_conditions = {}
         self._variables_by_submodel = {}
         self._variables = pybamm.FuzzyDict({})
+        self._coupled_variables = {}
         self._summary_variables = []
         self._events = []
         self._concatenated_rhs = None
@@ -181,6 +182,31 @@ class BaseModel:
     @boundary_conditions.setter
     def boundary_conditions(self, boundary_conditions):
         self._boundary_conditions = BoundaryConditionsDict(boundary_conditions)
+
+    @property
+    def coupled_variables(self):
+        """Returns a dictionary mapping strings to expressions representing variables needed by the model but whose equations were set by other models."""
+        return self._coupled_variables
+
+    @coupled_variables.setter
+    def coupled_variables(self, coupled_variables):
+        for name, var in coupled_variables.items():
+            if (
+                isinstance(var, pybamm.CoupledVariable)
+                and var.name != name
+                # Exception if the variable is also there under its own name
+                and not (
+                    var.name in coupled_variables and coupled_variables[var.name] == var
+                )
+            ):
+                raise ValueError(
+                    f"Coupled variable with name '{var.name}' is in coupled variables dictionary with "
+                    f"name '{name}'. Names must match."
+                )
+        self._coupled_variables = coupled_variables
+
+    def list_coupled_variables(self):
+        return list(self._coupled_variables.keys())
 
     @property
     def variables(self):
@@ -1084,7 +1110,7 @@ class BaseModel:
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
                 raise pybamm.ModelError(
-                    f"""no initial condition given for variable '{var}'"""
+                    f"no initial condition given for variable '{var}'"
                 )
 
     def check_variables(self):
@@ -1106,11 +1132,9 @@ class BaseModel:
         for var in all_vars:
             if var not in vars_in_keys:
                 raise pybamm.ModelError(
-                    f"""
-                    No key set for variable '{var}'. Make sure it is included in either
-                    model.rhs or model.algebraic, in an unmodified form
-                    (e.g. not Broadcasted)
-                    """
+                    f"No key set for variable '{var}'. Make sure it is included in either "
+                    "model.rhs or model.algebraic, in an unmodified form "
+                    "(e.g. not Broadcasted)"
                 )
 
     def check_no_repeated_keys(self):
@@ -1524,9 +1548,7 @@ class BoundaryConditionsDict(dict):
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
-                        f"""
-                        boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'
-                        """
+                        f"boundary condition types must be Dirichlet or Neumann, not '{bc[1]}'"
                     )
 
         return boundary_conditions

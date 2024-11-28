@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks_on_release:
     if: github.repository_owner == 'pybamm-team'

@@ -36,7 +36,7 @@ def _preprocess_binary(
     # Check both left and right are pybamm Symbols
     if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
         raise NotImplementedError(
-            f"""BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"""
+            f"BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
@@ -389,9 +389,9 @@ class MatrixMultiplication(BinaryOperator):
             return left @ right_jac
         else:
             raise NotImplementedError(
-                f"""jac of 'MatrixMultiplication' is only
-             implemented for left of type 'pybamm.Array',
-             not {left.__class__}"""
+                f"jac of 'MatrixMultiplication' is only "
+                "implemented for left of type 'pybamm.Array', "
+                f"not {left.__class__}"
             )
 
     def _binary_evaluate(self, left, right):
@@ -856,12 +856,17 @@ def _simplified_binary_broadcast_concatenation(
         elif isinstance(right, pybamm.Concatenation) and not isinstance(
             right, pybamm.ConcatenationVariable
         ):
-            return left.create_copy(
-                [
-                    operator(left_child, right_child)
-                    for left_child, right_child in zip(left.orphans, right.orphans)
-                ]
-            )
+            if len(left.orphans) == len(right.orphans):
+                return left.create_copy(
+                    [
+                        operator(left_child, right_child)
+                        for left_child, right_child in zip(left.orphans, right.orphans)
+                    ]
+                )
+            else:
+                raise AssertionError(
+                    "Concatenations must have the same number of children"
+                )
     if isinstance(right, pybamm.Concatenation) and not isinstance(
         right, pybamm.ConcatenationVariable
     ):
@@ -1541,8 +1546,8 @@ def source(
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            f"""'source' only implemented in the 'current collector' domain,
-            but symbols have domains {left.domain} and {right.domain}"""
+            "'source' only implemented in the 'current collector' domain, "
+            f"but symbols have domains {left.domain} and {right.domain}"
         )
     if boundary:
         return pybamm.BoundaryMass(right) @ left

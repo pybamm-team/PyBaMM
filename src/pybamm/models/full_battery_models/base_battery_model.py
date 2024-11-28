@@ -153,7 +153,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited", "reaction limited (asymmetric)", \
                     "solvent-diffusion limited", "electron-migration limited", \
-                    "interstitial-diffusion limited", "ec reaction limited" \
+                    "interstitial-diffusion limited", "ec reaction limited" ,   \
+                    "VonKolzenberg2020", "tunnelling limited",\
                     or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
@@ -210,6 +211,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "voltage as a state" : str
+                Whether to make a state for the voltage and solve an algebraic equation
+                for it. Default is "false".
             * "working electrode" : str
                 Can be "both" (default) for a standard battery or "positive" for a
                 half-cell where the negative electrode is replaced with a lithium metal
@@ -302,6 +306,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "interstitial-diffusion limited",
                 "ec reaction limited",
                 "ec reaction limited (asymmetric)",
+                "VonKolzenberg2020",
+                "tunnelling limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
@@ -321,6 +327,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "heterogeneous catalyst",
                 "cation-exchange membrane",
             ],
+            "voltage as a state": ["false", "true"],
             "working electrode": ["both", "positive"],
             "x-average side reactions": ["false", "true"],
         }
@@ -985,7 +992,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
-
         self._options = options
 
     def set_standard_output_variables(self):

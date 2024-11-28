@@ -19,8 +19,22 @@ class ExplicitCurrentControl(BaseModel):
             "Current [A]": I,
             "C-rate": I / self.param.Q,
         }
+        if self.options.get("voltage as a state") == "true":
+            V = pybamm.Variable("Voltage [V]")
+            variables.update({"Voltage [V]": V})
 
         return variables
+
+    def set_initial_conditions(self, variables):
+        if self.options.get("voltage as a state") == "true":
+            V = variables["Voltage [V]"]
+            self.initial_conditions[V] = self.param.ocv_init
+
+    def set_algebraic(self, variables):
+        if self.options.get("voltage as a state") == "true":
+            V = variables["Voltage [V]"]
+            V_expression = variables["Voltage expression [V]"]
+            self.algebraic[V] = V - V_expression
 
 
 class ExplicitPowerControl(BaseModel):

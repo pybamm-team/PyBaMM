@@ -15,6 +15,9 @@ on:
   # workflow manually
   workflow_dispatch:
 
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
@@ -51,7 +54,7 @@ jobs:
           LD_LIBRARY_PATH: $HOME/.local/lib
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v4.4.1
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: asv_periodic_results
           path: results
