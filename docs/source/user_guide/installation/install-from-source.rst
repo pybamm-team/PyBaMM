@@ -245,7 +245,7 @@ You can run unit tests for PyBaMM using
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  python run-tests.py --unit
+	  nox -s unit
 
 
 The above starts a sub-process using the current python interpreter (i.e. using your current
@@ -255,13 +255,13 @@ You can also use the test runner to run the doctests:
 
 .. code:: bash
 
-	  python run-tests.py --doctest
+	  nox -s unit
 
 There is more to the PyBaMM test runner. To see a list of all options, type
 
 .. code:: bash
 
-	  python run-tests.py --help
+	  nox --list
 
 How to build the PyBaMM documentation
 -------------------------------------
