@@ -31,7 +31,7 @@ class TestSimulation:
         assert V.has_symbol_of_classes(pybamm.Parameter)
         assert not V.has_symbol_of_classes(pybamm.Matrix)
 
-        sim.set_parameters()
+        sim._set_parameters()
         assert sim._mesh is None
         assert sim._disc is None
         V = sim.model_with_set_params.variables["Voltage [V]"]
@@ -138,8 +138,8 @@ class TestSimulation:
     def test_reuse_commands(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
-        sim.set_parameters()
-        sim.set_parameters()
+        sim._set_parameters()
+        sim._set_parameters()
 
         sim.build()
         sim.build()
@@ -149,7 +149,7 @@ class TestSimulation:
 
         sim.build()
         sim.solve([0, 600])
-        sim.set_parameters()
+        sim._set_parameters()
 
     def test_set_crate(self):
         model = pybamm.lithium_ion.SPM()

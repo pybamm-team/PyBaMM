@@ -344,7 +344,7 @@ class Simulation:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
-            self.set_parameters()
+            self._set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
             self._disc = pybamm.Discretisation(
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
