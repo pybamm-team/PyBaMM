@@ -222,11 +222,11 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
             domain.pre_name + "transport efficiency"
         ] ** (1.0 / 1.5)
 
+    def _get_activation_energy(var_name):
+        return pybamm_dict.get(var_name) or 0.0
+
     # define functional forms for pybamm parameters that depend on more than one
     # variable
-
-    def _get_activation_energy(name):
-        return pybamm_dict.get(name) or 0.0
 
     def _arrhenius(Ea, T):
         return exp(Ea / constants.R * (1 / T_ref - 1 / T))

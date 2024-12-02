@@ -475,7 +475,9 @@ class TestBPX:
 
             param = pybamm.ParameterValues.create_from_bpx(tmp.name)
 
-            assert param["User-defined scalar parameter"] == 1.0
+            assert param["User-defined scalar parameter"] == pytest.approx(
+                1.0, rel=1e-12
+            )
             var = pybamm.Variable("var")
             assert isinstance(
                 param["User-defined parameter data"](var), pybamm.Interpolant
@@ -495,10 +497,9 @@ class TestBPX:
             json.dump(copy.copy(bpx_obj), test_file)
             test_file.flush()
             param = pybamm.ParameterValues.create_from_bpx(test_file.name)
-            assert (
-                param["Negative electrode diffusivity activation energy [J.mol-1]"]
-                == 0.0
-            )
+            assert param[
+                "Negative electrode diffusivity activation energy [J.mol-1]"
+            ] == pytest.approx(0.0, rel=1e-12)
 
     def test_bpx_from_obj(self):
         bpx_obj = copy.copy(self.base)
