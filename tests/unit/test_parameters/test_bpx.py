@@ -483,3 +483,19 @@ class TestBPX:
             assert isinstance(
                 param["User-defined parameter data function"](var), pybamm.Power
             )
+
+    def test_bpx_activation_energy_default(self):
+        bpx_obj = copy.copy(self.base)
+        bpx_obj["Parameterisation"]["Negative electrode"][
+            "Diffusivity activation energy [J.mol-1]"
+        ] = None
+        with tempfile.NamedTemporaryFile(
+            suffix="test.json", delete=False, mode="w"
+        ) as test_file:
+            json.dump(copy.copy(bpx_obj), test_file)
+            test_file.flush()
+            param = pybamm.ParameterValues.create_from_bpx(test_file.name)
+            assert (
+                param["Negative electrode diffusivity activation energy [J.mol-1]"]
+                == 0.0
+            )
