@@ -67,6 +67,7 @@ class ParameterValues:
             for citation in self._dict_items["citations"]:
                 pybamm.citations.register(citation)
 
+    @staticmethod
     def _create_from_bpx(bpx, target_soc):
         from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
