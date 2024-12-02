@@ -67,42 +67,31 @@ class ParameterValues:
             for citation in self._dict_items["citations"]:
                 pybamm.citations.register(citation)
 
-    @staticmethod
-    def create_from_bpx(filename, target_soc: float = 1):
-        """
-        Parameters
-        ----------
-        filename: str
-            The filename of the bpx file
-        target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
-
-        Returns
-        -------
-        ParameterValues
-            A parameter values object with the parameters in the bpx file
-
-        """
-        if target_soc < 0 or target_soc > 1:
-            raise ValueError("Target SOC should be between 0 and 1")
-
-        from bpx import parse_bpx_file, get_electrode_concentrations
+    def _create_from_bpx(bpx, target_soc):
+        from bpx import get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
         from .bpx import bpx_to_param_dict
 
-        # parse bpx
-        bpx = parse_bpx_file(filename)
         pybamm_dict = bpx_to_param_dict(bpx)
 
         if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
             pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
                 "Lower voltage cut-off [V]"
             ]
+            warn(
+                "'Open-circuit voltage at 0% SOC [V]' not found in BPX file. Using "
+                "'Lower voltage cut-off [V]'.",
+                stacklevel=2,
+            )
+        if "Open-circuit voltage at 100% SOC [V]" not in pybamm_dict:
             pybamm_dict["Open-circuit voltage at 100% SOC [V]"] = pybamm_dict[
                 "Upper voltage cut-off [V]"
             ]
-            # probably should put a warning here to indicate we are going
-            # ahead with the low voltage limit.
+            warn(
+                "'Open-circuit voltage at 100% SOC [V]' not found in BPX file. Using "
+                "'Upper voltage cut-off [V]'.",
+                stacklevel=2,
+            )
 
         # get initial concentrations based on SOC
         # Note: we cannot set SOC for blended electrodes,
@@ -126,6 +115,54 @@ class ParameterValues:
             )
 
         return pybamm.ParameterValues(pybamm_dict)
+
+    @staticmethod
+    def create_from_bpx_obj(bpx_obj, target_soc: float = 1):
+        """
+        Parameters
+        ----------
+        bpx_obj: dict
+            A dictionary containing the parameters in the `BPX <https://bpxstandard.com/>`_ format
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        from bpx import parse_bpx_obj
+
+        if target_soc < 0 or target_soc > 1:
+            raise ValueError("Target SOC should be between 0 and 1")
+
+        bpx = parse_bpx_obj(bpx_obj)
+        return ParameterValues._create_from_bpx(bpx, target_soc)
+
+    @staticmethod
+    def create_from_bpx(filename, target_soc: float = 1):
+        """
+        Parameters
+        ----------
+        filename: str
+            The filename of the `BPX <https://bpxstandard.com/>`_ file
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        from bpx import parse_bpx_file
+
+        if target_soc < 0 or target_soc > 1:
+            raise ValueError("Target SOC should be between 0 and 1")
+
+        bpx = parse_bpx_file(filename)
+        return ParameterValues._create_from_bpx(bpx, target_soc)
 
     def __getitem__(self, key):
         try:

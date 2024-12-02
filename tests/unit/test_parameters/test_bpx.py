@@ -499,3 +499,8 @@ class TestBPX:
                 param["Negative electrode diffusivity activation energy [J.mol-1]"]
                 == 0.0
             )
+
+    def test_bpx_from_obj(self):
+        bpx_obj = copy.copy(self.base)
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert isinstance(param, pybamm.ParameterValues)
