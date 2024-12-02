@@ -1,5 +1,6 @@
 name: Build and publish package to PyPI
 on:
+  pull_request:
   release:
     types: [published]
   schedule:
