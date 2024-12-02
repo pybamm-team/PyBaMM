@@ -88,11 +88,11 @@ class ParameterValues:
 
         from bpx import parse_bpx_file, get_electrode_concentrations
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
-        from .bpx import _bpx_to_param_dict
+        from .bpx import bpx_to_param_dict
 
         # parse bpx
         bpx = parse_bpx_file(filename)
-        pybamm_dict = _bpx_to_param_dict(bpx)
+        pybamm_dict = bpx_to_param_dict(bpx)
 
         if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
             pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
