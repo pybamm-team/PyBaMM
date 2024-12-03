@@ -124,7 +124,6 @@ from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.ecm_parameters import EcmParameters
 from .parameters.size_distribution_parameters import *
-from .parameters.parameter_sets import parameter_sets
 
 # Mesh and Discretisation classes
 from .discretisations.discretisation import Discretisation
@@ -201,6 +200,9 @@ from . import callbacks, telemetry, config
 # Pybamm Data manager using pooch
 from .pybamm_data import DataLoader
 
+# Pybamm entry point API for parameter_sets and models
+from .dispatch import parameter_sets, Model
+
 # Fix Casadi import
 import os
 import pathlib
@@ -233,6 +235,7 @@ __all__ = [
     "util",
     "version",
     "pybamm_data",
+    "dispatch",
 ]
 
 config.generate()
