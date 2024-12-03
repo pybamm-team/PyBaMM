@@ -280,6 +280,18 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_sei_VonKolzenberg2020_model(self):
+        options = {
+            "SEI": "VonKolzenberg2020",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_tunnelling_limited(self):
+        options = {
+            "SEI": "tunnelling limited",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_mechanics_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         self.check_well_posedness(options)

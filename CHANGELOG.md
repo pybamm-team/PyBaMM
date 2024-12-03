@@ -1,8 +1,22 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+- Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
+
 ## Breaking changes
 
+- Separated extrapolation options for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`, and updated the default to be "linear" for the value and "quadratic" for the gradient. ([#4614](https://github.com/pybamm-team/PyBaMM/pull/4614))
 - Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
+
+## Bug fixes
+
+- Remove internal use of deprecated `set_parameters` function in the `Simulation` class which caused warnings. ([#4638](https://github.com/pybamm-team/PyBaMM/pull/4638))
+
+# [v24.11.2](https://github.com/pybamm-team/PyBaMM/tree/v24.11.2) - 2024-11-27
+
+## Bug fixes
+
+- Reverted modifications to quickplot from [#4529](https://github.com/pybamm-team/PyBaMM/pull/4529) which caused issues with the plots displaying correct variable names. ([#4622](https://github.com/pybamm-team/PyBaMM/pull/4622))
 
 # [v24.11.1](https://github.com/pybamm-team/PyBaMM/tree/v24.11.1) - 2024-11-22
 
