@@ -116,8 +116,6 @@ class BaseModel:
             for var in instance._variables.values():
                 if var.domain != []:
                     var.mesh = properties["mesh"][var.domain]
-                else:
-                    var.mesh = None
 
                 if var.domains["secondary"] != []:
                     var.secondary_mesh = properties["mesh"][var.domains["secondary"]]

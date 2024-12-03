@@ -72,7 +72,6 @@ class TestProcessedVariableComputed:
         # without space
         y = pybamm.StateVector(slice(0, 1))
         var = y
-        var.mesh = None
         t_sol = np.array([0])
         y_sol = np.array([1])[:, np.newaxis]
         var_casadi = to_casadi(var, y_sol)
@@ -117,7 +116,6 @@ class TestProcessedVariableComputed:
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
-        var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
@@ -136,7 +134,6 @@ class TestProcessedVariableComputed:
         y = pybamm.StateVector(slice(0, 1))
         a = pybamm.InputParameter("a")
         var = t * y * a
-        var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         inputs = {"a": np.array([1.0])}
