@@ -102,9 +102,6 @@ comsol_voltage = pybamm.Interpolant(
     comsol_t, np.array(comsol_variables["voltage"]), pybamm.t
 )
 
-comsol_voltage.mesh = None
-comsol_voltage.secondary_mesh = None
-
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.lithium_ion.BaseModel()
 comsol_model._geometry = pybamm_model.default_geometry
