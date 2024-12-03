@@ -39,7 +39,7 @@ class SummaryVariables:
 
         model = solution.all_models[0]
         self._possible_variables = model.summary_variables  # minus esoh variables
-        self._esoh_variables = []  # Store eSOH variable names
+        self._esoh_variables = None  # Store eSOH variable names
 
         # Flag if eSOH calculations are needed
         self.calc_esoh = (
@@ -70,8 +70,11 @@ class SummaryVariables:
         self.user_inputs = first_cycle.user_inputs
 
     @property
-    def all_variables(self):
-        """Return names of all possible summary variables, including eSOH variables."""
+    def all_variables(self) -> list[str]:
+        """
+        Return names of all possible summary variables, including eSOH variables
+         if appropriate.
+        """
         try:
             return self._all_variables
         except AttributeError:
@@ -81,16 +84,20 @@ class SummaryVariables:
                 for var in self._possible_variables
             )
 
-            if self._esoh_variables:
-                base_vars.extend(self._esoh_variables)
-            elif self.calc_esoh:
-                esoh_model = self.esoh_solver._get_electrode_soh_sims_full().model
-                esoh_vars = esoh_model.variables.keys()
-                base_vars.extend(esoh_vars)
-                self._esoh_variables = esoh_vars
+            if self.calc_esoh:
+                base_vars.extend(self.esoh_variables)
 
             self._all_variables = base_vars
             return self._all_variables
+
+    @property
+    def esoh_variables(self) -> list[str] | None:
+        """Return names of all eSOH variables."""
+        if self.calc_esoh and self._esoh_variables is None:
+            esoh_model = self.esoh_solver._get_electrode_soh_sims_full().model
+            esoh_vars = list(esoh_model.variables.keys())
+            self._esoh_variables = esoh_vars
+        return self._esoh_variables
 
     def __getitem__(self, key: str) -> float | list[float]:
         """
@@ -132,7 +139,7 @@ class SummaryVariables:
             self._update(var, var_lowercase)
 
     def _update_multiple_cycles(self, var: str, var_lowercase: str):
-        """Update variables for where more than one cycle exists."""
+        """Creates aggregated summary variables for where more than one cycle exists."""
         var_cycle = [cycle[var] for cycle in self.cycles]
         change_var_cycle = [
             cycle[f"Change in {var_lowercase}"] for cycle in self.cycles
