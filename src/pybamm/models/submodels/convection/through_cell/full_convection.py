@@ -17,7 +17,7 @@ class Full(BaseThroughCellModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def build(self):
         variables = {}
         for domain in self.options.whole_cell_domains:
             if domain != "separator":
@@ -38,19 +38,20 @@ class Full(BaseThroughCellModel):
                         domain, v_box_k, div_v_box_k, p_k
                     )
                 )
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Set up
         L_n = self.param.n.L
         x_s = pybamm.standard_spatial_vars.x_s
 
         # Transverse velocity in the separator determines through-cell velocity
-        div_Vbox_s = variables[
-            "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
-        ]
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        div_Vbox_s = pybamm.CoupledVariable(
+            "X-averaged separator transverse volume-averaged acceleration [m.s-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({div_Vbox_s.name: div_Vbox_s})
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
         v_box_n_right = -self.param.n.DeltaV * i_boundary_cc / self.param.F
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
@@ -67,18 +68,20 @@ class Full(BaseThroughCellModel):
         )
         variables.update(self._get_standard_whole_cell_pressure_variables(variables))
 
-        return variables
-
-    def set_algebraic(self, variables):
         p_n = variables["Negative electrode pressure [Pa]"]
         p_p = variables["Positive electrode pressure [Pa]"]
-
-        a_j_n = variables[
-            "Negative electrode volumetric interfacial current density [A.m-3]"
-        ]
-        a_j_p = variables[
-            "Positive electrode volumetric interfacial current density [A.m-3]"
-        ]
+        a_j_n = pybamm.CoupledVariable(
+            "Negative electrode volumetric interfacial current density [A.m-3]",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({a_j_n.name: a_j_n})
+        a_j_p = pybamm.CoupledVariable(
+            "Positive electrode volumetric interfacial current density [A.m-3]",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({a_j_p.name: a_j_p})
 
         v_box_n = variables["Negative electrode volume-averaged velocity [m.s-1]"]
         v_box_p = variables["Positive electrode volume-averaged velocity [m.s-1]"]
@@ -91,20 +94,16 @@ class Full(BaseThroughCellModel):
             p_p: self.param.L_x**2
             * (pybamm.div(v_box_p) + self.param.p.DeltaV * a_j_p / self.param.F),
         }
-
-    def set_boundary_conditions(self, variables):
-        p_n = variables["Negative electrode pressure [Pa]"]
-        p_s = variables["X-averaged separator pressure [Pa]"]
-        p_p = variables["Positive electrode pressure [Pa]"]
+        p_s = pybamm.CoupledVariable(
+            "X-averaged separator pressure [Pa]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({p_s.name: p_s})
 
         # Boundary conditions in x-direction for p_n and p_p
         self.boundary_conditions = {
             p_n: {"left": (pybamm.Scalar(0), "Neumann"), "right": (p_s, "Dirichlet")},
             p_p: {"left": (p_s, "Dirichlet"), "right": (pybamm.Scalar(0), "Neumann")},
         }
-
-    def set_initial_conditions(self, variables):
-        p_n = variables["Negative electrode pressure [Pa]"]
-        p_p = variables["Positive electrode pressure [Pa]"]
-
+        self.variables.update(variables)
         self.initial_conditions = {p_n: pybamm.Scalar(0), p_p: pybamm.Scalar(0)}

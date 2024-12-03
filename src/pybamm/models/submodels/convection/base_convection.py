@@ -95,7 +95,12 @@ class BaseModel(pybamm.BaseSubModel):
         p_dict = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()
-            p_dict[domain] = variables[f"{Domain} pressure [Pa]"]
+            p_dict[domain] = pybamm.CoupledVariable(
+                f"{Domain} pressure [Pa]",
+                domain=domain,
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({p_dict[domain].name: p_dict[domain]})
         p = pybamm.concatenation(*p_dict.values())
         variables = {"Pressure [Pa]": p}
         return variables
