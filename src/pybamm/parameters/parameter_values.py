@@ -73,6 +73,9 @@ class ParameterValues:
         from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
         from .bpx import bpx_to_param_dict
 
+        if target_soc < 0 or target_soc > 1:
+            raise ValueError("Target SOC should be between 0 and 1")
+
         pybamm_dict = bpx_to_param_dict(bpx)
 
         if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
@@ -135,9 +138,6 @@ class ParameterValues:
         """
         from bpx import parse_bpx_obj
 
-        if target_soc < 0 or target_soc > 1:
-            raise ValueError("Target SOC should be between 0 and 1")
-
         bpx = parse_bpx_obj(bpx_obj)
         return ParameterValues._create_from_bpx(bpx, target_soc)
 
@@ -158,9 +158,6 @@ class ParameterValues:
 
         """
         from bpx import parse_bpx_file
-
-        if target_soc < 0 or target_soc > 1:
-            raise ValueError("Target SOC should be between 0 and 1")
 
         bpx = parse_bpx_file(filename)
         return ParameterValues._create_from_bpx(bpx, target_soc)
