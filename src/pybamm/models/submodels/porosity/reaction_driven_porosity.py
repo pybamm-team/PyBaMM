@@ -26,9 +26,7 @@ class ReactionDriven(BaseModel):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
             delta_eps_k = 0
-            if domain == "separator":
-                pass  # separator porosity does not change
-            else:
+            if domain != "separator":  # separator porosity does not change
                 dom = domain.split()[0]
                 Domain = dom.capitalize()
                 if Domain == "Negative":
