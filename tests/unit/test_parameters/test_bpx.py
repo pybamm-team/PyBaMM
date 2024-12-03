@@ -263,8 +263,9 @@ class TestBPX:
                 assert isinstance(dUdT, pybamm.Interpolant)
 
     def test_bpx_soc_error(self):
+        bpx_obj = copy.copy(self.base)
         with pytest.raises(ValueError, match="Target SOC"):
-            pybamm.ParameterValues.create_from_bpx("blah.json", target_soc=10)
+            pybamm.ParameterValues.create_from_bpx_obj(bpx_obj, target_soc=10)
 
     def test_bpx_arrhenius(self):
         bpx_obj = copy.copy(self.base)
@@ -500,3 +501,8 @@ class TestBPX:
             assert param[
                 "Negative electrode diffusivity activation energy [J.mol-1]"
             ] == pytest.approx(0.0, rel=1e-12)
+
+    def test_bpx_from_obj(self):
+        bpx_obj = copy.copy(self.base)
+        param = pybamm.ParameterValues.create_from_bpx_obj(bpx_obj)
+        assert isinstance(param, pybamm.ParameterValues)

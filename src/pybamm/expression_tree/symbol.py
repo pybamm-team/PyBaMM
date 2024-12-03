@@ -236,6 +236,9 @@ class Symbol:
         # Set domains (and hence id)
         self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
+        # mesh required for solution and processed variables classes
+        self.mesh = None
+
         self._saved_evaluates_on_edges: dict = {}
         self._print_name = None
 
