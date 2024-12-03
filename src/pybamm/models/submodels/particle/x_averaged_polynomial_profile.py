@@ -29,7 +29,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain = self.domain
 
         variables = {}
@@ -93,22 +93,34 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 {f"Average {domain} particle concentration gradient [mol.m-4]": q_s_av}
             )
 
-        return variables
-
-    def get_coupled_variables(self, variables):
-        domain = self.domain
-
         c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
-        T_av = variables[f"X-averaged {domain} electrode temperature [K]"]
-        R = variables[f"X-averaged {domain} particle radius [m]"]
+        T_av = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T_av.name: T_av})
+        R = pybamm.CoupledVariable(
+            f"X-averaged {domain} particle radius [m]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({R.name: R})
 
         if self.name != "uniform profile":
-            current = variables["Total current density [A.m-2]"]
+            current = pybamm.CoupledVariable(
+                "Total current density [A.m-2]",
+            )
+            self.coupled_variables.update({current.name: current})
             D_eff_av = self._get_effective_diffusivity(c_s_av, T_av, current)
-            i_boundary_cc = variables["Current collector current density [A.m-2]"]
-            a_av = variables[
-                f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
-            ]
+            i_boundary_cc = pybamm.CoupledVariable(
+                "Current collector current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+            a_av = pybamm.CoupledVariable(
+                f"X-averaged {domain} electrode surface area to volume ratio [m-1]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({a_av.name: a_av})
             sgn = 1 if self.domain == "negative" else -1
 
             j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.L)
@@ -185,7 +197,10 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # Set flux based on polynomial order
         if self.name != "uniform profile":
             T_xav = pybamm.PrimaryBroadcast(T_av, [f"{domain} particle"])
-            current = variables["Total current density [A.m-2]"]
+            current = pybamm.CoupledVariable(
+                "Total current density [A.m-2]",
+            )
+            self.coupled_variables.update({current.name: current})
             D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav, current)
             D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
             variables.update(self._get_standard_diffusivity_variables(D_eff))
@@ -216,30 +231,35 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         )
         variables.update(self._get_standard_flux_variables(N_s))
 
-        return variables
-
-    def set_rhs(self, variables):
-        # Note: we have to use `pybamm.source(rhs, var)` in the rhs dict so that
-        # the scalar source term gets multplied by the correct mass matrix when
-        # using this model with 2D current collectors with the finite element
-        # method (see #1399)
-        domain = self.domain
-
         if self.size_distribution is False:
             c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
-            j_xav = variables[
-                f"X-averaged {domain} electrode interfacial current density [A.m-2]"
-            ]
-            R = variables[f"X-averaged {domain} particle radius [m]"]
+            j_xav = pybamm.CoupledVariable(
+                f"X-averaged {domain} electrode interfacial current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j_xav.name: j_xav})
+            R = pybamm.CoupledVariable(
+                f"X-averaged {domain} particle radius [m]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({R.name: R})
         else:
             c_s_av = variables[
                 f"Average {domain} particle concentration distribution [mol.m-3]"
             ]
-            j_xav = variables[
+            j_xav = pybamm.CoupledVariable(
                 f"X-averaged {domain} electrode interfacial "
-                "current density distribution [A.m-2]"
-            ]
-            R = variables[f"X-averaged {domain} particle sizes [m]"]
+                "current density distribution [A.m-2]",
+                domain=f"{domain} particle size",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({j_xav.name: j_xav})
+            R = pybamm.CoupledVariable(
+                f"X-averaged {domain} particle sizes [m]",
+                domain=f"{domain} particle size",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({R.name: R})
 
         # eq 15 of Subramanian2005
         # equivalent to dcdt = -i_cc / (eps * F * L)
@@ -265,16 +285,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 - 45 / 2 * j_xav / self.param.F / R**2
             )
             self.rhs[q_s_av] = pybamm.source(dqdt, q_s_av)
-
-    def set_algebraic(self, variables):
-        pass
-
-    def set_initial_conditions(self, variables):
-        """
-        For single or x-averaged particle models, initial conditions can't depend on x
-        or r so we take the r- and x-average of the initial conditions.
-        """
-        domain = self.domain
         c_init = pybamm.x_average(pybamm.r_average(self.phase_param.c_init))
 
         if self.size_distribution is False:
@@ -293,3 +303,4 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
             self.initial_conditions.update({q_s_av: 0})
+        self.variables.update(variables)

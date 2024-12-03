@@ -37,7 +37,7 @@ class PolynomialProfile(BaseParticle):
 
         pybamm.citations.register("Subramanian2005")
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
 
         variables = {}
@@ -182,19 +182,21 @@ class PolynomialProfile(BaseParticle):
             )
         )
 
-        return variables
-
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-
         if self.size_distribution is False:
             c_s = variables[f"{Domain} particle concentration [mol.m-3]"]
             c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
             c_s_surf = variables[f"{Domain} particle surface concentration [mol.m-3]"]
-            T = pybamm.PrimaryBroadcast(
-                variables[f"{Domain} electrode temperature [K]"], [f"{domain} particle"]
+            T_electrode = pybamm.CoupledVariable(
+                f"{Domain} electrode temperature [K]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
             )
-            current = variables["Total current density [A.m-2]"]
+            self.coupled_variables.update({T_electrode.name: T_electrode})
+            T = pybamm.PrimaryBroadcast(T_electrode, [f"{domain} particle"])
+            current = pybamm.CoupledVariable(
+                "Total current density [A.m-2]",
+            )
+            self.coupled_variables.update({current.name: current})
             D_eff = self._get_effective_diffusivity(c_s, T, current)
             r = pybamm.SpatialVariable(
                 f"r_{domain[0]}",
@@ -205,7 +207,12 @@ class PolynomialProfile(BaseParticle):
                 },
                 coord_sys="spherical polar",
             )
-            R = variables[f"{Domain} particle radius [m]"]
+            R = pybamm.CoupledVariable(
+                f"{Domain} particle radius [m]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({R.name: R})
             variables.update(self._get_standard_diffusivity_variables(D_eff))
         else:
             # only uniform concentration implemented, no need to calculate D_eff
@@ -237,15 +244,14 @@ class PolynomialProfile(BaseParticle):
 
         variables.update(self._get_standard_flux_variables(N_s))
 
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-
         if self.size_distribution is False:
             c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
-            j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
-            R = variables[f"{Domain} particle radius [m]"]
+            j = pybamm.CoupledVariable(
+                f"{Domain} electrode interfacial current density [A.m-2]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({j.name: j})
         else:
             c_s_rav = variables[
                 f"R-averaged {domain} particle concentration distribution [mol.m-3]"
@@ -273,18 +279,21 @@ class PolynomialProfile(BaseParticle):
                 }
             )
 
-    def set_algebraic(self, variables):
-        if self.name == "uniform profile":
-            # No algebraic equations since we only solve for the average concentration
-            return
-
-        domain, Domain = self.domain_Domain
-
         c_s_surf = variables[f"{Domain} particle surface concentration [mol.m-3]"]
         c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
         D_eff = variables[f"{Domain} particle effective diffusivity [m2.s-1]"]
-        j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
-        R = variables[f"{Domain} particle radius [m]"]
+        j = pybamm.CoupledVariable(
+            f"{Domain} electrode interfacial current density [A.m-2]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({j.name: j})
+        R = pybamm.CoupledVariable(
+            f"{Domain} particle radius [m]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({R.name: R})
 
         c_max = self.phase_param.c_max
         T_ref = self.param.T_ref
@@ -315,9 +324,6 @@ class PolynomialProfile(BaseParticle):
                 / D_c_max_over_R_scale
             }
 
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-
         c_init = pybamm.r_average(self.phase_param.c_init)
 
         if self.size_distribution is False:
@@ -342,3 +348,4 @@ class PolynomialProfile(BaseParticle):
                 f"R-averaged {domain} particle concentration gradient [mol.m-4]"
             ]
             self.initial_conditions.update({q_s_rav: 0})
+        self.variables.update(variables)
