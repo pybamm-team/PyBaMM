@@ -38,7 +38,7 @@ class MSMRDiffusion(BaseParticle):
         pybamm.citations.register("Baker2018")
         pybamm.citations.register("Verbrugge2017")
 
-    def get_fundamental_variables(self):
+    def build(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
@@ -131,99 +131,189 @@ class MSMRDiffusion(BaseParticle):
         # Standard potential variables
         variables.update(self._get_standard_potential_variables(U))
 
-        return variables
-
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
         if self.size_distribution is False:
             if self.x_average is False:
-                x = variables[f"{Domain} {phase_name}particle stoichiometry"]
-                dxdU = variables[
-                    f"{Domain} {phase_name}particle differential stoichiometry [V-1]"
-                ]
+                x = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle stoichiometry",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({x.name: x})
+                dxdU = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle differential stoichiometry [V-1]",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({dxdU.name: dxdU})
                 U = variables[f"{Domain} {phase_name}particle potential [V]"]
+                T_electrode = pybamm.CoupledVariable(
+                    f"{Domain} electrode temperature [K]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({T_electrode.name: T_electrode})
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"{Domain} electrode temperature [K]"],
+                    T_electrode,
                     [f"{domain} {phase_name}particle"],
                 )
-                R_nondim = variables[f"{Domain} {phase_name}particle radius"]
-                j = variables[
+                R_nondim = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle radius",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({R_nondim.name: R_nondim})
+                j = pybamm.CoupledVariable(
                     f"{Domain} electrode {phase_name}"
-                    "interfacial current density [A.m-2]"
-                ]
+                    "interfacial current density [A.m-2]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({j.name: j})
             else:
-                x = variables[f"X-averaged {domain} {phase_name}particle stoichiometry"]
-                dxdU = variables[
+                x = pybamm.CoupledVariable(
+                    f"X-averaged {domain} {phase_name}particle stoichiometry",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({x.name: x})
+                dxdU = pybamm.CoupledVariable(
                     f"X-averaged {domain} {phase_name}particle differential "
                     "stoichiometry [V-1]"
-                ]
+                )
                 U = variables[f"X-averaged {domain} {phase_name}particle potential [V]"]
+                T_electrode = pybamm.CoupledVariable(
+                    f"X-averaged {domain} electrode temperature [K]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({T_electrode.name: T_electrode})
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"X-averaged {domain} electrode temperature [K]"],
+                    T_electrode,
                     [f"{domain} {phase_name}particle"],
                 )
                 R_nondim = 1
-                j = variables[
+                j = pybamm.CoupledVariable(
                     f"X-averaged {domain} electrode {phase_name}"
-                    "interfacial current density [A.m-2]"
-                ]
+                    "interfacial current density [A.m-2]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({j.name: j})
             R_broad_nondim = R_nondim
         else:
-            R_nondim = variables[f"{Domain} {phase_name}particle sizes"]
+            R_nondim = pybamm.CoupledVariable(
+                f"{Domain} {phase_name}particle sizes",
+                domain=f"{domain} {phase_name}particle size",
+                auxiliary_domains={
+                    "secondary": f"{domain} electrode",
+                    "tertiary": "current collector",
+                },
+            )
+            self.coupled_variables.update({R_nondim.name: R_nondim})
             R_broad_nondim = pybamm.PrimaryBroadcast(
                 R_nondim, [f"{domain} {phase_name}particle"]
             )
             if self.x_average is False:
-                x = variables[
-                    f"{Domain} {phase_name}particle stoichiometry distribution"
-                ]
-                dxdU = variables[
+                x = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle stoichiometry distribution",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={
+                        "secondary": f"{domain} particle size",
+                        "tertiary": f"{domain} electrode",
+                        "quaternary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({x.name: x})
+                dxdU = pybamm.CoupledVariable(
                     f"{Domain} {phase_name}particle differential stoichiometry "
-                    "distribution [V-1]"
-                ]
+                    "distribution [V-1]",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={
+                        "secondary": f"{domain} particle size",
+                        "tertiary": f"{domain} electrode",
+                        "quaternary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({dxdU.name: dxdU})
                 U = variables[
                     f"{Domain} {phase_name}particle potential distribution [V]"
                 ]
                 # broadcast T to "particle size" domain then again into "particle"
+                T_electrode = pybamm.CoupledVariable(
+                    f"{Domain} electrode temperature [K]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({T_electrode.name: T_electrode})
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"{Domain} electrode temperature [K]"],
+                    T_electrode,
                     [f"{domain} {phase_name}particle size"],
                 )
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
-                j = variables[
+                j = pybamm.CoupledVariable(
                     f"{Domain} electrode {phase_name}interfacial "
-                    "current density distribution [A.m-2]"
-                ]
+                    "current density distribution [A.m-2]",
+                    domains={
+                        "primary": f"{domain} particle size",
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({j.name: j})
             else:
-                x = variables[
+                x = pybamm.CoupledVariable(
                     f"X-averaged {domain} {phase_name}particle "
-                    "stoichiometry distribution"
-                ]
-                dxdU = variables[
+                    "stoichiometry distribution",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={
+                        "secondary": f"{domain} particle size",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({x.name: x})
+                dxdU = pybamm.CoupledVariable(
                     f"X-averaged {domain} {phase_name}particle "
-                    "differential stoichiometry distribution [V-1]"
-                ]
+                    "differential stoichiometry distribution [V-1]",
+                    domain=f"{domain} particle",
+                    auxiliary_domains={
+                        "secondary": f"{domain} particle size",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({dxdU.name: dxdU})
                 U = variables[
                     f"X-averaged {domain} {phase_name}particle "
                     "potential distribution [V]"
                 ]
                 # broadcast to "particle size" domain then again into "particle"
+                T_electrode = pybamm.CoupledVariable(
+                    f"X-averaged {domain} electrode temperature [K]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({T_electrode.name: T_electrode})
                 T = pybamm.PrimaryBroadcast(
-                    variables[f"X-averaged {domain} electrode temperature [K]"],
+                    T_electrode,
                     [f"{domain} {phase_name}particle size"],
                 )
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
-                j = variables[
+                j = pybamm.CoupledVariable(
                     f"X-averaged {domain} electrode {phase_name}interfacial "
-                    "current density distribution [A.m-2]"
-                ]
+                    "current density distribution [A.m-2]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({j.name: j})
 
         # Note: diffusivity is given as a function of concentration here,
         # not stoichiometry
         c_max = self.phase_param.c_max
-        current = variables["Total current density [A.m-2]"]
+        current = pybamm.CoupledVariable(
+            "Total current density [A.m-2]",
+        )
+        self.coupled_variables.update({current.name: current})
         D_eff = self._get_effective_diffusivity(x * c_max, T, current)
         f = self.param.F / (self.param.R * T)
         N_s = c_max * x * (1 - x) * f * D_eff * pybamm.grad(U)
@@ -259,12 +349,6 @@ class MSMRDiffusion(BaseParticle):
         variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_standard_flux_variables(N_s))
 
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
         if self.size_distribution is False:
             if self.x_average is False:
                 U = variables[f"{Domain} {phase_name}particle potential [V]"]
@@ -281,10 +365,6 @@ class MSMRDiffusion(BaseParticle):
                     "potential distribution [V]"
                 ]
         self.rhs = {U: variables[f"{Domain} {phase_name}particle rhs [V.s-1]"]}
-
-    def set_boundary_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
 
         if self.size_distribution is False:
             if self.x_average is False:
@@ -307,10 +387,6 @@ class MSMRDiffusion(BaseParticle):
             U: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }
 
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
         U_init = self.phase_param.U_init
         if self.size_distribution is False:
             if self.x_average is False:
@@ -328,6 +404,7 @@ class MSMRDiffusion(BaseParticle):
                     "potential distribution [V]"
                 ]
         self.initial_conditions = {U: U_init}
+        self.variables.update(variables)
 
     def _get_standard_potential_variables(self, U):
         """
