@@ -18,7 +18,7 @@ class ThermalSubModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def get_fundamental_variables(self):
+    def build(self):
         T_cell = pybamm.Variable("Cell temperature [degC]")
         T_jig = pybamm.Variable("Jig temperature [degC]")
 
@@ -40,17 +40,19 @@ class ThermalSubModel(pybamm.BaseSubModel):
             "Heat transfer from jig to ambient [W]": Q_jig_cool,
         }
 
-        return variables
-
-    def get_coupled_variables(self, variables):
         number_of_rc_elements = self.model_options["number of rc elements"]
         number_of_elements = number_of_rc_elements + 1
 
         Q_irr = pybamm.Scalar(0)
         for i in range(number_of_elements):
-            Q_irr += variables[f"Element-{i} irreversible heat generation [W]"]
+            heat_gen = pybamm.CoupledVariable(
+                f"Element-{i} irreversible heat generation [W]",
+            )
+            self.coupled_variables.update({heat_gen.name: heat_gen})
+            Q_irr += heat_gen
 
-        Q_rev = variables["Reversible heat generation [W]"]
+        Q_rev = pybamm.CoupledVariable("Reversible heat generation [W]")
+        self.coupled_variables.update({Q_rev.name: Q_rev})
 
         variables.update(
             {
@@ -59,27 +61,13 @@ class ThermalSubModel(pybamm.BaseSubModel):
             }
         )
 
-        return variables
-
-    def set_rhs(self, variables):
-        T_cell = variables["Cell temperature [degC]"]
-        T_jig = variables["Jig temperature [degC]"]
-
-        Q_irr = variables["Irreversible heat generation [W]"]
-        Q_rev = variables["Reversible heat generation [W]"]
-
-        Q_cell_cool = variables["Heat transfer from cell to jig [W]"]
-        Q_jig_cool = variables["Heat transfer from jig to ambient [W]"]
-
         self.rhs = {
             T_cell: (Q_irr + Q_rev + Q_cell_cool) / self.param.cth_cell,
             T_jig: (Q_jig_cool - Q_cell_cool) / self.param.cth_jig,
         }
 
-    def set_initial_conditions(self, variables):
-        T_cell = variables["Cell temperature [degC]"]
-        T_jig = variables["Jig temperature [degC]"]
         self.initial_conditions = {
             T_cell: self.param.initial_T_cell,
             T_jig: self.param.initial_T_jig,
         }
+        self.variables.update(variables)

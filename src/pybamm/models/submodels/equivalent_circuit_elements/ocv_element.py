@@ -18,21 +18,21 @@ class OCVElement(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def get_fundamental_variables(self):
+    def build(self):
         soc = pybamm.Variable("SoC")
         ocv = self.param.ocv(soc)
         variables = {"SoC": soc, "Open-circuit voltage [V]": ocv}
-        return variables
 
-    def get_coupled_variables(self, variables):
-        current = variables["Current [A]"]
+        current = pybamm.CoupledVariable("Current [A]")
+        self.coupled_variables.update({"Current [A]": current})
 
-        ocv = variables["Open-circuit voltage [V]"]
-        T_cell = variables["Cell temperature [degC]"]
+        T_cell = pybamm.CoupledVariable("Cell temperature [degC]")
+        self.coupled_variables.update({"Cell temperature [degC]": T_cell})
 
         dUdT = self.param.dUdT(ocv, T_cell)
 
-        T_cell_kelvin = variables["Cell temperature [K]"]
+        T_cell_kelvin = pybamm.CoupledVariable("Cell temperature [K]")
+        self.coupled_variables.update({"Cell temperature [K]": T_cell_kelvin})
         Q_rev = -current * T_cell_kelvin * dUdT
 
         variables.update(
@@ -42,17 +42,11 @@ class OCVElement(pybamm.BaseSubModel):
             }
         )
 
-        return variables
-
-    def set_rhs(self, variables):
-        soc = variables["SoC"]
-        current = variables["Current [A]"]
         cell_capacity = self.param.cell_capacity
         self.rhs = {soc: -current / cell_capacity / 3600}
 
-    def set_initial_conditions(self, variables):
-        soc = variables["SoC"]
         self.initial_conditions = {soc: self.param.initial_soc}
+        self.variables.update(variables)
 
     def add_events_from(self, variables):
         soc = variables["SoC"]

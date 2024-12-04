@@ -22,15 +22,16 @@ class RCElement(pybamm.BaseSubModel):
         self.element_number = element_number
         self.model_options = options
 
-    def get_fundamental_variables(self):
+    def build(self):
         vrc = pybamm.Variable(f"Element-{self.element_number} overpotential [V]")
         variables = {f"Element-{self.element_number} overpotential [V]": vrc}
-        return variables
 
-    def get_coupled_variables(self, variables):
-        T_cell = variables["Cell temperature [degC]"]
-        current = variables["Current [A]"]
-        soc = variables["SoC"]
+        T_cell = pybamm.CoupledVariable("Cell temperature [degC]")
+        self.coupled_variables.update({"Cell temperature [degC]": T_cell})
+        current = pybamm.CoupledVariable("Current [A]")
+        self.coupled_variables.update({"Current [A]": current})
+        soc = pybamm.CoupledVariable("SoC")
+        self.coupled_variables.update({"SoC": soc})
 
         r = self.param.rcr_element(
             f"R{self.element_number} [Ohm]", T_cell, current, soc
@@ -52,22 +53,10 @@ class RCElement(pybamm.BaseSubModel):
             }
         )
 
-        return variables
-
-    def set_rhs(self, variables):
-        vrc = variables[f"Element-{self.element_number} overpotential [V]"]
-        current = variables["Current [A]"]
-
-        r = variables[f"R{self.element_number} [Ohm]"]
-        tau = variables[f"tau{self.element_number} [s]"]
-
         self.rhs = {
             vrc: -vrc / (tau) - current * r / tau,
         }
-
-    def set_initial_conditions(self, variables):
-        vrc = variables[f"Element-{self.element_number} overpotential [V]"]
-
         self.initial_conditions = {
             vrc: self.param.initial_rc_overpotential(self.element_number)
         }
+        self.variables.update(variables)

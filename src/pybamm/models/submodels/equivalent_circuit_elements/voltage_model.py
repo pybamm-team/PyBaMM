@@ -20,29 +20,38 @@ class VoltageModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def get_coupled_variables(self, variables):
-        ocv = variables["Open-circuit voltage [V]"]
+    def build(self):
+        ocv = pybamm.CoupledVariable("Open-circuit voltage [V]")
+        self.coupled_variables.update({"Open-circuit voltage [V]": ocv})
 
         number_of_rc_elements = self.model_options["number of rc elements"]
         number_of_elements = number_of_rc_elements + 1
 
         overpotential = pybamm.Scalar(0)
         for i in range(number_of_elements):
-            overpotential += variables[f"Element-{i} overpotential [V]"]
+            this_overpotential = pybamm.CoupledVariable(
+                f"Element-{i} overpotential [V]"
+            )
+            self.coupled_variables.update({this_overpotential.name: this_overpotential})
+            overpotential += this_overpotential
 
-        diffusion_overpotential = variables["Diffusion overpotential [V]"]
+        diffusion_overpotential = pybamm.CoupledVariable("Diffusion overpotential [V]")
+        self.coupled_variables.update(
+            {"Diffusion overpotential [V]": diffusion_overpotential}
+        )
 
         voltage = ocv + overpotential + diffusion_overpotential
 
         # Power and Resistance
-        current = variables["Current [A]"]
+        current = pybamm.CoupledVariable("Current [A]")
+        self.coupled_variables.update({"Current [A]": current})
 
         def x_not_zero(x):
             return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
 
         non_zero_current = x_not_zero(current)
 
-        variables.update(
+        self.variables.update(
             {
                 "Voltage [V]": voltage,
                 "Overpotential [V]": overpotential,
@@ -51,8 +60,6 @@ class VoltageModel(pybamm.BaseSubModel):
                 "Resistance [Ohm]": pybamm.sign(current) * voltage / non_zero_current,
             }
         )
-
-        return variables
 
     def add_events_from(self, variables):
         voltage = variables["Voltage [V]"]
