@@ -26,9 +26,10 @@ class TotalSEI(pybamm.BaseSubModel):
             self.reaction = "SEI"
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phases = self.options.phases[domain]
+        zero = pybamm.Scalar(0)
         # For each of the variables, the variable name without the phase name
         # is constructed by summing all of the variable names with the phases
         for variable_template in [
@@ -39,9 +40,22 @@ class TotalSEI(pybamm.BaseSubModel):
             f"Loss of lithium to {domain} {{}}{self.reaction} [mol]",
             f"Loss of capacity to {domain} {{}}{self.reaction} [A.h]",
         ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
-            )
-            variables[variable_template.format("")] = sumvar
-
-        return variables
+            sumvar = zero
+            for phase in phases:
+                # It would be nice if we had a systematic way to set the domain for these things.
+                if "X-averaged" in variable_template:
+                    var = pybamm.CoupledVariable(
+                        variable_template.format(phase + " "),
+                        domain="current collector",
+                    )
+                elif "of lithium" in variable_template:
+                    var = pybamm.CoupledVariable(variable_template.format(phase + " "))
+                else:
+                    var = pybamm.CoupledVariable(
+                        variable_template.format(phase + " "),
+                        domain=f"{domain} electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                self.coupled_variables.update({var.name: var})
+                sumvar += var
+            self.variables.update({variable_template.format(""): sumvar})

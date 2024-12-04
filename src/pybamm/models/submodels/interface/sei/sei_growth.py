@@ -106,15 +106,24 @@ class SEIGrowth(BaseModel):
         # it's ok to fall back on the total interfacial current density, j_tot
         # This should only happen when the interface submodel is "InverseButlerVolmer"
         # in which case j = j_tot (uniform) anyway
-        if f"{Domain} electrode interfacial current density [A.m-2]" in variables:
-            j = variables[f"{Domain} electrode interfacial current density [A.m-2]"]
-        elif self.reaction_loc == "interface":
-            j = variables["Lithium metal total interfacial current density [A.m-2]"]
-        else:
+        if isinstance(
+            submodels[f"{domain} {self.phase} interface"],
+            pybamm.models.submodels.interface.kinetics.inverse_kinetics.inverse_butler_volmer.InverseButlerVolmer,
+        ):
             j = variables[
                 f"X-averaged {domain} electrode total "
                 "interfacial current density [A.m-2]"
             ]
+
+        elif self.reaction_loc == "interface":
+            j = variables["Lithium metal total interfacial current density [A.m-2]"]
+        else:
+            j = pybamm.CoupledVariable(
+                f"{Domain} electrode total interfacial current density [A.m-2]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({j.name: j})
 
         L_sei_inner = variables[f"{Domain} inner {self.reaction_name}thickness [m]"]
         L_sei_outer = variables[f"{Domain} outer {self.reaction_name}thickness [m]"]
@@ -195,12 +204,6 @@ class SEIGrowth(BaseModel):
         # Add other standard coupled variables
         variables.update(super().get_coupled_variables(variables))
 
-        return variables
-
-    def set_rhs(self, variables):
-        phase_param = self.phase_param
-        domain, Domain = self.domain_Domain
-
         if self.reaction_loc == "x-average":
             L_inner = variables[
                 f"X-averaged {domain} inner {self.reaction_name}thickness [m]"
@@ -270,9 +273,6 @@ class SEIGrowth(BaseModel):
                 L_inner: -dLdt_SEI_inner + spreading_inner,
                 L_outer: -dLdt_SEI_outer + spreading_outer,
             }
-
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
         if self.reaction_loc == "x-average":
             L_inner = variables[
                 f"X-averaged {domain} inner {self.reaction_name}thickness [m]"
@@ -295,3 +295,4 @@ class SEIGrowth(BaseModel):
             self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:
             self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}
+        self.variables.update(variables)
