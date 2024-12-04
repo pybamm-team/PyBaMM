@@ -66,18 +66,34 @@ class BaseInterface(pybamm.BaseSubModel):
         phase_name = self.phase_name
         domain_options = getattr(self.options, domain)
 
-        c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
-        T = variables[f"{Domain} electrode temperature [K]"]
+        c_e = pybamm.CoupledVariable(
+            f"{Domain} electrolyte concentration [mol.m-3]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e.name: c_e})
+        T = pybamm.CoupledVariable(
+            f"{Domain} electrode temperature [K]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T.name: T})
 
         if self.reaction == "lithium-ion main":
             # For "particle-size distribution" submodels, take distribution version
             # of c_s_surf that depends on particle size.
             domain_options = getattr(self.options, domain)
             if domain_options["particle size"] == "distribution":
-                c_s_surf = variables[
+                c_s_surf = pybamm.CoupledVariable(
                     f"{Domain} {phase_name}particle surface "
-                    "concentration distribution [mol.m-3]"
-                ]
+                    "concentration distribution [mol.m-3]",
+                    domain=f"{domain} particle size",
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({c_s_surf.name: c_s_surf})
                 # If all variables were broadcast (in "x"), take only the orphans,
                 # then re-broadcast c_e
                 if (
@@ -97,9 +113,12 @@ class BaseInterface(pybamm.BaseSubModel):
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
 
             else:
-                c_s_surf = variables[
-                    f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-                ]
+                c_s_surf = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle surface concentration [mol.m-3]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({c_s_surf.name: c_s_surf})
                 # If all variables were broadcast, take only the orphans
                 if (
                     isinstance(c_s_surf, pybamm.Broadcast)
@@ -114,7 +133,10 @@ class BaseInterface(pybamm.BaseSubModel):
             if j0_option == "single":
                 j0 = phase_param.j0(c_e, c_s_surf, T)
             elif j0_option == "current sigmoid":
-                current = variables["Total current density [A.m-2]"]
+                current = pybamm.CoupledVariable(
+                    "Total current density [A.m-2]",
+                )
+                self.coupled_variables.update({current.name: current})
                 k = 100
                 if Domain == "Positive":
                     lithiation_current = current
@@ -131,6 +153,7 @@ class BaseInterface(pybamm.BaseSubModel):
         elif self.reaction == "lithium metal plating":
             # compute T on the surface of the anode (interface with separator)
             T = pybamm.boundary_value(T, "right")
+            c_e = pybamm.boundary_value(c_e, "right")
             c_Li_metal = 1 / self.param.V_bar_Li
             j0 = self.param.j0_Li_metal(c_e, c_Li_metal, T)
 
@@ -182,19 +205,24 @@ class BaseInterface(pybamm.BaseSubModel):
         there is only a single particle radius, so this method returns correct result.
         """
         domain = self.domain
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
 
         if self.options.electrode_types[domain] == "planar":
             # In a half-cell the total interfacial current density is the current
             # collector current density, not divided by electrode thickness
-            i_boundary_cc = variables["Current collector current density [A.m-2]"]
             j_total_average = i_boundary_cc
             a_j_total_average = i_boundary_cc
         else:
-            a_av = variables[
+            a_av = pybamm.CoupledVariable(
                 f"X-averaged {domain} electrode {self.phase_name}"
-                "surface area to volume ratio [m-1]"
-            ]
+                "surface area to volume ratio [m-1]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({a_av.name: a_av})
             sgn = 1 if self.domain == "negative" else -1
 
             a_j_total_average = sgn * i_boundary_cc / (self.domain_param.L)
@@ -295,9 +323,12 @@ class BaseInterface(pybamm.BaseSubModel):
         if isinstance(self, pybamm.kinetics.NoReaction):
             a = 0
         else:
-            a = variables[
-                f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-            ]
+            a = pybamm.CoupledVariable(
+                f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({a.name: a})
 
         j = variables[
             f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
@@ -306,10 +337,21 @@ class BaseInterface(pybamm.BaseSubModel):
         a_j_av = pybamm.x_average(a_j)
 
         if reaction_name == "SEI on cracks ":
-            roughness = variables[f"{Domain} electrode roughness ratio"] - 1
-            roughness_av = (
-                variables[f"X-averaged {domain} electrode roughness ratio"] - 1
+            roughness_ratio = pybamm.CoupledVariable(
+                f"{Domain} electrode roughness ratio",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
             )
+            self.coupled_variables.update({roughness_ratio.name: roughness_ratio})
+            roughness = roughness_ratio - 1
+            roughness_ratio_xav = pybamm.CoupledVariable(
+                f"X-averaged {domain} electrode roughness ratio",
+                domain="current collector",
+            )
+            self.coupled_variables.update(
+                {roughness_ratio_xav.name: roughness_ratio_xav}
+            )
+            roughness_av = roughness_ratio_xav - 1
         else:
             roughness = 1
             roughness_av = 1

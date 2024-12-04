@@ -8,7 +8,7 @@ from .base_external_circuit import BaseModel
 class ExplicitCurrentControl(BaseModel):
     """External circuit with current control."""
 
-    def build(self):
+    def build(self, submodels):
         i_cell = self.param.current_density_with_time
         I = self.param.current_with_time
         self.variables.update(
@@ -31,7 +31,7 @@ class ExplicitCurrentControl(BaseModel):
 class ExplicitPowerControl(BaseModel):
     """External circuit with current set explicitly to hit target power."""
 
-    def build(self):
+    def build(self, submodels):
         V = pybamm.CoupledVariable("Voltage [V]")
         self.coupled_variables.update({"Voltage [V]": V})
         P = pybamm.FunctionParameter("Power function [W]", {"Time [s]": pybamm.t})
@@ -49,7 +49,7 @@ class ExplicitPowerControl(BaseModel):
 class ExplicitResistanceControl(BaseModel):
     """External circuit with current set explicitly to hit target resistance."""
 
-    def build(self):
+    def build(self, submodels):
         V = pybamm.CoupledVariable("Voltage [V]")
         self.coupled_variables.update({"Voltage [V]": V})
 

@@ -19,7 +19,7 @@ class NoConvection(BaseThroughCellModel):
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
 
-    def build(self):
+    def build(self, submodels):
         variables = {}
         for domain in self.options.whole_cell_domains:
             if domain != "separator":

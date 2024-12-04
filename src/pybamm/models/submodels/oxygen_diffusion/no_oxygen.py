@@ -18,7 +18,7 @@ class NoOxygen(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         c_ox_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
         c_ox_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         c_ox_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")

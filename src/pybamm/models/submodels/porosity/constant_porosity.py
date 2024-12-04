@@ -14,7 +14,8 @@ class Constant(BaseModel):
     param : parameter class
         The parameters to use for this submodel
     """
-    def build(self):
+
+    def build(self, submodels):
         eps_dict = {}
         depsdt_dict = {}
         for domain in self.options.whole_cell_domains:

@@ -22,7 +22,7 @@ class BasePotentialPair(BaseModel):
 
         pybamm.citations.register("Timms2021")
 
-    def build(self):
+    def build(self, submodels):
         phi_s_cn = pybamm.Variable(
             "Negative current collector potential [V]", domain="current collector"
         )

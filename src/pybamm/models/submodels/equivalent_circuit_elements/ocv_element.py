@@ -18,7 +18,7 @@ class OCVElement(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         soc = pybamm.Variable("SoC")
         ocv = self.param.ocv(soc)
         variables = {"SoC": soc, "Open-circuit voltage [V]": ocv}

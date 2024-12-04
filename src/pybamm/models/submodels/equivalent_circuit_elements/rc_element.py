@@ -22,7 +22,7 @@ class RCElement(pybamm.BaseSubModel):
         self.element_number = element_number
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         vrc = pybamm.Variable(f"Element-{self.element_number} overpotential [V]")
         variables = {f"Element-{self.element_number} overpotential [V]": vrc}
 

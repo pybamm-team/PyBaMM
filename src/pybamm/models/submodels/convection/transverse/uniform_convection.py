@@ -18,7 +18,7 @@ class Uniform(BaseTransverseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         p_s = pybamm.PrimaryBroadcast(0, "current collector")
         variables = self._get_standard_separator_pressure_variables(p_s)
         # Set up

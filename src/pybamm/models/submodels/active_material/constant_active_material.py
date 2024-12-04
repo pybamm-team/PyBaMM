@@ -21,7 +21,7 @@ class Constant(BaseModel):
         Phase of the particle (default is "primary")
     """
 
-    def build(self):
+    def build(self, submodels):
         domain = self.domain
         phase = self.phase_name
         eps_solid = self.phase_param.epsilon_s

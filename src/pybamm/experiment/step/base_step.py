@@ -474,7 +474,7 @@ class BaseStepImplicit(BaseStep):
         submodel = self.get_submodel(new_model)
         variables = new_model.variables
         coupled_variables = new_model.coupled_variables
-        submodel.build()
+        submodel.build(new_model.submodels)
         variables.update(submodel.variables)
         coupled_variables.update(submodel.coupled_variables)
         new_model.rhs.update(submodel.rhs)

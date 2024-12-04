@@ -22,7 +22,7 @@ class Bruggeman(BaseModel):
     def __init__(self, param, component, options=None):
         super().__init__(param, component, options=options)
 
-    def build(self):
+    def build(self, submodels):
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:

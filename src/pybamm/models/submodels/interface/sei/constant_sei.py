@@ -30,7 +30,7 @@ class ConstantSEI(BaseModel):
         else:
             self.reaction_loc = "full electrode"
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         domain = self.domain.lower()
         # Constant thicknesses
         L_inner = self.phase_param.L_inner_0
@@ -45,14 +45,9 @@ class ConstantSEI(BaseModel):
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
         variables.update(self._get_standard_reaction_variables(zero, zero))
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Concentrations (derived from thicknesses)
         variables.update(self._get_standard_concentration_variables(variables))
 
         # Add other standard coupled variables
         variables.update(super().get_coupled_variables(variables))
 
-        return variables
+        self.variables.update(variables)

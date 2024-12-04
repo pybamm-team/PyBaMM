@@ -8,7 +8,7 @@ from .base_external_circuit import BaseModel
 class DischargeThroughput(BaseModel):
     """Model calculate discharge and throughput capacity and energy."""
 
-    def build(self):
+    def build(self, submodels):
         Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
         Q_Ah.print_name = "Q_Ah"
         # Throughput capacity (cumulative)

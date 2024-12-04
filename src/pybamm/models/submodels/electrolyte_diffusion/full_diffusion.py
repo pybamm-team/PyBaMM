@@ -22,7 +22,7 @@ class Full(BaseElectrolyteDiffusion):
     def __init__(self, param, options=None):
         super().__init__(param, options)
 
-    def build(self):
+    def build(self, submodels):
         eps_c_e_dict = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()

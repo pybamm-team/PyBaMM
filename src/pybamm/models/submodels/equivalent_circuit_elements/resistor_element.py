@@ -17,7 +17,7 @@ class ResistorElement(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         T_cell = pybamm.CoupledVariable("Cell temperature [degC]")
         self.coupled_variables.update({"Cell temperature [degC]": T_cell})
         current = pybamm.CoupledVariable("Current [A]")

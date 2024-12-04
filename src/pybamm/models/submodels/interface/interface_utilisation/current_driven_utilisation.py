@@ -25,7 +25,7 @@ class CurrentDriven(BaseModel):
         super().__init__(param, domain, options)
         self.reaction_loc = reaction_loc
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":

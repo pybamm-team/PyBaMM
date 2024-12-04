@@ -22,7 +22,7 @@ class OrderedPacking(BaseModel):
     def __init__(self, param, component, options=None):
         super().__init__(param, component, options=options)
 
-    def build(self):
+    def build(self, submodels):
         pybamm.citations.register("Shen2007")
         pybamm.citations.register("Akanni1987")
         if self.component == "Electrolyte":

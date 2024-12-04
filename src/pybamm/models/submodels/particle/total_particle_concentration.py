@@ -22,7 +22,7 @@ class TotalConcentration(BaseParticle):
         Phase of the particle (default is "primary")
     """
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phase = self.phase
         phase_name = self.phase_name

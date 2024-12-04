@@ -20,7 +20,7 @@ class VoltageModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         ocv = pybamm.CoupledVariable("Open-circuit voltage [V]")
         self.coupled_variables.update({"Open-circuit voltage [V]": ocv})
 

@@ -23,7 +23,7 @@ class Full(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         # Oxygen concentration (oxygen concentration is zero in the negative electrode)
         c_ox_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         c_ox_s = pybamm.Variable(
@@ -50,7 +50,7 @@ class Full(BaseModel):
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
-        self.coupled_variables.update({tor_s.name: tor_s})  
+        self.coupled_variables.update({tor_s.name: tor_s})
         tor_p = pybamm.CoupledVariable(
             "Positive electrolyte transport efficiency",
             domain="positive electrode",
@@ -87,7 +87,6 @@ class Full(BaseModel):
         )
         self.coupled_variables.update({deps_dt_p.name: deps_dt_p})
         deps_dt = pybamm.concatenation(deps_dt_s, deps_dt_p)
-
 
         N_ox = variables["Oxygen flux [mol.m-2.s-1]"].orphans[1]
 

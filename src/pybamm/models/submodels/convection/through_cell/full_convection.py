@@ -17,7 +17,7 @@ class Full(BaseThroughCellModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         variables = {}
         for domain in self.options.whole_cell_domains:
             if domain != "separator":

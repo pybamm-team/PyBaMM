@@ -20,7 +20,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
     def __init__(self, param, options=None):
         super().__init__(param, options)
 
-    def build(self):
+    def build(self, submodels):
         c_e_init = self.param.c_e_init
         eps_c_e_dict = {
             domain: self.param.domain_params[domain.split()[0]].epsilon_init * c_e_init

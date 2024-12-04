@@ -22,7 +22,7 @@ class ReactionDrivenODE(BaseModel):
         super().__init__(param, options)
         self.x_average = x_average
 
-    def build(self):
+    def build(self, submodels):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
             Domain = domain.capitalize()

@@ -28,7 +28,7 @@ class NoSEI(BaseModel):
         else:
             self.reaction_loc = "full electrode"
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         domain = self.domain.lower()
         if self.reaction_loc == "interface":
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
@@ -38,10 +38,7 @@ class NoSEI(BaseModel):
             )
         variables = self._get_standard_thickness_variables(zero, zero)
         variables.update(self._get_standard_reaction_variables(zero, zero))
-        return variables
-
-    def get_coupled_variables(self, variables):
         variables.update(self._get_standard_concentration_variables(variables))
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
-        return variables
+        self.variables.update(variables)

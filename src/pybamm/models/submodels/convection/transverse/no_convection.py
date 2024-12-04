@@ -20,7 +20,7 @@ class NoConvection(BaseTransverseModel):
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
 
-    def build(self):
+    def build(self, submoels):
         p_s = pybamm.PrimaryBroadcast(0, "current collector")
         variables = self._get_standard_separator_pressure_variables(p_s)
 

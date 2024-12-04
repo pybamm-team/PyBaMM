@@ -19,7 +19,7 @@ class LeadingOrder(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         c_ox_av = pybamm.Variable(
             "X-averaged oxygen concentration [mol.m-3]", domain="current collector"
         )
@@ -38,8 +38,7 @@ class LeadingOrder(BaseModel):
         variables.update(self._get_standard_flux_variables(N_ox))
 
         eps_n_av = pybamm.CoupledVariable(
-            "X-averaged negative electrode porosity",
-            domain="current collector"
+            "X-averaged negative electrode porosity", domain="current collector"
         )
         self.coupled_variables.update({eps_n_av.name: eps_n_av})
         eps_s_av = pybamm.CoupledVariable(

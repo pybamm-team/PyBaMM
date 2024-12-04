@@ -18,7 +18,7 @@ class Uniform(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         phi_s_cn = pybamm.PrimaryBroadcast(0, "current collector")
         variables = self._get_standard_negative_potential_variables(phi_s_cn)
         self.variables.update(variables)

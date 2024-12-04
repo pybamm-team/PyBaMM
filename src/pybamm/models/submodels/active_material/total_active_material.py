@@ -20,7 +20,7 @@ class Total(pybamm.BaseSubModel):
     def __init__(self, param, domain, options):
         super().__init__(param, domain, options=options)
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phases = self.options.phases[domain]
         zero = pybamm.Scalar(0)

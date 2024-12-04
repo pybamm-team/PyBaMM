@@ -28,7 +28,7 @@ class FunctionControl(BaseModel):
         self.external_circuit_function = external_circuit_function
         self.control = control
 
-    def build(self):
+    def build(self, submodels):
         # Current is a variable
         i_var = pybamm.Variable("Current variable [A]", scale=self.param.Q)
         if self.control in ["algebraic", "differential"]:

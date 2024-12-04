@@ -250,7 +250,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         pass
 
-    def build(self):
+    def build(self, submodels):
         """
         A method to build the submodel. Replaces get_fundamental_variables,
         get_coupled_variables, set_rhs, set_algebraic, set_boundary_conditions,

@@ -28,7 +28,7 @@ class FickianDiffusion(BaseParticle):
         super().__init__(param, domain, options, phase)
         self.x_average = x_average
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
@@ -79,7 +79,7 @@ class FickianDiffusion(BaseParticle):
                     },
                     coord_sys="cartesian",
                 )
-                variables = self._get_distribution_variables(R)
+                variables.update(self._get_distribution_variables(R))
                 f_v_dist = variables[
                     f"{Domain} volume-weighted {phase_name}"
                     "particle-size distribution [m-1]"
@@ -102,7 +102,7 @@ class FickianDiffusion(BaseParticle):
                     auxiliary_domains={"secondary": "current collector"},
                     coord_sys="cartesian",
                 )
-                variables = self._get_distribution_variables(R)
+                variables.update(self._get_distribution_variables(R))
                 f_v_dist = variables[
                     f"X-averaged {domain} volume-weighted {phase_name}"
                     "particle-size distribution [m-1]"

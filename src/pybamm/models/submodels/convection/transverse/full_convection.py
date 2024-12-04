@@ -18,7 +18,7 @@ class Full(BaseTransverseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         p_s = pybamm.Variable(
             "X-averaged separator pressure [Pa]", domain="current collector"
         )

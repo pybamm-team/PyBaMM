@@ -869,7 +869,7 @@ class BaseModel:
                 pybamm.logger.debug(
                     f"Attempting to build {name} submodel ({self.name}) using build method"
                 )
-                submodel.build()
+                submodel.build(self.submodels)
                 self.variables.update(submodel.variables)
                 self.coupled_variables.update(submodel.coupled_variables)
                 self.rhs.update(submodel.rhs)
@@ -890,6 +890,9 @@ class BaseModel:
         self.build_coupled_variables(submodels_built)
 
         self.build_model_equations(submodels_built)
+        # TODO: REMOVE BEFORE MERGE (TEMPORARY FIX)
+        for submodel in self.submodels.values():
+            self.coupled_variables.update(submodel.coupled_variables)
 
         self.link_coupled_variables()
 

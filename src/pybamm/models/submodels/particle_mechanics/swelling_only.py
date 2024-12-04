@@ -29,7 +29,7 @@ class SwellingOnly(BaseMechanics):
         pybamm.citations.register("Ai2019")
         pybamm.citations.register("Deshpande2012")
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
 
         zero = pybamm.FullBroadcast(

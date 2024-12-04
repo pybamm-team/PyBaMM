@@ -18,7 +18,7 @@ class ThermalSubModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         T_cell = pybamm.Variable("Cell temperature [degC]")
         T_jig = pybamm.Variable("Jig temperature [degC]")
 

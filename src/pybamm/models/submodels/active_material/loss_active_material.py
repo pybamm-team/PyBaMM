@@ -28,7 +28,7 @@ class LossActiveMaterial(BaseModel):
         pybamm.citations.register("Reniers2019")
         self.x_average = x_average
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phase = self.phase_name
 

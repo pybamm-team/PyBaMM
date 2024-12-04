@@ -27,7 +27,7 @@ class BaseKinetics(BaseInterface):
     def __init__(self, param, domain, reaction, options, phase="primary"):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         domain = self.domain
         phase_name = self.phase_name
 
@@ -48,24 +48,27 @@ class BaseKinetics(BaseInterface):
                 f"X-averaged total {domain} electrode {phase_name}"
                 "interfacial current density variable [A.m-2]": pybamm.x_average(j),
             }
-            return variables
         else:
-            return {}
+            variables = {}
 
-    def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
         phase_name = self.phase_name
 
         # Get surface potential difference
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
-            delta_phi = variables[
-                "Lithium metal interface surface potential difference [V]"
-            ]
+            delta_phi = pybamm.CoupledVariable(
+                "Lithium metal interface surface potential difference [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({delta_phi.name: delta_phi})
         else:
-            delta_phi = variables[
-                f"{Domain} electrode surface potential difference [V]"
-            ]
+            delta_phi = pybamm.CoupledVariable(
+                f"{Domain} electrode surface potential difference [V]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({delta_phi.name: delta_phi})
             # If delta_phi was broadcast, take only the orphan.
             if isinstance(delta_phi, pybamm.Broadcast):
                 delta_phi = delta_phi.orphans[0]
@@ -100,14 +103,22 @@ class BaseKinetics(BaseInterface):
             domain_options["particle size"] == "distribution"
             and self.options.electrode_types[domain] == "porous"
         ):
-            ocp = variables[
-                f"{Domain} electrode {reaction_name}"
-                "open-circuit potential distribution [V]"
-            ]
+            ocp = pybamm.CoupledVariable(
+                f"{Domain} electrode {reaction_name}open-circuit potential distribution [V]",
+                domain=f"{domain} particle size",
+                auxiliary_domains={
+                    "secondary": f"{domain} electrode",
+                    "tertiary": "current collector",
+                },
+            )
+            self.coupled_variables.update({ocp.name: ocp})
         else:
-            ocp = variables[
-                f"{Domain} electrode {reaction_name}open-circuit potential [V]"
-            ]
+            ocp = pybamm.CoupledVariable(
+                f"{Domain} electrode {reaction_name}open-circuit potential [V]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({ocp.name: ocp})
         # If ocp was broadcast, and the reaction is lithium metal plating OR
         # delta_phi's secondary domain is "current collector", then take only the
         # orphan.
@@ -127,19 +138,28 @@ class BaseKinetics(BaseInterface):
         # Add SEI resistance
         if self.options.electrode_types[domain] == "planar":
             R_sei = self.phase_param.R_sei
-            L_sei = variables[
-                f"{Domain} total {phase_name}SEI thickness [m]"
-            ]  # on interface
+            L_sei = pybamm.CoupledVariable(
+                f"{Domain} total {phase_name}SEI thickness [m]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({L_sei.name: L_sei})  # on interface
             eta_sei = -j_tot_av * L_sei * R_sei
         elif self.options["SEI film resistance"] == "average":
             R_sei = self.phase_param.R_sei
-            L_sei_av = variables[
-                f"X-averaged {domain} total {phase_name}SEI thickness [m]"
-            ]
+            L_sei_av = pybamm.CoupledVariable(
+                f"X-averaged {domain} total {phase_name}SEI thickness [m]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({L_sei_av.name: L_sei_av})
             eta_sei = -j_tot_av * L_sei_av * R_sei
         elif self.options["SEI film resistance"] == "distributed":
             R_sei = self.phase_param.R_sei
-            L_sei = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
+            L_sei = pybamm.CoupledVariable(
+                f"{Domain} total {phase_name}SEI thickness [m]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({L_sei.name: L_sei})
             j_tot = variables[
                 f"Total {domain} electrode {phase_name}"
                 "interfacial current density variable [A.m-2]"
@@ -164,24 +184,57 @@ class BaseKinetics(BaseInterface):
 
         # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
-            T = variables["X-averaged cell temperature [K]"]
-            u = variables["Lithium metal interface utilisation"]
+            T = pybamm.CoupledVariable(
+                "X-averaged cell temperature [K]", domain="current collector"
+            )
+            u = pybamm.CoupledVariable(
+                "Lithium metal interface utilisation", domain="current collector"
+            )
+            self.coupled_variables.update({T.name: T, u.name: u})
         elif j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature [K]"]
-            u = variables[f"X-averaged {domain} electrode interface utilisation"]
+            T = pybamm.CoupledVariable(
+                "X-averaged cell temperature [K]", domain="current collector"
+            )
+            u = pybamm.CoupledVariable(
+                "Lithium metal interface utilisation", domain="current collector"
+            )
+            self.coupled_variables.update({T.name: T, u.name: u})
         elif j0.domain == [f"{domain} particle size"]:
             if j0.domains["secondary"] != [f"{domain} electrode"]:
-                T = variables["X-averaged cell temperature [K]"]
-                u = variables[f"X-averaged {domain} electrode interface utilisation"]
+                T = pybamm.CoupledVariable(
+                    "X-averaged cell temperature [K]", domain="current collector"
+                )
+                u = pybamm.CoupledVariable(
+                    "Lithium metal interface utilisation", domain="current collector"
+                )
+                self.coupled_variables.update({T.name: T, u.name: u})
             else:
-                T = variables[f"{Domain} electrode temperature [K]"]
-                u = variables[f"{Domain} electrode interface utilisation"]
+                T = pybamm.CoupledVariable(
+                    f"{Domain} electrode temperature [K]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                u = pybamm.CoupledVariable(
+                    f"{Domain} electrode interface utilisation",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({T.name: T, u.name: u})
 
             # Broadcast T onto "particle size" domain
             T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
         else:
-            T = variables[f"{Domain} electrode temperature [K]"]
-            u = variables[f"{Domain} electrode interface utilisation"]
+            T = pybamm.CoupledVariable(
+                f"{Domain} electrode temperature [K]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            u = pybamm.CoupledVariable(
+                f"{Domain} electrode interface utilisation",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({T.name: T, u.name: u})
 
         # Update j, except in the "distributed SEI resistance" model, where j will be
         # found by solving an algebraic equation.
@@ -232,12 +285,6 @@ class BaseKinetics(BaseInterface):
                 self._get_standard_sei_film_overpotential_variables(eta_sei)
             )
 
-        return variables
-
-    def set_algebraic(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
@@ -250,21 +297,24 @@ class BaseKinetics(BaseInterface):
             # Override print_name
             j_tot_var.print_name = "j_tot"
 
-            a_j_tot = variables[
+            a_j_tot = pybamm.CoupledVariable(
                 f"Sum of {domain} electrode {phase_name}"
-                "volumetric interfacial current densities [A.m-3]"
-            ]
-            a = variables[
-                f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
-            ]
+                "volumetric interfacial current densities [A.m-3]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({a_j_tot.name: a_j_tot})
+
+            a = pybamm.CoupledVariable(
+                f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({a.name: a})
 
             # Algebraic equation to set the variable j_tot_var
             # equal to the sum of currents j_tot = a_j_tot / a
             self.algebraic[j_tot_var] = j_tot_var - a_j_tot / a
-
-    def set_initial_conditions(self, variables):
-        domain = self.domain
-        phase_name = self.phase_name
 
         if (
             self.options["total interfacial current density as a state"] == "true"
@@ -276,3 +326,4 @@ class BaseKinetics(BaseInterface):
             ]
             # Set initial guess to zero
             self.initial_conditions[j_tot_var] = pybamm.Scalar(0)
+        self.variables.update(variables)

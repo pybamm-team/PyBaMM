@@ -19,7 +19,7 @@ class Constant(BaseModel):
         A dictionary of options to be passed to the model.
     """
 
-    def build(self):
+    def build(self, submodels):
         domain = self.domain
         u_av = self.domain_param.u_init
         u = pybamm.FullBroadcast(u_av, f"{domain} electrode", "current collector")

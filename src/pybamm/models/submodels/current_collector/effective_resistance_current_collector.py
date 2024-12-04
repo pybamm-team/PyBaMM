@@ -128,7 +128,7 @@ class EffectiveResistance(BaseEffectiveResistance):
 
         pybamm.citations.register("Timms2021")
 
-    def build(self):
+    def build(self, submodels):
         pass
 
     def _get_fundamental_variables(self):

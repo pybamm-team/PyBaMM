@@ -22,26 +22,46 @@ class ReactionDriven(BaseModel):
         super().__init__(param, options)
         self.x_average = x_average
 
-    def build(self):
+    def build(self, submodels):
         eps_dict = {}
         for domain in self.options.whole_cell_domains:
             if domain == "separator":
                 delta_eps_k = 0  # separator porosity does not change
             else:
                 Domain = domain.split()[0].capitalize()
-                L_sei_k = pybamm.CoupledVariable(f"{Domain} total SEI thickness [m]", domain=domain, auxiliary_domains = {"secondary": "current collector"})
+                L_sei_k = pybamm.CoupledVariable(
+                    f"{Domain} total SEI thickness [m]",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
                 self.coupled_variables.update({L_sei_k.name: L_sei_k})
                 if Domain == "Negative":
                     L_sei_0 = self.param.n.prim.L_inner_0 + self.param.n.prim.L_outer_0
                 elif Domain == "Positive":
                     L_sei_0 = self.param.p.prim.L_inner_0 + self.param.p.prim.L_outer_0
-                L_pl_k = pybamm.CoupledVariable(f"{Domain} lithium plating thickness [m]", domain=domain, auxiliary_domains = {"secondary": "current collector"})
+                L_pl_k = pybamm.CoupledVariable(
+                    f"{Domain} lithium plating thickness [m]",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
                 self.coupled_variables.update({L_pl_k.name: L_pl_k})
-                L_dead_k = pybamm.CoupledVariable(f"{Domain} dead lithium thickness [m]", domain=domain, auxiliary_domains = {"secondary": "current collector"})
+                L_dead_k = pybamm.CoupledVariable(
+                    f"{Domain} dead lithium thickness [m]",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
                 self.coupled_variables.update({L_dead_k.name: L_dead_k})
-                L_sei_cr_k = pybamm.CoupledVariable(f"{Domain} total SEI on cracks thickness [m]", domain=domain, auxiliary_domains = {"secondary": "current collector"})
+                L_sei_cr_k = pybamm.CoupledVariable(
+                    f"{Domain} total SEI on cracks thickness [m]",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
                 self.coupled_variables.update({L_sei_cr_k.name: L_sei_cr_k})
-                roughness_k = pybamm.CoupledVariable(f"{Domain} electrode roughness ratio", domain=domain, auxiliary_domains = {"secondary": "current collector"})
+                roughness_k = pybamm.CoupledVariable(
+                    f"{Domain} electrode roughness ratio",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
                 self.coupled_variables.update({roughness_k.name: roughness_k})
 
                 L_tot = (
@@ -51,7 +71,11 @@ class ReactionDriven(BaseModel):
                     + L_sei_cr_k * (roughness_k - 1)
                 )
 
-                a_k = pybamm.CoupledVariable(f"{Domain} electrode surface area to volume ratio [m-1]", domain=domain, auxiliary_domains = {"secondary": "current collector"})
+                a_k = pybamm.CoupledVariable(
+                    f"{Domain} electrode surface area to volume ratio [m-1]",
+                    domain=domain,
+                    auxiliary_domains={"secondary": "current collector"},
+                )
                 self.coupled_variables.update({a_k.name: a_k})
 
                 # This assumes a thin film so curvature effects are neglected.

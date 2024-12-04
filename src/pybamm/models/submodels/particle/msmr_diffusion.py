@@ -38,7 +38,7 @@ class MSMRDiffusion(BaseParticle):
         pybamm.citations.register("Baker2018")
         pybamm.citations.register("Verbrugge2017")
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 

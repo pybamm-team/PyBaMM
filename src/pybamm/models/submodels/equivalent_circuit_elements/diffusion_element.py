@@ -18,7 +18,7 @@ class NoDiffusion(pybamm.BaseSubModel):
         super().__init__(param)
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         soc = pybamm.CoupledVariable("SoC")
         self.coupled_variables.update({soc.name: soc})
         z = pybamm.PrimaryBroadcast(soc, "ECMD particle")
@@ -56,7 +56,7 @@ class DiffusionElement(pybamm.BaseSubModel):
         pybamm.citations.register("Fan2022")
         self.model_options = options
 
-    def build(self):
+    def build(self, submodels):
         z = pybamm.Variable("Distributed SoC", domain="ECMD particle")
         x = pybamm.SpatialVariable(
             "x ECMD", domain=["ECMD particle"], coord_sys="Cartesian"

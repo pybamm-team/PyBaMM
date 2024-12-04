@@ -22,7 +22,7 @@ class HeterogeneousCatalyst(BaseModel):
     def __init__(self, param, component, options=None):
         super().__init__(param, component, options=options)
 
-    def build(self):
+    def build(self, submodels):
         pybamm.citations.register("Shen2007")
         pybamm.citations.register("Beeckman1990")
         if self.component == "Electrolyte":

@@ -19,7 +19,7 @@ class Full(BaseModel):
         A dictionary of options to be passed to the model.
     """
 
-    def build(self):
+    def build(self, submodels):
         domain = self.domain
         u = pybamm.FullBroadcast(1, f"{domain} electrode", "current collector")
 

@@ -40,7 +40,7 @@ class SEIGrowth(BaseModel):
         else:
             pybamm.citations.register("Marquis2020")
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         Ls = []
         for pos in ["inner", "outer"]:
@@ -76,24 +76,30 @@ class SEIGrowth(BaseModel):
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
         SEI_option = getattr(getattr(self.options, domain), self.phase)["SEI"]
-        T = variables[f"{Domain} electrode temperature [K]"]
+        T = pybamm.CoupledVariable(
+            f"{Domain} electrode temperature [K]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T.name: T})
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
-            delta_phi = variables[
-                "Lithium metal interface surface potential difference [V]"
-            ]
+            delta_phi = pybamm.CoupledVariable(
+                "Lithium metal interface surface potential difference [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({delta_phi.name: delta_phi})
             T = pybamm.boundary_value(T, "right")
         else:
-            delta_phi = variables[
-                f"{Domain} electrode surface potential difference [V]"
-            ]
+            delta_phi = pybamm.CoupledVariable(
+                f"{Domain} electrode surface potential difference [V]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({delta_phi.name: delta_phi})
 
         # Look for current that contributes to the -IR drop
         # If we can't find the interfacial current density from the main reaction, j,

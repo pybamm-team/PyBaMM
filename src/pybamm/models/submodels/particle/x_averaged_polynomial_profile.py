@@ -29,7 +29,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     def __init__(self, param, domain, options, phase="primary"):
         super().__init__(param, domain, options, phase)
 
-    def build(self):
+    def build(self, submodels):
         domain = self.domain
 
         variables = {}

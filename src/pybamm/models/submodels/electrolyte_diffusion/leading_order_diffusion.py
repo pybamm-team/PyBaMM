@@ -21,7 +21,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     def __init__(self, param):
         super().__init__(param)
 
-    def build(self):
+    def build(self, submodels):
         c_e_av = pybamm.Variable(
             "X-averaged electrolyte concentration [mol.m-3]",
             domain="current collector",

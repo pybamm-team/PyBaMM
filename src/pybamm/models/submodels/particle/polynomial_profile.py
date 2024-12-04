@@ -37,7 +37,7 @@ class PolynomialProfile(BaseParticle):
 
         pybamm.citations.register("Subramanian2005")
 
-    def build(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
 
         variables = {}
