@@ -33,8 +33,8 @@ jobs:
     name: Wheels (windows-latest)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.11
 
@@ -52,7 +52,7 @@ jobs:
         run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
       - name: Cache packages installed through vcpkg on Windows
-        uses: actions/cache@v4
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         env:
           cache-name: vckpg_binary_cache
         with:
@@ -61,7 +61,7 @@ jobs:
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+        uses: mxschmitt/action-tmate@e5c7151931ca95bad1c6f4190c730ecf8c7dde48 # v3.19
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Build 64-bit wheels on Windows
@@ -86,7 +86,7 @@ jobs:
             python -c "import pybamm; print(pybamm.IDAKLUSolver())"
             python -m pytest -m cibw {project}/tests/unit
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: wheels_windows
           path: ./wheelhouse/*.whl
@@ -96,10 +96,10 @@ jobs:
     name: Wheels (linux-amd64)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         name: Check out PyBaMM repository
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         name: Set up Python
         with:
           python-version: 3.11
@@ -125,7 +125,7 @@ jobs:
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for Linux
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: wheels_manylinux
           path: ./wheelhouse/*.whl
@@ -139,8 +139,8 @@ jobs:
         os: [macos-13, macos-14]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: '3.11'
 
@@ -259,7 +259,7 @@ jobs:
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -270,8 +270,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
 
@@ -279,7 +279,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: sdist
           path: ./dist/*.tar.gz
@@ -304,7 +304,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: artifacts
           merge-multiple: true
@@ -314,13 +314,13 @@ jobs:
 
       - name: Publish to PyPI
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc # v1.12.2
         with:
           packages-dir: artifacts/
 
       - name: Publish to TestPyPI
         if: github.event.inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc # v1.12.2
         with:
           packages-dir: artifacts/
           repository-url: https://test.pypi.org/legacy/
@@ -336,8 +336,8 @@ jobs:
     if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: JasonEtco/create-an-issue@v2
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5 # v2.9.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
