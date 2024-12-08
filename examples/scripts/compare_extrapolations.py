@@ -11,7 +11,12 @@ sim_lin = pybamm.Simulation(model_lin, var_pts=var_pts)
 sim_lin.solve([0, 3600])
 
 model_quad = pybamm.lead_acid.Full()
-method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
+method_options = {
+    "extrapolation": {
+        "order": {"gradient": "quadratic", "value": "quadratic"},
+        "use bcs": False,
+    }
+}
 spatial_methods = {
     "negative particle": pybamm.FiniteVolume(method_options),
     "positive particle": pybamm.FiniteVolume(method_options),

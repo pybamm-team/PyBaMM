@@ -13,7 +13,7 @@ jobs:
     name: Dispatch to `pybamm-validation`
     runs-on: ubuntu-latest
     steps:
-      - uses: mvasigh/dispatch-action@main
+      - uses: mvasigh/dispatch-action@7d246d27377b345bd9c58646c51641bec9c7435c # 1.1.6
         with:
           token: ${{ secrets.BENCHMARKS_ACCESS_TOKEN }}
           repo: pybamm-validation

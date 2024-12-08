@@ -13,7 +13,12 @@ class SpatialMethod:
     """
 
     def __init__(self, options=None):
-        self.options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        self.options = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "linear"},
+                "use bcs": False,
+            }
+        }
 
         # update double-layered dict
         if options:
