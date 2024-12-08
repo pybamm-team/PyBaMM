@@ -3,6 +3,7 @@ import pybamm
 from .step.base_step import (
     _convert_time_to_seconds,
     _convert_temperature_to_kelvin,
+    BaseStep,
 )
 
 
@@ -39,7 +40,7 @@ class Experiment:
 
     def __init__(
         self,
-        operating_conditions: list[str | tuple[str]],
+        operating_conditions: list[str | tuple[str] | BaseStep],
         period: str | None = None,
         temperature: float | None = None,
         termination: list[str] | None = None,
