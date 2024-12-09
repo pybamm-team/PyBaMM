@@ -190,7 +190,7 @@ class TestSearch:
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             model.variables.search("Electrolyte cot")
             out = (
-                "No results for search using 'Electrolyte cot'. "
+                "No results for search using ['Electrolyte cot']. "
                 "Best matches are ['Electrolyte concentration', "
                 "'Electrode potential']\n"
             )

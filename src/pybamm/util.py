@@ -102,41 +102,45 @@ class FuzzyDict(dict):
                 f"'{key}' not found. Best matches are {best_matches}"
             ) from error
 
-    def search(self, key, print_values=False):
+    def search(self, keys, print_values=False):
         """
-        Search dictionary for keys containing 'key'. If print_values is True, then
-        both the keys and values will be printed. Otherwise just the values will
-        be printed. If no results are found, the best matches are printed.
+        Search dictionary for keys containing all terms in 'keys'.
+        If print_values is True, both the keys and values will be printed.
+        Otherwise, just the keys will be printed. If no results are found,
+        the best matches are printed.
         """
-        key_in = key
-        key = key_in.lower()
+        if isinstance(keys, str):
+            keys = [keys]
+        
+        keys_lower = [key.lower() for key in keys]
 
-        # Sort the keys so results are stored in alphabetical order
-        keys = list(self.keys())
-        keys.sort()
+        dict_keys = list(self.keys())
+        dict_keys.sort()
         results = {}
 
-        # Check if any of the dict keys contain the key we are searching for
-        for k in keys:
-            if key in k.lower():
+        # Check if all search terms are present in each dictionary key
+        for k in dict_keys:
+            k_lower = k.lower()
+            if all(term in k_lower for term in keys_lower):
                 results[k] = self[k]
 
         if results == {}:
-            # If no results, return best matches
-            best_matches = self.get_best_matches(key)
+            # No results: Suggest best matches using the concatenated string
+            concatenated_keys = " ".join(keys_lower)
+            best_matches = self.get_best_matches(concatenated_keys)
             print(
-                f"No results for search using '{key_in}'. "
+                f"No results for search using {keys}. "
                 f"Best matches are {best_matches}"
             )
         elif print_values:
-            # Else print results, including dict items
+            # Print keys and values of matching results
             print("\n".join(f"{k}\t{v}" for k, v in results.items()))
         else:
-            # Just print keys
-            print("\n".join(f"{k}" for k in results.keys()))
+            # Print only keys of matching results
+            print("\n".join(results.keys()))
 
-    def copy(self):
-        return FuzzyDict(super().copy())
+        def copy(self):
+            return FuzzyDict(super().copy())
 
 
 class Timer:
