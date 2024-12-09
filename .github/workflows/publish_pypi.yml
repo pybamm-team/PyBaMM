@@ -52,7 +52,7 @@ jobs:
         run: git clone --depth 1 --branch v2.12.0 https://github.com/pybind/pybind11.git -c advice.detachedHead=false
 
       - name: Cache packages installed through vcpkg on Windows
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         env:
           cache-name: vckpg_binary_cache
         with:
@@ -77,7 +77,7 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install setuptools delvewheel # skip CasADi and CMake
           # Fix access violation because GHA runners have modified PATH that picks wrong
           # msvcp140.dll, see https://github.com/adang1345/delvewheel/issues/54
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
@@ -243,7 +243,7 @@ jobs:
           # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
@@ -314,13 +314,13 @@ jobs:
 
       - name: Publish to PyPI
         if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
-        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc # v1.12.2
+        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70 # v1.12.3
         with:
           packages-dir: artifacts/
 
       - name: Publish to TestPyPI
         if: github.event.inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc # v1.12.2
+        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70 # v1.12.3
         with:
           packages-dir: artifacts/
           repository-url: https://test.pypi.org/legacy/
