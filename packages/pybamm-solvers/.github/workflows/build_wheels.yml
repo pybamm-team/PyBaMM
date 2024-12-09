@@ -48,7 +48,7 @@ jobs:
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
           CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delvewheel # skip CasADi and CMake
+          CIBW_BEFORE_BUILD: python -m pip install setuptools delvewheel # skip CasADi and CMake
           CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "dev"
           CIBW_TEST_COMMAND: |
@@ -203,7 +203,7 @@ jobs:
           # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools wheel delocate
+          CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}

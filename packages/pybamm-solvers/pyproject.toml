@@ -1,7 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=64",
-    "wheel",
+    "setuptools>=70.1.1",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.7; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
