@@ -202,5 +202,5 @@ class TestIDAKLUSolver:
         )
 
         # check summary variables are the same if output variables are specified
-        for var in summary_vars[0].keys():
+        for var in model.summary_variables:
             assert summary_vars[0][var] == summary_vars[1][var]
