@@ -111,7 +111,7 @@ class FuzzyDict(dict):
         """
         if isinstance(keys, str):
             keys = [keys]
-        
+
         keys_lower = [key.lower() for key in keys]
 
         dict_keys = list(self.keys())
