@@ -7,7 +7,9 @@
 #include <idas/idas_bbdpre.h>         /* access to IDABBDPRE preconditioner          */
 
 #include <nvector/nvector_serial.h>  /* access to serial N_Vector            */
+#ifdef PYBAMM_OPENMP
 #include <nvector/nvector_openmp.h>  /* access to openmp N_Vector            */
+#endif
 #include <sundials/sundials_math.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_config.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_types.h> /* defs. of realtype, sunindextype      */
