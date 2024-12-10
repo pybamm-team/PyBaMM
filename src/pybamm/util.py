@@ -110,26 +110,27 @@ class FuzzyDict(dict):
         the best matches are printed.
         """
         if isinstance(keys, str):
-            keys = [keys]
+            search_keys = [keys]
+        else:
+            search_keys = keys.copy()
 
-        keys_lower = [key.lower() for key in keys]
+        search_keys = [k.lower() for k in search_keys]
 
-        dict_keys = list(self.keys())
-        dict_keys.sort()
+        known_keys = list(self.keys())
+        known_keys.sort()
         results = {}
 
         # Check if all search terms are present in each dictionary key
-        for k in dict_keys:
+        for k in known_keys:
             k_lower = k.lower()
-            if all(term in k_lower for term in keys_lower):
+            if all(term in k_lower for term in search_keys):
                 results[k] = self[k]
 
         if results == {}:
             # No results: Suggest best matches using the concatenated string
-            concatenated_keys = " ".join(keys_lower)
-            best_matches = self.get_best_matches(concatenated_keys)
+            best_matches = self.get_best_matches(" ".join(search_keys))
             print(
-                f"No results for search using {keys}. "
+                f"No results for search using '{keys}'. "
                 f"Best matches are {best_matches}"
             )
         elif print_values:
@@ -139,8 +140,8 @@ class FuzzyDict(dict):
             # Print only keys of matching results
             print("\n".join(results.keys()))
 
-        def copy(self):
-            return FuzzyDict(super().copy())
+    def copy(self):
+        return FuzzyDict(super().copy())
 
 
 class Timer:
