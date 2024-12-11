@@ -891,6 +891,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child][symbol.side][0]
+                additive_multiplicative = pybamm.Scalar(1)
+                multiplicative = pybamm.Scalar(1)
 
             elif symbol.side == "left":
                 if extrap_order_value == "linear":
@@ -903,6 +905,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                         sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts))
 
                         additive = -dx0 * bcs[child][symbol.side][0]
+                        if hasattr(submesh, "length"):
+                            additive_multiplicative = submesh.length
+                        else:
+                            additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
 
                     else:
                         sub_matrix = csr_matrix(
@@ -910,6 +917,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
 
                 elif extrap_order_value == "quadratic":
@@ -924,6 +932,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                             ([a, b], ([0, 0], [0, 1])), shape=(1, prim_pts)
                         )
                         additive = alpha * bcs[child][symbol.side][0]
+                        if hasattr(submesh, "length"):
+                            additive_multiplicative = submesh.length
+                        else:
+                            additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
 
                     else:
@@ -936,6 +948,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
 
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
 
                 else:
@@ -954,8 +967,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive = dxN * bcs[child][symbol.side][0]
                         if hasattr(submesh, "length"):
                             multiplicative = submesh.length
+                            additive_multiplicative = submesh.length
                         else:
                             multiplicative = pybamm.Scalar(1)
+                            additive_multiplicative = pybamm.Scalar(1)
                     else:
                         # to find value at x* use formula:
                         # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
@@ -967,6 +982,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
@@ -981,6 +997,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
 
                         additive = alpha * bcs[child][symbol.side][0]
+                        if hasattr(submesh, "length"):
+                            additive_multiplicative = submesh.length
+                        else:
+                            additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
                     else:
                         a = (
@@ -999,6 +1019,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
                         multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
@@ -1008,6 +1029,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # just use the value from the bc: f'(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child][symbol.side][0]
+                additive_multiplicative = pybamm.Scalar(1)
                 multiplicative = pybamm.Scalar(1)
 
             elif symbol.side == "left":
@@ -1017,6 +1039,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
                         multiplicative = 1 / submesh.length
                     else:
@@ -1031,6 +1054,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts)
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
                         multiplicative = 1 / submesh.length
                     else:
@@ -1048,6 +1072,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         shape=(1, prim_pts),
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
                         multiplicative = 1 / submesh.length
                     else:
@@ -1066,6 +1091,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         shape=(1, prim_pts),
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
                     if hasattr(submesh, "length"):
                         multiplicative = 1 / submesh.length
                     else:
@@ -1086,7 +1112,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         boundary_value.copy_domains(symbol)
 
         additive.copy_domains(symbol)
-        boundary_value += additive
+        boundary_value += additive * additive_multiplicative
 
         return boundary_value
 

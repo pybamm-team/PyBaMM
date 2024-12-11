@@ -89,6 +89,31 @@ class TestUniform1DSubMesh:
         )
 
 
+class TestSymbolicUniform1DSubMesh:
+    def test_exceptions(self):
+        lims = {"a": 1, "b": 2}
+        with pytest.raises(pybamm.GeometryError):
+            pybamm.SymbolicUniform1DSubMesh(lims, None)
+
+    def test_symmetric_mesh_creation_no_parameters(self, r, geometry):
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+        var_pts = {r: 20}
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # check boundary locations
+        assert mesh["negative particle"].edges[0] == 0
+        assert mesh["negative particle"].edges[-1] == 1
+
+        # check number of edges and nodes
+        assert len(mesh["negative particle"].nodes) == var_pts[r]
+        assert (
+            len(mesh["negative particle"].edges)
+            == len(mesh["negative particle"].nodes) + 1
+        )
+
+
 class TestExponential1DSubMesh:
     def test_symmetric_mesh_creation_no_parameters_even(self, r, geometry):
         submesh_params = {"side": "symmetric"}
