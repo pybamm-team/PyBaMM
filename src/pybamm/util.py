@@ -108,6 +108,14 @@ class FuzzyDict(dict):
         If print_values is True, both the keys and values will be printed.
         Otherwise, just the keys will be printed. If no results are found,
         the best matches are printed.
+
+        Parameters
+        ----------
+        keys : str or list of str
+            Search term(s)
+        print_values : bool, optional
+            If True, print both keys and values. Otherwise, print only keys.
+            Default is False..
         """
         if isinstance(keys, str):
             search_keys = [keys]
