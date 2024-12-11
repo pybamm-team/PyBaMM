@@ -95,6 +95,8 @@ class Mesh(dict):
                         if isinstance(sym, pybamm.Symbol):
                             try:
                                 sym_eval = sym.evaluate()
+                            except KeyError:
+                                sym_eval = sym
                             except NotImplementedError as error:
                                 if sym.has_symbol_of_classes(pybamm.Parameter):
                                     raise pybamm.DiscretisationError(
@@ -169,7 +171,12 @@ class Mesh(dict):
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):
-            if self[submeshnames[i]].edges[-1] != self[submeshnames[i + 1]].edges[0]:
+            if self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
+                pass
+            elif hasattr(self[submeshnames[i + 1]], "min"):
+                # Circle back to this, but this should let the case of submesh i+1 be a symbolic submesh
+                pass
+            else:
                 raise pybamm.DomainError("submesh edges are not aligned")
 
             coord_sys = self[submeshnames[i]].coord_sys
@@ -184,10 +191,26 @@ class Mesh(dict):
         )
         coord_sys = self[submeshnames[0]].coord_sys
         submesh = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+        if getattr(self[submeshnames[0]], "length", None) is not None:
+            # Assume that the ghost cells have the same length as the first submesh
+            if any("ghost" in submeshname for submeshname in submeshnames):
+                submesh_min = self[submeshnames[0]].min
+                submesh_length = self[submeshnames[0]].length
+            # If not ghost cells, then the length is the sum of the lengths of the submeshes
+            else:
+                submesh_min = self[submeshnames[0]].min
+                submesh_length = sum(
+                    [self[submeshname].length for submeshname in submeshnames]
+                )
+            submesh.length = submesh_length
+            submesh.min = submesh_min
         # add in internal boundaries
-        submesh.internal_boundaries = [
-            self[submeshname].edges[0] for submeshname in submeshnames[1:]
-        ]
+        for submeshname in submeshnames[1:]:
+            if getattr(self[submeshname], "length", None) is not None:
+                min = self[submeshname].min
+            else:
+                min = 0
+            submesh.internal_boundaries.append(self[submeshname].edges[0] + min)
         return submesh
 
     def add_ghost_meshes(self):
@@ -210,16 +233,20 @@ class Mesh(dict):
 
             # left ghost cell: two edges, one node, to the left of existing submesh
             lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            self[domain[0] + "_left ghost cell"] = pybamm.SubMesh1D(
-                lgs_edges, submesh.coord_sys
-            )
+            lgs_submesh = pybamm.SubMesh1D(lgs_edges, submesh.coord_sys)
+            if getattr(submesh, "length", None) is not None:
+                lgs_submesh.length = submesh.length
+                lgs_submesh.min = submesh.min
+            self[domain[0] + "_left ghost cell"] = lgs_submesh
 
             # right ghost cell: two edges, one node, to the right of
             # existing submesh
             rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            self[domain[0] + "_right ghost cell"] = pybamm.SubMesh1D(
-                rgs_edges, submesh.coord_sys
-            )
+            rgs_submesh = pybamm.SubMesh1D(rgs_edges, submesh.coord_sys)
+            if getattr(submesh, "length", None) is not None:
+                rgs_submesh.length = submesh.length
+                rgs_submesh.min = submesh.min
+            self[domain[0] + "_right ghost cell"] = rgs_submesh
 
     @property
     def geometry(self):
