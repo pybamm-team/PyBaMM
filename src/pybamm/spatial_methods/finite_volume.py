@@ -210,19 +210,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
         if getattr(submesh, "length", None) is not None:
             if submesh.coord_sys == "spherical polar":
-                if submesh.min != 0:
-                    raise AssertionError(
-                        "Spherical polar symbolic meshes must have min r = 0"
-                    )
-                else:
-                    return pybamm.Matrix(matrix) * (1 / submesh.length**3)
+                return pybamm.Matrix(matrix) * (1 / submesh.length**3)
             elif submesh.coord_sys == "cylindrical polar":
-                if submesh.min != 0:
-                    raise AssertionError(
-                        "Cylindrical polar symbolic meshes must have min r = 0"
-                    )
-                else:
-                    return pybamm.Matrix(matrix) * (1 / (submesh.length**2))
+                return pybamm.Matrix(matrix) * (1 / (submesh.length**2))
             else:
                 return pybamm.Matrix(matrix) * (1 / submesh.length)
         else:
@@ -336,7 +326,15 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        return pybamm.Matrix(csr_matrix(matrix))
+        matrix = pybamm.Matrix(csr_matrix(matrix))
+        if hasattr(submesh, "length"):
+            if submesh.coord_sys == "spherical polar":
+                matrix = matrix * submesh.length**3
+            elif submesh.coord_sys == "cylindrical polar":
+                matrix = matrix * submesh.length**2
+            else:
+                matrix = matrix * submesh.length
+        return matrix
 
     def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator."""
@@ -463,6 +461,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
+        if hasattr(submesh, "length"):
+            sub_matrix = sub_matrix * submesh.length
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
@@ -508,6 +508,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        if hasattr(submesh, "length"):
+            matrix = matrix * submesh.length
 
         return pybamm.Matrix(matrix)
 
