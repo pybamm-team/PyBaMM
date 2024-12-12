@@ -40,7 +40,7 @@ type:
 
    python -m virtualenv env
 
-or use any of your preferred environment management tool. You can then “activate”
+or use any of your preferred environment management tools. You can then “activate”
 the environment using:
 
 .. code::
