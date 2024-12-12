@@ -78,7 +78,7 @@ library beforehand.
 
    .. note::
 
-      At the moment, PyBaMM's conda-forge distribution does not include the ``IDAKLUSolver``.
+      At the moment, PyBaMM's conda-forge distribution does not include ``IDAKLUSolver``.
 
    .. code:: bash
 
