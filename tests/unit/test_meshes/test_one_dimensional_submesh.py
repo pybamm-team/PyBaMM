@@ -94,6 +94,10 @@ class TestSymbolicUniform1DSubMesh:
         lims = {"a": 1, "b": 2}
         with pytest.raises(pybamm.GeometryError):
             pybamm.SymbolicUniform1DSubMesh(lims, None)
+        tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
+
+        with pytest.raises(NotImplementedError):
+            pybamm.SymbolicUniform1DSubMesh(lims, 20, tabs=tabs)
 
     def test_symmetric_mesh_creation_no_parameters(self, r, geometry):
         submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
