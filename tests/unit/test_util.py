@@ -204,10 +204,10 @@ class TestSearch:
 
         # Test for multiple strings as input (default returns best matches)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
-            model.variables.search(["Electrolyte", "Poten"])
+            model.variables.search(["Electrolyte", "Potenteel"])
             out = (
-                "No exact matches found for 'Electrolyte'. Best matches are: ['Electrolyte concentration']\n"
-                "No exact matches found for 'Poten'. Best matches are: ['Electrode potential']\n"
+                "Exact matches for 'Electrolyte': ['Electrolyte concentration']\n"
+                "No exact matches found for 'Potenteel'. Best matches are: ['Electrode potential']\n"
             )
             assert fake_out.getvalue() == out
         # Test param search (default returns key, value)

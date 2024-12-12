@@ -128,12 +128,13 @@ class FuzzyDict(dict):
         known_keys = list(self.keys())
         known_keys.sort()
 
-        # Check for exact matches where all terms appear in the same key
+        # Check for exact matches where all search keys appear together in a key
         exact_matches = [
             key
             for key in known_keys
             if all(term in key.lower() for term in search_keys)
         ]
+
         if exact_matches:
             print(f"Results for '{' '.join(original_keys)}': {exact_matches}")
             if print_values:
@@ -141,22 +142,25 @@ class FuzzyDict(dict):
                     print(f"{match} -> {self[match]}")
             return
 
-        # If no exact matches, find partial matches for each individual search key
+        # If no exact matches, iterate over search keys individually
         for original_key, search_key in zip(original_keys, search_keys):
-            partial_matches = [key for key in known_keys if search_key in key.lower()]
+            # Find exact matches for this specific search key
+            exact_key_matches = [key for key in known_keys if search_key in key.lower()]
 
-            if partial_matches:
-                print(
-                    f"No exact matches found for '{original_key}'. Best matches are: {partial_matches}"
-                )
+            if exact_key_matches:
+                print(f"Exact matches for '{original_key}': {exact_key_matches}")
+                if print_values:
+                    for match in exact_key_matches:
+                        print(f"{match} -> {self[match]}")
             else:
-                # If no partial matches, suggest best matches
-                best_matches = difflib.get_close_matches(
+                # Find the best partial matches for this specific search key
+                partial_matches = difflib.get_close_matches(
                     search_key, known_keys, n=5, cutoff=0.5
                 )
-                if best_matches:
+
+                if partial_matches:
                     print(
-                        f"No exact matches found for '{original_key}'. Best matches are: {best_matches}"
+                        f"No exact matches found for '{original_key}'. Best matches are: {partial_matches}"
                     )
                 else:
                     print(f"No matches found for '{original_key}'.")
