@@ -306,6 +306,10 @@ def xyz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     return yz_average(x_average(symbol))
 
 
+def xyzs_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
+    return xyz_average(size_average(symbol))
+
+
 def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     """
     Convenience function for creating an average in the r-direction.
@@ -373,9 +377,18 @@ def size_average(
     # If symbol doesn't have a domain, or doesn't have "negative particle size"
     #  or "positive particle size" as a domain, it's average value is itself
     if symbol.domain == [] or not any(
-        domain in [["negative particle size"], ["positive particle size"]]
+        domain
+        in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]
         for domain in list(symbol.domains.values())
     ):
+        print(f"symbol: {symbol.domain}")
         return symbol
 
     # If symbol is a primary broadcast to "particle size", take the orphan

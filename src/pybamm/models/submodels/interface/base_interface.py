@@ -46,6 +46,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = self.phase_name + self.reaction_name
 
         self.reaction = reaction
+        domain_options = getattr(self.options, domain)
+        self.size_distribution = domain_options["particle size"] == "distribution"
 
     def _get_exchange_current_density(self, variables):
         """
@@ -93,8 +95,10 @@ class BaseInterface(pybamm.BaseSubModel):
                     # "current collector"
                     c_e = pybamm.PrimaryBroadcast(c_e, ["current collector"])
                 # broadcast c_e, T onto "particle size"
-                c_e = pybamm.PrimaryBroadcast(c_e, [f"{domain} particle size"])
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
+                c_e = pybamm.PrimaryBroadcast(
+                    c_e, [f"{domain} {phase_name}particle size"]
+                )
+                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
 
             else:
                 c_s_surf = variables[
@@ -215,7 +219,14 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
-        if j.domain in [["negative particle size"], ["positive particle size"]]:
+        if j.domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]:
             j = pybamm.size_average(j)
         # Average, and broadcast if necessary
         j_av = pybamm.x_average(j)
@@ -299,9 +310,15 @@ class BaseInterface(pybamm.BaseSubModel):
                 f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
             ]
 
-        j = variables[
-            f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
-        ]
+        if False:
+            j = variables[
+                f"{Domain} electrode {phase_name}{reaction_name}interfacial current density distribution [A.m-2]"
+            ]
+        else:
+            j = variables[
+                f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
+            ]
+        print(reaction_name)
         a_j = a * j
         a_j_av = pybamm.x_average(a_j)
 

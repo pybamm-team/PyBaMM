@@ -20,12 +20,27 @@ class NoPlating(BasePlating):
         super().__init__(param, domain, options=options, phase=phase)
 
     def get_fundamental_variables(self):
-        zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), f"{self.domain} electrode", "current collector"
-        )
+        phase_name = self.phase_name
+        if self.size_distribution is False:
+            zero = pybamm.FullBroadcast(
+                pybamm.Scalar(0), f"{self.domain} electrode", "current collector"
+            )
+        else:
+            zero = pybamm.PrimaryBroadcast(
+                pybamm.Scalar(0), f"{self.domain} {phase_name}particle size"
+            )
         variables = self._get_standard_concentration_variables(zero, zero)
-        variables.update(self._get_standard_overpotential_variables(zero))
-        variables.update(self._get_standard_reaction_variables(zero))
+        if self.size_distribution is False:
+            variables.update(self._get_standard_overpotential_variables(zero))
+            variables.update(self._get_standard_reaction_variables(zero))
+        else:
+            variables.update(
+                self._get_standard_size_distribution_overpotential_variables(zero)
+            )
+            variables.update(
+                self._get_standard_size_distribution_reaction_variables(zero)
+            )
+
         return variables
 
     def get_coupled_variables(self, variables):

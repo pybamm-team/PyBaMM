@@ -152,8 +152,13 @@ class BaseModel(BaseInterface):
             L = variables[f"{Domain} {reaction_name}thickness [m]"]
 
             n_SEI = L * L_to_n
-            n_SEI_xav = pybamm.x_average(n_SEI)
-            n_SEI_av = pybamm.yz_average(n_SEI_xav)
+            if self.size_distribution:
+                n_SEI_sav = pybamm.size_average(n_SEI)
+                n_SEI_xav = pybamm.x_average(n_SEI_sav)
+                n_SEI_av = pybamm.yz_average(n_SEI_xav)
+            else:
+                n_SEI_xav = pybamm.x_average(n_SEI)
+                n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
             delta_n_SEI = n_SEI_av - n_SEI_0
@@ -188,8 +193,13 @@ class BaseModel(BaseInterface):
             roughness = variables[f"{Domain} electrode roughness ratio"]
 
             n_SEI_cr = L_cr * L_to_n * (roughness - 1)  # SEI on cracks concentration
-            n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
-            n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
+            if self.size_distribution:
+                n_SEI_cr_sav = pybamm.size_average(n_SEI_cr)
+                n_SEI_cr_xav = pybamm.x_average(n_SEI_cr_sav)
+                n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
+            else:
+                n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+                n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
             # Calculate change in SEI cracks concentration
             # Initial state depends on roughness (to avoid division by zero)

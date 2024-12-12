@@ -32,12 +32,22 @@ class NoSEI(BaseModel):
         domain = self.domain.lower()
         if self.reaction_loc == "interface":
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
+        elif self.size_distribution:
+            zero = pybamm.FullBroadcast(
+                pybamm.Scalar(0),
+                f"{domain} {self.phase_name}particle size",
+                {"secondary": f"{domain} electrode", "tertiary": "current collector"},
+            )
         else:
             zero = pybamm.FullBroadcast(
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
         variables = self._get_standard_thickness_variables(zero)
         variables.update(self._get_standard_reaction_variables(zero))
+        if self.size_distribution:
+            variables.update(
+                self._get_standard_size_distribution_interfacial_current_variables(zero)
+            )
         return variables
 
     def get_coupled_variables(self, variables):

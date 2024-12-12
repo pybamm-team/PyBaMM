@@ -137,3 +137,24 @@ class BasePlating(BaseInterface):
         }
 
         return variables
+
+    def _get_standard_size_distribution_reaction_variables(self, j_stripping):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the lithum stripping interfacial reaction current
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        j_stripping_sav = pybamm.size_average(j_stripping)
+        j_stripping_av = pybamm.x_average(j_stripping_sav)
+
+        variables = {
+            f"{Domain} electrode {phase_name}lithium plating "
+            "interfacial current density distribution [A.m-2]": j_stripping,
+            f"{Domain} electrode {phase_name}lithium plating "
+            "interfacial current density [A.m-2]": j_stripping_sav,
+            f"X-averaged {domain} electrode {phase_name}lithium plating "
+            "interfacial current density [A.m-2]": j_stripping_av,
+        }
+
+        return variables
