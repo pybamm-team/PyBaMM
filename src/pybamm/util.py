@@ -115,8 +115,10 @@ class FuzzyDict(dict):
             Search term(s)
         print_values : bool, optional
             If True, print both keys and values. Otherwise, print only keys.
-            Default is False..
+            Default is False.
         """
+        import difflib
+
         if isinstance(keys, str):
             search_keys = [keys]
         else:
@@ -126,27 +128,44 @@ class FuzzyDict(dict):
 
         known_keys = list(self.keys())
         known_keys.sort()
-        results = {}
 
-        # Check if all search terms are present in each dictionary key
-        for k in known_keys:
-            k_lower = k.lower()
-            if all(term in k_lower for term in search_keys):
-                results[k] = self[k]
+        for search_key in search_keys:
+            exact_matches = []
+            partial_matches = []
 
-        if results == {}:
-            # No results: Suggest best matches using the concatenated string
-            best_matches = self.get_best_matches(" ".join(search_keys))
-            print(
-                f"No results for search using '{keys}'. "
-                f"Best matches are {best_matches}"
-            )
-        elif print_values:
-            # Print keys and values of matching results
-            print("\n".join(f"{k}\t{v}" for k, v in results.items()))
-        else:
-            # Print only keys of matching results
-            print("\n".join(results.keys()))
+            for key in known_keys:
+                key_lower = key.lower()
+                if all(term in key_lower for term in search_key.split()):
+                    exact_matches.append(key)
+
+            if exact_matches:
+                print(f"Results for '{search_key}': {exact_matches}")
+                if print_values:
+                    for match in exact_matches:
+                        print(f"{match} -> {self.data[match]}")
+                continue
+
+            # If no exact matches, find partial matches
+            for key in known_keys:
+                key_lower = key.lower()
+                if search_key in key_lower:
+                    partial_matches.append(key)
+
+            if partial_matches:
+                print(
+                    f"No exact matches found for '{search_key}'. Best matches are: {partial_matches}"
+                )
+            else:
+                # If no partial matches, suggest best matches
+                best_matches = difflib.get_close_matches(
+                    search_key, known_keys, n=5, cutoff=0.5
+                )
+                if best_matches:
+                    print(
+                        f"No exact matches found for '{search_key}'. Best matches are: {best_matches}"
+                    )
+                else:
+                    print(f"No matches found for '{search_key}'.")
 
     def copy(self):
         return FuzzyDict(super().copy())
