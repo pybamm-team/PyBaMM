@@ -3,6 +3,7 @@ name: PyBaMM
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore: [".all-contributorsrc", "all_contributors.md"]
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
@@ -96,7 +97,7 @@ jobs:
         run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         if: matrix.os != 'windows-latest'
         with:
           path: |
@@ -123,7 +124,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5.0.7
+        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -212,7 +213,7 @@ jobs:
         run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             # Repository files
@@ -267,7 +268,7 @@ jobs:
         run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             # Repository files
