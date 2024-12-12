@@ -4,42 +4,30 @@ Installation
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
 
-.. tab:: GNU/Linux and Windows
+.. tab:: pip
 
-   .. tab:: pip
+   PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
 
-      PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
+   .. code:: bash
 
-      .. code:: bash
+      pip install pybamm
 
-         pip install pybamm
+.. tab:: conda
 
-   .. tab:: conda
+   PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
+   
+   The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <index.html#dependencies>`_ available on conda-forge.
+   At the moment, PyBaMM's conda-forge distribution does not include the `IDAKLUSolver <../../api/solvers/idaklu_solver.html#idaklu-solver>`_.
 
-      PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
+   .. code:: bash
 
-      .. code:: bash
+      conda install -c conda-forge pybamm
 
-         conda install -c conda-forge pybamm
+   The ``pybamm-base`` package installs PyBaMM only with its `required dependencies <index.html#install-required-dependencies>`_. 
 
-.. tab:: macOS
+   .. code:: bash
 
-   .. tab:: pip
-
-      PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
-
-      .. code:: bash
-
-         pip install pybamm
-
-
-   .. tab:: conda
-
-      PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
-
-      .. code:: bash
-
-         conda install -c conda-forge pybamm
+      conda install -c conda-forge pybamm-base
 
 
 Optional solvers
