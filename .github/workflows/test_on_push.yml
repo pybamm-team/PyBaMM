@@ -3,6 +3,7 @@ name: PyBaMM
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore: [".all-contributorsrc", "all_contributors.md"]
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
