@@ -76,6 +76,10 @@ library beforehand.
 
 .. tab:: conda
 
+   .. note::
+
+      At the moment, PyBaMM's conda-forge distribution does not include the ``IDAKLUSolver``.
+
    .. code:: bash
 
       conda install -c conda-forge pybamm-base
@@ -107,7 +111,6 @@ Optional - IREE / MLIR support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Users can install ``iree`` (for MLIR just-in-time compilation) to use for main expression evaluation in the IDAKLU solver. Requires ``jax``.
-At the moment, PyBaMM's conda-forge distribution does not include the ``IDAKLUSolver``.
 
 .. code:: bash
 

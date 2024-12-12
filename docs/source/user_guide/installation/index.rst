@@ -17,7 +17,10 @@ It can be installed using ``pip`` or ``conda``, or from source.
    PyBaMM is available as a ``conda`` package through the conda-forge channel.
 
    The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <index.html#dependencies>`_ available on conda-forge.
-   At the moment, PyBaMM's conda-forge distribution does not include the `IDAKLUSolver <../../api/solvers/idaklu_solver.html#idaklu-solver>`_.
+
+   .. note::
+
+      At the moment, PyBaMM's conda-forge distribution does not include the ``IDAKLUSolver``.
 
    .. code:: bash
 
