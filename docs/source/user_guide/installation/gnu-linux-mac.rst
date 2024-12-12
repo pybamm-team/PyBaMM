@@ -50,7 +50,7 @@ To create a virtual environment ``env`` within your current directory type:
 
    virtualenv env
 
-or use any of your preferred environment management tool. You can then “activate”
+or use any of your preferred environment management tools. You can then “activate”
 the environment using:
 
 .. code:: bash
@@ -65,8 +65,7 @@ the environment and go back to your original system, just type:
 
    deactivate
 
-PyBaMM can be installed via ``pip`` or ``conda``. On macOS, it is necessary
-to install the `SUNDIALS <https://computing.llnl.gov/projects/sundials/>`__
+PyBaMM can be installed via ``pip`` or ``conda``.
 library beforehand.
 
 .. tab:: pip
