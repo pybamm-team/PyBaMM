@@ -604,9 +604,9 @@ class ParameterValues:
 
         def process_and_check(sym):
             new_sym = self.process_symbol(sym)
-            #if not isinstance(new_sym, pybamm.Scalar) and not isinstance(
+            # if not isinstance(new_sym, pybamm.Scalar) and not isinstance(
             #    new_sym, pybamm.InputParameter
-            #):
+            # ):
             #    raise ValueError(
             #        "Geometry parameters must be Scalars or InputParameters after parameter processing"
             #    )
