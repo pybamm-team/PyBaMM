@@ -1,5 +1,5 @@
 {
-  "skipCi": true,
+  "skipCi": false,
   "files": [
     "all_contributors.md"
   ],
