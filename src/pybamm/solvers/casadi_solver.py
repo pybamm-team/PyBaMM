@@ -45,8 +45,11 @@ class CasadiSolver(pybamm.BaseSolver):
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
     dt_event : float, optional
-        The maximum global step size (in seconds) used in "safe" mode. If None
+        The maximum global step size (in seconds) used in "safe" mode. If None,
         the default value is 600 seconds.
+    dt_max : float, optional
+        Deprecated. Use `dt_event` instead. The maximum global step size (in
+        seconds) used in "safe" mode. If None, the default value is 600 seconds.
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
@@ -84,6 +87,7 @@ class CasadiSolver(pybamm.BaseSolver):
         max_step=np.inf,
         max_step_decrease_count=5,
         dt_event=None,
+        dt_max=None,
         extrap_tol=None,
         extra_options_setup=None,
         extra_options_call=None,
@@ -110,6 +114,21 @@ class CasadiSolver(pybamm.BaseSolver):
             )
         self.max_step = max_step
         self.max_step_decrease_count = max_step_decrease_count
+
+        # Handle dt_event and dt_max with deprecation warning
+        if dt_max is not None:
+            if dt_event is not None:
+                raise ValueError(
+                    "Cannot specify both `dt_event` and the deprecated `dt_max`. "
+                    "Use `dt_event` only."
+                )
+            else:
+                pybamm.logger.warning(
+                    "`dt_max` is deprecated and will be removed in a future release. "
+                    "Use `dt_event` instead."
+                )
+                dt_event = dt_max
+
         self.dt_event = dt_event or 600
 
         self.extra_options_setup = extra_options_setup or {}
