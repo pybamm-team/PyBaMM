@@ -5,7 +5,6 @@ import numpy as onp
 import asyncio
 
 import pybamm
-from .base_solver import validate_max_step
 
 if pybamm.has_jax():
     import jax
@@ -85,7 +84,7 @@ class JaxSolver(pybamm.BaseSolver):
         self._ode_solver = method == "RK45"
         self.extra_options = extra_options or {}
         self.name = f"JAX solver ({method})"
-        self.max_step = validate_max_step(max_step)
+        self.max_step = max_step
         self._cached_solves = dict()
         pybamm.citations.register("jax2018")
 
@@ -216,7 +215,8 @@ class JaxSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs : dict, list[dict], optional
             Any input parameters to pass to the model when solving
-
+        max_step : float, optional
+            Maximum allowed step size. Default is np.inf.
         Returns
         -------
         list of `pybamm.Solution`
@@ -257,7 +257,9 @@ class JaxSolver(pybamm.BaseSolver):
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
             }
-            y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
+            y.extend(
+                jax.vmap(self._cached_solves[model])(inputs_v, max_step=self.max_step)
+            )
         else:
             # Unknown platform, use serial execution as fallback
             print(
@@ -265,7 +267,7 @@ class JaxSolver(pybamm.BaseSolver):
                 "falling back to serial execution"
             )
             for inputs_v in inputs:
-                y.append(self._cached_solves[model](inputs_v))
+                y.append(self._cached_solves[model](inputs_v, max_step=self.max_step))
 
         # This code block implements single-program multiple-data execution
         # using pmap across multiple XLAs. It is currently commented out

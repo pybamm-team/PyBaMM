@@ -6,7 +6,6 @@ import pybamm
 import numpy as np
 import numbers
 import scipy.sparse as sparse
-from .base_solver import validate_max_step
 
 import importlib
 
@@ -92,7 +91,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         extrap_tol=None,
         max_step=np.inf,
-        output_variables=[],
+        output_variables=None,
         options=None,
     ):
         # set default options,
@@ -115,7 +114,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     options[key] = value
         self._options = options
 
-        self.max_step = validate_max_step(max_step)
+        self.max_step = max_step
 
         self.output_variables = output_variables
 
@@ -517,7 +516,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return base_set_up_return
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, max_step=np.inf):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -529,6 +528,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
+        max_step : float, optional
+            Maximum allowed step size. Default is np.inf.
         """
         inputs_dict = inputs_dict or {}
         # stack inputs
@@ -580,6 +581,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 y0full,
                 ydot0full,
                 inputs,
+                max_step=max_step,
             )
         else:
             sol = idaklu.solve_python(
@@ -601,6 +603,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 rtol,
                 inputs,
                 self._setup["number_of_sensitivity_parameters"],
+                max_step=max_step,
             )
         integration_time = timer.time()
 
@@ -655,7 +658,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 number_of_samples = sol.y.shape[0] // number_of_timesteps
                 sol.y = sol.y.reshape((number_of_timesteps, number_of_samples))
                 startk = 0
-                for vark, var in enumerate(self.output_variables):
+                for _vark, var in enumerate(self.output_variables):
                     # ExplicitTimeIntegral's are not computed as part of the solver and
                     # do not need to be converted
                     if isinstance(

@@ -7,8 +7,6 @@ import pybamm
 import scipy.integrate as it
 import numpy as np
 
-from .base_solver import validate_max_step
-
 
 class ScipySolver(pybamm.BaseSolver):
     """Solve a discretised model, using scipy.integrate.solve_ivp.
@@ -52,7 +50,7 @@ class ScipySolver(pybamm.BaseSolver):
         self._ode_solver = True
         self.extra_options = extra_options or {}
         self.name = f"Scipy solver ({method})"
-        self.max_step = validate_max_step(max_step)
+        self.max_step = max_step
         pybamm.citations.register("Virtanen2020")
 
     def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
@@ -67,6 +65,8 @@ class ScipySolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
+        max_step : float, optional
+            Maximum allowed step size. Default is onp.inf.
 
         Returns
         -------
@@ -82,7 +82,12 @@ class ScipySolver(pybamm.BaseSolver):
         else:
             inputs = inputs_dict
 
-        extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
+        extra_options = {
+            **self.extra_options,
+            "rtol": self.rtol,
+            "atol": self.atol,
+            "max_step": self.max_step,
+        }
 
         # Initial conditions
         y0 = model.y0

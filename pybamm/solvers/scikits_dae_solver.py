@@ -8,8 +8,6 @@ import numpy as np
 import importlib
 import scipy.sparse as sparse
 
-from .base_solver import validate_max_step
-
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
     scikits_odes_spec = importlib.util.find_spec("scikits.odes")
@@ -72,13 +70,13 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         self.name = f"Scikits DAE solver ({method})"
 
         self.extra_options = extra_options or {}
-        self.max_step = validate_max_step(max_step)
+        self.max_step = max_step
 
         pybamm.citations.register("Malengier2018")
         pybamm.citations.register("Hindmarsh2000")
         pybamm.citations.register("Hindmarsh2005")
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
+    def _integrate(self, model, t_eval, inputs_dict=None, max_step=np.inf):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -90,6 +88,8 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
+        max_step : float, optional
+            Maximum allowed step size. Default is onp.inf.
 
         """
         inputs_dict = inputs_dict or {}
@@ -134,6 +134,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             "old_api": False,
             "rtol": self.rtol,
             "atol": self.atol,
+            "max_step": max_step,
         }
 
         if jacobian:
@@ -164,7 +165,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         sol = dae_solver.solve(t_eval, y0, ydot0)
         integration_time = timer.time()
 
-        # return solution, we need to tranpose y to match scipy's interface
+        # return solution, we need to transpose y to match scipy's interface
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             if sol.flag == 0:

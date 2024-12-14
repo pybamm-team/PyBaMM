@@ -4,7 +4,6 @@ import numpy as np
 import warnings
 from scipy.interpolate import interp1d
 from .lrudict import LRUDict
-from .base_solver import validate_max_step
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -109,7 +108,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 "'fast', for solving quickly without events, or 'safe without grid' or "
                 "'fast with events' (both experimental)"
             )
-        self.max_step = validate_max_step(max_step)
+        self.max_step = max_step
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_event = dt_event or 600
 
@@ -152,6 +151,8 @@ class CasadiSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
+        max_step : float, optional
+            Maximum allowed step size. Default is np.inf.
         """
 
         # Record whether there are any symbolic inputs
@@ -171,10 +172,14 @@ class CasadiSolver(pybamm.BaseSolver):
                 use_event_switch = False
             # Create an integrator with the grid (we just need to do this once)
             self.create_integrator(
-                model, inputs, t_eval, use_event_switch=use_event_switch
+                model,
+                inputs,
+                t_eval,
+                use_event_switch=use_event_switch,
+                max_step=self.max_step,
             )
             solution = self._run_integrator(
-                model, model.y0, inputs_dict, inputs, t_eval
+                model, model.y0, inputs_dict, inputs, t_eval, max_step=self.max_step
             )
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
@@ -193,7 +198,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # in "safe without grid" mode,
                 # create integrator once, without grid,
                 # to avoid having to create several times
-                self.create_integrator(model, inputs)
+                self.create_integrator(model, inputs, max_step=self.max_step)
                 # Initialize solution
                 solution = pybamm.Solution(
                     np.array([t]),
@@ -241,7 +246,10 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     if self.mode == "safe":
                         # update integrator with the grid
-                        self.create_integrator(model, inputs, t_window)
+                        self.create_integrator(
+                            model, inputs, t_window, max_step=self.max_step
+                        )
+
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
@@ -257,6 +265,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             t_window,
                             use_grid=use_grid,
                             extract_sensitivities_in_solution=False,
+                            max_step=self.max_step,
                         )
                         first_ts_solved = True
                         solved = True
