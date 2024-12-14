@@ -51,6 +51,7 @@ class BaseSolver:
         root_tol=1e-6,
         extrap_tol=None,
         output_variables=None,
+        max_step=None,
     ):
         self.method = method
         self.rtol = rtol
@@ -58,6 +59,7 @@ class BaseSolver:
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol or -1e-10
+        self.max_step = max_step
         self.output_variables = [] if output_variables is None else output_variables
         self._model_set_up = {}
 
