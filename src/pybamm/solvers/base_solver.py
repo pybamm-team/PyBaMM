@@ -37,6 +37,9 @@ class BaseSolver:
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     output_variables : list[str], optional
         List of variables to calculate and return. If none are specified then
         the complete state vector is returned (can be very large) (default is [])
@@ -51,7 +54,7 @@ class BaseSolver:
         root_tol=1e-6,
         extrap_tol=None,
         output_variables=None,
-        max_step=None,
+        max_step=np.inf,
     ):
         self.method = method
         self.rtol = rtol
