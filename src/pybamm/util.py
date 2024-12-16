@@ -123,10 +123,18 @@ class FuzzyDict(dict):
             If True, print both keys and values. Otherwise, print only keys.
             Default is False.
         """
+
+        if not keys or (isinstance(keys, str) and not keys.strip()):
+            print("Error: Please provide a non-empty search term.")
+            return
+        if isinstance(keys, list) and all(not str(k).strip() for k in keys):
+            print("Error: Please provide a non-empty search term in the list.")
+            return
+
         if isinstance(keys, str):
-            search_keys = [keys]
+            search_keys = [keys.strip()]
         else:
-            search_keys = keys.copy()
+            search_keys = [k.strip() for k in keys if k.strip()]
 
         original_keys = search_keys.copy()
         search_keys = [k.lower() for k in search_keys]

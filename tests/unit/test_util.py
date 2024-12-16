@@ -235,3 +235,23 @@ class TestSearch:
                 "Electrolyte concentration -> 1\n"
             )
             assert fake_out.getvalue() == out
+        # Test for empty string input
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("", print_values=True)
+            out = "Error: Please provide a non-empty search term.\n"
+            assert fake_out.getvalue() == out
+
+        # Test for list with all empty strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["", "   ", "\t"], print_values=True)
+            out = "Error: Please provide a non-empty search term in the list.\n"
+            assert fake_out.getvalue() == out
+
+        # Test for list with a mix of empty and valid strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["", "Electrolyte"], print_values=True)
+            out = (
+                "Results for 'Electrolyte': ['Electrolyte concentration']\n"
+                "Electrolyte concentration -> 1\n"
+            )
+            assert fake_out.getvalue() == out
