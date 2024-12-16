@@ -132,12 +132,11 @@ class FuzzyDict(dict):
             return
 
         if isinstance(keys, str):
-            search_keys = [keys.strip()]
+            original_keys = [keys]
+            search_keys = [keys.strip().lower()]
         else:
-            search_keys = [k.strip() for k in keys if k.strip()]
-
-        original_keys = search_keys.copy()
-        search_keys = [k.lower() for k in search_keys]
+            original_keys = keys
+            search_keys = [k.strip().lower() for k in keys if k.strip()]
 
         known_keys = list(self.keys())
         known_keys.sort()
@@ -150,7 +149,9 @@ class FuzzyDict(dict):
         ]
 
         if exact_matches:
-            print(f"Results for '{' '.join(original_keys)}': {exact_matches}")
+            print(
+                f"Results for '{' '.join(k for k in original_keys if k.strip())}': {exact_matches}"
+            )
             if print_values:
                 for match in exact_matches:
                     print(f"{match} -> {self[match]}")
