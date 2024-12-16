@@ -34,7 +34,16 @@ def set_iree_state():
                 ),
                 stacklevel=2,
             )
-            return "OFF"
+            state = "OFF"
+        if sys.version_info >= (3, 13):
+            warnings.warn(
+                (
+                    "IREE is not available for Python 3.13 or higher. "
+                    "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
+                ),
+                stacklevel=2,
+            )
+            state = "OFF"
     return state
 
 
