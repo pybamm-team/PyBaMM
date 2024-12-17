@@ -460,10 +460,12 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
             for i, phase_name in enumerate(particle_instance.keys()):
                 phase_instance = particle_instance[phase_name]
                 # Loop over fields in phase instance and add to pybamm dictionary
-                for name, field in phase_instance.model_fields.items():
-                    value = getattr(phase_instance, name)
-                    pybamm_name = PHASE_NAMES[i] + _get_pybamm_name(field.alias, domain)
-                    value = process_float_function_table(value, name)
+                for name_to_add, field_to_add in phase_instance.model_fields.items():
+                    value = getattr(phase_instance, name_to_add)
+                    pybamm_name = PHASE_NAMES[i] + _get_pybamm_name(
+                        field_to_add.alias, domain
+                    )
+                    value = process_float_function_table(value, name_to_add)
                     pybamm_dict[pybamm_name] = value
         # Handle other fields, which correspond directly to parameters
         else:
