@@ -427,9 +427,11 @@ class BaseInterface(pybamm.BaseSubModel):
         if j.domains["secondary"] == [f"{domain} electrode"]:
             # x-average
             j_xav = pybamm.x_average(j)
-        else:
+        elif getattr(self, "reaction_loc", None) != "interface":
             j_xav = j
             j = pybamm.SecondaryBroadcast(j_xav, [f"{domain} electrode"])
+        else:
+            j_xav = j
 
         variables = {
             f"{Domain} electrode {reaction_name}"
