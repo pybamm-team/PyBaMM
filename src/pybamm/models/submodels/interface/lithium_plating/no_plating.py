@@ -26,8 +26,13 @@ class NoPlating(BasePlating):
                 pybamm.Scalar(0), f"{self.domain} electrode", "current collector"
             )
         else:
-            zero = pybamm.PrimaryBroadcast(
-                pybamm.Scalar(0), f"{self.domain} {phase_name}particle size"
+            zero = pybamm.FullBroadcast(
+                pybamm.Scalar(0),
+                f"{self.domain} {phase_name}particle size",
+                {
+                    "secondary": f"{self.domain} electrode",
+                    "tertiary": "current collector",
+                },
             )
         variables = self._get_standard_concentration_variables(zero, zero)
         if self.size_distribution is False:

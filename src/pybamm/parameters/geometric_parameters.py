@@ -165,6 +165,12 @@ class ParticleGeometricParameters(BaseParameters):
         Dimensional electrode area-weighted particle-size distribution
         """
         Domain = self.domain.capitalize()
+        if "primary" in R.domains["primary"][0]:
+            self.phase_prefactor = "Primary: "
+        elif "secondary" in R.domains["primary"][0]:
+            self.phase_prefactor = "Secondary: "
+        else:
+            pass
         inputs = {f"{self.phase_prefactor}{Domain} particle-size variable [m]": R}
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{Domain} "

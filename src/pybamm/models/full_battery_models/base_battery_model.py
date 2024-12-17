@@ -867,6 +867,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "z": 10,
             "R_n": 30,
             "R_p": 30,
+            "R_n_prim": 30,
+            "R_p_prim": 30,
+            "R_n_sec": 30,
+            "R_p_sec": 30,
         }
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
@@ -887,6 +891,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive secondary particle": pybamm.Uniform1DSubMesh,
             "negative particle size": pybamm.Uniform1DSubMesh,
             "positive particle size": pybamm.Uniform1DSubMesh,
+            "negative primary particle size": pybamm.Uniform1DSubMesh,
+            "positive primary particle size": pybamm.Uniform1DSubMesh,
+            "negative secondary particle size": pybamm.Uniform1DSubMesh,
+            "positive secondary particle size": pybamm.Uniform1DSubMesh,
         }
         if self.options["dimensionality"] == 0:
             base_submeshes["current collector"] = pybamm.SubMesh0D
@@ -909,6 +917,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive secondary particle": pybamm.FiniteVolume(),
             "negative particle size": pybamm.FiniteVolume(),
             "positive particle size": pybamm.FiniteVolume(),
+            "negative primary particle size": pybamm.FiniteVolume(),
+            "positive primary particle size": pybamm.FiniteVolume(),
+            "negative secondary particle size": pybamm.FiniteVolume(),
+            "positive secondary particle size": pybamm.FiniteVolume(),
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method

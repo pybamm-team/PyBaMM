@@ -178,6 +178,7 @@ class Mesh(dict):
                 raise pybamm.DomainError(
                     "trying to combine two meshes in different coordinate systems"
                 )
+        print(submeshnames)
         combined_submesh_edges = np.concatenate(
             [self[submeshnames[0]].edges]
             + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]

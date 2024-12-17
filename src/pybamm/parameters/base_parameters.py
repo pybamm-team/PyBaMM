@@ -88,6 +88,8 @@ class BaseParameters:
             self.phase == "primary"
             and getattr(self.main_param.options, self.domain)["particle phases"] == "1"
         ):
+            print("hello old chap")
+            print(self.domain_Domain)
             # Only one phase, no need to distinguish between
             # "primary" and "secondary"
             self.phase_name = ""
@@ -95,6 +97,8 @@ class BaseParameters:
         else:
             # add a space so that we can use "" or (e.g.) "primary " interchangeably
             # when naming variables
+            print("hello young fellow")
+            print(self.domain_Domain, self.phase)
             self.phase_name = self.phase + " "
             self.phase_prefactor = self.phase.capitalize() + ": "
 
