@@ -230,7 +230,7 @@ class TestSymbol:
         expected_postorder = [
             "a",
             "c",
-            "*", 
+            "*",
             "a",
             "b",
             "*",
@@ -242,7 +242,7 @@ class TestSymbol:
             "a",
             "*",
             "-",
-            "*"
+            "*",
         ]
         for node, expect in zip(exp.pre_order(), expected_preorder):
             assert node.name == expect
