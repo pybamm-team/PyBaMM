@@ -4,42 +4,33 @@ Installation
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
 
-.. tab:: GNU/Linux and Windows
+.. tab:: pip
 
-   .. tab:: pip
+   PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
 
-      PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
+   .. code:: bash
 
-      .. code:: bash
+      pip install pybamm
 
-         pip install pybamm
+.. tab:: conda
 
-   .. tab:: conda
+   PyBaMM is available as a ``conda`` package through the conda-forge channel.
 
-      PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
+   The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <index.html#dependencies>`_ available on conda-forge.
 
-      .. code:: bash
+   .. note::
 
-         conda install -c conda-forge pybamm
+      At the moment, PyBaMM's conda-forge distribution does not include ``IDAKLUSolver``.
 
-.. tab:: macOS
+   .. code:: bash
 
-   .. tab:: pip
+      conda install -c conda-forge pybamm
 
-      PyBaMM can be installed via pip from `PyPI <https://pypi.org/project/pybamm>`__.
+   The ``pybamm-base`` package installs PyBaMM only with its `required dependencies <index.html#install-required-dependencies>`_.
 
-      .. code:: bash
+   .. code:: bash
 
-         pip install pybamm
-
-
-   .. tab:: conda
-
-      PyBaMM is part of the `Anaconda <https://docs.continuum.io/anaconda/>`_ distribution and is available as a conda package through the conda-forge channel.
-
-      .. code:: bash
-
-         conda install -c conda-forge pybamm
+      conda install -c conda-forge pybamm-base
 
 
 Optional solvers
@@ -72,6 +63,8 @@ Package                                                             Minimum supp
 `pandas <https://pypi.org/project/pandas/>`__                       1.5.0
 `pooch <https://www.fatiando.org/pooch/>`__                         1.8.1
 `posthog <https://posthog.com/>`__                                  3.6.5
+`pyyaml <https://pyyaml.org/>`__
+`platformdirs <https://platformdirs.readthedocs.io/en/latest/>`__
 =================================================================== ==========================
 
 .. _install.optional_dependencies:
@@ -111,6 +104,7 @@ Installable with ``pip install "pybamm[docs]"``
 Dependency                                                                                        Minimum Version    pip extra          Notes
 ================================================================================================= ================== ================== =======================================================================
 `sphinx <https://www.sphinx-doc.org/en/master/>`__                                                \-                 docs               Sphinx makes it easy to create intelligent and beautiful documentation.
+`sphinx_rtd_theme <https://pypi.org/project/sphinx-rtd-theme/>`__                                 \-                 docs               This Sphinx theme provides a great reader experience for documentation.
 `pydata-sphinx-theme <https://pydata-sphinx-theme.readthedocs.io/en/stable/>`__                   \-                 docs               A clean, Bootstrap-based Sphinx theme.
 `sphinx_design <https://sphinx-design.readthedocs.io/en/latest/>`__                               \-                 docs               A sphinx extension for designing.
 `sphinx-copybutton <https://sphinx-copybutton.readthedocs.io/en/latest/>`__                       \-                 docs               To copy codeblocks.
@@ -118,6 +112,13 @@ Dependency                                                                      
 `sphinx-inline-tabs <https://sphinx-inline-tabs.readthedocs.io/en/latest/>`__                     \-                 docs               Add inline tabbed content to your Sphinx documentation.
 `sphinxcontrib-bibtex <https://sphinxcontrib-bibtex.readthedocs.io/en/latest/>`__                 \-                 docs               For BibTeX citations.
 `sphinx-autobuild <https://sphinx-extensions.readthedocs.io/en/latest/sphinx-autobuild.html>`__   \-                 docs               For re-building docs once triggered.
+`sphinx-last-updated-by-git <https://pypi.org/project/sphinx-last-updated-by-git/>`__             \-                 docs               To get the "last updated" time for each Sphinx page from Git.
+`nbsphinx <https://nbsphinx.readthedocs.io/en/0.9.5/>`__                                          \-                 docs               Sphinx extension that provides a source parser for .ipynb files
+`ipykernel <https://pypi.org/project/ipykernel/>`__                                               \-                 docs               Provides the IPython kernel for Jupyter.
+`ipywidgets <https://ipywidgets.readthedocs.io/en/latest/>`__                                     \-                 docs               Interactive HTML widgets for Jupyter notebooks and the IPython kernel.
+`sphinx-gallery <https://pypi.org/project/sphinx-gallery/>`__                                     \-                 docs               Builds an HTML gallery of examples from any set of Python scripts.
+`sphinx-hoverxref <https://sphinx-hoverxref.readthedocs.io/en/latest/index.html>`__               \-                 docs               Sphinx extension to show a floating window.
+`sphinx-docsearch <https://sphinx-docsearch.readthedocs.io/>`__                                   \-                 docs               To replaces Sphinx’s built-in search with Algolia DocSearch.
 ================================================================================================= ================== ================== =======================================================================
 
 .. _install.examples_dependencies:
@@ -151,7 +152,9 @@ Dependency                                                                      
 `pytest <https://docs.pytest.org/en/stable/>`__                                  6.0.0              dev                For running the test suites.
 `pytest-doctestplus <https://github.com/scientific-python/pytest-doctestplus>`__ \-                 dev                For running doctests.
 `pytest-xdist <https://pytest-xdist.readthedocs.io/en/latest/>`__                \-                 dev                For running tests in parallel across distributed workers.
+`pytest-mock <https://pytest-mock.readthedocs.io/en/latest/index.html>`__        \-                 dev                Provides a mocker fixture.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
+`importlib-metadata <https://pypi.org/project/importlib-metadata/>`__            \-                 dev                Used to read metadata from Python packages.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:

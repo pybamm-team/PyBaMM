@@ -28,7 +28,7 @@ RUN uv venv $VIRTUAL_ENV
 RUN #!/bin/bash && source /home/pybamm/venv/bin/activate;
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN uv pip install --upgrade setuptools wheel wget cmake
+RUN uv pip install --upgrade setuptools wget cmake
 
 RUN python scripts/install_KLU_Sundials.py && \
 rm -rf pybind11 && \
