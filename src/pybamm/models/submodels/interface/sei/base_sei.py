@@ -263,7 +263,7 @@ class BaseModel(BaseInterface):
             )
 
         return variables
-    
+
     def _get_standard_reaction_distribution_variables(self, j_sei):
         """
         A private function to obtain the standard variables which
@@ -296,4 +296,3 @@ class BaseModel(BaseInterface):
             )
 
         return variables
-
