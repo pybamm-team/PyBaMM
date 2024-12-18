@@ -570,6 +570,13 @@ class Symbol:
         anytree = import_optional_dependency("anytree")
         return anytree.PreOrderIter(self)
 
+    def post_order(self):
+        """
+        returns an iterable that steps through the tree in post-order fashion.
+        """
+        anytree = import_optional_dependency("anytree")
+        return anytree.PostOrderIter(self)
+
     def __str__(self):
         """return a string representation of the node and its children."""
         return self._name
