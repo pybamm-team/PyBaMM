@@ -15,6 +15,7 @@ struct SetupOptions {
   int precon_half_bandwidth;
   int precon_half_bandwidth_keep;
   int num_threads;
+  int num_solvers;
   // IDALS linear solver interface
   std::string linear_solver; // klu, lapack, spbcg
   int linsol_max_iterations;
@@ -37,6 +38,7 @@ struct SolverOptions {
   double nonlinear_convergence_coefficient;
   double nonlinear_convergence_coefficient_ic;
   sunbooleantype suppress_algebraic_error;
+  bool hermite_interpolation;
   // IDA initial conditions calculation
   bool calc_ic;
   bool init_all_y_ic;

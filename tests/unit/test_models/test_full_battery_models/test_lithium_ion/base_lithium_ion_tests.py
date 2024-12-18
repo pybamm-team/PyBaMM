@@ -31,6 +31,10 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "lumped"}
         self.check_well_posedness(options)
 
+    def test_well_posed_lumped_thermal_model_surface_temperature(self):
+        options = {"thermal": "lumped", "surface temperature": "lumped"}
+        self.check_well_posedness(options)
+
     def test_well_posed_x_full_thermal_model(self):
         options = {"thermal": "x-full"}
         self.check_well_posedness(options)
@@ -273,6 +277,18 @@ class BaseUnitTestLithiumIon:
         options = {
             "SEI": "ec reaction limited (asymmetric)",
             "SEI porosity change": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_VonKolzenberg2020_model(self):
+        options = {
+            "SEI": "VonKolzenberg2020",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_tunnelling_limited(self):
+        options = {
+            "SEI": "tunnelling limited",
         }
         self.check_well_posedness(options)
 
@@ -582,5 +598,22 @@ class BaseUnitTestLithiumIon:
             "particle phases": ("2", "1"),
             "SEI": (("none", "solvent-diffusion limited"), "none"),
             "lithium plating": (("none", "irreversible"), "none"),
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_composite_LAM(self):
+        # phases with LAM degradation
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "SEI": "solvent-diffusion limited",
+            "loss of active material": "reaction-driven",
+        }
+        self.check_well_posedness(options)
+
+        options = {
+            "particle phases": ("2", "1"),
+            "open-circuit potential": (("single", "current sigmoid"), "single"),
+            "loss of active material": "stress-driven",
         }
         self.check_well_posedness(options)

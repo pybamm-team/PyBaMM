@@ -2,12 +2,11 @@ import nox
 import os
 import sys
 import warnings
-import platform
 from pathlib import Path
 
 
 # Options to modify nox behaviour
-nox.options.default_venv_backend = "virtualenv"
+nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
 if sys.platform != "win32":
     nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
@@ -27,28 +26,15 @@ def set_iree_state():
     """
     state = "ON" if os.getenv("PYBAMM_IDAKLU_EXPR_IREE", "OFF") == "ON" else "OFF"
     if state == "ON":
-        if sys.platform == "win32":
+        if sys.platform == "win32" or sys.platform == "darwin":
             warnings.warn(
                 (
-                    "IREE is not enabled on Windows yet. "
+                    "IREE is not enabled on Windows and MacOS. "
                     "Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
                 ),
                 stacklevel=2,
             )
             return "OFF"
-        if sys.platform == "darwin":
-            # iree-compiler is currently only available as a wheel on macOS 13 (or
-            # higher) and Python version 3.11
-            mac_ver = int(platform.mac_ver()[0].split(".")[0])
-            if (not sys.version_info[:2] == (3, 11)) or mac_ver < 13:
-                warnings.warn(
-                    (
-                        "IREE is only supported on MacOS 13 (or higher) and Python"
-                        "version 3.11. Setting PYBAMM_IDAKLU_EXPR_IREE=OFF."
-                    ),
-                    stacklevel=2,
-                )
-                return "OFF"
     return state
 
 
@@ -207,7 +193,7 @@ def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev]", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
         "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
@@ -222,7 +208,7 @@ def run_scripts(session):
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev]", silent=False)
+    session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
 
@@ -266,9 +252,11 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    specific_test_files = session.posargs if session.posargs else []
     session.run(
-        "python", "-m", "pytest", *specific_test_files, "-m", "unit or integration"
+        "python",
+        "-m",
+        "pytest",
+        *(session.posargs if session.posargs else ["-m", "unit or integration"]),
     )
 
 

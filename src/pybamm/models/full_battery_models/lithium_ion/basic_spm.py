@@ -26,7 +26,6 @@ class BasicSPM(BaseModel):
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
-        param = self.param
 
         ######################
         # Variables
@@ -44,23 +43,23 @@ class BasicSPM(BaseModel):
         )
 
         # Constant temperature
-        T = param.T_init
+        T = self.param.T_init
 
         ######################
         # Other set-up
         ######################
 
         # Current density
-        i_cell = param.current_density_with_time
-        a_n = 3 * param.n.prim.epsilon_s_av / param.n.prim.R_typ
-        a_p = 3 * param.p.prim.epsilon_s_av / param.p.prim.R_typ
-        j_n = i_cell / (param.n.L * a_n)
-        j_p = -i_cell / (param.p.L * a_p)
+        i_cell = self.param.current_density_with_time
+        a_n = 3 * self.param.n.prim.epsilon_s_av / self.param.n.prim.R_typ
+        a_p = 3 * self.param.p.prim.epsilon_s_av / self.param.p.prim.R_typ
+        j_n = i_cell / (self.param.n.L * a_n)
+        j_p = -i_cell / (self.param.p.L * a_p)
 
         ######################
         # State of Charge
         ######################
-        I = param.current_with_time
+        I = self.param.current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
         self.rhs[Q] = I / 3600
@@ -73,8 +72,8 @@ class BasicSPM(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
+        N_s_n = -self.param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -self.param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -pybamm.div(N_s_n)
         self.rhs[c_s_p] = -pybamm.div(N_s_p)
         # Surf takes the surface value of a variable, i.e. its boundary value on the
@@ -86,24 +85,24 @@ class BasicSPM(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_n / (param.F * pybamm.surf(param.n.prim.D(c_s_n, T))),
+                -j_n / (self.param.F * pybamm.surf(self.param.n.prim.D(c_s_n, T))),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -j_p / (param.F * pybamm.surf(param.p.prim.D(c_s_p, T))),
+                -j_p / (self.param.F * pybamm.surf(self.param.p.prim.D(c_s_p, T))),
                 "Neumann",
             ),
         }
         # c_n_init and c_p_init are functions of r and x, but for the SPM we
         # take the x-averaged value since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = pybamm.x_average(param.n.prim.c_init)
-        self.initial_conditions[c_s_p] = pybamm.x_average(param.p.prim.c_init)
+        self.initial_conditions[c_s_n] = pybamm.x_average(self.param.n.prim.c_init)
+        self.initial_conditions[c_s_p] = pybamm.x_average(self.param.p.prim.c_init)
         # Events specify points at which a solution should terminate
-        sto_surf_n = c_s_surf_n / param.n.prim.c_max
-        sto_surf_p = c_s_surf_p / param.p.prim.c_max
+        sto_surf_n = c_s_surf_n / self.param.n.prim.c_max
+        sto_surf_p = c_s_surf_p / self.param.p.prim.c_max
         self.events += [
             pybamm.Event(
                 "Minimum negative particle surface stoichiometry",
@@ -130,14 +129,14 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        RT_F = param.R * T / param.F
-        j0_n = param.n.prim.j0(param.c_e_init_av, c_s_surf_n, T)
-        j0_p = param.p.prim.j0(param.c_e_init_av, c_s_surf_p, T)
-        eta_n = (2 / param.n.prim.ne) * RT_F * pybamm.arcsinh(j_n / (2 * j0_n))
-        eta_p = (2 / param.p.prim.ne) * RT_F * pybamm.arcsinh(j_p / (2 * j0_p))
+        RT_F = self.param.R * T / self.param.F
+        j0_n = self.param.n.prim.j0(self.param.c_e_init_av, c_s_surf_n, T)
+        j0_p = self.param.p.prim.j0(self.param.c_e_init_av, c_s_surf_p, T)
+        eta_n = (2 / self.param.n.prim.ne) * RT_F * pybamm.arcsinh(j_n / (2 * j0_n))
+        eta_p = (2 / self.param.p.prim.ne) * RT_F * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0
-        phi_e = -eta_n - param.n.prim.U(sto_surf_n, T)
-        phi_s_p = eta_p + phi_e + param.p.prim.U(sto_surf_p, T)
+        phi_e = -eta_n - self.param.n.prim.U(sto_surf_n, T)
+        phi_s_p = eta_p + phi_e + self.param.p.prim.U(sto_surf_p, T)
         V = phi_s_p
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
@@ -157,7 +156,7 @@ class BasicSPM(BaseModel):
                 c_s_surf_n, "negative electrode"
             ),
             "Electrolyte concentration [mol.m-3]": pybamm.PrimaryBroadcast(
-                param.c_e_init_av, whole_cell
+                self.param.c_e_init_av, whole_cell
             ),
             "X-averaged positive particle concentration [mol.m-3]": c_s_p,
             "Positive particle surface "
@@ -178,6 +177,6 @@ class BasicSPM(BaseModel):
         }
         # Events specify points at which a solution should terminate
         self.events += [
-            pybamm.Event("Minimum voltage [V]", V - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage [V]", param.voltage_high_cut - V),
+            pybamm.Event("Minimum voltage [V]", V - self.param.voltage_low_cut),
+            pybamm.Event("Maximum voltage [V]", self.param.voltage_high_cut - V),
         ]

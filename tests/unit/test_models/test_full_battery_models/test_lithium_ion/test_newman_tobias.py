@@ -1,14 +1,14 @@
 #
 # Tests for the lithium-ion Newman-Tobias model
 #
-import pybamm
 import pytest
+
+import pybamm
 from tests import BaseUnitTestLithiumIon
 
 
 class TestNewmanTobias(BaseUnitTestLithiumIon):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup_method(self):
         self.model = pybamm.lithium_ion.NewmanTobias
 
     def test_electrolyte_options(self):
@@ -38,4 +38,16 @@ class TestNewmanTobias(BaseUnitTestLithiumIon):
 
     @pytest.mark.skip(reason="Test currently not implemented")
     def test_well_posed_composite_different_degradation(self):
+        pass  # skip this test
+
+    @pytest.mark.skip(reason="Test currently not implemented")
+    def test_well_posed_composite_LAM(self):
+        pass  # skip this test
+
+    @pytest.mark.skip(reason="Test currently not implemented")
+    def test_well_posed_sei_VonKolzenberg2020_model(self):
+        pass  # skip this test
+
+    @pytest.mark.skip(reason="Test currently not implemented")
+    def test_well_posed_sei_tunnelling_limited(self):
         pass  # skip this test

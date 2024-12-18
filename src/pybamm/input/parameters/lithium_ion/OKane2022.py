@@ -85,9 +85,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
 
     gamma_0 = pybamm.Parameter("Dead lithium decay constant [s-1]")
-    L_inner_0 = pybamm.Parameter("Initial inner SEI thickness [m]")
-    L_outer_0 = pybamm.Parameter("Initial outer SEI thickness [m]")
-    L_sei_0 = L_inner_0 + L_outer_0
+    L_sei_0 = pybamm.Parameter("Initial SEI thickness [m]")
 
     gamma = gamma_0 * L_sei_0 / L_sei
 
@@ -96,7 +94,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
 
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
-    LG M50 Graphite diffusivity as a function of stochiometry, in this case the
+    LG M50 Graphite diffusivity as a function of stoichiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from [1].
 
     References
@@ -109,7 +107,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
     T: :class:`pybamm.Symbol`
        Dimensional temperature
 
@@ -165,9 +163,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def graphite_volume_change_Ai2020(sto, c_s_max):
+def graphite_volume_change_Ai2020(sto):
     """
-    Graphite particle volume change as a function of stochiometry [1, 2].
+    Graphite particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -182,7 +180,7 @@ def graphite_volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
     Returns
     -------
@@ -260,7 +258,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
      Parameters
      ----------
      sto: :class:`pybamm.Symbol`
-       Electrode stochiometry
+       Electrode stoichiometry
      T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -279,7 +277,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
 
 def nmc_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 NMC open-circuit potential as a function of stochiometry, fit taken
+    LG M50 NMC open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
     References
@@ -292,7 +290,7 @@ def nmc_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
@@ -344,9 +342,9 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_m
     return m_ref * arrhenius * c_e**0.5 * c_s_surf**0.5 * (c_s_max - c_s_surf) ** 0.5
 
 
-def volume_change_Ai2020(sto, c_s_max):
+def volume_change_Ai2020(sto):
     """
-    Particle volume change as a function of stochiometry [1, 2].
+    Particle volume change as a function of stoichiometry [1, 2].
 
     References
     ----------
@@ -361,7 +359,7 @@ def volume_change_Ai2020(sto, c_s_max):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry, dimensionless
+        Electrode stoichiometry, dimensionless
         should be R-averaged particle concentration
     Returns
     -------
@@ -369,6 +367,7 @@ def volume_change_Ai2020(sto, c_s_max):
         volume change, dimensionless, normalised by particle volume
     """
     omega = pybamm.Parameter("Positive electrode partial molar volume [m3.mol-1]")
+    c_s_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
     t_change = omega * c_s_max * sto
     return t_change
 
@@ -522,26 +521,20 @@ def get_parameter_values():
         "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
         # sei
         "Ratio of lithium moles to SEI moles": 1.0,
-        "Inner SEI reaction proportion": 0.0,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "SEI solvent diffusivity [m2.s-1]": 2.5e-22,
         "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "SEI open-circuit potential [V]": 0.4,
+        "SEI electron conductivity [S.m-1]": 8.95e-14,
+        "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 0.0,
-        "Initial outer SEI thickness [m]": 5e-09,
-        "Initial inner SEI on cracks thickness [m]": 0,
-        "Initial outer SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
+        "Initial SEI thickness [m]": 5e-09,
+        "Initial SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.4,
         "SEI growth activation energy [J.mol-1]": 38000.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,

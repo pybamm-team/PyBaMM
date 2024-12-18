@@ -237,7 +237,7 @@ Finally, to run the unit and the integration suites sequentially, use
 
 	nox -s tests
 
-Using the test runner
+Using pytest
 ~~~~~~~~~~~~~~~~~~~~~~
 
 You can run unit tests for PyBaMM using
@@ -245,23 +245,19 @@ You can run unit tests for PyBaMM using
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  python run-tests.py --unit
+	  pytest -m unit
 
 
-The above starts a sub-process using the current python interpreter (i.e. using your current
-Python environment) and run the unit tests. This can take a few minutes.
+The above uses pytest (in your current
+Python environment) to run the unit tests. This can take a few minutes.
 
-You can also use the test runner to run the doctests:
-
-.. code:: bash
-
-	  python run-tests.py --doctest
-
-There is more to the PyBaMM test runner. To see a list of all options, type
+You can also use pytest to run the doctests:
 
 .. code:: bash
 
-	  python run-tests.py --help
+	  pytest --doctest-plus src
+
+Refer to the `testing <https://docs.pybamm.org/en/stable/source/user_guide/contributing.html#testing>`_ docs to find out more ways to test PyBaMM using pytest.
 
 How to build the PyBaMM documentation
 -------------------------------------

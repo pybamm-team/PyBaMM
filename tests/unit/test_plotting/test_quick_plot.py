@@ -1,13 +1,18 @@
 import os
 import pybamm
-import unittest
+import pytest
 
 import numpy as np
 from tempfile import TemporaryDirectory
 
 
-class TestQuickPlot(unittest.TestCase):
-    def test_simple_ode_model(self):
+class TestQuickPlot:
+    _solver_args = [pybamm.CasadiSolver()]
+    if pybamm.has_idaklu():
+        _solver_args.append(pybamm.IDAKLUSolver())
+
+    @pytest.mark.parametrize("solver", _solver_args)
+    def test_simple_ode_model(self, solver):
         model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -48,9 +53,6 @@ class TestQuickPlot(unittest.TestCase):
             "NaN variable": pybamm.Scalar(np.nan),
         }
 
-        # ODEs only (don't use Jacobian)
-        model.use_jacobian = False
-
         # Process and solve
         geometry = model.default_geometry
         param = model.default_parameter_values
@@ -59,7 +61,6 @@ class TestQuickPlot(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        solver = model.default_solver
         t_eval = np.linspace(0, 2, 100)
         solution = solver.solve(model, t_eval)
         quick_plot = pybamm.QuickPlot(
@@ -77,11 +78,11 @@ class TestQuickPlot(unittest.TestCase):
         # update the axis
         new_axis = [0, 0.5, 0, 1]
         quick_plot.axis_limits.update({("a",): new_axis})
-        self.assertEqual(quick_plot.axis_limits[("a",)], new_axis)
+        assert quick_plot.axis_limits[("a",)] == new_axis
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis_limits[("a",)], new_axis)
+        assert quick_plot.axis_limits[("a",)] != new_axis
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(show_plot=False)
@@ -90,7 +91,7 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test with different output variables
         quick_plot = pybamm.QuickPlot(solution, ["b broadcasted"])
-        self.assertEqual(len(quick_plot.axis_limits), 1)
+        assert len(quick_plot.axis_limits) == 1
         quick_plot.plot(0)
 
         quick_plot = pybamm.QuickPlot(
@@ -103,18 +104,18 @@ class TestQuickPlot(unittest.TestCase):
                 "c broadcasted positive electrode",
             ],
         )
-        self.assertEqual(len(quick_plot.axis_limits), 5)
+        assert len(quick_plot.axis_limits) == 5
         quick_plot.plot(0)
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
         var_key = ("c broadcasted",)
         quick_plot.axis_limits.update({var_key: new_axis})
-        self.assertEqual(quick_plot.axis_limits[var_key], new_axis)
+        assert quick_plot.axis_limits[var_key] == new_axis
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis_limits[var_key], new_axis)
+        assert quick_plot.axis_limits[var_key] != new_axis
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(show_plot=False)
@@ -135,60 +136,67 @@ class TestQuickPlot(unittest.TestCase):
             labels=["sol 1", "sol 2"],
             n_rows=2,
         )
-        self.assertEqual(quick_plot.colors, ["r", "g", "b"])
-        self.assertEqual(quick_plot.linestyles, ["-", "--"])
-        self.assertEqual(quick_plot.figsize, (1, 2))
-        self.assertEqual(quick_plot.labels, ["sol 1", "sol 2"])
-        self.assertEqual(quick_plot.n_rows, 2)
-        self.assertEqual(quick_plot.n_cols, 1)
+        assert quick_plot.colors == ["r", "g", "b"]
+        assert quick_plot.linestyles == ["-", "--"]
+        assert quick_plot.figsize == (1, 2)
+        assert quick_plot.labels == ["sol 1", "sol 2"]
+        assert quick_plot.n_rows == 2
+        assert quick_plot.n_cols == 1
+
+        if solution.hermite_interpolation:
+            t_plot = np.union1d(
+                solution.t, np.linspace(solution.t[0], solution.t[-1], 100 + 2)[1:-1]
+            )
+        else:
+            t_plot = t_eval
 
         # Test different time units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.time_scaling_factor, 1)
+        assert quick_plot.time_scaling_factor == 1
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="seconds")
         quick_plot.plot(0)
-        self.assertEqual(quick_plot.time_scaling_factor, 1)
+        assert quick_plot.time_scaling_factor == 1
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
         quick_plot.plot(0)
-        self.assertEqual(quick_plot.time_scaling_factor, 60)
+        assert quick_plot.time_scaling_factor == 60
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 60
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
         quick_plot.plot(0)
-        self.assertEqual(quick_plot.time_scaling_factor, 3600)
+        assert quick_plot.time_scaling_factor == 3600
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 3600
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
         )
-        with self.assertRaisesRegex(ValueError, "time unit"):
+        with pytest.raises(ValueError, match="time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
         # long solution defaults to hours instead of seconds
         solution_long = solver.solve(model, np.linspace(0, 1e5))
         quick_plot = pybamm.QuickPlot(solution_long, ["a"])
-        self.assertEqual(quick_plot.time_scaling_factor, 3600)
+        assert quick_plot.time_scaling_factor == 3600
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.spatial_unit, r"$\mu$m")
+        assert quick_plot.spatial_unit == r"$\mu$m"
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="m")
-        self.assertEqual(quick_plot.spatial_unit, "m")
+        assert quick_plot.spatial_unit == "m"
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="mm")
-        self.assertEqual(quick_plot.spatial_unit, "mm")
+        assert quick_plot.spatial_unit == "mm"
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="um")
-        self.assertEqual(quick_plot.spatial_unit, r"$\mu$m")
-        with self.assertRaisesRegex(ValueError, "spatial unit"):
+        assert quick_plot.spatial_unit == r"$\mu$m"
+        with pytest.raises(ValueError, match="spatial unit"):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
         # Test 2D variables
@@ -197,24 +205,25 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.dynamic_plot(show_plot=False)
         quick_plot.slider_update(0.01)
 
-        with self.assertRaisesRegex(NotImplementedError, "Cannot plot 2D variables"):
+        with pytest.raises(NotImplementedError, match="Cannot plot 2D variables"):
             pybamm.QuickPlot([solution, solution], ["2D variable"])
 
         # Test different variable limits
         quick_plot = pybamm.QuickPlot(
             solution, ["a", ["c broadcasted", "c broadcasted"]], variable_limits="tight"
         )
-        self.assertEqual(quick_plot.axis_limits[("a",)][2:], [None, None])
-        self.assertEqual(
-            quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:], [None, None]
-        )
+        assert quick_plot.axis_limits[("a",)][2:] == [None, None]
+        assert quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:] == [
+            None,
+            None,
+        ]
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
         quick_plot = pybamm.QuickPlot(
             solution, ["2D variable"], variable_limits="tight"
         )
-        self.assertEqual(quick_plot.variable_limits[("2D variable",)], (None, None))
+        assert quick_plot.variable_limits[("2D variable",)] == (None, None)
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
@@ -223,41 +232,37 @@ class TestQuickPlot(unittest.TestCase):
             ["a", ["c broadcasted", "c broadcasted"]],
             variable_limits={"a": [1, 2], ("c broadcasted", "c broadcasted"): [3, 4]},
         )
-        self.assertEqual(quick_plot.axis_limits[("a",)][2:], [1, 2])
-        self.assertEqual(
-            quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:], [3, 4]
-        )
+        assert quick_plot.axis_limits[("a",)][2:] == [1, 2]
+        assert quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:] == [3, 4]
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
         quick_plot = pybamm.QuickPlot(
             solution, ["a", "b broadcasted"], variable_limits={"a": "tight"}
         )
-        self.assertEqual(quick_plot.axis_limits[("a",)][2:], [None, None])
-        self.assertNotEqual(
-            quick_plot.axis_limits[("b broadcasted",)][2:], [None, None]
-        )
+        assert quick_plot.axis_limits[("a",)][2:] == [None, None]
+        assert quick_plot.axis_limits[("b broadcasted",)][2:] != [None, None]
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
-        with self.assertRaisesRegex(
-            TypeError, "variable_limits must be 'fixed', 'tight', or a dict"
+        with pytest.raises(
+            TypeError, match="variable_limits must be 'fixed', 'tight', or a dict"
         ):
             pybamm.QuickPlot(
                 solution, ["a", "b broadcasted"], variable_limits="bad variable limits"
             )
 
         # Test errors
-        with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
+        with pytest.raises(ValueError, match="Mismatching variable domains"):
             pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
-        with self.assertRaisesRegex(ValueError, "labels"):
+        with pytest.raises(ValueError, match="labels"):
             pybamm.QuickPlot(
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
         # No variable can be NaN
-        with self.assertRaisesRegex(
-            ValueError, "All-NaN variable 'NaN variable' provided"
+        with pytest.raises(
+            ValueError, match="All-NaN variable 'NaN variable' provided"
         ):
             pybamm.QuickPlot(solution, ["NaN variable"])
 
@@ -269,7 +274,7 @@ class TestQuickPlot(unittest.TestCase):
         model.rhs = {a: pybamm.Scalar(0)}
         model.initial_conditions = {a: pybamm.Scalar(0)}
         solution = pybamm.CasadiSolver("fast").solve(model, [0, 1])
-        with self.assertRaisesRegex(ValueError, "No default output variables"):
+        with pytest.raises(ValueError, match="No default output variables"):
             pybamm.QuickPlot(solution)
 
     def test_spm_simulation(self):
@@ -462,17 +467,17 @@ class TestQuickPlot(unittest.TestCase):
             ][1]
             np.testing.assert_array_almost_equal(qp_data.T, phi_n[:, :, -1])
 
-        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
+        with pytest.raises(NotImplementedError, match="Shape not recognized for"):
             pybamm.QuickPlot(solution, ["Negative particle concentration [mol.m-3]"])
 
         pybamm.close_plots()
 
     def test_invalid_input_type_failure(self):
-        with self.assertRaisesRegex(TypeError, "Solutions must be"):
+        with pytest.raises(TypeError, match="Solutions must be"):
             pybamm.QuickPlot(1)
 
     def test_empty_list_failure(self):
-        with self.assertRaisesRegex(TypeError, "QuickPlot requires at least 1"):
+        with pytest.raises(TypeError, match="QuickPlot requires at least 1"):
             pybamm.QuickPlot([])
 
     def test_model_with_inputs(self):
@@ -509,20 +514,10 @@ class TestQuickPlot(unittest.TestCase):
         pybamm.close_plots()
 
 
-class TestQuickPlotAxes(unittest.TestCase):
+class TestQuickPlotAxes:
     def test_quick_plot_axes(self):
         axes = pybamm.QuickPlotAxes()
         axes.add(("test 1", "test 2"), 1)
-        self.assertEqual(axes[0], 1)
-        self.assertEqual(axes.by_variable("test 1"), 1)
-        self.assertEqual(axes.by_variable("test 2"), 1)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert axes[0] == 1
+        assert axes.by_variable("test 1") == 1
+        assert axes.by_variable("test 2") == 1

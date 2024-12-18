@@ -43,8 +43,7 @@ class Full(BaseThroughCellModel):
 
     def get_coupled_variables(self, variables):
         # Set up
-        param = self.param
-        L_n = param.n.L
+        L_n = self.param.n.L
         x_s = pybamm.standard_spatial_vars.x_s
 
         # Transverse velocity in the separator determines through-cell velocity
@@ -52,7 +51,7 @@ class Full(BaseThroughCellModel):
             "X-averaged separator transverse volume-averaged acceleration [m.s-2]"
         ]
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        v_box_n_right = -param.n.DeltaV * i_boundary_cc / self.param.F
+        v_box_n_right = -self.param.n.DeltaV * i_boundary_cc / self.param.F
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 

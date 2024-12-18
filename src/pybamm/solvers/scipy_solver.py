@@ -150,7 +150,7 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event,
                 y_event,
                 termination,
-                sensitivities=bool(model.calculate_sensitivities),
+                all_sensitivities=bool(model.calculate_sensitivities),
             )
             sol.integration_time = integration_time
             return sol

@@ -54,15 +54,15 @@ class CurrentCollector2D(BaseThermal):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating [W.m-3]"]
-        T_amb = variables["Ambient temperature [K]"]
+        T_surf = variables["Surface temperature [K]"]
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
         # Calculate cooling
         Q_yz_surface_W_per_m2 = -(self.param.n.h_cc(y, z) + self.param.p.h_cc(y, z)) * (
-            T_av - T_amb
+            T_av - T_surf
         )
-        Q_edge_W_per_m2 = -self.param.h_edge(y, z) * (T_av - T_amb)
+        Q_edge_W_per_m2 = -self.param.h_edge(y, z) * (T_av - T_surf)
 
         # Account for surface area to volume ratio of pouch cell in surface cooling
         # term
@@ -98,14 +98,14 @@ class CurrentCollector2D(BaseThermal):
 
     def set_boundary_conditions(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
-        T_amb = variables["Ambient temperature [K]"]
+        T_surf = variables["Surface temperature [K]"]
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
         # Calculate heat fluxes
-        q_tab_n = -self.param.n.h_tab * (T_av - T_amb)
-        q_tab_p = -self.param.p.h_tab * (T_av - T_amb)
-        q_edge = -self.param.h_edge(y, z) * (T_av - T_amb)
+        q_tab_n = -self.param.n.h_tab * (T_av - T_surf)
+        q_tab_p = -self.param.p.h_tab * (T_av - T_surf)
+        q_edge = -self.param.h_edge(y, z) * (T_av - T_surf)
 
         # Subtract the edge cooling from the tab portion so as to not double count
         # Note: tab cooling is also only applied on the current collector hence

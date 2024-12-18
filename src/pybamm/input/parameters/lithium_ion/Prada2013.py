@@ -4,7 +4,7 @@ import numpy as np
 
 def graphite_LGM50_ocp_Chen2020(sto):
     """
-    LG M50 Graphite open-circuit potential as a function of stochiometry, fit taken
+    LG M50 Graphite open-circuit potential as a function of stoichiometry, fit taken
     from [1]. Prada2013 doesn't give an OCP for graphite, so we use this instead.
 
     References
@@ -17,7 +17,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
 
     Returns
     -------
@@ -86,7 +86,7 @@ def LFP_ocp_Afshar2017(sto):
     Parameters
     ----------
     sto : :class:`pybamm.Symbol`
-       Stochiometry of material (li-fraction)
+       stoichiometry of material (li-fraction)
 
     """
 

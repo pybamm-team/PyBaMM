@@ -9,7 +9,6 @@ from tests import (
     get_1p1d_mesh_for_testing,
 )
 import numpy as np
-import unittest
 
 
 def errors(pts, function, method_options, bcs=None):
@@ -57,11 +56,13 @@ def get_errors(function, method_options, pts, bcs=None):
     return l_errors, r_errors
 
 
-class TestExtrapolation(unittest.TestCase):
+class TestExtrapolation:
     def test_convergence_without_bcs(self):
         # all tests are performed on x in [0, 1]
-        linear = {"extrapolation": {"order": "linear"}}
-        quad = {"extrapolation": {"order": "quadratic"}}
+        linear = {"extrapolation": {"order": {"gradient": "linear", "value": "linear"}}}
+        quad = {
+            "extrapolation": {"order": {"gradient": "quadratic", "value": "quadratic"}}
+        }
 
         def x_squared(x):
             y = x**2
@@ -148,8 +149,18 @@ class TestExtrapolation(unittest.TestCase):
 
         bcs = {"left": (left_val, "Dirichlet"), "right": (right_flux, "Neumann")}
 
-        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
-        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+        linear = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        quad = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
         l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
         l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
 
@@ -203,8 +214,18 @@ class TestExtrapolation(unittest.TestCase):
 
         bcs = {"left": (left_flux, "Neumann"), "right": (right_val, "Dirichlet")}
 
-        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
-        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+        linear = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        quad = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
         l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
         l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
 
@@ -238,7 +259,12 @@ class TestExtrapolation(unittest.TestCase):
     def test_linear_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "linear", "use bcs": True}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -262,8 +288,8 @@ class TestExtrapolation(unittest.TestCase):
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(macro_submesh.nodes[:, np.newaxis])
-        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 2)
-        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 3)
+        assert extrap_left_disc.evaluate(None, constant_y) == 2
+        assert extrap_right_disc.evaluate(None, constant_y) == 3
 
         # check linear variable extrapolates correctly
         linear_y = macro_submesh.nodes
@@ -297,7 +323,7 @@ class TestExtrapolation(unittest.TestCase):
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(micro_submesh.nodes[:, np.newaxis])
-        self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1.0)
+        assert surf_eqn_disc.evaluate(None, constant_y) == 1.0
 
         # check linear variable extrapolates correctly
         linear_y = micro_submesh.nodes
@@ -309,7 +335,12 @@ class TestExtrapolation(unittest.TestCase):
     def test_quadratic_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -359,7 +390,7 @@ class TestExtrapolation(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             extrap_flux_left_disc.evaluate(None, constant_y), 0
         )
-        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+        assert extrap_flux_right_disc.evaluate(None, constant_y) == 0
 
         # check linear variable extrapolates correctly
         np.testing.assert_array_almost_equal(
@@ -403,7 +434,12 @@ class TestExtrapolation(unittest.TestCase):
         rpts = 10
         var_pts = {"r_n": rpts, "r_p": rpts}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {"negative particle": pybamm.FiniteVolume(method_options)}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -430,7 +466,12 @@ class TestExtrapolation(unittest.TestCase):
     def test_extrapolate_2d_models(self):
         # create discretisation
         mesh = get_p2d_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -448,7 +489,7 @@ class TestExtrapolation(unittest.TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
+        assert extrap_right_disc.domain == ["negative electrode"]
         # evaluate
         y_macro = mesh["negative electrode"].nodes
         y_micro = mesh["negative particle"].nodes
@@ -462,7 +503,7 @@ class TestExtrapolation(unittest.TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, [])
+        assert extrap_right_disc.domain == []
 
         # 2d macroscale
         mesh = get_1p1d_mesh_for_testing()
@@ -471,7 +512,7 @@ class TestExtrapolation(unittest.TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, [])
+        assert extrap_right_disc.domain == []
 
         # test extrapolate to "negative tab" gives same as "left" and
         # "positive tab" gives same "right" (see get_mesh_for_testing)
@@ -497,13 +538,3 @@ class TestExtrapolation(unittest.TestCase):
             extrap_pos_disc.evaluate(None, constant_y),
             extrap_right_disc.evaluate(None, constant_y),
         )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

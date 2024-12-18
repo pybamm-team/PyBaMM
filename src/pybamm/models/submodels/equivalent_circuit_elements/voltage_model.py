@@ -54,7 +54,7 @@ class VoltageModel(pybamm.BaseSubModel):
 
         return variables
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         voltage = variables["Voltage [V]"]
 
         # Add voltage events

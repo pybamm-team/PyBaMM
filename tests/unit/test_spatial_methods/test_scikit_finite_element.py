@@ -2,21 +2,21 @@
 # Test for the operator class
 #
 
+import pytest
 import pybamm
 from tests import get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
 import numpy as np
-import unittest
 
 
-class TestScikitFiniteElement(unittest.TestCase):
+class TestScikitFiniteElement:
     def test_not_implemented(self):
         mesh = get_2p1d_mesh_for_testing(include_particles=False)
         spatial_method = pybamm.ScikitFiniteElement()
         spatial_method.build(mesh)
-        self.assertEqual(spatial_method.mesh, mesh)
-        with self.assertRaises(NotImplementedError):
+        assert spatial_method.mesh == mesh
+        with pytest.raises(NotImplementedError):
             spatial_method.divergence(None, None, None)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
 
     def test_discretise_equations(self):
@@ -100,7 +100,7 @@ class TestScikitFiniteElement(unittest.TestCase):
                 "positive tab": (pybamm.Scalar(1), "Other BC"),
             }
         }
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
         disc.bcs = {
             var: {
@@ -108,19 +108,19 @@ class TestScikitFiniteElement(unittest.TestCase):
                 "positive tab": (pybamm.Scalar(1), "Neumann"),
             }
         }
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
 
         # raise ModelError if no BCs provided
         new_var = pybamm.Variable("new_var", domain="current collector")
         disc.set_variable_slices([new_var])
         eqn = pybamm.laplacian(new_var)
-        with self.assertRaises(pybamm.ModelError):
+        with pytest.raises(pybamm.ModelError):
             eqn_disc = disc.process_symbol(eqn)
 
         # check GeometryError if using scikit-fem not in y or z
         x = pybamm.SpatialVariable("x", ["current collector"])
-        with self.assertRaises(pybamm.GeometryError):
+        with pytest.raises(pybamm.GeometryError):
             disc.process_symbol(x)
 
     def test_gradient(self):
@@ -389,14 +389,14 @@ class TestScikitFiniteElement(unittest.TestCase):
         # row (default)
         vec = pybamm.DefiniteIntegralVector(var)
         vec_disc = disc.process_symbol(vec)
-        self.assertEqual(vec_disc.shape[0], 1)
-        self.assertEqual(vec_disc.shape[1], mesh["current collector"].npts)
+        assert vec_disc.shape[0] == 1
+        assert vec_disc.shape[1] == mesh["current collector"].npts
 
         # column
         vec = pybamm.DefiniteIntegralVector(var, vector_type="column")
         vec_disc = disc.process_symbol(vec)
-        self.assertEqual(vec_disc.shape[0], mesh["current collector"].npts)
-        self.assertEqual(vec_disc.shape[1], 1)
+        assert vec_disc.shape[0] == mesh["current collector"].npts
+        assert vec_disc.shape[1] == 1
 
     def test_neg_pos(self):
         mesh = get_2p1d_mesh_for_testing(include_particles=False)
@@ -423,7 +423,7 @@ class TestScikitFiniteElement(unittest.TestCase):
 
         # test BoundaryGradient not implemented
         extrap_neg = pybamm.BoundaryGradient(var, "negative tab")
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             disc.process_symbol(extrap_neg)
 
     def test_boundary_integral(self):
@@ -562,13 +562,3 @@ class TestScikitFiniteElement(unittest.TestCase):
         # spatial vars should discretise to the flattend meshgrid
         np.testing.assert_array_equal(y_disc.evaluate(), y_actual)
         np.testing.assert_array_equal(z_disc.evaluate(), z_actual)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

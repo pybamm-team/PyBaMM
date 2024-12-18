@@ -32,7 +32,6 @@ class Integrated(BaseElectrolyteConductivity):
         return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
-        param = self.param
         c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
 
         i_boundary_cc = variables["Current collector current density [A.m-2]"]
@@ -55,22 +54,21 @@ class Integrated(BaseElectrolyteConductivity):
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
-        RT_F_av = param.R * T_av / param.F
-        RT_F_av_n = param.R * T_av_n / param.F
-        RT_F_av_s = param.R * T_av_s / param.F
-        RT_F_av_p = param.R * T_av_p / param.F
+        RT_F_av = self.param.R * T_av / self.param.F
+        RT_F_av_n = self.param.R * T_av_n / self.param.F
+        RT_F_av_s = self.param.R * T_av_s / self.param.F
+        RT_F_av_p = self.param.R * T_av_p / self.param.F
 
-        param = self.param
-        L_n = param.n.L
-        L_p = param.p.L
-        L_x = param.L_x
+        L_n = self.param.n.L
+        L_p = self.param.p.L
+        L_x = self.param.L_x
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
         x_n_edge = pybamm.standard_spatial_vars.x_n_edge
         x_p_edge = pybamm.standard_spatial_vars.x_p_edge
 
-        chi_av = param.chi(c_e_av, T_av)
+        chi_av = self.param.chi(c_e_av, T_av)
         chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
         chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
@@ -87,13 +85,13 @@ class Integrated(BaseElectrolyteConductivity):
 
         # electrolyte potential
         indef_integral_n = pybamm.IndefiniteIntegral(
-            i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
+            i_e_n_edge / (self.param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
         )
         indef_integral_s = pybamm.IndefiniteIntegral(
-            i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
+            i_e_s_edge / (self.param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
         )
         indef_integral_p = pybamm.IndefiniteIntegral(
-            i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
+            i_e_p_edge / (self.param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
         )
 
         integral_n = indef_integral_n

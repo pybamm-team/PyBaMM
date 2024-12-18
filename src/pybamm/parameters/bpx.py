@@ -108,7 +108,7 @@ def _get_phase_names(domain):
         )
 
 
-def _bpx_to_param_dict(bpx: BPX) -> dict:
+def bpx_to_param_dict(bpx: BPX) -> dict:
     """
     Turns a BPX object in to a dictionary of parameters for PyBaMM
     """
@@ -222,17 +222,14 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             domain.pre_name + "transport efficiency"
         ] ** (1.0 / 1.5)
 
+    def _get_activation_energy(var_name):
+        return pybamm_dict.get(var_name) or 0.0
+
     # define functional forms for pybamm parameters that depend on more than one
     # variable
 
     def _arrhenius(Ea, T):
         return exp(Ea / constants.R * (1 / T_ref - 1 / T))
-
-    def _entropic_change(sto, c_s_max, dUdT, constant=False):
-        if constant:
-            return dUdT
-        else:
-            return dUdT(sto)
 
     # reaction rates in pybamm exchange current is defined j0 = k * sqrt(ce * cs *
     # (cs-cs_max)) in BPX exchange current is defined j0 = F * k_norm * sqrt((ce/ce0) *
@@ -284,25 +281,10 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 )
 
             # entropic change
-            dUdT = pybamm_dict[
-                phase_domain_pre_name + "entropic change coefficient [V.K-1]"
-            ]
-            if callable(dUdT):
+            dUdT = pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"]
+            if isinstance(dUdT, tuple):
                 pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(_entropic_change, dUdT=dUdT)
-                )
-            elif isinstance(dUdT, tuple):
-                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(
-                        _entropic_change,
-                        dUdT=partial(
-                            _interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1]
-                        ),
-                    )
-                )
-            else:
-                pybamm_dict[phase_domain_pre_name + "OCP entropic change [V.K-1]"] = (
-                    partial(_entropic_change, dUdT=dUdT, constant=True)
+                    partial(_interpolant_func, name=dUdT[0], x=dUdT[1][0], y=dUdT[1][1])
                 )
 
             # reaction rate
@@ -315,11 +297,15 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             k_norm = pybamm_dict[
                 phase_domain_pre_name + "reaction rate constant [mol.m-2.s-1]"
             ]
-            Ea_k = pybamm_dict.get(
+            Ea_k = _get_activation_energy(
                 phase_domain_pre_name
-                + "reaction rate constant activation energy [J.mol-1]",
-                0.0,
+                + "reaction rate constant activation energy [J.mol-1]"
             )
+            pybamm_dict[
+                phase_domain_pre_name
+                + "reaction rate constant activation energy [J.mol-1]"
+            ] = Ea_k
+
             # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))...
             # *sinh(),
             # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
@@ -329,9 +315,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             )
 
             # diffusivity
-            Ea_D = pybamm_dict.get(
-                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]",
-                0.0,
+            Ea_D = _get_activation_energy(
+                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             )
             pybamm_dict[
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
@@ -356,8 +341,11 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 )
 
     # electrolyte
-    Ea_D_e = pybamm_dict.get(
-        electrolyte.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    Ea_D_e = _get_activation_energy(
+        electrolyte.pre_name + "diffusivity activation energy [J.mol-1]"
+    )
+    pybamm_dict[electrolyte.pre_name + "diffusivity activation energy [J.mol-1]"] = (
+        Ea_D_e
     )
     D_e_ref = pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"]
 
@@ -379,8 +367,11 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         )
 
     # conductivity
-    Ea_sigma_e = pybamm_dict.get(
-        electrolyte.pre_name + "conductivity activation energy [J.mol-1]", 0.0
+    Ea_sigma_e = _get_activation_energy(
+        electrolyte.pre_name + "conductivity activation energy [J.mol-1]"
+    )
+    pybamm_dict[electrolyte.pre_name + "conductivity activation energy [J.mol-1]"] = (
+        Ea_sigma_e
     )
     sigma_e_ref = pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"]
 
@@ -440,6 +431,10 @@ def _get_pybamm_name(pybamm_name, domain):
         pybamm_name = domain.short_pre_name + pybamm_name_lower
     elif pybamm_name.startswith("OCP"):
         pybamm_name = domain.pre_name + pybamm_name
+    elif pybamm_name.startswith("Entropic change"):
+        pybamm_name = domain.pre_name + pybamm_name.replace(
+            "Entropic change coefficient", "OCP entropic change"
+        )
     elif pybamm_name.startswith("Cation transference number"):
         pybamm_name = pybamm_name
     elif domain.pre_name != "":

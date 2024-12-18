@@ -146,11 +146,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 )
             else:
                 raise pybamm.SolverError(
-                    f"""
-                    Could not find acceptable solution: solver terminated
-                    successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))})
-                    above tolerance ({self.tol})
-                    """
+                    "Could not find acceptable solution: solver terminated "
+                    f"successfully, but maximum solution error ({casadi.mmax(casadi.fabs(fun))}) "
+                    f"above tolerance ({self.tol})"
                 )
 
         # Concatenate differential part
@@ -170,7 +168,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             model,
             inputs_dict,
             termination="final time",
-            sensitivities=explicit_sensitivities,
+            all_sensitivities=explicit_sensitivities,
         )
         sol.integration_time = integration_time
         return sol

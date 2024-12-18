@@ -12,7 +12,6 @@ class Settings:
     _abs_smoothing = "exact"
     max_words_in_line = 4
     max_y_value = 1e5
-    step_start_offset = 1e-9
     tolerances = {
         "D_e__c_e": 10,  # dimensional
         "kappa_e__c_e": 10,  # dimensional

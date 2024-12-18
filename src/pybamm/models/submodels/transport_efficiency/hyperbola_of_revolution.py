@@ -7,7 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class HyperbolaOfRevolution(BaseModel):
     """Submodel for Hyperbola of revolution transport_efficiency
-    :footcite:t:`petersen1958diffusion`, :footcite:t:`shen2007critical`
+    :footcite:t:`Petersen1958`, :footcite:t:`Shen2007`
 
     Parameters
     ----------
@@ -23,8 +23,8 @@ class HyperbolaOfRevolution(BaseModel):
         super().__init__(param, component, options=options)
 
     def get_coupled_variables(self, variables):
-        pybamm.citations.register("shen2007critical")
-        pybamm.citations.register("petersen1958diffusion")
+        pybamm.citations.register("Shen2007")
+        pybamm.citations.register("Petersen1958")
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:

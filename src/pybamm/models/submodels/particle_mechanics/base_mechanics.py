@@ -38,30 +38,37 @@ class BaseMechanics(pybamm.BaseSubModel):
     def _get_mechanical_results(self, variables):
         domain_param = self.domain_param
         domain, Domain = self.domain_Domain
-
-        c_s_rav = variables[f"R-averaged {domain} particle concentration [mol.m-3]"]
-        sto_rav = variables[f"R-averaged {domain} particle concentration"]
-        c_s_surf = variables[f"{Domain} particle surface concentration [mol.m-3]"]
-        T_xav = variables["X-averaged cell temperature [K]"]
         phase_name = self.phase_name
+        phase_param = self.phase_param
+
+        c_s_rav = variables[
+            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
+        ]
+        sto_rav = variables[f"R-averaged {domain} {phase_name}particle concentration"]
+        c_s_surf = variables[
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
+        ]
+        T_xav = variables["X-averaged cell temperature [K]"]
         T = pybamm.PrimaryBroadcast(
             variables[f"{Domain} electrode temperature [K]"],
             [f"{domain} {phase_name}particle"],
         )
-        eps_s = variables[f"{Domain} electrode active material volume fraction"]
+        eps_s = variables[
+            f"{Domain} electrode {phase_name}active material volume fraction"
+        ]
 
         # use a tangential approximation for omega
-        sto = variables[f"{Domain} particle concentration"]
-        Omega = pybamm.r_average(domain_param.Omega(sto, T))
-        R0 = domain_param.prim.R
+        sto = variables[f"{Domain} {phase_name}particle concentration"]
+        Omega = pybamm.r_average(phase_param.Omega(sto, T))
+        R0 = phase_param.R
         c_0 = domain_param.c_0
-        E0 = pybamm.r_average(domain_param.E(sto, T))
-        nu = domain_param.nu
+        E0 = pybamm.r_average(phase_param.E(sto, T))
+        nu = phase_param.nu
         L0 = domain_param.L
-        sto_init = pybamm.r_average(domain_param.prim.c_init / domain_param.prim.c_max)
+        sto_init = pybamm.r_average(phase_param.c_init / phase_param.c_max)
         v_change = pybamm.x_average(
-            eps_s * domain_param.prim.t_change(sto_rav)
-        ) - pybamm.x_average(eps_s * domain_param.prim.t_change(sto_init))
+            eps_s * phase_param.t_change(sto_rav)
+        ) - pybamm.x_average(eps_s * phase_param.t_change(sto_init))
 
         electrode_thickness_change = self.param.n_electrodes_parallel * v_change * L0
         # Ai2019 eq [10]
@@ -81,17 +88,26 @@ class BaseMechanics(pybamm.BaseSubModel):
 
         variables.update(
             {
-                f"{Domain} particle surface radial stress [Pa]": stress_r_surf,
-                f"{Domain} particle surface tangential stress [Pa]": stress_t_surf,
-                f"{Domain} particle surface displacement [m]": disp_surf,
-                f"X-averaged {domain} particle surface "
+                f"{Domain} {phase_name}particle surface radial stress [Pa]": stress_r_surf,
+                f"{Domain} {phase_name}particle surface tangential stress [Pa]": stress_t_surf,
+                f"{Domain} {phase_name}particle surface displacement [m]": disp_surf,
+                f"X-averaged {domain} {phase_name}particle surface "
                 "radial stress [Pa]": stress_r_surf_av,
-                f"X-averaged {domain} particle surface "
+                f"X-averaged {domain} {phase_name}particle surface "
                 "tangential stress [Pa]": stress_t_surf_av,
-                f"X-averaged {domain} particle surface displacement [m]": disp_surf_av,
-                f"{Domain} electrode thickness change [m]": electrode_thickness_change,
+                f"X-averaged {domain} {phase_name}particle surface displacement [m]": disp_surf_av,
+                f"{Domain} electrode {phase_name}thickness change [m]": electrode_thickness_change,
             }
         )
+
+        if (
+            f"{Domain} primary thickness change [m]" in variables
+            and f"{Domain} secondary thickness change [m]" in variables
+        ):
+            variables[f"{Domain} thickness change [m]"] = (
+                variables[f"{Domain} primary thickness change [m]"]
+                + variables[f"{Domain} secondary thickness change [m]"]
+            )
 
         if (
             "Negative electrode thickness change [m]" in variables

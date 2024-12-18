@@ -16,7 +16,7 @@ def graphite_diffusivity_Kim2011(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -35,7 +35,7 @@ def graphite_diffusivity_Kim2011(sto, T):
 
 def graphite_ocp_Kim2011(sto):
     """
-    Graphite Open-circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open-circuit Potential (OCP) as a function of the stoichiometry [1].
 
     References
     ----------
@@ -92,7 +92,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
     """
 
     i0_ref = 36  # reference exchange current density at 100% SOC
-    sto = 0.36  # stochiometry at 100% SOC
+    sto = 0.36  # stoichiometry at 100% SOC
     c_s_n_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
@@ -111,7 +111,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max
 
 def nca_diffusivity_Kim2011(sto, T):
     """
-    NCA diffusivity as a function of stochiometry [1].
+    NCA diffusivity as a function of stoichiometry [1].
 
     References
     ----------
@@ -123,7 +123,7 @@ def nca_diffusivity_Kim2011(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
+        Electrode stoichiometry
     T: :class:`pybamm.Symbol`
         Dimensional temperature
 
@@ -168,7 +168,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
         Exchange-current density [A.m-2]
     """
     i0_ref = 4  # reference exchange current density at 100% SOC
-    sto = 0.41  # stochiometry at 100% SOC
+    sto = 0.41  # stoichiometry at 100% SOC
     c_s_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = pybamm.Parameter("Initial concentration in electrolyte [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
@@ -252,7 +252,7 @@ def electrolyte_conductivity_Kim2011(c_e, T):
 
 def nca_ocp_Kim2011(sto):
     """
-    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open Circuit Potential (OCP) as a function of the stoichiometry [1].
 
     References
     ----------
@@ -297,8 +297,8 @@ def get_parameter_values():
         for the planar effective thermal conductivity.
 
     SEI parameters are example parameters for SEI growth from the papers
-    :footcite:t:`Ramadass2004`, :footcite:t:`ploehn2004solvent`,
-    :footcite:t:`single2018identifying`, :footcite:t:`safari2008multimodal`, and
+    :footcite:t:`Ramadass2004`, :footcite:t:`Ploehn2004`,
+    :footcite:t:`Single2018`, :footcite:t:`Safari2008`, and
     :footcite:t:`Yang2017`
 
     .. note::
@@ -311,24 +311,19 @@ def get_parameter_values():
         "chemistry": "lithium_ion",
         # sei
         "Ratio of lithium moles to SEI moles": 2.0,
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
-        "Outer SEI partial molar volume [m3.mol-1]": 9.585e-05,
+        "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5000000000000002e-22,
+        "SEI solvent diffusivity [m2.s-1]": 2.5e-22,
         "Bulk solvent concentration [mol.m-3]": 2636.0,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conductivity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
+        "SEI open-circuit potential [V]": 0.4,
+        "SEI electron conductivity [S.m-1]": 8.95e-14,
+        "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial inner SEI thickness [m]": 2.5e-09,
-        "Initial outer SEI thickness [m]": 2.5e-09,
+        "Initial SEI thickness [m]": 5e-09,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
-        "SEI open-circuit potential [V]": 0.4,
         "SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,

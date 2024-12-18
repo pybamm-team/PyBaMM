@@ -7,8 +7,7 @@ import pytest
 
 
 class TestSPMe(BaseUnitTestLithiumIon):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup_method(self):
         self.model = pybamm.lithium_ion.SPMe
 
     # def test_external_variables(self):

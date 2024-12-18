@@ -3,7 +3,7 @@ import pybamm
 import numpy as np
 
 
-@pytest.mark.skipif(not pybamm.have_idaklu(), reason="idaklu solver is not installed")
+@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
 class TestIDAKLUSolver:
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()
@@ -32,7 +32,7 @@ class TestIDAKLUSolver:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         t_interp = np.linspace(0, 3500, 100)
-        t_eval = np.array([t_interp[0], t_interp[-1]])
+        t_eval = [t_interp[0], t_interp[-1]]
         solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
         solution = solver.solve(
             model,
@@ -152,3 +152,55 @@ class TestIDAKLUSolver:
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[1:3], true_solution)
+
+    def test_with_experiments(self):
+        summary_vars = []
+        sols = []
+        for out_vars in [True, False]:
+            model = pybamm.lithium_ion.SPM()
+
+            if out_vars:
+                output_variables = [
+                    "Discharge capacity [A.h]",  # 0D variables
+                    "Time [s]",
+                    "Current [A]",
+                    "Voltage [V]",
+                    "Pressure [Pa]",  # 1D variable
+                    "Positive particle effective diffusivity [m2.s-1]",  # 2D variable
+                ]
+            else:
+                output_variables = None
+
+            solver = pybamm.IDAKLUSolver(output_variables=output_variables)
+
+            experiment = pybamm.Experiment(
+                [
+                    (
+                        "Charge at 1C until 4.2 V",
+                        "Hold at 4.2 V until C/50",
+                        "Rest for 1 hour",
+                    )
+                ]
+            )
+
+            sim = pybamm.Simulation(
+                model,
+                experiment=experiment,
+                solver=solver,
+            )
+
+            sol = sim.solve()
+            sols.append(sol)
+            summary_vars.append(sol.summary_variables)
+
+        # check computed variables are propegated sucessfully
+        np.testing.assert_array_equal(
+            sols[0]["Pressure [Pa]"].data, sols[1]["Pressure [Pa]"].data
+        )
+        np.testing.assert_array_almost_equal(
+            sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data
+        )
+
+        # check summary variables are the same if output variables are specified
+        for var in summary_vars[0].keys():
+            assert summary_vars[0][var] == summary_vars[1][var]

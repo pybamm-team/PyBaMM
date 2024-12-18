@@ -1,6 +1,3 @@
-#
-# Parameter values for a simulation
-#
 import numpy as np
 import pybamm
 import numbers
@@ -35,15 +32,7 @@ class ParameterValues:
 
     """
 
-    def __init__(self, values, chemistry=None):
-        if chemistry is not None:
-            raise ValueError(
-                "The 'chemistry' keyword argument has been deprecated. "
-                "Call `ParameterValues` with a dictionary dictionary of "
-                "parameter values, or the name of a parameter set (string), "
-                "as the single argument, e.g. `ParameterValues('Chen2020')`.",
-            )
-
+    def __init__(self, values):
         # add physical constants as default values
         self._dict_items = pybamm.FuzzyDict(
             {
@@ -79,41 +68,34 @@ class ParameterValues:
                 pybamm.citations.register(citation)
 
     @staticmethod
-    def create_from_bpx(filename, target_soc: float = 1):
-        """
-        Parameters
-        ----------
-        filename: str
-            The filename of the bpx file
-        target_soc : float, optional
-            Target state of charge. Must be between 0 and 1. Default is 1.
+    def _create_from_bpx(bpx, target_soc):
+        from bpx import get_electrode_concentrations
+        from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
+        from .bpx import bpx_to_param_dict
 
-        Returns
-        -------
-        ParameterValues
-            A parameter values object with the parameters in the bpx file
-
-        """
         if target_soc < 0 or target_soc > 1:
             raise ValueError("Target SOC should be between 0 and 1")
 
-        from bpx import parse_bpx_file, get_electrode_concentrations
-        from bpx.schema import ElectrodeBlended, ElectrodeBlendedSPM
-        from .bpx import _bpx_to_param_dict
-
-        # parse bpx
-        bpx = parse_bpx_file(filename)
-        pybamm_dict = _bpx_to_param_dict(bpx)
+        pybamm_dict = bpx_to_param_dict(bpx)
 
         if "Open-circuit voltage at 0% SOC [V]" not in pybamm_dict:
             pybamm_dict["Open-circuit voltage at 0% SOC [V]"] = pybamm_dict[
                 "Lower voltage cut-off [V]"
             ]
+            warn(
+                "'Open-circuit voltage at 0% SOC [V]' not found in BPX file. Using "
+                "'Lower voltage cut-off [V]'.",
+                stacklevel=2,
+            )
+        if "Open-circuit voltage at 100% SOC [V]" not in pybamm_dict:
             pybamm_dict["Open-circuit voltage at 100% SOC [V]"] = pybamm_dict[
                 "Upper voltage cut-off [V]"
             ]
-            # probably should put a warning here to indicate we are going
-            # ahead with the low voltage limit.
+            warn(
+                "'Open-circuit voltage at 100% SOC [V]' not found in BPX file. Using "
+                "'Upper voltage cut-off [V]'.",
+                stacklevel=2,
+            )
 
         # get initial concentrations based on SOC
         # Note: we cannot set SOC for blended electrodes,
@@ -137,6 +119,48 @@ class ParameterValues:
             )
 
         return pybamm.ParameterValues(pybamm_dict)
+
+    @staticmethod
+    def create_from_bpx_obj(bpx_obj, target_soc: float = 1):
+        """
+        Parameters
+        ----------
+        bpx_obj: dict
+            A dictionary containing the parameters in the `BPX <https://bpxstandard.com/>`_ format
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        from bpx import parse_bpx_obj
+
+        bpx = parse_bpx_obj(bpx_obj)
+        return ParameterValues._create_from_bpx(bpx, target_soc)
+
+    @staticmethod
+    def create_from_bpx(filename, target_soc: float = 1):
+        """
+        Parameters
+        ----------
+        filename: str
+            The filename of the `BPX <https://bpxstandard.com/>`_ file
+        target_soc : float, optional
+            Target state of charge. Must be between 0 and 1. Default is 1.
+
+        Returns
+        -------
+        ParameterValues
+            A parameter values object with the parameters in the bpx file
+
+        """
+        from bpx import parse_bpx_file
+
+        bpx = parse_bpx_file(filename)
+        return ParameterValues._create_from_bpx(bpx, target_soc)
 
     def __getitem__(self, key):
         try:
@@ -192,7 +216,7 @@ class ParameterValues:
         return self._dict_items.items()
 
     def pop(self, *args, **kwargs):
-        self._dict_items.pop(*args, **kwargs)
+        return self._dict_items.pop(*args, **kwargs)
 
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
@@ -254,7 +278,7 @@ class ParameterValues:
                         f"Cannot update parameter '{name}' as it does not "
                         + f"have a default value. ({err.args[0]}). If you are "
                         + "sure you want to update this parameter, use "
-                        + "param.update({{name: value}}, check_already_exists=False)"
+                        + "param.update({name: value}, check_already_exists=False)"
                     ) from err
             if isinstance(value, str):
                 if (
@@ -930,3 +954,9 @@ class ParameterValues:
                     file.write((s + " : {:10.4g}\n").format(name, value))
                 else:
                     file.write((s + " : {:10.3E}\n").format(name, value))
+
+    def __contains__(self, key):
+        return key in self._dict_items
+
+    def __iter__(self):
+        return iter(self._dict_items)

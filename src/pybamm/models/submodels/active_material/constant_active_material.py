@@ -23,6 +23,7 @@ class Constant(BaseModel):
 
     def get_fundamental_variables(self):
         domain = self.domain
+        phase = self.phase_name
         eps_solid = self.phase_param.epsilon_s
         deps_solid_dt = pybamm.FullBroadcast(
             0, f"{domain} electrode", "current collector"
@@ -35,7 +36,7 @@ class Constant(BaseModel):
 
         variables.update(
             {
-                "Loss of lithium due to loss of active material "
+                f"Loss of lithium due to loss of {phase}active material "
                 f"in {domain} electrode [mol]": pybamm.Scalar(0)
             }
         )

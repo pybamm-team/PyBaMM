@@ -61,7 +61,6 @@ class BaseInterface(pybamm.BaseSubModel):
         j0 : :class: `pybamm.Symbol`
             The exchange current density.
         """
-        param = self.param
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
@@ -132,8 +131,8 @@ class BaseInterface(pybamm.BaseSubModel):
         elif self.reaction == "lithium metal plating":
             # compute T on the surface of the anode (interface with separator)
             T = pybamm.boundary_value(T, "right")
-            c_Li_metal = 1 / param.V_bar_Li
-            j0 = param.j0_Li_metal(c_e, c_Li_metal, T)
+            c_Li_metal = 1 / self.param.V_bar_Li
+            j0 = self.param.j0_Li_metal(c_e, c_Li_metal, T)
 
         elif self.reaction == "lead-acid main":
             # If variable was broadcast, take only the orphan
@@ -150,7 +149,7 @@ class BaseInterface(pybamm.BaseSubModel):
             if self.domain == "negative":
                 j0 = pybamm.Scalar(0)
             elif self.domain == "positive":
-                j0 = param.p.prim.j0_Ox(c_e, T)
+                j0 = self.param.p.prim.j0_Ox(c_e, T)
 
         return j0
 

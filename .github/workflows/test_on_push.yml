@@ -5,6 +5,7 @@ on:
   pull_request:
 
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
   PYBAMM_IDAKLU_EXPR_CASADI: ON
   PYBAMM_IDAKLU_EXPR_IREE: ON
@@ -21,33 +22,35 @@ jobs:
   style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Check style
         run: |
-          python -m pip install pre-commit
+          python -m uv pip install pre-commit
           pre-commit run -a
 
   run_unit_integration_and_coverage_tests:
-    needs: style
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-12, macos-14, windows-latest]
+        os: [ubuntu-latest, macos-13, macos-14, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -62,7 +65,7 @@ jobs:
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
+        if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
         env:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
@@ -81,16 +84,19 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         id: setup-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         if: matrix.os != 'windows-latest'
         with:
           path: |
@@ -117,7 +123,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -126,7 +132,6 @@ jobs:
 
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
-    needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -134,12 +139,12 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
         with:
           packages: graphviz pandoc
           execute_install_scripts: true
@@ -153,13 +158,16 @@ jobs:
 
       - name: Set up Python
         id: setup-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.11
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Install docs dependencies and run doctests for GNU/Linux
         run: python -m nox -s doctests
@@ -168,7 +176,6 @@ jobs:
         run: python -m nox -s docs
 
   run_example_tests:
-    needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -176,10 +183,10 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -193,16 +200,19 @@ jobs:
 
       - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             # Repository files
@@ -221,7 +231,6 @@ jobs:
         run: python -m nox -s examples
 
   run_scripts_tests:
-    needs: style
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -229,10 +238,10 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
@@ -246,16 +255,19 @@ jobs:
 
       - name: Set up Python 3.12
         id: setup-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
           cache: 'pip'
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
       - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@v4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: |
             # Repository files

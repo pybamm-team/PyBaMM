@@ -7,7 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class Bruggeman(BaseModel):
     """Submodel for Bruggeman transport_efficiency,
-    :footcite:t:`bruggeman1935berechnung`
+    :footcite:t:`Bruggeman1935`
 
     Parameters
     ----------
@@ -28,7 +28,7 @@ class Bruggeman(BaseModel):
             for domain in self.options.whole_cell_domains:
                 Domain = domain.capitalize()
                 eps_k = variables[f"{Domain} porosity"]
-                pybamm.citations.register("bruggeman1935berechnung")
+                pybamm.citations.register("Bruggeman1935")
                 b_k = self.param.domain_params[domain.split()[0]].b_e
                 tor_k = eps_k**b_k
                 tor_dict[domain] = tor_k
@@ -40,7 +40,7 @@ class Bruggeman(BaseModel):
                 else:
                     Domain = domain.capitalize()
                     phi_k = 1 - variables[f"{Domain} porosity"]
-                    pybamm.citations.register("bruggeman1935berechnung")
+                    pybamm.citations.register("Bruggeman1935")
                     b_k = self.param.domain_params[domain.split()[0]].b_s
                     tor_k = phi_k**b_k
                 tor_dict[domain] = tor_k

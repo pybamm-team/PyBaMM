@@ -28,14 +28,28 @@ class BaseSubModel(pybamm.BaseModel):
 
     Attributes
     ----------
-    param: parameter class
-        The model parameter symbols
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
+    param : parameter class
+        The model parameter symbols.
+    domain : str
+        The domain of the submodel, could be either 'Negative', 'Positive', 'Separator', or None.
+    name : str
+        The name of the submodel.
+    external : bool
+        A boolean flag indicating whether the variables defined by the submodel will be
+        provided externally by the user. Set to False by default.
+    options : dict or pybamm.BatteryModelOptions
+        A dictionary or an instance of `pybamm.BatteryModelOptions` that stores configuration
+        options for the submodel.
+    phase_name : str
+        A string representing the phase of the submodel, which could be "primary",
+        "secondary", or an empty string if there is only one phase.
+    phase : str or None
+        The current phase of the submodel, which could be "primary", "secondary", or None.
+    boundary_conditions : dict
+        A dictionary mapping variables to their respective boundary conditions.
+    variables : dict
+        A dictionary mapping variable names (strings) to expressions or objects that
+        represent the useful variables for the submodel.
     """
 
     def __init__(
@@ -112,6 +126,7 @@ class BaseSubModel(pybamm.BaseModel):
 
     @property
     def domain_Domain(self):
+        """Returns a tuple containing the current domain and its capitalized form."""
         return self._domain, self._Domain
 
     def get_parameter_info(self, by_submodel=False):
@@ -221,7 +236,7 @@ class BaseSubModel(pybamm.BaseModel):
         """
         pass
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         """
         A method to set events related to the state of submodel variable. Note: this
         method modifies the state of self.events. Unless overwritten by a submodel, the

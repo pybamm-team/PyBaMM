@@ -26,7 +26,7 @@ class TestOKane2022_graphite_SiOx_halfcell:
                 0.33947,
             ),
             "Positive electrode cracking rate": ([T], 3.9e-20),
-            "Positive electrode volume change": ([sto, 33133], 0.0897),
+            "Positive electrode volume change": ([sto], 0.0897),
         }
 
         for name, value in fun_test.items():

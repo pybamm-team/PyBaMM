@@ -28,7 +28,6 @@ class BaseParticle(pybamm.BaseSubModel):
         self.size_distribution = domain_options["particle size"] == "distribution"
 
     def _get_effective_diffusivity(self, c, T, current):
-        param = self.param
         domain, Domain = self.domain_Domain
         domain_param = self.domain_param
         phase_param = self.phase_param
@@ -57,10 +56,10 @@ class BaseParticle(pybamm.BaseSubModel):
         if stress_option == "true":
             # Ai2019 eq [12]
             sto = c / phase_param.c_max
-            Omega = pybamm.r_average(domain_param.Omega(sto, T))
-            E = pybamm.r_average(domain_param.E(sto, T))
-            nu = domain_param.nu
-            theta_M = Omega / (param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
+            Omega = pybamm.r_average(phase_param.Omega(sto, T))
+            E = pybamm.r_average(phase_param.E(sto, T))
+            nu = phase_param.nu
+            theta_M = Omega / (self.param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
             stress_factor = 1 + theta_M * (c - domain_param.c_0)
         else:
             stress_factor = 1

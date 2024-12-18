@@ -2,7 +2,6 @@
 # Tests for the Concatenation class and subclasses
 #
 import pytest
-import unittest.mock as mock
 from tests import assert_domain_equal
 
 
@@ -377,7 +376,7 @@ class TestConcatenations:
         # Test concat_sym
         assert pybamm.Concatenation(a, b).to_equation() == func_symbol
 
-    def test_to_from_json(self):
+    def test_to_from_json(self, mocker):
         # test DomainConcatenation
         mesh = get_mesh_for_testing()
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -386,7 +385,7 @@ class TestConcatenations:
 
         json_dict = {
             "name": "domain_concatenation",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "domains": {
                 "primary": ["negative electrode", "separator", "positive electrode"],
                 "secondary": [],
@@ -429,7 +428,7 @@ class TestConcatenations:
 
         np_json = {
             "name": "numpy_concatenation",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "domains": {
                 "primary": [],
                 "secondary": [],
@@ -446,3 +445,18 @@ class TestConcatenations:
 
         # test _from_json
         assert pybamm.NumpyConcatenation._from_json(np_json) == conc_np
+
+    def test_same_number_of_children(self):
+        a = pybamm.Variable("y", domain=["1", "2"])
+        b = pybamm.Variable("z", domain=["3"])
+
+        d1 = pybamm.Variable("d1", domain=["1"])
+        d2 = pybamm.Variable("d2", domain=["2"])
+        d3 = pybamm.Variable("d3", domain=["3"])
+
+        d_concat = pybamm.concatenation(pybamm.sin(d1), pybamm.sin(d2), pybamm.sin(d3))
+        a_concat = pybamm.concatenation(pybamm.sin(a), pybamm.sin(b))
+        with pytest.raises(
+            AssertionError, match="Concatenations must have the same number of children"
+        ):
+            a_concat + d_concat

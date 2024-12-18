@@ -47,7 +47,6 @@ class BaseModel(BaseElectrolyteConductivity):
 
     def get_coupled_variables(self, variables):
         Domain = self.domain.capitalize()
-        param = self.param
 
         if self.domain in ["negative", "positive"]:
             conductivity, sigma_eff = self._get_conductivities(variables)
@@ -59,7 +58,7 @@ class BaseModel(BaseElectrolyteConductivity):
             T = variables[f"{Domain} electrode temperature [K]"]
 
             i_e = conductivity * (
-                param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e)
+                self.param.chiRT_over_Fc(c_e, T) * pybamm.grad(c_e)
                 + pybamm.grad(delta_phi)
                 + i_boundary_cc / sigma_eff
             )
@@ -83,8 +82,8 @@ class BaseModel(BaseElectrolyteConductivity):
             tor_s = variables["Separator electrolyte transport efficiency"]
             T = variables["Separator temperature [K]"]
 
-            chiRT_over_Fc_e_s = param.chiRT_over_Fc(c_e_s, T)
-            kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
+            chiRT_over_Fc_e_s = self.param.chiRT_over_Fc(c_e_s, T)
+            kappa_s_eff = self.param.kappa_e(c_e_s, T) * tor_s
 
             phi_e = phi_e_n_s + pybamm.IndefiniteIntegral(
                 chiRT_over_Fc_e_s * pybamm.grad(c_e_s) - i_boundary_cc / kappa_s_eff,
@@ -124,7 +123,8 @@ class BaseModel(BaseElectrolyteConductivity):
             grad_left = -i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "left")
             grad_right = (
                 (i_boundary_cc / pybamm.boundary_value(conductivity, "right"))
-                - pybamm.boundary_value(param.chiRT_over_Fc(c_e, T), "right") * grad_c_e
+                - pybamm.boundary_value(self.param.chiRT_over_Fc(c_e, T), "right")
+                * grad_c_e
                 - i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "right")
             )
 
@@ -132,7 +132,8 @@ class BaseModel(BaseElectrolyteConductivity):
             grad_c_e = pybamm.boundary_gradient(c_e, "left")
             grad_left = (
                 (i_boundary_cc / pybamm.boundary_value(conductivity, "left"))
-                - pybamm.boundary_value(param.chiRT_over_Fc(c_e, T), "left") * grad_c_e
+                - pybamm.boundary_value(self.param.chiRT_over_Fc(c_e, T), "left")
+                * grad_c_e
                 - i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "left")
             )
             grad_right = -i_boundary_cc * pybamm.boundary_value(1 / sigma_eff, "right")
@@ -150,14 +151,13 @@ class BaseModel(BaseElectrolyteConductivity):
     def _get_conductivities(self, variables):
         Domain = self.domain.capitalize()
 
-        param = self.param
         tor_e = variables[f"{Domain} electrolyte transport efficiency"]
         tor_s = variables[f"{Domain} electrode transport efficiency"]
         c_e = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
         T = variables[f"{Domain} electrode temperature [K]"]
         sigma = self.domain_param.sigma(T)
 
-        kappa_eff = param.kappa_e(c_e, T) * tor_e
+        kappa_eff = self.param.kappa_e(c_e, T) * tor_e
         sigma_eff = sigma * tor_s
         conductivity = kappa_eff / (1 + kappa_eff / sigma_eff)
 

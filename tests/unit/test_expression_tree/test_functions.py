@@ -3,7 +3,6 @@
 #
 
 import pytest
-import unittest.mock as mock
 
 import numpy as np
 from scipy import special
@@ -399,7 +398,7 @@ class TestSpecificFunctions:
             abs=1e-05,
         )
 
-    def test_erf(self):
+    def test_erf(self, mocker):
         a = pybamm.InputParameter("a")
         fun = pybamm.erf(a)
         assert fun.evaluate(inputs={"a": 3}) == special.erf(3)
@@ -416,7 +415,7 @@ class TestSpecificFunctions:
         # test creation from json
         input_json = {
             "name": "erf",
-            "id": mock.ANY,
+            "id": mocker.ANY,
             "function": "erf",
             "children": [a],
         }

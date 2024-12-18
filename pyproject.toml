@@ -1,11 +1,10 @@
 [build-system]
 requires = [
-    "setuptools>=64",
-    "wheel",
+    "setuptools>=70.1.1",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.5; platform_system!='Windows'",
+    "casadi>=3.6.7; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
-    # cross platforms, so updates to its minimum version here should be accompanied
+    # across platforms, so updates to its minimum version here should be accompanied
     # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
     "cmake; platform_system!='Windows'",
 ]
@@ -13,7 +12,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.5"
+version = "24.11.2"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -37,13 +36,16 @@ classifiers = [
 dependencies = [
     "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
-    "casadi>=3.6.5",
+    "casadi>=3.6.7",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
     "sympy>=1.12",
     "typing-extensions>=4.10.0",
     "pandas>=1.5.0",
     "pooch>=1.8.1",
+    "posthog",
+    "pyyaml",
+    "platformdirs",
 ]
 
 [project.urls]
@@ -84,11 +86,12 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
+    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx>=0.4.0",
+    "bpx==0.4.0",
 ]
 # Low-overhead progress bars
 tqdm = [
@@ -105,12 +108,11 @@ dev = [
     "pytest-cov",
     # For doctest
     "pytest-doctestplus",
-    # For test parameterization
-    "parameterized>=0.9",
     # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
     "pytest-mock",
+    "pytest-subtests",
     # For testing Jupyter notebooks
     "nbmake",
     # To access the metadata for python packages
@@ -134,9 +136,6 @@ all = [
     "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
 
-[project.scripts]
-pybamm_install_jax = "pybamm.util:install_jax"
-
 [project.entry-points."pybamm_parameter_sets"]
 Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
 Ai2020 = "pybamm.input.parameters.lithium_ion.Ai2020:get_parameter_values"
@@ -155,6 +154,7 @@ Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_v
 Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
+Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
 [tool.setuptools]
 include-package-data = true
@@ -200,6 +200,8 @@ extend-select = [
     "YTT",           # flake8-2020
     "TID252",        # relative-imports
     "S101",          # to identify use of assert statement
+    "PT027",         # remove unittest style assertion
+    "PT009",         # Use pytest.raises instead of unittest-style
 ]
 ignore = [
     "E741",        # Ambiguous variable name
@@ -233,6 +235,7 @@ minversion = "8"
 required_plugins = [
     "pytest-xdist",
     "pytest-mock",
+    "pytest-subtests",
 ]
 norecursedirs = 'pybind11*'
 addopts = [
@@ -266,11 +269,6 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
-
-[tool.repo-review]
-ignore = [
-    "PP003"  # list wheel as a build-dep
-]
 
 [tool.mypy]
 ignore_missing_imports = true

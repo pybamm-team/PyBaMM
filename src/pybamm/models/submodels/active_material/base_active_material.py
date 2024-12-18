@@ -23,7 +23,6 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, domain, options=options, phase=phase)
 
     def _get_standard_active_material_variables(self, eps_solid):
-        param = self.param
         phase_name = self.phase_name
         domain, Domain = self.domain_Domain
 
@@ -61,9 +60,9 @@ class BaseModel(pybamm.BaseSubModel):
             C = (
                 pybamm.yz_average(eps_solid_av)
                 * L
-                * param.A_cc
+                * self.param.A_cc
                 * c_s_max
-                * param.F
+                * self.param.F
                 / 3600
             )
             if phase_name == "":

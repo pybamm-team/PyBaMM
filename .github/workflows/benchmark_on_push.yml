@@ -8,13 +8,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
 
@@ -23,10 +26,13 @@ jobs:
           sudo apt-get update
           sudo apt install gfortran gcc libopenblas-dev
 
+      - name: Set up uv
+        run: python -m pip install uv
+
       - name: Install python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools wget cmake casadi numpy
-          python -m pip install asv[virtualenv]
+          python -m uv pip install --upgrade pip wheel setuptools wget cmake casadi numpy
+          python -m uv pip install asv[virtualenv]
 
       - name: Install SuiteSparse and SUNDIALS
         run: python scripts/install_KLU_Sundials.py

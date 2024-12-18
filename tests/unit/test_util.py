@@ -35,6 +35,7 @@ class TestUtil:
                 "Lithium plating current": 4,
                 "A dimensional variable [m]": 5,
                 "Positive particle diffusivity [m2.s-1]": 6,
+                "Primary: Open circuit voltage [V]": 7,
             }
         )
         d2 = pybamm.FuzzyDict(
@@ -51,6 +52,9 @@ class TestUtil:
 
         with pytest.raises(KeyError, match="dimensional version"):
             d.__getitem__("A dimensional variable")
+
+        with pytest.raises(KeyError, match="composite model"):
+            d.__getitem__("Open circuit voltage [V]")
 
         with pytest.raises(KeyError, match="open circuit voltage"):
             d.__getitem__("Measured open circuit voltage [V]")
@@ -88,7 +92,7 @@ class TestUtil:
             path = os.path.join(package_dir, tempfile_obj.name)
             assert pybamm.get_parameters_filepath(tempfile_obj.name) == path
 
-    @pytest.mark.skipif(not pybamm.have_jax(), reason="JAX is not installed")
+    @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
     def test_is_jax_compatible(self):
         assert pybamm.is_jax_compatible()
 

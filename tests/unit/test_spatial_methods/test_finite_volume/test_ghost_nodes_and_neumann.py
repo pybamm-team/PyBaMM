@@ -5,10 +5,10 @@
 import pybamm
 from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
 import numpy as np
-import unittest
+import pytest
 
 
-class TestGhostNodes(unittest.TestCase):
+class TestGhostNodes:
     def test_add_ghost_nodes(self):
         # Set up
 
@@ -36,25 +36,25 @@ class TestGhostNodes(unittest.TestCase):
         np.testing.assert_array_equal(
             sym_ghost.evaluate(y=y_test)[1:-1], discretised_symbol.evaluate(y=y_test)
         )
-        self.assertEqual(
-            (sym_ghost.evaluate(y=y_test)[0] + sym_ghost.evaluate(y=y_test)[1]) / 2, 0
-        )
-        self.assertEqual(
-            (sym_ghost.evaluate(y=y_test)[-2] + sym_ghost.evaluate(y=y_test)[-1]) / 2, 3
-        )
+        assert (
+            sym_ghost.evaluate(y=y_test)[0] + sym_ghost.evaluate(y=y_test)[1]
+        ) / 2 == 0
+        assert (
+            sym_ghost.evaluate(y=y_test)[-2] + sym_ghost.evaluate(y=y_test)[-1]
+        ) / 2 == 3
 
         # test errors
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.add_neumann_values(var, discretised_symbol, bcs, var.domain)
         bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "No boundary conditions"):
+        with pytest.raises(ValueError, match="No boundary conditions"):
             sp_meth.add_ghost_nodes(var, discretised_symbol, {})
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+        with pytest.raises(ValueError, match="boundary condition must be"):
             sp_meth.add_neumann_values(var, discretised_symbol, bcs, var.domain)
 
     def test_add_ghost_nodes_concatenation(self):
@@ -92,22 +92,14 @@ class TestGhostNodes(unittest.TestCase):
             symbol_plus_ghost_both.evaluate(None, y_test)[1:-1],
             discretised_symbol.evaluate(None, y_test),
         )
-        self.assertEqual(
-            (
-                symbol_plus_ghost_both.evaluate(None, y_test)[0]
-                + symbol_plus_ghost_both.evaluate(None, y_test)[1]
-            )
-            / 2,
-            0,
-        )
-        self.assertEqual(
-            (
-                symbol_plus_ghost_both.evaluate(None, y_test)[-2]
-                + symbol_plus_ghost_both.evaluate(None, y_test)[-1]
-            )
-            / 2,
-            3,
-        )
+        assert (
+            symbol_plus_ghost_both.evaluate(None, y_test)[0]
+            + symbol_plus_ghost_both.evaluate(None, y_test)[1]
+        ) / 2 == 0
+        assert (
+            symbol_plus_ghost_both.evaluate(None, y_test)[-2]
+            + symbol_plus_ghost_both.evaluate(None, y_test)[-1]
+        ) / 2 == 3
 
     def test_p2d_add_ghost_nodes(self):
         # create discretisation
@@ -187,13 +179,3 @@ class TestGhostNodes(unittest.TestCase):
         np.testing.assert_array_equal(
             (c_s_p_ghost_eval[:, -2] + c_s_p_ghost_eval[:, -1]) / 2, 3
         )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

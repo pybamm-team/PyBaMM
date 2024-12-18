@@ -1,7 +1,7 @@
 {
+  "skipCi": false,
   "files": [
-    "all_contributors.md",
-    "README.md"
+    "all_contributors.md"
   ],
   "imageSize": 100,
   "commit": false,
@@ -517,10 +517,10 @@
       ]
     },
     {
-      "login": "abillscmu",
+      "login": "aabills",
       "name": "Alec Bills",
       "avatar_url": "https://avatars.githubusercontent.com/u/48105066?v=4",
-      "profile": "https://github.com/abillscmu",
+      "profile": "https://github.com/aabills",
       "contributions": [
         "code"
       ]
@@ -747,7 +747,8 @@
       "profile": "https://github.com/AbhishekChaudharii",
       "contributions": [
         "doc",
-        "code"
+        "code",
+        "test"
       ]
     },
     {
@@ -960,6 +961,54 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "medha-14",
+      "name": "Medha Bhardwaj",
+      "avatar_url": "https://avatars.githubusercontent.com/u/143182673?v=4",
+      "profile": "https://github.com/medha-14",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "MarcBerliner",
+      "name": "Marc Berliner",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34451391?v=4",
+      "profile": "http://marcberliner.com",
+      "contributions": [
+        "code",
+        "doc",
+        "infra",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "Aswinr24",
+      "name": "Aswinr24",
+      "avatar_url": "https://avatars.githubusercontent.com/u/135364633?v=4",
+      "profile": "https://github.com/Aswinr24",
+      "contributions": [
+        "test"
+      ]
+    },
+    {
+      "login": "isaacbasil",
+      "name": "isaacbasil",
+      "avatar_url": "https://avatars.githubusercontent.com/u/123981577?v=4",
+      "profile": "https://github.com/isaacbasil",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "AndEsterson",
+      "name": "Andrew Esterson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55912083?v=4",
+      "profile": "https://github.com/AndEsterson",
+      "contributions": [
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -967,7 +1016,6 @@
   "projectOwner": "pybamm-team",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true,
   "commitConvention": "angular",
   "commitType": "docs"
 }

@@ -5,11 +5,11 @@ import subprocess
 from multiprocessing import cpu_count
 from pathlib import Path
 from platform import system
-import wheel.bdist_wheel as orig
 
 from setuptools import setup, Extension
 from setuptools.command.install import install
 from setuptools.command.build_ext import build_ext
+from setuptools.command.bdist_wheel import bdist_wheel
 
 
 default_lib_dir = (
@@ -230,29 +230,29 @@ class CustomInstall(install):
 # ---------- Custom class for building wheels ------------------------------------------
 
 
-class bdist_wheel(orig.bdist_wheel):
+class PyBaMMWheel(bdist_wheel):
     """A custom install command to add 2 build options"""
 
     user_options = [
-        *orig.bdist_wheel.user_options,
+        *bdist_wheel.user_options,
         ("suitesparse-root=", None, "suitesparse source location"),
         ("sundials-root=", None, "sundials source location"),
     ]
 
     def initialize_options(self):
-        orig.bdist_wheel.initialize_options(self)
+        bdist_wheel.initialize_options(self)
         self.suitesparse_root = None
         self.sundials_root = None
 
     def finalize_options(self):
-        orig.bdist_wheel.finalize_options(self)
+        bdist_wheel.finalize_options(self)
         if not self.suitesparse_root:
             self.suitesparse_root = default_lib_dir
         if not self.sundials_root:
             self.sundials_root = default_lib_dir
 
     def run(self):
-        orig.bdist_wheel.run(self)
+        bdist_wheel.run(self)
 
 
 def compile_KLU():
@@ -323,12 +323,12 @@ idaklu_ext = Extension(
         "src/pybamm/solvers/c_solvers/idaklu/IdakluJax.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/common.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/common.cpp",
-        "src/pybamm/solvers/c_solvers/idaklu/python.hpp",
-        "src/pybamm/solvers/c_solvers/idaklu/python.cpp",
         "src/pybamm/solvers/c_solvers/idaklu/Solution.cpp",
         "src/pybamm/solvers/c_solvers/idaklu/Solution.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/Options.hpp",
         "src/pybamm/solvers/c_solvers/idaklu/Options.cpp",
+        "src/pybamm/solvers/c_solvers/idaklu/observe.hpp",
+        "src/pybamm/solvers/c_solvers/idaklu/observe.cpp",
         "src/pybamm/solvers/c_solvers/idaklu.cpp",
     ],
 )
@@ -342,7 +342,7 @@ setup(
     ext_modules=ext_modules,
     cmdclass={
         "build_ext": CMakeBuild,
-        "bdist_wheel": bdist_wheel,
+        "bdist_wheel": PyBaMMWheel,
         "install": CustomInstall,
     },
 )

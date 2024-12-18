@@ -7,7 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class OrderedPacking(BaseModel):
     """Submodel for Ordered Packing transport_efficiency
-    :footcite:t:`akanni1987effective`, :footcite:t:`shen2007critical`
+    :footcite:t:`Akanni1987`, :footcite:t:`Shen2007`
 
     Parameters
     ----------
@@ -23,8 +23,8 @@ class OrderedPacking(BaseModel):
         super().__init__(param, component, options=options)
 
     def get_coupled_variables(self, variables):
-        pybamm.citations.register("shen2007critical")
-        pybamm.citations.register("akanni1987effective")
+        pybamm.citations.register("Shen2007")
+        pybamm.citations.register("Akanni1987")
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:

@@ -6,8 +6,8 @@ from benchmarks.benchmark_utils import set_random_seed
 import numpy as np
 
 
-def solve_model_once(model, solver, t_eval):
-    solver.solve(model, t_eval=t_eval)
+def solve_model_once(model, solver, t_eval, t_interp):
+    solver.solve(model, t_eval=t_eval, t_interp=t_interp)
 
 
 class TimeSolveSPM:
@@ -31,6 +31,7 @@ class TimeSolveSPM:
     model: pybamm.BaseModel
     solver: pybamm.BaseSolver
     t_eval: np.ndarray
+    t_interp: np.ndarray | None
 
     def setup(self, solve_first, parameters, solver_class):
         set_random_seed()
@@ -38,8 +39,14 @@ class TimeSolveSPM:
         self.model = pybamm.lithium_ion.SPM()
         c_rate = 1
         tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
+        if self.solver.supports_interp:
+            self.t_eval = np.array([0, tmax])
+            self.t_interp = None
+        else:
+            nb_points = 500
+            self.t_eval = np.linspace(0, tmax, nb_points)
+            self.t_interp = None
+
         geometry = self.model.default_geometry
 
         # load parameter values and process model and geometry
@@ -63,10 +70,10 @@ class TimeSolveSPM:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, self.solver, self.t_eval)
+            solve_model_once(self.model, self.solver, self.t_eval, self.t_interp)
 
     def time_solve_model(self, _solve_first, _parameters, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeSolveSPMe:
@@ -97,8 +104,13 @@ class TimeSolveSPMe:
         self.model = pybamm.lithium_ion.SPMe()
         c_rate = 1
         tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
+        if self.solver.supports_interp:
+            self.t_eval = np.array([0, tmax])
+            self.t_interp = None
+        else:
+            nb_points = 500
+            self.t_eval = np.linspace(0, tmax, nb_points)
+            self.t_interp = None
         geometry = self.model.default_geometry
 
         # load parameter values and process model and geometry
@@ -122,10 +134,10 @@ class TimeSolveSPMe:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, self.solver, self.t_eval)
+            solve_model_once(self.model, self.solver, self.t_eval, self.t_interp)
 
     def time_solve_model(self, _solve_first, _parameters, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)
 
 
 class TimeSolveDFN:
@@ -161,8 +173,13 @@ class TimeSolveDFN:
         self.model = pybamm.lithium_ion.DFN()
         c_rate = 1
         tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
+        if self.solver.supports_interp:
+            self.t_eval = np.array([0, tmax])
+            self.t_interp = None
+        else:
+            nb_points = 500
+            self.t_eval = np.linspace(0, tmax, nb_points)
+            self.t_interp = None
         geometry = self.model.default_geometry
 
         # load parameter values and process model and geometry
@@ -186,7 +203,7 @@ class TimeSolveDFN:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, self.solver, self.t_eval)
+            solve_model_once(self.model, self.solver, self.t_eval, self.t_interp)
 
     def time_solve_model(self, _solve_first, _parameters, _solver_class):
-        self.solver.solve(self.model, t_eval=self.t_eval)
+        self.solver.solve(self.model, t_eval=self.t_eval, t_interp=self.t_interp)

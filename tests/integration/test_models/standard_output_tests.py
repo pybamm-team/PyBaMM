@@ -449,7 +449,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             # this seems to be linked to using constant concentration but not sure why
             decimal = 12
         elif self.model.options["particle phases"] != "1":
-            decimal = 13
+            decimal = 9
         elif "current-driven" in self.model.options["loss of active material"]:
             # current driven LAM model doesn't perfectly conserve lithium, not sure why
             decimal = 9

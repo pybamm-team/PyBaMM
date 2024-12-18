@@ -2,6 +2,7 @@
 # Solution class
 #
 import casadi
+import copy
 import json
 import numbers
 import numpy as np
@@ -57,11 +58,14 @@ class Solution:
         the event happens.
     termination : str
         String to indicate why the solution terminated
-
-    sensitivities: bool or dict
+    all_sensitivities: bool or dict of lists
         True if sensitivities included as the solution of the explicit forwards
         equations.  False if no sensitivities included/wanted. Dict if sensitivities are
-        provided as a dict of {parameter: sensitivities} pairs.
+        provided as a dict of {parameter: [sensitivities]} pairs.
+    variables_returned: bool
+        Bool to indicate if `all_ys` contains the full state vector, or is empty because
+        only requested variables have been returned. True if `output_variables` is used
+        with a solver, otherwise False.
 
     """
 
@@ -74,7 +78,9 @@ class Solution:
         t_event=None,
         y_event=None,
         termination="final time",
-        sensitivities=False,
+        all_sensitivities=False,
+        all_yps=None,
+        variables_returned=False,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
@@ -88,6 +94,12 @@ class Solution:
         self._all_ys_and_sens = all_ys
         self._all_models = all_models
 
+        if (all_yps is not None) and not isinstance(all_yps, list):
+            all_yps = [all_yps]
+        self._all_yps = all_yps
+
+        self.variables_returned = variables_returned
+
         # Set up inputs
         if not isinstance(all_inputs, list):
             all_inputs_copy = dict(all_inputs)
@@ -98,7 +110,18 @@ class Solution:
         else:
             self.all_inputs = all_inputs
 
-        self.sensitivities = sensitivities
+        if isinstance(all_sensitivities, bool):
+            self._all_sensitivities = all_sensitivities
+        elif isinstance(all_sensitivities, dict):
+            self._all_sensitivities = {}
+            for key, value in all_sensitivities.items():
+                if isinstance(value, list):
+                    self._all_sensitivities[key] = value
+                else:
+                    self._all_sensitivities[key] = [value]
+
+        else:
+            raise TypeError("sensitivities arg needs to be a bool or dict")
 
         # Check no ys are too large
         if check_solution:
@@ -117,7 +140,7 @@ class Solution:
 
         # initialize empty variables and data
         self._variables = pybamm.FuzzyDict()
-        self.data = pybamm.FuzzyDict()
+        self._data = pybamm.FuzzyDict()
 
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
@@ -134,47 +157,31 @@ class Solution:
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
+    def has_sensitivities(self) -> bool:
+        if isinstance(self._all_sensitivities, bool):
+            return self._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict):
+            return len(self._all_sensitivities) > 0
+
     def extract_explicit_sensitivities(self):
-        # if we got here, we haven't set y yet
-        self.set_y()
+        self._all_sensitivities = {}
 
-        # extract sensitivities from full y solution
-        self._y, self._sensitivities = self._extract_explicit_sensitivities(
-            self.all_models[0], self.y, self.t, self.all_inputs[0]
-        )
-
-        # make sure we remove all sensitivities from all_ys
+        # extract sensitivities from each sub-solution
         for index, (model, ys, ts, inputs) in enumerate(
             zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
         ):
-            self._all_ys[index], _ = self._extract_explicit_sensitivities(
+            self._all_ys[index], sens_segment = self._extract_explicit_sensitivities(
                 model, ys, ts, inputs
             )
+            for key, value in sens_segment.items():
+                if key in self._all_sensitivities:
+                    self._all_sensitivities[key] = self._all_sensitivities[key] + [
+                        value
+                    ]
+                else:
+                    self._all_sensitivities[key] = [value]
 
-    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
-        """
-        given a model and a solution y, extracts the sensitivities
-
-        Parameters
-        --------
-        model : :class:`pybamm.BaseModel`
-            A model that has been already setup by this base solver
-        y: ndarray
-            The solution of the full explicit sensitivity equations
-        t_eval: ndarray
-            The evaluation times
-        inputs: dict
-            parameter inputs
-
-        Returns
-        -------
-        y: ndarray
-            The solution of the ode/dae in model
-        sensitivities: dict of (string: ndarray)
-            A dictionary of parameter names, and the corresponding solution of
-            the sensitivity equations
-        """
-
+    def _extract_sensitivity_matrix(self, model, y):
         n_states = model.len_rhs_and_alg
         n_rhs = model.len_rhs
         n_alg = model.len_alg
@@ -185,7 +192,6 @@ class Solution:
             n_p = model.len_alg_sens // model.len_alg
         len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
 
-        n_t = len(t_eval)
         # y gets the part of the solution vector that correspond to the
         # actual ODE/DAE solution
 
@@ -211,6 +217,8 @@ class Solution:
             y_full = y.full()
         else:
             y_full = y
+
+        n_t = y.shape[1]
         ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
         alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
         # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
@@ -220,6 +228,44 @@ class Solution:
         full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
             n_t * n_states, n_p
         )
+
+        # convert back to casadi (todo: this is not very efficient, should refactor
+        # to avoid this)
+        full_sens_matrix = casadi.DM(full_sens_matrix)
+
+        y_dae = np.vstack(
+            [
+                y[: model.len_rhs, :],
+                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
+            ]
+        )
+        return y_dae, full_sens_matrix
+
+    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
+        """
+        given a model and a solution y, extracts the sensitivities
+
+        Parameters
+        --------
+        model : :class:`pybamm.BaseModel`
+            A model that has been already setup by this base solver
+        y: ndarray
+            The solution of the full explicit sensitivity equations
+        t_eval: ndarray
+            The evaluation times
+        inputs: dict
+            parameter inputs
+
+        Returns
+        -------
+        y: ndarray
+            The solution of the ode/dae in model
+        sensitivities: dict of (string: ndarray)
+            A dictionary of parameter names, and the corresponding solution of
+            the sensitivity equations
+        """
+
+        y_dae, full_sens_matrix = self._extract_sensitivity_matrix(model, y)
 
         # Save the full sensitivity matrix
         sensitivity = {"all": full_sens_matrix}
@@ -234,12 +280,6 @@ class Solution:
             sensitivity[name] = full_sens_matrix[:, start:end]
             start = end
 
-        y_dae = np.vstack(
-            [
-                y[: model.len_rhs, :],
-                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
-            ]
-        )
         return y_dae, sensitivity
 
     @property
@@ -262,31 +302,63 @@ class Solution:
         try:
             return self._y
         except AttributeError:
-            self.set_y()
-
             # if y is evaluated before sensitivities then need to extract them
-            if isinstance(self._sensitivities, bool) and self._sensitivities:
+            if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
                 self.extract_explicit_sensitivities()
+
+            self.set_y()
 
             return self._y
 
     @property
+    def data(self):
+        for k, v in self._variables.items():
+            if k not in self._data:
+                self._data[k] = v.data
+        return self._data
+
+    @property
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array"""
-        if isinstance(self._sensitivities, bool):
-            if self._sensitivities:
-                self.extract_explicit_sensitivities()
-            else:
-                self._sensitivities = {}
+        try:
+            return self._sensitivities
+        except AttributeError:
+            self.set_sensitivities()
         return self._sensitivities
 
     @sensitivities.setter
     def sensitivities(self, value):
-        """Updates the sensitivity"""
+        """Updates the sensitivity if False or True. Raises an error if sensitivities are a dict"""
         # sensitivities must be a dict or bool
-        if not isinstance(value, (bool, dict)):
-            raise TypeError("sensitivities arg needs to be a bool or dict")
-        self._sensitivities = value
+        if not isinstance(value, bool):
+            raise TypeError("sensitivities arg needs to be a bool")
+
+        if isinstance(self._all_sensitivities, dict):
+            raise NotImplementedError(
+                "Setting sensitivities is not supported if sensitivities are "
+                "already provided as a dict of {parameter: sensitivities} pairs."
+            )
+
+        self._all_sensitivities = value
+
+    def set_sensitivities(self):
+        if not self.has_sensitivities():
+            self._sensitivities = {}
+            return
+
+        # extract sensitivities if they are not already extracted
+        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
+            self.extract_explicit_sensitivities()
+
+        is_casadi = isinstance(
+            next(iter(self._all_sensitivities.values()))[0], (casadi.DM, casadi.MX)
+        )
+        self._sensitivities = {}
+        for key, sens in self._all_sensitivities.items():
+            if is_casadi:
+                self._sensitivities[key] = casadi.vertcat(*sens)
+            else:
+                self._sensitivities[key] = np.vstack(sens)
 
     def set_y(self):
         try:
@@ -348,6 +420,14 @@ class Solution:
         return [casadi.vertcat(*inp.values()) for inp in self.all_inputs]
 
     @property
+    def all_yps(self):
+        return self._all_yps
+
+    @property
+    def hermite_interpolation(self):
+        return self.all_yps is not None
+
+    @property
     def t_event(self):
         """Time at which the event happens"""
         return self._t_event
@@ -374,14 +454,35 @@ class Solution:
         than the full solution when only the first state is needed (e.g. to initialize
         a model with the solution)
         """
+        if isinstance(self._all_sensitivities, bool):
+            sensitivities = self._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict):
+            sensitivities = {}
+            n_states = self.all_models[0].len_rhs_and_alg
+            for key in self._all_sensitivities:
+                sensitivities[key] = self._all_sensitivities[key][0][-n_states:, :]
+
+        if self.all_yps is None:
+            all_yps = None
+        else:
+            all_yps = self.all_yps[0][:, :1]
+
+        if not self.variables_returned:
+            all_ys = self.all_ys[0][:, :1]
+        else:
+            # Get first state from initial conditions as all_ys is empty
+            all_ys = self.all_models[0].y0full.reshape(-1, 1)
+
         new_sol = Solution(
             self.all_ts[0][:1],
-            self.all_ys[0][:, :1],
+            all_ys,
             self.all_models[:1],
             self.all_inputs[:1],
             None,
             None,
             "final time",
+            all_sensitivities=sensitivities,
+            all_yps=all_yps,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
         new_sol._sub_solutions = self.sub_solutions[:1]
@@ -399,18 +500,38 @@ class Solution:
         than the full solution when only the final state is needed (e.g. to initialize
         a model with the solution)
         """
+        if isinstance(self._all_sensitivities, bool):
+            sensitivities = self._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict):
+            sensitivities = {}
+            n_states = self.all_models[-1].len_rhs_and_alg
+            for key in self._all_sensitivities:
+                sensitivities[key] = self._all_sensitivities[key][-1][-n_states:, :]
+
+        if self.all_yps is None:
+            all_yps = None
+        else:
+            all_yps = self.all_yps[-1][:, -1:]
+
+        if not self.variables_returned:
+            all_ys = self.all_ys[-1][:, -1:]
+        else:
+            # Get last state from y_event as all_ys is empty
+            all_ys = self.y_event.reshape(len(self.y_event), 1)
+
         new_sol = Solution(
             self.all_ts[-1][-1:],
-            self.all_ys[-1][:, -1:],
+            all_ys,
             self.all_models[-1:],
             self.all_inputs[-1:],
             self.t_event,
             self.y_event,
             self.termination,
+            all_sensitivities=sensitivities,
+            all_yps=all_yps,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
         new_sol._sub_solutions = self.sub_solutions[-1:]
-
         new_sol.solve_time = 0
         new_sol.integration_time = 0
         new_sol.set_up_time = 0
@@ -457,60 +578,70 @@ class Solution:
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
         # make sure that sensitivities are extracted if required
-        if isinstance(self._sensitivities, bool) and self._sensitivities:
+        if isinstance(self._all_sensitivities, bool) and self._all_sensitivities:
             self.extract_explicit_sensitivities()
 
-        # Convert single entry to list
+        # Single variable
         if isinstance(variables, str):
             variables = [variables]
-        # Process
-        for key in variables:
-            cumtrapz_ic = None
-            pybamm.logger.debug(f"Post-processing {key}")
-            vars_pybamm = [model.variables_and_events[key] for model in self.all_models]
 
-            # Iterate through all models, some may be in the list several times and
-            # therefore only get set up once
-            vars_casadi = []
-            for i, (model, ys, inputs, var_pybamm) in enumerate(
-                zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+        # Process
+        for variable in variables:
+            self._update_variable(variable)
+
+    def _update_variable(self, variable):
+        time_integral = None
+        pybamm.logger.debug(f"Post-processing {variable}")
+        vars_pybamm = [
+            model.variables_and_events[variable] for model in self.all_models
+        ]
+
+        # Iterate through all models, some may be in the list several times and
+        # therefore only get set up once
+        vars_casadi = []
+        for i, (model, ys, inputs, var_pybamm) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
+        ):
+            if self.variables_returned and var_pybamm.has_symbol_of_classes(
+                pybamm.expression_tree.state_vector.StateVector
             ):
-                if ys.size == 0 and var_pybamm.has_symbol_of_classes(
-                    pybamm.expression_tree.state_vector.StateVector
-                ):
-                    raise KeyError(
-                        f"Cannot process variable '{key}' as it was not part of the "
-                        "solve. Please re-run the solve with `output_variables` set to "
-                        "include this variable."
-                    )
-                elif isinstance(var_pybamm, pybamm.ExplicitTimeIntegral):
-                    cumtrapz_ic = var_pybamm.initial_condition
-                    cumtrapz_ic = cumtrapz_ic.evaluate()
-                    var_pybamm = var_pybamm.child
-                    var_casadi = self.process_casadi_var(
-                        var_pybamm,
-                        inputs,
-                        ys.shape,
-                    )
-                    model._variables_casadi[key] = var_casadi
-                    vars_pybamm[i] = var_pybamm
-                elif key in model._variables_casadi:
-                    var_casadi = model._variables_casadi[key]
+                raise KeyError(
+                    f"Cannot process variable '{variable}' as it was not part of the "
+                    "solve. Please re-run the solve with `output_variables` set to "
+                    "include this variable."
+                )
+            elif isinstance(
+                var_pybamm, (pybamm.ExplicitTimeIntegral, pybamm.DiscreteTimeSum)
+            ):
+                time_integral = pybamm.ProcessedVariableTimeIntegral.from_pybamm_var(
+                    var_pybamm
+                )
+                var_pybamm = var_pybamm.child
+                if variable in model._variables_casadi:
+                    var_casadi = model._variables_casadi[variable]
                 else:
                     var_casadi = self.process_casadi_var(
                         var_pybamm,
                         inputs,
                         ys.shape,
                     )
-                    model._variables_casadi[key] = var_casadi
-                vars_casadi.append(var_casadi)
-            var = pybamm.ProcessedVariable(
-                vars_pybamm, vars_casadi, self, cumtrapz_ic=cumtrapz_ic
-            )
+                    model._variables_casadi[variable] = var_casadi
+                vars_pybamm[i] = var_pybamm
+            elif variable in model._variables_casadi:
+                var_casadi = model._variables_casadi[variable]
+            else:
+                var_casadi = self.process_casadi_var(
+                    var_pybamm,
+                    inputs,
+                    ys.shape,
+                )
+                model._variables_casadi[variable] = var_casadi
+            vars_casadi.append(var_casadi)
+        var = pybamm.process_variable(
+            vars_pybamm, vars_casadi, self, time_integral=time_integral
+        )
 
-            # Save variable and data
-            self._variables[key] = var
-            self.data[key] = var.data
+        self._variables[variable] = var
 
     def process_casadi_var(self, var_pybamm, inputs, ys_shape):
         t_MX = casadi.MX.sym("t")
@@ -520,8 +651,40 @@ class Solution:
         }
         inputs_MX = casadi.vertcat(*[p for p in inputs_MX_dict.values()])
         var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=inputs_MX_dict)
-        var_casadi = casadi.Function("variable", [t_MX, y_MX, inputs_MX], [var_sym])
-        return var_casadi
+
+        opts = {
+            "cse": True,
+            "inputs_check": False,
+            "is_diff_in": [False, False, False],
+            "is_diff_out": [False],
+            "regularity_check": False,
+            "error_on_fail": False,
+            "enable_jacobian": False,
+        }
+
+        # Casadi has a bug where it does not correctly handle arrays with
+        # zeros padded at the beginning or end. To avoid this, we add and
+        # subtract the same number to the variable to reinforce the
+        # variable bounds. This does not affect the answer
+        epsilon = 1.0
+        var_sym = (var_sym - epsilon) + epsilon
+
+        var_casadi = casadi.Function(
+            "variable",
+            [t_MX, y_MX, inputs_MX],
+            [var_sym],
+            opts,
+        )
+
+        # Some variables, like interpolants, cannot be expanded
+        try:
+            var_casadi_out = var_casadi.expand()
+        except RuntimeError as error:
+            if "'eval_sx' not defined for" not in str(error):
+                raise error  # pragma: no cover
+            var_casadi_out = var_casadi
+
+        return var_casadi_out
 
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
@@ -534,7 +697,7 @@ class Solution:
 
         Returns
         -------
-        :class:`pybamm.ProcessedVariable`
+        :class:`pybamm.ProcessedVariable` or :class:`pybamm.ProcessedVariableComputed`
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
@@ -750,13 +913,47 @@ class Solution:
             return new_sol
 
         # Update list of sub-solutions
+        hermite_interpolation = (
+            other.hermite_interpolation and self.hermite_interpolation
+        )
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
             all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
             all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+            if hermite_interpolation:
+                all_yps = self.all_yps + [other.all_yps[0][:, 1:]] + other.all_yps[1:]
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
+            if hermite_interpolation:
+                all_yps = self.all_yps + other.all_yps
+
+        if not hermite_interpolation:
+            all_yps = None
+
+        # sensitivities can be:
+        # - bool if not using sensitivities or using explicit sensitivities which still
+        #   need to be extracted
+        # - dict if sensitivities are provided as a dict of {parameter: sensitivities}
+        # both self and other should have the same type of sensitivities
+        # OR both can be either False or {} (i.e. no sensitivities)
+        if isinstance(self._all_sensitivities, bool) and isinstance(
+            other._all_sensitivities, bool
+        ):
+            all_sensitivities = self._all_sensitivities or other._all_sensitivities
+        elif isinstance(self._all_sensitivities, dict) and isinstance(
+            other._all_sensitivities, dict
+        ):
+            all_sensitivities = self._all_sensitivities
+            # we can assume that the keys are the same for both solutions
+            for key in other._all_sensitivities:
+                all_sensitivities[key] = (
+                    all_sensitivities[key] + other._all_sensitivities[key]
+                )
+        elif not self._all_sensitivities and not other._all_sensitivities:
+            all_sensitivities = {}
+        else:
+            raise ValueError("Sensitivities must be of the same type")
 
         new_sol = Solution(
             all_ts,
@@ -766,18 +963,37 @@ class Solution:
             other.t_event,
             other.y_event,
             other.termination,
-            bool(self.sensitivities),
+            all_sensitivities=all_sensitivities,
+            all_yps=all_yps,
+            variables_returned=other.variables_returned,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
-        # Set solution time
-        new_sol.solve_time = self.solve_time + other.solve_time
-        new_sol.integration_time = self.integration_time + other.integration_time
+        # Add timers (if available)
+        for attr in ["solve_time", "integration_time", "set_up_time"]:
+            if (
+                getattr(self, attr, None) is not None
+                and getattr(other, attr, None) is not None
+            ):
+                setattr(new_sol, attr, getattr(self, attr) + getattr(other, attr))
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
+
+        # update variables which were derived at the solver stage
+        if other._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in other._variables.values()
+        ):
+            if not self._variables:
+                new_sol._variables = other._variables.copy()
+            else:
+                new_sol._variables = {
+                    v: self._variables[v]._update(other._variables[v], new_sol)
+                    for v in self._variables.keys()
+                }
 
         return new_sol
 
@@ -787,12 +1003,16 @@ class Solution:
     def copy(self):
         new_sol = self.__class__(
             self.all_ts,
-            self.all_ys,
+            # need to copy y in case it is modified by extract explicit sensitivities
+            [copy.copy(y) for y in self.all_ys],
             self.all_models,
             self.all_inputs,
             self.t_event,
             self.y_event,
             self.termination,
+            self._all_sensitivities,
+            self.all_yps,
+            self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -801,6 +1021,13 @@ class Solution:
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
         new_sol.set_up_time = self.set_up_time
+
+        # copy over variables which were derived at the solver stage
+        if self._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in self._variables.values()
+        ):
+            new_sol._variables = self._variables.copy()
 
         return new_sol
 
@@ -902,6 +1129,9 @@ def make_cycle_solution(
         sum_sols.t_event,
         sum_sols.y_event,
         sum_sols.termination,
+        sum_sols._all_sensitivities,
+        sum_sols.all_yps,
+        sum_sols.variables_returned,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions

@@ -79,7 +79,7 @@ class OneDimensionalX(BaseThermal):
         Q = variables["Total heating [W.m-3]"]
         Q_cn = variables["Negative current collector Ohmic heating [W.m-3]"]
         Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
-        T_amb = variables["Ambient temperature [K]"]
+        T_surf = variables["Surface temperature [K]"]
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -140,28 +140,28 @@ class OneDimensionalX(BaseThermal):
                 (
                     pybamm.boundary_value(lambda_n, "left")
                     * pybamm.boundary_gradient(T_n, "left")
-                    - h_cn * (T_cn - T_amb)
+                    - h_cn * (T_cn - T_surf)
                 )
                 / L_cn
                 + Q_cn
-                + cooling_coefficient_cn * (T_cn - T_amb)
+                + cooling_coefficient_cn * (T_cn - T_surf)
             )
             / self.param.n.rho_c_p_cc(T_cn),
             T: (
                 pybamm.div(lambda_ * pybamm.grad(T))
                 + Q
-                + cooling_coefficient * (T - T_amb)
+                + cooling_coefficient * (T - T_surf)
             )
             / rho_c_p,
             T_cp: (
                 (
                     -pybamm.boundary_value(lambda_p, "right")
                     * pybamm.boundary_gradient(T_p, "right")
-                    - h_cp * (T_cp - T_amb)
+                    - h_cp * (T_cp - T_surf)
                 )
                 / L_cp
                 + Q_cp
-                + cooling_coefficient_cp * (T_cp - T_amb)
+                + cooling_coefficient_cp * (T_cp - T_surf)
             )
             / self.param.p.rho_c_p_cc(T_cp),
         }

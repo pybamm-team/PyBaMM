@@ -41,8 +41,6 @@ class LeadingOrder(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        param = self.param
-
         c_ox_av = variables["X-averaged oxygen concentration [mol.m-3]"]
 
         eps_n_av = variables["X-averaged negative electrode porosity"]
@@ -62,16 +60,21 @@ class LeadingOrder(BaseModel):
         ]
 
         source_terms = (
-            param.n.L * param.s_ox_Ox * a_j_ox_n_av
-            + param.p.L * param.s_ox_Ox * a_j_ox_p_av
+            self.param.n.L * self.param.s_ox_Ox * a_j_ox_n_av
+            + self.param.p.L * self.param.s_ox_Ox * a_j_ox_p_av
         )
 
         self.rhs = {
             c_ox_av: 1
-            / (param.n.L * eps_n_av + param.s.L * eps_s_av + param.p.L * eps_p_av)
+            / (
+                self.param.n.L * eps_n_av
+                + self.param.s.L * eps_s_av
+                + self.param.p.L * eps_p_av
+            )
             * (
-                source_terms / param.F
-                - c_ox_av * (param.n.L * deps_n_dt_av + param.p.L * deps_p_dt_av)
+                source_terms / self.param.F
+                - c_ox_av
+                * (self.param.n.L * deps_n_dt_av + self.param.p.L * deps_p_dt_av)
             )
         }
 

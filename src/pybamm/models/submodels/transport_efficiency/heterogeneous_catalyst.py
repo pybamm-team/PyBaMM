@@ -7,7 +7,7 @@ from .base_transport_efficiency import BaseModel
 
 class HeterogeneousCatalyst(BaseModel):
     """Submodel for Heterogeneous Catalyst transport_efficiency
-    :footcite:t:`beeckman1990mathematical`, :footcite:t:`shen2007critical`
+    :footcite:t:`Beeckman1990`, :footcite:t:`Shen2007`
 
     Parameters
     ----------
@@ -23,8 +23,8 @@ class HeterogeneousCatalyst(BaseModel):
         super().__init__(param, component, options=options)
 
     def get_coupled_variables(self, variables):
-        pybamm.citations.register("shen2007critical")
-        pybamm.citations.register("beeckman1990mathematical")
+        pybamm.citations.register("Shen2007")
+        pybamm.citations.register("Beeckman1990")
         if self.component == "Electrolyte":
             tor_dict = {}
             for domain in self.options.whole_cell_domains:

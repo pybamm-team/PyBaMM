@@ -89,7 +89,7 @@ class CurrentDriven(BaseModel):
 
         self.initial_conditions = {u: u_init}
 
-    def set_events(self, variables):
+    def add_events_from(self, variables):
         domain, Domain = self.domain_Domain
 
         if self.reaction_loc == "full electrode":

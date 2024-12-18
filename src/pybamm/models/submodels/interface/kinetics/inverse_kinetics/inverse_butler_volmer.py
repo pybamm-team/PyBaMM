@@ -93,8 +93,9 @@ class InverseButlerVolmer(BaseInterface):
         return variables
 
     def _get_overpotential(self, j, j0, ne, T, u):
-        param = self.param
-        return (2 * (param.R * T) / param.F / ne) * pybamm.arcsinh(j / (2 * j0 * u))
+        return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh(
+            j / (2 * j0 * u)
+        )
 
 
 class CurrentForInverseButlerVolmer(BaseInterface):

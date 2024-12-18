@@ -97,7 +97,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
     def get_coupled_variables(self, variables):
         domain = self.domain
-        param = self.param
 
         c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
         T_av = variables[f"X-averaged {domain} electrode temperature [K]"]
@@ -135,7 +134,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # an extra algebraic equation to solve. For now, using the average c is an
             # ok approximation and means the SPM(e) still gives a system of ODEs rather
             # than DAEs.
-            c_s_surf_xav = c_s_av - (j_xav * R / 5 / param.F / D_eff_av)
+            c_s_surf_xav = c_s_av - (j_xav * R / 5 / self.param.F / D_eff_av)
         elif self.name == "quartic profile":
             # The surface concentration is computed from the average concentration,
             # the average concentration gradient and the boundary flux (see notes
@@ -144,7 +143,9 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             q_s_av = variables[
                 f"Average {domain} particle concentration gradient [mol.m-4]"
             ]
-            c_s_surf_xav = c_s_av + R / 35 * (8 * q_s_av - (j_xav / param.F / D_eff_av))
+            c_s_surf_xav = c_s_av + R / 35 * (
+                8 * q_s_av - (j_xav / self.param.F / D_eff_av)
+            )
 
         # Set concentration depending on polynomial order
         # Since c_s_xav doesn't depend on x, we need to define a spatial
@@ -223,7 +224,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         # using this model with 2D current collectors with the finite element
         # method (see #1399)
         domain = self.domain
-        param = self.param
 
         if self.size_distribution is False:
             c_s_av = variables[f"Average {domain} particle concentration [mol.m-3]"]
@@ -243,7 +243,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
 
         # eq 15 of Subramanian2005
         # equivalent to dcdt = -i_cc / (eps * F * L)
-        dcdt = -3 * j_xav / param.F / R
+        dcdt = -3 * j_xav / self.param.F / R
 
         if self.size_distribution is False:
             self.rhs = {c_s_av: pybamm.source(dcdt, c_s_av)}
@@ -262,7 +262,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             # eq 30 of Subramanian2005
             dqdt = (
                 -30 * pybamm.surf(D_eff_xav) * q_s_av / R**2
-                - 45 / 2 * j_xav / param.F / R**2
+                - 45 / 2 * j_xav / self.param.F / R**2
             )
             self.rhs[q_s_av] = pybamm.source(dqdt, q_s_av)
 

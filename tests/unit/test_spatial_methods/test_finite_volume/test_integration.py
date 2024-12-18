@@ -2,6 +2,7 @@
 # Tests for integration using Finite Volume method
 #
 
+import pytest
 import pybamm
 from tests import (
     get_mesh_for_testing,
@@ -9,10 +10,9 @@ from tests import (
     get_cylindrical_mesh_for_testing,
 )
 import numpy as np
-import unittest
 
 
-class TestFiniteVolumeIntegration(unittest.TestCase):
+class TestFiniteVolumeIntegration:
     def test_definite_integral(self):
         # create discretisation
         mesh = get_mesh_for_testing(xpts=200, rpts=200)
@@ -37,7 +37,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         submesh = mesh[("negative electrode", "separator")]
 
         constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
-        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ln + ls)
+        assert integral_eqn_disc.evaluate(None, constant_y) == ln + ls
         linear_y = submesh.nodes
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 2 / 2
@@ -56,10 +56,10 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         submesh = mesh[("separator", "positive electrode")]
 
         constant_y = np.ones_like(submesh.nodes[:, np.newaxis])
-        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ls + lp)
+        assert integral_eqn_disc.evaluate(None, constant_y) == ls + lp
         linear_y = submesh.nodes
-        self.assertAlmostEqual(
-            integral_eqn_disc.evaluate(None, linear_y)[0][0], (1 - (ln) ** 2) / 2
+        assert integral_eqn_disc.evaluate(None, linear_y)[0][0] == pytest.approx(
+            (1 - (ln) ** 2) / 2
         )
         cos_y = np.cos(submesh.nodes[:, np.newaxis])
         np.testing.assert_array_almost_equal(
@@ -122,9 +122,9 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         # test failure for secondary dimension column form
         finite_volume = pybamm.FiniteVolume()
         finite_volume.build(mesh)
-        with self.assertRaisesRegex(
+        with pytest.raises(
             NotImplementedError,
-            "Integral in secondary vector only implemented in 'row' form",
+            match="Integral in secondary vector only implemented in 'row' form",
         ):
             finite_volume.definite_integral_matrix(var, "column", "secondary")
 
@@ -293,14 +293,14 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         # row (default)
         vec = pybamm.DefiniteIntegralVector(var)
         vec_disc = disc.process_symbol(vec)
-        self.assertEqual(vec_disc.shape[0], 1)
-        self.assertEqual(vec_disc.shape[1], mesh["negative electrode"].npts)
+        assert vec_disc.shape[0] == 1
+        assert vec_disc.shape[1] == mesh["negative electrode"].npts
 
         # column
         vec = pybamm.DefiniteIntegralVector(var, vector_type="column")
         vec_disc = disc.process_symbol(vec)
-        self.assertEqual(vec_disc.shape[0], mesh["negative electrode"].npts)
-        self.assertEqual(vec_disc.shape[1], 1)
+        assert vec_disc.shape[0] == mesh["negative electrode"].npts
+        assert vec_disc.shape[1] == 1
 
     def test_indefinite_integral(self):
         # create discretisation
@@ -340,7 +340,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+        assert left_boundary_value_disc.evaluate(y=phi_exact) == 0
         # linear case
         phi_exact = submesh.nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
@@ -380,7 +380,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+        assert left_boundary_value_disc.evaluate(y=phi_exact) == 0
 
         # linear case
         phi_exact = submesh.nodes[:, np.newaxis] - submesh.edges[0]
@@ -441,7 +441,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         c_approx = c_integral_disc.evaluate(None, c_exact)
         c_approx += 1  # add constant of integration
         np.testing.assert_array_almost_equal(c_exact, c_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
+        assert left_boundary_value_disc.evaluate(y=c_exact) == 0
 
         # linear case
         c_exact = submesh.nodes[:, np.newaxis]
@@ -489,7 +489,7 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(right_boundary_value_disc.evaluate(y=phi_exact), 0)
+        assert right_boundary_value_disc.evaluate(y=phi_exact) == 0
 
         # linear case
         phi_exact = submesh.nodes - submesh.edges[-1]
@@ -583,9 +583,9 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
 
         int_c = pybamm.IndefiniteIntegral(c, r)
         disc.set_variable_slices([c])
-        with self.assertRaisesRegex(
+        with pytest.raises(
             NotImplementedError,
-            "Indefinite integral on a spherical polar domain is not implemented",
+            match="Indefinite integral on a spherical polar domain is not implemented",
         ):
             disc.process_symbol(int_c)
 
@@ -655,13 +655,3 @@ class TestFiniteVolumeIntegration(unittest.TestCase):
                 full_int_phi_disc.evaluate(y=phi_exact).flatten(),
                 int_plus_back_int_phi_disc.evaluate(y=phi_exact).flatten(),
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

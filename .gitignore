@@ -46,7 +46,6 @@ input/*
 
 # simulation outputs
 out/
-config.py
 matplotlibrc
 *.pickle
 *.sav
@@ -65,6 +64,7 @@ coverage.xml
 htmlcov/
 
 # virtual environment
+.venv
 env/
 venv/
 venv3.5/
