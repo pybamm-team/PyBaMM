@@ -263,3 +263,37 @@ class BaseModel(BaseInterface):
             )
 
         return variables
+    
+    def _get_standard_reaction_distribution_variables(self, j_sei):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the SEI interfacial reaction current
+
+        Parameters
+        ----------
+        j_sei : :class:`pybamm.Symbol`
+            The SEI interfacial reaction current.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the SEI currents.
+        """
+        domain, Domain = self.domain_Domain
+        j_sei = pybamm.size_average(j_sei)
+        variables = {
+            f"{Domain} electrode {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_sei,
+        }
+
+        if self.reaction_loc != "interface":
+            j_sei_av = pybamm.x_average(j_sei)
+            variables.update(
+                {
+                    f"X-averaged {domain} electrode {self.reaction_name}"
+                    "interfacial current density [A.m-2]": j_sei_av,
+                }
+            )
+
+        return variables
+

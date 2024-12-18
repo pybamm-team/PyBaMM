@@ -666,7 +666,6 @@ class ParameterValues:
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             function_name = self[symbol.name]
-            print(symbol.name)
             if isinstance(
                 function_name,
                 (numbers.Number, pybamm.Interpolant, pybamm.InputParameter),
