@@ -388,7 +388,6 @@ def size_average(
         ]
         for domain in list(symbol.domains.values())
     ):
-        print(f"symbol: {symbol.domain}")
         return symbol
 
     # If symbol is a primary broadcast to "particle size", take the orphan

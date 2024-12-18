@@ -331,7 +331,6 @@ class BaseInterface(pybamm.BaseSubModel):
             j = variables[
                 f"{Domain} electrode {phase_name}{reaction_name}interfacial current density [A.m-2]"
             ]
-        print(reaction_name)
         a_j = a * j
         a_j_av = pybamm.x_average(a_j)
 
