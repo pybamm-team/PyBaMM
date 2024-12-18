@@ -12,9 +12,9 @@
 
 <img src='./benchmark_images/time_vs_mesh_size_22.7.png'>
 
-## Solve Time vs dt_max
+## Solve Time vs dt_event
 
-<img src='./benchmark_images/time_vs_dt_max_22.7.png'>
+<img src='./benchmark_images/time_vs_dt_event_22.7.png'>
 
 ## Solve Time vs Number of states
 
