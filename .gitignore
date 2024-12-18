@@ -137,3 +137,5 @@ results/
 
 # tests
 test_callback.log
+PublicPyBaMM_Composite/
+PyBaMM/
