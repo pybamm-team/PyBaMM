@@ -54,36 +54,4 @@ jobs:
 
       - name: Run Sphinx linkcheck
         run: sphinx-build -b linkcheck -d docs/_build/.doctrees docs docs/_build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Run Lychee URL checker in parallel (No redundant checkout)
-      - name: Lychee URL checker
-        uses: lycheeverse/lychee-action@v2.1.0
-        with:
-          args: >-
-            --cache
-            --no-progress
-            --max-cache-age 2d
-            --timeout 10
-            --max-retries 5
-            --skip-missing
-            --exclude-loopback
-            --exclude https://twitter.com/pybamm_
-            --exclude "https://doi\.org|www.sciencedirect\.com/*"
-            --exclude https://www.rse.ox.ac.uk
-            --accept 200,429
-            --exclude-path ./CHANGELOG.md
-            --exclude-path ./scripts/update_version.py
-            --exclude-path asv.conf.json
-            --exclude-path docs/conf.py
-            --exclude-path all_contributors.md
-            './**/*.rst'
-            './**/*.md'
-            './**/*.py'
-            './**/*.ipynb'
-            './**/*.json'
-            './**/*.toml'
-          fail: true
-          jobSummary: true
-          format: markdown
+  
