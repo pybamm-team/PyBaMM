@@ -54,4 +54,3 @@ jobs:
 
       - name: Run Sphinx linkcheck
         run: sphinx-build -b linkcheck -d docs/_build/.doctrees docs docs/_build
-  
