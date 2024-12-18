@@ -414,6 +414,7 @@ def silicon_SEI_limited_dead_lithium_OKane2022(L_sei):
 
     return gamma
 
+
 def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
