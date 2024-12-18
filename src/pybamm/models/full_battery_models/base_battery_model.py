@@ -530,11 +530,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Heat of mixing submodels do not yet support particle-size "
                     "distributions."
                 )
-            if options["lithium plating"] != "none":
-                raise NotImplementedError(
-                    "Lithium plating submodels do not yet support particle-size "
-                    "distributions."
-                )
             if options["particle"] in ["quadratic profile", "quartic profile"]:
                 raise NotImplementedError(
                     "'quadratic' and 'quartic' concentration profiles have not yet "
