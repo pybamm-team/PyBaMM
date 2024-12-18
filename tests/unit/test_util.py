@@ -195,7 +195,10 @@ class TestSearch:
         # Test bad var search (returns best matches)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             model.variables.search("Electrolyte cot")
-            out = "No exact matches found for 'Electrolyte cot'. Best matches are: ['Electrolyte concentration', 'Electrode potential']\n"
+            out = (
+                "No exact matches found for 'Electrolyte cot'. "
+                "Best matches are: ['Electrolyte concentration', 'Electrode potential']\n"
+            )
             assert fake_out.getvalue() == out
 
         # Test for multiple strings as input (default returns key)
@@ -236,17 +239,20 @@ class TestSearch:
                 "Electrolyte concentration -> 1\n"
             )
             assert fake_out.getvalue() == out
-        # Test for empty string input
-        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
-            model.variables.search("", print_values=True)
-            out = "Error: Please provide a non-empty search term.\n"
-            assert fake_out.getvalue() == out
 
-        # Test for list with all empty strings
-        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+        # Test for empty string input (raises ValueError)
+        with pytest.raises(
+            ValueError,
+            match="The search term cannot be an empty or whitespace-only string.",
+        ):
+            model.variables.search("", print_values=True)
+
+        # Test for list with all empty strings (raises ValueError)
+        with pytest.raises(
+            ValueError,
+            match="The 'keys' list cannot contain only empty or whitespace strings.",
+        ):
             model.variables.search(["", "   ", "\t"], print_values=True)
-            out = "Error: Please provide a non-empty search term in the list.\n"
-            assert fake_out.getvalue() == out
 
         # Test for list with a mix of empty and valid strings
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
@@ -256,3 +262,10 @@ class TestSearch:
                 "Electrolyte concentration -> 1\n"
             )
             assert fake_out.getvalue() == out
+
+        # Test invalid input type
+        with pytest.raises(
+            TypeError,
+            match=" 'keys' must be a string or a list of strings, got <class 'int'>",
+        ):
+            model.variables.search(123)

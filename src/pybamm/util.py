@@ -108,6 +108,22 @@ class FuzzyDict(dict):
                 f"'{key}' not found. Best matches are {best_matches}"
             ) from error
 
+    def _find_matches(self, search_key, known_keys):
+        """
+        Helper method to find exact and partial matches for a given search key.
+
+        Parameters
+        ----------
+        search_key : str
+            The term to search for in the keys.
+        known_keys : list of str
+            The list of known dictionary keys to search within.
+
+        """
+        exact = [key for key in known_keys if search_key in key.lower()]
+        partial = difflib.get_close_matches(search_key, known_keys, n=5, cutoff=0.5)
+        return exact, partial
+
     def search(self, keys, print_values=False):
         """
         Search dictionary for keys containing all terms in 'keys'.
@@ -124,17 +140,28 @@ class FuzzyDict(dict):
             Default is False.
         """
 
-        if not keys or (isinstance(keys, str) and not keys.strip()):
-            print("Error: Please provide a non-empty search term.")
-            return
-        if isinstance(keys, list) and all(not str(k).strip() for k in keys):
-            print("Error: Please provide a non-empty search term in the list.")
-            return
+        if not isinstance(keys, (str, list)):
+            raise TypeError(
+                f" 'keys' must be a string or a list of strings, got {type(keys)}"
+            )
 
         if isinstance(keys, str):
+            if not keys.strip():
+                raise ValueError(
+                    "The search term cannot be an empty or whitespace-only string."
+                )
             original_keys = [keys]
             search_keys = [keys.strip().lower()]
-        else:
+
+        elif isinstance(keys, list):
+            if all(not str(k).strip() for k in keys):
+                raise ValueError(
+                    "The 'keys' list cannot contain only empty or whitespace strings."
+                )
+
+            if not all(isinstance(k, str) for k in keys):
+                raise TypeError("All elements in the 'keys' list must be strings.")
+
             original_keys = keys
             search_keys = [k.strip().lower() for k in keys if k.strip()]
 
@@ -159,8 +186,9 @@ class FuzzyDict(dict):
 
         # If no exact matches, iterate over search keys individually
         for original_key, search_key in zip(original_keys, search_keys):
-            # Find exact matches for this specific search key
-            exact_key_matches = [key for key in known_keys if search_key in key.lower()]
+            exact_key_matches, partial_matches = self._find_matches(
+                search_key, known_keys
+            )
 
             if exact_key_matches:
                 print(f"Exact matches for '{original_key}': {exact_key_matches}")
@@ -168,11 +196,6 @@ class FuzzyDict(dict):
                     for match in exact_key_matches:
                         print(f"{match} -> {self[match]}")
             else:
-                # Find the best partial matches for this specific search key
-                partial_matches = difflib.get_close_matches(
-                    search_key, known_keys, n=5, cutoff=0.5
-                )
-
                 if partial_matches:
                     print(
                         f"No exact matches found for '{original_key}'. Best matches are: {partial_matches}"
