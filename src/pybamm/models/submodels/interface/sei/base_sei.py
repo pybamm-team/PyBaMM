@@ -184,13 +184,11 @@ class BaseModel(BaseInterface):
             )
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
-
             L_inner_cr = variables[f"{Domain} inner {reaction_name}thickness [m]"]
             L_outer_cr = variables[f"{Domain} outer {reaction_name}thickness [m]"]
             roughness = variables[
                 f"{Domain} electrode {self.phase_name}roughness ratio"
             ]
-
 
             n_SEI_cr = L_cr * L_to_n * (roughness - 1)  # SEI on cracks concentration
             n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)

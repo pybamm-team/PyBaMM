@@ -535,7 +535,6 @@ def get_parameter_values():
     return {
         "chemistry": "lithium_ion",
         # sei
-
         "Primary: Negative ratio of lithium moles to SEI moles": 2.0,
         "Primary: Negative inner SEI reaction proportion": 0.5,
         "Primary: Negative inner SEI partial molar volume [m3.mol-1]": 9.585e-05,
@@ -577,7 +576,6 @@ def get_parameter_values():
         "Secondary: Negative SEI open-circuit potential [V]": 0.4,
         "Secondary: Negative SEI growth activation energy [J.mol-1]": 0.0,
         "Negative electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
-
         "Positive electrode reaction-driven LAM factor [m3.mol-1]": 0.0,
         # cell
         "Negative current collector thickness [m]": 1.2e-05,
