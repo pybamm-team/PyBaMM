@@ -232,7 +232,10 @@ class BaseInterface(pybamm.BaseSubModel):
         j_av = pybamm.x_average(j)
         if j.domain == []:
             j = pybamm.FullBroadcast(j, f"{domain} electrode", "current collector")
-        elif j.domain == ["current collector"]:
+        elif (
+            j.domain == ["current collector"]
+            and getattr(self, "reaction_loc", None) != "interface"
+        ):
             j = pybamm.PrimaryBroadcast(j, f"{domain} electrode")
 
         variables = {
@@ -242,10 +245,12 @@ class BaseInterface(pybamm.BaseSubModel):
             "interfacial current density [A.m-2]": j_av,
         }
         if self.phase_name == reaction_name:
-            variables.update({
-                f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]": j,
-                f"X-averaged {domain} electrode {reaction_name}interfacial current density [A.m-2]": j_av,
-            })
+            variables.update(
+                {
+                    f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]": j,
+                    f"X-averaged {domain} electrode {reaction_name}interfacial current density [A.m-2]": j_av,
+                }
+            )
 
         return variables
 
