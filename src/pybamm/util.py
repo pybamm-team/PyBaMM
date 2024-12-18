@@ -1,3 +1,4 @@
+from __future__ import annotations
 import importlib.util
 import importlib.metadata
 import numbers
@@ -124,7 +125,7 @@ class FuzzyDict(dict):
         partial = difflib.get_close_matches(search_key, known_keys, n=5, cutoff=0.5)
         return exact, partial
 
-    def search(self, keys, print_values=False):
+    def search(self, keys: str | list[str], print_values: bool = False):
         """
         Search dictionary for keys containing all terms in 'keys'.
         If print_values is True, both the keys and values will be printed.
