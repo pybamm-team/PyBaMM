@@ -155,10 +155,9 @@ class BaseModel(BaseInterface):
             if self.size_distribution:
                 n_SEI_sav = pybamm.size_average(n_SEI)
                 n_SEI_xav = pybamm.x_average(n_SEI_sav)
-                n_SEI_av = pybamm.yz_average(n_SEI_xav)
             else:
                 n_SEI_xav = pybamm.x_average(n_SEI)
-                n_SEI_av = pybamm.yz_average(n_SEI_xav)
+            n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
             delta_n_SEI = n_SEI_av - n_SEI_0
