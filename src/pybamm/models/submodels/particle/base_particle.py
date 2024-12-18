@@ -185,6 +185,7 @@ class BaseParticle(pybamm.BaseSubModel):
         """
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
+        Phase_prefactor = self.phase_param.phase_prefactor
 
         R_typ = self.phase_param.R_typ  # [m]
         # Particle-size distribution (area-weighted)
@@ -237,21 +238,21 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables = {
             f"{Domain} {phase_name}particle sizes": R / R_typ,
-            f"{Domain} {phase_name}particle sizes [m]": R,
-            f"{Domain} area-weighted {phase_name}particle-size"
+            f"{Phase_prefactor}{Domain} {phase_name}particle sizes [m]": R,
+            f"{Phase_prefactor}{Domain} area-weighted {phase_name}particle-size"
             " distribution [m-1]": f_a_dist,
-            f"{Domain} volume-weighted {phase_name}particle-size"
+            f"{Phase_prefactor}{Domain} volume-weighted {phase_name}particle-size"
             " distribution [m-1]": f_v_dist,
-            f"{Domain} number-based {phase_name}particle-size"
+            f"{Phase_prefactor}{Domain} number-based {phase_name}particle-size"
             " distribution [m-1]": f_num_dist,
-            f"{Domain} area-weighted mean particle radius [m]": R_a_mean,
-            f"{Domain} volume-weighted mean particle radius [m]": R_v_mean,
-            f"{Domain} number-based mean particle radius [m]": R_num_mean,
-            f"{Domain} area-weighted {phase_name}particle-size"
+            f"{Phase_prefactor}{Domain} area-weighted mean particle radius [m]": R_a_mean,
+            f"{Phase_prefactor}{Domain} volume-weighted mean particle radius [m]": R_v_mean,
+            f"{Phase_prefactor}{Domain} number-based mean particle radius [m]": R_num_mean,
+            f"{Phase_prefactor}{Domain} area-weighted {phase_name}particle-size"
             " standard deviation [m]": sd_a,
-            f"{Domain} volume-weighted {phase_name}particle-size"
+            f"{Phase_prefactor}{Domain} volume-weighted {phase_name}particle-size"
             " standard deviation [m]": sd_v,
-            f"{Domain} number-based {phase_name}particle-size"
+            f"{Phase_prefactor}{Domain} number-based {phase_name}particle-size"
             " standard deviation [m]": sd_num,
             # X-averaged sizes and distributions
             f"X-averaged {domain} {phase_name}particle sizes [m]": pybamm.x_average(R),

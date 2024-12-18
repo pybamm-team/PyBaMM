@@ -140,6 +140,10 @@ class TestBaseBatteryModel:
             "z": 10,
             "R_n": 30,
             "R_p": 30,
+            "R_n_prim": 30,
+            "R_p_prim": 30,
+            "R_n_sec": 30,
+            "R_p_sec": 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         assert var_pts == model.default_var_pts
