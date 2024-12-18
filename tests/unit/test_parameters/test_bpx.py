@@ -4,11 +4,12 @@ import pybamm
 import copy
 import numpy as np
 import pytest
+from typing import Any
 
 
 class TestBPX:
     def setup_method(self):
-        self.base = {
+        self.base: dict[str, Any] = {
             "Header": {
                 "BPX": 1.0,
                 "Title": "Parametrisation example",
@@ -132,9 +133,6 @@ class TestBPX:
             with tempfile.NamedTemporaryFile(
                 suffix=filename, delete=False, mode="w"
             ) as tmp:
-                # write to a temporary file so we can
-                # get the source later on using inspect.getsource
-                # (as long as the file still exists)
                 json.dump(obj, tmp)
                 tmp.flush()
 
@@ -183,9 +181,6 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
@@ -237,9 +232,6 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a temporary file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
@@ -274,9 +266,6 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
@@ -367,9 +356,6 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
@@ -446,9 +432,6 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a tempory file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
@@ -468,9 +451,6 @@ class TestBPX:
         with tempfile.NamedTemporaryFile(
             suffix=filename, delete=False, mode="w"
         ) as tmp:
-            # write to a temporary file so we can
-            # get the source later on using inspect.getsource
-            # (as long as the file still exists)
             json.dump(bpx_obj, tmp)
             tmp.flush()
 
