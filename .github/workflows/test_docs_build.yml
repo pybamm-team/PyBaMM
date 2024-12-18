@@ -3,13 +3,6 @@ name: Documentation
 on:
   workflow_dispatch:
   pull_request:
-  push:
-    branches:
-      - main
-      - develop
-  schedule:
-    # Run every day at 3 am UTC
-    - cron: "0 3 * * *"
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
