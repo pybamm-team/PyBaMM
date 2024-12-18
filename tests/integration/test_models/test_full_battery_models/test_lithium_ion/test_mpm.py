@@ -81,6 +81,7 @@ class TestMPM:
                 + 0.1,
                 "Negative particle hysteresis decay rate": 1,
                 "Negative particle hysteresis switching factor": 1,
+                "Initial hysteresis state in negative electrode": -0.5,
                 # "Negative electrode OCP hysteresis [V]": lambda sto: 1,
             },
             check_already_exists=False,
