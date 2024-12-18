@@ -1,18 +1,13 @@
-# Run all unit tests and integration tests for all Python versions
-# and platforms at 3am UTC every day and on PRs to the main branch
 name: Scheduled
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-
   # Run every day at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
 
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
   PYBAMM_IDAKLU_EXPR_CASADI: ON
   PYBAMM_IDAKLU_EXPR_IREE: ON
@@ -26,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  run_tests:
+  run_unit_integration_and_coverage_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,13 +32,14 @@ jobs:
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+          sudo dot -c
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
         if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
@@ -64,7 +60,7 @@ jobs:
         run: choco install graphviz --version=8.0.5
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -89,7 +85,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -99,21 +95,23 @@ jobs:
   # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install graphviz pandoc texlive-latex-extra dvipng
+          sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.11
 
@@ -131,19 +129,21 @@ jobs:
 
   run_example_tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     name: Example notebooks (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install gfortran gcc graphviz pandoc libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
 
@@ -162,19 +162,21 @@ jobs:
 
   run_scripts_tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc graphviz libopenblas-dev texlive-latex-extra dvipng
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: 3.12
 

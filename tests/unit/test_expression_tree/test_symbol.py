@@ -227,7 +227,26 @@ class TestSymbol:
             "c",
             "a",
         ]
+        expected_postorder = [
+            "a",
+            "c",
+            "*",
+            "a",
+            "b",
+            "*",
+            "c",
+            "*",
+            "a",
+            "+",
+            "c",
+            "a",
+            "*",
+            "-",
+            "*",
+        ]
         for node, expect in zip(exp.pre_order(), expected_preorder):
+            assert node.name == expect
+        for node, expect in zip(exp.post_order(), expected_postorder):
             assert node.name == expect
 
     def test_symbol_diff(self):

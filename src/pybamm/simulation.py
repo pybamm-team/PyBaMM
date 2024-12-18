@@ -10,6 +10,7 @@ import hashlib
 import warnings
 from functools import lru_cache
 from datetime import timedelta
+import pybamm.telemetry
 from pybamm.util import import_optional_dependency
 
 from pybamm.expression_tree.operations.serialise import Serialise
@@ -175,6 +176,11 @@ class Simulation:
             )
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
+        msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
+
+    def _set_up_and_parameterise_experiment(self, solve_kwargs=None):
         """
         Create and parameterise the models for each step in the experiment.
 
@@ -253,10 +259,16 @@ class Simulation:
             )
 
     def set_parameters(self):
+        msg = (
+            "pybamm.set_parameters is deprecated and not meant to be accessed by users."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        self._set_parameters()
+
+    def _set_parameters(self):
         """
         A method to set the parameters in the model and the associated geometry.
         """
-
         if self._model_with_set_params:
             return
 
@@ -332,7 +344,7 @@ class Simulation:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
-            self.set_parameters()
+            self._set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
             self._disc = pybamm.Discretisation(
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
@@ -354,7 +366,7 @@ class Simulation:
         if self.steps_to_built_models:
             return
         else:
-            self.set_up_and_parameterise_experiment(solve_kwargs)
+            self._set_up_and_parameterise_experiment(solve_kwargs)
 
             # Can process geometry with default parameter values (only electrical
             # parameters change between parameter values)
@@ -450,6 +462,8 @@ class Simulation:
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
         """
+        pybamm.telemetry.capture("simulation-solved")
+
         # Setup
         if solver is None:
             solver = self._solver

@@ -1,11 +1,12 @@
 #
 # Tests for the lithium-ion DFN model
 #
+import numpy as np
+import pytest
+
 import pybamm
 import tests
-import numpy as np
 from tests import BaseIntegrationTestLithiumIon
-import pytest
 
 
 class TestDFN(BaseIntegrationTestLithiumIon):

@@ -153,7 +153,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited", "reaction limited (asymmetric)", \
                     "solvent-diffusion limited", "electron-migration limited", \
-                    "interstitial-diffusion limited", "ec reaction limited" \
+                    "interstitial-diffusion limited", "ec reaction limited" ,   \
+                    "VonKolzenberg2020", "tunnelling limited",\
                     or "ec reaction limited (asymmetric)": :class:`pybamm.sei.SEIGrowth`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
@@ -305,6 +306,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "interstitial-diffusion limited",
                 "ec reaction limited",
                 "ec reaction limited (asymmetric)",
+                "VonKolzenberg2020",
+                "tunnelling limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],
@@ -990,7 +993,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 f"must use surface formulation to solve {self!s} with hydrolysis"
             )
-
         self._options = options
 
     def set_standard_output_variables(self):
