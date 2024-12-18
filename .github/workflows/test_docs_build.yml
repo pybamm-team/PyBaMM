@@ -43,7 +43,7 @@ jobs:
         run: python -m nox -s doctests
 
       - name: Build docs (HTML)
-        run: sphinx-build -b html docs/ docs/_build/html
+        run: sphinx-build -b html -d docs/_build/.doctrees docs docs/_build
 
       - name: Run Sphinx linkcheck
         run: sphinx-build -b linkcheck -d docs/_build/.doctrees docs docs/_build
