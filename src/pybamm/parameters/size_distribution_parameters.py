@@ -9,14 +9,23 @@ import numpy as np
 def get_size_distribution_parameters(
     param,
     R_n_av=None,
+    R_n_av_prim=None,
+    R_n_av_sec=None,
     R_p_av=None,
     sd_n=0.3,
+    sd_n_prim=0.3,
+    sd_n_sec=0.3,
     sd_p=0.3,
     R_min_n=None,
+    R_min_n_prim=None,
+    R_min_n_sec=None,
     R_min_p=None,
     R_max_n=None,
+    R_max_n_prim=None,
+    R_max_n_sec=None,
     R_max_p=None,
     working_electrode="both",
+    composite="neither",
 ):
     """
     A convenience method to add standard area-weighted particle-size distribution
@@ -62,30 +71,68 @@ def get_size_distribution_parameters(
     """
     if working_electrode == "both":
         # Radii from given parameter set
-        R_n_typ = param["Negative particle radius [m]"]
+        if composite != "negative" and composite != "both":
+            R_n_typ = param["Negative particle radius [m]"]
+            # Set the mean particle radii
+            R_n_av = R_n_av or R_n_typ
+            # Minimum radii
+            R_min_n = R_min_n or np.max([0, 1 - sd_n * 5])
 
-        # Set the mean particle radii
-        R_n_av = R_n_av or R_n_typ
+            # Max radii
+            R_max_n = R_max_n or (1 + sd_n * 5)
 
-        # Minimum radii
-        R_min_n = R_min_n or np.max([0, 1 - sd_n * 5])
+            # Area-weighted particle-size distribution
+            def f_a_dist_n(R):
+                return lognormal(R, R_n_av, sd_n * R_n_av)
 
-        # Max radii
-        R_max_n = R_max_n or (1 + sd_n * 5)
+            param.update(
+                {
+                    "Negative minimum particle radius [m]": R_min_n * R_n_av,
+                    "Negative maximum particle radius [m]": R_max_n * R_n_av,
+                    "Negative area-weighted "
+                    + "particle-size distribution [m-1]": f_a_dist_n,
+                },
+                check_already_exists=False,
+            )
+        else:
+            R_n_typ_prim = param["Primary: Negative particle radius [m]"]
+            R_n_typ_sec = param["Secondary: Negative particle radius [m]"]
+            # Set the mean particle radii
+            R_n_av_prim = R_n_av_prim or R_n_typ_prim
+            R_n_av_sec = R_n_av_sec or R_n_typ_sec
+            # Minimum radii
+            R_min_n_prim = R_min_n_prim or np.max([0, 1 - sd_n_prim * 5])
+            R_min_n_sec = R_min_n_sec or np.max([0, 1 - sd_n_sec * 5])
 
-        # Area-weighted particle-size distribution
-        def f_a_dist_n(R):
-            return lognormal(R, R_n_av, sd_n * R_n_av)
+            # Max radii
+            R_max_n_prim = R_max_n_prim or (1 + sd_n_prim * 5)
+            R_max_n_sec = R_max_n_sec or (1 + sd_n_sec * 5)
 
-        param.update(
-            {
-                "Negative minimum particle radius [m]": R_min_n * R_n_av,
-                "Negative maximum particle radius [m]": R_max_n * R_n_av,
-                "Negative area-weighted "
-                + "particle-size distribution [m-1]": f_a_dist_n,
-            },
-            check_already_exists=False,
-        )
+            # Area-weighted particle-size distribution
+            def f_a_dist_n_prim(R):
+                return lognormal(R, R_n_av_prim, sd_n_prim * R_n_av_prim)
+
+            def f_a_dist_n_sec(R):
+                return lognormal(R, R_n_av_sec, sd_n_sec * R_n_av_sec)
+
+            param.update(
+                {
+                    "Primary: Negative minimum particle radius [m]": R_min_n_prim
+                    * R_n_av_prim,
+                    "Primary: Negative maximum particle radius [m]": R_max_n_prim
+                    * R_n_av_prim,
+                    "Primary: Negative area-weighted "
+                    + "particle-size distribution [m-1]": f_a_dist_n_prim,
+                    "Secondary: Negative minimum particle radius [m]": R_min_n_sec
+                    * R_n_av_sec,
+                    "Secondary: Negative maximum particle radius [m]": R_max_n_sec
+                    * R_n_av_sec,
+                    "Secondary: Negative area-weighted "
+                    + "particle-size distribution [m-1]": f_a_dist_n_sec,
+                },
+                check_already_exists=False,
+            )
+
     # Radii from given parameter set
     R_p_typ = param["Positive particle radius [m]"]
 

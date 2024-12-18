@@ -98,9 +98,48 @@ R_n = pybamm.SpatialVariable(
     },
     coord_sys="cartesian",
 )
+
 R_p = pybamm.SpatialVariable(
     "R_p",
     domain=["positive particle size"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian",
+)
+
+R_n_prim = pybamm.SpatialVariable(
+    "R_n_prim",
+    domain=["negative primary particle size"],
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian",
+)
+R_p_prim = pybamm.SpatialVariable(
+    "R_p_prim",
+    domain=["positive primary particle size"],
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian",
+)
+
+R_n_sec = pybamm.SpatialVariable(
+    "R_n_sec",
+    domain=["negative secondary particle size"],
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+    coord_sys="cartesian",
+)
+R_p_sec = pybamm.SpatialVariable(
+    "R_p_sec",
+    domain=["positive secondary particle size"],
     auxiliary_domains={
         "secondary": "positive electrode",
         "tertiary": "current collector",

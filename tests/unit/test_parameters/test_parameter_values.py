@@ -893,7 +893,7 @@ class TestParameterValues:
         var_av_proc = param.process_symbol(var_av)
 
         assert isinstance(var_av_proc, pybamm.SizeAverage)
-        R = pybamm.SpatialVariable("R", "negative particle size")
+        R = pybamm.SpatialVariable("R_n", "negative particle size")
         assert var_av_proc.f_a_dist == R**2
 
     def test_process_not_constant(self):
