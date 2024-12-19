@@ -229,7 +229,7 @@ class TestSearch:
         # Test no matches and no best matches
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             model.variables.search("NonexistentKey")
-            assert fake_out.getvalue() == "No matches found for 'NonexistentKey'.\n"
+            assert fake_out.getvalue() == "No matches found for 'NonexistentKey'\n"
 
         # Test print_values=True with partial matches
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
@@ -243,14 +243,14 @@ class TestSearch:
         # Test for empty string input (raises ValueError)
         with pytest.raises(
             ValueError,
-            match="The search term cannot be an empty or whitespace-only string.",
+            match="The search term cannot be an empty or whitespace-only string",
         ):
             model.variables.search("", print_values=True)
 
         # Test for list with all empty strings (raises ValueError)
         with pytest.raises(
             ValueError,
-            match="The 'keys' list cannot contain only empty or whitespace strings.",
+            match="The 'keys' list cannot contain only empty or whitespace strings",
         ):
             model.variables.search(["", "   ", "\t"], print_values=True)
 
@@ -266,6 +266,6 @@ class TestSearch:
         # Test invalid input type
         with pytest.raises(
             TypeError,
-            match=" 'keys' must be a string or a list of strings, got <class 'int'>",
+            match="'keys' must be a string or a list of strings, got <class 'int'>",
         ):
             model.variables.search(123)

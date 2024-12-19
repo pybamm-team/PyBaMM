@@ -109,7 +109,7 @@ class FuzzyDict(dict):
                 f"'{key}' not found. Best matches are {best_matches}"
             ) from error
 
-    def _find_matches(self, search_key, known_keys):
+    def _find_matches(self, search_key: str, known_keys: list[str]):
         """
         Helper method to find exact and partial matches for a given search key.
 
@@ -141,15 +141,16 @@ class FuzzyDict(dict):
             Default is False.
         """
 
-        if not isinstance(keys, (str, list)):
-            raise TypeError(
-                f" 'keys' must be a string or a list of strings, got {type(keys)}"
-            )
+        if not isinstance(keys, (str, list)) or not all(
+            isinstance(k, str) for k in keys
+        ):
+            msg = f"'keys' must be a string or a list of strings, got {type(keys)}"
+            raise TypeError(msg)
 
         if isinstance(keys, str):
             if not keys.strip():
                 raise ValueError(
-                    "The search term cannot be an empty or whitespace-only string."
+                    "The search term cannot be an empty or whitespace-only string"
                 )
             original_keys = [keys]
             search_keys = [keys.strip().lower()]
@@ -157,11 +158,8 @@ class FuzzyDict(dict):
         elif isinstance(keys, list):
             if all(not str(k).strip() for k in keys):
                 raise ValueError(
-                    "The 'keys' list cannot contain only empty or whitespace strings."
+                    "The 'keys' list cannot contain only empty or whitespace strings"
                 )
-
-            if not all(isinstance(k, str) for k in keys):
-                raise TypeError("All elements in the 'keys' list must be strings.")
 
             original_keys = keys
             search_keys = [k.strip().lower() for k in keys if k.strip()]
@@ -202,7 +200,7 @@ class FuzzyDict(dict):
                         f"No exact matches found for '{original_key}'. Best matches are: {partial_matches}"
                     )
                 else:
-                    print(f"No matches found for '{original_key}'.")
+                    print(f"No matches found for '{original_key}'")
 
     def copy(self):
         return FuzzyDict(super().copy())
