@@ -138,6 +138,7 @@ from .meshes.one_dimensional_submeshes import (
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
     SpectralVolume1DSubMesh,
+    SymbolicUniform1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
