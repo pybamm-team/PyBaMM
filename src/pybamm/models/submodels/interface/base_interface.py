@@ -46,6 +46,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = self.phase_name + self.reaction_name
 
         self.reaction = reaction
+        domain_options = getattr(self.options, domain)
+        self.size_distribution = domain_options["particle size"] == "distribution"
 
     def _get_exchange_current_density(self, variables):
         """
@@ -93,8 +95,10 @@ class BaseInterface(pybamm.BaseSubModel):
                     # "current collector"
                     c_e = pybamm.PrimaryBroadcast(c_e, ["current collector"])
                 # broadcast c_e, T onto "particle size"
-                c_e = pybamm.PrimaryBroadcast(c_e, [f"{domain} particle size"])
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
+                c_e = pybamm.PrimaryBroadcast(
+                    c_e, [f"{domain} {phase_name}particle size"]
+                )
+                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
 
             else:
                 c_s_surf = variables[
@@ -215,13 +219,23 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
-        if j.domain in [["negative particle size"], ["positive particle size"]]:
+        if j.domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]:
             j = pybamm.size_average(j)
         # Average, and broadcast if necessary
         j_av = pybamm.x_average(j)
         if j.domain == []:
             j = pybamm.FullBroadcast(j, f"{domain} electrode", "current collector")
-        elif j.domain == ["current collector"]:
+        elif (
+            j.domain == ["current collector"]
+            and getattr(self, "reaction_loc", None) != "interface"
+        ):
             j = pybamm.PrimaryBroadcast(j, f"{domain} electrode")
 
         variables = {
@@ -230,6 +244,13 @@ class BaseInterface(pybamm.BaseSubModel):
             f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density [A.m-2]": j_av,
         }
+        if self.phase_name == reaction_name:
+            variables.update(
+                {
+                    f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]": j,
+                    f"X-averaged {domain} electrode {reaction_name}interfacial current density [A.m-2]": j_av,
+                }
+            )
 
         return variables
 
@@ -298,7 +319,6 @@ class BaseInterface(pybamm.BaseSubModel):
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
             ]
-
         j = variables[
             f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
         ]
@@ -335,7 +355,14 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For eta_r variables that depend on particle size, see
         # "_get_standard_size_distribution_overpotential_variables"
-        if eta_r.domain in [["negative particle size"], ["positive particle size"]]:
+        if eta_r.domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]:
             eta_r = pybamm.size_average(eta_r)
 
         # X-average, and broadcast if necessary
@@ -410,9 +437,11 @@ class BaseInterface(pybamm.BaseSubModel):
         if j.domains["secondary"] == [f"{domain} electrode"]:
             # x-average
             j_xav = pybamm.x_average(j)
-        else:
+        elif getattr(self, "reaction_loc", None) != "interface":
             j_xav = j
             j = pybamm.SecondaryBroadcast(j_xav, [f"{domain} electrode"])
+        else:
+            j_xav = j
 
         variables = {
             f"{Domain} electrode {reaction_name}"
