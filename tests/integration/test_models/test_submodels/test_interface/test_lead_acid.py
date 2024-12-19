@@ -2,7 +2,6 @@
 # Tests for the electrode-electrolyte interface equations for lead-acid models
 #
 import pybamm
-from tests import get_discretisation_for_testing
 import pytest
 
 
@@ -75,7 +74,7 @@ class TestMainReaction:
         for x in j0_p.pre_order():
             assert not isinstance(x, pybamm.Parameter)
 
-    def test_discretisation_main_reaction(self):
+    def test_discretisation_main_reaction(self, get_discretisation_for_testing):
         # With intercalation
         param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(
@@ -88,7 +87,7 @@ class TestMainReaction:
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters and discretise
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
-        disc = get_discretisation_for_testing()
+        disc = get_discretisation_for_testing
         mesh = disc.mesh
         disc.set_variable_slices([self.c_e])
         j0_n = disc.process_symbol(parameter_values.process_symbol(j0_n))
