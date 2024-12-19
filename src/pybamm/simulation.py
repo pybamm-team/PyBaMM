@@ -920,7 +920,7 @@ class Simulation:
                 # See PR #3995
                 if voltage_stop is not None:
                     min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
-                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+                    logs["Minimum voltage [V]"] = min_voltage
 
                 callbacks.on_cycle_end(logs)
 
@@ -941,7 +941,7 @@ class Simulation:
 
             if self._solution is not None and len(all_cycle_solutions) > 0:
                 self._solution.cycles = all_cycle_solutions
-                self._solution.set_summary_variables(all_summary_variables)
+                self._solution.update_summary_variables(all_summary_variables)
                 self._solution.all_first_states = all_first_states
 
             callbacks.on_experiment_end(logs)
