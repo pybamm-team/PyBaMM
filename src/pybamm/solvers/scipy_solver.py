@@ -21,6 +21,9 @@ class ScipySolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `SciPy documentation
@@ -34,6 +37,7 @@ class ScipySolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=None,
+        max_step=np.inf,
         extra_options=None,
     ):
         super().__init__(
@@ -41,10 +45,12 @@ class ScipySolver(pybamm.BaseSolver):
             rtol=rtol,
             atol=atol,
             extrap_tol=extrap_tol,
+            max_step=max_step,
         )
         self._ode_solver = True
         self.extra_options = extra_options or {}
         self.name = f"Scipy solver ({method})"
+        self.max_step = max_step
         pybamm.citations.register("Virtanen2020")
 
     def _integrate(self, model, t_eval, inputs_dict=None, t_interp=None):
@@ -59,6 +65,8 @@ class ScipySolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
+        max_step : float, optional
+            Maximum allowed step size. Default is onp.inf.
 
         Returns
         -------
@@ -74,7 +82,12 @@ class ScipySolver(pybamm.BaseSolver):
         else:
             inputs = inputs_dict
 
-        extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
+        extra_options = {
+            **self.extra_options,
+            "rtol": self.rtol,
+            "atol": self.atol,
+            "max_step": self.max_step,
+        }
 
         # Initial conditions
         y0 = model.y0
