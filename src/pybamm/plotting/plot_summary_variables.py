@@ -62,13 +62,13 @@ def plot_summary_variables(
         for solution in solutions:
             # plot summary variable v/s cycle number
             ax.plot(
-                solution.summary_variables["Cycle number"],
+                solution.summary_variables.cycle_number,
                 solution.summary_variables[var],
             )
         # label the axes
         ax.set_xlabel("Cycle number")
         ax.set_ylabel(var)
-        ax.set_xlim([1, solution.summary_variables["Cycle number"][-1]])
+        ax.set_xlim([1, solution.summary_variables.cycle_number[-1]])
 
     fig.tight_layout()
 
