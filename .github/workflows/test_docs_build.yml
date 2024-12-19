@@ -40,7 +40,7 @@ jobs:
           pip install -e .[docs,dev,all]
 
       - name: Run doctests
-        run: python -m nox -s doctests
+        run: python -m pytest --doctest-plus src
 
       - name: Build docs (HTML)
         run: sphinx-build -b html -W --keep-going -d docs/_build/.doctrees docs docs/_build
