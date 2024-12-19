@@ -302,6 +302,33 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
             # generate full matrix from the submatrix
             matrix = kron(eye(third_dim_repeats), int_matrix)
+        elif integration_dimension == "tertiary":
+            # Create appropriate submesh by combining submeshes in domain
+            primary_submesh = self.mesh[domains["primary"]]
+
+            # Create matrix which integrates in the tertiary dimension
+            # Different number of edges depending on whether child evaluates on edges
+            # in the primary dimensions
+            if child.evaluates_on_edges("primary"):
+                n_primary_pts = primary_submesh.npts + 1
+            else:
+                n_primary_pts = primary_submesh.npts
+            int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
+
+            # repeat matrix for each node in higher dimensions
+            fourth_dim_repeats = self._get_auxiliary_domain_repeats(
+                {
+                    k: v
+                    for k, v in domains.items()
+                    if (k == "secondary" or k == "quaternary")
+                }
+            )
+
+            # generate full matrix from the submatrix
+            matrix = kron(eye(fourth_dim_repeats), int_matrix)
+        else:
+            raise ValueError(f"Invalid integration dimension: {integration_dimension}")
+
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format

@@ -688,6 +688,10 @@ class Discretisation:
                     eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             pybamm.logger.debug(f"Discretise {eqn_key!r}")
+            if "X-averaged positive particle effective diffusivity [m2.s-1]" in str(
+                eqn_key
+            ):
+                print("here")
             processed_eqn = self.process_symbol(eqn)
             # Calculate scale if the key has a scale
             scale = getattr(eqn_key, "scale", 1)
