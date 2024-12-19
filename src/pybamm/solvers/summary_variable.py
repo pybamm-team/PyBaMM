@@ -23,6 +23,12 @@ class SummaryVariables:
         Solver for electrode state-of-health (eSOH) calculations.
     user_inputs : dict, optional
         Additional user inputs for calculations.
+
+    Attributes
+    ----------
+    cycle_number : array[int]
+        Stores the cycle number for each saved cycle, for use when plotting.
+        Length is equal to the number of cycles in a solution.
     """
 
     def __init__(
