@@ -61,7 +61,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         sto = variables[f"{Domain} {phase_name}particle concentration"]
         Omega = pybamm.r_average(phase_param.Omega(sto, T))
         R0 = phase_param.R
-        c_0 = domain_param.c_0
+        c_0 = phase_param.c_0
         E0 = pybamm.r_average(phase_param.E(sto, T))
         nu = phase_param.nu
         L0 = domain_param.L
@@ -133,8 +133,8 @@ class BaseMechanics(pybamm.BaseSubModel):
         a = variables[
             f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
         ]
-        rho_cr = self.domain_param.rho_cr
-        w_cr = self.domain_param.w_cr
+        rho_cr = self.phase_param.rho_cr
+        w_cr = self.phase_param.w_cr
         roughness = 1 + 2 * l_cr * rho_cr * w_cr  # ratio of cracks to normal surface
         a_cr = (roughness - 1) * a  # crack surface area to volume ratio
 

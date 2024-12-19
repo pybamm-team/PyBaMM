@@ -41,7 +41,7 @@ class CrackPropagation(BaseMechanics):
             l_cr_av = pybamm.Variable(
                 f"X-averaged {domain} particle crack length [m]",
                 domain="current collector",
-                scale=self.domain_param.l_cr_0,
+                scale=self.phase_param.l_cr_0,
             )
             l_cr = pybamm.PrimaryBroadcast(l_cr_av, f"{domain} electrode")
         else:
@@ -49,7 +49,7 @@ class CrackPropagation(BaseMechanics):
                 f"{Domain} particle crack length [m]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
-                scale=self.domain_param.l_cr_0,
+                scale=self.phase_param.l_cr_0,
             )
 
         variables = self._get_standard_variables(l_cr)
@@ -62,9 +62,9 @@ class CrackPropagation(BaseMechanics):
         variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
         T = variables[f"{Domain} electrode temperature [K]"]
-        k_cr = self.domain_param.k_cr(T)
-        m_cr = self.domain_param.m_cr
-        b_cr = self.domain_param.b_cr
+        k_cr = self.phase_param.k_cr(T)
+        m_cr = self.phase_param.m_cr
+        b_cr = self.phase_param.b_cr
         stress_t_surf = variables[f"{Domain} particle surface tangential stress [Pa]"]
         l_cr = variables[f"{Domain} particle crack length [m]"]
         # # compressive stress will not lead to crack propagation
@@ -94,7 +94,7 @@ class CrackPropagation(BaseMechanics):
     def set_initial_conditions(self, variables):
         domain, Domain = self.domain_Domain
 
-        l_cr_0 = self.domain_param.l_cr_0
+        l_cr_0 = self.phase_param.l_cr_0
         if self.x_average is True:
             l_cr = variables[f"X-averaged {domain} particle crack length [m]"]
         else:
