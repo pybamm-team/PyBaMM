@@ -56,8 +56,13 @@ class TestSizeDistributionParameters:
             composite="negative",
         )
         assert "Primary: Negative maximum particle radius [m]" in values_composite
-        values.evaluate(param.n.prim.f_a_dist_n_prim(R_test))
-        values.evaluate(param.n.sec.f_a_dist_n_sec(R_test))
+        param = pybamm.LithiumIonParameters({"particle phases": ("2", "1")})
+        R_test_n_prim = pybamm.Scalar(1e-6)
+        R_test_n_prim.domains = {"primary": ["negative primary particle size"]}
+        R_test_n_sec = pybamm.Scalar(1e-6)
+        R_test_n_sec.domains = {"primary": ["negative secondary particle size"]}
+        values_composite.evaluate(param.n.prim.f_a_dist(R_test_n_prim))
+        values_composite.evaluate(param.n.sec.f_a_dist(R_test_n_sec))
         params_composite = pybamm.ParameterValues("Chen2020_composite")
         params_composite.update(
             {
@@ -72,8 +77,13 @@ class TestSizeDistributionParameters:
             composite="positive",
         )
         assert "Primary: Positive maximum particle radius [m]" in values_composite
-        values.evaluate(param.p.prim.f_a_dist_p_prim(R_test))
-        values.evaluate(param.p.sec.f_a_dist_p_sec(R_test))
+        param = pybamm.LithiumIonParameters({"particle phases": ("1", "2")})
+        R_test_p_prim = pybamm.Scalar(1e-6)
+        R_test_p_prim.domains = {"primary": ["positive primary particle size"]}
+        R_test_p_sec = pybamm.Scalar(1e-6)
+        R_test_p_sec.domains = {"primary": ["positive secondary particle size"]}
+        values_composite.evaluate(param.p.prim.f_a_dist(R_test_p_prim))
+        values_composite.evaluate(param.p.sec.f_a_dist(R_test_p_sec))
         params_composite = pybamm.ParameterValues("Chen2020_composite")
         params_composite.update(
             {
