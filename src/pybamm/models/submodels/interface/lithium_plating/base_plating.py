@@ -90,10 +90,6 @@ class BasePlating(BaseInterface):
         L_dead_Li_av = pybamm.x_average(L_dead_Li)
         Q_dead_Li = c_dead_Li_av * L_k * self.param.L_y * self.param.L_z
 
-        # if self.size_distribution is True:
-        #    Q_plated_Li = pybamm.size_average(Q_plated_Li)
-        #    Q_dead_Li = pybamm.size_average(Q_dead_Li)
-
         variables = {
             f"{Domain} {phase_name}lithium plating concentration "
             "[mol.m-3]": c_plated_Li,

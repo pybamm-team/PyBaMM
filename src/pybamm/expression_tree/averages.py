@@ -406,20 +406,15 @@ def size_average(
     else:
         if f_a_dist is None:
             geo = pybamm.geometric_parameters
+            name = "R"
             if "negative" in symbol.domain[0]:
-                if "primary" in symbol.domain[0]:
-                    name = "R_n_prim"
-                elif "secondary" in symbol.domain[0]:
-                    name = "R_n_sec"
-                else:
-                    name = "R_n"
-            else:
-                if "primary" in symbol.domain[0]:
-                    name = "R_p_prim"
-                elif "secondary" in symbol.domain[0]:
-                    name = "R_p_sec"
-                else:
-                    name = "R_p"
+                name += "_n"
+            elif "positive" in symbol.domain[0]:
+                name += "_p"
+            if "primary" in symbol.domain[0]:
+                name += "_prim"
+            elif "secondary" in symbol.domain[0]:
+                name += "_sec"
             R = pybamm.SpatialVariable(
                 name, domains=symbol.domains, coord_sys="cartesian"
             )
