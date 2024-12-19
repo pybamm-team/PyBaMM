@@ -515,9 +515,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         Cracking rate for the electrode;
         """
+        phase_prefactor = self.phase_prefactor
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{Domain} electrode cracking rate", {"Temperature [K]": T}
+            f"{phase_prefactor}{Domain} electrode cracking rate", {"Temperature [K]": T}
         )
 
     def D(self, c_s, T, lithiation=None):
