@@ -166,8 +166,6 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                     var_dict[domain] = zero_s
                 else:
                     var = variables[variable_template.format(domain + " ")]
-                    if "size" in var.domain[0]:
-                        var = pybamm.size_average(var)
                     var_dict[domain] = var
             var = pybamm.concatenation(*var_dict.values())
             variables.update({variable_template.format(""): var})

@@ -35,16 +35,16 @@ class NoPlating(BasePlating):
                 },
             )
         variables = self._get_standard_concentration_variables(zero, zero)
-        if self.size_distribution is False:
-            variables.update(self._get_standard_overpotential_variables(zero))
-            variables.update(self._get_standard_reaction_variables(zero))
-        else:
+        if self.size_distribution:
             variables.update(
                 self._get_standard_size_distribution_overpotential_variables(zero)
             )
             variables.update(
                 self._get_standard_size_distribution_reaction_variables(zero)
             )
+        else:
+            variables.update(self._get_standard_reaction_variables(zero))
+        variables.update(self._get_standard_overpotential_variables(zero))
 
         return variables
 

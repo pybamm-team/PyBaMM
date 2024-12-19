@@ -319,18 +319,9 @@ class BaseInterface(pybamm.BaseSubModel):
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
             ]
-        if "plating" in reaction_name:
-            j = variables[
-                f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
-            ]
-        elif phase_name in reaction_name:
-            j = variables[
-                f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
-            ]
-        else:
-            j = variables[
-                f"{Domain} electrode {phase_name}{reaction_name}interfacial current density [A.m-2]"
-            ]
+        j = variables[
+            f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
+        ]
         a_j = a * j
         a_j_av = pybamm.x_average(a_j)
 
@@ -364,7 +355,14 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For eta_r variables that depend on particle size, see
         # "_get_standard_size_distribution_overpotential_variables"
-        if eta_r.domain in [["negative particle size"], ["positive particle size"]]:
+        if eta_r.domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]:
             eta_r = pybamm.size_average(eta_r)
 
         # X-average, and broadcast if necessary

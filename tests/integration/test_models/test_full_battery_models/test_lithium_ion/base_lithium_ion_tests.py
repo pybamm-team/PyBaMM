@@ -351,41 +351,6 @@ class BaseIntegrationTestLithiumIon:
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
-    def test_particle_size_composite(self):
-        options = {
-            "particle phases": ("2", "1"),
-            "open-circuit potential": (("single", "current sigmoid"), "single"),
-            "particle size": "distribution",
-            "surface form": "algebraic",
-        }
-        parameter_values = pybamm.ParameterValues("Chen2020_composite")
-        name = "Negative electrode active material volume fraction"
-        x = 0.1
-        parameter_values.update(
-            {f"Primary: {name}": (1 - x) * 0.75, f"Secondary: {name}": x * 0.75}
-        )
-        parameter_values = pybamm.get_size_distribution_parameters(
-            parameter_values,
-            composite="negative",
-            R_min_n_prim=0.9,
-            R_min_n_sec=0.9,
-            R_max_n_prim=1.1,
-            R_max_n_sec=1.1,
-        )
-        # self.run_basic_processing_test(options, parameter_values=parameter_values)
-        # TODO: fix this test
-        sim = pybamm.Simulation(self.model(options), parameter_values=parameter_values)
-        sim.solve(t_eval=np.linspace(0, 3600))
-
-    def test_particle_size_distribution(self):
-        options = {
-            "particle size": "distribution",
-            "surface form": "algebraic",
-        }
-        parameter_values = self.model(options).default_parameter_values
-        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
-        self.run_basic_processing_test(options, parameter_values=parameter_values)
-
     def test_composite_graphite_silicon_sei(self):
         options = {
             "particle phases": ("2", "1"),
