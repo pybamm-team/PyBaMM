@@ -165,7 +165,8 @@ class TotalInterfacialCurrent(pybamm.BaseSubModel):
                 if domain == "separator":
                     var_dict[domain] = zero_s
                 else:
-                    var_dict[domain] = variables[variable_template.format(domain + " ")]
+                    var = variables[variable_template.format(domain + " ")]
+                    var_dict[domain] = var
             var = pybamm.concatenation(*var_dict.values())
             variables.update({variable_template.format(""): var})
 

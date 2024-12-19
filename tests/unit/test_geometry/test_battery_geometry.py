@@ -77,6 +77,16 @@ class TestBatteryGeometry:
             geometry["positive secondary particle"]["r_p_sec"]["max"] == geo.p.sec.R_typ
         )
 
+        options = {
+            "particle phases": "2",
+            "particle size": "distribution",
+        }
+        geometry = pybamm.battery_geometry(options=options)
+        assert "negative primary particle size" in geometry
+        assert "positive primary particle size" in geometry
+        assert "negative secondary particle size" in geometry
+        assert "positive secondary particle size" in geometry
+
     def test_geometry_error(self):
         with pytest.raises(pybamm.GeometryError, match="Invalid current"):
             pybamm.battery_geometry(

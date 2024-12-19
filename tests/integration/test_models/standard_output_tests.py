@@ -322,17 +322,17 @@ class ParticleConcentrationTests(BaseOutputTest):
             # Take only the x-averaged of these for now, since variables cannot have
             # 4 domains yet
             self.c_s_n_dist = solution[
-                "X-averaged negative particle concentration distribution"
+                f"X-averaged negative {self.phase_name_n}particle concentration distribution"
             ]
             self.c_s_p_dist = solution[
-                "X-averaged positive particle concentration distribution"
+                f"X-averaged positive {self.phase_name_p}particle concentration distribution"
             ]
 
             self.c_s_n_surf_dist = solution[
-                "Negative particle surface concentration distribution"
+                f"Negative {self.phase_name_n}particle surface concentration distribution"
             ]
             self.c_s_p_surf_dist = solution[
-                "Positive particle surface concentration distribution"
+                f"Positive {self.phase_name_p}particle surface concentration distribution"
             ]
 
     def test_concentration_increase_decrease(self):
