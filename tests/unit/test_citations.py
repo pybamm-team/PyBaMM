@@ -357,13 +357,13 @@ class TestCitations:
 
         citations._reset()
         assert "Sripad2020" not in citations._papers_to_cite
-        pybamm.kinetics.Marcus(None, None, None, None, None)
+        pybamm.kinetics.Marcus(None, "negative", None, None, None)
         assert "Sripad2020" in citations._papers_to_cite
         assert "Sripad2020" in citations._citation_tags.keys()
 
         citations._reset()
         assert "Sripad2020" not in citations._papers_to_cite
-        pybamm.kinetics.MarcusHushChidsey(None, None, None, None, None)
+        pybamm.kinetics.MarcusHushChidsey(None, "negative", None, None, None)
         assert "Sripad2020" in citations._papers_to_cite
         assert "Sripad2020" in citations._citation_tags.keys()
 

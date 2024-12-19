@@ -201,7 +201,14 @@ class TestUnaryOperators:
         )
         assert average_a == a
 
-        for domain in [["negative particle size"], ["positive particle size"]]:
+        for domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]:
             a = pybamm.Symbol("a", domain=domain)
             R = pybamm.SpatialVariable("R", domain)
             av_a = pybamm.size_average(a)

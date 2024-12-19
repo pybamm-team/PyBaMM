@@ -13,7 +13,7 @@ Ensure Docker installation by running:
 
 .. code:: bash
 
-	  docker --version
+      docker --version
 
 Pulling the Docker image
 ------------------------

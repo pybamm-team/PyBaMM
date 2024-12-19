@@ -81,9 +81,19 @@ class BaseModel(pybamm.BaseSubModel):
                 R = self.phase_param.R
             elif domain_options["particle size"] == "distribution":
                 if self.domain == "negative":
-                    R_ = pybamm.standard_spatial_vars.R_n
+                    if self.phase_name == "primary ":
+                        R_ = pybamm.standard_spatial_vars.R_n_prim
+                    elif self.phase_name == "secondary ":
+                        R_ = pybamm.standard_spatial_vars.R_n_sec
+                    else:
+                        R_ = pybamm.standard_spatial_vars.R_n
                 elif self.domain == "positive":
-                    R_ = pybamm.standard_spatial_vars.R_p
+                    if self.phase_name == "primary ":
+                        R_ = pybamm.standard_spatial_vars.R_p_prim
+                    elif self.phase_name == "secondary ":
+                        R_ = pybamm.standard_spatial_vars.R_p_sec
+                    else:
+                        R_ = pybamm.standard_spatial_vars.R_p
                 R = pybamm.size_average(R_)
 
             R_av = pybamm.x_average(R)
