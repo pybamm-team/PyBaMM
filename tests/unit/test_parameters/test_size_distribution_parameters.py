@@ -56,6 +56,8 @@ class TestSizeDistributionParameters:
             composite="negative",
         )
         assert "Primary: Negative maximum particle radius [m]" in values_composite
+        values.evaluate(param.n.prim.f_a_dist_n_prim(R_test))
+        values.evaluate(param.n.sec.f_a_dist_n_sec(R_test))
         params_composite = pybamm.ParameterValues("Chen2020_composite")
         params_composite.update(
             {
@@ -70,6 +72,8 @@ class TestSizeDistributionParameters:
             composite="positive",
         )
         assert "Primary: Positive maximum particle radius [m]" in values_composite
+        values.evaluate(param.p.prim.f_a_dist_p_prim(R_test))
+        values.evaluate(param.p.sec.f_a_dist_p_sec(R_test))
         params_composite = pybamm.ParameterValues("Chen2020_composite")
         params_composite.update(
             {

@@ -319,18 +319,9 @@ class BaseInterface(pybamm.BaseSubModel):
             a = variables[
                 f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
             ]
-        if "plating" in reaction_name:
-            j = variables[
-                f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
-            ]
-        elif phase_name in reaction_name:
-            j = variables[
-                f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
-            ]
-        else:
-            j = variables[
-                f"{Domain} electrode {phase_name}{reaction_name}interfacial current density [A.m-2]"
-            ]
+        j = variables[
+            f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]"
+        ]
         a_j = a * j
         a_j_av = pybamm.x_average(a_j)
 
