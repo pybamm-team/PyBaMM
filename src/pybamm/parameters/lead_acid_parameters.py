@@ -344,6 +344,7 @@ class PhaseLeadAcidParameters(BaseParameters):
         self.domain = domain_param.domain
         self.main_param = domain_param.main_param
         self.geo = domain_param.geo.prim
+        self.phase_name = phase
 
     def _set_parameters(self):
         main = self.main_param
