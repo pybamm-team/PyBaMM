@@ -23,7 +23,7 @@ class SwellingOnly(BaseMechanics):
 
     """
 
-    def __init__(self, param, domain, options, phase="primary"):
+    def __init__(self, param, domain, options, phase):
         super().__init__(param, domain, options, phase)
 
         pybamm.citations.register("Ai2019")
@@ -39,8 +39,8 @@ class SwellingOnly(BaseMechanics):
         variables = self._get_standard_variables(zero)
         variables.update(
             {
-                f"{Domain} particle cracking rate [m.s-1]": zero,
-                f"X-averaged {domain} particle cracking rate [m.s-1]": zero_av,
+                f"{Domain} {self.phase_name}particle cracking rate [m.s-1]": zero,
+                f"X-averaged {domain} {self.phase_name}particle cracking rate [m.s-1]": zero_av,
             }
         )
         return variables
