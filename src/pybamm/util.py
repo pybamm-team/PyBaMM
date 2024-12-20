@@ -156,7 +156,7 @@ class FuzzyDict(dict):
 
         elif isinstance(keys, list):
             if all(not str(k).strip() for k in keys):
-                msg  = "The 'keys' list cannot contain only empty or whitespace strings"
+                msg = "The 'keys' list cannot contain only empty or whitespace strings"
                 raise ValueError(msg)
 
             original_keys = keys
