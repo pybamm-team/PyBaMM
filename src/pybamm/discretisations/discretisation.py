@@ -193,6 +193,11 @@ class Discretisation:
 
         model_disc.bcs = self.bcs
 
+        # pre-process variables so that all state variables are included
+        pre_processed_variables = self._pre_process_variables(
+            model.variables, model.initial_conditions
+        )
+
         pybamm.logger.verbose(f"Discretise initial conditions for {model.name}")
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -202,9 +207,7 @@ class Discretisation:
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
         pybamm.logger.verbose(f"Discretise variables for {model.name}")
-        pre_processed_variables = self._pre_process_variables(
-            model.variables, model_disc.initial_conditions
-        )
+
         model_disc.variables = self.process_dict(pre_processed_variables)
 
         # Process parabolic and elliptic equations
