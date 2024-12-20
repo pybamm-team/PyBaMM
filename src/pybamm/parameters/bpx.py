@@ -398,8 +398,7 @@ def bpx_to_param_dict(bpx: BPX) -> dict:
     # Add user-defined parameters, if any
     user_defined = bpx.parameterisation.user_defined
     if user_defined:
-        for name in user_defined.model_fields.keys():
-            value = getattr(user_defined, name)
+        for name, value in user_defined:
             value = process_float_function_table(value, name)
             if callable(value):
                 pybamm_dict[name] = partial(_callable_func, fun=value)
