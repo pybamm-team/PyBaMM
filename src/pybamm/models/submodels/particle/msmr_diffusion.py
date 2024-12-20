@@ -257,7 +257,7 @@ class MSMRDiffusion(BaseParticle):
             N_s = pybamm.SecondaryBroadcast(N_s, [f"{domain} electrode"])
 
         variables.update(self._get_standard_diffusivity_variables(D_eff))
-        variables.update(self._get_standard_flux_variables(N_s))
+        variables.update(self._get_standard_flux_variables(N_s, None))
 
         return variables
 

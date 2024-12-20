@@ -214,7 +214,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 c_s, c_s_av=c_s_av, c_s_surf=c_s_surf
             )
         )
-        variables.update(self._get_standard_flux_variables(N_s))
+        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
 

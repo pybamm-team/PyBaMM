@@ -305,23 +305,26 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif integration_dimension == "tertiary":
             # Create appropriate submesh by combining submeshes in domain
             primary_submesh = self.mesh[domains["primary"]]
+            secondary_submesh = self.mesh[domains["secondary"]]
 
             # Create matrix which integrates in the tertiary dimension
             # Different number of edges depending on whether child evaluates on edges
-            # in the primary dimensions
+            # in the primary and secondary dimensions
             if child.evaluates_on_edges("primary"):
                 n_primary_pts = primary_submesh.npts + 1
             else:
                 n_primary_pts = primary_submesh.npts
-            int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
+            if child.evaluates_on_edges("secondary"):
+                n_secondary_pts = secondary_submesh.npts + 1
+            else:
+                n_secondary_pts = secondary_submesh.npts
+            int_matrix = hstack(
+                [d_edge * eye(n_primary_pts * n_secondary_pts) for d_edge in d_edges]
+            )
 
             # repeat matrix for each node in higher dimensions
             fourth_dim_repeats = self._get_auxiliary_domain_repeats(
-                {
-                    k: v
-                    for k, v in domains.items()
-                    if (k == "secondary" or k == "quaternary")
-                }
+                {k: v for k, v in domains.items() if k == "quaternary"}
             )
 
             # generate full matrix from the submatrix

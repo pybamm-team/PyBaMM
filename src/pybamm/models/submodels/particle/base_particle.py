@@ -161,20 +161,28 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_flux_variables(self, N_s):
+    def _get_standard_diffusivity_variables(self, D_eff):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        variables = {f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s}
+        variables = {
+            f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]": D_eff,
+            f"X-averaged {domain} {phase_name}particle effective "
+            "diffusivity [m2.s-1]": pybamm.x_average(D_eff),
+            f"Volume-averaged {domain} {phase_name}particle effective "
+            "diffusivity [m2.s-1]": pybamm.r_average(pybamm.x_average(D_eff)),
+        }
+        return variables
 
-        if isinstance(N_s, pybamm.Broadcast):
-            N_s_xav = pybamm.x_average(N_s)
-            variables.update(
-                {
-                    f"X-averaged {domain} {phase_name}"
-                    "particle flux [mol.m-2.s-1]": N_s_xav
-                }
-            )
+    def _get_standard_flux_variables(self, N_s, N_s_xav):
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+
+        variables = {
+            # f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s,
+            f"X-averaged {domain} {phase_name}particle flux [mol.m-2.s-1]": N_s_xav,
+        }
+
         return variables
 
     def _get_distribution_variables(self, R):
@@ -393,7 +401,7 @@ class BaseParticle(pybamm.BaseSubModel):
         }
         return variables
 
-    def _get_standard_flux_distribution_variables(self, N_s):
+    def _get_standard_flux_distribution_variables(self, N_s, N_s_xav):
         """
         Forms standard flux variables that depend on particle size R given
         the flux variable N_s from the distribution submodel.
@@ -401,44 +409,12 @@ class BaseParticle(pybamm.BaseSubModel):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        if [f"{domain} electrode"] in N_s.domains.values():
-            # N_s depends on x
-
-            N_s_distribution = N_s
-            # x-av the *tertiary* domain
-            # NOTE: not yet implemented. Fill with zeros instead
-            N_s_xav_distribution = pybamm.FullBroadcast(
-                0,
-                [f"{domain} {phase_name}particle"],
-                {
-                    "secondary": f"{domain} {phase_name}particle size",
-                    "tertiary": "current collector",
-                },
-            )
-        else:
-            N_s_xav_distribution = N_s
-            N_s_distribution = pybamm.TertiaryBroadcast(N_s, [f"{domain} electrode"])
-
         variables = {
             f"X-averaged {domain} {phase_name}particle flux "
-            "distribution [mol.m-2.s-1]": N_s_xav_distribution,
-            f"{Domain} {phase_name}particle flux "
-            "distribution [mol.m-2.s-1]": N_s_distribution,
+            "distribution [mol.m-2.s-1]": N_s_xav,
+            f"{Domain} {phase_name}particle flux " "distribution [mol.m-2.s-1]": N_s,
         }
 
-        return variables
-
-    def _get_standard_diffusivity_variables(self, D_eff):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        variables = {
-            f"{Domain} {phase_name}particle effective diffusivity [m2.s-1]": D_eff,
-            f"X-averaged {domain} {phase_name}particle effective "
-            "diffusivity [m2.s-1]": pybamm.x_average(D_eff),
-            f"Volume-averaged {domain} {phase_name}particle effective "
-            "diffusivity [m2.s-1]": pybamm.r_average(pybamm.x_average(D_eff)),
-        }
         return variables
 
     def _get_standard_diffusivity_distribution_variables(self, D_eff):

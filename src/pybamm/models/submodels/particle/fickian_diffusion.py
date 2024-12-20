@@ -130,6 +130,7 @@ class FickianDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
+        current = variables["Total current density [A.m-2]"]
 
         if self.size_distribution is False:
             if self.x_average:
@@ -188,9 +189,8 @@ class FickianDiffusion(BaseParticle):
                 "current density distribution [A.m-2]"
             ]
 
-        current = variables["Total current density [A.m-2]"]
         D_eff = self._get_effective_diffusivity(c_s, T, current)
-        D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav, current)
+        D_eff_xav = pybamm.x_average(D_eff)
         N_s = -D_eff * pybamm.grad(c_s)
         N_s_xav = -D_eff_xav * pybamm.grad(c_s_xav)
 
@@ -208,34 +208,36 @@ class FickianDiffusion(BaseParticle):
             }
         )
 
-        # Still debugging domain mismatch here - before this there was a mismatch
-        # where sometimes the variables we x-averaged and sometimes not, but you got away with it
-        # Similar changes will be needed in the msmr_diffusion.py file.
-        # if self.x_average is True:
-        #    if self.size_distribution is True:
-        #        D_eff = pybamm.TertiaryBroadcast(D_eff, [f"{domain} electrode"])
-        #        N_s = pybamm.TertiaryBroadcast(N_s, [f"{domain} electrode"])
-        #    else:
-        #        D_eff = pybamm.SecondaryBroadcast(D_eff, [f"{domain} electrode"])
-        #        N_s = pybamm.SecondaryBroadcast(N_s, [f"{domain} electrode"])
-        #
         if self.size_distribution is True:
-            # Update size-dependent variables
             variables.update(
                 self._get_standard_diffusivity_distribution_variables(D_eff)
             )
-            variables.update(self._get_standard_flux_distribution_variables(N_s))
-            # Now average over size
-            R = pybamm.SpatialVariable(
-                "R", domains=D_eff.domains, coord_sys="cartesian"
+            if self.x_average:
+                N_s = pybamm.TertiaryBroadcast(N_s_xav, [f"{domain} electrode"])
+            variables.update(
+                self._get_standard_flux_distribution_variables(N_s, N_s_xav)
             )
-            f_a_dist = self.phase_param.f_a_dist(R)
-            D_eff = pybamm.Integral(f_a_dist * D_eff, R)
-            N_s = pybamm.Integral(f_a_dist * N_s, R)
 
-        # TODO: This is where the problem is.
-        # variables.update(self._get_standard_diffusivity_variables(D_eff))
-        # variables.update(self._get_standard_flux_variables(N_s))
+            # Debugging, now get non-size-averaged variables
+            c_s = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
+            c_s_xav = variables[
+                f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
+            ]
+            T = pybamm.PrimaryBroadcast(
+                variables[f"{Domain} electrode temperature [K]"],
+                [f"{domain} {phase_name}particle"],
+            )
+            T_xav = pybamm.PrimaryBroadcast(
+                variables[f"X-averaged {domain} electrode temperature [K]"],
+                [f"{domain} {phase_name}particle"],
+            )
+            D_eff = self._get_effective_diffusivity(c_s, T, current)
+            D_eff_xav = pybamm.x_average(D_eff)
+            N_s = -D_eff * pybamm.grad(c_s)
+            N_s_xav = -D_eff_xav * pybamm.grad(c_s_xav)
+
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
+        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
 
