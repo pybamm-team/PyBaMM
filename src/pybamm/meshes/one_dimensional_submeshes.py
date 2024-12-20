@@ -85,6 +85,30 @@ class SubMesh1D(SubMesh):
         return json_dict
 
 
+class SymbolicUniform1DSubMesh(SubMesh1D):
+    def __init__(self, lims, npts, tabs=None):
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
+        coord_sys = spatial_var.coord_sys
+        x0 = spatial_lims["min"]
+        if tabs is not None:
+            raise NotImplementedError("Tabs not supported for symbolic uniform submesh")
+        if coord_sys != "cartesian" and spatial_lims["min"] != 0:
+            raise pybamm.GeometryError(
+                "Symbolic uniform submesh with non-cartesian coordinates and non-zero minimum not supported"
+            )
+        npts = npts[spatial_var.name]
+        length = spatial_lims["max"] - x0
+        self.edges = np.linspace(0, 1, npts + 1)
+        self.length = length
+        self.min = x0
+        self.nodes = (self.edges[1:] + self.edges[:-1]) / 2
+        self.d_edges = np.diff(self.edges)
+        self.d_nodes = np.diff(self.nodes)
+        self.npts = self.nodes.size
+        self.coord_sys = coord_sys
+        self.internal_boundaries = []
+
+
 class Uniform1DSubMesh(SubMesh1D):
     """
     A class to generate a uniform submesh on a 1D domain

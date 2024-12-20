@@ -914,12 +914,6 @@ class TestParameterValues:
         exp_param = param.process_symbol(expression)
         assert exp_param == 3.0 * (2.0**var2) / ((-4.0 + var1) + var2)
 
-    def test_process_geometry(self):
-        var = pybamm.Variable("var")
-        geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}
-        with pytest.raises(ValueError, match="Geometry parameters must be Scalars"):
-            pybamm.ParameterValues({}).process_geometry(geometry)
-
     def test_process_model(self):
         model = pybamm.BaseModel()
         a = pybamm.Parameter("a")
