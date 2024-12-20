@@ -31,7 +31,7 @@ class FickianDiffusion(BaseParticle):
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-
+        Phase_prefactor = self.phase_param.phase_prefactor
         variables = {}
         if self.size_distribution is False:
             if self.x_average is False:
@@ -81,7 +81,7 @@ class FickianDiffusion(BaseParticle):
                 )
                 variables = self._get_distribution_variables(R)
                 f_v_dist = variables[
-                    f"{Domain} volume-weighted {phase_name}"
+                    f"{Phase_prefactor}{Domain} volume-weighted {phase_name}"
                     "particle-size distribution [m-1]"
                 ]
             else:
@@ -130,6 +130,7 @@ class FickianDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
+        Phase_prefactor = self.phase_param.phase_prefactor
 
         if self.size_distribution is False:
             if self.x_average is False:
@@ -219,7 +220,7 @@ class FickianDiffusion(BaseParticle):
             )
             variables.update(self._get_standard_flux_distribution_variables(N_s))
             # Size-averaged flux variables
-            R = variables[f"{Domain} {phase_name}particle sizes [m]"]
+            R = variables[f"{Phase_prefactor}{Domain} {phase_name}particle sizes [m]"]
             f_a_dist = self.phase_param.f_a_dist(R)
             D_eff = pybamm.Integral(f_a_dist * D_eff, R)
             N_s = pybamm.Integral(f_a_dist * N_s, R)
