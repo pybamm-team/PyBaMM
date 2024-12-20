@@ -91,7 +91,7 @@ cite = [
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx @ git+ssh://git@github.com/kratman/BPX.git@fix/v0.5.0#egg=bpx",
+    "bpx>=0.5.0",
 ]
 # Low-overhead progress bars
 tqdm = [
