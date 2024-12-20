@@ -149,17 +149,15 @@ class FuzzyDict(dict):
 
         if isinstance(keys, str):
             if not keys.strip():
-                raise ValueError(
-                    "The search term cannot be an empty or whitespace-only string"
-                )
+                msg = "The search term cannot be an empty or whitespace-only string"
+                raise ValueError(msg)
             original_keys = [keys]
             search_keys = [keys.strip().lower()]
 
         elif isinstance(keys, list):
             if all(not str(k).strip() for k in keys):
-                raise ValueError(
-                    "The 'keys' list cannot contain only empty or whitespace strings"
-                )
+                msg  = "The 'keys' list cannot contain only empty or whitespace strings"
+                raise ValueError(msg)
 
             original_keys = keys
             search_keys = [k.strip().lower() for k in keys if k.strip()]
