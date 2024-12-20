@@ -284,15 +284,15 @@ class FiniteVolume(pybamm.SpatialMethod):
             # get lower dimensions and the corresponding domains, i.e. if integration_dimension is "secondary",
             # lower_dimensions is ["primary"] and lower_domains is [child.domains["primary"]]
             lower_dimensions = possible_dimensions[:this_dimension_index]
-            lower_domains = [child.domains[dom] for dom in lower_dimensions]
+            lower_domains = [child.domains[dimension] for dimension in lower_dimensions]
             # get higher dimensions, i.e. if integration_dimension is "secondary",
             # higher_dimensions is ["tertiary", "quaternary"]
             higher_dimensions = possible_dimensions[this_dimension_index + 1 :]
             n_lower_pts = 1
             #  Lower dimensions should be repeated, so add them to the eye matrix
-            for lower_domain, domain_level in zip(lower_domains, lower_dimensions):
+            for lower_domain, lower_dimension in zip(lower_domains, lower_dimensions):
                 lower_submesh = self.mesh[lower_domain]
-                if child.evaluates_on_edges(domain_level):
+                if child.evaluates_on_edges(lower_dimension):
                     n_lower_pts *= lower_submesh.npts + 1
                 else:
                     n_lower_pts *= lower_submesh.npts
