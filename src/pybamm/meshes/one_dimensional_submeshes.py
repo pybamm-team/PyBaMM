@@ -93,7 +93,7 @@ class SymbolicUniform1DSubMesh(SubMesh1D):
         if tabs is not None:
             raise NotImplementedError("Tabs not supported for symbolic uniform submesh")
         if coord_sys != "cartesian" and spatial_lims["min"] != 0:
-            raise NotImplementedError(
+            raise pybamm.GeometryError(
                 "Symbolic uniform submesh with non-cartesian coordinates and non-zero minimum not supported"
             )
         npts = npts[spatial_var.name]

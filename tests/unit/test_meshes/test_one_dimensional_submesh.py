@@ -12,6 +12,13 @@ def r():
 
 
 @pytest.fixture()
+def x():
+    return pybamm.SpatialVariable(
+        "x", domain=["negative electrode"], coord_sys="cartesian"
+    )
+
+
+@pytest.fixture()
 def geometry(r):
     geometry = {
         "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
@@ -90,18 +97,34 @@ class TestUniform1DSubMesh:
 
 
 class TestSymbolicUniform1DSubMesh:
-    def test_exceptions(self):
+    def test_exceptions(self, r):
         lims = {"a": 1, "b": 2}
         with pytest.raises(pybamm.GeometryError):
             pybamm.SymbolicUniform1DSubMesh(lims, None)
+        lims = {"x_n": {"min": 0, "max": 1}}
+        npts = {"x_n": 10}
         tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
+        lims["tabs"] = tabs
 
         with pytest.raises(NotImplementedError):
-            pybamm.SymbolicUniform1DSubMesh(lims, 20, tabs=tabs)
+            pybamm.SymbolicUniform1DSubMesh(lims, npts, tabs=tabs)
 
-    def test_symmetric_mesh_creation_no_parameters(self, r, geometry):
-        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+        submesh_types = {"negative particle": pybamm.SymbolicUniform1DSubMesh}
         var_pts = {r: 20}
+        geometry = {
+            "negative particle": {
+                r: {"min": pybamm.InputParameter("min"), "max": pybamm.Scalar(2)}
+            }
+        }
+        with pytest.raises(pybamm.GeometryError):
+            pybamm.Mesh(geometry, submesh_types, var_pts)
+
+    def test_mesh_creation(self, r, x):
+        submesh_types = {"negative particle": pybamm.SymbolicUniform1DSubMesh}
+        var_pts = {r: 20}
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}
+        }
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -110,12 +133,30 @@ class TestSymbolicUniform1DSubMesh:
         assert mesh["negative particle"].edges[0] == 0
         assert mesh["negative particle"].edges[-1] == 1
 
+        # check scaling and min/max
+        assert mesh["negative particle"].length == 2
+        assert mesh["negative particle"].min == 0
+
         # check number of edges and nodes
         assert len(mesh["negative particle"].nodes) == var_pts[r]
         assert (
             len(mesh["negative particle"].edges)
             == len(mesh["negative particle"].nodes) + 1
         )
+
+        # Check that length and min are scaled correctly
+        submesh_types = {"negative electrode": pybamm.SymbolicUniform1DSubMesh}
+        var_pts = {x: 20}
+        geometry = {
+            "negative electrode": {
+                x: {"min": pybamm.InputParameter("min"), "max": pybamm.Scalar(2)}
+            }
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        assert mesh["negative electrode"].length == pybamm.Scalar(
+            2
+        ) - pybamm.InputParameter("min")
+        assert mesh["negative electrode"].min == pybamm.InputParameter("min")
 
 
 class TestExponential1DSubMesh:
