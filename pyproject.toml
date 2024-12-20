@@ -91,7 +91,7 @@ cite = [
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx>=0.4.0",
+    "bpx==0.4.0",
 ]
 # Low-overhead progress bars
 tqdm = [

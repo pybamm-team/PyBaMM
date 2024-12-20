@@ -31,6 +31,9 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     def test_composite_reaction_driven_LAM(self):
         pass  # skip this test
 
+    def test_particle_size_composite(self):
+        pass  # skip this test
+
     def test_composite_stress_driven_LAM(self):
         pass  # skip this test
 
