@@ -9,6 +9,7 @@
 
 ## Breaking changes
 
+- Updated BPX to v0.5.0 and made changes for the switch to Pydantic V2 ([#4701](https://github.com/pybamm-team/PyBaMM/pull/4701))
 - Summary variables now calculated only when called, accessed via a class in the same manner as other variables rather than a dictionary. ([#4621](https://github.com/pybamm-team/PyBaMM/pull/4621))
 - The conda distribution (`pybamm`) now installs all optional dependencies available on conda-forge. Use the new `pybamm-base` conda
 package to install PyBaMM with only the required dependencies. ([conda-forge/pybamm-feedstock#70](https://github.com/conda-forge/pybamm-feedstock/pull/70))
