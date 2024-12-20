@@ -263,7 +263,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 d_edges = 2 * np.pi * (r_edges_right**2 - r_edges_left**2) / 2
         else:
             d_edges = submesh.d_edges
-        possible_domains = ["primary", "secondary", "tertiary", "quaternary"]
+        possible_dimensions = ["primary", "secondary", "tertiary", "quaternary"]
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh[domains["primary"]]
@@ -279,32 +279,32 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
             matrix = kron(eye(second_dim_repeats), d_edges)
-        elif integration_dimension in possible_domains[1:]:
-            this_domain_index = possible_domains.index(integration_dimension)
-            # get "lower domain levels" and the corresponding domains, i.e. if integration_dimension is "secondary",
-            # lower_domain_levels is ["primary"] and lower_domains is [child.domains["primary"]]
-            lower_domain_levels = possible_domains[:this_domain_index]
-            lower_domains = [child.domains[dom] for dom in lower_domain_levels]
-            # get "higher domain levels", i.e. if integration_dimension is "secondary",
-            # higher_domain_levels is ["tertiary", "quaternary"]
-            higher_domain_levels = possible_domains[this_domain_index + 1 :]
+        elif integration_dimension in possible_dimensions[1:]:
+            this_dimension_index = possible_dimensions.index(integration_dimension)
+            # get lower dimensions and the corresponding domains, i.e. if integration_dimension is "secondary",
+            # lower_dimensions is ["primary"] and lower_domains is [child.domains["primary"]]
+            lower_dimensions = possible_dimensions[:this_dimension_index]
+            lower_domains = [child.domains[dom] for dom in lower_dimensions]
+            # get higher dimensions, i.e. if integration_dimension is "secondary",
+            # higher_dimensions is ["tertiary", "quaternary"]
+            higher_dimensions = possible_dimensions[this_dimension_index + 1 :]
             n_lower_pts = 1
-            #  Lower domain levels should be repeated, so add them to the eye matrix
-            for lower_domain, domain_level in zip(lower_domains, lower_domain_levels):
+            #  Lower dimensions should be repeated, so add them to the eye matrix
+            for lower_domain, domain_level in zip(lower_domains, lower_dimensions):
                 lower_submesh = self.mesh[lower_domain]
                 if child.evaluates_on_edges(domain_level):
                     n_lower_pts *= lower_submesh.npts + 1
                 else:
                     n_lower_pts *= lower_submesh.npts
             int_matrix = hstack([d_edge * eye(n_lower_pts) for d_edge in d_edges])
-            # Higher domain levels should be tiled, so repeat the matrix for each higher domain level.
+            # Higher dimensions should be tiled, so repeat the matrix for each higher dimension.
             higher_repeats = self._get_auxiliary_domain_repeats(
-                {k: v for k, v in domains.items() if (k in higher_domain_levels)}
+                {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
             matrix = kron(eye(higher_repeats), int_matrix)
         else:
             raise ValueError(
-                f"Invalid integration dimension: {integration_dimension}. Only {possible_domains} are supported."
+                f"Invalid integration dimension: {integration_dimension}. Only {possible_dimensions} are supported."
             )
         return pybamm.Matrix(csr_matrix(matrix))
 
