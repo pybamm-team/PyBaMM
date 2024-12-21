@@ -123,6 +123,18 @@ class TestMPM:
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
+    def test_mpm_with_lithium_plating(self):
+        options = {
+            "lithium plating": "irreversible",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+        options = {
+            "lithium plating": "reversible",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
 
 class TestMPMExternalCircuits:
     def test_well_posed_voltage(self):
@@ -194,17 +206,5 @@ class TestMPMWithMechanics:
 
     def test_well_posed_both_swelling_only_not_implemented(self):
         options = {"particle mechanics": "swelling only"}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-
-class TestMPMWithPlating:
-    def test_well_posed_reversible_plating_not_implemented(self):
-        options = {"lithium plating": "reversible"}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_well_posed_irreversible_plating_not_implemented(self):
-        options = {"lithium plating": "irreversible"}
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
