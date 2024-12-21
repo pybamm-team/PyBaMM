@@ -60,6 +60,9 @@ class ReactionDriven(BaseModel):
                     L_sei_cr_k = variables[
                         f"{Domain} total {phase_name}SEI on cracks thickness [m]"
                     ]
+                    #roughness_k = variables[
+                    #   f"{Domain} electrode {phase_name}roughness ratio"
+                    #]
 
                     L_tot = (
                         (L_sei_k - L_sei_0)
