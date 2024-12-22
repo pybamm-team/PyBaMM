@@ -47,7 +47,7 @@ Dependencies
 
 .. warning::
 
-    The list of dependencies below may be outdated. Please refer to the official repository or package manager for the most up-to-date versions.
+    The list of dependencies below might be outdated. Please refer to the pyproject.toml file to find all dependencies.
 
 Required dependencies
 ~~~~~~~~~~~~~~~~~~~~~
