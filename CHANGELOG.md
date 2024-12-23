@@ -160,6 +160,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 ## Optimizations
 
 - Sped up initialization of a `ProcessedVariable` by making the internal `xarray.DataArray` initialization lazy (only gets created if interpolation is needed) ([#3862](https://github.com/pybamm-team/PyBaMM/pull/3862))
+- Enhanced option checking by converting string-based options into tuples for consistent handling.([#4707](https://github.com/pybamm-team/PyBaMM/pull/4707))
 
 ## Breaking changes
 
