@@ -37,5 +37,8 @@ python:
       extra_requirements:
         - docs
         - all
+<<<<<<< HEAD
         - sphinx-linkcheck
 
+=======
+>>>>>>> b676427021809d91facc01640870a75752b8b55b
