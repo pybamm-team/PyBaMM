@@ -45,6 +45,10 @@ Dependencies
 ------------
 .. _install.required_dependencies:
 
+.. warning::
+
+    The list of dependencies below might be outdated. Please refer to the ``pyproject.toml`` file to find all dependencies.
+
 Required dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -53,16 +57,16 @@ PyBaMM requires the following dependencies.
 =================================================================== ==========================
 Package                                                             Minimum supported version
 =================================================================== ==========================
-`NumPy <https://numpy.org>`__                                       1.23.5
-`SciPy <https://docs.scipy.org/doc/scipy/>`__                       1.9.3
-`CasADi <https://web.casadi.org/docs/>`__                           3.6.3
-`Xarray <https://docs.xarray.dev/en/stable/>`__                     2022.6.0
-`Anytree <https://anytree.readthedocs.io/en/stable/>`__             2.8.0
-`SymPy <https://docs.sympy.org/latest/index.html>`__                1.9.3
-`typing-extensions <https://pypi.org/project/typing-extensions/>`__ 4.10.0
-`pandas <https://pypi.org/project/pandas/>`__                       1.5.0
-`pooch <https://www.fatiando.org/pooch/>`__                         1.8.1
-`posthog <https://posthog.com/>`__                                  3.6.5
+`NumPy <https://numpy.org>`__                                         1.23.5
+`SciPy <https://docs.scipy.org/doc/scipy/>`__                         1.9.3
+`CasADi <https://web.casadi.org/docs/>`__                             3.6.3
+`Xarray <https://docs.xarray.dev/en/stable/>`__                       2022.6.0
+`Anytree <https://anytree.readthedocs.io/en/stable/>`__               2.8.0
+`SymPy <https://docs.sympy.org/latest/index.html>`__                  1.9.3
+`typing-extensions <https://pypi.org/project/typing-extensions/>`__  4.10.0
+`pandas <https://pypi.org/project/pandas/>`__                         1.5.0
+`pooch <https://www.fatiando.org/pooch/>`__                           1.8.1
+`posthog <https://posthog.com/>`__                                    3.6.5
 `pyyaml <https://pyyaml.org/>`__
 `platformdirs <https://platformdirs.readthedocs.io/en/latest/>`__
 =================================================================== ==========================
