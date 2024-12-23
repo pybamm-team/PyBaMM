@@ -9,6 +9,16 @@ from pybamm.expression_tree.operations.serialise import Serialise
 
 
 def represents_positive_integer(s):
+    """Check if a string represents a positive integer"""
+    try:
+        val = int(s)
+    except ValueError:
+        return False
+    else:
+        return val > 0
+
+
+def _ensure_tuple(value):
     """
     Check if a string represents a positive integer
 
@@ -23,16 +33,6 @@ def represents_positive_integer(s):
         The input value as a tuple.
 
     """
-    try:
-        val = int(s)
-    except ValueError:
-        return False
-    else:
-        return val > 0
-
-
-def _ensure_tuple(value):
-    """Ensure that the input value is a tuple. Convert a string to a tuple."""
     if isinstance(value, str):
         return (value,)
     elif isinstance(value, tuple):
