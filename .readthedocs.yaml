@@ -18,6 +18,8 @@ build:
   apt_packages:
     - "graphviz"
   os: ubuntu-22.04
+  env:
+    READTHEDOCS_OUTPUT: "build"  # Set the environment variable
   tools:
     python: "3.12"
   jobs:
