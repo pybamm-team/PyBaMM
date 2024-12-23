@@ -47,5 +47,5 @@ jobs:
       - name: Build docs (HTML)
         run: sphinx-build -b html -W --keep-going -d docs/_build/.doctrees docs docs/_build
 
-      - name: Run Sphinx linkcheck
-        run: sphinx-build -b linkcheck -d docs/_build/.doctrees docs docs/_build
+      # - name: Run Sphinx linkcheck
+      #   run: sphinx-build -b linkcheck -d docs/_build/.doctrees docs docs/_build

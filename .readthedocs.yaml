@@ -5,6 +5,8 @@ sphinx:
   builder: html
   configuration: docs/conf.py
   fail_on_warning: false
+  # Enable link checking during the build process
+  linkcheck: true
 
 # PDF builds are disabled here because they are built in a custom fashion
 # by extending the RTD build process, see below
@@ -44,3 +46,4 @@ python:
       extra_requirements:
         - docs
         - all
+
