@@ -458,7 +458,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
-        plating_option = _ensure_tuple(plating_option)  # Ensure it's treated as a tuple
+        plating_option = _ensure_tuple(plating_option)
 
         if plating_option == ("partially reversible",):
             default_options["SEI"] = "constant"
@@ -547,8 +547,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with contact resistance
         _ensure_tuple(options["contact resistance"])
+        _ensure_tuple(options["operating mode"])
+
         if "true" in options["contact resistance"]:
-            _ensure_tuple(options["operating mode"])
             if "explicit power" in options["operating mode"]:
                 raise NotImplementedError(
                     "Contact resistance not yet supported for explicit power."
@@ -559,62 +560,62 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
 
         # Options not yet compatible with particle-size distributions
-        _ensure_tuple(options["particle size"])
+
+        # Ensure all necessary options are tuples
+        for option in [
+            "particle size",
+            "lithium plating porosity change",
+            "heat of mixing",
+            "particle",
+            "particle mechanics",
+            "particle shape",
+            "SEI",
+            "stress-induced diffusion",
+            "thermal",
+        ]:
+            _ensure_tuple(options[option])
+
         if "distribution" in options["particle size"]:
-            _ensure_tuple(options["lithium plating porosity change"])
-            if options["lithium plating porosity change"] != "false":
+            if "false" not in options["lithium plating porosity change"]:
                 raise NotImplementedError(
                     "Lithium plating porosity change not yet supported for particle-size distributions."
                 )
-
-            _ensure_tuple(options["heat of mixing"])
-            if options["heat of mixing"] != "false":
+            if "false" not in options["heat of mixing"]:
                 raise NotImplementedError(
                     "Heat of mixing submodels do not yet support particle-size distributions."
                 )
-
-            _ensure_tuple(options["particle"])
             if options["particle"] in ["quadratic profile", "quartic profile"]:
                 raise NotImplementedError(
                     "'quadratic' and 'quartic' concentration profiles have not yet been implemented for particle-size distributions."
                 )
-
-            _ensure_tuple(options["particle mechanics"])
-            if options["particle mechanics"] != "none":
+            if "none" not in options["particle mechanics"]:
                 raise NotImplementedError(
                     "Particle mechanics submodels do not yet support particle-size distributions."
                 )
-
-            _ensure_tuple(options["particle shape"])
-            if options["particle shape"] != "spherical":
+            if "spherical" not in options["particle shape"]:
                 raise NotImplementedError(
                     "Particle shape must be 'spherical' for particle-size distribution submodels."
                 )
-
-            _ensure_tuple(options["SEI"])
-            if options["SEI"] != "none":
+            if "none" not in options["SEI"]:
                 raise NotImplementedError(
                     "SEI submodels do not yet support particle-size distributions."
                 )
-
-            _ensure_tuple(options["stress-induced diffusion"])
-            if options["stress-induced diffusion"] == "true":
+            if "true" in options["stress-induced diffusion"]:
                 raise NotImplementedError(
                     "Stress-induced diffusion cannot yet be included in particle-size distributions."
                 )
-
-            _ensure_tuple(options["thermal"])
-            if options["thermal"] == "x-full":
+            if "x-full" in options["thermal"]:
                 raise NotImplementedError(
                     "X-full thermal submodels do not yet support particle-size distributions."
                 )
 
         # Renamed options
         _ensure_tuple(options["working electrode"])
-        if options["working electrode"] == "negative":
+
+        if "negative" in options["working electrode"]:
             raise pybamm.OptionError(
                 "The 'negative' working electrode option has been removed because "
-                "the voltage - and therefore the energy stored - would be negative."
+                "the voltage - and therefore the energy stored - would be negative. "
                 "Use the 'positive' working electrode option instead and set whatever "
                 "would normally be the negative electrode as the positive electrode."
             )
@@ -698,7 +699,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            _ensure_tuple(value)  # Ensure all values are treated as tuples
+            _ensure_tuple(value)
             if isinstance(value, str) or option in [
                 "dimensionality",
                 "operating mode",
