@@ -50,7 +50,8 @@ To create a virtual environment ``env`` within your current directory type:
 
    virtualenv env
 
-You can then “activate” the environment using:
+or use any of your preferred environment management tools. You can then “activate”
+the environment using:
 
 .. code:: bash
 
@@ -64,26 +65,24 @@ the environment and go back to your original system, just type:
 
    deactivate
 
-PyBaMM can be installed via pip.
+PyBaMM can be installed via ``pip`` or ``conda``.
+library beforehand.
 
-.. tab:: GNU/Linux
-
-   In a terminal, run the following command:
-
-   .. code:: bash
-
-      pip install pybamm
-
-.. tab:: macOS
-
-   In a terminal, run the following command:
+.. tab:: pip
 
    .. code:: bash
 
       pip install pybamm
 
-PyBaMM’s required dependencies (such as ``numpy``, ``casadi``, etc) will be
-installed automatically when you install PyBaMM using ``pip``.
+.. tab:: conda
+
+   .. code:: bash
+
+      conda install -c conda-forge pybamm-base
+
+PyBaMM’s `required dependencies <index.html#install-required-dependencies>`_
+(such as ``numpy``, ``casadi``, etc) will be installed automatically when you
+install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 
 For an introduction to virtual environments, see
 (https://realpython.com/python-virtual-environments-a-primer/).
@@ -99,6 +98,8 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 	  pip install "pybamm[jax]"
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
+
+PyBaMM's full `conda-forge distribution <index.html#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
 .. _optional-iree-mlir-support:
 

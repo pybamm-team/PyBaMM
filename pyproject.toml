@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.11.1"
+version = "24.11.2"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -87,7 +87,7 @@ cite = [
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx>=0.4.0",
+    "bpx==0.4.0",
 ]
 # Low-overhead progress bars
 tqdm = [
@@ -260,11 +260,6 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
-
-[tool.repo-review]
-ignore = [
-    "PP003"  # list wheel as a build-dep
-]
 
 [tool.mypy]
 ignore_missing_imports = true

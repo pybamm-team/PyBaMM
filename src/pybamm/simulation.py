@@ -344,7 +344,7 @@ class Simulation:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
-            self.set_parameters()
+            self._set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
             self._disc = pybamm.Discretisation(
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
@@ -920,7 +920,7 @@ class Simulation:
                 # See PR #3995
                 if voltage_stop is not None:
                     min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
-                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+                    logs["Minimum voltage [V]"] = min_voltage
 
                 callbacks.on_cycle_end(logs)
 
@@ -941,7 +941,7 @@ class Simulation:
 
             if self._solution is not None and len(all_cycle_solutions) > 0:
                 self._solution.cycles = all_cycle_solutions
-                self._solution.set_summary_variables(all_summary_variables)
+                self._solution.update_summary_variables(all_summary_variables)
                 self._solution.all_first_states = all_first_states
 
             callbacks.on_experiment_end(logs)

@@ -14,10 +14,6 @@
 [![code style](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/pybamm-team/PyBaMM/badge)](https://scorecard.dev/viewer/?uri=github.com/pybamm-team/PyBaMM)
 
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-94-orange.svg)](#-contributors)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
-
 </div>
 
 # PyBaMM
@@ -170,8 +166,10 @@ If you'd like to help us develop PyBaMM by adding new methods, writing documenta
 
 ## 📫 Get in touch
 
-For any questions, comments, suggestions or bug reports, please see the
-[contact page](https://www.pybamm.org/community).
+For any questions, comments, suggestions or bug reports, please visit:
+
+- Our [Contact Page](https://www.pybamm.org/community)
+- Our [Discussion Forum](https://pybamm.discourse.group/)
 
 ## 📃 License
 
