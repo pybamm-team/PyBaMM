@@ -1,6 +1,8 @@
 Installation
 ============
 
+.. _installation:
+
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
 
@@ -16,7 +18,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
    PyBaMM is available as a ``conda`` package through the conda-forge channel.
 
-   The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <index.html#dependencies>`_ available on conda-forge.
+   The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <#dependencies>`_ available on conda-forge.
 
    .. note::
 
@@ -26,7 +28,7 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
       conda install -c conda-forge pybamm
 
-   The ``pybamm-base`` package installs PyBaMM only with its `required dependencies <index.html#install-required-dependencies>`_.
+        The ``pybamm-base`` package installs PyBaMM only with its `required dependencies <#install-required-dependencies>`_.
 
    .. code:: bash
 
@@ -38,9 +40,8 @@ Optional solvers
 
 The following solvers are optionally available:
 
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <gnu-linux-mac.html#optional-jaxsolver>`_.
-*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see `Optional - IREE / MLIR Support <gnu-linux-mac.html#optional-iree-mlir-support>`_.
-
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
+*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see :ref:`optional-iree-mlir-support`.
 Dependencies
 ------------
 .. _install.required_dependencies:
@@ -51,6 +52,9 @@ Dependencies
 
 Required dependencies
 ~~~~~~~~~~~~~~~~~~~~~
+
+.. _install-required-dependencies:
+
 
 PyBaMM requires the following dependencies.
 
