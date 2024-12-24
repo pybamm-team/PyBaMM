@@ -1,7 +1,7 @@
 #
 # Base battery model class
 #
-
+from __future__ import annotations
 import pybamm
 from functools import cached_property
 
@@ -18,9 +18,9 @@ def represents_positive_integer(s):
         return val > 0
 
 
-def _ensure_tuple(value):
+def _ensure_tuple(value: str | tuple[str]) -> tuple | None:
     """
-    Check if a string represents a positive integer
+    Ensure the input value is returned as a tuple.
 
     Parameters
     ----------
@@ -29,14 +29,16 @@ def _ensure_tuple(value):
 
     Returns
     -------
-    tuple
-        The input value as a tuple.
-
+    tuple or None
+        The input value as a tuple, or None if the input is not a string or tuple.
     """
-    if isinstance(value, str):
-        return (value,)
-    elif isinstance(value, tuple):
-        return value
+    return (
+        (value,)
+        if isinstance(value, str)
+        else value
+        if isinstance(value, tuple)
+        else None
+    )
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
@@ -562,7 +564,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Options not yet compatible with particle-size distributions
 
         # Ensure all necessary options are tuples
-        for option in [
+        for _ in [
             "particle size",
             "lithium plating porosity change",
             "heat of mixing",
@@ -573,7 +575,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "stress-induced diffusion",
             "thermal",
         ]:
-            _ensure_tuple(options[option])
+            _ensure_tuple(options[_])
 
         if "distribution" in options["particle size"]:
             if "false" not in options["lithium plating porosity change"]:
