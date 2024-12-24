@@ -1,7 +1,15 @@
+
+.. _install-required-dependencies:
+
+
+Required dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+PyBaMM requires the following dependencies.
+
 Installation
 ============
 
-.. _installation:
 
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
@@ -52,8 +60,6 @@ Dependencies
 
 Required dependencies
 ~~~~~~~~~~~~~~~~~~~~~
-
-.. _install-required-dependencies:
 
 
 PyBaMM requires the following dependencies.
