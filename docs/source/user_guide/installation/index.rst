@@ -1,10 +1,3 @@
-
-
-Required dependencies
-=====================
-
-PyBaMM requires the following dependencies.
-
 Installation
 ============
 
@@ -98,7 +91,7 @@ and specific sets of dependencies are listed in the sections below.
 .. _install.plot_dependencies:
 
 Plot dependencies
------------------
+^^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[plot]"``
 
