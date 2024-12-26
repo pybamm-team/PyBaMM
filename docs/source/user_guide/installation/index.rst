@@ -45,7 +45,7 @@ The following solvers are optionally available:
 Dependencies
 ------------
 
-pybamm requires the following dependencies:
+PyBaMM requires the following dependencies:
 
 .. warning::
 
