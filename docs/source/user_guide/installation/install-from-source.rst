@@ -1,7 +1,8 @@
+.. _install-from-source:
+
 Install from source (GNU Linux and macOS)
 =========================================
 
-.. _install-from-source:
 
 .. contents::
 

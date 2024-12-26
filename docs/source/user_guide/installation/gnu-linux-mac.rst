@@ -84,7 +84,7 @@ library beforehand.
 
       conda install -c conda-forge pybamm-base
 
-PyBaMM’s `required dependencies <#install-required-dependencies>`_
+PyBaMM’s `required dependencies <./index.rst#install-required-dependencies>`_.
 (such as ``numpy``, ``casadi``, etc) will be installed automatically when you
 install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 
@@ -104,7 +104,7 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
-PyBaMM's full `conda-forge distribution <#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
+PyBaMM's full `conda-forge distribution <./index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
 .. _optional-iree-mlir-support:
 
