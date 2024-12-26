@@ -96,16 +96,17 @@ def make_test_cases():
         )
         f4 = jax_multi.get_jaxpr()
 
-    return [
-        # single output
-        (output_variables[:1], jax_single, f1, no_jit),
-        # jit single output
-        (output_variables[:1], jax_single2, f2, jax.jit),
-        # multiple outputs
-        (output_variables, jax_multi, f3, no_jit),
-        # jit multiple outputs
-        (output_variables, jax_multi2, f4, jax.jit),
-    ]
+        return [
+            # single output
+            (output_variables[:1], jax_single, f1, no_jit),
+            # jit single output
+            (output_variables[:1], jax_single2, f2, jax.jit),
+            # multiple outputs
+            (output_variables, jax_multi, f3, no_jit),
+            # jit multiple outputs
+            (output_variables, jax_multi2, f4, jax.jit),
+        ]
+    return []
 
 
 # Check the interface throws an appropriate error if either IDAKLU or JAX not available
