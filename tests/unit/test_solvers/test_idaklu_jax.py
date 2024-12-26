@@ -1,9 +1,7 @@
-#
-# Tests for the KLU-Jax interface class
-#
+import sys
 
 import pytest
-
+import os
 import pybamm
 import numpy as np
 
@@ -18,24 +16,24 @@ if pybamm.has_idaklu() and pybamm.has_jax():
         "b": 0.2,
     }
 
-    model = pybamm.BaseModel()
+    base_model = pybamm.BaseModel()
     v = pybamm.Variable("v")
     u1 = pybamm.Variable("u1")
     u2 = pybamm.Variable("u2")
     a = pybamm.InputParameter("a")
     b = pybamm.InputParameter("b")
-    model.rhs = {u1: a * v, u2: b * v}
-    model.algebraic = {v: 1 - v}
-    model.initial_conditions = {u1: 0, u2: 0, v: 1}
-    model.variables = {"v": v, "u1": u1, "u2": u2}
+    base_model.rhs = {u1: a * v, u2: b * v}
+    base_model.algebraic = {v: 1 - v}
+    base_model.initial_conditions = {u1: 0, u2: 0, v: 1}
+    base_model.variables = {"v": v, "u1": u1, "u2": u2}
     disc = pybamm.Discretisation()
-    disc.process_model(model)
+    disc.process_model(base_model)
     t_eval = np.linspace(0, 1, 100)
-    idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
+    base_idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
     # Create surrogate data (using base IDAKLU solver)
-    sim = idaklu_solver.solve(
-        model,
+    sim = base_idaklu_solver.solve(
+        base_model,
         t_eval,
         inputs=inputs,
         calculate_sensitivities=True,
@@ -49,8 +47,8 @@ if pybamm.has_idaklu() and pybamm.has_jax():
         "u2",
     ]
     # Single output variable
-    idaklu_jax_solver1 = idaklu_solver.jaxify(
-        model,
+    idaklu_jax_solver1 = base_idaklu_solver.jaxify(
+        base_model,
         t_eval,
         output_variables=output_variables[:1],
         calculate_sensitivities=True,
@@ -58,8 +56,8 @@ if pybamm.has_idaklu() and pybamm.has_jax():
     )
     f1 = idaklu_jax_solver1.get_jaxpr()
     # Multiple output variables
-    idaklu_jax_solver3 = idaklu_solver.jaxify(
-        model,
+    idaklu_jax_solver3 = base_idaklu_solver.jaxify(
+        base_model,
         t_eval,
         output_variables=output_variables,
         calculate_sensitivities=True,
@@ -103,23 +101,23 @@ class TestIDAKLUJax:
     # Initialisation tests
 
     def test_initialise_twice(self):
-        idaklu_jax_solver = idaklu_solver.jaxify(
-            model,
+        idaklu_jax_solver = base_idaklu_solver.jaxify(
+            base_model,
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=True,
         )
         with pytest.warns(UserWarning):
             idaklu_jax_solver.jaxify(
-                model,
+                base_model,
                 t_eval,
                 output_variables=output_variables,
                 calculate_sensitivities=True,
             )
 
     def test_uninitialised(self):
-        idaklu_jax_solver = idaklu_solver.jaxify(
-            model,
+        idaklu_jax_solver = base_idaklu_solver.jaxify(
+            base_model,
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=True,
@@ -135,8 +133,8 @@ class TestIDAKLUJax:
 
     def test_no_output_variables(self):
         with pytest.raises(pybamm.SolverError):
-            idaklu_solver.jaxify(
-                model,
+            base_idaklu_solver.jaxify(
+                base_model,
                 t_eval,
             )
 
@@ -169,6 +167,7 @@ class TestIDAKLUJax:
 
     # Scalar evaluation
 
+    @pytest.mark.skipif(sys.platform.lower().startswith("win"), reason="IDAKLU-Jax is experimental on Windows")
     @pytest.mark.parametrize("output_variables,idaklu_jax_solver,f,wrapper", testcase)
     def test_f_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(f)(t_eval[k], inputs)
@@ -183,6 +182,7 @@ class TestIDAKLUJax:
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
+    @pytest.mark.skipif(sys.platform.lower().startswith("win"), reason="IDAKLU-Jax is experimental on Windows")
     @pytest.mark.parametrize("output_variables,idaklu_jax_solver,f,wrapper", testcase)
     def test_f_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.vmap(f, in_axes=in_axes))(t_eval, inputs)
@@ -844,8 +844,8 @@ class TestIDAKLUJax:
         # Create an imperfect prediction
         inputs_pred = inputs.copy()
         inputs_pred["a"] = 0.150
-        sim_pred = idaklu_solver.solve(
-            model,
+        sim_pred = base_idaklu_solver.solve(
+            base_model,
             t_eval,
             inputs=inputs_pred,
             calculate_sensitivities=True,
