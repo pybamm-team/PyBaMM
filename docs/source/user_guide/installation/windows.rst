@@ -73,7 +73,8 @@ PyBaMM can be installed via pip:
 
       conda install -c conda-forge pybamm-base
 
-PyBaMM’s `required dependencies <./index.rst#install-required-dependencies>`_
+PyBaMM’s :ref:`required dependencies <install-required-dependencies>`
+
 (such as ``numpy``, ``casadi``, etc) will be installed automatically when you
 install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 

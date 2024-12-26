@@ -1,4 +1,4 @@
-.. _install-required-dependencies:
+
 
 Required dependencies
 =====================
@@ -56,6 +56,9 @@ pybamm requires the following dependencies:
 .. warning::
 
     The list of dependencies below might be outdated. Please refer to the ``pyproject.toml`` file to find all dependencies.
+
+.. _install-required-dependencies:
+
 
 Required dependencies
 ---------------------
