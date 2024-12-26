@@ -20,9 +20,13 @@ def solved_simulation():
 
 
 @pytest.mark.parametrize(
+    "split_by_electrode",
+    [True, False],
+    ids=["with_split_by_electrode", "with_no_split_by_electrode"],
+)
+@pytest.mark.parametrize(
     "from_solution", [True, False], ids=["from_solution", "from_simulation"]
 )
-@pytest.mark.parametrize("split_by_electrode", [True, False], ids=["split", "no_split"])
 def test_plot_voltage_components(solved_simulation, from_solution, split_by_electrode):
     sim, sol = solved_simulation
     target = sol if from_solution else sim
