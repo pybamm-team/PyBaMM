@@ -1,7 +1,6 @@
 import sys
 
 import pytest
-import os
 import pybamm
 import numpy as np
 
@@ -167,7 +166,10 @@ class TestIDAKLUJax:
 
     # Scalar evaluation
 
-    @pytest.mark.skipif(sys.platform.lower().startswith("win"), reason="IDAKLU-Jax is experimental on Windows")
+    @pytest.mark.skipif(
+        sys.platform.lower().startswith("win"),
+        reason="IDAKLU-Jax is experimental on Windows",
+    )
     @pytest.mark.parametrize("output_variables,idaklu_jax_solver,f,wrapper", testcase)
     def test_f_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(f)(t_eval[k], inputs)
@@ -182,7 +184,10 @@ class TestIDAKLUJax:
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
-    @pytest.mark.skipif(sys.platform.lower().startswith("win"), reason="IDAKLU-Jax is experimental on Windows")
+    @pytest.mark.skipif(
+        sys.platform.lower().startswith("win"),
+        reason="IDAKLU-Jax is experimental on Windows",
+    )
     @pytest.mark.parametrize("output_variables,idaklu_jax_solver,f,wrapper", testcase)
     def test_f_vmap(self, output_variables, idaklu_jax_solver, f, wrapper):
         out = wrapper(jax.vmap(f, in_axes=in_axes))(t_eval, inputs)
