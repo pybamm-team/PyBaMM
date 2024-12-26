@@ -22,7 +22,7 @@ build:
     python: "3.12"
   jobs:
     pre_build:
-      - python -m sphinx -b linkcheck -D linkcheck_timeout=1 docs/ ./linkcheck_output
+      - python -m sphinx -b linkcheck -D linkcheck_timeout=5 docs/ ./linkcheck_output
     # Unshallow the git clone otherwise this may cause issues with Sphinx extensions
     post_checkout:
       - git fetch --unshallow
