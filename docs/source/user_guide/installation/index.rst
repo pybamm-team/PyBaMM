@@ -55,7 +55,7 @@ pybamm requires the following dependencies:
 
 .. warning::
 
-    The list of dependencies below might be outdated. Please refer to the ``pyproject.toml`` file to find all dependencies.
+    The list of dependencies below might be outdated. Please use tools like [``pipdeptree``](https://github.com/tox-dev/pipdeptree) to find the latest dependencies of ``pybamm``.
 
 .. _install-required-dependencies:
 
