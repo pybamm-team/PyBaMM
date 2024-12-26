@@ -124,6 +124,10 @@ class TestIDAKLUJax_NoJax:
     not pybamm.has_idaklu() or not pybamm.has_jax(),
     reason="IDAKLU Solver and/or JAX are not available",
 )
+@pytest.mark.skipif(
+    sys.platform.lower().startswith("win"),
+    reason="IDAKLU-Jax is experimental on Windows",
+)
 class TestIDAKLUJax:
     # Initialisation tests
 
@@ -194,10 +198,6 @@ class TestIDAKLUJax:
 
     # Scalar evaluation
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -207,10 +207,6 @@ class TestIDAKLUJax:
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -220,10 +216,6 @@ class TestIDAKLUJax:
             out, np.array([sim[outvar](t_eval) for outvar in output_variables]).T
         )
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -258,10 +250,6 @@ class TestIDAKLUJax:
         with pytest.raises(ValueError):
             idaklu_jax_solver.get_vars(1, 2, 3)  # too many arguments
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -271,10 +259,6 @@ class TestIDAKLUJax:
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
         )
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -296,10 +280,6 @@ class TestIDAKLUJax:
         out = idaklu_jax_solver.get_vars(array, output_variables)
         np.testing.assert_allclose(out, array)
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -331,10 +311,6 @@ class TestIDAKLUJax:
         with pytest.raises(ValueError):
             idaklu_jax_solver.get_var(1, 2, 3)  # too many arguments
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
@@ -359,10 +335,6 @@ class TestIDAKLUJax:
             )
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
-    @pytest.mark.skipif(
-        sys.platform.lower().startswith("win"),
-        reason="IDAKLU-Jax is experimental on Windows",
-    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
