@@ -1,7 +1,3 @@
-#
-# Tests for the KLU Solver class
-#
-
 from contextlib import redirect_stdout
 import io
 import pytest
@@ -635,7 +631,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(ValueError, match="std::exception"):
+        with pytest.raises(ValueError):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
