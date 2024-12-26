@@ -55,7 +55,7 @@ Required dependencies
 PyBaMM requires the following dependencies.
 
 =================================================================== ==========================
-Package                                                             Minimum supported version
+Package                                                             Supported version(s)
 =================================================================== ==========================
 `NumPy <https://numpy.org>`__                                         Whatever recent versions work. >= 1.23.5, <2
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.9.3
