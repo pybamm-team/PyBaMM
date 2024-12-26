@@ -347,6 +347,10 @@ class TestIDAKLUJax:
             )
             np.testing.assert_allclose(out, sim[outvar](float(t_eval[k])))
 
+    @pytest.mark.skipif(
+        sys.platform.lower().startswith("win"),
+        reason="IDAKLU-Jax is experimental on Windows",
+    )
     @pytest.mark.parametrize(
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
