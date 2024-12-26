@@ -50,7 +50,7 @@ The following solvers are optionally available:
 *  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see :ref:`optional-iree-mlir-support`.
 
 Dependencies
-------------
+============
 pybamm requires the following dependencies:
 
 .. warning::
@@ -58,7 +58,7 @@ pybamm requires the following dependencies:
     The list of dependencies below might be outdated. Please refer to the ``pyproject.toml`` file to find all dependencies.
 
 Required dependencies
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 
 PyBaMM requires the following dependencies.
@@ -83,7 +83,7 @@ Package                                                             Minimum supp
 .. _install.optional_dependencies:
 
 Optional Dependencies
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 PyBaMM has a number of optional dependencies for different functionalities.
 If the optional dependency is not installed, PyBaMM will raise an ImportError when the method requiring that dependency is called.
@@ -95,7 +95,7 @@ and specific sets of dependencies are listed in the sections below.
 .. _install.plot_dependencies:
 
 Plot dependencies
-=================
+-----------------
 
 Installable with ``pip install "pybamm[plot]"``
 
@@ -137,7 +137,7 @@ Dependency                                                                      
 .. _install.examples_dependencies:
 
 Examples dependencies
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 Installable with ``pip install "pybamm[examples]"``
 
@@ -150,7 +150,7 @@ Dependency                                                                      
 .. _install.dev_dependencies:
 
 Dev dependencies
-================
+----------------
 
 Installable with ``pip install "pybamm[dev]"``
 
@@ -173,7 +173,8 @@ Dependency                                                                      
 .. _install.cite_dependencies:
 
 Cite dependencies
-~~~~~~~~~~~~~~~~~
+-----------------
+
 Installable with ``pip install "pybamm[cite]"``
 
 =========================================================== ================== ================== =========================================
@@ -185,7 +186,8 @@ Dependency                                                  Minimum Version    p
 .. _install.bpx_dependencies:
 
 bpx dependencies
-~~~~~~~~~~~~~~~~
+----------------
+
 
 Installable with ``pip install "pybamm[bpx]"``
 
@@ -198,7 +200,7 @@ Dependency                                                  Minimum Version    p
 .. _install.tqdm_dependencies:
 
 tqdm dependencies
-~~~~~~~~~~~~~~~~~
+-----------------
 
 Installable with ``pip install "pybamm[tqdm]"``
 
@@ -211,7 +213,7 @@ Dependency                                                  Minimum Version    p
 .. _install.jax_dependencies:
 
 Jax dependencies
-~~~~~~~~~~~~~~~~
+----------------
 
 Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
 
@@ -223,7 +225,7 @@ Dependency                                                                Minimu
 ========================================================================= ================== ================== =======================
 
 IREE dependencies
-~~~~~~~~~~~~~~~~~
+-----------------
 
 Installable with ``pip install "pybamm[iree]"`` (requires ``jax`` dependencies to be installed).
 
