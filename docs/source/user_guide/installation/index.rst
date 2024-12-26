@@ -47,7 +47,7 @@ Dependencies
 
 .. warning::
 
-        The list of dependencies below might be outdated. Please use tools like [``pipdeptree``](https://github.com/tox-dev/pipdeptree) to find the latest dependencies of ``pybamm``
+        The list of dependencies below might be outdated. Please use tools like [`pipdeptree`](https://github.com/tox-dev/pipdeptree) to find the latest dependencies of ``pybamm``
 
 Required dependencies
 ~~~~~~~~~~~~~~~~~~~~~
