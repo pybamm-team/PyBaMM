@@ -1,7 +1,3 @@
-#
-# Tests for the voltage plot components functions
-#
-
 import pytest
 import pybamm
 import numpy as np
