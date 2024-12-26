@@ -82,7 +82,7 @@ jobs:
           CIBW_TEST_COMMAND: |
             python -m pytest -m cibw {project}/tests/unit
       - name: Upload Windows wheels
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: wheels_windows
           path: ./wheelhouse/*.whl
@@ -114,7 +114,7 @@ jobs:
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for Linux
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: wheels_manylinux
           path: ./wheelhouse/*.whl
@@ -166,7 +166,7 @@ jobs:
             python -m pytest -m cibw {project}/tests/unit
 
       - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: wheels_${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -186,7 +186,7 @@ jobs:
         run: pipx run build --sdist
 
       - name: Upload SDist
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: sdist
           path: ./dist/*.tar.gz
