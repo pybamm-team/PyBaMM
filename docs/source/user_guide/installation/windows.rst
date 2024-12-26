@@ -110,4 +110,4 @@ Installation using WSL
 
 If you want to install the optional PyBaMM solvers, you have to use the
 Windows Subsystem for Linux (WSL). You can find the installation
-`Installation <windows-wsl.rst>`_
+instructions on the `Installation <windows-wsl.rst>`_ page.
