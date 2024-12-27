@@ -90,7 +90,6 @@ linkcheck_ignore = [
     "https://www.sciencedirect.com",
     "https://doi.org/10.1137/20M1336898",  # DOI link to ignore
     "https://en.wikipedia.org/wiki/",  # Wikipedia link to ignore
-    "https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#a-before-you-begin",  # GitHub link to ignore
     "https://books.google.co.uk/books",
 ]
 
