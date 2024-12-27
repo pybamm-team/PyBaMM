@@ -1,6 +1,7 @@
 Installation
 ============
 
+
 PyBaMM is available on GNU/Linux, MacOS and Windows.
 It can be installed using ``pip`` or ``conda``, or from source.
 
@@ -16,13 +17,13 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
    PyBaMM is available as a ``conda`` package through the conda-forge channel.
 
-   The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <index.html#dependencies>`_ available on conda-forge.
+   The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <#dependencies>`_ available on conda-forge.
 
    .. code:: bash
 
       conda install -c conda-forge pybamm
 
-   The ``pybamm-base`` package installs PyBaMM only with its `required dependencies <index.html#install-required-dependencies>`_.
+        The ``pybamm-base`` package installs PyBaMM only with its `required dependencies <#install-required-dependencies>`_.
 
    .. code:: bash
 
@@ -34,19 +35,24 @@ Optional solvers
 
 The following solvers are optionally available:
 
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <gnu-linux-mac.html#optional-jaxsolver>`_.
-*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see `Optional - IREE / MLIR Support <gnu-linux-mac.html#optional-iree-mlir-support>`_.
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
+*  `IREE <https://iree.dev/>`_ (`MLIR <https://mlir.llvm.org/>`_) support, see :ref:`optional-iree-mlir-support`.
 
 Dependencies
 ------------
-.. _install.required_dependencies:
+
+PyBaMM requires the following dependencies:
 
 .. warning::
 
     The list of dependencies below might be outdated. Please refer to the ``pyproject.toml`` file to find all dependencies.
 
+.. _install-required-dependencies:
+
+
 Required dependencies
 ~~~~~~~~~~~~~~~~~~~~~
+
 
 PyBaMM requires the following dependencies.
 
@@ -137,7 +143,7 @@ Dependency                                                                      
 .. _install.dev_dependencies:
 
 Dev dependencies
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[dev]"``
 
@@ -173,7 +179,8 @@ Dependency                                                  Minimum Version    p
 .. _install.bpx_dependencies:
 
 bpx dependencies
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
+
 
 Installable with ``pip install "pybamm[bpx]"``
 
@@ -199,7 +206,7 @@ Dependency                                                  Minimum Version    p
 .. _install.jax_dependencies:
 
 Jax dependencies
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[jax]"``, currently supported on Python 3.9-3.11.
 
@@ -211,7 +218,7 @@ Dependency                                                                Minimu
 ========================================================================= ================== ================== =======================
 
 IREE dependencies
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 Installable with ``pip install "pybamm[iree]"`` (requires ``jax`` dependencies to be installed).
 
