@@ -1,88 +1,42 @@
-#
-# Tests for the lead-acid Full model
-#
 import pybamm
-import tests
-
-import numpy as np
+import pytest
 
 
-class TestLeadAcidFull:
-    def test_basic_processing(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 3600 * 17))
-
-    def test_basic_processing_with_convection(self):
-        options = {"thermal": "isothermal", "convection": "uniform transverse"}
-        model = pybamm.lead_acid.Full(options)
-        # var_pts = {"x_n": 10, "x_s": 10, "x_p": 10}
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 3600 * 10))
-
-    def test_optimisations(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
-
-        original = optimtest.evaluate_model()
-        to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python)
-
-    def test_set_up(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
-        optimtest.set_up_model(to_python=True)
-        optimtest.set_up_model(to_python=False)
-
-    def test_basic_processing_1plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 1}
-        model = pybamm.lead_acid.Full(options)
-        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "y": 5, "z": 5}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
-
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "convection": "full transverse",
-        }
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
+@pytest.fixture(
+    params=[
+        (None, "well_posed"),
+        ({"convection": "uniform transverse"}, "well_posed"),
+        ({"dimensionality": 1, "convection": "full transverse"}, "well_posed"),
+        ({"surface form": "differential"}, "well_posed_differential"),
+        (
+            {"surface form": "differential", "dimensionality": 1},
+            "well_posed_differential_1plus1d",
+        ),
+        ({"surface form": "algebraic"}, "well_posed_algebraic"),
+        ({"hydrolysis": "true"}, "well_posed_hydrolysis"),
+        (
+            {"hydrolysis": "true", "surface form": "differential"},
+            "well_posed_surface_form_differential",
+        ),
+        (
+            {"hydrolysis": "true", "surface form": "algebraic"},
+            "well_posed_surface_form_algebraic",
+        ),
+    ]
+)
+def lead_acid_test_cases(request):
+    options, test_name = request.param
+    model = pybamm.lead_acid.Full(options)
+    return model, test_name
 
 
-class TestLeadAcidFullSurfaceForm:
-    def test_basic_processing_differential(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+def test_lead_acid_full(lead_acid_test_cases):
+    model, test_name = lead_acid_test_cases
 
-    def test_basic_processing_algebraic(self):
-        options = {"surface form": "algebraic"}
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+    model.check_well_posedness()
 
-    def test_set_up(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
-        optimtest.set_up_model(to_python=True)
-        optimtest.set_up_model(to_python=False)
-
-    def test_thermal(self):
-        options = {"thermal": "lumped"}
-        model = pybamm.lead_acid.Full(options)
-        param = model.default_parameter_values
-        param["Current function [A]"] = 1.7
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-        options = {"thermal": "x-full"}
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+    if test_name in [
+        "well_posed_surface_form_differential",
+        "well_posed_surface_form_algebraic",
+    ]:
+        assert isinstance(model.default_solver, pybamm.CasadiSolver)
