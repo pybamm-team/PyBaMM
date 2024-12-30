@@ -8,18 +8,11 @@ from tests import (
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
+    get_spherical_mesh_for_testing_symbolic,
+    get_cylindrical_mesh_for_testing_symbolic,
 )
 import numpy as np
-
-
-def get_mesh_for_testing_symbolic():
-    submesh_types = {"domain": pybamm.SymbolicUniform1DSubMesh}
-    geometry = {
-        "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
-    }
-    var_pts = {"x": 15}
-    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-    return mesh
 
 
 class TestFiniteVolumeGradDiv:
@@ -440,6 +433,55 @@ class TestFiniteVolumeGradDiv:
             4 * np.ones((npts, 1)),
         )
 
+    def test_cylindrical_grad_div_shapes_Neumann_bcs_symbolic(self):
+        mesh = get_cylindrical_mesh_for_testing_symbolic()
+        spatial_methods = {"cylindrical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Test gradient
+        var = pybamm.Variable("var", domain="cylindrical domain")
+        disc.set_variable_slices([var])
+        grad_eqn = pybamm.grad(var)
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        constant_y = np.ones_like(mesh["cylindrical domain"].nodes[:, np.newaxis])
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y),
+            np.zeros((14, 1)),
+        )
+
+        # Test divergence
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(pybamm.div(grad_eqn))
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, constant_y),
+            np.zeros((15, 1)),
+        )
+
+        # Test divergence of gradient
+        # div(grad(r^2)) = 4, N_left = 2*r_inner, N_right = 2
+        submesh = mesh["cylindrical domain"]
+        y_squared = (submesh.nodes * submesh.length) ** 2
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(4), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, y_squared),
+            4 * np.ones((15, 1)),
+        )
+
     def test_spherical_grad_div_shapes_Neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions spherical polar
@@ -500,6 +542,58 @@ class TestFiniteVolumeGradDiv:
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, quadratic_y),
             6 * np.ones((submesh.npts, 1)),
+        )
+
+    def test_spherical_grad_div_shapes_Neumann_bcs_symbolic(self):
+        mesh = get_spherical_mesh_for_testing_symbolic()
+        spatial_methods = {"spherical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Test gradient
+        var = pybamm.Variable("var", domain="spherical domain")
+        disc.set_variable_slices([var])
+        grad_eqn = pybamm.grad(var)
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        constant_y = np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis])
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y),
+            np.zeros((14, 1)),
+        )
+
+        # Test divergence
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        div_eqn_disc = disc.process_symbol(pybamm.div(grad_eqn))
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(
+                None, np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis])
+            ),
+            np.zeros_like(mesh["spherical domain"].nodes[:, np.newaxis]),
+        )
+
+        # Test divergence of gradient
+        # div(grad(r^2)) = 6, N_left = 0, N_right = 2
+        submesh = mesh["spherical domain"]
+        quadratic_y = (submesh.nodes * submesh.length) ** 2
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(4), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, quadratic_y),
+            6 * np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis]),
         )
 
     def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
