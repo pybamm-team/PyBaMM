@@ -406,7 +406,7 @@ class BaseParticle(pybamm.BaseSubModel):
         }
         return variables
 
-    def _get_standard_flux_distribution_variables(self, N_s, N_s_xav):
+    def _get_standard_flux_distribution_variables(self, N_s, N_s_xav=None):
         """
         Forms standard flux variables that depend on particle size R given
         the flux variable N_s from the distribution submodel.
@@ -416,9 +416,16 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables = {
             f"{Domain} {phase_name}particle flux " "distribution [mol.m-2.s-1]": N_s,
-            f"X-averaged {domain} {phase_name}particle flux "
-            "distribution [mol.m-2.s-1]": N_s_xav,
         }
+
+        if isinstance(N_s, pybamm.Broadcast):
+            N_s_xav = pybamm.x_average(N_s)
+            variables.update(
+                {
+                    f"X-averaged {domain} {phase_name}"
+                    "particle flux distribution [mol.m-2.s-1]": N_s_xav,
+                }
+            )
         return variables
 
     def _get_standard_diffusivity_distribution_variables(self, D_eff):

@@ -130,104 +130,94 @@ class FickianDiffusion(BaseParticle):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
-        current = variables["Total current density [A.m-2]"]
 
         if self.size_distribution is False:
-            if self.x_average:
-                R_nondim = 1
-            else:
+            if self.x_average is False:
+                c_s = variables[
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]"
+                ]
+                T = pybamm.PrimaryBroadcast(
+                    variables[f"{Domain} electrode temperature [K]"],
+                    [f"{domain} {phase_name}particle"],
+                )
                 R_nondim = variables[f"{Domain} {phase_name}particle radius"]
+                j = variables[
+                    f"{Domain} electrode {phase_name}"
+                    "interfacial current density [A.m-2]"
+                ]
+            else:
+                c_s = variables[
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
+                ]
+                T = pybamm.PrimaryBroadcast(
+                    variables[f"X-averaged {domain} electrode temperature [K]"],
+                    [f"{domain} {phase_name}particle"],
+                )
+                R_nondim = 1
+                j = variables[
+                    f"X-averaged {domain} electrode {phase_name}"
+                    "interfacial current density [A.m-2]"
+                ]
             R_broad_nondim = R_nondim
-            c_s = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
-            c_s_xav = variables[
-                f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-            ]
-            T = pybamm.PrimaryBroadcast(
-                variables[f"{Domain} electrode temperature [K]"],
-                [f"{domain} {phase_name}particle"],
-            )
-            T_xav = pybamm.PrimaryBroadcast(
-                variables[f"X-averaged {domain} electrode temperature [K]"],
-                [f"{domain} {phase_name}particle"],
-            )
-            j = variables[
-                f"{Domain} electrode {phase_name}" "interfacial current density [A.m-2]"
-            ]
-            j_xav = variables[
-                f"X-averaged {domain} electrode {phase_name}"
-                "interfacial current density [A.m-2]"
-            ]
         else:
             R_nondim = variables[f"{Domain} {phase_name}particle sizes"]
             R_broad_nondim = pybamm.PrimaryBroadcast(
                 R_nondim, [f"{domain} {phase_name}particle"]
             )
-            c_s = variables[
-                f"{Domain} {phase_name}particle " "concentration distribution [mol.m-3]"
-            ]
-            c_s_xav = variables[
-                f"X-averaged {domain} {phase_name}particle "
-                "concentration distribution [mol.m-3]"
-            ]
-            # broadcast T to "particle size" domain then again into "particle"
-            T = pybamm.PrimaryBroadcast(
-                variables[f"{Domain} electrode temperature [K]"],
-                [f"{domain} {phase_name}particle size"],
-            )
-            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
-            T_xav = pybamm.PrimaryBroadcast(
-                variables[f"X-averaged {domain} electrode temperature [K]"],
-                [f"{domain} {phase_name}particle size"],
-            )
-            T_xav = pybamm.PrimaryBroadcast(T_xav, [f"{domain} {phase_name}particle"])
-            j = variables[
-                f"{Domain} electrode {phase_name}interfacial "
-                "current density distribution [A.m-2]"
-            ]
-            j_xav = variables[
-                f"X-averaged {domain} electrode {phase_name}interfacial "
-                "current density distribution [A.m-2]"
-            ]
+            if self.x_average is False:
+                c_s = variables[
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
+                ]
+                # broadcast T to "particle size" domain then again into "particle"
+                T = pybamm.PrimaryBroadcast(
+                    variables[f"{Domain} electrode temperature [K]"],
+                    [f"{domain} {phase_name}particle size"],
+                )
+                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
+                j = variables[
+                    f"{Domain} electrode {phase_name}interfacial "
+                    "current density distribution [A.m-2]"
+                ]
+            else:
+                c_s = variables[
+                    f"X-averaged {domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
+                ]
+                # broadcast to "particle size" domain then again into "particle"
+                T = pybamm.PrimaryBroadcast(
+                    variables[f"X-averaged {domain} electrode temperature [K]"],
+                    [f"{domain} {phase_name}particle size"],
+                )
+                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle"])
+                j = variables[
+                    f"X-averaged {domain} electrode {phase_name}interfacial "
+                    "current density distribution [A.m-2]"
+                ]
 
+        current = variables["Total current density [A.m-2]"]
         D_eff = self._get_effective_diffusivity(c_s, T, current)
-        D_eff_xav = pybamm.x_average(D_eff)
-
         N_s = -D_eff * pybamm.grad(c_s)
-        if isinstance(N_s, pybamm.Broadcast):
-            N_s_xav = pybamm.x_average(N_s)
-        else:
-            N_s_xav = -D_eff_xav * pybamm.grad(c_s_xav)
-
-        if self.x_average:
-            rhs = -(1 / (R_broad_nondim**2)) * pybamm.div(N_s_xav)
-            bc = -j_xav * R_nondim / self.param.F / pybamm.surf(D_eff_xav)
-        else:
-            rhs = -(1 / (R_broad_nondim**2)) * pybamm.div(N_s)
-            bc = -j * R_nondim / self.param.F / pybamm.surf(D_eff)
 
         variables.update(
             {
-                f"{Domain} {phase_name}particle rhs [mol.m-3.s-1]": rhs,
-                f"{Domain} {phase_name}particle bc [mol.m-4]": bc,
+                f"{Domain} {phase_name}particle rhs [mol.m-3.s-1]": -(
+                    1 / (R_broad_nondim**2)
+                )
+                * pybamm.div(N_s),
+                f"{Domain} {phase_name}particle bc [mol.m-4]": -j
+                * R_nondim
+                / self.param.F
+                / pybamm.surf(D_eff),
             }
         )
-
-        # For x-averaged models, re-broadcast N_s to electrode domain to avoid a
-        # ShapeError during discretisation
-        if self.x_average:
-            if self.size_distribution:
-                N_s = pybamm.TertiaryBroadcast(N_s_xav, [f"{domain} electrode"])
-            else:
-                N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])
 
         if self.size_distribution:
             variables.update(
                 self._get_standard_diffusivity_distribution_variables(D_eff)
             )
 
-            variables.update(
-                self._get_standard_flux_distribution_variables(N_s, N_s_xav)
-            )
+            variables.update(self._get_standard_flux_distribution_variables(N_s))
         else:
             variables.update(self._get_standard_diffusivity_variables(D_eff))
             variables.update(self._get_standard_flux_variables(N_s))
@@ -265,23 +255,29 @@ class FickianDiffusion(BaseParticle):
         phase_name = self.phase_name
 
         if self.size_distribution is False:
-            c_s = variables[f"{Domain} {phase_name}particle concentration [mol.m-3]"]
-            c_s_xav = variables[
-                f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
-            ]
+            if self.x_average is False:
+                c_s = variables[
+                    f"{Domain} {phase_name}particle concentration [mol.m-3]"
+                ]
+            else:
+                c_s = variables[
+                    f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]"
+                ]
         else:
-            c_s = variables[
-                f"{Domain} {phase_name}particle " "concentration distribution [mol.m-3]"
-            ]
-            c_s_xav = variables[
-                f"X-averaged {domain} {phase_name}particle "
-                "concentration distribution [mol.m-3]"
-            ]
+            if self.x_average is False:
+                c_s = variables[
+                    f"{Domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
+                ]
+            else:
+                c_s = variables[
+                    f"X-averaged {domain} {phase_name}particle "
+                    "concentration distribution [mol.m-3]"
+                ]
 
         rbc = variables[f"{Domain} {phase_name}particle bc [mol.m-4]"]
         self.boundary_conditions = {
-            c_s: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")},
-            c_s_xav: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")},
+            c_s: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }
 
     def set_initial_conditions(self, variables):

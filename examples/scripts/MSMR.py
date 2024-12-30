@@ -7,7 +7,7 @@ pybamm.set_logging_level("INFO")
 msmr_model = pybamm.lithium_ion.MSMR({"number of MSMR reactions": ("6", "4")})
 
 # We can also use a SPM with MSMR thermodynamics, transport and kinetics by changing
-# model options. Note we need to se the "surface form" to "algebraic" or "differential"
+# model options. Note we need to set the "surface form" to "algebraic" or "differential"
 # to use the MSMR, since we cannot explicitly invert the kinetics
 spm_msmr_model = pybamm.lithium_ion.SPM(
     {
@@ -40,7 +40,9 @@ experiment = pybamm.Experiment(
 sols = []
 for model in [msmr_model, spm_msmr_model]:
     sim = pybamm.Simulation(
-        model, parameter_values=parameter_values, experiment=experiment
+        model,
+        parameter_values=parameter_values,
+        experiment=experiment,
     )
     sol = sim.solve(initial_soc=0.9)
     sols.append(sol)
