@@ -12,6 +12,16 @@ from tests import (
 import numpy as np
 
 
+def get_mesh_for_testing_symbolic():
+    submesh_types = {"domain": pybamm.SymbolicUniform1DSubMesh}
+    geometry = {
+        "domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}},
+    }
+    var_pts = {"x": 15}
+    mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+    return mesh
+
+
 class TestFiniteVolumeGradDiv:
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
@@ -636,3 +646,37 @@ class TestFiniteVolumeGradDiv:
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), expected
         )
+
+    def test_grad_div_shapes_symbolic_mesh(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="domain")
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(grad_eqn)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        div_eqn_disc = disc.process_symbol(div_eqn)
+
+        # Evaluate grad
+        dom = ("domain_left ghost cell", "domain", "domain_right ghost cell")
+        linear_y = mesh[dom].nodes * mesh[dom].length + mesh[dom].min
+        expected = np.ones((16, 1))
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, linear_y), expected
+        )
+
+        # Evaluate div
+        div_eqn = pybamm.div(pybamm.grad(var))
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        div_eval = div_eqn_disc.evaluate(None, linear_y)
+        div_eval = np.reshape(div_eval, [15, 1])
+        np.testing.assert_array_almost_equal(div_eval, np.zeros([15, 1]))
