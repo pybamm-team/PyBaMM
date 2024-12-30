@@ -179,9 +179,14 @@ class BaseParticle(pybamm.BaseSubModel):
         phase_name = self.phase_name
 
         variables = {
-            # f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s,
-            f"X-averaged {domain} {phase_name}particle flux [mol.m-2.s-1]": N_s_xav,
+            f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s,
         }
+        if self.x_average:
+            variables.update(
+                {
+                    f"X-averaged {domain} {phase_name}particle flux [mol.m-2.s-1]": N_s_xav,
+                }
+            )
 
         return variables
 
@@ -410,11 +415,10 @@ class BaseParticle(pybamm.BaseSubModel):
         phase_name = self.phase_name
 
         variables = {
+            f"{Domain} {phase_name}particle flux " "distribution [mol.m-2.s-1]": N_s,
             f"X-averaged {domain} {phase_name}particle flux "
             "distribution [mol.m-2.s-1]": N_s_xav,
-            f"{Domain} {phase_name}particle flux " "distribution [mol.m-2.s-1]": N_s,
         }
-
         return variables
 
     def _get_standard_diffusivity_distribution_variables(self, D_eff):
