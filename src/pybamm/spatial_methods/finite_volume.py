@@ -245,9 +245,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral matrix for the domain
         """
         domains = child.domains
-        if vector_type != "row" and integration_dimension == "secondary":
+        if vector_type != "row" and integration_dimension != "primary":
             raise NotImplementedError(
-                "Integral in secondary vector only implemented in 'row' form"
+                f"Integral in {integration_dimension} vector only implemented in 'row' form"
             )
 
         domain = child.domains[integration_dimension]
@@ -263,7 +263,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 d_edges = 2 * np.pi * (r_edges_right**2 - r_edges_left**2) / 2
         else:
             d_edges = submesh.d_edges
-
+        possible_dimensions = ["primary", "secondary", "tertiary", "quaternary"]
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh[domains["primary"]]
@@ -279,34 +279,33 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
             matrix = kron(eye(second_dim_repeats), d_edges)
-        elif integration_dimension == "secondary":
-            # Create appropriate submesh by combining submeshes in domain
-            primary_submesh = self.mesh[domains["primary"]]
-
-            # Create matrix which integrates in the secondary dimension
-            # Different number of edges depending on whether child evaluates on edges
-            # in the primary dimensions
-            if child.evaluates_on_edges("primary"):
-                n_primary_pts = primary_submesh.npts + 1
-            else:
-                n_primary_pts = primary_submesh.npts
-            int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
-
-            # repeat matrix for each node in higher dimensions
-            third_dim_repeats = self._get_auxiliary_domain_repeats(
-                {
-                    k: v
-                    for k, v in domains.items()
-                    if (k == "tertiary" or k == "quaternary")
-                }
+        elif integration_dimension in possible_dimensions[1:]:
+            this_dimension_index = possible_dimensions.index(integration_dimension)
+            # get lower dimensions and the corresponding domains, i.e. if integration_dimension is "secondary",
+            # lower_dimensions is ["primary"] and lower_domains is [child.domains["primary"]]
+            lower_dimensions = possible_dimensions[:this_dimension_index]
+            lower_domains = [child.domains[dimension] for dimension in lower_dimensions]
+            # get higher dimensions, i.e. if integration_dimension is "secondary",
+            # higher_dimensions is ["tertiary", "quaternary"]
+            higher_dimensions = possible_dimensions[this_dimension_index + 1 :]
+            n_lower_pts = 1
+            #  Lower dimensions should be repeated, so add them to the eye matrix
+            for lower_domain, lower_dimension in zip(lower_domains, lower_dimensions):
+                lower_submesh = self.mesh[lower_domain]
+                if child.evaluates_on_edges(lower_dimension):
+                    n_lower_pts *= lower_submesh.npts + 1
+                else:
+                    n_lower_pts *= lower_submesh.npts
+            int_matrix = hstack([d_edge * eye(n_lower_pts) for d_edge in d_edges])
+            # Higher dimensions should be tiled, so repeat the matrix for each higher dimension.
+            higher_repeats = self._get_auxiliary_domain_repeats(
+                {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
-            # generate full matrix from the submatrix
-            matrix = kron(eye(third_dim_repeats), int_matrix)
-        # generate full matrix from the submatrix
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
+            matrix = kron(eye(higher_repeats), int_matrix)
+        else:
+            raise ValueError(
+                f"Invalid integration dimension: {integration_dimension}. Only {possible_dimensions} are supported."
+            )
         return pybamm.Matrix(csr_matrix(matrix))
 
     def indefinite_integral(self, child, discretised_child, direction):
