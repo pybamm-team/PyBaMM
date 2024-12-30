@@ -1018,6 +1018,16 @@
       "contributions": [
         "infra"
       ]
+    },
+    {
+      "login": "RohitP2005",
+      "name": "RohitP2005",
+      "avatar_url": "https://avatars.githubusercontent.com/u/122815777?v=4",
+      "profile": "https://github.com/RohitP2005",
+      "contributions": [
+        "doc",
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
