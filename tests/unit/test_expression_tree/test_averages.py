@@ -5,11 +5,14 @@ import pytest
 import numpy as np
 import pybamm
 from tests import assert_domain_equal
+from hypothesis import strategies as st
+from hypothesis import given
 
 
 class TestUnaryOperators:
-    def test_x_average(self):
-        a = pybamm.Scalar(4)
+    @given(st.integers())
+    def test_x_average(self, random_value):
+        a = pybamm.Scalar(random_value)
         average_a = pybamm.x_average(a)
         assert average_a == a
 
@@ -17,17 +20,17 @@ class TestUnaryOperators:
         average_broad_a = pybamm.x_average(
             pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        assert average_broad_a == pybamm.Scalar(4)
+        assert average_broad_a == pybamm.Scalar(random_value)
 
         # average of a number times a broadcast is the number times the child
         average_two_broad_a = pybamm.x_average(
             2 * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        assert average_two_broad_a == pybamm.Scalar(8)
+        assert average_two_broad_a == pybamm.Scalar(2 * random_value)
         average_t_broad_a = pybamm.x_average(
             pybamm.t * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        assert average_t_broad_a == (pybamm.t * pybamm.Scalar(4))
+        assert average_t_broad_a == (pybamm.t * random_value)
 
         # full broadcasts
         average_broad_a = pybamm.x_average(
@@ -174,9 +177,10 @@ class TestUnaryOperators:
         assert pybamm.x_average(a + b) == pybamm.x_average(a) + pybamm.x_average(b)
         assert pybamm.x_average(a - b) == pybamm.x_average(a) - pybamm.x_average(b)
 
-    def test_size_average(self):
+    @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
+    def test_size_average(self, random_value):
         # no domain
-        a = pybamm.Scalar(1)
+        a = pybamm.Scalar(random_value)
         average_a = pybamm.size_average(a)
         assert average_a == a
 
@@ -193,7 +197,7 @@ class TestUnaryOperators:
         average_a = pybamm.size_average(
             pybamm.PrimaryBroadcast(a, "negative particle size")
         )
-        assert average_a.evaluate() == np.array([1])
+        assert average_a.evaluate() == np.array([random_value])
 
         a = pybamm.Symbol("a", domain="negative particle")
         average_a = pybamm.size_average(
@@ -267,8 +271,9 @@ class TestUnaryOperators:
         assert pybamm.r_average(a + b) == pybamm.r_average(a) + pybamm.r_average(b)
         assert pybamm.r_average(a - b) == pybamm.r_average(a) - pybamm.r_average(b)
 
-    def test_yz_average(self):
-        a = pybamm.Scalar(1)
+    @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
+    def test_yz_average(self, random_value):
+        a = pybamm.Scalar(random_value)
         z_average_a = pybamm.z_average(a)
         yz_average_a = pybamm.yz_average(a)
         assert z_average_a == a
@@ -280,8 +285,8 @@ class TestUnaryOperators:
         yz_average_broad_a = pybamm.yz_average(
             pybamm.PrimaryBroadcast(a, ["current collector"])
         )
-        assert z_average_broad_a.evaluate() == np.array([1])
-        assert yz_average_broad_a.evaluate() == np.array([1])
+        assert z_average_broad_a.evaluate() == np.array([random_value])
+        assert yz_average_broad_a.evaluate() == np.array([random_value])
 
         a = pybamm.Variable("a", domain=["current collector"])
         y = pybamm.SpatialVariable("y", ["current collector"])
