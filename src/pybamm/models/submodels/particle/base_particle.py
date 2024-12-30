@@ -174,20 +174,20 @@ class BaseParticle(pybamm.BaseSubModel):
         }
         return variables
 
-    def _get_standard_flux_variables(self, N_s, N_s_xav):
+    def _get_standard_flux_variables(self, N_s):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
-        variables = {
-            f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s,
-        }
-        if self.x_average:
+        variables = {f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s}
+
+        if isinstance(N_s, pybamm.Broadcast):
+            N_s_xav = pybamm.x_average(N_s)
             variables.update(
                 {
-                    f"X-averaged {domain} {phase_name}particle flux [mol.m-2.s-1]": N_s_xav,
+                    f"X-averaged {domain} {phase_name}"
+                    "particle flux [mol.m-2.s-1]": N_s_xav
                 }
             )
-
         return variables
 
     def _get_distribution_variables(self, R):

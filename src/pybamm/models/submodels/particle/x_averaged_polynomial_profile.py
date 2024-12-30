@@ -214,13 +214,13 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 c_s, c_s_av=c_s_av, c_s_surf=c_s_surf
             )
         )
-        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_standard_flux_variables(N_s))
 
         return variables
 
     def set_rhs(self, variables):
         # Note: we have to use `pybamm.source(rhs, var)` in the rhs dict so that
-        # the scalar source term gets multplied by the correct mass matrix when
+        # the scalar source term gets multiplied by the correct mass matrix when
         # using this model with 2D current collectors with the finite element
         # method (see #1399)
         domain = self.domain

@@ -218,11 +218,14 @@ class MSMRDiffusion(BaseParticle):
         D_eff_xav = pybamm.x_average(D_eff)
 
         f = self.param.F / (self.param.R * T)
+        f_xav = pybamm.x_average(f)
         N_s = c_max * x * (1 - x) * f * D_eff * pybamm.grad(U)
         if isinstance(N_s, pybamm.Broadcast):
             N_s_xav = pybamm.x_average(N_s)
         else:
-            N_s_xav = c_max * x_xav * (1 - x_xav) * f * D_eff_xav * pybamm.grad(U_xav)
+            N_s_xav = (
+                c_max * x_xav * (1 - x_xav) * f_xav * D_eff_xav * pybamm.grad(U_xav)
+            )
 
         if self.x_average:
             rhs = -(1 / (R_broad_nondim**2)) * pybamm.div(N_s_xav) / c_max / dxdU_xav
@@ -230,7 +233,7 @@ class MSMRDiffusion(BaseParticle):
                 -j_xav
                 * R_nondim
                 / self.param.F
-                / pybamm.surf(c_max * x_xav * (1 - x_xav) * f * D_eff_xav)
+                / pybamm.surf(c_max * x_xav * (1 - x_xav) * f_xav * D_eff_xav)
             )
         else:
             rhs = -(1 / (R_broad_nondim**2)) * pybamm.div(N_s) / c_max / dxdU
@@ -266,7 +269,7 @@ class MSMRDiffusion(BaseParticle):
             )
         else:
             variables.update(self._get_standard_diffusivity_variables(D_eff))
-            variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+            variables.update(self._get_standard_flux_variables(N_s))
 
         return variables
 

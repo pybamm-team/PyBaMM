@@ -230,7 +230,7 @@ class FickianDiffusion(BaseParticle):
             )
         else:
             variables.update(self._get_standard_diffusivity_variables(D_eff))
-            variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+            variables.update(self._get_standard_flux_variables(N_s))
 
         return variables
 
