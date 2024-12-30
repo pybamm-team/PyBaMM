@@ -2,6 +2,7 @@
 
 ## Features
 
+- Enhanced the `search` method to accept multiple search terms in the form of a string or a list. ([#4650](https://github.com/pybamm-team/PyBaMM/pull/4650))
 - Made composite electrode model compatible with particle size distribution ([#4687](https://github.com/pybamm-team/PyBaMM/pull/4687))
 - Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
@@ -9,6 +10,7 @@
 
 ## Breaking changes
 
+- Updated BPX to v0.5.0 and made changes for the switch to Pydantic V2 ([#4701](https://github.com/pybamm-team/PyBaMM/pull/4701))
 - Summary variables now calculated only when called, accessed via a class in the same manner as other variables rather than a dictionary. ([#4621](https://github.com/pybamm-team/PyBaMM/pull/4621))
 - The conda distribution (`pybamm`) now installs all optional dependencies available on conda-forge. Use the new `pybamm-base` conda
 package to install PyBaMM with only the required dependencies. ([conda-forge/pybamm-feedstock#70](https://github.com/conda-forge/pybamm-feedstock/pull/70))
