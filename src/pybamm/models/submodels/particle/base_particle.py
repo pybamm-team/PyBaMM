@@ -403,28 +403,28 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if [f"{domain} electrode"] in N_s.domains.values():
             # N_s depends on x
-
             N_s_distribution = N_s
-            # x-av the *tertiary* domain
-            # NOTE: not yet implemented. Fill with zeros instead
-            N_s_xav_distribution = pybamm.FullBroadcast(
-                0,
-                [f"{domain} {phase_name}particle"],
-                {
-                    "secondary": f"{domain} {phase_name}particle size",
-                    "tertiary": "current collector",
-                },
-            )
+            if isinstance(N_s, pybamm.SecondaryBroadcast):
+                N_s_xav_distribution = pybamm.x_average(N_s)
+            else:
+                # can't average variables that evaluate on edges
+                N_s_xav_distribution = None
         else:
             N_s_xav_distribution = N_s
             N_s_distribution = pybamm.TertiaryBroadcast(N_s, [f"{domain} electrode"])
 
         variables = {
-            f"X-averaged {domain} {phase_name}particle flux "
-            "distribution [mol.m-2.s-1]": N_s_xav_distribution,
             f"{Domain} {phase_name}particle flux "
             "distribution [mol.m-2.s-1]": N_s_distribution,
         }
+
+        if N_s_xav_distribution is not None:
+            variables.update(
+                {
+                    f"X-averaged {domain} {phase_name}particle flux "
+                    "distribution [mol.m-2.s-1]": N_s_xav_distribution,
+                }
+            )
 
         return variables
 
