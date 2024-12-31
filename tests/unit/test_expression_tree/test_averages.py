@@ -286,7 +286,7 @@ class TestUnaryOperators:
             pybamm.PrimaryBroadcast(a, ["current collector"])
         )
         assert z_average_broad_a.evaluate() == np.array([random_value])
-        assert yz_average_broad_a.evaluate() == np.array([random_value])
+        assert yz_average_broad_a.evaluate() == np.array([random_integer])
 
         a = pybamm.Variable("a", domain=["current collector"])
         y = pybamm.SpatialVariable("y", ["current collector"])
