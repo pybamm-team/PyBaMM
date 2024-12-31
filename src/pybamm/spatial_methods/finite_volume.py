@@ -461,13 +461,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
-        if hasattr(submesh, "length"):
-            sub_matrix = sub_matrix * submesh.length
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        if hasattr(submesh, "length"):
+            matrix = matrix * submesh.length
 
         return pybamm.Matrix(matrix)
 
