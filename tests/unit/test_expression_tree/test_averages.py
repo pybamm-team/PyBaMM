@@ -20,7 +20,7 @@ class TestUnaryOperators:
         average_broad_a = pybamm.x_average(
             pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        assert average_broad_a == pybamm.Scalar(random_value)
+        assert average_broad_a == pybamm.Scalar(random_integer)
 
         # average of a number times a broadcast is the number times the child
         average_two_broad_a = pybamm.x_average(
