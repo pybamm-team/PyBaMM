@@ -228,13 +228,12 @@ class FickianDiffusion(BaseParticle):
             )
             variables.update(self._get_standard_flux_distribution_variables(N_s))
             # Size-averaged flux variables
-            # R = variables[f"{Phase_prefactor}{Domain} {phase_name}particle sizes [m]"]
-            # f_a_dist = self.phase_param.f_a_dist(R)
-            # D_eff = pybamm.Integral(f_a_dist * D_eff, R)
-            # N_s = pybamm.Integral(f_a_dist * N_s, R)
-        else:
-            variables.update(self._get_standard_diffusivity_variables(D_eff))
-            variables.update(self._get_standard_flux_variables(N_s))
+            D_eff = pybamm.size_average(D_eff)
+            R = pybamm.SpatialVariable("R", domains=D_eff.domains)
+            f_a_dist = self.phase_param.f_a_dist(R)
+            N_s = pybamm.Integral(f_a_dist * N_s, R)
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
+        variables.update(self._get_standard_flux_variables(N_s))
 
         return variables
 

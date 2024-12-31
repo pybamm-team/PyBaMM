@@ -166,7 +166,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables = {f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s}
 
-        if isinstance(N_s, pybamm.Broadcast):
+        if isinstance(N_s, pybamm.SecondaryBroadcast):
             N_s_xav = pybamm.x_average(N_s)
             variables.update(
                 {
