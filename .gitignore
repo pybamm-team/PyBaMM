@@ -137,3 +137,6 @@ results/
 
 # tests
 test_callback.log
+
+# hypothesis
+.hypothesis/
