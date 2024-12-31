@@ -30,7 +30,7 @@ class TestUnaryOperators:
         average_t_broad_a = pybamm.x_average(
             pybamm.t * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        assert average_t_broad_a == (pybamm.t * random_value)
+        assert average_t_broad_a == (pybamm.t * random_integer)
 
         # full broadcasts
         average_broad_a = pybamm.x_average(
