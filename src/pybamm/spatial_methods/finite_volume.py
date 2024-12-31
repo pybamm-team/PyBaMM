@@ -302,10 +302,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
             matrix = kron(eye(higher_repeats), int_matrix)
-        else:
-            raise ValueError(
-                f"Invalid integration dimension: {integration_dimension}. Only {possible_dimensions} are supported."
-            )
         return pybamm.Matrix(csr_matrix(matrix))
 
     def indefinite_integral(self, child, discretised_child, direction):
