@@ -178,7 +178,7 @@ class TestUnaryOperators:
         assert pybamm.x_average(a - b) == pybamm.x_average(a) - pybamm.x_average(b)
 
     @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
-    def test_size_average(self, random_value):
+    def test_size_average(self, random_integer):
         # no domain
         a = pybamm.Scalar(random_value)
         average_a = pybamm.size_average(a)
