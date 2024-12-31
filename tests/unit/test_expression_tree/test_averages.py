@@ -26,7 +26,7 @@ class TestUnaryOperators:
         average_two_broad_a = pybamm.x_average(
             2 * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        assert average_two_broad_a == pybamm.Scalar(2 * random_value)
+        assert average_two_broad_a == pybamm.Scalar(2 * random_integer)
         average_t_broad_a = pybamm.x_average(
             pybamm.t * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
