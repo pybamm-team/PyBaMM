@@ -272,8 +272,8 @@ class TestUnaryOperators:
         assert pybamm.r_average(a - b) == pybamm.r_average(a) - pybamm.r_average(b)
 
     @given(st.integers(min_value=-(2**63), max_value=2**63 - 1))
-    def test_yz_average(self, random_value):
-        a = pybamm.Scalar(random_value)
+    def test_yz_average(self, random_integer):
+        a = pybamm.Scalar(random_integer)
         z_average_a = pybamm.z_average(a)
         yz_average_a = pybamm.yz_average(a)
         assert z_average_a == a
