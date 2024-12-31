@@ -197,7 +197,7 @@ class TestUnaryOperators:
         average_a = pybamm.size_average(
             pybamm.PrimaryBroadcast(a, "negative particle size")
         )
-        assert average_a.evaluate() == np.array([random_value])
+        assert average_a.evaluate() == np.array([random_integer])
 
         a = pybamm.Symbol("a", domain="negative particle")
         average_a = pybamm.size_average(
