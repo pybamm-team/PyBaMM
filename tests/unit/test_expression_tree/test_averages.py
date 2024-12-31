@@ -12,7 +12,7 @@ from hypothesis import given
 class TestUnaryOperators:
     @given(st.integers())
     def test_x_average(self, random_integer):
-        a = pybamm.Scalar(random_value)
+        a = pybamm.Scalar(random_integer)
         average_a = pybamm.x_average(a)
         assert average_a == a
 
