@@ -7,6 +7,7 @@ from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
 )
 import numpy as np
 
@@ -330,6 +331,95 @@ class TestExtrapolation:
         y_surf = micro_submesh.edges[-1]
         np.testing.assert_array_almost_equal(
             surf_eqn_disc.evaluate(None, linear_y), y_surf
+        )
+
+    def test_extrapolate_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        spatial_methods = {
+            "domain": pybamm.FiniteVolume(method_options),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="domain")
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        extrap_grad_left = pybamm.BoundaryGradient(var, "left")
+        extrap_grad_right = pybamm.BoundaryGradient(var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        extrap_grad_left_disc = disc.process_symbol(extrap_grad_left)
+        extrap_grad_right_disc = disc.process_symbol(extrap_grad_right)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(mesh["domain"].nodes[:, np.newaxis])
+        assert extrap_left_disc.evaluate(None, constant_y) == 1
+        assert extrap_right_disc.evaluate(None, constant_y) == 1
+
+        # check linear variable extrapolates correctly
+        linear_y = mesh["domain"].nodes
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 1
+        )
+
+        # check gradient extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2
+        )
+
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
+        spatial_methods = {"domain": pybamm.FiniteVolume(method_options)}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="domain")
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        extrap_grad_left = pybamm.BoundaryGradient(var, "left")
+        extrap_grad_right = pybamm.BoundaryGradient(var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        extrap_grad_left_disc = disc.process_symbol(extrap_grad_left)
+        extrap_grad_right_disc = disc.process_symbol(extrap_grad_right)
+
+        # check constant extrapolates to constant
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, constant_y), 1
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, constant_y), 1
+        )
+
+        # check linear variable extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 1
+        )
+
+        # check gradient extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2
         )
 
     def test_quadratic_extrapolate_left_right(self):
