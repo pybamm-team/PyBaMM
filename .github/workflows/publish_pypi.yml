@@ -152,7 +152,14 @@ jobs:
 
       - name: Build wheels on macOS
         shell: bash
-        run: |
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: >
+            PYBAMM_DISABLE_TELEMETRY="true"
+          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
+          CIBW_ARCHS_MACOS: auto
+          CIBW_BEFORE_ALL: |
             set -e -x
 
             # Set LLVM-OpenMP URL
@@ -213,7 +220,7 @@ jobs:
 
             # Can't download LLVM-OpenMP directly, use conda/mamba and set environment variables
             brew install miniforge
-            mamba create -n pybamm-dev $OPENMP_URL
+            conda create -n pybamm-dev $OPENMP_URL
             if [[ $(uname -m) == "x86_64" ]]; then
               PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybamm-dev"
             elif [[ $(uname -m) == "arm64" ]]; then
@@ -232,17 +239,7 @@ jobs:
             export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
             export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
 
-            # cibuildwheel not recognising its environment variable, so set manually
-            export CIBUILDWHEEL="1"
-
             python scripts/install_KLU_Sundials.py
-            python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ENVIRONMENT: >
-            PYBAMM_DISABLE_TELEMETRY="true"
-          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
-          CIBW_ARCHS_MACOS: auto
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
