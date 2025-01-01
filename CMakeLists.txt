@@ -45,7 +45,7 @@ message("PYBAMM_IDAKLU_EXPR_CASADI: ${PYBAMM_IDAKLU_EXPR_CASADI}")
 
 # Casadi PyBaMM source files
 set(IDAKLU_EXPR_CASADI_SOURCE_FILES "")
-if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON" )
+if(${PYBAMM_IDAKLU_EXPR_CASADI} STREQUAL "ON")
   add_compile_definitions(CASADI_ENABLE)
   set(IDAKLU_EXPR_CASADI_SOURCE_FILES
     src/pybamm/solvers/c_solvers/idaklu/Expressions/Casadi/CasadiFunctions.cpp
@@ -61,7 +61,7 @@ message("PYBAMM_IDAKLU_EXPR_IREE: ${PYBAMM_IDAKLU_EXPR_IREE}")
 
 # IREE (MLIR expression evaluation) PyBaMM source files
 set(IDAKLU_EXPR_IREE_SOURCE_FILES "")
-if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON")
   add_compile_definitions(IREE_ENABLE)
   # Source file list
   set(IDAKLU_EXPR_IREE_SOURCE_FILES
@@ -112,7 +112,7 @@ pybind11_add_module(idaklu
   ${IDAKLU_EXPR_IREE_SOURCE_FILES}
 )
 
-if (NOT DEFINED USE_PYTHON_CASADI)
+if(NOT DEFINED USE_PYTHON_CASADI)
   set(USE_PYTHON_CASADI TRUE)
 endif()
 
@@ -124,7 +124,7 @@ execute_process(
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-if (CASADI_DIR)
+if(CASADI_DIR)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found Python casadi path: ${CASADI_DIR}")
 endif()
@@ -145,28 +145,56 @@ set_target_properties(
 )
 
 # openmp
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  if (NOT DEFINED ENV{CIBUILDWHEEL})
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if(DEFINED ENV{CIBUILDWHEEL})
+    # In the cibuildwheel environment, we need to check the architecture
+    # to determine the correct conda prefix. Tthis is for grabbing the
+    # right OpenMP library built against the correct sysroot for macOS
+    # version compatibility.
+    execute_process(
+      COMMAND uname -m
+      OUTPUT_VARIABLE MACHINE_ARCH
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(MACHINE_ARCH STREQUAL "x86_64")
+      set(CONDA_PREFIX "/usr/local/Caskroom/miniforge/base/envs/pybamm-dev")
+    elseif(MACHINE_ARCH STREQUAL "arm64")
+      set(CONDA_PREFIX "/opt/homebrew/Caskroom/miniforge/base/envs/pybamm-dev")
+    endif()
+    set(OpenMP_ROOT "$ENV{HOME}/.local;${CONDA_PREFIX}")
+    set(OpenMP_CXX_INCLUDE_DIRS "${CONDA_PREFIX}/include")
+    set(OpenMP_CXX_LIB_DIRS "$ENV{HOME}/.local/lib;${CONDA_PREFIX}/lib")
+  else()
+    # regular build, use Homebrew paths
     execute_process(
       COMMAND "brew" "--prefix"
       OUTPUT_VARIABLE HOMEBREW_PREFIX
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if (OpenMP_ROOT)
+    if(OpenMP_ROOT)
       set(OpenMP_ROOT "${OpenMP_ROOT}:${HOMEBREW_PREFIX}/opt/libomp")
     else()
       set(OpenMP_ROOT "${HOMEBREW_PREFIX}/opt/libomp")
     endif()
   endif()
 endif()
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+
+# some diagnostic messages to help with debugging
+message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "OpenMP_ROOT: ${OpenMP_ROOT}")
+if(DEFINED OpenMP_CXX_INCLUDE_DIRS)
+  message(STATUS "OpenMP include dirs: ${OpenMP_CXX_INCLUDE_DIRS}")
 endif()
+if(DEFINED OpenMP_CXX_LIB_DIRS)
+  message(STATUS "OpenMP library dir: ${OpenMP_CXX_LIB_DIRS}")
+endif()
+
+find_package(OpenMP REQUIRED)
+target_link_libraries(idaklu PRIVATE OpenMP::OpenMP_CXX)
+target_include_directories(idaklu PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS REQUIRED)
-message("SUNDIALS found in ${SUNDIALS_INCLUDE_DIR}: ${SUNDIALS_LIBRARIES}")
+message("SUNDIALS found in ${SUNDIALS_LIBRARY_DIR}: ${SUNDIALS_LIBRARIES}")
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
@@ -177,13 +205,13 @@ if(DEFINED VCPKG_ROOT_DIR)
   find_package(SuiteSparse CONFIG REQUIRED)
 else()
   find_package(SuiteSparse REQUIRED)
-  message("SuiteSparse found in ${SuiteSparse_INCLUDE_DIRS}: ${SuiteSparse_LIBRARIES}")
+  message("SuiteSparse found in ${SuiteSparse_LIBRARY_DIRS}: ${SuiteSparse_LIBRARIES}")
 endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
 
 # IREE (MLIR compiler and runtime library) build settings
-if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON" )
+if(${PYBAMM_IDAKLU_EXPR_IREE} STREQUAL "ON")
   set(IREE_BUILD_COMPILER ON)
   set(IREE_BUILD_TESTS OFF)
   set(IREE_BUILD_SAMPLES OFF)
