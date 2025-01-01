@@ -235,9 +235,11 @@ jobs:
             export CC=/usr/bin/clang
             export CXX=/usr/bin/clang++
             export CPPFLAGS="$CPPFLAGS -Xpreprocessor -fopenmp"
-            export CFLAGS="$CFLAGS -I$PREFIX/include"
-            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include"
-            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -lomp"
+            export CFLAGS="$CFLAGS -I$PREFIX/include -I$HOME/.local/include"
+            export CXXFLAGS="$CXXFLAGS -I$PREFIX/include -I$HOME/.local/include"
+            export LDFLAGS="$LDFLAGS -L$PREFIX/lib -L$HOME/.local/lib -lomp"
+            # Add OpenMP root to the environment as an additional safeguard
+            export OpenMP_ROOT="$HOME/.local"
 
             python scripts/install_KLU_Sundials.py
           CIBW_BEFORE_BUILD: python -m pip install cmake casadi setuptools delocate
