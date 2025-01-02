@@ -525,10 +525,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
-            if options["heat of mixing"] != "false":
+            if options["lithium plating porosity change"] != "false":
                 raise NotImplementedError(
-                    "Heat of mixing submodels do not yet support particle-size "
-                    "distributions."
+                    "Lithium plating porosity change not yet supported for particle-size"
+                    " distributions."
                 )
             if options["SEI porosity change"] == "true":
                 raise NotImplementedError(
@@ -538,6 +538,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             if options["lithium plating porosity change"] == "true":
                 raise NotImplementedError(
                     "Lithium plating porosity change submodels do not yet support particle-size "
+            if options["heat of mixing"] != "false":
+                raise NotImplementedError(
+                    "Heat of mixing submodels do not yet support particle-size "
                     "distributions."
                 )
             if options["particle"] in ["quadratic profile", "quartic profile"]:

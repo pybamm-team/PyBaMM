@@ -51,7 +51,7 @@ class NoSEI(BaseModel):
             )
         else:
             variables.update(self._get_standard_reaction_variables(zero))
-            variables.update(self._get_standard_interfacial_current_variables(zero))
+        variables.update(self._get_standard_interfacial_current_variables(zero))
         return variables
 
     def get_coupled_variables(self, variables):

@@ -29,7 +29,6 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def _get_effective_diffusivity(self, c, T, current):
         domain, Domain = self.domain_Domain
-        domain_param = self.domain_param
         phase_param = self.phase_param
         domain_options = getattr(self.options, domain)
 
@@ -60,7 +59,7 @@ class BaseParticle(pybamm.BaseSubModel):
             E = pybamm.r_average(phase_param.E(sto, T))
             nu = phase_param.nu
             theta_M = Omega / (self.param.R * T) * (2 * Omega * E) / (9 * (1 - nu))
-            stress_factor = 1 + theta_M * (c - domain_param.c_0)
+            stress_factor = 1 + theta_M * (c - phase_param.c_0)
         else:
             stress_factor = 1
 

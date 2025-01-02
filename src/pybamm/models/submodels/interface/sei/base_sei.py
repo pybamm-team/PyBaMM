@@ -120,6 +120,7 @@ class BaseModel(BaseInterface):
         """Update variables related to the SEI concentration."""
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
+        phase_name = phase_param.phase_name
         reaction_name = self.reaction_name
 
         # Set scales to one for the "no SEI" model so that they are not required
@@ -155,10 +156,9 @@ class BaseModel(BaseInterface):
             if self.size_distribution:
                 n_SEI_sav = pybamm.size_average(n_SEI)
                 n_SEI_xav = pybamm.x_average(n_SEI_sav)
-                n_SEI_av = pybamm.yz_average(n_SEI_xav)
             else:
                 n_SEI_xav = pybamm.x_average(n_SEI)
-                n_SEI_av = pybamm.yz_average(n_SEI_xav)
+            n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
             delta_n_SEI = n_SEI_av - n_SEI_0
@@ -190,7 +190,7 @@ class BaseModel(BaseInterface):
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
             L_cr = variables[f"{Domain} {reaction_name}thickness [m]"]
-            roughness = variables[f"{Domain} electrode roughness ratio"]
+            roughness = variables[f"{Domain} {phase_name}electrode roughness ratio"]
 
             n_SEI_cr = L_cr * L_to_n * (roughness - 1)  # SEI on cracks concentration
             if self.size_distribution:
