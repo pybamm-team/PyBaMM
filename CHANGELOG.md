@@ -19,6 +19,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Moved the IDAKLU solver to a standalone `pybammsolvers` package. This will
   make pybamm a pure python package and make installing and using the solver
   easier. ([#4487](https://github.com/pybamm-team/PyBaMM/pull/4487))
+- Wycisk OCP model now requires an parameter to set the initial condition. ([#4374](https://github.com/pybamm-team/PyBaMM/pull/4374))
 
 ## Bug fixes
 
