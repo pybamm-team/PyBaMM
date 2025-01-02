@@ -62,6 +62,10 @@ class Solution:
         True if sensitivities included as the solution of the explicit forwards
         equations.  False if no sensitivities included/wanted. Dict if sensitivities are
         provided as a dict of {parameter: [sensitivities]} pairs.
+    variables_returned: bool
+        Bool to indicate if `all_ys` contains the full state vector, or is empty because
+        only requested variables have been returned. True if `output_variables` is used
+        with a solver, otherwise False.
 
     """
 
@@ -76,6 +80,7 @@ class Solution:
         termination="final time",
         all_sensitivities=False,
         all_yps=None,
+        variables_returned=False,
         check_solution=True,
     ):
         if not isinstance(all_ts, list):
@@ -92,6 +97,8 @@ class Solution:
         if (all_yps is not None) and not isinstance(all_yps, list):
             all_yps = [all_yps]
         self._all_yps = all_yps
+
+        self.variables_returned = variables_returned
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -460,9 +467,15 @@ class Solution:
         else:
             all_yps = self.all_yps[0][:, :1]
 
+        if not self.variables_returned:
+            all_ys = self.all_ys[0][:, :1]
+        else:
+            # Get first state from initial conditions as all_ys is empty
+            all_ys = self.all_models[0].y0full.reshape(-1, 1)
+
         new_sol = Solution(
             self.all_ts[0][:1],
-            self.all_ys[0][:, :1],
+            all_ys,
             self.all_models[:1],
             self.all_inputs[:1],
             None,
@@ -500,9 +513,15 @@ class Solution:
         else:
             all_yps = self.all_yps[-1][:, -1:]
 
+        if not self.variables_returned:
+            all_ys = self.all_ys[-1][:, -1:]
+        else:
+            # Get last state from y_event as all_ys is empty
+            all_ys = self.y_event.reshape(len(self.y_event), 1)
+
         new_sol = Solution(
             self.all_ts[-1][-1:],
-            self.all_ys[-1][:, -1:],
+            all_ys,
             self.all_models[-1:],
             self.all_inputs[-1:],
             self.t_event,
@@ -544,16 +563,10 @@ class Solution:
         """Updates the initial start time of the experiment"""
         self._initial_start_time = value
 
-    def set_summary_variables(self, all_summary_variables):
-        summary_variables = {var: [] for var in all_summary_variables[0]}
-        for sum_vars in all_summary_variables:
-            for name, value in sum_vars.items():
-                summary_variables[name].append(value)
-
-        summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
+    def update_summary_variables(self, all_summary_variables):
         self.all_summary_variables = all_summary_variables
-        self._summary_variables = pybamm.FuzzyDict(
-            {name: np.array(value) for name, value in summary_variables.items()}
+        self._summary_variables = pybamm.SummaryVariables(
+            self, cycle_summary_variables=all_summary_variables
         )
 
     def update(self, variables):
@@ -583,7 +596,7 @@ class Solution:
         for i, (model, ys, inputs, var_pybamm) in enumerate(
             zip(self.all_models, self.all_ys, self.all_inputs, vars_pybamm)
         ):
-            if ys.size == 0 and var_pybamm.has_symbol_of_classes(
+            if self.variables_returned and var_pybamm.has_symbol_of_classes(
                 pybamm.expression_tree.state_vector.StateVector
             ):
                 raise KeyError(
@@ -678,7 +691,7 @@ class Solution:
 
         Returns
         -------
-        :class:`pybamm.ProcessedVariable`
+        :class:`pybamm.ProcessedVariable` or :class:`pybamm.ProcessedVariableComputed`
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
@@ -946,6 +959,7 @@ class Solution:
             other.termination,
             all_sensitivities=all_sensitivities,
             all_yps=all_yps,
+            variables_returned=other.variables_returned,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -961,6 +975,19 @@ class Solution:
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
+
+        # update variables which were derived at the solver stage
+        if other._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in other._variables.values()
+        ):
+            if not self._variables:
+                new_sol._variables = other._variables.copy()
+            else:
+                new_sol._variables = {
+                    v: self._variables[v]._update(other._variables[v], new_sol)
+                    for v in self._variables.keys()
+                }
 
         return new_sol
 
@@ -979,6 +1006,7 @@ class Solution:
             self.termination,
             self._all_sensitivities,
             self.all_yps,
+            self.variables_returned,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
@@ -987,6 +1015,13 @@ class Solution:
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
         new_sol.set_up_time = self.set_up_time
+
+        # copy over variables which were derived at the solver stage
+        if self._variables and all(
+            isinstance(v, pybamm.ProcessedVariableComputed)
+            for v in self._variables.values()
+        ):
+            new_sol._variables = self._variables.copy()
 
         return new_sol
 
@@ -1090,6 +1125,7 @@ def make_cycle_solution(
         sum_sols.termination,
         sum_sols._all_sensitivities,
         sum_sols.all_yps,
+        sum_sols.variables_returned,
     )
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
@@ -1100,8 +1136,8 @@ def make_cycle_solution(
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = _get_cycle_summary_variables(
-        cycle_solution, esoh_solver, user_inputs=inputs
+    cycle_summary_variables = pybamm.SummaryVariables(
+        cycle_solution, esoh_solver=esoh_solver, user_inputs=inputs
     )
 
     cycle_first_state = cycle_solution.first_state
@@ -1112,46 +1148,3 @@ def make_cycle_solution(
         cycle_solution = None
 
     return cycle_solution, cycle_summary_variables, cycle_first_state
-
-
-def _get_cycle_summary_variables(cycle_solution, esoh_solver, user_inputs=None):
-    user_inputs = user_inputs or {}
-    model = cycle_solution.all_models[0]
-    cycle_summary_variables = pybamm.FuzzyDict({})
-
-    # Summary variables
-    summary_variables = model.summary_variables
-    first_state = cycle_solution.first_state
-    last_state = cycle_solution.last_state
-    for var in summary_variables:
-        data_first = first_state[var].data
-        data_last = last_state[var].data
-        cycle_summary_variables[var] = data_last[0]
-        var_lowercase = var[0].lower() + var[1:]
-        cycle_summary_variables["Change in " + var_lowercase] = (
-            data_last[0] - data_first[0]
-        )
-
-    # eSOH variables (full-cell lithium-ion model only, for now)
-    if (
-        esoh_solver is not None
-        and isinstance(model, pybamm.lithium_ion.BaseModel)
-        and model.options.electrode_types["negative"] == "porous"
-        and "Negative electrode capacity [A.h]" in model.variables
-        and "Positive electrode capacity [A.h]" in model.variables
-    ):
-        Q_n = last_state["Negative electrode capacity [A.h]"].data[0]
-        Q_p = last_state["Positive electrode capacity [A.h]"].data[0]
-        Q_Li = last_state["Total lithium capacity in particles [A.h]"].data[0]
-        all_inputs = {**user_inputs, "Q_n": Q_n, "Q_p": Q_p, "Q_Li": Q_Li}
-        try:
-            esoh_sol = esoh_solver.solve(inputs=all_inputs)
-        except pybamm.SolverError as error:  # pragma: no cover
-            raise pybamm.SolverError(
-                "Could not solve for summary variables, run "
-                "`sim.solve(calc_esoh=False)` to skip this step"
-            ) from error
-
-        cycle_summary_variables.update(esoh_sol)
-
-    return cycle_summary_variables

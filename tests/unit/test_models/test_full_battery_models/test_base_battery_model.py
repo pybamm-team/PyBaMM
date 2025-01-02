@@ -41,7 +41,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
-'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)'])
+'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)', 'VonKolzenberg2020', 'tunnelling limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 'SEI on cracks': 'false' (possible: ['false', 'true'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
@@ -140,6 +140,10 @@ class TestBaseBatteryModel:
             "z": 10,
             "R_n": 30,
             "R_p": 30,
+            "R_n_prim": 30,
+            "R_p_prim": 30,
+            "R_n_sec": 30,
+            "R_p_sec": 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         assert var_pts == model.default_var_pts

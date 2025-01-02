@@ -747,20 +747,24 @@ class TestIDAKLUSolver:
                         options=options,
                     )
                     works = (
-                        jacobian == "none"
-                        and (linear_solver == "SUNLinSol_Dense")
-                        or jacobian == "dense"
-                        and (linear_solver == "SUNLinSol_Dense")
-                        or jacobian == "sparse"
-                        and (
-                            linear_solver != "SUNLinSol_Dense"
-                            and linear_solver != "garbage"
+                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                        or (
+                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
                         )
-                        or jacobian == "matrix-free"
-                        and (
-                            linear_solver != "SUNLinSol_KLU"
-                            and linear_solver != "SUNLinSol_Dense"
-                            and linear_solver != "garbage"
+                        or (
+                            jacobian == "sparse"
+                            and (
+                                linear_solver != "SUNLinSol_Dense"
+                                and linear_solver != "garbage"
+                            )
+                        )
+                        or (
+                            jacobian == "matrix-free"
+                            and (
+                                linear_solver != "SUNLinSol_KLU"
+                                and linear_solver != "SUNLinSol_Dense"
+                                and linear_solver != "garbage"
+                            )
                         )
                     )
 
@@ -938,6 +942,9 @@ class TestIDAKLUSolver:
         for varname in inaccessible_vars:
             with pytest.raises(KeyError):
                 sol[varname].data
+
+        # Check Solution is marked
+        assert sol.variables_returned is True
 
         # Mock a 1D current collector and initialise (none in the model)
         sol["x_s [m]"].domain = ["current collector"]

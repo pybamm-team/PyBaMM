@@ -40,7 +40,8 @@ type:
 
    python -m virtualenv env
 
-You can then “activate” the environment using:
+or use any of your preferred environment management tools. You can then “activate”
+the environment using:
 
 .. code::
 
@@ -56,12 +57,26 @@ the environment and go back to your original system, just type:
 
 PyBaMM can be installed via pip:
 
-.. code:: bash
+.. tab:: pip
 
-   pip install pybamm
+   .. code:: bash
 
-PyBaMM’s dependencies (such as ``numpy``, ``scipy``, etc) will be
-installed automatically when you install PyBaMM using ``pip``.
+      pip install pybamm
+
+.. tab:: conda
+
+   .. note::
+
+      At the moment, PyBaMM's conda-forge distribution does not include ``IDAKLUSolver``.
+
+   .. code:: bash
+
+      conda install -c conda-forge pybamm-base
+
+PyBaMM’s :ref:`required dependencies <install-required-dependencies>`
+
+(such as ``numpy``, ``casadi``, etc) will be installed automatically when you
+install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 
 For an introduction to virtual environments, see
 (https://realpython.com/python-virtual-environments-a-primer/).
@@ -76,6 +91,8 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 	  pip install "pybamm[jax]"
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
+
+PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
 Uninstall PyBaMM
 ----------------
@@ -93,4 +110,4 @@ Installation using WSL
 
 If you want to install the optional PyBaMM solvers, you have to use the
 Windows Subsystem for Linux (WSL). You can find the installation
-instructions `here <windows-wsl.html>`__.
+instructions on the `Installation <windows-wsl.rst>`_ page.

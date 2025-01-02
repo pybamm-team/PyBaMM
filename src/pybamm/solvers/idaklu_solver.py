@@ -55,9 +55,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
     Parameters
     ----------
     rtol : float, optional
-        The relative tolerance for the solver (default is 1e-6).
+        The relative tolerance for the solver (default is 1e-4).
     atol : float, optional
-        The absolute tolerance for the solver (default is 1e-4).
+        The absolute tolerance for the solver (default is 1e-6).
     root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
         If a solver class, must be an algebraic solver class.
@@ -863,6 +863,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             termination,
             all_sensitivities=yS_out,
             all_yps=yp,
+            variables_returned=bool(save_outputs_only),
         )
 
         newsol.integration_time = integration_time

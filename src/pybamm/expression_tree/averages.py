@@ -251,8 +251,8 @@ def z_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
-            f"""z-average only implemented in the 'current collector' domain,
-            but symbol has domains {symbol.domain}"""
+            "z-average only implemented in the 'current collector' domain, "
+            f"but symbol has domains {symbol.domain}"
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
@@ -285,8 +285,8 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
-            f"""y-z-average only implemented in the 'current collector' domain,
-            but symbol has domains {symbol.domain}"""
+            "y-z-average only implemented in the 'current collector' domain, "
+            f"but symbol has domains {symbol.domain}"
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
@@ -304,6 +304,10 @@ def yz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
 
 def xyz_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
     return yz_average(x_average(symbol))
+
+
+def xyzs_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
+    return xyz_average(size_average(symbol))
 
 
 def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
@@ -373,7 +377,15 @@ def size_average(
     # If symbol doesn't have a domain, or doesn't have "negative particle size"
     #  or "positive particle size" as a domain, it's average value is itself
     if symbol.domain == [] or not any(
-        domain in [["negative particle size"], ["positive particle size"]]
+        domain
+        in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]
         for domain in list(symbol.domains.values())
     ):
         return symbol
@@ -394,13 +406,30 @@ def size_average(
     else:
         if f_a_dist is None:
             geo = pybamm.geometric_parameters
+            name = "R"
+            if "negative" in symbol.domain[0]:
+                name += "_n"
+            elif "positive" in symbol.domain[0]:
+                name += "_p"
+            if "primary" in symbol.domain[0]:
+                name += "_prim"
+            elif "secondary" in symbol.domain[0]:
+                name += "_sec"
             R = pybamm.SpatialVariable(
-                "R", domains=symbol.domains, coord_sys="cartesian"
+                name, domains=symbol.domains, coord_sys="cartesian"
             )
-            if ["negative particle size"] in symbol.domains.values():
+            if ["negative particle size"] in symbol.domains.values() or [
+                "negative primary particle size"
+            ] in symbol.domains.values():
                 f_a_dist = geo.n.prim.f_a_dist(R)
-            elif ["positive particle size"] in symbol.domains.values():
+            elif ["negative secondary particle size"] in symbol.domains.values():
+                f_a_dist = geo.n.sec.f_a_dist(R)
+            elif ["positive particle size"] in symbol.domains.values() or [
+                "positive primary particle size"
+            ] in symbol.domains.values():
                 f_a_dist = geo.p.prim.f_a_dist(R)
+            elif ["positive secondary particle size"] in symbol.domains.values():
+                f_a_dist = geo.p.sec.f_a_dist(R)
         return SizeAverage(symbol, f_a_dist)
 
 

@@ -51,3 +51,8 @@ def set_random_seed():
 @pytest.fixture(autouse=True)
 def set_debug_value():
     pybamm.settings.debug_mode = True
+
+
+@pytest.fixture(autouse=True)
+def disable_telemetry():
+    pybamm.telemetry.disable()
