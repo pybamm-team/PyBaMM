@@ -27,37 +27,63 @@ class InverseButlerVolmer(BaseInterface):
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction, options=options)
 
-    def get_coupled_variables(self, variables):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
-        ocp = variables[f"{Domain} electrode {reaction_name}open-circuit potential [V]"]
+        ocp = pybamm.CoupledVariable(
+            f"{Domain} electrode {reaction_name}open-circuit potential [V]",
+            domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({ocp.name: ocp})
 
-        j0 = self._get_exchange_current_density(variables)
+        j0 = self._get_exchange_current_density({})
         # Broadcast to match j0's domain
 
-        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density(
-            variables
-        )
+        j_tot_av, a_j_tot_av = self._get_average_total_interfacial_current_density({})
         if j0.domain in [[], ["current collector"]]:
             j_tot = j_tot_av
         else:
             j_tot = pybamm.PrimaryBroadcast(j_tot_av, [f"{domain} electrode"])
-        variables.update(
-            self._get_standard_total_interfacial_current_variables(j_tot, a_j_tot_av)
+        variables = self._get_standard_total_interfacial_current_variables(
+            j_tot, a_j_tot_av
         )
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
         if self.options.electrode_types[domain] == "planar":
-            T = variables["X-averaged cell temperature [K]"]
-            u = variables["Lithium metal interface utilisation"]
+            T = pybamm.CoupledVariable(
+                "X-averaged cell temperature [K]",
+                domain="current collector",
+            )
+            u = pybamm.CoupledVariable(
+                "Lithium metal interface utilisation",
+                domain="current collector",
+            )
+            self.coupled_variables.update({T.name: T, u.name: u})
         elif j0.domain in ["current collector", ["current collector"]]:
-            T = variables["X-averaged cell temperature [K]"]
-            u = variables[f"X-averaged {domain} electrode interface utilisation"]
+            T = pybamm.CoupledVariable(
+                "X-averaged cell temperature [K]",
+                domain="current collector",
+            )
+            u = pybamm.CoupledVariable(
+                "Lithium metal interface utilisation",
+                domain="current collector",
+            )
+            self.coupled_variables.update({T.name: T, u.name: u})
         else:
-            T = variables[f"{Domain} electrode temperature [K]"]
-            u = variables[f"{Domain} electrode interface utilisation"]
+            T = pybamm.CoupledVariable(
+                f"{Domain} electrode temperature [K]",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            u = pybamm.CoupledVariable(
+                f"{Domain} electrode interface utilisation",
+                domain=f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({T.name: T, u.name: u})
 
         # eta_r is the overpotential from inverting Butler-Volmer, regardless of any
         # additional SEI resistance. What changes is how delta_phi is defined in terms
@@ -71,9 +97,16 @@ class InverseButlerVolmer(BaseInterface):
         if self.options["SEI film resistance"] != "none":
             R_sei = self.phase_param.R_sei
             if self.options.electrode_types[domain] == "planar":
-                L_sei = variables[f"{Domain} total SEI thickness [m]"]
+                L_sei = pybamm.CoupledVariable(
+                    f"{Domain} total SEI thickness [m]",
+                    domain="current collector",
+                )
             else:
-                L_sei = variables[f"X-averaged {domain} total SEI thickness [m]"]
+                L_sei = pybamm.CoupledVariable(
+                    f"X-averaged {domain} total SEI thickness [m]",
+                    domain="current collector",
+                )
+            self.coupled_variables.update({L_sei.name: L_sei})
             eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
         else:
@@ -90,7 +123,7 @@ class InverseButlerVolmer(BaseInterface):
             )
         )
 
-        return variables
+        self.variables.update(variables)
 
     def _get_overpotential(self, j, j0, ne, T, u):
         return (2 * (self.param.R * T) / self.param.F / ne) * pybamm.arcsinh(

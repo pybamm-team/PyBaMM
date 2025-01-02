@@ -106,20 +106,34 @@ class SEIGrowth(BaseModel):
         # it's ok to fall back on the total interfacial current density, j_tot
         # This should only happen when the interface submodel is "InverseButlerVolmer"
         # in which case j = j_tot (uniform) anyway
+        # this should be changed.
+        if f"{domain} {self.phase} interface" in submodels:
+            interface_submodel = submodels[f"{domain} {self.phase} interface"]
+        elif f"{domain} interface" in submodels:
+            interface_submodel = submodels[f"{domain} interface"]
+        elif f"{domain} electrode interface" in submodels:
+            interface_submodel = submodels[f"{domain} electrode interface"]
+
         if isinstance(
-            submodels[f"{domain} {self.phase} interface"],
+            interface_submodel,
             pybamm.models.submodels.interface.kinetics.inverse_kinetics.inverse_butler_volmer.InverseButlerVolmer,
         ):
-            j = variables[
+            j = pybamm.CoupledVariable(
                 f"X-averaged {domain} electrode total "
-                "interfacial current density [A.m-2]"
-            ]
+                "interfacial current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j.name: j})
 
         elif self.reaction_loc == "interface":
-            j = variables["Lithium metal total interfacial current density [A.m-2]"]
+            j = pybamm.CoupledVariable(
+                "Lithium metal total interfacial current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j.name: j})
         else:
             j = pybamm.CoupledVariable(
-                f"{Domain} electrode total interfacial current density [A.m-2]",
+                f"{Domain} electrode interfacial current density [A.m-2]",
                 domain=f"{domain} electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
@@ -236,11 +250,29 @@ class SEIGrowth(BaseModel):
         # For SEI on initial surface (as opposed to cracks), it is zero.
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
-                l_cr = variables[f"X-averaged {domain} particle crack length [m]"]
-                dl_cr = variables[f"X-averaged {domain} particle cracking rate [m.s-1]"]
+                l_cr = pybamm.CoupledVariable(
+                    f"X-averaged {domain} particle crack length [m]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({l_cr.name: l_cr})
+                dl_cr = pybamm.CoupledVariable(
+                    f"X-averaged {domain} particle cracking rate [m.s-1]",
+                    domain="current collector",
+                )
+                self.coupled_variables.update({dl_cr.name: dl_cr})
             else:
-                l_cr = variables[f"{Domain} particle crack length [m]"]
-                dl_cr = variables[f"{Domain} particle cracking rate [m.s-1]"]
+                l_cr = pybamm.CoupledVariable(
+                    f"{Domain} particle crack length [m]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({l_cr.name: l_cr})
+                dl_cr = pybamm.CoupledVariable(
+                    f"{Domain} particle cracking rate [m.s-1]",
+                    domain=f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({dl_cr.name: dl_cr})
             spreading_outer = (
                 dl_cr / l_cr * (self.phase_param.L_outer_crack_0 - L_outer)
             )

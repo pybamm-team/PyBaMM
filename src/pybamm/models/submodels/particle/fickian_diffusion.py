@@ -187,7 +187,7 @@ class FickianDiffusion(BaseParticle):
                 self.coupled_variables.update({R_nondim.name: R_nondim})
             else:
                 R_nondim = pybamm.CoupledVariable(
-                    f"X-averaged {domain} {phase_name}particle sizes",
+                    f"{Domain} {phase_name}particle sizes",
                     domain=f"{domain} {phase_name}particle size",
                     auxiliary_domains={"secondary": "current collector"},
                 )
@@ -241,7 +241,8 @@ class FickianDiffusion(BaseParticle):
                 j = pybamm.CoupledVariable(
                     f"X-averaged {domain} electrode {phase_name}interfacial "
                     "current density distribution [A.m-2]",
-                    domain="current collector",
+                    domain=f"{domain} particle size",
+                    auxiliary_domains={"secondary": "current collector"},
                 )
                 self.coupled_variables.update({j.name: j})
 

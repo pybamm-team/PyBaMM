@@ -892,6 +892,10 @@ class BaseModel:
         self.build_model_equations(submodels_built)
         # TODO: REMOVE BEFORE MERGE (TEMPORARY FIX)
         for submodel in self.submodels.values():
+            for var in submodel.coupled_variables:
+                if var == "Negative electrode interfacial current density [A.m-2]":
+                    print(submodel.name)
+                    print(submodel.coupled_variables)
             self.coupled_variables.update(submodel.coupled_variables)
 
         self.link_coupled_variables()
