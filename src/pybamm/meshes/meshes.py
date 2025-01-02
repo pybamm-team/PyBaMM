@@ -172,11 +172,15 @@ class Mesh(dict):
         # next submesh
         for i in range(len(submeshnames) - 1):
             if self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]:
+                # submeshes are aligned, all good
                 pass
-            elif hasattr(self[submeshnames[i + 1]], "min"):
-                # Circle back to this, but this should let the case of submesh i+1 be a symbolic submesh
+            elif hasattr(self[submeshnames[i]], "min") or hasattr(
+                self[submeshnames[i + 1]], "min"
+            ):
+                # we have to give benefit of the doubt if either is symbolic because we won't know length until we have processed parameters.
                 pass
             else:
+                # submeshes are not aligned and neither is symbolic
                 raise pybamm.DomainError("submesh edges are not aligned")
 
             coord_sys = self[submeshnames[i]].coord_sys
