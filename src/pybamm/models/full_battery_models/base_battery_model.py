@@ -526,7 +526,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
             if options["lithium plating porosity change"] != "false":
-                raise NotImplementedError(
+                raise pybamm.OptionError(
                     "Lithium plating porosity change not yet supported for particle-size"
                     " distributions."
                 )
