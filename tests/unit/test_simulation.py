@@ -481,7 +481,7 @@ class TestSimulation:
                 sim.save(test_name)
 
     def test_load_param(self):
-        with tempfile.NamedTemporaryFile() as tmp:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
             filename = tmp.name
             model = pybamm.lithium_ion.SPM()
             params = pybamm.ParameterValues("Chen2020")
