@@ -8,6 +8,9 @@ from tests import (
     get_mesh_for_testing,
     get_1p1d_mesh_for_testing,
     get_cylindrical_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
+    get_cylindrical_mesh_for_testing_symbolic,
+    get_spherical_mesh_for_testing_symbolic,
 )
 import numpy as np
 
@@ -127,6 +130,48 @@ class TestFiniteVolumeIntegration:
             match="Integral in secondary vector only implemented in 'row' form",
         ):
             finite_volume.definite_integral_matrix(var, "column", "secondary")
+
+    def test_definite_integral_symbolic_mesh(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="domain")
+        x = pybamm.SpatialVariable("x", "domain")
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["domain"].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, const_y), 2.0, decimal=4
+        )
+
+        mesh = get_cylindrical_mesh_for_testing_symbolic()
+        spatial_methods = {"cylindrical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="cylindrical domain")
+        r = pybamm.SpatialVariable(
+            "r", "cylindrical domain", coord_sys="cylindrical polar"
+        )
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["cylindrical domain"].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, const_y), 2 * np.pi * 2.0, decimal=4
+        )
+
+        mesh = get_spherical_mesh_for_testing_symbolic()
+        spatial_methods = {"spherical domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="spherical domain")
+        r = pybamm.SpatialVariable("r", "spherical domain", coord_sys="spherical polar")
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        const_y = np.ones_like(mesh["spherical domain"].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, const_y), 4 * np.pi * 2.0**3 / 3, decimal=4
+        )
 
     def test_integral_secondary_tertiary_domain(self):
         # create discretisation
@@ -562,6 +607,31 @@ class TestFiniteVolumeIntegration:
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
         np.testing.assert_array_almost_equal(x_end**3 / 6, phi_approx, decimal=4)
 
+    def test_indefinite_integral_on_edges_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # make a variable 'phi' and a vector 'i' which is broadcast onto edges
+        # the integral of this should then be put onto the nodes
+        phi = pybamm.Variable("phi", domain=["domain"])
+        i = pybamm.PrimaryBroadcastToEdges(1, phi.domain)
+        x = pybamm.SpatialVariable("x", phi.domain)
+        disc.set_variable_slices([phi])
+        submesh = mesh["domain"]
+        x_end = submesh.edges[-1] * submesh.length + submesh.min
+
+        # take indefinite integral
+        int_phi = pybamm.IndefiniteIntegral(i * phi, x)
+        # take integral again
+        int_int_phi = pybamm.Integral(int_phi, x)
+        int_int_phi_disc = disc.process_symbol(int_int_phi)
+
+        # constant case
+        phi_exact = np.ones_like(submesh.nodes)
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_almost_equal(x_end**2 / 2, phi_approx)
+
     def test_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -607,6 +677,23 @@ class TestFiniteVolumeIntegration:
             match="Indefinite integral on a spherical polar domain is not implemented",
         ):
             disc.process_symbol(int_c)
+
+    def test_indefinite_integral_on_nodes_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["domain"])
+        x = pybamm.SpatialVariable("x", ["domain"])
+        int_phi = pybamm.IndefiniteIntegral(phi, x)
+        disc.set_variable_slices([phi])
+        int_phi_disc = disc.process_symbol(int_phi)
+
+        submesh = mesh["domain"]
+        constant_y = np.ones((submesh.npts, 1))
+        phi_exact = submesh.edges * submesh.length + submesh.min
+        phi_approx = int_phi_disc.evaluate(None, constant_y).flatten()
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
     def test_backward_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
