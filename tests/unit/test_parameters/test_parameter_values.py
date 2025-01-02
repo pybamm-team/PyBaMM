@@ -971,6 +971,12 @@ class TestParameterValues:
         with pytest.raises(KeyError):
             parameter_values.process_model(model)
 
+    def test_process_geometry(self):
+        var = pybamm.Variable("var")
+        geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}
+        with pytest.raises(ValueError, match="Geometry parameters must be Scalars"):
+            pybamm.ParameterValues({}).process_geometry(geometry)
+
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
