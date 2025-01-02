@@ -404,8 +404,8 @@ class BaseParticle(pybamm.BaseSubModel):
         if [f"{domain} electrode"] in N_s.domains.values():
             # N_s depends on x
             N_s_distribution = N_s
-            if isinstance(N_s, pybamm.SecondaryBroadcast):
-                N_s_xav_distribution = pybamm.x_average(N_s)
+            if isinstance(N_s, pybamm.TertiaryBroadcast):
+                N_s_xav_distribution = N_s.orphans[0]
             else:
                 # can't average variables that evaluate on edges
                 N_s_xav_distribution = None
