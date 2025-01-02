@@ -1052,7 +1052,6 @@ class Solution:
             Keyword arguments, passed to ax.fill_between.
 
         """
-        # Use 'self' here as the solution object
         return pybamm.plot_voltage_components(
             self,
             ax=ax,
@@ -1102,6 +1101,8 @@ def make_cycle_solution(
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True
+    inputs : dict
+        User inputs for the summary variables.
 
     Returns
     -------
@@ -1109,6 +1110,8 @@ def make_cycle_solution(
         The Solution object for this cycle, or None (if save_this_cycle is False)
     cycle_summary_variables : dict
         Dictionary of summary variables for this cycle
+    cycle_first_state : Solution
+        First state of the cycle.
 
     """
     sum_sols = step_solutions[0].copy()
