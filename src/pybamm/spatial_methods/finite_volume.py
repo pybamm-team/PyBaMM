@@ -64,7 +64,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)
-        return pybamm.Vector(entries, domains=symbol.domains)
+
+        if hasattr(symbol_mesh, "length"):
+            return (
+                pybamm.Vector(entries, domains=symbol.domains) * symbol_mesh.length
+                + symbol_mesh.min
+            )
+        else:
+            return pybamm.Vector(entries, domains=symbol.domains)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -128,8 +135,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-
-        return pybamm.Matrix(matrix)
+        if getattr(submesh, "length", None) is not None:
+            return pybamm.Matrix(matrix) * 1 / submesh.length
+        else:
+            return pybamm.Matrix(matrix)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
@@ -145,6 +154,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             # create np.array of repeated submesh.edges
             r_edges_numpy = np.kron(np.ones(second_dim_repeats), submesh.edges)
             r_edges = pybamm.Vector(r_edges_numpy)
+            if hasattr(submesh, "length"):
+                r_edges = r_edges * submesh.length
             if submesh.coord_sys == "spherical polar":
                 out = divergence_matrix @ ((r_edges**2) * discretised_symbol)
             elif submesh.coord_sys == "cylindrical polar":
@@ -197,7 +208,15 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
-        return pybamm.Matrix(matrix)
+        if getattr(submesh, "length", None) is not None:
+            if submesh.coord_sys == "spherical polar":
+                return pybamm.Matrix(matrix) * (1 / submesh.length**3)
+            elif submesh.coord_sys == "cylindrical polar":
+                return pybamm.Matrix(matrix) * (1 / (submesh.length**2))
+            else:
+                return pybamm.Matrix(matrix) * (1 / submesh.length)
+        else:
+            return pybamm.Matrix(matrix)
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -245,9 +264,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral matrix for the domain
         """
         domains = child.domains
-        if vector_type != "row" and integration_dimension == "secondary":
+        if vector_type != "row" and integration_dimension != "primary":
             raise NotImplementedError(
-                "Integral in secondary vector only implemented in 'row' form"
+                f"Integral in {integration_dimension} vector only implemented in 'row' form"
             )
 
         domain = child.domains[integration_dimension]
@@ -263,7 +282,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 d_edges = 2 * np.pi * (r_edges_right**2 - r_edges_left**2) / 2
         else:
             d_edges = submesh.d_edges
-
+        possible_dimensions = ["primary", "secondary", "tertiary", "quaternary"]
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh[domains["primary"]]
@@ -279,35 +298,43 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
             matrix = kron(eye(second_dim_repeats), d_edges)
-        elif integration_dimension == "secondary":
-            # Create appropriate submesh by combining submeshes in domain
-            primary_submesh = self.mesh[domains["primary"]]
-
-            # Create matrix which integrates in the secondary dimension
-            # Different number of edges depending on whether child evaluates on edges
-            # in the primary dimensions
-            if child.evaluates_on_edges("primary"):
-                n_primary_pts = primary_submesh.npts + 1
-            else:
-                n_primary_pts = primary_submesh.npts
-            int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
-
-            # repeat matrix for each node in higher dimensions
-            third_dim_repeats = self._get_auxiliary_domain_repeats(
-                {
-                    k: v
-                    for k, v in domains.items()
-                    if (k == "tertiary" or k == "quaternary")
-                }
+        elif integration_dimension in possible_dimensions[1:]:
+            this_dimension_index = possible_dimensions.index(integration_dimension)
+            # get lower dimensions and the corresponding domains, i.e. if integration_dimension is "secondary",
+            # lower_dimensions is ["primary"] and lower_domains is [child.domains["primary"]]
+            lower_dimensions = possible_dimensions[:this_dimension_index]
+            lower_domains = [child.domains[dimension] for dimension in lower_dimensions]
+            # get higher dimensions, i.e. if integration_dimension is "secondary",
+            # higher_dimensions is ["tertiary", "quaternary"]
+            higher_dimensions = possible_dimensions[this_dimension_index + 1 :]
+            n_lower_pts = 1
+            #  Lower dimensions should be repeated, so add them to the eye matrix
+            for lower_domain, lower_dimension in zip(lower_domains, lower_dimensions):
+                lower_submesh = self.mesh[lower_domain]
+                if child.evaluates_on_edges(lower_dimension):
+                    n_lower_pts *= lower_submesh.npts + 1
+                else:
+                    n_lower_pts *= lower_submesh.npts
+            int_matrix = hstack([d_edge * eye(n_lower_pts) for d_edge in d_edges])
+            # Higher dimensions should be tiled, so repeat the matrix for each higher dimension.
+            higher_repeats = self._get_auxiliary_domain_repeats(
+                {k: v for k, v in domains.items() if (k in higher_dimensions)}
             )
-            # generate full matrix from the submatrix
-            matrix = kron(eye(third_dim_repeats), int_matrix)
+            matrix = kron(eye(higher_repeats), int_matrix)
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        return pybamm.Matrix(csr_matrix(matrix))
+        matrix = pybamm.Matrix(csr_matrix(matrix))
+        if hasattr(submesh, "length"):
+            if submesh.coord_sys == "spherical polar":
+                matrix = matrix * submesh.length**3
+            elif submesh.coord_sys == "cylindrical polar":
+                matrix = matrix * submesh.length**2
+            else:
+                matrix = matrix * submesh.length
+        return matrix
 
     def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator."""
@@ -439,6 +466,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        if hasattr(submesh, "length"):
+            matrix = matrix * submesh.length
 
         return pybamm.Matrix(matrix)
 
@@ -479,6 +508,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+        if hasattr(submesh, "length"):
+            matrix = matrix * submesh.length
 
         return pybamm.Matrix(matrix)
 
@@ -569,7 +600,15 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Finite volume derivative
         # Remove domains to avoid clash
-        dx = right_mesh.nodes[0] - left_mesh.nodes[-1]
+        if hasattr(right_mesh, "length"):
+            right_mesh_x = right_mesh.min + (right_mesh.nodes[0] * right_mesh.length)
+        else:
+            right_mesh_x = right_mesh.nodes[0]
+        if hasattr(left_mesh, "length"):
+            left_mesh_x = left_mesh.min + (left_mesh.nodes[-1] * left_mesh.length)
+        else:
+            left_mesh_x = left_mesh.nodes[-1]
+        dx = right_mesh_x - left_mesh_x
         dy_r = (right_matrix / dx) @ right_symbol_disc
         dy_r.clear_domains()
         dy_l = (left_matrix / dx) @ left_symbol_disc
@@ -852,6 +891,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child][symbol.side][0]
+                additive_multiplicative = pybamm.Scalar(1)
+                multiplicative = pybamm.Scalar(1)
 
             elif symbol.side == "left":
                 if extrap_order_value == "linear":
@@ -864,6 +905,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                         sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts))
 
                         additive = -dx0 * bcs[child][symbol.side][0]
+                        if hasattr(submesh, "length"):
+                            additive_multiplicative = submesh.length
+                        else:
+                            additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
 
                     else:
                         sub_matrix = csr_matrix(
@@ -871,6 +917,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
 
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
@@ -884,6 +932,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                             ([a, b], ([0, 0], [0, 1])), shape=(1, prim_pts)
                         )
                         additive = alpha * bcs[child][symbol.side][0]
+                        if hasattr(submesh, "length"):
+                            additive_multiplicative = submesh.length
+                        else:
+                            additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
 
                     else:
                         a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
@@ -895,6 +948,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
 
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
+
                 else:
                     raise NotImplementedError
 
@@ -909,7 +965,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                             ([1], ([0], [prim_pts - 1])), shape=(1, prim_pts)
                         )
                         additive = dxN * bcs[child][symbol.side][0]
-
+                        if hasattr(submesh, "length"):
+                            multiplicative = submesh.length
+                            additive_multiplicative = submesh.length
+                        else:
+                            multiplicative = pybamm.Scalar(1)
+                            additive_multiplicative = pybamm.Scalar(1)
                     else:
                         # to find value at x* use formula:
                         # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
@@ -921,6 +982,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
                 elif extrap_order_value == "quadratic":
                     if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
@@ -934,7 +997,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                         )
 
                         additive = alpha * bcs[child][symbol.side][0]
-
+                        if hasattr(submesh, "length"):
+                            additive_multiplicative = submesh.length
+                        else:
+                            additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
                     else:
                         a = (
                             (dxN + dxNm1)
@@ -952,6 +1019,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                             shape=(1, prim_pts),
                         )
                         additive = pybamm.Scalar(0)
+                        additive_multiplicative = pybamm.Scalar(1)
+                        multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 
@@ -960,6 +1029,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # just use the value from the bc: f'(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child][symbol.side][0]
+                additive_multiplicative = pybamm.Scalar(1)
+                multiplicative = pybamm.Scalar(1)
 
             elif symbol.side == "left":
                 if extrap_order_gradient == "linear":
@@ -968,6 +1039,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    if hasattr(submesh, "length"):
+                        multiplicative = 1 / submesh.length
+                    else:
+                        multiplicative = pybamm.Scalar(1)
 
                 elif extrap_order_gradient == "quadratic":
                     a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1**2 + dx1 * dx2)
@@ -978,6 +1054,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts)
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    if hasattr(submesh, "length"):
+                        multiplicative = 1 / submesh.length
+                    else:
+                        multiplicative = pybamm.Scalar(1)
+
                 else:
                     raise NotImplementedError
 
@@ -990,6 +1072,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                         shape=(1, prim_pts),
                     )
                     additive = pybamm.Scalar(0)
+                    additive_multiplicative = pybamm.Scalar(1)
+                    if hasattr(submesh, "length"):
+                        multiplicative = 1 / submesh.length
+                    else:
+                        multiplicative = pybamm.Scalar(1)
 
                 elif extrap_order_gradient == "quadratic":
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1**2 + dxNm1 * dxNm2)
@@ -1004,7 +1091,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                         shape=(1, prim_pts),
                     )
                     additive = pybamm.Scalar(0)
-
+                    additive_multiplicative = pybamm.Scalar(1)
+                    if hasattr(submesh, "length"):
+                        multiplicative = 1 / submesh.length
+                    else:
+                        multiplicative = pybamm.Scalar(1)
                 else:
                     raise NotImplementedError
 
@@ -1016,11 +1107,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(repeats), sub_matrix))
 
         # Return boundary value with domain given by symbol
-        boundary_value = pybamm.Matrix(matrix) @ discretised_child
+        matrix = pybamm.Matrix(matrix) * multiplicative
+        boundary_value = matrix @ discretised_child
         boundary_value.copy_domains(symbol)
 
         additive.copy_domains(symbol)
-        boundary_value += additive
+        boundary_value += additive * additive_multiplicative
 
         return boundary_value
 
@@ -1315,6 +1407,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
                 beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
 
+                # dx_real = dx * length, therefore, beta is unchanged
                 # Compute harmonic mean on internal edges
                 # Note: add small number to denominator to regularise D_eff
                 D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
@@ -1397,7 +1490,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         direction : str
             Direction in which to apply the operator (upwind or downwind)
         """
-
         if symbol not in bcs:
             raise pybamm.ModelError(
                 "Boundary conditions must be provided for " f"{direction}ing '{symbol}'"
