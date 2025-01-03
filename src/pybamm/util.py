@@ -121,9 +121,31 @@ class FuzzyDict(dict):
             The list of known dictionary keys to search within.
 
         """
-        exact = [key for key in known_keys if search_key in key.lower()]
-        partial = difflib.get_close_matches(search_key, known_keys, n=5, cutoff=0.5)
-        return exact, partial
+        search_key = search_key.lower()
+        min_similarity = 0.4
+
+        exact_matches = []
+        partial_matches = []
+
+        for key in known_keys:
+            key_lower = key.lower()
+            if search_key in key_lower:
+                key_words = key_lower.split()
+                significant_match = False
+
+                for word in key_words:
+                    similarity = difflib.SequenceMatcher(None, search_key, word).ratio()
+
+                    if similarity >= min_similarity:
+                        significant_match = True
+
+                if significant_match:
+                    exact_matches.append(key)
+            else:
+                partial_matches = difflib.get_close_matches(
+                    search_key, known_keys, n=5, cutoff=0.5
+                )
+        return exact_matches, partial_matches
 
     def search(self, keys: str | list[str], print_values: bool = False):
         """
@@ -163,14 +185,24 @@ class FuzzyDict(dict):
             search_keys = [k.strip().lower() for k in keys if k.strip()]
 
         known_keys = list(self.keys())
-        known_keys.sort()
-
+        min_similarity = 0.4
         # Check for exact matches where all search keys appear together in a key
-        exact_matches = [
-            key
-            for key in known_keys
-            if all(term in key.lower() for term in search_keys)
-        ]
+        exact_matches = []
+        for key in known_keys:
+            key_lower = key.lower()
+            if all(term in key_lower for term in search_keys):
+                key_words = key_lower.split()
+
+                # Ensure all search terms match at least one word in the key
+                if all(
+                    any(
+                        difflib.SequenceMatcher(None, term, word).ratio()
+                        >= min_similarity
+                        for word in key_words
+                    )
+                    for term in search_keys
+                ):
+                    exact_matches.append(key)
 
         if exact_matches:
             print(
