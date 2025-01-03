@@ -8,6 +8,9 @@
 - Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
 
+## Optimizations
+
+- Improved search to handle cases with shorter input strings and provide more relevant results.([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
 
 ## Breaking changes
 
