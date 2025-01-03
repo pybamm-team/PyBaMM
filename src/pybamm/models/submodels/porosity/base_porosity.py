@@ -17,8 +17,6 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, options=options)
 
     def _get_standard_porosity_variables(self, eps_dict):
-        # if "particle size" in eps_dict["negative electrode"].domain[0]:
-        #    eps_dict = {k: pybamm.size_average(v) for k, v in eps_dict.items()}
         eps = pybamm.concatenation(*eps_dict.values())
 
         variables = {"Porosity": eps}
