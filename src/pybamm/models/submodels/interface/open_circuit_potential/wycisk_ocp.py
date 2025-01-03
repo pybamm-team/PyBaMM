@@ -12,7 +12,7 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
     is tunable via two additional parameters. The hysteresis state is updated based on the current and the differential capacity.
     """
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         h = pybamm.Variable(
@@ -22,26 +22,33 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
                 "secondary": "current collector",
             },
         )
-        return {
+        variables = {
             f"{Domain} electrode {phase_name}hysteresis state": h,
         }
-
-    def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
         phase = self.phase
 
         if self.reaction == "lithium-ion main":
-            T = variables[f"{Domain} electrode temperature [K]"]
+            T = pybamm.CoupledVariable(
+                f"{Domain} electrode temperature [K]",
+                f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({T.name: T})
             h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
             # For "particle-size distribution" models, take distribution version
             # of c_s_surf that depends on particle size.
             domain_options = getattr(self.options, domain)
             if domain_options["particle size"] == "distribution":
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry distribution"
-                ]
+                sto_surf = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle surface stoichiometry distribution",
+                    domains={
+                        "primary": f"{domain} {phase_name}particle size",
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({sto_surf.name: sto_surf})
                 # If variable was broadcast, take only the orphan
                 if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
                     T, pybamm.Broadcast
@@ -51,9 +58,12 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
                 T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
                 h = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
             else:
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry"
-                ]
+                sto_surf = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle surface stoichiometry",
+                    f"{domain} electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({sto_surf.name: sto_surf})
                 # If variable was broadcast, take only the orphan
                 if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
                     T, pybamm.Broadcast
@@ -66,7 +76,11 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             ] = h
 
             # Bulk OCP is from the average SOC and temperature
-            sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
+            sto_bulk = pybamm.CoupledVariable(
+                f"{Domain} electrode {phase_name}stoichiometry",
+                "current collector",
+            )
+            self.coupled_variables.update({sto_bulk.name: sto_bulk})
             c_scale = self.phase_param.c_max
             variables[f"Total lithium in {phase} phase in {domain} electrode [mol]"] = (
                 sto_bulk * c_scale
@@ -97,11 +111,14 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
 
             # determine dQ/dU
             if phase_name == "":
-                Q_mag = variables[f"{Domain} electrode capacity [A.h]"]
+                Q_mag = pybamm.CoupledVariable(
+                    f"{Domain} electrode capacity [A.h]",
+                )
             else:
-                Q_mag = variables[
-                    f"{Domain} electrode {phase_name}phase capacity [A.h]"
-                ]
+                Q_mag = pybamm.CoupledVariable(
+                    f"{Domain} electrode {phase_name}phase capacity [A.h]",
+                )
+            self.coupled_variables.update({Q_mag.name: Q_mag})
 
             dU = self.phase_param.U(sto_surf, T_bulk).diff(sto_surf)
             dQdU = Q_mag / dU
@@ -141,25 +158,31 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
-        return variables
+        self.variables.update(variables)
 
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-
-        current = variables[
-            f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
-        ]
+        current = pybamm.CoupledVariable(
+            f"{Domain} electrode {phase_name}interfacial current density [A.m-2]",
+            f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({current.name: current})
         # check if composite or not
         if phase_name != "":
-            Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
+            Q_cell = pybamm.CoupledVariable(
+                f"{Domain} electrode {phase_name}phase capacity [A.h]",
+            )
         else:
-            Q_cell = variables[f"{Domain} electrode capacity [A.h]"]
+            Q_cell = pybamm.CoupledVariable(
+                f"{Domain} electrode capacity [A.h]",
+            )
+        self.coupled_variables.update({Q_cell.name: Q_cell})
 
-        dQdU = variables[
-            f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
-        ]
-        dQdU = dQdU.orphans[0]
+        dQdU = pybamm.CoupledVariable(
+            f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]",
+            f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({dQdU.name: dQdU})
         K = self.phase_param.hysteresis_decay
         K_x = self.phase_param.hysteresis_switch
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
@@ -168,9 +191,4 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
             K * (current / (Q_cell * (dQdU**K_x))) * (1 - pybamm.sign(current) * h)
         )  #! current is backwards for a halfcell
         self.rhs[h] = dhdt
-
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
         self.initial_conditions[h] = pybamm.Scalar(0)
