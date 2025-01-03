@@ -430,7 +430,7 @@ class TestBaseBatteryModel:
         assert isinstance(model.default_solver, pybamm.CasadiSolver)
 
         # check that default_solver gives you a new solver, not an internal object
-        _ = model.default_solver
+        solver = model.default_solver
         solver = pybamm.BaseModel()
         assert isinstance(model.default_solver, pybamm.CasadiSolver)
         assert isinstance(solver, pybamm.BaseModel)
