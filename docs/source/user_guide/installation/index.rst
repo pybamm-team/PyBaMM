@@ -51,7 +51,7 @@ PyBaMM requires the following dependencies:
 
     The list of dependencies below might be outdated. Users are advised to manually check the `pyproject.toml`_ file to find out supported versions.
 
-.. _pyproject.toml: https://github.com/pybamm-team/PyBaMM/blob/develop/pyproject.toml
+.. _pyproject.toml: https://github.com/pybamm-team/PyBaMM/blob/main/pyproject.toml
 
 .. _install-required-dependencies:
 
