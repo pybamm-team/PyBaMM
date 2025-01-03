@@ -21,7 +21,7 @@ class Isothermal(BaseThermal):
     def __init__(self, param, options=None, x_average=False):
         super().__init__(param, options=options, x_average=x_average)
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         # Set the x-averaged temperature to the ambient temperature, which can be
         # specified as a function of space (y, z) only and time
         y = pybamm.standard_spatial_vars.y
@@ -43,9 +43,6 @@ class Isothermal(BaseThermal):
 
         variables = self._get_standard_fundamental_variables(T_dict)
 
-        return variables
-
-    def get_coupled_variables(self, variables):
         if self.options["calculate heat source for isothermal models"] == "true":
             variables.update(self._get_standard_coupled_variables(variables))
         else:
@@ -79,4 +76,4 @@ class Isothermal(BaseThermal):
                 # All variables are zero
                 variables.update({var: zero})
 
-        return variables
+        self.variables.update(variables)

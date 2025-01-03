@@ -236,7 +236,9 @@ class BaseModel:
                             sym, self._variables[name]
                         )
             else:
-                raise ValueError(f"coupled variable {name} not found in variables")
+                raise pybamm.ModelError(
+                    f"coupled variable {name} not found in variables"
+                )
 
     @property
     def variables(self):

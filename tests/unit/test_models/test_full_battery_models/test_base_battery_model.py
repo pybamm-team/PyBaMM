@@ -418,7 +418,7 @@ class TestBaseBatteryModel:
         model.submodels["current collector"] = pybamm.current_collector.Uniform(
             model.param
         )
-        with pytest.raises(pybamm.ModelError, match="Missing variable"):
+        with pytest.raises(pybamm.ModelError, match="coupled variable"):
             model.build_model()
 
     def test_default_solver(self):

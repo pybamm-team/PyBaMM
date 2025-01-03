@@ -69,16 +69,45 @@ class BaseThermal(pybamm.BaseSubModel):
 
     def _get_standard_coupled_variables(self, variables):
         # Ohmic heating in solid
-        i_s_p = variables["Positive electrode current density [A.m-2]"]
-        phi_s_p = variables["Positive electrode potential [V]"]
+        i_s_p = pybamm.CoupledVariable(
+            "Positive electrode current density [A.m-2]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({i_s_p.name: i_s_p})
+        phi_s_p = pybamm.CoupledVariable(
+            "Positive electrode potential [V]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({phi_s_p.name: phi_s_p})
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
         if self.options.electrode_types["negative"] == "planar":
-            i_boundary_cc = variables["Current collector current density [A.m-2]"]
-            T_n = variables["Negative electrode temperature [K]"]
+            i_boundary_cc = pybamm.CoupledVariable(
+                "Current collector current density [A.m-2]",
+                "current collector",
+            )
+            self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+            T_n = pybamm.CoupledVariable(
+                "Negative electrode temperature [K]",
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({T_n.name: T_n})
             Q_ohm_s_n = i_boundary_cc**2 / self.param.n.sigma(T_n)
         else:
-            i_s_n = variables["Negative electrode current density [A.m-2]"]
-            phi_s_n = variables["Negative electrode potential [V]"]
+            i_s_n = pybamm.CoupledVariable(
+                "Negative electrode current density [A.m-2]",
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({i_s_n.name: i_s_n})
+            phi_s_n = pybamm.CoupledVariable(
+                "Negative electrode potential [V]",
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({phi_s_n.name: phi_s_n})
             Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
@@ -87,18 +116,43 @@ class BaseThermal(pybamm.BaseSubModel):
         # Ohmic heating in electrolyte
         # TODO: change full stefan-maxwell conductivity so that i_e is always
         # a Concatenation
-        i_e = variables["Electrolyte current density [A.m-2]"]
+        if self.options.electrode_types["negative"] == "planar":
+            i_e_domains = ["separator", "positive electrode"]
+        else:
+            i_e_domains = ["negative electrode", "separator", "positive electrode"]
+        i_e = pybamm.CoupledVariable(
+            "Electrolyte current density [A.m-2]",
+            i_e_domains,
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({i_e.name: i_e})
+
         # Special case for half cell -- i_e has to be a concatenation for this to work due to a mismatch with Q_ohm, so we make a new i_e which is a concatenation.
         if (not isinstance(i_e, pybamm.Concatenation)) and (
             self.options.electrode_types["negative"] == "planar"
         ):
             i_e = self._get_i_e_for_half_cell_thermal(variables)
 
-        phi_e = variables["Electrolyte potential [V]"]
+        phi_e = pybamm.CoupledVariable(
+            "Electrolyte potential [V]",
+            i_e_domains,
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({phi_e.name: phi_e})
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
-            phi_e_s = variables["Separator electrolyte potential [V]"]
-            phi_e_p = variables["Positive electrolyte potential [V]"]
+            phi_e_s = pybamm.CoupledVariable(
+                "Separator electrolyte potential [V]",
+                "separator",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({phi_e_s.name: phi_e_s})
+            phi_e_p = pybamm.CoupledVariable(
+                "Positive electrolyte potential [V]",
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({phi_e_p.name: phi_e_p})
             if self.options.electrode_types["negative"] == "planar":
                 i_e_s, i_e_p = i_e.orphans
                 Q_ohm_e_n = pybamm.FullBroadcast(
@@ -106,7 +160,12 @@ class BaseThermal(pybamm.BaseSubModel):
                 )
             else:
                 i_e_n, i_e_s, i_e_p = i_e.orphans
-                phi_e_n = variables["Negative electrolyte potential [V]"]
+                phi_e_n = pybamm.CoupledVariable(
+                    "Negative electrolyte potential [V]",
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({phi_e_n.name: phi_e_n})
                 Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
             Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
             Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
@@ -131,16 +190,34 @@ class BaseThermal(pybamm.BaseSubModel):
             phase_names = ["primary ", "secondary "]
 
         Q_rxn_p, Q_rev_p = 0, 0
-        T_p = variables["Positive electrode temperature [K]"]
+        T_p = pybamm.CoupledVariable(
+            "Positive electrode temperature [K]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T_p.name: T_p})
         for phase in phase_names:
-            a_j_p = variables[
-                f"Positive electrode {phase}volumetric interfacial current density [A.m-3]"
-            ]
-            eta_r_p = variables[f"Positive electrode {phase}reaction overpotential [V]"]
+            a_j_p = pybamm.CoupledVariable(
+                f"Positive electrode {phase}volumetric interfacial current density [A.m-3]",
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({a_j_p.name: a_j_p})
+            eta_r_p = pybamm.CoupledVariable(
+                f"Positive electrode {phase}reaction overpotential [V]",
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({eta_r_p.name: eta_r_p})
             # Irreversible electrochemical heating
             Q_rxn_p += a_j_p * eta_r_p
             # Reversible electrochemical heating
-            dUdT_p = variables[f"Positive electrode {phase}entropic change [V.K-1]"]
+            dUdT_p = pybamm.CoupledVariable(
+                f"Positive electrode {phase}entropic change [V.K-1]",
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({dUdT_p.name: dUdT_p})
             Q_rev_p += a_j_p * T_p * dUdT_p
 
         num_phases = int(self.options.negative["particle phases"])
@@ -149,8 +226,16 @@ class BaseThermal(pybamm.BaseSubModel):
             phase_names = ["primary ", "secondary "]
 
         if self.options.electrode_types["negative"] == "planar":
-            i_n = variables["Lithium metal total interfacial current density [A.m-2]"]
-            eta_r_n = variables["Lithium metal interface reaction overpotential [V]"]
+            i_n = pybamm.CoupledVariable(
+                "Lithium metal total interfacial current density [A.m-2]",
+                "current collector",
+            )
+            self.coupled_variables.update({i_n.name: i_n})
+            eta_r_n = pybamm.CoupledVariable(
+                "Lithium metal interface reaction overpotential [V]",
+                "current collector",
+            )
+            self.coupled_variables.update({eta_r_n.name: eta_r_n})
             Q_rxn_n = pybamm.PrimaryBroadcast(
                 i_n * eta_r_n / self.param.n.L,
                 ["negative electrode"],
@@ -164,17 +249,28 @@ class BaseThermal(pybamm.BaseSubModel):
             Q_rxn_n = 0
             Q_rev_n = 0
             for phase in phase_names:
-                a_j_n = variables[
-                    f"Negative electrode {phase}volumetric interfacial current density [A.m-3]"
-                ]
-                eta_r_n = variables[
-                    f"Negative electrode {phase}reaction overpotential [V]"
-                ]
+                a_j_n = pybamm.CoupledVariable(
+                    f"Negative electrode {phase}volumetric interfacial current density [A.m-3]",
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({a_j_n.name: a_j_n})
+                eta_r_n = pybamm.CoupledVariable(
+                    f"Negative electrode {phase}reaction overpotential [V]",
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({eta_r_n.name: eta_r_n})
                 # Irreversible electrochemical heating
                 Q_rxn_n += a_j_n * eta_r_n
 
                 # Reversible electrochemical heating
-                dUdT_n = variables[f"Negative electrode {phase}entropic change [V.K-1]"]
+                dUdT_n = pybamm.CoupledVariable(
+                    f"Negative electrode {phase}entropic change [V.K-1]",
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({dUdT_n.name: dUdT_n})
                 Q_rev_n += a_j_n * T_n * dUdT_n
 
         # Irreversible electrochemical heating
@@ -295,15 +391,27 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # Compute the Ohmic heating for 0D current collectors
         if cc_dimension == 0:
-            i_boundary_cc = variables["Current collector current density [A.m-2]"]
+            i_boundary_cc = pybamm.CoupledVariable(
+                "Current collector current density [A.m-2]",
+                "current collector",
+            )
+            self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
             Q_s_cn = i_boundary_cc**2 / self.param.n.sigma_cc
             Q_s_cp = i_boundary_cc**2 / self.param.p.sigma_cc
         # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
         # In this limit the current flow is all in the y,z direction in the current
         # collectors
         elif cc_dimension in [1, 2]:
-            phi_s_cn = variables["Negative current collector potential [V]"]
-            phi_s_cp = variables["Positive current collector potential [V]"]
+            phi_s_cn = pybamm.CoupledVariable(
+                "Negative current collector potential [V]",
+                "current collector",
+            )
+            phi_s_cp = pybamm.CoupledVariable(
+                "Positive current collector potential [V]",
+                "current collector",
+            )
+            self.coupled_variables.update({phi_s_cn.name: phi_s_cn})
+            self.coupled_variables.update({phi_s_cp.name: phi_s_cp})
             # TODO: implement grad_squared in other spatial methods so that the
             # if statement can be removed
             if cc_dimension == 1:
@@ -332,17 +440,46 @@ class BaseThermal(pybamm.BaseSubModel):
                     0, ["negative electrode"], "current collector"
                 )
             else:
-                a_n = variables["Negative electrode surface area to volume ratio [m-1]"]
-                R_n = variables["Negative particle radius [m]"]
+                a_n = pybamm.CoupledVariable(
+                    "Negative electrode surface area to volume ratio [m-1]",
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({a_n.name: a_n})
+                R_n = pybamm.CoupledVariable(
+                    "Negative particle radius [m]",
+                    "negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({R_n.name: R_n})
                 N_n = a_n / (4 * pi * R_n**2)
                 if self.x_average:
-                    c_n = variables[
-                        "X-averaged negative particle concentration [mol.m-3]"
-                    ]
-                    T_n = variables["X-averaged negative electrode temperature [K]"]
+                    c_n = pybamm.CoupledVariable(
+                        "X-averaged negative particle concentration [mol.m-3]",
+                        "current collector",
+                    )
+                    self.coupled_variables.update({c_n.name: c_n})
+                    T_n = pybamm.CoupledVariable(
+                        "X-averaged negative electrode temperature [K]",
+                        "current collector",
+                    )
+                    self.coupled_variables.update({T_n.name: T_n})
                 else:
-                    c_n = variables["Negative particle concentration [mol.m-3]"]
-                    T_n = variables["Negative electrode temperature [K]"]
+                    c_n = pybamm.CoupledVariable(
+                        "Negative particle concentration [mol.m-3]",
+                        "negative particle",
+                        auxiliary_domains={
+                            "secondary": "negative electrode",
+                            "tertiary": "current collector",
+                        },
+                    )
+                    self.coupled_variables.update({c_n.name: c_n})
+                    T_n = pybamm.CoupledVariable(
+                        "Negative electrode temperature [K]",
+                        "negative electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                    self.coupled_variables.update({T_n.name: T_n})
                 T_n_part = pybamm.PrimaryBroadcast(T_n, ["negative particle"])
                 dc_n_dr2 = pybamm.inner(pybamm.grad(c_n), pybamm.grad(c_n))
                 D_n = self.param.n.prim.D(c_n, T_n_part)
@@ -357,15 +494,47 @@ class BaseThermal(pybamm.BaseSubModel):
                 Q_mix_s_n = -F * N_n * integral_r_n
 
             # Compute heat of mixing in positive electrode
-            a_p = variables["Positive electrode surface area to volume ratio [m-1]"]
-            R_p = variables["Positive particle radius [m]"]
+            a_p = pybamm.CoupledVariable(
+                "Positive electrode surface area to volume ratio [m-1]",
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({a_p.name: a_p})
+            R_p = pybamm.CoupledVariable(
+                "Positive particle radius [m]",
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({R_p.name: R_p})
             N_p = a_p / (4 * pi * R_p**2)
             if self.x_average:
-                c_p = variables["X-averaged positive particle concentration [mol.m-3]"]
-                T_p = variables["X-averaged positive electrode temperature [K]"]
+                c_p = pybamm.CoupledVariable(
+                    "X-averaged positive particle concentration [mol.m-3]",
+                    "positive particle",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({c_p.name: c_p})
+                T_p = pybamm.CoupledVariable(
+                    "X-averaged positive electrode temperature [K]",
+                    "current collector",
+                )
+                self.coupled_variables.update({T_p.name: T_p})
             else:
-                c_p = variables["Positive particle concentration [mol.m-3]"]
-                T_p = variables["Positive electrode temperature [K]"]
+                c_p = pybamm.CoupledVariable(
+                    "Positive particle concentration [mol.m-3]",
+                    "positive particle",
+                    auxiliary_domains={
+                        "secondary": "positive electrode",
+                        "tertiary": "current collector",
+                    },
+                )
+                self.coupled_variables.update({c_p.name: c_p})
+                T_p = pybamm.CoupledVariable(
+                    "Positive electrode temperature [K]",
+                    "positive electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                self.coupled_variables.update({T_p.name: T_p})
             T_p_part = pybamm.PrimaryBroadcast(T_p, ["positive particle"])
             dc_p_dr2 = pybamm.inner(pybamm.grad(c_p), pybamm.grad(c_p))
             D_p = self.param.p.prim.D(c_p, T_p_part)
@@ -419,16 +588,56 @@ class BaseThermal(pybamm.BaseSubModel):
             return pybamm.yz_average(var)
 
     def _get_i_e_for_half_cell_thermal(self, variables):
-        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
-        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
-        grad_phi_e_s = variables["Gradient of separator electrolyte potential [V.m-1]"]
-        grad_phi_e_p = variables["Gradient of positive electrolyte potential [V.m-1]"]
+        c_e_s = pybamm.CoupledVariable(
+            "Separator electrolyte concentration [mol.m-3]",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_s.name: c_e_s})
+        c_e_p = pybamm.CoupledVariable(
+            "Positive electrolyte concentration [mol.m-3]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_p.name: c_e_p})
+        grad_phi_e_s = pybamm.CoupledVariable(
+            "Gradient of separator electrolyte potential [V.m-1]",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({grad_phi_e_s.name: grad_phi_e_s})
+        grad_phi_e_p = pybamm.CoupledVariable(
+            "Gradient of positive electrolyte potential [V.m-1]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({grad_phi_e_p.name: grad_phi_e_p})
         grad_c_e_s = pybamm.grad(c_e_s)
         grad_c_e_p = pybamm.grad(c_e_p)
-        T_s = variables["Separator temperature [K]"]
-        T_p = variables["Positive electrode temperature [K]"]
-        tor_s = variables["Separator electrolyte transport efficiency"]
-        tor_p = variables["Positive electrolyte transport efficiency"]
+        T_s = pybamm.CoupledVariable(
+            "Separator temperature [K]",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T_s.name: T_s})
+        T_p = pybamm.CoupledVariable(
+            "Positive electrode temperature [K]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T_p.name: T_p})
+        tor_s = pybamm.CoupledVariable(
+            "Separator electrolyte transport efficiency",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_s.name: tor_s})
+        tor_p = pybamm.CoupledVariable(
+            "Positive electrolyte transport efficiency",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_p.name: tor_p})
         i_e_s = (self.param.kappa_e(c_e_s, T_s) * tor_s) * (
             self.param.chiRT_over_Fc(c_e_s, T_s) * grad_c_e_s - grad_phi_e_s
         )

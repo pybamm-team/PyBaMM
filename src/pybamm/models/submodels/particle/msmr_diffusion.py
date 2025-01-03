@@ -162,11 +162,17 @@ class MSMRDiffusion(BaseParticle):
                     T_electrode,
                     [f"{domain} {phase_name}particle"],
                 )
-                R_nondim = pybamm.CoupledVariable(
-                    f"{Domain} {phase_name}particle radius",
-                    domain=f"{domain} electrode",
-                    auxiliary_domains={"secondary": "current collector"},
-                )
+                if self.x_average:
+                    R_nondim = pybamm.CoupledVariable(
+                        f"X-averaged {Domain} {phase_name}particle radius",
+                        domain="current collector",
+                    )
+                else:
+                    R_nondim = pybamm.CoupledVariable(
+                        f"{Domain} {phase_name}particle radius",
+                        domain=f"{domain} electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
                 self.coupled_variables.update({R_nondim.name: R_nondim})
                 j = pybamm.CoupledVariable(
                     f"{Domain} electrode {phase_name}"
@@ -205,14 +211,21 @@ class MSMRDiffusion(BaseParticle):
                 self.coupled_variables.update({j.name: j})
             R_broad_nondim = R_nondim
         else:
-            R_nondim = pybamm.CoupledVariable(
-                f"{Domain} {phase_name}particle sizes",
-                domain=f"{domain} {phase_name}particle size",
-                auxiliary_domains={
-                    "secondary": f"{domain} electrode",
-                    "tertiary": "current collector",
-                },
-            )
+            if self.x_average:
+                R_nondim = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle sizes",
+                    domain=f"{domain} {phase_name}particle size",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+            else:
+                R_nondim = pybamm.CoupledVariable(
+                    f"{Domain} {phase_name}particle sizes",
+                    domain=f"{domain} {phase_name}particle size",
+                    auxiliary_domains={
+                        "secondary": f"{domain} electrode",
+                        "tertiary": "current collector",
+                    },
+                )
             self.coupled_variables.update({R_nondim.name: R_nondim})
             R_broad_nondim = pybamm.PrimaryBroadcast(
                 R_nondim, [f"{domain} {phase_name}particle"]
