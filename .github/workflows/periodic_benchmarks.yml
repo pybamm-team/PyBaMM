@@ -39,7 +39,6 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          python -m uv pip install --upgrade pip wheel setuptools wget numpy
           python -m uv pip install asv[virtualenv]
 
       - name: Run benchmarks

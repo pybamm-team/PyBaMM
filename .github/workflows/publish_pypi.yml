@@ -106,7 +106,7 @@ jobs:
           CIBW_ENVIRONMENT: >
             PYBAMM_DISABLE_TELEMETRY="true"
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install setuptools wheel
+          CIBW_BEFORE_BUILD_LINUX: python -m pip install setuptools
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_EXTRAS: "all,dev,jax"
           CIBW_TEST_COMMAND: |
@@ -151,7 +151,7 @@ jobs:
           # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
           CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel delocate
+          CIBW_BEFORE_BUILD: python -m pip install setuptools delocate
           CIBW_REPAIR_WHEEL_COMMAND: |
             if [[ $(uname -m) == "x86_64" ]]; then
               delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}

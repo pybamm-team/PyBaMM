@@ -18,7 +18,7 @@ package to install PyBaMM with only the required dependencies. ([conda-forge/pyb
 - Separated extrapolation options for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`, and updated the default to be "linear" for the value and "quadratic" for the gradient. ([#4614](https://github.com/pybamm-team/PyBaMM/pull/4614))
 - Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
 - Moved the IDAKLU solver to a standalone `pybammsolvers` package. This will
-  make pybamm a pure python package and make installing and using the solver
+  make PyBaMM a pure Python package and make installing and using the solver
   easier. ([#4487](https://github.com/pybamm-team/PyBaMM/pull/4487))
 - Wycisk OCP model now requires an parameter to set the initial condition. ([#4374](https://github.com/pybamm-team/PyBaMM/pull/4374))
 
