@@ -19,17 +19,14 @@ class NoPlating(BasePlating):
     def __init__(self, param, domain, options=None, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         zero = pybamm.FullBroadcast(
             pybamm.Scalar(0), f"{self.domain} electrode", "current collector"
         )
         variables = self._get_standard_concentration_variables(zero, zero)
         variables.update(self._get_standard_overpotential_variables(zero))
         variables.update(self._get_standard_reaction_variables(zero))
-        return variables
-
-    def get_coupled_variables(self, variables):
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
-
+        self.variables.update(variables)
         return variables

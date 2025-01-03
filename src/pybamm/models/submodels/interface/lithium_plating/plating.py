@@ -25,7 +25,7 @@ class Plating(BasePlating):
         pybamm.citations.register("OKane2020")
         pybamm.citations.register("OKane2022")
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         scale = self.phase_param.c_Li_typ
         if self.x_average is True:
@@ -58,18 +58,32 @@ class Plating(BasePlating):
             )
 
         variables = self._get_standard_concentration_variables(c_plated_Li, c_dead_Li)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
-        delta_phi = variables[f"{Domain} electrode surface potential difference [V]"]
-        c_e_n = variables[f"{Domain} electrolyte concentration [mol.m-3]"]
-        T = variables[f"{Domain} electrode temperature [K]"]
-        eta_sei = variables[
-            f"{Domain} electrode {self.phase_name}SEI film overpotential [V]"
-        ]
+        delta_phi = pybamm.CoupledVariable(
+            f"{Domain} electrode surface potential difference [V]",
+            f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({delta_phi.name: delta_phi})
+        c_e_n = pybamm.CoupledVariable(
+            f"{Domain} electrolyte concentration [mol.m-3]",
+            f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_n.name: c_e_n})
+        T = pybamm.CoupledVariable(
+            f"{Domain} electrode temperature [K]",
+            f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T.name: T})
+        eta_sei = pybamm.CoupledVariable(
+            f"{Domain} electrode {self.phase_name}SEI film overpotential [V]",
+            f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({eta_sei.name: eta_sei})
         c_plated_Li = variables[
             f"{Domain} {self.phase_name}lithium plating concentration [mol.m-3]"
         ]
@@ -100,11 +114,6 @@ class Plating(BasePlating):
 
         # Add other standard coupled variables
         variables.update(super().get_coupled_variables(variables))
-
-        return variables
-
-    def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
         if self.x_average is True:
             c_plated_Li = variables[
@@ -118,9 +127,11 @@ class Plating(BasePlating):
                 f"X-averaged {domain} electrode {phase_name}lithium plating volumetric "
                 "interfacial current density [A.m-3]"
             ]
-            L_sei = variables[
-                f"X-averaged {domain} total {phase_name}SEI thickness [m]"
-            ]
+            L_sei = pybamm.CoupledVariable(
+                f"X-averaged {domain} total {phase_name}SEI thickness [m]",
+                "current collector",
+            )
+            self.coupled_variables.update({L_sei.name: L_sei})
         else:
             c_plated_Li = variables[
                 f"{Domain} {phase_name}lithium plating concentration [mol.m-3]"
@@ -132,7 +143,11 @@ class Plating(BasePlating):
                 f"{Domain} electrode {phase_name}lithium plating volumetric "
                 "interfacial current density [A.m-3]"
             ]
-            L_sei = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
+            L_sei = pybamm.CoupledVariable(
+                f"{Domain} total {phase_name}SEI thickness [m]",
+                f"{domain} electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
 
         lithium_plating_option = getattr(getattr(self.options, domain), self.phase)[
             "lithium plating"
@@ -157,10 +172,6 @@ class Plating(BasePlating):
             c_plated_Li: dc_plated_Li,
             c_dead_Li: dc_dead_Li,
         }
-
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
         if self.x_average is True:
             c_plated_Li = variables[
                 f"X-averaged {domain} {phase_name}lithium plating concentration "
@@ -180,3 +191,5 @@ class Plating(BasePlating):
         zero = 0 * c_plated_Li_0
 
         self.initial_conditions = {c_plated_Li: c_plated_Li_0, c_dead_Li: zero}
+
+        self.variables.update(variables)

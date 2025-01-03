@@ -22,7 +22,7 @@ class TotalLithiumPlating(pybamm.BaseSubModel):
     def __init__(self, param, domain, options):
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
+    def build(self, submodels):
         domain, Domain = self.domain_Domain
         phases = self.options.phases[domain]
         # For each of the variables, the variable name without the phase name
@@ -35,9 +35,23 @@ class TotalLithiumPlating(pybamm.BaseSubModel):
             f"Loss of lithium to {domain} {{}}lithium plating [mol]",
             f"Loss of capacity to {domain} {{}}lithium plating [A.h]",
         ]:
-            sumvar = sum(
-                variables[variable_template.format(phase + " ")] for phase in phases
-            )
-            variables[variable_template.format("")] = sumvar
-
-        return variables
+            zero = pybamm.Scalar(0)
+            sumvar = zero
+            for phase in phases:
+                # It would be nice if we had a systematic way to set the domain for these things.
+                if "X-averaged" in variable_template:
+                    var = pybamm.CoupledVariable(
+                        variable_template.format(phase + " "),
+                        domain="current collector",
+                    )
+                elif "electrode" in variable_template:
+                    var = pybamm.CoupledVariable(
+                        variable_template.format(phase + " "),
+                        domain=f"{domain} electrode",
+                        auxiliary_domains={"secondary": "current collector"},
+                    )
+                else:
+                    var = pybamm.CoupledVariable(variable_template.format(phase + " "))
+                self.coupled_variables.update({var.name: var})
+                sumvar += var
+            self.variables.update({variable_template.format(""): sumvar})
