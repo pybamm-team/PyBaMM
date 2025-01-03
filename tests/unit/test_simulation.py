@@ -480,7 +480,7 @@ class TestSimulation:
                 sim.save(test_name)
 
     def test_load_param(self, tmp_path):
-        filename = tmp_path / "test.pkl"
+        filename = str(tmp_path / "test.pkl")
         model = pybamm.lithium_ion.SPM()
         params = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, parameter_values=params)

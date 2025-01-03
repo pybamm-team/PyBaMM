@@ -61,7 +61,7 @@ class TestAlgebraicSolver:
         # Relax options and see worse results
         solver = pybamm.AlgebraicSolver(extra_options={"ftol": 1})
         solution = solver._integrate(model, np.array([0]))
-        assert solution.y != -2
+        assert solution.y != np.array([-2])
 
     def test_root_find_fail(self):
         class Model(pybamm.BaseModel):
