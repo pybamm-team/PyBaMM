@@ -173,7 +173,7 @@ class TestFiniteVolumeIntegration:
             integral_eqn_disc.evaluate(None, const_y), 4 * np.pi * 2.0**3 / 3, decimal=4
         )
 
-    def test_integral_secondary_domain(self):
+    def test_integral_secondary_tertiary_domain(self):
         # create discretisation
         mesh = get_1p1d_mesh_for_testing()
         spatial_methods = {
@@ -186,6 +186,7 @@ class TestFiniteVolumeIntegration:
         # lengths
         ln = mesh["negative electrode"].edges[-1]
         ls = mesh["separator"].edges[-1] - ln
+        lc = mesh["current collector"].edges[-1]
         lp = 1 - (ln + ls)
 
         var = pybamm.Variable(
@@ -197,9 +198,12 @@ class TestFiniteVolumeIntegration:
             },
         )
         x = pybamm.SpatialVariable("x", "positive electrode")
+        z = pybamm.SpatialVariable("z", "current collector")
         integral_eqn = pybamm.Integral(var, x)
+        integral_eqn_tertiary = pybamm.Integral(var, z)
         disc.set_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        integral_eqn_disc_secondary = disc.process_symbol(integral_eqn)
+        integral_eqn_disc_tertiary = disc.process_symbol(integral_eqn_tertiary)
 
         submesh = mesh["positive particle"]
         constant_y = np.ones(
@@ -210,16 +214,22 @@ class TestFiniteVolumeIntegration:
                 1,
             )
         )
+        # Test with constant y
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y),
+            integral_eqn_disc_secondary.evaluate(None, constant_y),
             lp * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
         )
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc_tertiary.evaluate(None, constant_y),
+            lc * np.ones((submesh.npts * mesh["positive electrode"].npts, 1)),
+        )
+        # Test with linear
         linear_in_x = np.tile(
             np.repeat(mesh["positive electrode"].nodes, submesh.npts),
             mesh["current collector"].npts,
         )
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_in_x),
+            integral_eqn_disc_secondary.evaluate(None, linear_in_x),
             (1 - (ln + ls) ** 2)
             / 2
             * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
@@ -229,15 +239,24 @@ class TestFiniteVolumeIntegration:
             mesh["positive electrode"].npts * mesh["current collector"].npts,
         )
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_in_r).flatten(),
+            integral_eqn_disc_secondary.evaluate(None, linear_in_r).flatten(),
             lp * np.tile(submesh.nodes, mesh["current collector"].npts),
         )
         cos_y = np.cos(linear_in_x)
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, cos_y),
+            integral_eqn_disc_secondary.evaluate(None, cos_y),
             (np.sin(1) - np.sin(ln + ls))
             * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
             decimal=4,
+        )
+        # test tertiary integration with linear function in y
+        linear_in_z = np.repeat(
+            mesh["current collector"].nodes,
+            submesh.npts * mesh["positive electrode"].npts,
+        )
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc_tertiary.evaluate(None, linear_in_z),
+            (lc**2 / 2) * np.ones((submesh.npts * mesh["positive electrode"].npts, 1)),
         )
 
     def test_integral_primary_then_secondary_same_result(self):
