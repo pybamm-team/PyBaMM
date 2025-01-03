@@ -486,12 +486,7 @@ class TestSimulation:
         sim = pybamm.Simulation(model, parameter_values=params)
         sim.solve([0, 3600])
         sim.save(filename)
-
-        try:
-            pkl_obj = pybamm.load_sim(filename)
-        except Exception as e:
-            raise e
-
+        pkl_obj = pybamm.load_sim(filename)
         assert (
             "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
             == pkl_obj.parameter_values[
