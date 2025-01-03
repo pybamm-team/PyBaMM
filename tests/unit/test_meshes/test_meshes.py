@@ -208,6 +208,28 @@ class TestMesh:
         ):
             mesh.combine_submeshes()
 
+        # test symbolic submesh
+        new_submesh_types = submesh_types.copy()
+        geometry = {
+            "negative electrode": {
+                "x_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            },
+            "separator": {
+                "x_s": {"min": pybamm.Scalar(1), "max": pybamm.InputParameter("L")}
+            },
+        }
+        param.process_geometry(geometry)
+        for k in new_submesh_types:
+            new_submesh_types[k] = pybamm.SymbolicUniform1DSubMesh
+        mesh = pybamm.Mesh(geometry, new_submesh_types, var_pts)
+        submesh = mesh[("negative electrode", "separator")]
+        mesh.combine_submeshes("negative electrode", "separator")
+        assert (
+            submesh.length
+            == mesh["separator"].length + mesh["negative electrode"].length
+        )
+        assert submesh.min == mesh["negative electrode"].min
+
     def test_ghost_cells(self, submesh_types):
         param = get_param()
 
@@ -231,6 +253,70 @@ class TestMesh:
         np.testing.assert_array_equal(
             mesh["positive electrode_right ghost cell"].edges[0],
             mesh["positive electrode"].edges[-1],
+        )
+
+        # test symbolic mesh
+        geometry = {
+            "negative electrode": {
+                "x_n": {"min": pybamm.Scalar(0), "max": pybamm.InputParameter("L_n")}
+            },
+            "separator": {
+                "x_s": {
+                    "min": pybamm.InputParameter("L_n"),
+                    "max": pybamm.InputParameter("L"),
+                }
+            },
+        }
+        submesh_types = {
+            "negative electrode": pybamm.SymbolicUniform1DSubMesh,
+            "separator": pybamm.SymbolicUniform1DSubMesh,
+        }
+        var_pts = {
+            "x_n": 10,
+            "x_s": 10,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        np.testing.assert_array_equal(
+            mesh["negative electrode_left ghost cell"].edges[1],
+            mesh["negative electrode"].edges[0],
+        )
+        np.testing.assert_array_equal(
+            mesh["negative electrode_left ghost cell"].edges[0],
+            -mesh["negative electrode"].edges[1],
+        )
+        np.testing.assert_array_equal(
+            mesh["separator_left ghost cell"].edges[1],
+            mesh["separator"].edges[0],
+        )
+        np.testing.assert_array_equal(
+            mesh["separator_left ghost cell"].edges[0],
+            -mesh["separator"].edges[1],
+        )
+
+    def test_symbolic_mesh_ghost_cells(self, submesh_types):
+        param = get_param()
+
+        submesh_types.update({"negative electrode": pybamm.SymbolicUniform1DSubMesh})
+
+        geometry = pybamm.battery_geometry()
+        param.process_geometry(geometry)
+
+        var_pts = {"x_n": 10, "x_s": 10, "x_p": 12, "r_n": 5, "r_p": 6}
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        lgs_submesh = mesh["negative electrode_left ghost cell"]
+        rgs_submesh = mesh["negative electrode_right ghost cell"]
+        submesh = mesh["negative electrode"]
+
+        np.testing.assert_array_equal(
+            lgs_submesh.edges[1] * lgs_submesh.length + lgs_submesh.min,
+            submesh.edges[0],
+        )
+        np.testing.assert_array_equal(
+            rgs_submesh.edges[0] * rgs_submesh.length + rgs_submesh.min,
+            submesh.edges[-1] * submesh.length + submesh.min,
         )
 
     def test_mesh_coord_sys(self, submesh_types):
