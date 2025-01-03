@@ -269,3 +269,9 @@ class TestSearch:
             match="'keys' must be a string or a list of strings, got <class 'int'>",
         ):
             model.variables.search(123)
+
+        # Test smaller strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["El", "co"], print_values=True)
+            out = "No matches found for 'El'\n" "No matches found for 'co'\n"
+            assert fake_out.getvalue() == out
