@@ -28,7 +28,7 @@ class OneDimensionalX(BaseThermal):
         super().__init__(param, options=options, x_average=x_average)
         pybamm.citations.register("Timms2021")
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         T_dict = {}
         for domain in ["negative electrode", "separator", "positive electrode"]:
             Domain = domain.capitalize()
@@ -63,13 +63,7 @@ class OneDimensionalX(BaseThermal):
         )
 
         variables = self._get_standard_fundamental_variables(T_dict)
-        return variables
-
-    def get_coupled_variables(self, variables):
         variables.update(self._get_standard_coupled_variables(variables))
-        return variables
-
-    def set_rhs(self, variables):
         T = variables["Cell temperature [K]"]
         T_cn = variables["Negative current collector temperature [K]"]
         T_n = variables["Negative electrode temperature [K]"]
@@ -79,7 +73,11 @@ class OneDimensionalX(BaseThermal):
         Q = variables["Total heating [W.m-3]"]
         Q_cn = variables["Negative current collector Ohmic heating [W.m-3]"]
         Q_cp = variables["Positive current collector Ohmic heating [W.m-3]"]
-        T_surf = variables["Surface temperature [K]"]
+        T_surf = pybamm.CoupledVariable(
+            "Surface temperature [K]",
+            "current collector",
+        )
+        self.coupled_variables.update({T_surf.name: T_surf})
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -166,18 +164,9 @@ class OneDimensionalX(BaseThermal):
             / self.param.p.rho_c_p_cc(T_cp),
         }
 
-    def set_boundary_conditions(self, variables):
-        T = variables["Cell temperature [K]"]
-        T_cn = variables["Negative current collector temperature [K]"]
-        T_cp = variables["Positive current collector temperature [K]"]
-
         self.boundary_conditions = {
             T: {"left": (T_cn, "Dirichlet"), "right": (T_cp, "Dirichlet")}
         }
-
-    def set_initial_conditions(self, variables):
-        T = variables["Cell temperature [K]"]
-        T_cn = variables["Negative current collector temperature [K]"]
-        T_cp = variables["Positive current collector temperature [K]"]
         T_init = self.param.T_init
         self.initial_conditions = {T_cn: T_init, T: T_init, T_cp: T_init}
+        self.variables.update(variables)

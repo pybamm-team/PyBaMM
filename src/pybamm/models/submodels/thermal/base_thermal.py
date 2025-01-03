@@ -456,7 +456,8 @@ class BaseThermal(pybamm.BaseSubModel):
                 if self.x_average:
                     c_n = pybamm.CoupledVariable(
                         "X-averaged negative particle concentration [mol.m-3]",
-                        "current collector",
+                        "negative particle",
+                        auxiliary_domains={"secondary": "current collector"},
                     )
                     self.coupled_variables.update({c_n.name: c_n})
                     T_n = pybamm.CoupledVariable(

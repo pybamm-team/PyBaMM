@@ -26,7 +26,7 @@ class CurrentCollector1D(BaseThermal):
         super().__init__(param, options=options, x_average=x_average)
         pybamm.citations.register("Timms2021")
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         T_x_av = pybamm.Variable(
             "X-averaged cell temperature [K]",
             domain="current collector",
@@ -44,17 +44,14 @@ class CurrentCollector1D(BaseThermal):
             T_dict[domain] = pybamm.PrimaryBroadcast(T_x_av, domain)
 
         variables = self._get_standard_fundamental_variables(T_dict)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
         variables.update(self._get_standard_coupled_variables(variables))
-        return variables
-
-    def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
         Q_av = variables["X-averaged total heating [W.m-3]"]
-        T_surf = variables["Surface temperature [K]"]
+        T_surf = pybamm.CoupledVariable(
+            "Surface temperature [K]",
+            "current collector",
+        )
+        self.coupled_variables.update({T_surf.name: T_surf})
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
@@ -84,9 +81,11 @@ class CurrentCollector1D(BaseThermal):
             )
             / self.param.rho_c_p_eff(T_av)
         }
-
-    def set_boundary_conditions(self, variables):
-        T_surf = variables["Surface temperature [K]"]
+        T_surf = pybamm.CoupledVariable(
+            "Surface temperature [K]",
+            "current collector",
+        )
+        self.coupled_variables.update({T_surf.name: T_surf})
         T_av = variables["X-averaged cell temperature [K]"]
 
         # Find tab locations (top vs bottom)
@@ -148,7 +147,6 @@ class CurrentCollector1D(BaseThermal):
                 ),
             },
         }
-
-    def set_initial_conditions(self, variables):
         T_av = variables["X-averaged cell temperature [K]"]
         self.initial_conditions = {T_av: self.param.T_init}
+        self.variables.update(variables)
