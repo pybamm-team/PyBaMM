@@ -33,7 +33,7 @@ class ReactionDriven(BaseModel):
                     L_sei_0 = self.param.n.prim.L_sei_0
                 elif Domain == "Positive":
                     L_sei_0 = self.param.p.prim.L_sei_0
-                roughness_k = variables[f"{Domain} electrode roughness ratio"]
+                mechanics_option = getattr(self.options, dom)["particle mechanics"]
                 SEI_option = getattr(self.options, dom)["SEI"]
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
@@ -60,9 +60,10 @@ class ReactionDriven(BaseModel):
                     L_sei_cr_k = variables[
                         f"{Domain} total {phase_name}SEI on cracks thickness [m]"
                     ]
-                    # roughness_k = variables[
-                    #   f"{Domain} electrode {phase_name}roughness ratio"
-                    # ]
+                    if mechanics_option == "none":
+                        roughness_k = pybamm.Scalar(1)
+                    else: 
+                        roughness_k = variables[f"{Domain} electrode roughness ratio"]
 
                     L_tot = (
                         (L_sei_k - L_sei_0)
