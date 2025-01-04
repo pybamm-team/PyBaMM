@@ -1,7 +1,4 @@
-#
-# Tests for the lead-acid LOQS model
-#
-
+import pytest
 import pybamm
 
 
@@ -73,37 +70,27 @@ class TestLeadAcidLOQS:
         )
 
 
-class TestLeadAcidLOQSWithSideReactions:
-    def test_well_posed_differential(self):
-        options = {"surface form": "differential", "hydrolysis": "true"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
-    def test_well_posed_algebraic(self):
-        options = {"surface form": "algebraic", "hydrolysis": "true"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
-
-class TestLeadAcidLOQSSurfaceForm:
-    def test_well_posed_differential(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
-    def test_well_posed_algebraic(self):
-        options = {"surface form": "algebraic"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
-    def test_well_posed_1plus1_d(self):
-        options = {
+@pytest.fixture(
+    params=[
+        {"surface form": "differential"},
+        {"surface form": "algebraic"},
+        {
             "surface form": "differential",
             "current collector": "potential pair",
             "dimensionality": 1,
-        }
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
+        },
+    ],
+    ids=["differential", "algebraic", "1plus1_d"],
+)
+def loqs_model(request):
+    options = request.param
+    model = pybamm.lead_acid.LOQS(options)
+    return model
+
+
+class TestLeadAcidLOQSSurfaceForm:
+    def test_well_posed(self, loqs_model):
+        loqs_model.check_well_posedness()
 
     def test_default_geometry(self):
         options = {"surface form": "differential"}
@@ -114,34 +101,27 @@ class TestLeadAcidLOQSSurfaceForm:
         assert "current collector" in model.default_geometry
 
 
-class TestLeadAcidLOQSExternalCircuits:
-    def test_well_posed_voltage(self):
-        options = {"operating mode": "voltage"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
-    def test_well_posed_power(self):
-        options = {"operating mode": "power"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
-
-    def test_well_posed_function(self):
-        def external_circuit_function(variables):
-            I = variables["Current [A]"]
-            V = variables["Voltage [V]"]
-            return (
-                V
-                + I
-                - pybamm.FunctionParameter(
-                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
-                )
+@pytest.fixture(
+    params=[
+        {"operating mode": "voltage"},
+        {"operating mode": "power"},
+        {
+            "operating mode": lambda variables: variables["Voltage [V]"]
+            + variables["Current [A]"]
+            - pybamm.FunctionParameter(
+                "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
             )
+        },
+        {"calculate discharge energy": "true"},
+    ],
+    ids=["voltage", "power", "function", "discharge_energy"],
+)
+def loqs_external_circuit_model(request):
+    options = request.param
+    model = pybamm.lead_acid.LOQS(options)
+    return model
 
-        options = {"operating mode": external_circuit_function}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
 
-    def test_well_posed_discharge_energy(self):
-        options = {"calculate discharge energy": "true"}
-        model = pybamm.lead_acid.LOQS(options)
-        model.check_well_posedness()
+class TestLeadAcidLOQSExternalCircuits:
+    def test_well_posed(self, loqs_external_circuit_model):
+        loqs_external_circuit_model.check_well_posedness()

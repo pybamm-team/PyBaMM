@@ -1,42 +1,107 @@
 import pybamm
+import tests
 import pytest
+import numpy as np
 
 
 @pytest.fixture(
     params=[
-        (None, "well_posed"),
-        ({"convection": "uniform transverse"}, "well_posed"),
-        ({"dimensionality": 1, "convection": "full transverse"}, "well_posed"),
-        ({"surface form": "differential"}, "well_posed_differential"),
-        (
-            {"surface form": "differential", "dimensionality": 1},
-            "well_posed_differential_1plus1d",
-        ),
-        ({"surface form": "algebraic"}, "well_posed_algebraic"),
-        ({"hydrolysis": "true"}, "well_posed_hydrolysis"),
-        (
-            {"hydrolysis": "true", "surface form": "differential"},
-            "well_posed_surface_form_differential",
-        ),
-        (
-            {"hydrolysis": "true", "surface form": "algebraic"},
-            "well_posed_surface_form_algebraic",
-        ),
-    ]
+        {"thermal": "isothermal"},
+        {"thermal": "isothermal", "convection": "uniform transverse"},
+    ],
+    ids=[
+        "isothermal",
+        "isothermal_with_convection",
+    ],
 )
-def lead_acid_test_cases(request):
-    options, test_name = request.param
+def full_model_options(request):
+    return request.param
+
+
+@pytest.fixture(
+    params=[
+        {"surface form": "differential"},
+        {"surface form": "algebraic"},
+        {"thermal": "lumped"},
+        {"thermal": "x-full"},
+    ],
+    ids=[
+        "surface_differential",
+        "surface_algebraic",
+        "thermal_lumped",
+        "thermal_x_full",
+    ],
+)
+def full_surface_model_options(request):
+    return request.param
+
+
+def test_basic_processing(full_model_options):
+    model = pybamm.lead_acid.Full(full_model_options)
+    modeltest = tests.StandardModelTest(model)
+    t_eval = (
+        np.linspace(0, 3600 * 10)
+        if "convection" in full_model_options
+        else np.linspace(0, 3600 * 17)
+    )
+    skip_output_tests = full_model_options.get("dimensionality") == 1
+    modeltest.test_all(t_eval=t_eval, skip_output_tests=skip_output_tests)
+
+
+@pytest.fixture(
+    params=[
+        {"current collector": "potential pair", "dimensionality": 1},
+        {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "convection": "full transverse",
+        },
+    ],
+    ids=["basic", "with_convection"],
+)
+def model_1plus1D_options(request):
+    return request.param
+
+
+def test_basic_processing_1plus1D(model_1plus1D_options):
+    var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "y": 5, "z": 5}
+    model = pybamm.lead_acid.Full(model_1plus1D_options)
+    modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+    modeltest.test_all(skip_output_tests=True)
+
+
+def test_optimisations():
+    options = {"thermal": "isothermal"}
     model = pybamm.lead_acid.Full(options)
-    return model, test_name
+    optimtest = tests.OptimisationsTest(model)
+    original = optimtest.evaluate_model()
+    to_python = optimtest.evaluate_model(to_python=True)
+    np.testing.assert_array_almost_equal(original, to_python)
 
 
-def test_lead_acid_full(lead_acid_test_cases):
-    model, test_name = lead_acid_test_cases
+@pytest.fixture(
+    params=[
+        {"thermal": "isothermal"},
+        {"surface form": "differential"},
+    ],
+    ids=["full", "surface_form"],
+)
+def setup_options(request):
+    return request.param
 
-    model.check_well_posedness()
 
-    if test_name in [
-        "well_posed_surface_form_differential",
-        "well_posed_surface_form_algebraic",
-    ]:
-        assert isinstance(model.default_solver, pybamm.CasadiSolver)
+def test_set_up(setup_options):
+    model = pybamm.lead_acid.Full(setup_options)
+    optimtest = tests.OptimisationsTest(model)
+    optimtest.set_up_model(to_python=True)
+    optimtest.set_up_model(to_python=False)
+
+
+def test_surface_processing(full_surface_model_options):
+    model = pybamm.lead_acid.Full(full_surface_model_options)
+    modeltest = tests.StandardModelTest(model)
+    if full_surface_model_options.get("thermal") == "lumped":
+        param = model.default_parameter_values
+        param["Current function [A]"] = 1.7
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+    modeltest.test_all()
