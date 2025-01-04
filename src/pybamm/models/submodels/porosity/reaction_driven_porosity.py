@@ -63,7 +63,9 @@ class ReactionDriven(BaseModel):
                     if mechanics_option == "none":
                         roughness_k = pybamm.Scalar(1)
                     else: 
-                        roughness_k = variables[f"{Domain} electrode roughness ratio"]
+                        roughness_k = variables[
+                            f"{Domain} {phase_name}electrode roughness ratio"
+                        ]
 
                     L_tot = (
                         (L_sei_k - L_sei_0)
