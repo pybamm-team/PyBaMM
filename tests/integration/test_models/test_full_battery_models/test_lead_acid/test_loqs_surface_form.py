@@ -4,58 +4,52 @@ import pytest
 import numpy as np
 
 
-@pytest.fixture(
-    params=[
-        {"surface form": "algebraic"},
-        {"surface form": "differential"},
-        {
+@pytest.fixture
+def optimtest():
+    options = {"surface form": "differential"}
+    model = pybamm.lead_acid.LOQS(options)
+    optimtest_instance = tests.OptimisationsTest(model)
+    return optimtest_instance
+
+
+class TestLeadAcidLoqsSurfaceForm:
+    @pytest.mark.parametrize(
+        "surface_form",
+        ["algebraic", "differential"],
+        ids=["basic_processing", "basic_processing_with_capacitance"],
+    )
+    def test_basic_processing(self, surface_form):
+        options = {"surface form": surface_form}
+        model = pybamm.lead_acid.LOQS(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    @pytest.mark.skip(reason="model not working for 1+1D differential")
+    def test_basic_processing_1p1D_differential(self):
+        options = {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
+        model = pybamm.lead_acid.LOQS(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(skip_output_tests=True)
+
+    def test_basic_processing_1p1D_algebraic(self):
+        options = {
             "surface form": "algebraic",
             "current collector": "potential pair",
             "dimensionality": 1,
-        },
-    ],
-    ids=[
-        "basic_processing_algebraic",
-        "basic_processing_with_capacitance",
-        "basic_processing_1p1D_algebraic",
-    ],
-)
-def loqs_surface_model(request):
-    return pybamm.lead_acid.LOQS(request.param), request.param
+        }
+        model = pybamm.lead_acid.LOQS(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(skip_output_tests=True)
 
+    def test_optimisations(self, optimtest):
+        original = optimtest.evaluate_model()
+        to_python = optimtest.evaluate_model(to_python=True)
+        np.testing.assert_array_almost_equal(original, to_python, decimal=5)
 
-def test_basic_processing(loqs_surface_model):
-    model, options = loqs_surface_model
-    model_test = tests.StandardModelTest(model)
-    skip_output_tests = options.get("dimensionality") == 1
-    model_test.test_all(skip_output_tests=skip_output_tests)
-
-
-def test_optimisations():
-    options = {"surface form": "differential"}
-    model = pybamm.lead_acid.LOQS(options)
-    optimtest = tests.OptimisationsTest(model)
-
-    original = optimtest.evaluate_model()
-    to_python = optimtest.evaluate_model(to_python=True)
-    np.testing.assert_array_almost_equal(original, to_python, decimal=5)
-
-
-def test_set_up():
-    options = {"surface form": "differential"}
-    model = pybamm.lead_acid.LOQS(options)
-    optimtest = tests.OptimisationsTest(model)
-    optimtest.set_up_model(to_python=True)
-    optimtest.set_up_model(to_python=False)
-
-
-@pytest.mark.skip(reason="model not working for 1+1D differential")
-def test_basic_processing_1p1D_differential():
-    options = {
-        "surface form": "differential",
-        "current collector": "potential pair",
-        "dimensionality": 1,
-    }
-    model = pybamm.lead_acid.LOQS(options)
-    model_test = tests.StandardModelTest(model)
-    model_test.test_all(skip_output_tests=True)
+    def test_set_up(self, optimtest):
+        optimtest.set_up_model(to_python=True)
+        optimtest.set_up_model(to_python=False)
