@@ -142,6 +142,7 @@ SolverOptions::SolverOptions(py::dict &py_opts)
       max_order_bdf(py_opts["max_order_bdf"].cast<int>()),
       max_num_steps(py_opts["max_num_steps"].cast<int>()),
       dt_init(RCONST(py_opts["dt_init"].cast<double>())),
+      dt_min(RCONST(py_opts["dt_min"].cast<double>())),
       dt_max(RCONST(py_opts["dt_max"].cast<double>())),
       max_error_test_failures(py_opts["max_error_test_failures"].cast<int>()),
       max_nonlinear_iterations(py_opts["max_nonlinear_iterations"].cast<int>()),
