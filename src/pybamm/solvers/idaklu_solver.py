@@ -113,6 +113,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "max_num_steps": 100000,
                 # Initial step size. The solver default is used if this is left at 0.0
                 "dt_init": 0.0,
+                # Minimum absolute step size. The solver default is used if this is
+                # left at 0.0
+                "dt_min": 0.0,
                 # Maximum absolute step size. The solver default is used if this is
                 # left at 0.0
                 "dt_max": 0.0,
@@ -194,6 +197,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "max_order_bdf": 5,
             "max_num_steps": 100000,
             "dt_init": 0.0,
+            "dt_min": 0.0,
             "dt_max": 0.0,
             "max_error_test_failures": 10,
             "max_nonlinear_iterations": 40,

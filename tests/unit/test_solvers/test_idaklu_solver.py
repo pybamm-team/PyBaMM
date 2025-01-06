@@ -790,6 +790,7 @@ class TestIDAKLUSolver:
             "max_order_bdf": 4,
             "max_num_steps": 490,
             "dt_init": 0.01,
+            "dt_min": 1e-6,
             "dt_max": 1000.9,
             "max_error_test_failures": 11,
             "max_nonlinear_iterations": 5,
