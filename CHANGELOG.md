@@ -2,6 +2,7 @@
 
 ## Features
 
+- Enabled using SEI models with particle size distributions. ([#4693](https://github.com/pybamm-team/PyBaMM/pull/4693))
 - Added symbolic mesh which allows for using InputParameters for geometric parameters ([#4665](https://github.com/pybamm-team/PyBaMM/pull/4665))
 - Enhanced the `search` method to accept multiple search terms in the form of a string or a list. ([#4650](https://github.com/pybamm-team/PyBaMM/pull/4650))
 - Made composite electrode model compatible with particle size distribution ([#4687](https://github.com/pybamm-team/PyBaMM/pull/4687))
