@@ -49,7 +49,14 @@ class BaseOpenCircuitPotential(BaseInterface):
         reaction_name = self.reaction_name
 
         # Update size variables then size average.
-        if ocp_surf.domain in [["negative particle size"], ["positive particle size"]]:
+        if ocp_surf.domain in [
+            ["negative particle size"],
+            ["positive particle size"],
+            ["negative primary particle size"],
+            ["positive primary particle size"],
+            ["negative secondary particle size"],
+            ["positive secondary particle size"],
+        ]:
             variables = self._get_standard_size_distribution_ocp_variables(
                 ocp_surf, dUdT
             )

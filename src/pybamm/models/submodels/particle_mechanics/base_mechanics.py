@@ -30,8 +30,8 @@ class BaseMechanics(pybamm.BaseSubModel):
         domain, Domain = self.domain_Domain
         l_cr_av = pybamm.x_average(l_cr)
         variables = {
-            f"{Domain} particle crack length [m]": l_cr,
-            f"X-averaged {domain} particle crack length [m]": l_cr_av,
+            f"{Domain} {self.phase_param.phase_name}particle crack length [m]": l_cr,
+            f"X-averaged {domain} {self.phase_param.phase_name}particle crack length [m]": l_cr_av,
         }
         return variables
 
@@ -61,7 +61,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         sto = variables[f"{Domain} {phase_name}particle concentration"]
         Omega = pybamm.r_average(phase_param.Omega(sto, T))
         R0 = phase_param.R
-        c_0 = domain_param.c_0
+        c_0 = phase_param.c_0
         E0 = pybamm.r_average(phase_param.E(sto, T))
         nu = phase_param.nu
         L0 = domain_param.L
@@ -127,21 +127,21 @@ class BaseMechanics(pybamm.BaseSubModel):
 
     def _get_standard_surface_variables(self, variables):
         domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
+        phase_name = self.phase_param.phase_name
 
-        l_cr = variables[f"{Domain} particle crack length [m]"]
+        l_cr = variables[f"{Domain} {phase_name}particle crack length [m]"]
         a = variables[
             f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
         ]
-        rho_cr = self.domain_param.rho_cr
-        w_cr = self.domain_param.w_cr
+        rho_cr = self.phase_param.rho_cr
+        w_cr = self.phase_param.w_cr
         roughness = 1 + 2 * l_cr * rho_cr * w_cr  # ratio of cracks to normal surface
         a_cr = (roughness - 1) * a  # crack surface area to volume ratio
 
         roughness_xavg = pybamm.x_average(roughness)
         variables = {
-            f"{Domain} crack surface to volume ratio [m-1]": a_cr,
-            f"{Domain} electrode roughness ratio": roughness,
-            f"X-averaged {domain} electrode roughness ratio": roughness_xavg,
+            f"{Domain} {phase_name}crack surface to volume ratio [m-1]": a_cr,
+            f"{Domain} {phase_name}electrode roughness ratio": roughness,
+            f"X-averaged {domain} {phase_name}electrode roughness ratio": roughness_xavg,
         }
         return variables

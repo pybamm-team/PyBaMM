@@ -1,7 +1,7 @@
 {
+  "skipCi": false,
   "files": [
-    "all_contributors.md",
-    "README.md"
+    "all_contributors.md"
   ],
   "imageSize": 100,
   "commit": false,
@@ -517,10 +517,10 @@
       ]
     },
     {
-      "login": "abillscmu",
+      "login": "aabills",
       "name": "Alec Bills",
       "avatar_url": "https://avatars.githubusercontent.com/u/48105066?v=4",
-      "profile": "https://github.com/abillscmu",
+      "profile": "https://github.com/aabills",
       "contributions": [
         "code"
       ]
@@ -991,6 +991,43 @@
       "contributions": [
         "test"
       ]
+    },
+    {
+      "login": "isaacbasil",
+      "name": "isaacbasil",
+      "avatar_url": "https://avatars.githubusercontent.com/u/123981577?v=4",
+      "profile": "https://github.com/isaacbasil",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "AndEsterson",
+      "name": "Andrew Esterson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55912083?v=4",
+      "profile": "https://github.com/AndEsterson",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "ahamed24",
+      "name": "ahamed24",
+      "avatar_url": "https://avatars.githubusercontent.com/u/153092659?v=4",
+      "profile": "https://github.com/ahamed24",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "RohitP2005",
+      "name": "RohitP2005",
+      "avatar_url": "https://avatars.githubusercontent.com/u/122815777?v=4",
+      "profile": "https://github.com/RohitP2005",
+      "contributions": [
+        "doc",
+        "infra"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -998,7 +1035,6 @@
   "projectOwner": "pybamm-team",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true,
   "commitConvention": "angular",
   "commitType": "docs"
 }

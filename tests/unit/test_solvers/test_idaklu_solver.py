@@ -747,20 +747,24 @@ class TestIDAKLUSolver:
                         options=options,
                     )
                     works = (
-                        jacobian == "none"
-                        and (linear_solver == "SUNLinSol_Dense")
-                        or jacobian == "dense"
-                        and (linear_solver == "SUNLinSol_Dense")
-                        or jacobian == "sparse"
-                        and (
-                            linear_solver != "SUNLinSol_Dense"
-                            and linear_solver != "garbage"
+                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                        or (
+                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
                         )
-                        or jacobian == "matrix-free"
-                        and (
-                            linear_solver != "SUNLinSol_KLU"
-                            and linear_solver != "SUNLinSol_Dense"
-                            and linear_solver != "garbage"
+                        or (
+                            jacobian == "sparse"
+                            and (
+                                linear_solver != "SUNLinSol_Dense"
+                                and linear_solver != "garbage"
+                            )
+                        )
+                        or (
+                            jacobian == "matrix-free"
+                            and (
+                                linear_solver != "SUNLinSol_KLU"
+                                and linear_solver != "SUNLinSol_Dense"
+                                and linear_solver != "garbage"
+                            )
                         )
                     )
 

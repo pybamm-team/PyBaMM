@@ -76,7 +76,9 @@ class BaseKinetics(BaseInterface):
             self.reaction == "lithium-ion main"
             and domain_options["particle size"] == "distribution"
         ):
-            delta_phi = pybamm.PrimaryBroadcast(delta_phi, [f"{domain} particle size"])
+            delta_phi = pybamm.PrimaryBroadcast(
+                delta_phi, [f"{domain} {phase_name}particle size"]
+            )
 
         # Get exchange-current density. For MSMR models we calculate the exchange
         # current density for each reaction, then sum these to give a total exchange
@@ -149,6 +151,10 @@ class BaseKinetics(BaseInterface):
             j_tot.print_name = "j_tot"
 
             eta_sei = -j_tot * L_sei * R_sei
+            if self.size_distribution and eta_r.domains["secondary"] != [
+                f"{domain} electrode"
+            ]:
+                eta_sei = pybamm.x_average(eta_sei)
         else:
             eta_sei = pybamm.Scalar(0)
         eta_r += eta_sei
@@ -169,7 +175,7 @@ class BaseKinetics(BaseInterface):
         elif j0.domain in ["current collector", ["current collector"]]:
             T = variables["X-averaged cell temperature [K]"]
             u = variables[f"X-averaged {domain} electrode interface utilisation"]
-        elif j0.domain == [f"{domain} particle size"]:
+        elif j0.domain == [f"{domain} {phase_name}particle size"]:
             if j0.domains["secondary"] != [f"{domain} electrode"]:
                 T = variables["X-averaged cell temperature [K]"]
                 u = variables[f"X-averaged {domain} electrode interface utilisation"]
@@ -178,7 +184,7 @@ class BaseKinetics(BaseInterface):
                 u = variables[f"{Domain} electrode interface utilisation"]
 
             # Broadcast T onto "particle size" domain
-            T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
         else:
             T = variables[f"{Domain} electrode temperature [K]"]
             u = variables[f"{Domain} electrode interface utilisation"]
@@ -198,7 +204,9 @@ class BaseKinetics(BaseInterface):
         else:
             j = self._get_kinetics(j0, ne, eta_r, T, u)
 
-        if j.domain == [f"{domain} particle size"]:
+        if j.domain == [f"{domain} particle size"] or j.domain == [
+            f"{domain} {phase_name}particle size"
+        ]:
             # If j depends on particle size, get size-dependent "distribution"
             # variables first
             variables.update(

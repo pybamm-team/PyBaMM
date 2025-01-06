@@ -1,7 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=64",
-    "wheel",
+    "setuptools>=70.1.1",
     # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
     "casadi>=3.6.7; platform_system!='Windows'",
     # Note: the version of CasADi as a build-time dependency should be matched
@@ -13,7 +12,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.11.1"
+version = "24.11.2"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -92,7 +91,7 @@ cite = [
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx>=0.4.0",
+    "bpx>=0.5.0,<0.6.0",
 ]
 # Low-overhead progress bars
 tqdm = [
@@ -270,11 +269,6 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
-
-[tool.repo-review]
-ignore = [
-    "PP003"  # list wheel as a build-dep
-]
 
 [tool.mypy]
 ignore_missing_imports = true

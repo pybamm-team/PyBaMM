@@ -1,6 +1,4 @@
-#
-# Private classes and functions for experiment steps
-#
+from __future__ import annotations
 import pybamm
 import numpy as np
 from datetime import datetime
@@ -492,6 +490,10 @@ _type_to_units = {
 }
 
 
+def get_unit_from(a_string: str) -> str:
+    return a_string.lstrip("0123456789.-eE ")
+
+
 def _convert_time_to_seconds(time_and_units):
     """Convert a time in seconds, minutes or hours to a time in seconds"""
     if time_and_units is None:
@@ -501,11 +503,10 @@ def _convert_time_to_seconds(time_and_units):
     if isinstance(time_and_units, numbers.Number):
         if time_and_units <= 0:
             raise ValueError("time must be positive")
-        else:
-            return time_and_units
+        return time_and_units
 
     # Split number and units
-    units = time_and_units.lstrip("0123456789.- ")
+    units = get_unit_from(time_and_units)
     time = time_and_units[: -len(units)]
     if units in ["second", "seconds", "s", "sec"]:
         time_in_seconds = float(time)
@@ -528,7 +529,7 @@ def _convert_temperature_to_kelvin(temperature_and_units):
         return temperature_and_units
 
     # Split number and units
-    units = temperature_and_units.lstrip("0123456789.- ")
+    units = get_unit_from(temperature_and_units)
     temperature = temperature_and_units[: -len(units)]
     if units in ["K"]:
         temperature_in_kelvin = float(temperature)
@@ -547,7 +548,7 @@ def _convert_electric(value_string):
         value = 1 / float(value_string[2:])
     else:
         # All other cases e.g. 4 A, 2.5 V, 1.5 Ohm
-        unit = value_string.lstrip("0123456789.- ")
+        unit = get_unit_from(value_string)
         value = float(value_string[: -len(unit)])
         # Catch milli- prefix
         if unit.startswith("m"):
