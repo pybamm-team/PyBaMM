@@ -157,10 +157,19 @@ class BaseElectrode(pybamm.BaseSubModel):
         if "negative electrode" not in self.options.whole_cell_domains:
             i_s_n = None
         else:
-            i_s_n = variables["Negative electrode current density [A.m-2]"]
+            i_s_n = pybamm.CoupledVariable(
+                "Negative electrode current density [A.m-2]",
+                domain="negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({i_s_n.name: i_s_n})
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
-        i_s_p = variables["Positive electrode current density [A.m-2]"]
-
+        i_s_p = pybamm.CoupledVariable(
+            "Positive electrode current density [A.m-2]",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({i_s_p.name: i_s_p})
         i_s = pybamm.concatenation(i_s_n, i_s_s, i_s_p)
 
         variables.update({"Electrode current density [A.m-2]": i_s})
@@ -168,11 +177,18 @@ class BaseElectrode(pybamm.BaseSubModel):
         if self.set_positive_potential:
             # Get phi_s_cn from the current collector submodel and phi_s_p from the
             # electrode submodel
-            phi_s_cn = variables["Negative current collector potential [V]"]
+            phi_s_cn = pybamm.CoupledVariable(
+                "Negative current collector potential [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({phi_s_cn.name: phi_s_cn})
             phi_s_p = variables["Positive electrode potential [V]"]
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             if self.options["contact resistance"] == "true":
-                I = variables["Current [A]"]
+                I = pybamm.CoupledVariable(
+                    "Current [A]",
+                )
+                self.coupled_variables.update({I.name: I})
                 delta_phi_contact = I * self.param.R_contact
             else:
                 delta_phi_contact = pybamm.Scalar(0)

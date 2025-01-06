@@ -31,25 +31,81 @@ class Integrated(BaseElectrolyteConductivity):
         x = pybamm.maximum(x, tol)
         return pybamm.log(x)
 
-    def get_coupled_variables(self, variables):
-        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
+    def build(self, submodels):
+        c_e_av = pybamm.CoupledVariable(
+            "X-averaged electrolyte concentration [mol.m-3]",
+            "current collector",
+        )
+        self.coupled_variables.update({c_e_av.name: c_e_av})
 
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
-        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
-        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            "current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+
+        c_e_n = pybamm.CoupledVariable(
+            "Negative electrolyte concentration [mol.m-3]",
+            "negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_n.name: c_e_n})
+
+        c_e_s = pybamm.CoupledVariable(
+            "Separator electrolyte concentration [mol.m-3]",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_s.name: c_e_s})
+
+        c_e_p = pybamm.CoupledVariable(
+            "Positive electrolyte concentration [mol.m-3]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_p.name: c_e_p})
+
         c_e_n0 = pybamm.boundary_value(c_e_n, "left")
 
-        delta_phi_n_av = variables[
-            "X-averaged negative electrode surface potential difference [V]"
-        ]
-        phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
+        delta_phi_n_av = pybamm.CoupledVariable(
+            "X-averaged negative electrode surface potential difference [V]",
+            "current collector",
+        )
+        self.coupled_variables.update({delta_phi_n_av.name: delta_phi_n_av})
 
-        tor_n = variables["Negative electrolyte transport efficiency"]
-        tor_s = variables["Separator electrolyte transport efficiency"]
-        tor_p = variables["Positive electrolyte transport efficiency"]
+        phi_s_n_av = pybamm.CoupledVariable(
+            "X-averaged negative electrode potential [V]",
+            "current collector",
+        )
+        self.coupled_variables.update({phi_s_n_av.name: phi_s_n_av})
 
-        T_av = variables["X-averaged cell temperature [K]"]
+        tor_n = pybamm.CoupledVariable(
+            "Negative electrolyte transport efficiency",
+            "negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_n.name: tor_n})
+
+        tor_s = pybamm.CoupledVariable(
+            "Separator electrolyte transport efficiency",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_s.name: tor_s})
+
+        tor_p = pybamm.CoupledVariable(
+            "Positive electrolyte transport efficiency",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({tor_p.name: tor_p})
+
+        T_av = pybamm.CoupledVariable(
+            "X-averaged cell temperature [K]",
+            "current collector",
+        )
+        self.coupled_variables.update({T_av.name: T_av})
+
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
@@ -157,8 +213,8 @@ class Integrated(BaseElectrolyteConductivity):
             "separator": phi_e_s,
             "positive electrode": phi_e_p,
         }
+        variables = {}
         variables.update(self._get_standard_potential_variables(phi_e_dict))
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
-
-        return variables
+        self.variables.update(variables)

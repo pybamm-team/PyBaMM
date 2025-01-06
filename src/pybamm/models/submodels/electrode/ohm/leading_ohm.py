@@ -31,14 +31,22 @@ class LeadingOrder(BaseModel):
             set_positive_potential=set_positive_potential,
         )
 
-    def get_coupled_variables(self, variables):
+    def build(self, submodels):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
+        domain, Domain = self.domain_Domain
 
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        phi_s_cn = variables["Negative current collector potential [V]"]
-
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+        phi_s_cn = pybamm.CoupledVariable(
+            "Negative current collector potential [V]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({phi_s_cn.name: phi_s_cn})
         # import parameters and spatial variables
         L_n = self.param.n.L
         L_p = self.param.p.L
@@ -52,26 +60,27 @@ class LeadingOrder(BaseModel):
 
         elif self.domain == "positive":
             # recall delta_phi = phi_s - phi_e
-            delta_phi_p_av = variables[
-                "X-averaged positive electrode surface potential difference [V]"
-            ]
-            phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
+            delta_phi_p_av = pybamm.CoupledVariable(
+                "X-averaged positive electrode surface potential difference [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({delta_phi_p_av.name: delta_phi_p_av})
+            phi_e_p_av = pybamm.CoupledVariable(
+                "X-averaged positive electrolyte potential [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({phi_e_p_av.name: phi_e_p_av})
 
             v = delta_phi_p_av + phi_e_p_av
 
             phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
             i_s = i_boundary_cc * (1 - (L_x - x_p) / L_p)
 
-        variables.update(self._get_standard_potential_variables(phi_s))
+        variables = self._get_standard_potential_variables(phi_s)
         variables.update(self._get_standard_current_variables(i_s))
 
         if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
-
-        return variables
-
-    def set_boundary_conditions(self, variables):
-        Domain = self.domain.capitalize()
 
         phi_s = variables[f"{Domain} electrode potential [V]"]
 

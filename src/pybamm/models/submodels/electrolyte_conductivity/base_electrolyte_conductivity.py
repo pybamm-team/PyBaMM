@@ -225,8 +225,17 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         else:
             phi_e_n = variables["Negative electrolyte potential [V]"]
             # concentration overpotential
-            c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
-            T_n = variables["Negative electrode temperature [K]"]
+            c_e_n = pybamm.CoupledVariable(
+                "Negative electrolyte concentration [mol.m-3]",
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({c_e_n.name: c_e_n})
+            T_n = pybamm.CoupledVariable(
+                "Negative electrode temperature [K]",
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
             indef_integral_n = pybamm.IndefiniteIntegral(
                 self.param.chiRT_over_Fc(c_e_n, T_n) * pybamm.grad(c_e_n),
                 pybamm.standard_spatial_vars.x_n,
@@ -234,11 +243,31 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         phi_e_p = variables["Positive electrolyte potential [V]"]
 
-        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
-        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
+        c_e_s = pybamm.CoupledVariable(
+            "Separator electrolyte concentration [mol.m-3]",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_s.name: c_e_s})
+        c_e_p = pybamm.CoupledVariable(
+            "Positive electrolyte concentration [mol.m-3]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_p.name: c_e_p})
 
-        T_s = variables["Separator temperature [K]"]
-        T_p = variables["Positive electrode temperature [K]"]
+        T_s = pybamm.CoupledVariable(
+            "Separator temperature [K]",
+            "separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T_s.name: T_s})
+        T_p = pybamm.CoupledVariable(
+            "Positive electrode temperature [K]",
+            "positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({T_p.name: T_p})
 
         # concentration overpotential
         indef_integral_s = pybamm.IndefiniteIntegral(
@@ -264,14 +293,14 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         return variables
 
-    def set_boundary_conditions(self, variables):
-        phi_e = variables["Electrolyte potential [V]"]
+    # def set_boundary_conditions(self, variables):
+    #    phi_e = variables["Electrolyte potential [V]"]
 
-        if self.options.electrode_types["negative"] == "planar":
-            phi_e_ref = variables["Lithium metal interface electrolyte potential [V]"]
-            lbc = (phi_e_ref, "Dirichlet")
-        else:
-            lbc = (pybamm.Scalar(0), "Neumann")
-        self.boundary_conditions = {
-            phi_e: {"left": lbc, "right": (pybamm.Scalar(0), "Neumann")}
-        }
+    #    if self.options.electrode_types["negative"] == "planar":
+    #        phi_e_ref = variables["Lithium metal interface electrolyte potential [V]"]
+    #        lbc = (phi_e_ref, "Dirichlet")
+    #    else:
+    #        lbc = (pybamm.Scalar(0), "Neumann")
+    #    self.boundary_conditions = {
+    #        phi_e: {"left": lbc, "right": (pybamm.Scalar(0), "Neumann")}
+    #    }

@@ -24,10 +24,13 @@ class Composite(BaseModel):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options=options)
 
-    def get_coupled_variables(self, variables):
-        domain = self.domain
-
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+    def build(self, submodels):
+        domain, Domain = self.domain_Domain
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
 
         # import parameters and spatial variables
         L_n = self.param.n.L
@@ -36,9 +39,21 @@ class Composite(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        tor = variables[f"X-averaged {domain} electrode transport efficiency"]
-        phi_s_cn = variables["Negative current collector potential [V]"]
-        T = variables[f"X-averaged {domain} electrode temperature [K]"]
+        tor = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode transport efficiency",
+            domain="current collector",
+        )
+        self.coupled_variables.update({tor.name: tor})
+        phi_s_cn = pybamm.CoupledVariable(
+            "Negative current collector potential [V]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({phi_s_cn.name: phi_s_cn})
+        T = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode temperature [K]",
+            domain=f"{domain} electrode",
+        )
+        self.coupled_variables.update({T.name: T})
 
         sigma_eff = self.domain_param.sigma(T) * tor
         if self._domain == "negative":
@@ -48,10 +63,16 @@ class Composite(BaseModel):
             i_s = i_boundary_cc * (1 - x_n / L_n)
 
         elif self.domain == "positive":
-            delta_phi_p_av = variables[
-                "X-averaged positive electrode surface potential difference [V]"
-            ]
-            phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
+            delta_phi_p_av = pybamm.CoupledVariable(
+                "X-averaged positive electrode surface potential difference [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({delta_phi_p_av.name: delta_phi_p_av})
+            phi_e_p_av = pybamm.CoupledVariable(
+                "X-averaged positive electrolyte potential [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({phi_e_p_av.name: phi_e_p_av})
 
             const = (
                 delta_phi_p_av
@@ -64,21 +85,32 @@ class Composite(BaseModel):
             )
             i_s = i_boundary_cc * (1 - (L_x - x_p) / L_p)
 
-        variables.update(self._get_standard_potential_variables(phi_s))
+        variables = self._get_standard_potential_variables(phi_s)
         variables.update(self._get_standard_current_variables(i_s))
 
         if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
-        return variables
-
-    def set_boundary_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-
-        phi_s = variables[f"{Domain} electrode potential [V]"]
-        tor = variables[f"X-averaged {domain} electrode transport efficiency"]
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        T = variables[f"X-averaged {domain} electrode temperature [K]"]
+        phi_s = pybamm.CoupledVariable(
+            f"{Domain} electrode potential [V]",
+            domain=f"{domain} electrode",
+        )
+        self.coupled_variables.update({phi_s.name: phi_s})
+        tor = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode transport efficiency",
+            domain="current collector",
+        )
+        self.coupled_variables.update({tor.name: tor})
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+        T = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T.name: T})
 
         if self.domain == "negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")
@@ -90,3 +122,4 @@ class Composite(BaseModel):
             rbc = (-i_boundary_cc / sigma_eff, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
+        self.variables.update(variables)

@@ -30,25 +30,76 @@ class Composite(BaseElectrolyteConductivity):
         x = pybamm.maximum(x, tol)
         return pybamm.log(x)
 
-    def get_coupled_variables(self, variables):
-        c_e_av = variables["X-averaged electrolyte concentration [mol.m-3]"]
+    def build(self, submodels):
+        variables = {}
+        variables.update(self._get_coupled_variables(variables))
+        self.variables.update(variables)
 
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
+    def _get_coupled_variables(self, variables):
+        c_e_av = pybamm.CoupledVariable(
+            "X-averaged electrolyte concentration [mol.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({c_e_av.name: c_e_av})
+
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+
         if self.options.electrode_types["negative"] == "porous":
-            c_e_n = variables["Negative electrolyte concentration [mol.m-3]"]
-            delta_phi_n_av = variables[
-                "X-averaged negative electrode surface potential difference [V]"
-            ]
-            phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
-            tor_n_av = variables["X-averaged negative electrolyte transport efficiency"]
+            c_e_n = pybamm.CoupledVariable(
+                "Negative electrolyte concentration [mol.m-3]",
+                domain="negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
+            self.coupled_variables.update({c_e_n.name: c_e_n})
+            delta_phi_n_av = pybamm.CoupledVariable(
+                "X-averaged negative electrode surface potential difference [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({delta_phi_n_av.name: delta_phi_n_av})
+            phi_s_n_av = pybamm.CoupledVariable(
+                "X-averaged negative electrode potential [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({phi_s_n_av.name: phi_s_n_av})
+            tor_n_av = pybamm.CoupledVariable(
+                "X-averaged negative electrolyte transport efficiency",
+                domain="current collector",
+            )
+            self.coupled_variables.update({tor_n_av.name: tor_n_av})
 
-        c_e_s = variables["Separator electrolyte concentration [mol.m-3]"]
-        c_e_p = variables["Positive electrolyte concentration [mol.m-3]"]
+        c_e_s = pybamm.CoupledVariable(
+            "Separator electrolyte concentration [mol.m-3]",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_s.name: c_e_s})
+        c_e_p = pybamm.CoupledVariable(
+            "Positive electrolyte concentration [mol.m-3]",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({c_e_p.name: c_e_p})
 
-        tor_s_av = variables["X-averaged separator electrolyte transport efficiency"]
-        tor_p_av = variables["X-averaged positive electrolyte transport efficiency"]
+        tor_s_av = pybamm.CoupledVariable(
+            "X-averaged separator electrolyte transport efficiency",
+            domain="current collector",
+        )
+        self.coupled_variables.update({tor_s_av.name: tor_s_av})
+        tor_p_av = pybamm.CoupledVariable(
+            "X-averaged positive electrolyte transport efficiency",
+            domain="current collector",
+        )
+        self.coupled_variables.update({tor_p_av.name: tor_p_av})
 
-        T_av = variables["X-averaged cell temperature [K]"]
+        T_av = pybamm.CoupledVariable(
+            "X-averaged cell temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T_av.name: T_av})
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 

@@ -27,9 +27,9 @@ class BaseModel(Composite):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def get_fundamental_variables(self):
+    def _get_fundamental_variables(self):
         if self.domain == "separator":
-            return {}
+            return
 
         delta_phi_av = pybamm.Variable(
             f"X-averaged {self.domain} electrode surface potential difference [V]",
@@ -42,31 +42,31 @@ class BaseModel(Composite):
         )
         return variables
 
-    def get_coupled_variables(self, variables):
+    def _get_coupled_variables(self, variables):
         Domain = self.domain.capitalize()
         # Only update coupled variables once
         if self.domain == "negative":
-            variables.update(super().get_coupled_variables(variables))
+            variables.update(super()._get_coupled_variables(variables))
 
-        phi_s = variables[f"{Domain} electrode potential [V]"]
-        phi_e = variables[f"{Domain} electrolyte potential [V]"]
+        phi_s = pybamm.CoupledVariable(
+            f"{Domain} electrode potential [V]",
+            domain=f"{self.domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({phi_s.name: phi_s})
+        phi_e = pybamm.CoupledVariable(
+            f"{Domain} electrolyte potential [V]",
+            domain=f"{self.domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.coupled_variables.update({phi_e.name: phi_e})
         delta_phi = phi_s - phi_e
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
-        return variables
-
-    def set_initial_conditions(self, variables):
-        domain = self.domain
-
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
         delta_phi_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
-
-    def set_boundary_conditions(self, variables):
         if self.domain == "negative":
             phi_e = variables["Electrolyte potential [V]"]
             self.boundary_conditions = {
@@ -75,6 +75,7 @@ class BaseModel(Composite):
                     "right": (pybamm.Scalar(0), "Neumann"),
                 }
             }
+        self.variables.update(variables)
 
 
 class CompositeDifferential(BaseModel):
@@ -142,20 +143,31 @@ class CompositeAlgebraic(BaseModel):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_algebraic(self, variables):
+    def build(self, submodels):
         domain = self.domain
 
-        sum_a_j = variables[
-            f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
+        variables = self._get_fundamental_variables()
+        variables.update(self._get_coupled_variables(variables))
 
-        sum_a_j_av = variables[
+        sum_a_j = pybamm.CoupledVariable(
+            f"Sum of x-averaged {domain} electrode volumetric "
+            "interfacial current densities [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j.name: sum_a_j})
+
+        sum_a_j_av = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
+            "interfacial current density [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j_av.name: sum_a_j_av})
+
+        delta_phi = pybamm.Variable(
+            f"X-averaged {domain} electrode surface potential difference [V]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({delta_phi.name: delta_phi})
 
         self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) / self.param.a_j_scale
+        self.variables.update(variables)

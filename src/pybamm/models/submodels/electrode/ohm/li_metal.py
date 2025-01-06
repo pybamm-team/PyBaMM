@@ -34,7 +34,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         A dictionary of options to be passed to the model.
     """
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         delta_phi = pybamm.Variable(
             "Lithium metal interface surface potential difference [V]",
             domain="current collector",
@@ -42,18 +42,27 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         variables = {
             "Lithium metal interface surface potential difference [V]": delta_phi,
         }
-        return variables
-
-    def get_coupled_variables(self, variables):
         Domain = self.domain.capitalize()
         domain_param = self.domain_param
 
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        T = variables[f"{Domain} current collector temperature [K]"]
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+        T = pybamm.CoupledVariable(
+            f"{Domain} current collector temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T.name: T})
         L = domain_param.L
         delta_phi_s = i_boundary_cc * L / domain_param.sigma(T)
 
-        phi_s_cc = variables[f"{Domain} current collector potential [V]"]
+        phi_s_cc = pybamm.CoupledVariable(
+            f"{Domain} current collector potential [V]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({phi_s_cc.name: phi_s_cc})
         delta_phi = variables[
             "Lithium metal interface surface potential difference [V]"
         ]
@@ -65,30 +74,39 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
         variables.update(
             self._get_li_metal_interface_variables(delta_phi_s, phi_s, phi_e)
         )
-        return variables
-
-    def set_initial_conditions(self, variables):
         delta_phi = variables[
             "Lithium metal interface surface potential difference [V]"
         ]
         delta_phi_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
-
-    def set_rhs(self, variables):
-        Domain = self.domain.capitalize()
         if self.options["surface form"] == "differential":
-            j_pl = variables["Lithium metal plating current density [A.m-2]"]
-            j_sei = variables[
-                f"{Domain} electrode SEI interfacial current density [A.m-2]"
-            ]
+            j_pl = pybamm.CoupledVariable(
+                "Lithium metal plating current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j_pl.name: j_pl})
+            j_sei = pybamm.CoupledVariable(
+                f"{Domain} electrode SEI interfacial current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j_sei.name: j_sei})
             sum_j = j_pl + j_sei
 
-            i_cc = variables["Current collector current density [A.m-2]"]
+            i_cc = pybamm.CoupledVariable(
+                "Current collector current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({i_cc.name: i_cc})
             delta_phi = variables[
                 "Lithium metal interface surface potential difference [V]"
             ]
             # temperature at the interface of the negative electrode with the separator
+            T_neg = pybamm.CoupledVariable(
+                "Negative electrode temperature [K]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({T_neg.name: T_neg})
             T = pybamm.boundary_value(
                 variables["Negative electrode temperature [K]"], "right"
             )
@@ -96,17 +114,24 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
             C_dl = self.domain_param.C_dl(T)
 
             self.rhs[delta_phi] = 1 / C_dl * (i_cc - sum_j)
-
-    def set_algebraic(self, variables):
-        Domain = self.domain.capitalize()
-        if self.options["surface form"] != "differential":  # also catches "false"
-            j_pl = variables["Lithium metal plating current density [A.m-2]"]
-            j_sei = variables[
-                f"{Domain} electrode SEI interfacial current density [A.m-2]"
-            ]
+        else:  # also catches "false"
+            j_pl = pybamm.CoupledVariable(
+                "Lithium metal plating current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j_pl.name: j_pl})
+            j_sei = pybamm.CoupledVariable(
+                f"{Domain} electrode SEI interfacial current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({j_sei.name: j_sei})
             sum_j = j_pl + j_sei
 
-            i_cc = variables["Current collector current density [A.m-2]"]
+            i_cc = pybamm.CoupledVariable(
+                "Current collector current density [A.m-2]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({i_cc.name: i_cc})
             delta_phi = variables[
                 "Lithium metal interface surface potential difference [V]"
             ]
@@ -125,24 +150,36 @@ class LithiumMetalExplicit(LithiumMetalBaseModel):
         A dictionary of options to be passed to the model.
     """
 
-    def get_coupled_variables(self, variables):
+    def build(self, submodels):
         Domain = self.domain.capitalize()
         domain_param = self.domain_param
 
-        i_boundary_cc = variables["Current collector current density [A.m-2]"]
-        T = variables[f"{Domain} current collector temperature [K]"]
+        i_boundary_cc = pybamm.CoupledVariable(
+            "Current collector current density [A.m-2]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({i_boundary_cc.name: i_boundary_cc})
+        T = pybamm.CoupledVariable(
+            f"{Domain} current collector temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T.name: T})
         L = domain_param.L
         delta_phi_s = i_boundary_cc * L / domain_param.sigma(T)
 
-        phi_s_cc = variables[f"{Domain} current collector potential [V]"]
-        delta_phi = variables[
-            "Lithium metal interface surface potential difference [V]"
-        ]
+        phi_s_cc = pybamm.CoupledVariable(
+            f"{Domain} current collector potential [V]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({phi_s_cc.name: phi_s_cc})
+        delta_phi = pybamm.CoupledVariable(
+            "Lithium metal interface surface potential difference [V]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({delta_phi.name: delta_phi})
 
         phi_s = phi_s_cc - delta_phi_s
         phi_e = phi_s - delta_phi
 
-        variables.update(
-            self._get_li_metal_interface_variables(delta_phi_s, phi_s, phi_e)
-        )
-        return variables
+        variables = self._get_li_metal_interface_variables(delta_phi_s, phi_s, phi_e)
+        self.variables.update(variables)

@@ -218,7 +218,12 @@ class BaseModel:
                 pybamm.logger.debug(
                     f"coupled variable found for variable {name}: {self._variables[name]}"
                 )
-                for sym in self._variables.values():
+                for var_name, sym in self._variables.items():
+                    pybamm.logger.debug(
+                        f"replacing coupled variable in the tree for {name}: {var_name}"
+                    )
+                    if name == "X-averaged negative electrode potential [V]":
+                        print(sym)
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._rhs.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
@@ -894,10 +899,6 @@ class BaseModel:
         self.build_model_equations(submodels_built)
         # TODO: REMOVE BEFORE MERGE (TEMPORARY FIX)
         for submodel in self.submodels.values():
-            for var in submodel.coupled_variables:
-                if var == "Negative electrode interfacial current density [A.m-2]":
-                    print(submodel.name)
-                    print(submodel.coupled_variables)
             self.coupled_variables.update(submodel.coupled_variables)
 
         self.link_coupled_variables()
