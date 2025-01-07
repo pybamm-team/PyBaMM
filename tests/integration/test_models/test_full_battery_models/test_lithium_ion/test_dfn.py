@@ -151,3 +151,16 @@ class TestDFNWithSizeDistribution:
         # compare
         np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=12)
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=12)
+
+    def test_basic_processing_nonlinear_diffusion(self):
+        options = {
+            "particle size": "distribution",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        # Ecker2015 has a nonlinear diffusion coefficient
+        parameter_values = pybamm.ParameterValues("Ecker2015")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=parameter_values, var_pts=self.var_pts
+        )
+        modeltest.test_all(skip_output_tests=True)
