@@ -140,7 +140,11 @@ class Composite(BaseElectrolyteConductivity):
 
         # electrolyte potential
         if self.options.electrode_types["negative"] == "planar":
-            phi_e_li = variables["Lithium metal interface electrolyte potential [V]"]
+            phi_e_li = pybamm.CoupledVariable(
+                "Lithium metal interface electrolyte potential [V]",
+                domain="current collector",
+            )
+            self.coupled_variables.update({phi_e_li.name: phi_e_li})
             c_e_n = pybamm.boundary_value(c_e_s, "left")
             phi_e_const = (
                 phi_e_li

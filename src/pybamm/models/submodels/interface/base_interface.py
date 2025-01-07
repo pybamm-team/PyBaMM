@@ -440,6 +440,14 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_surface_potential_difference_variables(self, delta_phi):
+        domain, Domain = self.domain_Domain
+        reaction_name = self.reaction_name
+        variables = {
+            f"{Domain} electrode {reaction_name}surface potential difference [V]": delta_phi,
+        }
+        return variables
+
     def _get_standard_size_distribution_interfacial_current_variables(self, j):
         """
         Interfacial current density variables that depend on particle size R,

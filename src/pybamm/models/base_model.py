@@ -222,8 +222,12 @@ class BaseModel:
                     pybamm.logger.debug(
                         f"replacing coupled variable in the tree for {name}: {var_name}"
                     )
-                    if name == "X-averaged negative electrode potential [V]":
-                        print(sym)
+                    if name == "Positive electrode potential [V]":
+                        if (
+                            var_name
+                            == "X-averaged negative electrode surface potential difference [V]"
+                        ):
+                            print(sym)
                     coupled_variable.set_coupled_variable(sym, self._variables[name])
                 for sym in self._rhs.values():
                     coupled_variable.set_coupled_variable(sym, self._variables[name])

@@ -52,6 +52,7 @@ class Composite(BaseModel):
         T = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode temperature [K]",
             domain=f"{domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         self.coupled_variables.update({T.name: T})
 
@@ -91,11 +92,6 @@ class Composite(BaseModel):
         if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
-        phi_s = pybamm.CoupledVariable(
-            f"{Domain} electrode potential [V]",
-            domain=f"{domain} electrode",
-        )
-        self.coupled_variables.update({phi_s.name: phi_s})
         tor = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode transport efficiency",
             domain="current collector",

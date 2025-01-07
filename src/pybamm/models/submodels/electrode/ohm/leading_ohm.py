@@ -88,3 +88,4 @@ class LeadingOrder(BaseModel):
         rbc = (pybamm.Scalar(0), "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
+        self.variables.update(variables)
