@@ -112,7 +112,7 @@ def make_test_cases():
 # Check the interface throws an appropriate error if either IDAKLU or JAX not available
 @pytest.mark.skipif(
     pybamm.has_jax(),
-    reason="Both IDAKLU and JAX are available",
+    reason="JAX is available",
 )
 class TestIDAKLUJax_NoJax:
     def test_instantiate_fails(self):
