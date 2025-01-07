@@ -44,9 +44,9 @@ class Explicit(BaseElectrolyteConductivity):
         )
         self.coupled_variables.update({phi_e.name: phi_e})
         delta_phi = phi_s - phi_e
-        if "negative primary interface" in submodels:
+        if "positive primary interface" in submodels:
             key = f"{domain} primary interface"
-        elif "negative interface" in submodels:
+        elif "positive interface" in submodels:
             key = f"{domain} interface"
         else:
             key = "fuck you"

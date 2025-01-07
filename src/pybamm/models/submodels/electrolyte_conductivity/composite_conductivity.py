@@ -32,7 +32,10 @@ class Composite(BaseElectrolyteConductivity):
 
     def build(self, submodels):
         variables = {}
+        variables.update(self._get_fundamental_variables())
         variables.update(self._get_coupled_variables(variables))
+        self._set_rhs(variables)
+        self._set_initial_conditions(variables)
         self.variables.update(variables)
 
     def _get_coupled_variables(self, variables):
@@ -231,5 +234,4 @@ class Composite(BaseElectrolyteConductivity):
 
         # Override print_name
         i_e.print_name = "i_e"
-
         return variables

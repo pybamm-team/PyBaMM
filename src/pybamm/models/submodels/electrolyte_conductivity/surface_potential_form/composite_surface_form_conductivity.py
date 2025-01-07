@@ -42,6 +42,16 @@ class BaseModel(Composite):
         )
         return variables
 
+    def _set_initial_conditions(self, variables):
+        domain = self.domain
+
+        delta_phi = variables[
+            f"X-averaged {domain} electrode surface potential difference [V]"
+        ]
+        delta_phi_init = self.domain_param.prim.U_init
+
+        self.initial_conditions = {delta_phi: delta_phi_init}
+
     def _get_coupled_variables(self, variables):
         Domain = self.domain.capitalize()
         # Only update coupled variables once
@@ -75,7 +85,7 @@ class BaseModel(Composite):
                     "right": (pybamm.Scalar(0), "Neumann"),
                 }
             }
-        self.variables.update(variables)
+        return variables
 
 
 class CompositeDifferential(BaseModel):
@@ -97,27 +107,37 @@ class CompositeDifferential(BaseModel):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_rhs(self, variables):
+    def _set_rhs(self, variables):
         domain = self.domain
 
-        a = variables[
-            f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
-        ]
+        a = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode surface area to volume ratio [m-1]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({a.name: a})
 
-        sum_a_j = variables[
+        sum_a_j = pybamm.CoupledVariable(
             f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
+            "interfacial current densities [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j.name: sum_a_j})
 
-        sum_a_j_av = variables[
+        sum_a_j_av = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
+            "interfacial current density [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j_av.name: sum_a_j_av})
+
         delta_phi = variables[
             f"X-averaged {domain} electrode surface potential difference [V]"
         ]
-
-        T = variables[f"X-averaged {domain} electrode temperature [K]"]
+        T = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T.name: T})
 
         C_dl = self.domain_param.C_dl(T)
 
