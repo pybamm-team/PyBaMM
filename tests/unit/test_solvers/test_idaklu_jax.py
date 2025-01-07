@@ -21,7 +21,7 @@ def make_model():
     return model
 
 
-if pybamm.has_idaklu() and pybamm.has_jax():
+if pybamm.has_jax():
     from jax.tree_util import tree_flatten
     import jax
     import jax.numpy as jnp
@@ -61,7 +61,7 @@ def make_test_cases():
     def no_jit(f):
         return f
 
-    if pybamm.has_idaklu() and pybamm.has_jax():
+    if pybamm.has_jax():
         jax_single = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
             make_model(),
             t_eval,
@@ -111,7 +111,7 @@ def make_test_cases():
 
 # Check the interface throws an appropriate error if either IDAKLU or JAX not available
 @pytest.mark.skipif(
-    pybamm.has_idaklu() and pybamm.has_jax(),
+    pybamm.has_jax(),
     reason="Both IDAKLU and JAX are available",
 )
 class TestIDAKLUJax_NoJax:
@@ -121,8 +121,8 @@ class TestIDAKLUJax_NoJax:
 
 
 @pytest.mark.skipif(
-    not pybamm.has_idaklu() or not pybamm.has_jax(),
-    reason="IDAKLU Solver and/or JAX are not available",
+    not pybamm.has_jax(),
+    reason="JAX is not available",
 )
 @pytest.mark.skipif(
     sys.platform.lower().startswith("win"),

@@ -19,10 +19,7 @@ class BaseIntegrationTestLithiumIon:
         param = pybamm.ParameterValues("Ecker2015")
         rtol = 1e-6
         atol = 1e-6
-        if pybamm.has_idaklu():
-            solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
-        else:
-            solver = pybamm.CasadiSolver(rtol=rtol, atol=atol)
+        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         modeltest = tests.StandardModelTest(
             model, parameter_values=param, solver=solver
         )

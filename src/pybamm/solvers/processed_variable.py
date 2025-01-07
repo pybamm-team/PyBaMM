@@ -112,16 +112,7 @@ class ProcessedVariable:
         Evaluate the base variable at the given time points and y values.
         """
         t = self.t_pts
-
-        # For small number of points, use Python
-        if pybamm.has_idaklu():
-            entries = self._observe_raw_cpp()
-        else:
-            # Fallback method for when IDAKLU is not available. To be removed
-            # when the C++ code is migrated to a new repo
-            entries = self._observe_raw_python()  # pragma: no cover
-
-        return self._observe_postfix(entries, t)
+        return self._observe_postfix(self._observe_raw_cpp(), t)
 
     def _setup_cpp_inputs(self, t, full_range):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
@@ -251,9 +242,7 @@ class ProcessedVariable:
             idxs_sort = np.argsort(t_observe)
             t_observe = t_observe[idxs_sort]
 
-        hermite_time_interp = (
-            pybamm.has_idaklu() and self.hermite_interpolation and not observe_raw
-        )
+        hermite_time_interp = self.hermite_interpolation and not observe_raw
 
         if hermite_time_interp:
             entries = self.observe_and_interp(t_observe, fill_value)

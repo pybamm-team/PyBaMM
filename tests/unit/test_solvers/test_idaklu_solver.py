@@ -8,7 +8,6 @@ from tests import get_discretisation_for_testing
 
 
 @pytest.mark.cibw
-@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
 class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts

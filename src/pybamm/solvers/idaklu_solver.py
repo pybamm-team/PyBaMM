@@ -6,6 +6,7 @@ import numpy as np
 import numbers
 import scipy.sparse as sparse
 from scipy.linalg import bandwidth
+import pybammsolvers.idaklu as idaklu
 
 import warnings
 
@@ -18,19 +19,6 @@ if pybamm.has_jax():
         import iree.compiler
     except ImportError:  # pragma: no cover
         pass
-
-try:
-    import pybammsolvers.idaklu as idaklu
-
-    idaklu_imported = True
-except ImportError as e:  # pragma: no cover
-    idaklu = None
-    print(f"Error loading idaklu: {e}")
-    idaklu_imported = False
-
-
-def has_idaklu():
-    return idaklu_imported
 
 
 def has_iree():
@@ -229,9 +217,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self._options = options
 
         self.output_variables = [] if output_variables is None else output_variables
-
-        if not has_idaklu():  # pragma: no cover
-            raise ImportError("KLU is not installed")
 
         super().__init__(
             "ida",
