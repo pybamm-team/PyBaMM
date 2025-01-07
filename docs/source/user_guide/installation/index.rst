@@ -35,7 +35,7 @@ Optional solvers
 
 The following solvers are optionally available:
 
-*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <gnu-linux-mac.html#optional-jaxsolver>`_.
+*  jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see :ref:`optional-jaxsolver` .
 
 Dependencies
 ------------
