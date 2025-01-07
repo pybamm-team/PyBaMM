@@ -1,6 +1,3 @@
-#
-# Base integration tests for lithium-ion models
-#
 import numpy as np
 
 import pybamm

@@ -1,9 +1,7 @@
 import pybamm
 import numpy as np
 import pandas as pd
-
 import os
-import uuid
 import pytest
 from tempfile import TemporaryDirectory
 from scipy.integrate import cumulative_trapezoid
@@ -481,28 +479,20 @@ class TestSimulation:
             ):
                 sim.save(test_name)
 
-    def test_load_param(self):
-        # Test load_sim for parameters imports
-        filename = f"{uuid.uuid4()}.p"
+    def test_load_param(self, tmp_path):
+        filename = str(tmp_path / "test.pkl")
         model = pybamm.lithium_ion.SPM()
         params = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, parameter_values=params)
         sim.solve([0, 3600])
         sim.save(filename)
-
-        try:
-            pkl_obj = pybamm.load_sim(os.path.join(filename))
-        except Exception as excep:
-            os.remove(filename)
-            raise excep
-
+        pkl_obj = pybamm.load_sim(filename)
         assert (
             "graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
             == pkl_obj.parameter_values[
                 "Negative electrode exchange-current density [A.m-2]"
             ].__name__
         )
-        os.remove(filename)
 
     def test_save_load_dae(self):
         with TemporaryDirectory() as dir_name:
@@ -662,7 +652,7 @@ class TestSimulation:
         with pytest.raises(pybamm.SolverError, match="'t_eval' can be provided"):
             sim.solve(t_eval=[0, 1, 2])
 
-        # tets list gets turned into np.linspace(t0, tf, 100)
+        # tests list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
         np.testing.assert_array_almost_equal(sim.solution.t, np.linspace(0, 10, 100))
 
