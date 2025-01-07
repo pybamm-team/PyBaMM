@@ -7,19 +7,12 @@ from pathlib import Path
 # Options to modify nox behaviour
 nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.reuse_existing_virtualenvs = True
-if sys.platform != "win32":
-    nox.options.sessions = ["pre-commit", "pybamm-requires", "unit"]
-else:
-    nox.options.sessions = ["pre-commit", "unit"]
+nox.options.sessions = ["pre-commit", "unit"]
 
 homedir = os.getenv("HOME")
 PYBAMM_ENV = {
-    "LD_LIBRARY_PATH": f"{homedir}/.local/lib",
     "PYTHONIOENCODING": "utf-8",
     "MPLBACKEND": "Agg",
-    # Expression evaluators (...EXPR_CASADI cannot be fully disabled at this time)
-    "PYBAMM_IDAKLU_EXPR_CASADI": os.getenv("PYBAMM_IDAKLU_EXPR_CASADI", "ON"),
-    "PYBAMM_DISABLE_TELEMETRY": "true",
 }
 VENV_DIR = Path("./venv").resolve()
 
@@ -38,32 +31,6 @@ def set_environment_variables(env_dict, session):
     """
     for key, value in env_dict.items():
         session.env[key] = value
-
-
-@nox.session(name="pybamm-requires")
-def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
-    set_environment_variables(PYBAMM_ENV, session=session)
-    if sys.platform != "win32":
-        session.install("cmake", silent=False)
-        session.run("python", "scripts/install_KLU_Sundials.py", *session.posargs)
-        if not os.path.exists("./pybind11"):
-            session.run(
-                "git",
-                "clone",
-                "--depth",
-                "1",
-                "--branch",
-                "v2.12.0",
-                "https://github.com/pybind/pybind11.git",
-                "pybind11/",
-                "-c",
-                "advice.detachedHead=false",
-                external=True,
-            )
-    else:
-        session.error("nox -s pybamm-requires is only available on Linux & macOS.")
-
 
 @nox.session(name="coverage")
 def run_coverage(session):
@@ -170,9 +137,11 @@ def run_tests(session):
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    specific_test_files = session.posargs if session.posargs else []
     session.run(
-        "python", "-m", "pytest", *specific_test_files, "-m", "unit or integration"
+        "python",
+        "-m",
+        "pytest",
+        *(session.posargs if session.posargs else ["-m", "unit or integration"]),
     )
 
 

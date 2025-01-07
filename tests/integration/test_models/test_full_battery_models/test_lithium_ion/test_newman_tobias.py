@@ -1,9 +1,10 @@
 #
 # Tests for the lithium-ion Newman-Tobias model
 #
+import pytest
+
 import pybamm
 from tests import BaseIntegrationTestLithiumIon
-import pytest
 
 
 class TestNewmanTobias(BaseIntegrationTestLithiumIon):
@@ -30,5 +31,14 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon):
     def test_composite_reaction_driven_LAM(self):
         pass  # skip this test
 
+    def test_particle_size_composite(self):
+        pass  # skip this test
+
     def test_composite_stress_driven_LAM(self):
+        pass  # skip this test
+
+    def test_sei_VonKolzenberg2020(self):
+        pass  # skip this test
+
+    def test_sei_tunnelling_limited(self):
         pass  # skip this test

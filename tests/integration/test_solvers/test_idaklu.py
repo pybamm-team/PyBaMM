@@ -1,9 +1,7 @@
-import pytest
 import pybamm
 import numpy as np
 
 
-@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
 class TestIDAKLUSolver:
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()
@@ -202,5 +200,5 @@ class TestIDAKLUSolver:
         )
 
         # check summary variables are the same if output variables are specified
-        for var in summary_vars[0].keys():
+        for var in model.summary_variables:
             assert summary_vars[0][var] == summary_vars[1][var]

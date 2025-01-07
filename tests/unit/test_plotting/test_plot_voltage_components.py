@@ -7,77 +7,41 @@ from matplotlib import use
 use("Agg")
 
 
-class TestPlotVoltageComponents:
-    def test_plot_with_solution(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        sol = sim.solve([0, 3600])
-        for split in [True, False]:
-            _, ax = pybamm.plot_voltage_components(
-                sol, show_plot=False, split_by_electrode=split
-            )
-            t, V = ax.get_lines()[0].get_data()
-            np.testing.assert_array_equal(t, sol["Time [h]"].data)
-            np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
+@pytest.fixture
+def solved_simulation():
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model)
+    sol = sim.solve([0, 3600])
+    return sim, sol
 
-        _, ax = plt.subplots()
-        _, ax_out = pybamm.plot_voltage_components(sol, ax=ax, show_legend=True)
-        assert ax_out == ax
 
-    def test_plot_with_simulation(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 3600])
+@pytest.mark.parametrize(
+    "split_by_electrode",
+    [True, False],
+    ids=["with_split_by_electrode", "with_no_split_by_electrode"],
+)
+@pytest.mark.parametrize(
+    "from_solution", [True, False], ids=["from_solution", "from_simulation"]
+)
+def test_plot_voltage_components(solved_simulation, from_solution, split_by_electrode):
+    sim, sol = solved_simulation
+    target = sol if from_solution else sim
 
-        for split in [True, False]:
-            _, ax = pybamm.plot_voltage_components(
-                sim, show_plot=False, split_by_electrode=split
-            )
-            t, V = ax.get_lines()[0].get_data()
-            np.testing.assert_array_equal(t, sim.solution["Time [h]"].data)
-            np.testing.assert_array_equal(V, sim.solution["Battery voltage [V]"].data)
+    _, ax = target.plot_voltage_components(
+        show_plot=False, split_by_electrode=split_by_electrode
+    )
+    t, V = ax.get_lines()[0].get_data()
+    np.testing.assert_array_equal(t, sol["Time [h]"].data)
+    np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
 
-        _, ax = plt.subplots()
-        _, ax_out = pybamm.plot_voltage_components(sim, ax=ax, show_legend=True)
-        assert ax_out == ax
+    _, ax = plt.subplots()
+    _, ax_out = target.plot_voltage_components(ax=ax, show_legend=True)
+    assert ax_out == ax
 
-    def test_plot_from_solution(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        sol = sim.solve([0, 3600])
-        for split in [True, False]:
-            _, ax = sol.plot_voltage_components(
-                show_plot=False, split_by_electrode=split
-            )
-            t, V = ax.get_lines()[0].get_data()
-            np.testing.assert_array_equal(t, sol["Time [h]"].data)
-            np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
 
-        _, ax = plt.subplots()
-        _, ax_out = sol.plot_voltage_components(ax=ax, show_legend=True)
-        assert ax_out == ax
+def test_plot_without_solution():
+    model = pybamm.lithium_ion.SPM()
+    sim = pybamm.Simulation(model)
 
-    def test_plot_from_simulation(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        sim.solve([0, 3600])
-
-        for split in [True, False]:
-            _, ax = sim.plot_voltage_components(
-                show_plot=False, split_by_electrode=split
-            )
-            t, V = ax.get_lines()[0].get_data()
-            np.testing.assert_array_equal(t, sim.solution["Time [h]"].data)
-            np.testing.assert_array_equal(V, sim.solution["Battery voltage [V]"].data)
-
-        _, ax = plt.subplots()
-        _, ax_out = sim.plot_voltage_components(ax=ax, show_legend=True)
-        assert ax_out == ax
-
-    def test_plot_without_solution(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-
-        with pytest.raises(ValueError) as error:
-            sim.plot_voltage_components()
-            assert str(error.exception) == "The simulation has not been solved yet."
+    with pytest.raises(ValueError, match="The simulation has not been solved yet."):
+        sim.plot_voltage_components()

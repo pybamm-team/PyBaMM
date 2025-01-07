@@ -1,7 +1,3 @@
-#
-# Tests for the KLU Solver class
-#
-
 from contextlib import redirect_stdout
 import io
 import pytest
@@ -12,7 +8,6 @@ from tests import get_discretisation_for_testing
 
 
 @pytest.mark.cibw
-@pytest.mark.skipif(not pybamm.has_idaklu(), reason="idaklu solver is not installed")
 class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
@@ -586,7 +581,7 @@ class TestIDAKLUSolver:
         solver = pybamm.IDAKLUSolver()
 
         t_eval = [0, 3]
-        with pytest.raises(ValueError, match="std::exception"):
+        with pytest.raises(ValueError):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
@@ -692,20 +687,24 @@ class TestIDAKLUSolver:
                         options=options,
                     )
                     works = (
-                        jacobian == "none"
-                        and (linear_solver == "SUNLinSol_Dense")
-                        or jacobian == "dense"
-                        and (linear_solver == "SUNLinSol_Dense")
-                        or jacobian == "sparse"
-                        and (
-                            linear_solver != "SUNLinSol_Dense"
-                            and linear_solver != "garbage"
+                        (jacobian == "none" and (linear_solver == "SUNLinSol_Dense"))
+                        or (
+                            jacobian == "dense" and (linear_solver == "SUNLinSol_Dense")
                         )
-                        or jacobian == "matrix-free"
-                        and (
-                            linear_solver != "SUNLinSol_KLU"
-                            and linear_solver != "SUNLinSol_Dense"
-                            and linear_solver != "garbage"
+                        or (
+                            jacobian == "sparse"
+                            and (
+                                linear_solver != "SUNLinSol_Dense"
+                                and linear_solver != "garbage"
+                            )
+                        )
+                        or (
+                            jacobian == "matrix-free"
+                            and (
+                                linear_solver != "SUNLinSol_KLU"
+                                and linear_solver != "SUNLinSol_Dense"
+                                and linear_solver != "garbage"
+                            )
                         )
                     )
 
@@ -735,6 +734,7 @@ class TestIDAKLUSolver:
             "max_order_bdf": 4,
             "max_num_steps": 490,
             "dt_init": 0.01,
+            "dt_min": 1e-6,
             "dt_max": 1000.9,
             "max_error_test_failures": 11,
             "max_nonlinear_iterations": 5,

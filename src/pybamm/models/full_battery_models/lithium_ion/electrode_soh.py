@@ -312,6 +312,27 @@ class ElectrodeSOHSolver:
             self.__get_electrode_soh_sims_split
         )
 
+    def __getstate__(self):
+        """
+        Return dictionary of picklable items
+        """
+        result = self.__dict__.copy()
+        result["_get_electrode_soh_sims_full"] = None  # Exclude LRU cache
+        result["_get_electrode_soh_sims_split"] = None  # Exclude LRU cache
+        return result
+
+    def __setstate__(self, state):
+        """
+        Unpickle, restoring unpicklable relationships
+        """
+        self.__dict__ = state
+        self._get_electrode_soh_sims_full = lru_cache()(
+            self.__get_electrode_soh_sims_full
+        )
+        self._get_electrode_soh_sims_split = lru_cache()(
+            self.__get_electrode_soh_sims_split
+        )
+
     def _get_lims_ocp(self):
         parameter_values = self.parameter_values
 
@@ -673,7 +694,7 @@ class ElectrodeSOHSolver:
             V_min = parameter_values.evaluate(self.param.ocp_soc_0)
             V_max = parameter_values.evaluate(self.param.ocp_soc_100)
 
-            if not V_min <= V_init <= V_max:
+            if not V_min - tol <= V_init <= V_max + tol:
                 raise ValueError(
                     f"Initial voltage {V_init}V is outside the voltage limits "
                     f"({V_min}, {V_max})"
@@ -881,7 +902,6 @@ def get_initial_stoichiometries(
         :class:`pybamm.BatteryModelOptions`.
     tol : float, optional
         The tolerance for the solver used to compute the initial stoichiometries.
-        A lower value results in higher precision but may increase computation time.
         Default is 1e-6.
     inputs : dict, optional
         A dictionary of input parameters passed to the model.
