@@ -138,6 +138,7 @@ from .meshes.one_dimensional_submeshes import (
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
     SpectralVolume1DSubMesh,
+    SymbolicUniform1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -174,7 +175,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, has_idaklu, has_iree
+from .solvers.idaklu_solver import IDAKLUSolver, has_iree
 
 # Experiments
 from .experiment.experiment import Experiment
