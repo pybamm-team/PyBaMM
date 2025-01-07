@@ -32,6 +32,7 @@ def set_environment_variables(env_dict, session):
     for key, value in env_dict.items():
         session.env[key] = value
 
+
 @nox.session(name="coverage")
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
