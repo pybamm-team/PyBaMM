@@ -9,8 +9,6 @@ on:
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
-  PYBAMM_IDAKLU_EXPR_CASADI: ON
-  PYBAMM_IDAKLU_EXPR_IREE: ON
 
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
@@ -70,11 +68,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        timeout-minutes: 10
-        if: matrix.os != 'windows-latest'
-        run: python -m nox -s pybamm-requires
-
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
@@ -92,7 +85,6 @@ jobs:
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-  # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
     strategy:
@@ -153,10 +145,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
-
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
@@ -185,10 +173,6 @@ jobs:
 
       - name: Install nox
         run: python -m uv pip install nox[uv]
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts
