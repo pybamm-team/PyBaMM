@@ -173,9 +173,9 @@ jobs:
 
             export SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
 
-            # Can't download LLVM-OpenMP directly, use conda/mamba and set environment variables
+            # Can't download LLVM-OpenMP directly, use conda and set environment variables
             brew install miniforge
-            mamba create -n pybammsolvers-dev $OPENMP_URL
+            conda create -n pybammsolvers-dev $OPENMP_URL
             if [[ $(uname -m) == "x86_64" ]]; then
               PREFIX="/usr/local/Caskroom/miniforge/base/envs/pybammsolvers-dev"
             elif [[ $(uname -m) == "arm64" ]]; then

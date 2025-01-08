@@ -31,6 +31,7 @@ struct SolverOptions {
   int max_order_bdf;
   int max_num_steps;
   double dt_init;
+  double dt_min;
   double dt_max;
   int max_error_test_failures;
   int max_nonlinear_iterations;
