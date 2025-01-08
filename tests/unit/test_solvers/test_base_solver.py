@@ -353,9 +353,6 @@ class TestBaseSolver:
         assert solver.get_platform_context("Linux") == "fork"
         assert solver.get_platform_context("Darwin") == "fork"
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_sensitivities(self):
         def exact_diff_a(y, a, b):
             return np.array([[y[0] ** 2 + 2 * a], [y[0]]])

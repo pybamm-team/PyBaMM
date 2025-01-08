@@ -1,8 +1,4 @@
-#
-# Simulation class
-#
 from __future__ import annotations
-
 import pickle
 import pybamm
 import numpy as np
@@ -344,7 +340,7 @@ class Simulation:
             self._model_with_set_params = self._model
             self._built_model = self._model
         else:
-            self.set_parameters()
+            self._set_parameters()
             self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
             self._disc = pybamm.Discretisation(
                 self._mesh, self._spatial_methods, **self._discretisation_kwargs
@@ -899,6 +895,7 @@ class Simulation:
                     logs["summary variables"] = cycle_sum_vars
 
                 # Calculate capacity_start using the first cycle
+                capacity_stop = None
                 if cycle_num == 1:
                     # Note capacity_start could be defined as
                     # self._parameter_values["Nominal cell capacity [A.h]"] instead
@@ -910,17 +907,15 @@ class Simulation:
                             capacity_stop = value
                         elif typ == "%":
                             capacity_stop = value / 100 * capacity_start
-                    else:
-                        capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()
 
                 # Add minimum voltage to summary variable logs if there is a voltage stop
-                # See PR #3995
+                min_voltage = None
                 if voltage_stop is not None:
                     min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
-                    logs["summary variables"]["Minimum voltage [V]"] = min_voltage
+                    logs["Minimum voltage [V]"] = min_voltage
 
                 callbacks.on_cycle_end(logs)
 
@@ -935,13 +930,12 @@ class Simulation:
                     if min_voltage <= voltage_stop[0]:
                         break
 
-                # Break if the experiment is infeasible (or errored)
-                if feasible is False:
+                if not feasible:
                     break
 
             if self._solution is not None and len(all_cycle_solutions) > 0:
                 self._solution.cycles = all_cycle_solutions
-                self._solution.set_summary_variables(all_summary_variables)
+                self._solution.update_summary_variables(all_summary_variables)
                 self._solution.all_first_states = all_first_states
 
             callbacks.on_experiment_end(logs)

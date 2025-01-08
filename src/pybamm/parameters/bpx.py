@@ -108,7 +108,7 @@ def _get_phase_names(domain):
         )
 
 
-def _bpx_to_param_dict(bpx: BPX) -> dict:
+def bpx_to_param_dict(bpx: BPX) -> dict:
     """
     Turns a BPX object in to a dictionary of parameters for PyBaMM
     """
@@ -222,6 +222,9 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             domain.pre_name + "transport efficiency"
         ] ** (1.0 / 1.5)
 
+    def _get_activation_energy(var_name):
+        return pybamm_dict.get(var_name) or 0.0
+
     # define functional forms for pybamm parameters that depend on more than one
     # variable
 
@@ -294,11 +297,15 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             k_norm = pybamm_dict[
                 phase_domain_pre_name + "reaction rate constant [mol.m-2.s-1]"
             ]
-            Ea_k = pybamm_dict.get(
+            Ea_k = _get_activation_energy(
                 phase_domain_pre_name
-                + "reaction rate constant activation energy [J.mol-1]",
-                0.0,
+                + "reaction rate constant activation energy [J.mol-1]"
             )
+            pybamm_dict[
+                phase_domain_pre_name
+                + "reaction rate constant activation energy [J.mol-1]"
+            ] = Ea_k
+
             # Note that in BPX j = 2*F*k_norm*sqrt((ce/ce0)*(c/c_max)*(1-c/c_max))...
             # *sinh(),
             # and in PyBaMM j = 2*k*sqrt(ce*c*(c_max - c))*sinh()
@@ -308,9 +315,8 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
             )
 
             # diffusivity
-            Ea_D = pybamm_dict.get(
-                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]",
-                0.0,
+            Ea_D = _get_activation_energy(
+                phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
             )
             pybamm_dict[
                 phase_domain_pre_name + "diffusivity activation energy [J.mol-1]"
@@ -335,8 +341,11 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
                 )
 
     # electrolyte
-    Ea_D_e = pybamm_dict.get(
-        electrolyte.pre_name + "diffusivity activation energy [J.mol-1]", 0.0
+    Ea_D_e = _get_activation_energy(
+        electrolyte.pre_name + "diffusivity activation energy [J.mol-1]"
+    )
+    pybamm_dict[electrolyte.pre_name + "diffusivity activation energy [J.mol-1]"] = (
+        Ea_D_e
     )
     D_e_ref = pybamm_dict[electrolyte.pre_name + "diffusivity [m2.s-1]"]
 
@@ -358,8 +367,11 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
         )
 
     # conductivity
-    Ea_sigma_e = pybamm_dict.get(
-        electrolyte.pre_name + "conductivity activation energy [J.mol-1]", 0.0
+    Ea_sigma_e = _get_activation_energy(
+        electrolyte.pre_name + "conductivity activation energy [J.mol-1]"
+    )
+    pybamm_dict[electrolyte.pre_name + "conductivity activation energy [J.mol-1]"] = (
+        Ea_sigma_e
     )
     sigma_e_ref = pybamm_dict[electrolyte.pre_name + "conductivity [S.m-1]"]
 
@@ -386,8 +398,7 @@ def _bpx_to_param_dict(bpx: BPX) -> dict:
     # Add user-defined parameters, if any
     user_defined = bpx.parameterisation.user_defined
     if user_defined:
-        for name in user_defined.__dict__.keys():
-            value = getattr(user_defined, name)
+        for name, value in user_defined:
             value = process_float_function_table(value, name)
             if callable(value):
                 pybamm_dict[name] = partial(_callable_func, fun=value)
@@ -435,7 +446,7 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
     Turns a BPX instance in to a dictionary of parameters for PyBaMM for a given domain
     """
     # Loop over fields in BPX instance and add to pybamm dictionary
-    for name, field in instance.__fields__.items():
+    for name, field in instance.model_fields.items():
         value = getattr(instance, name)
         # Handle blended electrodes, where the field is now an instance of
         # ElectrodeBlended or ElectrodeBlendedSPM
@@ -448,16 +459,16 @@ def _bpx_to_domain_param_dict(instance: BPX, pybamm_dict: dict, domain: Domain) 
             for i, phase_name in enumerate(particle_instance.keys()):
                 phase_instance = particle_instance[phase_name]
                 # Loop over fields in phase instance and add to pybamm dictionary
-                for name, field in phase_instance.__fields__.items():
-                    value = getattr(phase_instance, name)
+                for name_to_add, field_to_add in phase_instance.model_fields.items():
+                    value = getattr(phase_instance, name_to_add)
                     pybamm_name = PHASE_NAMES[i] + _get_pybamm_name(
-                        field.field_info.alias, domain
+                        field_to_add.alias, domain
                     )
-                    value = process_float_function_table(value, name)
+                    value = process_float_function_table(value, name_to_add)
                     pybamm_dict[pybamm_name] = value
         # Handle other fields, which correspond directly to parameters
         else:
-            pybamm_name = _get_pybamm_name(field.field_info.alias, domain)
+            pybamm_name = _get_pybamm_name(field.alias, domain)
             value = process_float_function_table(value, name)
             pybamm_dict[pybamm_name] = value
     return pybamm_dict

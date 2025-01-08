@@ -212,7 +212,7 @@ class LoggingCallback(Callback):
 
         voltage_stop = logs["stopping conditions"]["voltage"]
         if voltage_stop is not None:
-            min_voltage = logs["summary variables"]["Minimum voltage [V]"]
+            min_voltage = logs["Minimum voltage [V]"]
             if min_voltage > voltage_stop[0]:
                 self.logger.notice(
                     f"Minimum voltage is now {min_voltage:.3f} V "

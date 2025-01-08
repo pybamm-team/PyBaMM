@@ -22,10 +22,10 @@ PyBaMM documentation
 
 **Useful links**:
 `Project Home Page <https://www.pybamm.org>`_ |
-`Installation <source/user_guide/installation/index.html>`_ |
+`Installation <source/user_guide/installation/index.rst>`_ |
 `Source Repository <https://github.com/pybamm-team/pybamm>`_ |
 `Issue Tracker <https://github.com/pybamm-team/pybamm/issues>`_ |
-`Discussions <https://github.com/pybamm-team/pybamm/discussions>`_
+`Discussions <https://pybamm.discourse.group/>`_
 
 PyBaMM (Python Battery Mathematical Modelling) is an open-source battery simulation package
 written in Python. Our mission is to accelerate battery modelling research by
@@ -107,7 +107,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-link:: source/user_guide/contributing.html
+      .. button-link:: ../CONTRIBUTING.md
          :expand:
          :color: secondary
          :click-parent:

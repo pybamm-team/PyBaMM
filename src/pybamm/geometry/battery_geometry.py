@@ -83,6 +83,18 @@ def battery_geometry(
                 "negative particle size": {"R_n": {"min": R_min_n, "max": R_max_n}},
             }
         )
+        phases = int(options.negative["particle phases"])
+        if phases >= 2:
+            geometry.update(
+                {
+                    "negative primary particle size": {
+                        "R_n_prim": {"min": R_min_n, "max": R_max_n}
+                    },
+                    "negative secondary particle size": {
+                        "R_n_sec": {"min": R_min_n, "max": R_max_n}
+                    },
+                }
+            )
     if (
         options is not None
         and options.positive["particle size"] == "distribution"
@@ -95,6 +107,18 @@ def battery_geometry(
                 "positive particle size": {"R_p": {"min": R_min_p, "max": R_max_p}},
             }
         )
+        phases = int(options.positive["particle phases"])
+        if phases >= 2:
+            geometry.update(
+                {
+                    "positive primary particle size": {
+                        "R_p_prim": {"min": R_min_p, "max": R_max_p}
+                    },
+                    "positive secondary particle size": {
+                        "R_p_sec": {"min": R_min_p, "max": R_max_p}
+                    },
+                }
+            )
 
     # Add current collector domains
     current_collector_dimension = options["dimensionality"]

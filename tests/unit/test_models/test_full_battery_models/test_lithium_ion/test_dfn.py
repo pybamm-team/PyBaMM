@@ -27,6 +27,10 @@ class TestDFN(BaseUnitTestLithiumIon):
         options = {"particle size": ("single", "distribution")}
         self.check_well_posedness(options)
 
+    def test_well_posed_size_distribution_composite(self):
+        options = {"particle size": "distribution", "particle phases": "2"}
+        self.check_well_posedness(options)
+
     def test_well_posed_current_sigmoid_ocp_with_psd(self):
         options = {
             "open-circuit potential": "current sigmoid",

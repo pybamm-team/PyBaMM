@@ -1,0 +1,18 @@
+name: Discussion Autoresponder
+
+on:
+  discussion:
+    types: [created]
+
+jobs:
+  autorespond:
+    name: Autorespond to New Discussions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run Discussion Autoresponder
+        uses: wesleyscholl/discussion-auto-responder@v1.0.8
+        with:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          comment_body: "Hi! We have now moved our discussions to [Discourse](https://pybamm.discourse.group/). Please post your question there."
+          delay_milliseconds: 0

@@ -312,6 +312,27 @@ class ElectrodeSOHSolver:
             self.__get_electrode_soh_sims_split
         )
 
+    def __getstate__(self):
+        """
+        Return dictionary of picklable items
+        """
+        result = self.__dict__.copy()
+        result["_get_electrode_soh_sims_full"] = None  # Exclude LRU cache
+        result["_get_electrode_soh_sims_split"] = None  # Exclude LRU cache
+        return result
+
+    def __setstate__(self, state):
+        """
+        Unpickle, restoring unpicklable relationships
+        """
+        self.__dict__ = state
+        self._get_electrode_soh_sims_full = lru_cache()(
+            self.__get_electrode_soh_sims_full
+        )
+        self._get_electrode_soh_sims_split = lru_cache()(
+            self.__get_electrode_soh_sims_split
+        )
+
     def _get_lims_ocp(self):
         parameter_values = self.parameter_values
 

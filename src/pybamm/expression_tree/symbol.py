@@ -236,6 +236,9 @@ class Symbol:
         # Set domains (and hence id)
         self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
+        # mesh required for solution and processed variables classes
+        self.mesh = None
+
         self._saved_evaluates_on_edges: dict = {}
         self._print_name = None
 
@@ -566,6 +569,13 @@ class Symbol:
         """
         anytree = import_optional_dependency("anytree")
         return anytree.PreOrderIter(self)
+
+    def post_order(self, filter=None):
+        """
+        returns an iterable that steps through the tree in post-order fashion.
+        """
+        anytree = import_optional_dependency("anytree")
+        return anytree.PostOrderIter(self, filter_=filter)
 
     def __str__(self):
         """return a string representation of the node and its children."""

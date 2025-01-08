@@ -1,11 +1,13 @@
-import pytest
-import pybamm
-import os
-import io
 import contextlib
+import io
+import os
 import warnings
-from pybtex.database import Entry
 from tempfile import NamedTemporaryFile
+
+import pytest
+from pybtex.database import Entry
+
+import pybamm
 
 
 @contextlib.contextmanager
@@ -36,7 +38,7 @@ class TestCitations:
 
         # Test key error
         with pytest.raises(KeyError):
-            citations._parse_citation("not a citation")  # this should raise key error
+            citations._parse_citation("not a citation")
 
         # Test unknown citations at registration
         assert "not a citation" in citations._unknown_citations
@@ -268,6 +270,36 @@ class TestCitations:
         assert "BrosaPlanella2022" in citations._citation_tags.keys()
         citations._reset()
 
+    def test_VonKolzenberg_2020(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        assert "VonKolzenberg2020" not in citations._papers_to_cite
+
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "VonKolzenberg2020"})
+        assert "VonKolzenberg2020" in citations._papers_to_cite
+        citations._reset()
+
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "VonKolzenberg2020"})
+        assert "VonKolzenberg2020" in citations._papers_to_cite
+        citations._reset()
+
+    def test_tang_2012(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        assert "Tang2012" not in citations._papers_to_cite
+
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "tunnelling limited"})
+        assert "Tang2012" in citations._papers_to_cite
+        citations._reset()
+
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "tunnelling limited"})
+        assert "Tang2012" in citations._papers_to_cite
+        citations._reset()
+
     def test_newman_tobias(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
@@ -325,13 +357,13 @@ class TestCitations:
 
         citations._reset()
         assert "Sripad2020" not in citations._papers_to_cite
-        pybamm.kinetics.Marcus(None, None, None, None, None)
+        pybamm.kinetics.Marcus(None, "negative", None, None, None)
         assert "Sripad2020" in citations._papers_to_cite
         assert "Sripad2020" in citations._citation_tags.keys()
 
         citations._reset()
         assert "Sripad2020" not in citations._papers_to_cite
-        pybamm.kinetics.MarcusHushChidsey(None, None, None, None, None)
+        pybamm.kinetics.MarcusHushChidsey(None, "negative", None, None, None)
         assert "Sripad2020" in citations._papers_to_cite
         assert "Sripad2020" in citations._citation_tags.keys()
 
@@ -423,12 +455,11 @@ class TestCitations:
         assert "Virtanen2020" in citations._papers_to_cite
         assert "Virtanen2020" in citations._citation_tags.keys()
 
-        if pybamm.has_idaklu():
-            citations._reset()
-            assert "Hindmarsh2005" not in citations._papers_to_cite
-            pybamm.IDAKLUSolver()
-            assert "Hindmarsh2005" in citations._papers_to_cite
-            assert "Hindmarsh2005" in citations._citation_tags.keys()
+        citations._reset()
+        assert "Hindmarsh2005" not in citations._papers_to_cite
+        pybamm.IDAKLUSolver()
+        assert "Hindmarsh2005" in citations._papers_to_cite
+        assert "Hindmarsh2005" in citations._citation_tags.keys()
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_jax_citations(self):
