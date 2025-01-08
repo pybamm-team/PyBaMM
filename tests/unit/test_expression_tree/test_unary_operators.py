@@ -77,7 +77,7 @@ class TestUnaryOperators:
         assert absa.name == "abs"
         assert absa.children[0].name == a.name
 
-        b = pybamm.Scalar(-random_value)
+        b = pybamm.Scalar(random_value)
         absb = pybamm.AbsoluteValue(b)
         assert absb.evaluate() == abs(random_value)
 
