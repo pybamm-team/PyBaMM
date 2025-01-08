@@ -70,7 +70,7 @@ class TestUnaryOperators:
         assert pybamm.Negate._from_json(input_json) == nega
 
     @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
-    @given(random_value=st.floats(min_value=-1e3, max_value=1e3))
+    @given(st.floats(min_value=-1e38, max_value=0))
     def test_absolute(self, mocker, random_value):
         a = pybamm.Symbol("a")
         absa = pybamm.AbsoluteValue(a)
