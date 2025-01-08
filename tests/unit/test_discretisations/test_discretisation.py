@@ -68,6 +68,44 @@ class TestDiscretise:
         for child in c_e.children:
             assert child in disc.bcs.keys()
 
+    def test_add_internal_boundary_conditions_symbolic(self):
+        submesh_types = {
+            "left domain": pybamm.SymbolicUniform1DSubMesh,
+            "middle domain": pybamm.SymbolicUniform1DSubMesh,
+            "right domain": pybamm.SymbolicUniform1DSubMesh,
+        }
+        spatial_methods = {
+            "left domain": pybamm.FiniteVolume(),
+            "middle domain": pybamm.FiniteVolume(),
+            "right domain": pybamm.FiniteVolume(),
+        }
+        x_l = pybamm.SpatialVariable("x_l", ["left domain"], coord_sys="cartesian")
+        x_m = pybamm.SpatialVariable("x_m", ["middle domain"], coord_sys="cartesian")
+        x_r = pybamm.SpatialVariable("x_r", ["right domain"], coord_sys="cartesian")
+        geometry = {
+            "left domain": {x_l: {"min": 0, "max": 1}},
+            "middle domain": {x_m: {"min": 1, "max": 2}},
+            "right domain": {x_r: {"min": 2, "max": 3}},
+        }
+        var_pts = {x_l: 10, x_m: 10, x_r: 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        model = pybamm.BaseModel()
+        c_e_n = pybamm.Variable("c_e_n", domain=["left domain"])
+        c_e_s = pybamm.Variable("c_e_s", domain=["middle domain"])
+        c_e_p = pybamm.Variable("c_e_p", domain=["right domain"])
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+        model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
+        disc.bcs = model.boundary_conditions
+        disc.set_variable_slices([c_e_n, c_e_s, c_e_p])
+        disc.set_internal_boundary_conditions(model)
+
+        for child in c_e.children:
+            assert child in disc.bcs.keys()
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()

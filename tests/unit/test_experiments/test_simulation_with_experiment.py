@@ -1,6 +1,3 @@
-#
-# Test setting up a simulation with an experiment
-#
 import pytest
 import casadi
 import pybamm
@@ -167,9 +164,6 @@ class TestSimulationExperiment:
             sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -202,9 +196,6 @@ class TestSimulationExperiment:
         )
         assert solutions[1].termination == "final time"
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_solve_with_sensitivities_and_experiment(self):
         experiment_2step = pybamm.Experiment(
             [

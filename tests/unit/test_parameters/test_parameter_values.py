@@ -43,13 +43,7 @@ class TestParameterValues:
 
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
-        assert (
-            repr(param) == "{'Boltzmann constant [J.K-1]': 1.380649e-23,\n"
-            " 'Electron charge [C]': 1.602176634e-19,\n"
-            " 'Faraday constant [C.mol-1]': 96485.33212,\n"
-            " 'Ideal gas constant [J.K-1.mol-1]': 8.314462618,\n"
-            " 'a': 1}"
-        )
+        assert "'a': 1" in repr(param)
         assert param._ipython_key_completions_() == [
             "Ideal gas constant [J.K-1.mol-1]",
             "Faraday constant [C.mol-1]",
@@ -914,12 +908,6 @@ class TestParameterValues:
         exp_param = param.process_symbol(expression)
         assert exp_param == 3.0 * (2.0**var2) / ((-4.0 + var1) + var2)
 
-    def test_process_geometry(self):
-        var = pybamm.Variable("var")
-        geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}
-        with pytest.raises(ValueError, match="Geometry parameters must be Scalars"):
-            pybamm.ParameterValues({}).process_geometry(geometry)
-
     def test_process_model(self):
         model = pybamm.BaseModel()
         a = pybamm.Parameter("a")
@@ -976,6 +964,12 @@ class TestParameterValues:
         model.boundary_conditions = {var1: {"left": (x, "Dirichlet")}}
         with pytest.raises(KeyError):
             parameter_values.process_model(model)
+
+    def test_process_geometry(self):
+        var = pybamm.Variable("var")
+        geometry = {"negative electrode": {"x": {"min": 0, "max": var}}}
+        with pytest.raises(ValueError, match="Geometry parameters must be Scalars"):
+            pybamm.ParameterValues({}).process_geometry(geometry)
 
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()

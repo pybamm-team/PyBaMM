@@ -7,6 +7,7 @@ from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
 )
 import numpy as np
 from scipy.sparse import kron, eye
@@ -172,6 +173,18 @@ class TestFiniteVolume:
         assert isinstance(r_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis]
+        )
+
+    def test_spatial_variable_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        spatial_methods = {"domain": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        x = pybamm.SpatialVariable("x", ["domain"])
+        x_disc = disc.process_symbol(x)
+        assert isinstance(x_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x_disc.evaluate(),
+            mesh["domain"].nodes[:, np.newaxis] * mesh["domain"].length,
         )
 
     def test_mass_matrix_shape(self):

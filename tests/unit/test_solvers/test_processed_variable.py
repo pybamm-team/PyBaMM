@@ -1,7 +1,3 @@
-#
-# Tests for the Processed Variable class
-#
-
 import casadi
 import pybamm
 import tests
@@ -11,10 +7,7 @@ import pytest
 from scipy.interpolate import CubicHermiteSpline
 
 
-if pybamm.has_idaklu():
-    _hermite_args = [True, False]
-else:
-    _hermite_args = [False]
+_hermite_args = [True, False]
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -96,10 +89,9 @@ class TestProcessedVariable:
         )
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
 
         return y_sol, first_sol, second_sol, t_sol, yp_sol
 
@@ -153,10 +145,9 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(data_t1, data_t2)
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -326,10 +317,9 @@ class TestProcessedVariable:
         )
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D_unknown_domain(self, hermite_interp):
@@ -1212,9 +1202,6 @@ class TestProcessedVariable:
             processed_var._process_spatial_variable_names(["var1", "var2"])
 
     def test_hermite_interpolator(self):
-        if not pybamm.has_idaklu():
-            pytest.skip("Cannot test Hermite interpolation without IDAKLU")
-
         # initialise dummy solution to access method
         def solution_setup(t_sol, sign):
             y_sol = np.array([sign * np.sin(t_sol)])
