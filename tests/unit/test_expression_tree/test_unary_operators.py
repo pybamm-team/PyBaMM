@@ -167,8 +167,8 @@ class TestUnaryOperators:
 
     @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
     @given(
-        random_value1=st.floats(min_value=-1e3, max_value=1e3),
-        random_value2=st.floats(min_value=-1e3, max_value=1e3),
+        random_value1=st.floats(min_value=-1e38, max_value=1e38),
+        random_value2=st.floats(min_value=-1e38, max_value=1e38),
     )
     def test_floor(self, mocker, random_value1, random_value2):
         a = pybamm.Symbol("a")
