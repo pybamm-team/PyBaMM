@@ -36,7 +36,11 @@ class Full(BaseModel):
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        c_ox_s_p = pybamm.concatenation(c_ox_s, c_ox_p)
+        c_ox_s_p = pybamm.concatenation(
+            c_ox_s,
+            c_ox_p,
+            name="Separator and positive electrode oxygen concentration [mol.m-3]",
+        )
         variables = {
             "Separator and positive electrode oxygen concentration [mol.m-3]": c_ox_s_p
         }
