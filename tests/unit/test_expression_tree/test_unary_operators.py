@@ -28,7 +28,7 @@ class TestUnaryOperators:
         assert absval.evaluate(inputs={"a": 10}) == 10
 
     @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
-    @given(random_value=st.floats(min_value=-1e3, max_value=1e3))
+    @given(random_value=st.floats(min_value=-1e38, max_value=1e38))
     def test_negation(self, mocker, random_value):
         a = pybamm.Symbol("a")
         nega = pybamm.Negate(a)
