@@ -46,7 +46,6 @@ dependencies = [
     "posthog",
     "pyyaml",
     "platformdirs",
-    "hypothesis"
 ]
 
 [project.urls]
