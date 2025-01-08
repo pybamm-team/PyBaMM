@@ -79,7 +79,7 @@ class TestUnaryOperators:
 
         b = pybamm.Scalar(random_value)
         absb = pybamm.AbsoluteValue(b)
-        assert absb.evaluate() == abs(random_value)
+        assert absb.evaluate() == -random_value
 
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
