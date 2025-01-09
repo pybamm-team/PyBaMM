@@ -174,9 +174,6 @@ class TestSolution:
         ):
             sol_sum.y
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_add_solutions_with_computed_variables(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
@@ -238,9 +235,6 @@ class TestSolution:
         assert sol_copy.solve_time == sol1.solve_time
         assert sol_copy.integration_time == sol1.integration_time
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_copy_with_computed_variables(self):
         model = pybamm.BaseModel()
         u = pybamm.Variable("u")
@@ -286,9 +280,6 @@ class TestSolution:
         assert sol_last_state.solve_time == 0
         assert sol_last_state.integration_time == 0
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_first_last_state_empty_y(self):
         # check that first and last state work when y is empty
         # due to only variables being returned (required for experiments)
@@ -526,9 +517,7 @@ class TestSolution:
         time = sim.solution["Time [h]"](sim.solution.t)
         assert len(time) == 10
 
-    _solver_classes = [pybamm.CasadiSolver]
-    if pybamm.has_idaklu():
-        _solver_classes.append(pybamm.IDAKLUSolver)
+    _solver_classes = [pybamm.CasadiSolver, pybamm.IDAKLUSolver]
 
     @pytest.mark.parametrize("solver_class", _solver_classes)
     def test_discrete_data_sum(self, solver_class):
