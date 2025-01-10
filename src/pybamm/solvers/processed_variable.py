@@ -5,6 +5,7 @@ import pybamm
 from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 import bisect
+from pybammsolvers import idaklu
 
 
 class ProcessedVariable:
@@ -140,13 +141,13 @@ class ProcessedVariable:
 
         is_f_contiguous = _is_f_contiguous(ys)
 
-        ts = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(ts)
-        ys = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(ys)
+        ts = idaklu.VectorRealtypeNdArray(ts)
+        ys = idaklu.VectorRealtypeNdArray(ys)
         if self.hermite_interpolation:
-            yps = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(yps)
+            yps = idaklu.VectorRealtypeNdArray(yps)
         else:
             yps = None
-        inputs = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(inputs)
+        inputs = idaklu.VectorRealtypeNdArray(inputs)
 
         # Generate the serialized C++ functions only once
         funcs_unique = {}
@@ -164,9 +165,7 @@ class ProcessedVariable:
 
         ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs(t, full_range=False)
         shapes = self._shape(t)
-        return pybamm.solvers.idaklu_solver.idaklu.observe_hermite_interp(
-            t, ts, ys, yps, inputs, funcs, shapes
-        )
+        return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
     def _observe_raw_cpp(self):
         pybamm.logger.debug("Observing the variable raw data in C++")
@@ -176,9 +175,7 @@ class ProcessedVariable:
         )
         shapes = self._shape(self.t_pts)
 
-        return pybamm.solvers.idaklu_solver.idaklu.observe(
-            ts, ys, inputs, funcs, is_f_contiguous, shapes
-        )
+        return idaklu.observe(ts, ys, inputs, funcs, is_f_contiguous, shapes)
 
     def _observe_raw_python(self):
         raise NotImplementedError  # pragma: no cover
