@@ -1036,9 +1036,9 @@ class TestDiscretise:
         assert expr.children[2].evaluate(0, y).shape == (105, 1)
 
     def test_exceptions(self):
-        c_n = pybamm.Variable("c", domain=["negative electrode"])
+        c_n = pybamm.Variable("c_n", domain=["negative electrode"])
         N_n = pybamm.grad(c_n)
-        c_s = pybamm.Variable("c", domain=["separator"])
+        c_s = pybamm.Variable("c_s", domain=["separator"])
         N_s = pybamm.grad(c_s)
         model = pybamm.BaseModel()
         model.rhs = {c_n: pybamm.div(N_n), c_s: pybamm.div(N_s)}
@@ -1049,22 +1049,6 @@ class TestDiscretise:
         }
 
         disc = get_discretisation_for_testing()
-
-        # check raises error if different sized key and output var
-        model.variables = {c_n.name: c_s}
-        with pytest.raises(pybamm.ModelError, match="variable and its eqn"):
-            disc.process_model(model)
-
-        # check doesn't raise if concatenation
-        model.variables = {c_n.name: pybamm.concatenation(2 * c_n, 3 * c_s)}
-        disc.process_model(model, inplace=False)
-
-        # check doesn't raise if broadcast
-        model.variables = {
-            c_n.name: pybamm.PrimaryBroadcast(
-                pybamm.InputParameter("a"), ["negative electrode"]
-            )
-        }
         disc.process_model(model)
 
         # Check setting up a 0D spatial method with 1D mesh raises error
@@ -1277,3 +1261,29 @@ class TestDiscretise:
         disc = pybamm.Discretisation(remove_independent_variables_from_rhs=True)
         disc.process_model(model)
         assert len(model.rhs) == 3
+
+    def test_pre_process_variables(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        model = pybamm.BaseModel()
+        model.rhs = {a: b, b: a}
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(1),
+        }
+        model.variables = {
+            "a": a,  # correct
+            # b missing
+        }
+        disc = pybamm.Discretisation()
+        disc_model = disc.process_model(model, inplace=False)
+        assert list(disc_model.variables.keys()) == ["a", "b"]
+
+        model.variables = {
+            "a": a,
+            "b": 2 * a,
+        }
+        with pytest.raises(
+            pybamm.ModelError, match="Variable 'b' should have expression"
+        ):
+            disc.process_model(model, inplace=False)
