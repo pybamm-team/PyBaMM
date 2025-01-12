@@ -1,6 +1,3 @@
-#
-# Processed Variable class
-#
 from typing import Optional
 import casadi
 import numpy as np
@@ -8,6 +5,7 @@ import pybamm
 from scipy.integrate import cumulative_trapezoid
 import xarray as xr
 import bisect
+from pybammsolvers import idaklu
 
 
 class ProcessedVariable:
@@ -115,16 +113,7 @@ class ProcessedVariable:
         Evaluate the base variable at the given time points and y values.
         """
         t = self.t_pts
-
-        # For small number of points, use Python
-        if pybamm.has_idaklu():
-            entries = self._observe_raw_cpp()
-        else:
-            # Fallback method for when IDAKLU is not available. To be removed
-            # when the C++ code is migrated to a new repo
-            entries = self._observe_raw_python()  # pragma: no cover
-
-        return self._observe_postfix(entries, t)
+        return self._observe_postfix(self._observe_raw_cpp(), t)
 
     def _setup_cpp_inputs(self, t, full_range):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
@@ -152,13 +141,13 @@ class ProcessedVariable:
 
         is_f_contiguous = _is_f_contiguous(ys)
 
-        ts = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(ts)
-        ys = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(ys)
+        ts = idaklu.VectorRealtypeNdArray(ts)
+        ys = idaklu.VectorRealtypeNdArray(ys)
         if self.hermite_interpolation:
-            yps = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(yps)
+            yps = idaklu.VectorRealtypeNdArray(yps)
         else:
             yps = None
-        inputs = pybamm.solvers.idaklu_solver.idaklu.VectorRealtypeNdArray(inputs)
+        inputs = idaklu.VectorRealtypeNdArray(inputs)
 
         # Generate the serialized C++ functions only once
         funcs_unique = {}
@@ -176,9 +165,7 @@ class ProcessedVariable:
 
         ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs(t, full_range=False)
         shapes = self._shape(t)
-        return pybamm.solvers.idaklu_solver.idaklu.observe_hermite_interp(
-            t, ts, ys, yps, inputs, funcs, shapes
-        )
+        return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
     def _observe_raw_cpp(self):
         pybamm.logger.debug("Observing the variable raw data in C++")
@@ -188,9 +175,7 @@ class ProcessedVariable:
         )
         shapes = self._shape(self.t_pts)
 
-        return pybamm.solvers.idaklu_solver.idaklu.observe(
-            ts, ys, inputs, funcs, is_f_contiguous, shapes
-        )
+        return idaklu.observe(ts, ys, inputs, funcs, is_f_contiguous, shapes)
 
     def _observe_raw_python(self):
         raise NotImplementedError  # pragma: no cover
@@ -254,9 +239,7 @@ class ProcessedVariable:
             idxs_sort = np.argsort(t_observe)
             t_observe = t_observe[idxs_sort]
 
-        hermite_time_interp = (
-            pybamm.has_idaklu() and self.hermite_interpolation and not observe_raw
-        )
+        hermite_time_interp = self.hermite_interpolation and not observe_raw
 
         if hermite_time_interp:
             entries = self.observe_and_interp(t_observe, fill_value)
