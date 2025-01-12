@@ -460,9 +460,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
-        plating_option = _ensure_tuple(plating_option)
-
-        if plating_option == ("partially reversible",):
+        if plating_option == "partially reversible":
             default_options["SEI"] = "constant"
         elif plating_option == ("partially reversible", "none"):
             default_options["SEI"] = ("constant", "none")
@@ -470,10 +468,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["SEI"] = "none"
         # The "SEI" option will still be overridden by extra_options if provided
 
-        options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
+        options = pybamm.FuzzyDict(default_options)
         for name, opt in extra_options.items():
-            _ensure_tuple(opt)
             if name in default_options:
                 options[name] = opt
             else:
@@ -492,12 +489,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Note: this check is currently performed on full cells, but is loosened for
         # half-cells where you must pass a tuple of options to only set MSMR models in
         # the working electrode
-        _ensure_tuple(options["open-circuit potential"])
-        _ensure_tuple(options["particle"])
-        _ensure_tuple(options["intercalation kinetics"])
-
         msmr_check_list = [
-            options[opt] == "MSMR"
+            "MSMR" in options[opt]
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
         if (
@@ -512,10 +505,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
-        _ensure_tuple(options["SEI film resistance"])
-        if "distributed" in options["SEI film resistance"]:
+        if options["SEI film resistance"] == "distributed":
             options["total interfacial current density as a state"] = "true"
-
             # Check that extra_options did not try to provide a clashing option
             if (
                 extra_options.get("total interfacial current density as a state")
@@ -528,15 +519,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # If "SEI film resistance" is not "none" and there are multiple phases
         # then "total interfacial current density as a state" must be "true"
-        _ensure_tuple(options["SEI film resistance"])
-        _ensure_tuple(options["particle phases"])
-
         if (
-            "none" not in options["SEI film resistance"]
-            and "1" not in options["particle phases"]
+            options["SEI film resistance"] != "none"
+            and options["particle phases"] != "1"
         ):
             options["total interfacial current density as a state"] = "true"
-            # check that extra_options did not try to provide a clashing option
+            # Check that extra_options did not try to provide a clashing option
             if (
                 extra_options.get("total interfacial current density as a state")
                 == "false"
@@ -548,55 +536,45 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
 
         # Options not yet compatible with contact resistance
-        _ensure_tuple(options["contact resistance"])
-        _ensure_tuple(options["operating mode"])
-
-        if "true" in options["contact resistance"]:
-            if "explicit power" in options["operating mode"]:
+        if options["contact resistance"] == "true":
+            if options["operating mode"] == "explicit power":
                 raise NotImplementedError(
                     "Contact resistance not yet supported for explicit power."
                 )
-            if "explicit resistance" in options["operating mode"]:
+            if options["operating mode"] == "explicit resistance":
                 raise NotImplementedError(
                     "Contact resistance not yet supported for explicit resistance."
                 )
 
         # Options not yet compatible with particle-size distributions
-
-        # Ensure all necessary options are tuples
-        for _ in [
-            "particle size",
-            "lithium plating porosity change",
-            "heat of mixing",
-            "particle",
-            "particle mechanics",
-            "particle shape",
-            "SEI",
-            "stress-induced diffusion",
-            "thermal",
-        ]:
-            _ensure_tuple(options[_])
-
         if "distribution" in options["particle size"]:
-            if "false" not in options["lithium plating porosity change"]:
+            if options["lithium plating porosity change"] != "false":
                 raise NotImplementedError(
-                    "Lithium plating porosity change not yet supported for particle-size distributions."
+                    "Lithium plating porosity change not yet supported for particle-size"
+                    " distributions."
                 )
-            if "false" not in options["heat of mixing"]:
+            if options["heat of mixing"] != "false":
                 raise NotImplementedError(
-                    "Heat of mixing submodels do not yet support particle-size distributions."
+                    "Heat of mixing submodels do not yet support particle-size "
+                    "distributions."
                 )
-            if options["particle"] in ["quadratic profile", "quartic profile"]:
+            if (
+                "quadratic profile" in options["particle"]
+                or "quartic profile" in options["particle"]
+            ):
                 raise NotImplementedError(
-                    "'quadratic' and 'quartic' concentration profiles have not yet been implemented for particle-size distributions."
+                    "'quadratic' and 'quartic' concentration profiles have not yet "
+                    "been implemented for particle-size ditributions"
                 )
             if "none" not in options["particle mechanics"]:
                 raise NotImplementedError(
-                    "Particle mechanics submodels do not yet support particle-size distributions."
+                    "Particle mechanics submodels do not yet support particle-size"
+                    " distributions."
                 )
             if "spherical" not in options["particle shape"]:
                 raise NotImplementedError(
-                    "Particle shape must be 'spherical' for particle-size distribution submodels."
+                    "Particle shape must be 'spherical' for particle-size distribution"
+                    " submodels."
                 )
             if "none" not in options["SEI"]:
                 raise NotImplementedError(
@@ -604,20 +582,20 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
             if "true" in options["stress-induced diffusion"]:
                 raise NotImplementedError(
-                    "Stress-induced diffusion cannot yet be included in particle-size distributions."
+                    "stress-induced diffusion cannot yet be included in "
+                    "particle-size distributions."
                 )
-            if "x-full" in options["thermal"]:
+            if options["thermal"] == "x-full":
                 raise NotImplementedError(
-                    "X-full thermal submodels do not yet support particle-size distributions."
+                    "X-full thermal submodels do not yet support particle-size"
+                    " distributions."
                 )
 
         # Renamed options
-        _ensure_tuple(options["working electrode"])
-
-        if "negative" in options["working electrode"]:
+        if options["working electrode"] == "negative":
             raise pybamm.OptionError(
                 "The 'negative' working electrode option has been removed because "
-                "the voltage - and therefore the energy stored - would be negative. "
+                "the voltage - and therefore the energy stored - would be negative."
                 "Use the 'positive' working electrode option instead and set whatever "
                 "would normally be the negative electrode as the positive electrode."
             )
@@ -671,7 +649,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
                 options["surface form"] != "false"
-                and options["particle"] == "Fickian diffusion"
+                and "Fickian diffusion" in options["particle"]
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
@@ -691,7 +669,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
                 p_mechanics = (p_mechanics, p_mechanics)
             if any(
-                sei == "true" and mech != "swelling and cracking"
+                "true" in sei and "swelling and cracking" not in mech
                 for mech, sei in zip(p_mechanics, sei_on_cr)
             ):
                 raise pybamm.OptionError(
@@ -701,7 +679,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            _ensure_tuple(value)
             if isinstance(value, str) or option in [
                 "dimensionality",
                 "operating mode",
