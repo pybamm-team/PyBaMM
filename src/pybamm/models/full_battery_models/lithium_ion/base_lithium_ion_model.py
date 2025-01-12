@@ -174,7 +174,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 for domain in domains
             )
             n_Li_cyc = n_Li_particles_cyc + n_Li_e
-            LLI_cyc = (1 - n_Li_particles_cyc / param.n_Li_particles_init_cyc) * 100
+            LLI_cyc = (1 - n_Li_particles_cyc / self.param.n_Li_particles_init_cyc) * 100
 
             self.variables.update(
                 {

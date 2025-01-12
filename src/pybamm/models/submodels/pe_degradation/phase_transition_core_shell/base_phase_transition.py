@@ -65,10 +65,8 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         c_c_outer = c_c_surf
         c_c_outer_av = c_c_surf_av
 
-        c_o_surf = pybamm.surf(c_o)
+        c_o_surf = pybamm.surf(c_o) # i.e., c_o_outer
         c_o_surf_av = pybamm.x_average(c_o_surf)
-        c_o_outer = c_o_surf
-        c_o_outer_av = c_o_surf_av
         c_o_inner = pybamm.boundary_value(c_o, "left")
         c_o_inner_av = pybamm.x_average(c_o_inner)
 
@@ -219,8 +217,6 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         return variables
 
     def _r_average_core(self, symbol):
-        domain = self.domain
-
         if symbol.domain != [] and symbol.domain[0].endswith("core"):
             r_co = pybamm.SpatialVariable("r_co", symbol.domain)
             # v = pybamm.FullBroadcast(
@@ -242,8 +238,6 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             )
 
     def _r_average_shell(self, symbol, s_nd):
-        domain = self.domain
-
         if symbol.domain != [] and symbol.domain[0].endswith("shell"):
             # need to inherit the secondary domains for the multiplication with
             # s_nd with primary domain of 'positive electrode'

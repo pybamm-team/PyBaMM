@@ -9,7 +9,7 @@ References
 ----------
     [1] Sturm, J., et al. "Modeling and Simulation of Inhomogeneities in a
 18650 Nickel-Rich, Silicon-Graphite Lithium-Ion Cell during Fast Charging".
-Journal of Power Sources, vol. 412, Feb. 2019, pp. 204–23.
+Journal of Power Sources, vol. 412, Feb. 2019, pp. 204--23.
 doi: 10.1016/j.jpowsour.2018.11.043.
 """
 path, _ = os.path.split(os.path.abspath(__file__))

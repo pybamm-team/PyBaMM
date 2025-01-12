@@ -33,7 +33,7 @@ class PhaseTransition(BasePhaseTransition):
     def __init__(self, param, domain, options, phase="primary", x_average=False):
         # check whether the domain is positive
         if domain != "positive":
-            raise DomainError(
+            raise pybamm.DomainError(
                 "Domain must be 'positive' for phase transition degradation"
             )
 
@@ -293,14 +293,13 @@ class PhaseTransition(BasePhaseTransition):
         phase_name = self.phase_name
         phase_param = self.phase_param
         phase = self.phase
-        param = self.param
 
         R_typ = phase_param.R_typ
 
         if domain == "positive":
             options_phase = getattr(self.options, domain)["particle phases"]
         else:
-            raise DomainError(
+            raise pybamm.DomainError(
                 "Domain must be 'positive' for phase transition degradation."
                 "Spatial variables only defined for positive core and shell."
             )

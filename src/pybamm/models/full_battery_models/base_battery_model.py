@@ -948,7 +948,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     }
                 )
             elif phases >= 2:
-                base_var_pts.update(
+                base_submeshes.update(
                     {
                         "positive primary core": pybamm.Uniform1DSubMesh,
                         "positive primary shell": pybamm.Uniform1DSubMesh,
@@ -994,7 +994,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     }
                 )
             elif phases >= 2:
-                base_var_pts.update(
+                base_spatial_methods.update(
                     {
                         "positive primary core": pybamm.FiniteVolume(),
                         "positive primary shell": pybamm.FiniteVolume(),
