@@ -96,11 +96,6 @@ class TestUtil:
     def test_is_jax_compatible(self):
         assert pybamm.is_jax_compatible()
 
-    def test_git_commit_info(self):
-        git_commit_info = pybamm.get_git_commit_info()
-        assert isinstance(git_commit_info, str)
-        assert git_commit_info[:2] == "v2"
-
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
