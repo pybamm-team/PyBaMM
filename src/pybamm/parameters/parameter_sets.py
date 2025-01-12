@@ -1,5 +1,4 @@
 import sys
-import warnings
 import importlib.metadata
 import textwrap
 from collections.abc import Mapping
@@ -78,22 +77,6 @@ class ParameterSets(Mapping):
     def get_docstring(self, key):
         """Return the docstring for the ``key`` parameter set"""
         return textwrap.dedent(self.__load_entry_point__(key).__doc__)
-
-    def __getattribute__(self, name):
-        try:
-            return super().__getattribute__(name)
-        except AttributeError as error:
-            # For backwards compatibility, parameter sets that used to be defined in
-            # this file now return the name as a string, which will load the same
-            # parameter set as before when passed to `ParameterValues`
-            if name in self:
-                msg = (
-                    f"Parameter sets should be called directly by their name ({name}), "
-                    f"instead of via pybamm.parameter_sets (pybamm.parameter_sets.{name})."
-                )
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
-                return name
-            raise error
 
 
 #: Singleton Instance of :class:ParameterSets """
