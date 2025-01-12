@@ -6,7 +6,7 @@ Windows
 Prerequisites
 -------------
 
-To use PyBaMM, you must have Python 3.8, 3.9, 3.10, 3.11, or 3.12 installed.
+To use PyBaMM, you must have Python 3.9, 3.10, 3.11, or 3.12 installed.
 
 To install Python 3 download the installation files from `Python’s
 website <https://www.python.org/downloads/windows/>`__. Make sure to
@@ -40,7 +40,8 @@ type:
 
    python -m virtualenv env
 
-You can then “activate” the environment using:
+or use any of your preferred environment management tools. You can then “activate”
+the environment using:
 
 .. code::
 
@@ -56,12 +57,22 @@ the environment and go back to your original system, just type:
 
 PyBaMM can be installed via pip:
 
-.. code:: bash
+.. tab:: pip
 
-   pip install pybamm
+   .. code:: bash
 
-PyBaMM’s dependencies (such as ``numpy``, ``scipy``, etc) will be
-installed automatically when you install PyBaMM using ``pip``.
+      pip install pybamm
+
+.. tab:: conda
+
+   .. code:: bash
+
+      conda install -c conda-forge pybamm-base
+
+PyBaMM’s :ref:`required dependencies <install-required-dependencies>`
+
+(such as ``numpy``, ``casadi``, etc) will be installed automatically when you
+install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 
 For an introduction to virtual environments, see
 (https://realpython.com/python-virtual-environments-a-primer/).
@@ -71,15 +82,13 @@ Optional - JaxSolver
 
 Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
-.. note::
-
-   The Jax solver is only supported for Python versions 3.9 through 3.12.
-
 .. code:: bash
 
 	  pip install "pybamm[jax]"
 
-The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system. (``pybamm_install_jax`` is deprecated.)
+The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
+
+PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
 Uninstall PyBaMM
 ----------------
@@ -97,4 +106,4 @@ Installation using WSL
 
 If you want to install the optional PyBaMM solvers, you have to use the
 Windows Subsystem for Linux (WSL). You can find the installation
-instructions `here <windows-wsl.html>`__.
+instructions on the `Installation <windows-wsl.rst>`_ page.

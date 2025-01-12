@@ -1,24 +1,17 @@
 [build-system]
 requires = [
-    "setuptools>=64",
-    "wheel",
-    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.3; platform_system!='Windows'",
-    # Note: the version of CasADi as a build-time dependency should be matched
-    # cross platforms, so updates to its minimum version here should be accompanied
-    # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
-    "cmake; platform_system!='Windows'",
+    "setuptools",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.1rc2"
+version = "24.11.2"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
 maintainers = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
-requires-python = ">=3.8, <3.13"
+requires-python = ">=3.9, <3.13"
 readme = {file = "README.md", content-type = "text/markdown"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -28,7 +21,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -36,11 +28,19 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "numpy>=1.23.5",
-    "scipy>=1.9.3",
-    "casadi>=3.6.3",
+    "pybammsolvers",
+    "numpy>=1.23.5,<2.0.0",
+    "scipy>=1.11.4",
+    "casadi>=3.6.7",
     "xarray>=2022.6.0",
     "anytree>=2.8.0",
+    "sympy>=1.12",
+    "typing-extensions>=4.10.0",
+    "pandas>=1.5.0",
+    "pooch>=1.8.1",
+    "posthog",
+    "pyyaml",
+    "platformdirs",
 ]
 
 [project.urls]
@@ -51,7 +51,6 @@ Releases = "https://github.com/pybamm-team/PyBaMM/releases"
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
 
 [project.optional-dependencies]
-# For the generation of documentation
 docs = [
     "sphinx>=6",
     "sphinx_rtd_theme>=0.5",
@@ -74,7 +73,6 @@ docs = [
 examples = [
     "jupyter",
 ]
-# Plotting functionality
 plot = [
     "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
@@ -82,23 +80,18 @@ plot = [
     # outside of plot() methods.
     "matplotlib>=3.6.0",
 ]
-# For the Citations class
 cite = [
+    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
-]
-# To generate LaTeX strings
-latexify = [
-    "sympy>=1.12",
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx>=0.4.0",
+    "bpx>=0.5.0,<0.6.0",
 ]
 # Low-overhead progress bars
 tqdm = [
     "tqdm",
 ]
-# Dependencies intended for use by developers
 dev = [
     # For working with pre-commit hooks
     "pre-commit",
@@ -107,35 +100,31 @@ dev = [
     # For running testing sessions
     "nox",
     # For coverage
-    "coverage[toml]",
-    # For testing Jupyter notebooks
+    "pytest-cov",
+    # For doctest
+    "pytest-doctestplus",
+    # pytest and its plugins
     "pytest>=6",
     "pytest-xdist",
+    "pytest-mock",
+    "pytest-subtests",
+    # For testing Jupyter notebooks
     "nbmake",
+    # To access the metadata for python packages
+    "importlib-metadata; python_version < '3.10'",
 ]
-# Reading CSV files
-pandas = [
-    "pandas>=1.5.0",
-]
-# For the Jax solver. Note: these must be kept in sync with the versions defined in pybamm/util.py.
+# For the Jax solver.
+# Note: These must be kept in sync with the versions defined in pybamm/util.py, and
+#       must remain compatible with IREE (see noxfile.py for IREE compatibility).
 jax = [
-    "jax==0.4.20; python_version >= '3.9'",
-    "jaxlib==0.4.20; python_version >= '3.9'",
+    "jax==0.4.27",
+    "jaxlib==0.4.27",
 ]
-# For the scikits.odes solver
-odes = [
-    "scikits.odes"
-]
-# Contains all optional dependencies, except for odes, jax, and dev dependencies
+# Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
-    "autograd>=1.6.2",
     "scikit-fem>=8.1.0",
-    "pybamm[examples,plot,cite,latexify,bpx,tqdm,pandas]",
+    "pybamm[examples,plot,cite,bpx,tqdm]",
 ]
-
-[project.scripts]
-pybamm_install_odes = "pybamm.install_odes:main"
-pybamm_install_jax = "pybamm.util:install_jax"
 
 [project.entry-points."pybamm_parameter_sets"]
 Sulzer2019 = "pybamm.input.parameters.lead_acid.Sulzer2019:get_parameter_values"
@@ -155,6 +144,7 @@ Ramadass2004 = "pybamm.input.parameters.lithium_ion.Ramadass2004:get_parameter_v
 Xu2019 = "pybamm.input.parameters.lithium_ion.Xu2019:get_parameter_values"
 ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
+Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 Zhuo2023 = "pybamm.input.parameters.lithium_ion.Zhuo2023:get_parameter_values"
 
 [tool.setuptools]
@@ -170,20 +160,19 @@ pybamm = [
     "*.md",
     "*.csv",
     "*.py",
-    "pybamm/CITATIONS.bib",
-    "pybamm/plotting/mplstyle",
+    "src/pybamm/CITATIONS.bib",
+    "src/pybamm/plotting/mplstyle",
 ]
 
 [tool.setuptools.packages.find]
-include = ["pybamm", "pybamm.*"]
-
+where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
 
 [tool.ruff.lint]
 extend-select = [
-    # "B",           # flake8-bugbear
+    "B",             # flake8-bugbear
     # "I",           # isort
     # "ARG",         # flake8-unused-arguments
     # "C4",          # flake8-comprehensions
@@ -195,11 +184,15 @@ extend-select = [
     # "PT",          # flake8-pytest-style
     # "PTH",         # flake8-use-pathlib
     # "RET",         # flake8-return
-    "RUF",         # Ruff-specific
+    "RUF",           # Ruff-specific
     # "SIM",         # flake8-simplify
     # "T20",         # flake8-print
-    "UP",          # pyupgrade
-    "YTT",         # flake8-2020
+    "UP",            # pyupgrade
+    "YTT",           # flake8-2020
+    "TID252",        # relative-imports
+    "S101",          # to identify use of assert statement
+    "PT027",         # remove unittest style assertion
+    "PT009",         # Use pytest.raises instead of unittest-style
 ]
 ignore = [
     "E741",        # Ambiguous variable name
@@ -220,29 +213,30 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["T20"]
+"tests/*" = ["T20", "S101"]
 "docs/*" = ["T20"]
 "examples/*" = ["T20"]
 "**.ipynb" = ["E402", "E703"]
 "docs/source/examples/notebooks/models/lithium-plating.ipynb" = ["F821"]
 
-# NOTE: currently used only for notebook tests with the nbmake plugin.
 [tool.pytest.ini_options]
-minversion = "6"
+minversion = "8"
 # Use pytest-xdist to run tests in parallel by default, exit with
 # error if not installed
 required_plugins = [
     "pytest-xdist",
+    "pytest-mock",
+    "pytest-subtests",
 ]
+norecursedirs = 'pybind11*'
 addopts = [
     "-nauto",
-    "-v",
-    "-ra",
+    "-vra",
     "--strict-config",
     "--strict-markers",
 ]
 testpaths = [
-    "docs/source/examples/",
+    "tests",
 ]
 console_output_style = "progress"
 xfail_strict = true
@@ -251,6 +245,10 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
+    # ignore warnings generated while running tests
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::RuntimeWarning",
 ]
 
 # Logging configuration
@@ -260,10 +258,17 @@ log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
-source = ["pybamm"]
+source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
 
-[tool.repo-review]
-ignore = [
-    "PP003"  # list wheel as a build-dep
-]
+[tool.mypy]
+ignore_missing_imports = true
+allow_redefinition = true
+disable_error_code = ["call-overload", "operator"]
+
+[[tool.mypy.overrides]]
+module = [
+        "pybamm.models.base_model.*",
+        "pybamm.models.full_battery_models.base_battery_model.*"
+        ]
+disable_error_code = "attr-defined"

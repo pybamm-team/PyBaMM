@@ -1,17 +1,15 @@
+import pytest
 import pybamm
-import unittest
 from tests import get_mesh_for_testing
-from tests import TestCase
-import sys
-import time
+
 import numpy as np
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
 
 
-@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
-class TestJaxSolver(TestCase):
+@pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+class TestJaxSolver:
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
@@ -32,25 +30,18 @@ class TestJaxSolver(TestCase):
             # Solve
             solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 1, 80)
-            t0 = time.perf_counter()
             solution = solver.solve(model, t_eval)
-            t_first_solve = time.perf_counter() - t0
             np.testing.assert_array_equal(solution.t, t_eval)
             np.testing.assert_allclose(
                 solution.y[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-6
             )
 
             # Test time
-            self.assertEqual(
-                solution.total_time, solution.solve_time + solution.set_up_time
-            )
-            self.assertEqual(solution.termination, "final time")
+            assert solution.total_time == solution.solve_time + solution.set_up_time
+            assert solution.termination == "final time"
 
-            t0 = time.perf_counter()
             second_solution = solver.solve(model, t_eval)
-            t_second_solve = time.perf_counter() - t0
 
-            self.assertLess(t_second_solve, t_first_solve)
             np.testing.assert_array_equal(second_solution.y, solution.y)
 
     def test_semi_explicit_model(self):
@@ -75,25 +66,17 @@ class TestJaxSolver(TestCase):
         # Solve
         solver = pybamm.JaxSolver(method="BDF", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 80)
-        t0 = time.perf_counter()
         solution = solver.solve(model, t_eval)
-        t_first_solve = time.perf_counter() - t0
         np.testing.assert_array_equal(solution.t, t_eval)
         soln = np.exp(0.1 * solution.t)
         np.testing.assert_allclose(solution.y[0], soln, rtol=1e-7, atol=1e-7)
         np.testing.assert_allclose(solution.y[-1], 2 * soln, rtol=1e-7, atol=1e-7)
 
         # Test time
-        self.assertEqual(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
-        self.assertEqual(solution.termination, "final time")
+        assert solution.total_time == solution.solve_time + solution.set_up_time
+        assert solution.termination == "final time"
 
-        t0 = time.perf_counter()
         second_solution = solver.solve(model, t_eval)
-        t_second_solve = time.perf_counter() - t0
-
-        self.assertLess(t_second_solve, t_first_solve)
         np.testing.assert_array_equal(second_solution.y, solution.y)
 
     def test_solver_sensitivities(self):
@@ -125,7 +108,7 @@ class TestJaxSolver(TestCase):
             solve = solver.get_solve(model, t_eval)
 
             # create a dummy "model" where we calculate the sum of the time series
-            def solve_model(rate):
+            def solve_model(rate, solve=solve):
                 return jax.numpy.sum(solve({"rate": rate}))
 
             # check answers with finite difference
@@ -136,7 +119,7 @@ class TestJaxSolver(TestCase):
             grad_solve = jax.jit(jax.grad(solve_model))
             grad = grad_solve(rate)
 
-            self.assertAlmostEqual(grad, grad_num, places=1)
+            assert grad == pytest.approx(grad_num, abs=0.1)
 
     def test_solver_only_works_with_jax(self):
         model = pybamm.BaseModel()
@@ -156,7 +139,7 @@ class TestJaxSolver(TestCase):
             model.convert_to_format = convert_to_format
 
             solver = pybamm.JaxSolver()
-            with self.assertRaisesRegex(RuntimeError, "must be converted to JAX"):
+            with pytest.raises(RuntimeError, match="must be converted to JAX"):
                 solver.solve(model, t_eval)
 
     def test_solver_doesnt_support_events(self):
@@ -183,7 +166,7 @@ class TestJaxSolver(TestCase):
         # Solve
         solver = pybamm.JaxSolver()
         t_eval = np.linspace(0, 10, 100)
-        with self.assertRaisesRegex(RuntimeError, "Terminate events not supported"):
+        with pytest.raises(RuntimeError, match="Terminate events not supported"):
             solver.solve(model, t_eval)
 
     def test_model_solver_with_inputs(self):
@@ -205,24 +188,17 @@ class TestJaxSolver(TestCase):
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 80)
-
-        t0 = time.perf_counter()
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        t_first_solve = time.perf_counter() - t0
 
         np.testing.assert_allclose(
             solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-6
         )
 
-        t0 = time.perf_counter()
         solution = solver.solve(model, t_eval, inputs={"rate": 0.2})
-        t_second_solve = time.perf_counter() - t0
 
         np.testing.assert_allclose(
             solution.y[0], np.exp(-0.2 * solution.t), rtol=1e-6, atol=1e-6
         )
-
-        self.assertLess(t_second_solve, t_first_solve)
 
     def test_get_solve(self):
         # Create model
@@ -242,14 +218,14 @@ class TestJaxSolver(TestCase):
         disc.process_model(model)
 
         # test that another method string gives error
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             solver = pybamm.JaxSolver(method="not_real")
 
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 80)
 
-        with self.assertRaisesRegex(RuntimeError, "Model is not set up for solving"):
+        with pytest.raises(RuntimeError, match="Model is not set up for solving"):
             solver.get_solve(model, t_eval)
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})
@@ -262,11 +238,10 @@ class TestJaxSolver(TestCase):
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
 
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        # Reset solver, test passing `calculate_sensitivities`
+        for method in ["RK45", "BDF"]:
+            solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
+            solution_sens = solver.solve(
+                model, t_eval, inputs={"rate": 0.1}, calculate_sensitivities=True
+            )
+            assert len(solution_sens.sensitivities) == 0

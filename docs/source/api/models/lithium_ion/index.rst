@@ -12,3 +12,4 @@ Lithium-ion Models
   msmr
   yang2017
   electrode_soh
+  ecm_split_ocv

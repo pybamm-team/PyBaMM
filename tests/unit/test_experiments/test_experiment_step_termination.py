@@ -1,18 +1,17 @@
 #
 # Test the experiment step termination classes
 #
+
 import pybamm
-import unittest
+import pytest
 
 
-class TestExperimentStepTermination(unittest.TestCase):
+class TestExperimentStepTermination:
     def test_base_termination(self):
         term = pybamm.step.BaseTermination(1)
-        self.assertEqual(term.value, 1)
-
-        with self.assertRaises(NotImplementedError):
+        assert term.value == 1
+        with pytest.raises(NotImplementedError):
             term.get_event(None, None)
-
-        self.assertEqual(term, pybamm.step.BaseTermination(1))
-        self.assertNotEqual(term, pybamm.step.BaseTermination(2))
-        self.assertNotEqual(term, pybamm.step.CurrentTermination(1))
+        assert term == pybamm.step.BaseTermination(1)
+        assert term != pybamm.step.BaseTermination(2)
+        assert term != pybamm.step.CurrentTermination(1)

@@ -1,13 +1,11 @@
 #
 # Test some experiments
 #
-from tests import TestCase
 import pybamm
 import numpy as np
-import unittest
 
 
-class TestExperiments(TestCase):
+class TestExperiments:
     def test_discharge_rest_charge(self):
         experiment = pybamm.Experiment(
             [
@@ -78,7 +76,7 @@ class TestExperiments(TestCase):
         )
         sol = sim.solve()
         # this experiment fails during the third cycle (i.e. is infeasible)
-        self.assertEqual(len(sol.cycles), 3)
+        assert len(sol.cycles) == 3
 
     def test_drive_cycle(self):
         drive_cycle = np.array([np.arange(100), 5 * np.ones(100)]).T
@@ -100,13 +98,3 @@ class TestExperiments(TestCase):
         )
         sol = sim.solve()
         assert np.all(sol["Terminal voltage [V]"].entries >= 4.00)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

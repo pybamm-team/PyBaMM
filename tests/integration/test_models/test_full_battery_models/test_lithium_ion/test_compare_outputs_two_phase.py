@@ -3,11 +3,9 @@
 #
 import pybamm
 import numpy as np
-import unittest
-from tests import TestCase
 
 
-class TestCompareOutputsTwoPhase(TestCase):
+class TestCompareOutputsTwoPhase:
     def compare_outputs_two_phase_graphite_graphite(self, model_class):
         """
         Check that a two-phase graphite-graphite model gives the same results as a
@@ -144,9 +142,9 @@ class TestCompareOutputsTwoPhase(TestCase):
         )
 
         sim = pybamm.Simulation(model, parameter_values=param)
-        t_eval = np.linspace(0, 9000, 1000)
-        sol1 = sim.solve(t_eval, inputs={"x": 0.01})
-        sol2 = sim.solve(t_eval, inputs={"x": 0.1})
+        t_eval = np.linspace(0, 8000, 1000)
+        inputs = [{"x": 0.01}, {"x": 0.1}]
+        sol = sim.solve(t_eval, inputs=inputs)
 
         # Starting values should be close
         for var in [
@@ -155,11 +153,11 @@ class TestCompareOutputsTwoPhase(TestCase):
             "Average negative secondary particle concentration",
         ]:
             np.testing.assert_allclose(
-                sol1[var].data[:20], sol2[var].data[:20], rtol=1e-2
+                sol[0][var].data[:20], sol[1][var].data[:20], rtol=1e-2
             )
 
         # More silicon means longer sim
-        self.assertLess(sol1["Time [s]"].data[-1], sol2["Time [s]"].data[-1])
+        assert sol[0]["Time [s]"].data[-1] < sol[1]["Time [s]"].data[-1]
 
     def test_compare_SPM_silicon_graphite(self):
         model_class = pybamm.lithium_ion.SPM
@@ -172,12 +170,3 @@ class TestCompareOutputsTwoPhase(TestCase):
     def test_compare_DFN_silicon_graphite(self):
         model_class = pybamm.lithium_ion.DFN
         self.compare_outputs_two_phase_silicon_graphite(model_class)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

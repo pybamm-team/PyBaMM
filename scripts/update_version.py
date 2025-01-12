@@ -6,9 +6,6 @@ import json
 import os
 import re
 from datetime import date
-from dateutil.relativedelta import relativedelta
-
-
 import pybamm
 
 
@@ -17,14 +14,12 @@ def update_version():
     Opens file and updates the version number
     """
     release_version = os.getenv("VERSION")[1:]
-    release_date = (
-        date.today()
-        if "rc" in release_version
-        else date.today() + relativedelta(day=31)
-    )
+    release_date = date.today()
 
     # pybamm/version.py
-    with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
+    with open(
+        os.path.join(pybamm.root_dir(), "src", "pybamm", "version.py"), "r+"
+    ) as file:
         output = file.read()
         replace_version = re.sub(
             '(?<=__version__ = ")(.+)(?=")', release_version, output
@@ -82,15 +77,7 @@ def update_version():
     with open(os.path.join(pybamm.root_dir(), "CHANGELOG.md"), "r+") as file:
         output_list = file.readlines()
         output_list[0] = changelog_line1
-        # add a new heading for rc0 releases
-        if "rc0" in release_version:
-            output_list.insert(2, changelog_line2)
-        else:
-            # for rcX and final releases, update the already existing rc
-            # release heading
-            for i in range(0, len(output_list)):
-                if re.search("[v]\d\d\.\drc\d", output_list[i]):
-                    output_list[i] = changelog_line2[:-1]
+        output_list.insert(2, changelog_line2)
         file.truncate(0)
         file.seek(0)
         file.writelines(output_list)

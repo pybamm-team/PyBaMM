@@ -1,13 +1,11 @@
 #
 # Test function control submodel
 #
-from tests import TestCase
 import numpy as np
 import pybamm
-import unittest
 
 
-class TestFunctionControl(TestCase):
+class TestFunctionControl:
     def test_constant_current(self):
         def constant_current(variables):
             I = variables["Current [A]"]
@@ -193,13 +191,3 @@ class TestFunctionControl(TestCase):
         # solve model
         t_eval = np.linspace(0, 3600, 100)
         model.default_solver.solve(model, t_eval)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

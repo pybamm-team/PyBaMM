@@ -1,29 +1,26 @@
 #
 # Test the experiment steps
 #
+import pytest
 import pybamm
-import unittest
 import numpy as np
 from datetime import datetime
-from pybamm.experiment.step import _Step
 
 
-class TestExperimentSteps(unittest.TestCase):
+class TestExperimentSteps:
     def test_step(self):
-        step = pybamm.step._Step("current", 1, duration=3600)
-        self.assertEqual(step.type, "current")
-        self.assertEqual(step.value, 1)
-        self.assertEqual(step.duration, 3600)
-        self.assertEqual(step.termination, [])
-        self.assertEqual(step.period, None)
-        self.assertEqual(step.temperature, None)
-        self.assertEqual(step.tags, [])
-        self.assertEqual(step.start_time, None)
-        self.assertEqual(step.end_time, None)
-        self.assertEqual(step.next_start_time, None)
+        step = pybamm.step.current(1, duration=3600)
+        assert step.value == 1
+        assert step.duration == 3600
+        assert step.termination == []
+        assert step.period is None
+        assert step.temperature is None
+        assert step.tags == []
+        assert step.start_time is None
+        assert step.end_time is None
+        assert step.next_start_time is None
 
-        step = pybamm.step._Step(
-            "voltage",
+        step = pybamm.step.voltage(
             1,
             duration="1h",
             termination="2.5V",
@@ -32,52 +29,50 @@ class TestExperimentSteps(unittest.TestCase):
             tags="test",
             start_time=datetime(2020, 1, 1, 0, 0, 0),
         )
-        self.assertEqual(step.type, "voltage")
-        self.assertEqual(step.value, 1)
-        self.assertEqual(step.duration, 3600)
-        self.assertEqual(step.termination, [pybamm.step.VoltageTermination(2.5)])
-        self.assertEqual(step.period, 60)
-        self.assertEqual(step.temperature, 298.15)
-        self.assertEqual(step.tags, ["test"])
-        self.assertEqual(step.start_time, datetime(2020, 1, 1, 0, 0, 0))
+        assert step.value == 1
+        assert step.duration == 3600
+        assert step.termination == [pybamm.step.VoltageTermination(2.5)]
+        assert step.period == 60
+        assert step.temperature == 298.15
+        assert step.tags == ["test"]
+        assert step.start_time == datetime(2020, 1, 1, 0, 0, 0)
 
-        step = pybamm.step._Step("current", 1, temperature="298K")
-        self.assertEqual(step.temperature, 298)
+        step = pybamm.step.current(1, temperature="298K")
+        assert step.temperature == 298
 
-        with self.assertRaisesRegex(ValueError, "temperature units"):
-            step = pybamm.step._Step("current", 1, temperature="298T")
+        with pytest.raises(ValueError, match="temperature units"):
+            step = pybamm.step.current(1, temperature="298T")
+
+        with pytest.raises(ValueError, match="time must be positive"):
+            pybamm.step.current(1, duration=0)
 
     def test_specific_steps(self):
         current = pybamm.step.current(1)
-        self.assertIsInstance(current, pybamm.step._Step)
-        self.assertEqual(current.type, "current")
-        self.assertEqual(current.value, 1)
-        self.assertEqual(str(current), repr(current))
+        assert isinstance(current, pybamm.step.Current)
+        assert current.value == 1
+        assert str(current) == repr(current)
+        assert current.duration == 24 * 3600
 
         c_rate = pybamm.step.c_rate(1)
-        self.assertIsInstance(c_rate, pybamm.step._Step)
-        self.assertEqual(c_rate.type, "C-rate")
-        self.assertEqual(c_rate.value, 1)
+        assert isinstance(c_rate, pybamm.step.CRate)
+        assert c_rate.value == 1
+        assert c_rate.duration == 3600 * 2
 
         voltage = pybamm.step.voltage(1)
-        self.assertIsInstance(voltage, pybamm.step._Step)
-        self.assertEqual(voltage.type, "voltage")
-        self.assertEqual(voltage.value, 1)
+        assert isinstance(voltage, pybamm.step.Voltage)
+        assert voltage.value == 1
 
         rest = pybamm.step.rest()
-        self.assertIsInstance(rest, pybamm.step._Step)
-        self.assertEqual(rest.type, "current")
-        self.assertEqual(rest.value, 0)
+        assert isinstance(rest, pybamm.step.Current)
+        assert rest.value == 0
 
         power = pybamm.step.power(1)
-        self.assertIsInstance(power, pybamm.step._Step)
-        self.assertEqual(power.type, "power")
-        self.assertEqual(power.value, 1)
+        assert isinstance(power, pybamm.step.Power)
+        assert power.value == 1
 
         resistance = pybamm.step.resistance(1)
-        self.assertIsInstance(resistance, pybamm.step._Step)
-        self.assertEqual(resistance.type, "resistance")
-        self.assertEqual(resistance.value, 1)
+        assert isinstance(resistance, pybamm.step.Resistance)
+        assert resistance.value == 1
 
     def test_step_string(self):
         steps = [
@@ -98,80 +93,80 @@ class TestExperimentSteps(unittest.TestCase):
 
         expected_result = [
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": 1.0,
                 "duration": 1800.0,
                 "termination": [],
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": 0.05,
                 "duration": 3600.0,
                 "termination": [],
                 "period": 120,
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": -0.5,
                 "duration": 2700.0,
                 "termination": [],
             },
             {
                 "value": 1.0,
-                "type": "current",
+                "type": "Current",
                 "duration": 1800.0,
                 "termination": [],
             },
             {
                 "value": -0.2,
-                "type": "current",
+                "type": "Current",
                 "duration": 2700.0,
                 "termination": [],
             },
             {
                 "value": 1.0,
-                "type": "power",
+                "type": "Power",
                 "duration": 1800.0,
                 "termination": [],
             },
             {
                 "value": -0.2,
-                "type": "power",
+                "type": "Power",
                 "duration": 2700.0,
                 "termination": [],
             },
             {
                 "value": 0,
-                "type": "current",
+                "type": "Current",
                 "duration": 600.0,
                 "termination": [],
             },
             {
                 "value": 1,
-                "type": "voltage",
+                "type": "Voltage",
                 "duration": 20.0,
                 "termination": [],
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": -1,
-                "duration": None,
+                "duration": 7200,
                 "termination": [pybamm.step.VoltageTermination(4.1)],
             },
             {
                 "value": 4.1,
-                "type": "voltage",
-                "duration": None,
+                "type": "Voltage",
+                "duration": 3600 * 24,
                 "termination": [pybamm.step.CurrentTermination(0.05)],
             },
             {
                 "value": 3,
-                "type": "voltage",
-                "duration": None,
+                "type": "Voltage",
+                "duration": 3600 * 24,
                 "termination": [pybamm.step.CrateTermination(0.02)],
             },
             {
-                "type": "C-rate",
+                "type": "CRate",
                 "value": 1 / 3,
                 "duration": 7200.0,
                 "termination": [pybamm.step.VoltageTermination(2.5)],
@@ -182,14 +177,14 @@ class TestExperimentSteps(unittest.TestCase):
             actual = pybamm.step.string(step).to_dict()
             for k in expected.keys():
                 # useful form for debugging
-                self.assertEqual([k, expected[k]], [k, actual[k]])
+                assert [k, expected[k]] == [k, actual[k]]
 
-        with self.assertRaisesRegex(ValueError, "Period cannot be"):
+        with pytest.raises(ValueError, match="Period cannot be"):
             pybamm.step.string(
                 "Discharge at 1C for 1 hour (1 minute period)", period=60
             )
 
-        with self.assertRaisesRegex(ValueError, "Temperature must be"):
+        with pytest.raises(ValueError, match="Temperature must be"):
             pybamm.step.string("Discharge at 1C for 1 hour at 298.15oC")
 
     def test_drive_cycle(self):
@@ -199,13 +194,12 @@ class TestExperimentSteps(unittest.TestCase):
         # Create steps
         drive_cycle_step = pybamm.step.current(drive_cycle, temperature="-5oC")
         # Check drive cycle operating conditions
-        self.assertEqual(drive_cycle_step.type, "current")
-        self.assertEqual(drive_cycle_step.duration, 9)
-        self.assertEqual(drive_cycle_step.period, 1)
-        self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
+        assert drive_cycle_step.duration == 9
+        assert drive_cycle_step.period == 1
+        assert drive_cycle_step.temperature == 273.15 - 5
 
         bad_drive_cycle = np.ones((10, 3))
-        with self.assertRaisesRegex(ValueError, "Drive cycle must be a 2-column array"):
+        with pytest.raises(ValueError, match="Drive cycle must be a 2-column array"):
             pybamm.step.current(bad_drive_cycle)
 
     def test_drive_cycle_duration(self):
@@ -218,10 +212,9 @@ class TestExperimentSteps(unittest.TestCase):
             drive_cycle, duration=20, temperature="-5oC"
         )
         # Check drive cycle operating conditions
-        self.assertEqual(drive_cycle_step.type, "current")
-        self.assertEqual(drive_cycle_step.duration, 20)
-        self.assertEqual(drive_cycle_step.period, 1)
-        self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
+        assert drive_cycle_step.duration == 20
+        assert drive_cycle_step.period == 1
+        assert drive_cycle_step.temperature == 273.15 - 5
 
         # Check duration shorter than drive cycle data
         # Create steps
@@ -229,41 +222,40 @@ class TestExperimentSteps(unittest.TestCase):
             drive_cycle, duration=5, temperature="-5oC"
         )
         # Check drive cycle operating conditions
-        self.assertEqual(drive_cycle_step.type, "current")
-        self.assertEqual(drive_cycle_step.duration, 5)
-        self.assertEqual(drive_cycle_step.period, 1)
-        self.assertEqual(drive_cycle_step.temperature, 273.15 - 5)
+        assert drive_cycle_step.duration == 5
+        assert drive_cycle_step.period == 1
+        assert drive_cycle_step.temperature == 273.15 - 5
 
     def test_bad_strings(self):
-        with self.assertRaisesRegex(TypeError, "Input to step.string"):
+        with pytest.raises(TypeError, match="Input to step.string"):
             pybamm.step.string(1)
-        with self.assertRaisesRegex(TypeError, "Input to step.string"):
+        with pytest.raises(TypeError, match="Input to step.string"):
             pybamm.step.string((1, 2, 3))
-        with self.assertRaisesRegex(ValueError, "Operating conditions must"):
+        with pytest.raises(ValueError, match="Operating conditions must"):
             pybamm.step.string("Discharge at 1 A at 2 hours")
-        with self.assertRaisesRegex(ValueError, "drive cycles"):
+        with pytest.raises(ValueError, match="drive cycles"):
             pybamm.step.string("Run at 1 A for 2 hours")
-        with self.assertRaisesRegex(ValueError, "Instruction must be"):
+        with pytest.raises(ValueError, match="Instruction must be"):
             pybamm.step.string("Play at 1 A for 2 hours")
-        with self.assertRaisesRegex(ValueError, "Operating conditions must"):
+        with pytest.raises(ValueError, match="Operating conditions must"):
             pybamm.step.string("Do at 1 A")
-        with self.assertRaisesRegex(ValueError, "Instruction"):
+        with pytest.raises(ValueError, match="Instruction"):
             pybamm.step.string("Cell Charge at 1 A for 2 hours")
-        with self.assertRaisesRegex(ValueError, "units must be"):
+        with pytest.raises(ValueError, match="units must be"):
             pybamm.step.string("Discharge at 1 B for 2 hours")
-        with self.assertRaisesRegex(ValueError, "time units must be"):
+        with pytest.raises(ValueError, match="time units must be"):
             pybamm.step.string("Discharge at 1 A for 2 years")
 
     def test_start_times(self):
         # Test start_times
-        step = pybamm.step._Step(
-            "current", 1, duration=3600, start_time=datetime(2020, 1, 1, 0, 0, 0)
+        step = pybamm.step.current(
+            1, duration=3600, start_time=datetime(2020, 1, 1, 0, 0, 0)
         )
-        self.assertEqual(step.start_time, datetime(2020, 1, 1, 0, 0, 0))
+        assert step.start_time == datetime(2020, 1, 1, 0, 0, 0)
 
         # Test bad start_times
-        with self.assertRaisesRegex(TypeError, "`start_time` should be"):
-            pybamm.step._Step("current", 1, duration=3600, start_time="bad start_time")
+        with pytest.raises(TypeError, match="`start_time` should be"):
+            pybamm.step.current(1, duration=3600, start_time="bad start_time")
 
     def test_custom_termination(self):
         def neg_stoich_cutoff(variables):
@@ -274,22 +266,44 @@ class TestExperimentSteps(unittest.TestCase):
         )
         variables = {"Negative electrode stoichiometry": 3}
         event = neg_stoich_termination.get_event(variables, None)
-        self.assertEqual(event.name, "Negative stoichiometry cut-off [experiment]")
-        self.assertEqual(event.expression, 2)
+        assert event.name == "Negative stoichiometry cut-off [experiment]"
+        assert event.expression == 2
 
     def test_drive_cycle_start_time(self):
         # An example where start_time t>0
         t = np.array([[1, 1], [2, 2], [3, 3]])
 
-        with self.assertRaisesRegex(ValueError, "Drive cycle must start at t=0"):
-            _Step("current", t)
+        with pytest.raises(ValueError, match="Drive cycle must start at t=0"):
+            pybamm.step.current(t)
 
+    def test_base_custom_steps(self):
+        with pytest.raises(NotImplementedError):
+            pybamm.step.BaseStepExplicit(None).current_value(None)
+        with pytest.raises(NotImplementedError):
+            pybamm.step.BaseStepImplicit(None).get_submodel(None)
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
+    def test_custom_steps(self):
+        def custom_step_constant(variables):
+            return 1
 
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        custom_constant = pybamm.step.CustomStepExplicit(custom_step_constant)
+
+        assert custom_constant.current_value_function({}) == 1
+
+        def custom_step_voltage(variables):
+            return variables["Voltage [V]"] - 4.1
+
+        custom_step_alg = pybamm.step.CustomStepImplicit(custom_step_voltage)
+
+        assert custom_step_alg.control == "algebraic"
+        assert custom_step_alg.current_rhs_function(
+            {"Voltage [V]": 4.2}
+        ) == pytest.approx(0.1)
+
+        custom_step_diff = pybamm.step.CustomStepImplicit(
+            custom_step_voltage, control="differential"
+        )
+        assert custom_step_diff.control == "differential"
+
+        with pytest.raises(ValueError, match="control must be"):
+            pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")

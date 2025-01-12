@@ -42,8 +42,13 @@ for ax, i, j in zip(
         model = i[1].new_copy()
         c_rate = 1
         tmax = 3500 / c_rate
-        nb_points = 500
-        t_eval = np.linspace(0, tmax, nb_points)
+        if solver.supports_interp:
+            t_eval = np.array([0, tmax])
+            t_interp = None
+        else:
+            nb_points = 500
+            t_eval = np.linspace(0, tmax, nb_points)
+            t_interp = None
         geometry = model.default_geometry
 
         # load parameter values and process model and geometry
@@ -69,11 +74,11 @@ for ax, i, j in zip(
 
         for tol in abstols:
             solver.atol = tol
-            solver.solve(model, t_eval=t_eval)
+            solver.solve(model, t_eval=t_eval, t_interp=t_interp)
             time = 0
             runs = 20
-            for k in range(0, runs):
-                solution = solver.solve(model, t_eval=t_eval)
+            for _ in range(0, runs):
+                solution = solver.solve(model, t_eval=t_eval, t_interp=t_interp)
                 time += solution.solve_time.value
             time = time / runs
 

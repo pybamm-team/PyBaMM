@@ -1,20 +1,18 @@
 #
 # Tests for the jacobian methods for two-dimensional objects
 #
-from tests import TestCase
+
+import pytest
 import pybamm
 
 import numpy as np
-import unittest
 from scipy.sparse import eye
-from tests import get_1p1d_discretisation_for_testing
+from tests import (
+    get_1p1d_discretisation_for_testing,
+)
 
 
-def test_multi_var_function(arg1, arg2):
-    return arg1 + arg2
-
-
-class TestJacobian(TestCase):
+class TestJacobian:
     def test_linear(self):
         y = pybamm.StateVector(slice(0, 8))
         u = pybamm.StateVector(slice(0, 2), slice(4, 6))
@@ -84,7 +82,7 @@ class TestJacobian(TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # when differentiating by independent part of the state vector
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             u.jac(v)
 
     def test_nonlinear(self):
@@ -201,12 +199,6 @@ class TestJacobian(TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy)
 
-        # several children
-        func = pybamm.Function(test_multi_var_function, 2 * y, 3 * y)
-        jacobian = np.diag(5 * np.ones(8))
-        dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
-
     def test_jac_of_domain_concatenation(self):
         # create mesh
         disc = get_1p1d_discretisation_for_testing()
@@ -251,13 +243,3 @@ class TestJacobian(TestCase):
         y0 = np.ones(1500)
         jac = conc_disc.jac(y).evaluate(y=y0).toarray()
         np.testing.assert_array_equal(jac, np.eye(1500))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

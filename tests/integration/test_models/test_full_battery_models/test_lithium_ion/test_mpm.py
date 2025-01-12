@@ -1,14 +1,12 @@
 #
 # Tests for the lithium-ion MPM model
 #
-from tests import TestCase
 import pybamm
 import tests
 import numpy as np
-import unittest
 
 
-class TestMPM(TestCase):
+class TestMPM:
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
@@ -27,7 +25,7 @@ class TestMPM(TestCase):
         to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if pybamm.have_jax():
+        if pybamm.has_jax():
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
@@ -62,6 +60,28 @@ class TestMPM(TestCase):
                 "Negative electrode delithiation OCP [V]" "": parameter_values[
                     "Negative electrode OCP [V]"
                 ],
+            },
+            check_already_exists=False,
+        )
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
+
+    def test_wycisk_ocp(self):
+        options = {"open-circuit potential": ("Wycisk", "single")}
+        model = pybamm.lithium_ion.MPM(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Negative electrode lithiation OCP [V]"
+                "": lambda sto: parameter_values["Negative electrode OCP [V]"](sto)
+                - 0.1,
+                "Negative electrode delithiation OCP [V]"
+                "": lambda sto: parameter_values["Negative electrode OCP [V]"](sto)
+                + 0.1,
+                "Negative particle hysteresis decay rate": 1,
+                "Negative particle hysteresis switching factor": 1,
+                "Initial hysteresis state in negative electrode": -0.5,
             },
             check_already_exists=False,
         )
@@ -103,11 +123,10 @@ class TestMPM(TestCase):
         np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
 
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()
+    def test_basic_processing_nonlinear_diffusion(self):
+        model = pybamm.lithium_ion.MPM()
+        # Ecker2015 has a nonlinear diffusion coefficient
+        parameter_values = pybamm.ParameterValues("Ecker2015")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)

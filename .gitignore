@@ -14,8 +14,8 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!pybamm/CITATIONS.bib
-!pybamm/input/**/*.csv
+!src/pybamm/CITATIONS.bib
+!src/pybamm/input/**/*.csv
 !tests/unit/test_parameters/*.csv
 !benchmarks/benchmark_images/*.png
 
@@ -46,7 +46,6 @@ input/*
 
 # simulation outputs
 out/
-config.py
 matplotlibrc
 *.pickle
 *.sav
@@ -65,6 +64,7 @@ coverage.xml
 htmlcov/
 
 # virtual environment
+.venv
 env/
 venv/
 venv3.5/
@@ -77,14 +77,6 @@ share/
 pyvenv.cfg
 .vscode
 .ruff_cache/
-
-# sundials
-sundials
-sundials4
-sundials-*
-SuiteSparse-*
-build_sundials
-KLU_module_deps
 
 # downloads
 *.gz
@@ -106,9 +98,6 @@ KLU_module_deps
 
 # setup
 setup.log
-
-# odes setup
-scikits_odes_setup.log
 
 # test
 test.c
@@ -132,20 +121,14 @@ html/
 results/
 
 # expression tree images for notebooks in docs
-!docs/source/examples/notebooks/expression_tree/expression_tree1.png
-!docs/source/examples/notebooks/expression_tree/expression_tree2.png
-!docs/source/examples/notebooks/expression_tree/expression_tree3.png
-!docs/source/examples/notebooks/expression_tree/expression_tree4.png
-!docs/source/examples/notebooks/expression_tree/expression_tree5.png
+!docs/source/examples/notebooks/expression_tree/*.png
 
 # do not ignore SPM images for notebooks in docs
-!docs/source/examples/notebooks/models/spm1.png
-!docs/source/examples/notebooks/models/spm2.png
+!docs/source/examples/notebooks/models/*.png
 
 # do not ignore images in _static folder in docs
 !docs/_static/favicon/favicon.png
-!docs/_static/pybamm_logo.png
-!docs/_static/pybamm_logo_whitetext.png
+!docs/_static/*.png
 
 # tests
 test_callback.log
