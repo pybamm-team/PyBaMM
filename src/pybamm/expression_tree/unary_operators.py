@@ -1095,12 +1095,12 @@ class BoundaryCellValue(BoundaryOperator):
         super().__init__("boundary cell value", child, side)
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_cell_value(child, self.side)
 
 
 class BoundaryCellLength(BoundaryOperator):
-    """A node in the expression tree which gets half the cell length of the 
+    """A node in the expression tree which gets half the cell length of the
     boundary cell on its primary domain.
 
     Parameters
@@ -1115,7 +1115,7 @@ class BoundaryCellLength(BoundaryOperator):
         super().__init__("boundary cell length", child, side)
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_cell_length(child, self.side)
 
 
@@ -1479,7 +1479,7 @@ def boundary_value(symbol, side):
 def boundary_cell_value(symbol, side):
     """convenience function for creating a :class:`pybamm.BoundaryCellValue`
 
-    not boundary value but the nodal value of boundary cell, i.e., 
+    not boundary value but the nodal value of boundary cell, i.e.,
     the unknown for this cell: c_0 or c_N
 
     Parameters

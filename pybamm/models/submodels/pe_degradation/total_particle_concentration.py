@@ -29,8 +29,7 @@ class TotalConcentration(BasePhaseTransition):
         phase_param = self.phase_param
 
         c_c_rav = variables[
-            f"R-averaged {domain} {phase_name}core "
-            "lithium concentration [mol.m-3]"
+            f"R-averaged {domain} {phase_name}core " "lithium concentration [mol.m-3]"
         ]
         eps_s = variables[
             f"{Domain} electrode {phase_name}active material volume fraction"
@@ -42,9 +41,7 @@ class TotalConcentration(BasePhaseTransition):
         ]
 
         # total lithium in the core, concentration in shell not taken into account
-        c_c_vol_av = (
-            pybamm.x_average(eps_s * c_c_rav) / eps_s_av
-        )
+        c_c_vol_av = pybamm.x_average(eps_s * c_c_rav) / eps_s_av
         # total cyclable lithium in the core
         c_c_vol_av_cyc = (
             pybamm.x_average(eps_s * (c_c_rav - phase_param.c_bott)) / eps_s_av
@@ -57,20 +54,25 @@ class TotalConcentration(BasePhaseTransition):
 
         variables.update(
             {
-                f"{Domain} electrode {phase_name}stoichiometry"
-                "": c_c_vol_av / c_scale,
+                f"{Domain} electrode {phase_name}stoichiometry" "": c_c_vol_av
+                / c_scale,
                 f"{Domain} electrode {phase_name}volume-averaged "
                 "concentration": c_c_vol_av / c_scale,
-                 f"{Domain} electrode {phase_name}volume-averaged "
+                f"{Domain} electrode {phase_name}volume-averaged "
                 "concentration [mol.m-3]": c_c_vol_av,
                 f"Total lithium in {phase} phase in {domain} electrode [mol]"
-                "": pybamm.yz_average(c_c_vol_av * eps_s_av) * L * A * (
-                    1 - lam_pe_av # remove degraded shell fraction
-                    ),
+                "": pybamm.yz_average(c_c_vol_av * eps_s_av)
+                * L
+                * A
+                * (
+                    1 - lam_pe_av  # remove degraded shell fraction
+                ),
                 f"Total cyclable lithium in {phase} phase in "
                 f"{domain} electrode [mol]": pybamm.yz_average(
                     c_c_vol_av_cyc * eps_s_av * (1 - lam_pe_av)
-                ) * L * A,
+                )
+                * L
+                * A,
             }
         )
         return variables

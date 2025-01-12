@@ -234,7 +234,7 @@ r_co = pybamm.SpatialVariable(
         "secondary": "positive electrode",
         "tertiary": "current collector",
     },
-    coord_sys="spherical polar"
+    coord_sys="spherical polar",
 )
 r_sh = pybamm.SpatialVariable(
     "r_sh",
@@ -245,7 +245,7 @@ r_sh = pybamm.SpatialVariable(
     },
     # note the coordinate system is different from that of r_co
     # thus the rhs of eqs residing in the core and shell differs
-    coord_sys="cartesian"
+    coord_sys="cartesian",
 )
 r_co_prim = pybamm.SpatialVariable(
     "r_co_prim",
@@ -254,7 +254,7 @@ r_co_prim = pybamm.SpatialVariable(
         "secondary": "positive electrode",
         "tertiary": "current collector",
     },
-    coord_sys="spherical polar"
+    coord_sys="spherical polar",
 )
 r_sh_prim = pybamm.SpatialVariable(
     "r_sh_prim",
@@ -263,7 +263,7 @@ r_sh_prim = pybamm.SpatialVariable(
         "secondary": "positive electrode",
         "tertiary": "current collector",
     },
-    coord_sys="cartesian"
+    coord_sys="cartesian",
 )
 r_co_sec = pybamm.SpatialVariable(
     "r_co_sec",
@@ -272,7 +272,7 @@ r_co_sec = pybamm.SpatialVariable(
         "secondary": "positive electrode",
         "tertiary": "current collector",
     },
-    coord_sys="spherical polar"
+    coord_sys="spherical polar",
 )
 r_sh_sec = pybamm.SpatialVariable(
     "r_sh_sec",
@@ -281,5 +281,5 @@ r_sh_sec = pybamm.SpatialVariable(
         "secondary": "positive electrode",
         "tertiary": "current collector",
     },
-    coord_sys="cartesian"
+    coord_sys="cartesian",
 )

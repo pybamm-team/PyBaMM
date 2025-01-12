@@ -4,6 +4,7 @@
 import pybamm
 from .base_phase_transition import BasePhaseTransition
 
+
 class PhaseTransition(BasePhaseTransition):
     """
     Class for positive electrode degradation mechanism of progressive phase
@@ -43,7 +44,7 @@ class PhaseTransition(BasePhaseTransition):
 
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
-        phase_name     = self.phase_name
+        phase_name = self.phase_name
 
         variables = {}
 
@@ -59,7 +60,7 @@ class PhaseTransition(BasePhaseTransition):
                 bounds=(0, self.phase_param.c_max),
                 scale=self.phase_param.c_max,
             )
-            c_c.print_name = f"c_c_{domain[0]}" # e.g. c_c_n
+            c_c.print_name = f"c_c_{domain[0]}"  # e.g. c_c_n
 
             # oxygen concentration in degraded shell
             c_o = pybamm.Variable(
@@ -118,16 +119,16 @@ class PhaseTransition(BasePhaseTransition):
 
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
-        phase_name     = self.phase_name
-        phase_param    = self.phase_param
-        param          = self.param
+        phase_name = self.phase_name
+        phase_param = self.phase_param
+        param = self.param
 
-        R_typ    = phase_param.R_typ
-        c_thrd   = phase_param.c_c_thrd
-        c_trap   = phase_param.c_s_trap
+        R_typ = phase_param.R_typ
+        c_thrd = phase_param.c_c_thrd
+        c_trap = phase_param.c_s_trap
         c_o_core = phase_param.c_o_core
-        k_1      = phase_param.k_1
-        k_2      = phase_param.k_2
+        k_1 = phase_param.k_1
+        k_2 = phase_param.k_2
 
         if self.x_average is False:
             # independent variables
@@ -148,8 +149,7 @@ class PhaseTransition(BasePhaseTransition):
 
             R_nd = variables[f"{Domain} {phase_name}particle radius"]
             j = variables[
-                f"{Domain} electrode {phase_name}"
-                "interfacial current density [A.m-2]"
+                f"{Domain} electrode {phase_name}" "interfacial current density [A.m-2]"
             ]
 
             # variable values at the moving core-shell phase boundary
@@ -169,12 +169,8 @@ class PhaseTransition(BasePhaseTransition):
             c_o_1 = variables[
                 f"{Domain} {phase_name}shell inner cell oxygen concentration [mol.m-3]"
             ]
-            dx_core = variables[
-                f"{Domain} {phase_name}core surface cell length [m]"
-            ]
-            dx_shell = variables[
-                f"{Domain} {phase_name}shell inner cell length [m]"
-            ]
+            dx_core = variables[f"{Domain} {phase_name}core surface cell length [m]"]
+            dx_shell = variables[f"{Domain} {phase_name}shell inner cell length [m]"]
         else:
             # independent variables
             c_c = variables[
@@ -194,11 +190,9 @@ class PhaseTransition(BasePhaseTransition):
             T_o = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}shell"])
 
             # we use averaged particle radius to represent all particles here
-            # R_nd = 1 assumes the typical radius (R value at electrode middle point) 
+            # R_nd = 1 assumes the typical radius (R value at electrode middle point)
             # represent all particles, as adopted in particle ficikan model SPM
-            R_nd = variables[
-                f"X-averaged {domain} {phase_name}particle radius"
-            ]
+            R_nd = variables[f"X-averaged {domain} {phase_name}particle radius"]
 
             j = variables[
                 f"X-averaged {domain} electrode {phase_name}"
@@ -233,15 +227,16 @@ class PhaseTransition(BasePhaseTransition):
 
         # time rate of moving phase boundary
         # EqualHeaviside evaluates whether left <= right
-        s_nd_dot = ( 
-            -(k_1  - k_2 * c_o_inner) / (R_nd * R_typ) * 
-            pybamm.EqualHeaviside(c_c_outer, c_thrd)
+        s_nd_dot = (
+            -(k_1 - k_2 * c_o_inner)
+            / (R_nd * R_typ)
+            * pybamm.EqualHeaviside(c_c_outer, c_thrd)
         )
 
         # defined in base_phase_transition
         D_c = pybamm.surf(phase_param.D(c_c, T_c))
         D_o = pybamm.boundary_value(phase_param.D_o(c_o, T_o), "left")
-        
+
         # Derived variable values at the moving phase boundary
         # from applied boundary conditions of mass conservation
         # The boundary conditions for the lithium and oxygen diffusion equations
@@ -250,19 +245,17 @@ class PhaseTransition(BasePhaseTransition):
         # Note they are not extrapolated from cell central variable values
         # lithium concentration at the moving phase boundary
         c_c_b = (
-            (c_c_N - dx_core / D_c * (
-                     R_nd / s_nd * j / param.F - 
-                      (R_nd**2) * R_typ * s_nd * s_nd_dot * c_trap
-                     )
-            ) / (1 + dx_core / D_c * (R_nd**2) * R_typ * s_nd * s_nd_dot)
-        )
+            c_c_N
+            - dx_core
+            / D_c
+            * (R_nd / s_nd * j / param.F - (R_nd**2) * R_typ * s_nd * s_nd_dot * c_trap)
+        ) / (1 + dx_core / D_c * (R_nd**2) * R_typ * s_nd * s_nd_dot)
 
         # oxygen concentration at the moving phase boundary
         c_o_b = (
-            (c_o_1 - dx_shell / D_o * (R_nd**2) * R_typ * (1 - s_nd) *
-                      s_nd_dot * c_o_core ) /
-            (1 - dx_shell / D_o * (R_nd**2) * R_typ * (1 - s_nd) * s_nd_dot)
-        )
+            c_o_1
+            - dx_shell / D_o * (R_nd**2) * R_typ * (1 - s_nd) * s_nd_dot * c_o_core
+        ) / (1 - dx_shell / D_o * (R_nd**2) * R_typ * (1 - s_nd) * s_nd_dot)
 
         # boundary conditions for lithium diffusion in the core
         rbc_c_c = (c_c_b - c_c_N) / dx_core
@@ -297,10 +290,10 @@ class PhaseTransition(BasePhaseTransition):
 
     def set_rhs(self, variables):
         domain, Domain = self.domain_Domain
-        phase_name     = self.phase_name
-        phase_param    = self.phase_param
-        phase          = self.phase
-        param          = self.param
+        phase_name = self.phase_name
+        phase_param = self.phase_param
+        phase = self.phase
+        param = self.param
 
         R_typ = phase_param.R_typ
 
@@ -374,28 +367,26 @@ class PhaseTransition(BasePhaseTransition):
         D_c = phase_param.D(c_c, T_c)
         D_o = phase_param.D_o(c_o, T_o)
 
-        self.rhs[c_c] = (
-            pybamm.inner(r_co * s_nd_dot / s_nd, pybamm.grad(c_c)) +
-            1 / (R_nd**2) / (s_nd**2) * pybamm.div(D_c * pybamm.grad(c_c))
-        )
+        self.rhs[c_c] = pybamm.inner(r_co * s_nd_dot / s_nd, pybamm.grad(c_c)) + 1 / (
+            R_nd**2
+        ) / (s_nd**2) * pybamm.div(D_c * pybamm.grad(c_c))
         # div((r_sh * (1 - s_nd) + s_nd * R_typ)**2 * D_o * pybamm.grad(c_o))
         # will lead to rounding errors
         # (D_o * pybamm.grad(c_o)) must be bracketed to avoid the rounding errors
         # or first define N_o to be called later, as did below
         N_o = -D_o * pybamm.grad(c_o)
-        self.rhs[c_o] = (
-            pybamm.inner(
-                (R_typ - r_sh) / (1 - s_nd) * s_nd_dot, pybamm.grad(c_o)
-            ) - (
-                1 / ((R_nd * (1 - s_nd) * (r_sh * (1 - s_nd) + s_nd * R_typ)) ** 2) *
-                pybamm.div((r_sh * (1 - s_nd) + s_nd * R_typ)**2 * N_o)
-            )
+        self.rhs[c_o] = pybamm.inner(
+            (R_typ - r_sh) / (1 - s_nd) * s_nd_dot, pybamm.grad(c_o)
+        ) - (
+            1
+            / ((R_nd * (1 - s_nd) * (r_sh * (1 - s_nd) + s_nd * R_typ)) ** 2)
+            * pybamm.div((r_sh * (1 - s_nd) + s_nd * R_typ) ** 2 * N_o)
         )
         self.rhs[s_nd] = s_nd_dot
 
     def set_boundary_conditions(self, variables):
         domain, Domain = self.domain_Domain
-        phase_name     = self.phase_name
+        phase_name = self.phase_name
 
         if self.x_average is False:
             c_c = variables[
@@ -412,20 +403,16 @@ class PhaseTransition(BasePhaseTransition):
                 f"X-averaged {domain} {phase_name}shell oxygen concentration [mol.m-3]"
             ]
 
-        rbc_c_c = variables[
-            f"{Domain} {phase_name}core right-hand-side bc [mol.m-4]"
-        ]
-        lbc_c_o = variables[
-            f"{Domain} {phase_name}shell left-hand-side bc [mol.m-4]"
-        ]
+        rbc_c_c = variables[f"{Domain} {phase_name}core right-hand-side bc [mol.m-4]"]
+        lbc_c_o = variables[f"{Domain} {phase_name}shell left-hand-side bc [mol.m-4]"]
 
         self.boundary_conditions[c_c] = {
-            "left":  (pybamm.Scalar(0), "Neumann"),
-            "right": (rbc_c_c, "Neumann")
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (rbc_c_c, "Neumann"),
         }
         self.boundary_conditions[c_o] = {
-            "left":  (lbc_c_o, "Neumann"),
-            "right": (pybamm.Scalar(0), "Dirichlet")
+            "left": (lbc_c_o, "Neumann"),
+            "right": (pybamm.Scalar(0), "Dirichlet"),
         }
 
     def set_initial_conditions(self, variables):
@@ -434,7 +421,7 @@ class PhaseTransition(BasePhaseTransition):
 
         c_c_init = self.phase_param.c_c_init
         c_o_init = self.phase_param.c_o_init
-        s_nd_init   = self.phase_param.s_nd_init
+        s_nd_init = self.phase_param.s_nd_init
 
         if self.x_average is False:
             c_c = variables[
@@ -457,12 +444,12 @@ class PhaseTransition(BasePhaseTransition):
                 f"X-averaged {domain} {phase_name}particle "
                 "moving phase boundary location"
             ]
-            c_c_init  = pybamm.x_average(c_c_init)
-            c_o_init  = pybamm.x_average(c_o_init)
+            c_c_init = pybamm.x_average(c_c_init)
+            c_o_init = pybamm.x_average(c_o_init)
             s_nd_init = pybamm.x_average(s_nd_init)
 
         self.initial_conditions = {
-            c_c:  c_c_init,
-            c_o:  c_o_init,
+            c_c: c_c_init,
+            c_o: c_o_init,
             s_nd: s_nd_init,
         }

@@ -70,18 +70,13 @@ def battery_geometry(
                         }
                     )
 
-    if (
-        options is not None
-        and options["PE degradation"] == "phase transition"
-    ):
+    if options is not None and options["PE degradation"] == "phase transition":
         geo_domain = geo.domain_params["positive"]
         phases = int(getattr(options, domain)["particle phases"])
         if phases == 1:
             geometry.update(
                 {
-                    "positive core": {
-                        "r_co": {"min":0, "max": geo_domain.prim.R_typ}
-                    },
+                    "positive core": {"r_co": {"min": 0, "max": geo_domain.prim.R_typ}},
                     "positive shell": {
                         "r_sh": {"min": 0, "max": geo_domain.prim.R_typ}
                     },

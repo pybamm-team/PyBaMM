@@ -32,7 +32,8 @@ class XAverage(_BaseAverage):
     def __init__(self, child: pybamm.Symbol) -> None:
         if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif (all(n in child.domain[0] for n in ["positive", "particle"])
+        elif (
+            all(n in child.domain[0] for n in ["positive", "particle"])
             or all(n in child.domain[0] for n in ["positive", "core"])
             or all(n in child.domain[0] for n in ["positive", "shell"])
         ):
@@ -328,8 +329,8 @@ def r_average(symbol: pybamm.Symbol) -> pybamm.Symbol:
         the new averaged symbol
     """
     has_r_domain = symbol.domain != [] and (
-        symbol.domain[0].endswith("particle") or
-        symbol.domain[0] in ["positive core", "positive shell"]
+        symbol.domain[0].endswith("particle")
+        or symbol.domain[0] in ["positive core", "positive shell"]
     )
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):

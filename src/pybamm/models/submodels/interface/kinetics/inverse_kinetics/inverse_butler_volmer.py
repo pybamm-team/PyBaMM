@@ -90,9 +90,7 @@ class InverseButlerVolmer(BaseInterface):
                 f"X-averaged {domain} {phase_name}particle "
                 "moving phase boundary location"
             ]
-            R_av = variables[
-                f"X-averaged {domain} {phase_name}particle radius [m]"
-            ]
+            R_av = variables[f"X-averaged {domain} {phase_name}particle radius [m]"]
             eta_shell = -j_tot * (pybamm.Scalar(1) - s_nd_av) * R_av * R_shell
 
             variables.update(
@@ -101,7 +99,7 @@ class InverseButlerVolmer(BaseInterface):
         else:
             eta_shell = pybamm.Scalar(0)
 
-        delta_phi = eta_r + ocp - eta_sei - eta_shell # = phi_s - phi_e
+        delta_phi = eta_r + ocp - eta_sei - eta_shell  # = phi_s - phi_e
 
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
