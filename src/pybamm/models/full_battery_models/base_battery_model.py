@@ -16,6 +16,7 @@ def represents_positive_integer(s):
     else:
         return val > 0
 
+
 class BatteryModelOptions(pybamm.FuzzyDict):
     """
     Attributes
@@ -561,7 +562,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "SEI submodels do not yet support particle-size distributions."
                 )
             if "true" in options["stress-induced diffusion"]:
-
                 raise NotImplementedError(
                     "stress-induced diffusion cannot yet be included in "
                     "particle-size distributions."
