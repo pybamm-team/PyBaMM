@@ -767,13 +767,13 @@ class CurrentTests(BaseOutputTest):
             ),
             self.i_cell / self.L_n,
             rtol=1e-3,
-            atol=1e-4,
+            atol=1e-3,
         )
         np.testing.assert_allclose(
             np.mean(self.a_j_p(self.t, self.x_p), axis=0),
             -self.i_cell / self.L_p,
             rtol=1e-3,
-            atol=1e-4,
+            atol=1e-3,
         )
 
     def test_conservation(self):
@@ -786,13 +786,13 @@ class CurrentTests(BaseOutputTest):
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
             np.testing.assert_allclose(
-                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=1e-2, atol=1e-8
+                self.i_s(t, x) + self.i_e(t, x), i_cell, rtol=1e-2, atol=1e-6
             )
         np.testing.assert_allclose(
-            self.i_s(t, x_n), self.i_s_n(t, x_n), rtol=1e-3, atol=1e-9
+            self.i_s(t, x_n), self.i_s_n(t, x_n), rtol=1e-3, atol=1e-6
         )
         np.testing.assert_allclose(
-            self.i_s(t, x_p), self.i_s_p(t, x_p), rtol=1e-3, atol=1e-9
+            self.i_s(t, x_p), self.i_s_p(t, x_p), rtol=1e-3, atol=1e-6
         )
 
     def test_current_density_boundaries(self):

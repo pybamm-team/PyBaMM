@@ -193,6 +193,11 @@ class Discretisation:
 
         model_disc.bcs = self.bcs
 
+        # pre-process variables so that all state variables are included
+        pre_processed_variables = self._pre_process_variables(
+            model.variables, model.initial_conditions
+        )
+
         pybamm.logger.verbose(f"Discretise initial conditions for {model.name}")
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -202,7 +207,8 @@ class Discretisation:
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
         pybamm.logger.verbose(f"Discretise variables for {model.name}")
-        model_disc.variables = self.process_dict(model.variables)
+
+        model_disc.variables = self.process_dict(pre_processed_variables)
 
         # Process parabolic and elliptic equations
         pybamm.logger.verbose(f"Discretise model equations for {model.name}")
@@ -657,6 +663,46 @@ class Discretisation:
 
         return mass_matrix, mass_matrix_inv
 
+    def _pre_process_variables(
+        self,
+        variables: dict[str, pybamm.Symbol],
+        initial_conditions: dict[pybamm.Variable, pybamm.Symbol],
+    ):
+        """
+        Pre-process variables before discretisation. This involves:
+        - ensuring that all the state variables are included in the variables,
+          any missing are added
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of variables to pre-process
+        initial_conditions : dict
+            Dictionary of initial conditions
+
+        Returns
+        -------
+        dict
+            Pre-processed variables (copy of input variables with any missing state)
+
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If any state variable names are already included but with
+            incorrect expressions
+        """
+        new_variables = {k: v for k, v in variables.items()}
+        for var in initial_conditions.keys():
+            if var.name not in new_variables:
+                new_variables[var.name] = var
+            else:
+                if new_variables[var.name] != var:
+                    raise pybamm.ModelError(
+                        f"Variable '{var.name}' should have expression "
+                        f"'{var}', but has expression '{new_variables[var.name]}'"
+                    )
+        return new_variables
+
     def process_dict(self, var_eqn_dict, ics=False):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.algebraic, model.initial_conditions or
@@ -1008,7 +1054,6 @@ class Discretisation:
     def check_model(self, model):
         """Perform some basic checks to make sure the discretised model makes sense."""
         self.check_initial_conditions(model)
-        self.check_variables(model)
 
     def check_initial_conditions(self, model):
         # Check initial conditions are a numpy array
@@ -1048,40 +1093,6 @@ class Discretisation:
                     "discretisation but algebraic.shape = "
                     f"{model.algebraic[var].shape} and initial_conditions.shape = {model.initial_conditions[var].shape} for variable '{var}'."
                 )
-
-    def check_variables(self, model):
-        """
-        Check variables in variable list against rhs.
-        Be lenient with size check if the variable in model.variables is broadcasted, or
-        a concatenation
-        (if broadcasted, variable is a multiplication with a vector of ones)
-        """
-        for rhs_var in model.rhs.keys():
-            if rhs_var.name in model.variables.keys():
-                var = model.variables[rhs_var.name]
-
-                different_shapes = not np.array_equal(
-                    model.rhs[rhs_var].shape, var.shape
-                )
-
-                not_concatenation = not isinstance(var, pybamm.Concatenation)
-
-                not_mult_by_one_vec = not (
-                    isinstance(
-                        var, (pybamm.Multiplication, pybamm.MatrixMultiplication)
-                    )
-                    and (
-                        pybamm.is_matrix_one(var.left)
-                        or pybamm.is_matrix_one(var.right)
-                    )
-                )
-
-                if different_shapes and not_concatenation and not_mult_by_one_vec:
-                    raise pybamm.ModelError(
-                        "variable and its eqn must have the same shape after "
-                        "discretisation but variable.shape = "
-                        f"{var.shape} and rhs.shape = {model.rhs[rhs_var].shape} for variable '{var}'. "
-                    )
 
     def is_variable_independent(self, var, all_vars_in_eqns):
         pybamm.logger.verbose("Removing independent blocks.")

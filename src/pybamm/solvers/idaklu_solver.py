@@ -1,6 +1,3 @@
-#
-# Solver class using sundials with the KLU sparse linear solver
-#
 # mypy: ignore-errors
 import os
 import casadi
@@ -9,8 +6,8 @@ import numpy as np
 import numbers
 import scipy.sparse as sparse
 from scipy.linalg import bandwidth
+import pybammsolvers.idaklu as idaklu
 
-import importlib
 import warnings
 
 
@@ -22,21 +19,6 @@ if pybamm.has_jax():
         import iree.compiler
     except ImportError:  # pragma: no cover
         pass
-
-idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-if idaklu_spec is not None:
-    try:
-        idaklu = importlib.util.module_from_spec(idaklu_spec)
-        if idaklu_spec.loader:
-            idaklu_spec.loader.exec_module(idaklu)
-    except ImportError as e:  # pragma: no cover
-        idaklu = None
-        print(f"Error loading idaklu: {e}")
-        idaklu_spec = None
-
-
-def has_idaklu():
-    return idaklu_spec is not None
 
 
 def has_iree():
@@ -119,6 +101,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 "max_num_steps": 100000,
                 # Initial step size. The solver default is used if this is left at 0.0
                 "dt_init": 0.0,
+                # Minimum absolute step size. The solver default is used if this is
+                # left at 0.0
+                "dt_min": 0.0,
                 # Maximum absolute step size. The solver default is used if this is
                 # left at 0.0
                 "dt_max": 0.0,
@@ -200,6 +185,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "max_order_bdf": 5,
             "max_num_steps": 100000,
             "dt_init": 0.0,
+            "dt_min": 0.0,
             "dt_max": 0.0,
             "max_error_test_failures": 10,
             "max_nonlinear_iterations": 40,
@@ -231,9 +217,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         self._options = options
 
         self.output_variables = [] if output_variables is None else output_variables
-
-        if idaklu_spec is None:  # pragma: no cover
-            raise ImportError("KLU is not installed")
 
         super().__init__(
             "ida",

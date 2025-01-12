@@ -1,7 +1,6 @@
 #
 # Base battery model class
 #
-from __future__ import annotations
 import pybamm
 from functools import cached_property
 
@@ -16,30 +15,6 @@ def represents_positive_integer(s):
         return False
     else:
         return val > 0
-
-
-def _ensure_tuple(value: str | tuple[str]) -> tuple | None:
-    """
-    Ensure the input value is returned as a tuple.
-
-    Parameters
-    ----------
-    value : str or tuple
-        The input value to ensure as a tuple.
-
-    Returns
-    -------
-    tuple or None
-        The input value as a tuple, or None if the input is not a string or tuple.
-    """
-    return (
-        (value,)
-        if isinstance(value, str)
-        else value
-        if isinstance(value, tuple)
-        else None
-    )
-
 
 class BatteryModelOptions(pybamm.FuzzyDict):
     """
@@ -549,9 +524,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # Options not yet compatible with particle-size distributions
         if "distribution" in options["particle size"]:
             if options["lithium plating porosity change"] != "false":
-                raise NotImplementedError(
+                raise pybamm.OptionError(
                     "Lithium plating porosity change not yet supported for particle-size"
                     " distributions."
+                )
+            if options["SEI porosity change"] == "true":
+                raise NotImplementedError(
+                    "SEI porosity change submodels do not yet support particle-size "
+                    "distributions."
                 )
             if options["heat of mixing"] != "false":
                 raise NotImplementedError(
@@ -581,6 +561,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "SEI submodels do not yet support particle-size distributions."
                 )
             if "true" in options["stress-induced diffusion"]:
+
                 raise NotImplementedError(
                     "stress-induced diffusion cannot yet be included in "
                     "particle-size distributions."

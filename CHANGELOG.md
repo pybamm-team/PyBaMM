@@ -6,12 +6,14 @@
 
 ## Features
 
+- Added a `dt_min` option to the (`IDAKLUSolver`). ([#4736](https://github.com/pybamm-team/PyBaMM/pull/4736))
+- Enabled using SEI models with particle size distributions. ([#4693](https://github.com/pybamm-team/PyBaMM/pull/4693))
 - Added symbolic mesh which allows for using InputParameters for geometric parameters ([#4665](https://github.com/pybamm-team/PyBaMM/pull/4665))
 - Enhanced the `search` method to accept multiple search terms in the form of a string or a list. ([#4650](https://github.com/pybamm-team/PyBaMM/pull/4650))
 - Made composite electrode model compatible with particle size distribution ([#4687](https://github.com/pybamm-team/PyBaMM/pull/4687))
 - Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
-
+- Automatically add state variables of the model to the output variables if they are not already present ([#4700](https://github.com/pybamm-team/PyBaMM/pull/4700))
 
 ## Breaking changes
 
@@ -21,10 +23,14 @@
 package to install PyBaMM with only the required dependencies. ([conda-forge/pybamm-feedstock#70](https://github.com/conda-forge/pybamm-feedstock/pull/70))
 - Separated extrapolation options for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`, and updated the default to be "linear" for the value and "quadratic" for the gradient. ([#4614](https://github.com/pybamm-team/PyBaMM/pull/4614))
 - Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
+- Moved the IDAKLU solver to a standalone `pybammsolvers` package. This will
+  make PyBaMM a pure Python package and make installing and using the solver
+  easier. ([#4487](https://github.com/pybamm-team/PyBaMM/pull/4487))
 - Wycisk OCP model now requires an parameter to set the initial condition. ([#4374](https://github.com/pybamm-team/PyBaMM/pull/4374))
 
 ## Bug fixes
 
+- Fixed bug when using stoichiometry-dependent diffusivity with the DFN model with a particle size distribution. ([#4726](https://github.com/pybamm-team/PyBaMM/pull/4726))
 - Remove internal use of deprecated `set_parameters` function in the `Simulation` class which caused warnings. ([#4638](https://github.com/pybamm-team/PyBaMM/pull/4638))
 - Provide default value for `Symbol.mesh` attribute to avoid errors when adding variables after discretisation. ([#4644](https://github.com/pybamm-team/PyBaMM/pull/4644))
 
