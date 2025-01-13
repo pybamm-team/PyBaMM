@@ -218,7 +218,7 @@ class TestSearch:
         # Test param search (default returns key, value)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             param.search("test")
-            out = "Results for 'test': ['test']\n" "test -> 10\n"
+            out = "Results for 'test': ['test']\ntest -> 10\n"
             assert fake_out.getvalue() == out
 
         # Test no matches and no best matches

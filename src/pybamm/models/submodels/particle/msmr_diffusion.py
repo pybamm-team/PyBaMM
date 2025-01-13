@@ -354,10 +354,12 @@ class MSMRDiffusion(BaseParticle):
             "surface potential [V]": U_surf_av,
             f"Minimum {domain} {phase_name}particle potential [V]": pybamm.min(U),
             f"Maximum {domain} {phase_name}particle potential [V]": pybamm.max(U),
-            f"Minimum {domain} {phase_name}particle "
-            "surface potential [V]": pybamm.min(U_surf),
-            f"Maximum {domain} {phase_name}particle "
-            "surface potential [V]": pybamm.max(U_surf),
+            f"Minimum {domain} {phase_name}particle surface potential [V]": pybamm.min(
+                U_surf
+            ),
+            f"Maximum {domain} {phase_name}particle surface potential [V]": pybamm.max(
+                U_surf
+            ),
         }
         return variables
 

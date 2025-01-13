@@ -1041,8 +1041,7 @@ class BaseSolver:
         pybamm.logger.verbose(f"Discontinuity events found at t = {discontinuities}")
         if isinstance(inputs, list):
             raise pybamm.SolverError(
-                "Cannot solve for a list of input parameters"
-                " sets with discontinuities"
+                "Cannot solve for a list of input parameters sets with discontinuities"
             )
 
         # insert time points around discontinuities in t_eval
@@ -1522,7 +1521,7 @@ class BaseSolver:
         elif self._on_extrapolation == "warn":
             name = solution.all_models[-1].name
             warnings.warn(
-                f"While solving {name} extrapolation occurred " f"for {extrap_events}",
+                f"While solving {name} extrapolation occurred for {extrap_events}",
                 pybamm.SolverWarning,
                 stacklevel=2,
             )
