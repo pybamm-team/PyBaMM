@@ -131,10 +131,14 @@ class BaseParticle(pybamm.BaseSubModel):
             / c_scale,
             f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s)
             / c_scale,
-            f"Minimum {domain} {phase_name}particle "
-            "surface concentration": pybamm.min(c_s_surf) / c_scale,
-            f"Maximum {domain} {phase_name}particle "
-            "surface concentration": pybamm.max(c_s_surf) / c_scale,
+            f"Minimum {domain} {phase_name}particle surface concentration": pybamm.min(
+                c_s_surf
+            )
+            / c_scale,
+            f"Maximum {domain} {phase_name}particle surface concentration": pybamm.max(
+                c_s_surf
+            )
+            / c_scale,
             # Stoichiometry (equivalent to dimensionless concentration)
             f"{Domain} {phase_name}particle stoichiometry": c_s / c_scale,
             f"X-averaged {domain} {phase_name}particle stoichiometry": c_s_xav
@@ -149,10 +153,14 @@ class BaseParticle(pybamm.BaseSubModel):
             / c_scale,
             f"Maximum {domain} {phase_name}particle stoichiometry": pybamm.max(c_s)
             / c_scale,
-            f"Minimum {domain} {phase_name}particle "
-            "surface stoichiometry": pybamm.min(c_s_surf) / c_scale,
-            f"Maximum {domain} {phase_name}particle "
-            "surface stoichiometry": pybamm.max(c_s_surf) / c_scale,
+            f"Minimum {domain} {phase_name}particle surface stoichiometry": pybamm.min(
+                c_s_surf
+            )
+            / c_scale,
+            f"Maximum {domain} {phase_name}particle surface stoichiometry": pybamm.max(
+                c_s_surf
+            )
+            / c_scale,
             # Electrode extent of lithiation
             f"{Domain} electrode extent of lithiation": c_s_rav / c_scale,
             f"X-averaged {domain} electrode extent of lithiation": c_s_av / c_scale,

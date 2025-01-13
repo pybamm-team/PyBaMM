@@ -110,8 +110,8 @@ class BaseModel(BaseInterface):
             if self.reaction == "SEI":
                 variables.update(
                     {
-                        f"X-averaged {domain} electrode resistance "
-                        "[Ohm.m2]": L_sei_av * R_sei,
+                        f"X-averaged {domain} electrode resistance [Ohm.m2]": L_sei_av
+                        * R_sei,
                     }
                 )
         return variables
@@ -219,7 +219,7 @@ class BaseModel(BaseInterface):
 
             variables.update(
                 {
-                    f"{Domain} {reaction_name}" "concentration [mol.m-3]": n_SEI_cr,
+                    f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI_cr,
                     f"X-averaged {domain} {reaction_name}"
                     "concentration [mol.m-3]": n_SEI_cr_xav,
                     f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei_cr,
