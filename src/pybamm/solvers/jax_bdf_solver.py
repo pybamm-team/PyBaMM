@@ -970,8 +970,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     def _check_arg(arg):
         if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):
             msg = (
-                "The contents of odeint *args must be arrays or scalars, but got "
-                "\n{}."
+                "The contents of odeint *args must be arrays or scalars, but got \n{}."
             )
         raise TypeError(msg.format(arg))
 

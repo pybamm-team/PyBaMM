@@ -531,7 +531,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, " f"not '{lbc_type}'"
+                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
             )
 
         if rbc_type == "Dirichlet":
@@ -546,7 +546,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, " f"not '{rbc_type}'"
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector
@@ -623,7 +623,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             lbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, " f"not '{lbc_type}'"
+                f"boundary condition must be Dirichlet or Neumann, not '{lbc_type}'"
             )
 
         if rbc_type == "Neumann":
@@ -638,7 +638,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             rbc_vector = pybamm.Vector(np.zeros(n * second_dim_repeats))
         else:
             raise ValueError(
-                "boundary condition must be Dirichlet or Neumann, " f"not '{rbc_type}'"
+                f"boundary condition must be Dirichlet or Neumann, not '{rbc_type}'"
             )
 
         bcs_vector = lbc_vector + rbc_vector
