@@ -137,6 +137,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
             ]
 
             self.algebraic[delta_phi] = (i_cc - sum_j) / self.param.I_typ
+        self.variables.update(variables)
 
 
 class LithiumMetalExplicit(LithiumMetalBaseModel):

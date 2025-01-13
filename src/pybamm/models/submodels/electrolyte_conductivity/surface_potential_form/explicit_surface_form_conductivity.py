@@ -48,6 +48,8 @@ class Explicit(BaseElectrolyteConductivity):
             key = f"{domain} primary interface"
         elif "positive interface" in submodels:
             key = f"{domain} interface"
+        elif "leading-order positive interface" in submodels:
+            key = f"leading-order {domain} interface"
         else:
             key = "fuck you"
 

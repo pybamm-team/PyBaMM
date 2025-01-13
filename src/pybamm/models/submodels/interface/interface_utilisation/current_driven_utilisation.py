@@ -69,11 +69,13 @@ class CurrentDriven(BaseModel):
             self.coupled_variables.update({a_j.name: a_j})
         beta = self.domain_param.beta_utilisation
 
-        self.rhs = {u: beta * u * a_j / self.param.F}
-
+        if self.reaction_loc == "x-average":
+            var = u_xav
+        else:
+            var = u
+        self.rhs = {var: beta * var * a_j / self.param.F}
         u_init = self.domain_param.u_init
-
-        self.initial_conditions = {u: u_init}
+        self.initial_conditions = {var: u_init}
         self.variables.update(variables)
 
     def add_events_from(self, variables):

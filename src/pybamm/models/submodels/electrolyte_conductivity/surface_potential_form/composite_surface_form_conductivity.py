@@ -107,8 +107,11 @@ class CompositeDifferential(BaseModel):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def _set_rhs(self, variables):
+    def build(self, submodels):
         domain = self.domain
+
+        variables = self._get_fundamental_variables()
+        variables.update(self._get_coupled_variables(variables))
 
         a = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode surface area to volume ratio [m-1]",
@@ -130,9 +133,11 @@ class CompositeDifferential(BaseModel):
         )
         self.coupled_variables.update({sum_a_j_av.name: sum_a_j_av})
 
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
+        delta_phi = pybamm.Variable(
+            f"X-averaged {domain} electrode surface potential difference [V]",
+            domain="current collector",
+        )
+        variables.update({delta_phi.name: delta_phi})
         T = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode temperature [K]",
             domain="current collector",
@@ -141,7 +146,10 @@ class CompositeDifferential(BaseModel):
 
         C_dl = self.domain_param.C_dl(T)
 
+        delta_phi_init = self.domain_param.prim.U_init
         self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
+        self.initial_conditions = {delta_phi: delta_phi_init}
+        self.variables.update(variables)
 
 
 class CompositeAlgebraic(BaseModel):
@@ -187,7 +195,7 @@ class CompositeAlgebraic(BaseModel):
             f"X-averaged {domain} electrode surface potential difference [V]",
             domain="current collector",
         )
-        self.coupled_variables.update({delta_phi.name: delta_phi})
+        variables.update({delta_phi.name: delta_phi})
 
         self.algebraic[delta_phi] = (sum_a_j_av - sum_a_j) / self.param.a_j_scale
         self.variables.update(variables)

@@ -53,6 +53,7 @@ class SurfaceForm(BaseModel):
         T = pybamm.CoupledVariable(
             f"{Domain} electrode temperature [K]",
             f"{self.domain} electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         self.coupled_variables.update({T.name: T})
 
