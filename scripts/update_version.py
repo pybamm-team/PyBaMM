@@ -2,7 +2,6 @@
 Automatically update the version number
 """
 
-import json
 import os
 import re
 from datetime import date
