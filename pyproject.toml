@@ -1,9 +1,6 @@
 [build-system]
 requires = [
     "hatchling>=1.13.0",
-    "hatch-vcs>=0.3.0",
-    "casadi>=3.6.7; platform_system!='Windows'",
-    "cmake; platform_system!='Windows'",
 ]
 build-backend = "hatchling.build"
 
@@ -84,12 +81,11 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
-    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx>=0.4.0",
+    "bpx>=0.5.0,<0.6.0",
 ]
 # Low-overhead progress bars
 tqdm = [
@@ -123,10 +119,7 @@ jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-# For MLIR expression evaluation (IDAKLU Solver)
-iree = [
-    "iree-compiler==20240507.886",
-]
+
 # Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
@@ -153,10 +146,6 @@ ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
-[tool.hatch.version]
-source = "vcs"
-raw-options = { local_scheme = "no-local-version", version_scheme = "python-simplified-semver" }
-
 [tool.hatch.build]
 packages = ["src/pybamm"]
 include = [
@@ -168,25 +157,11 @@ include = [
     "src/pybamm/plotting/mplstyle",
 ]
 
-[tool.setuptools]
-include-package-data = true
-
 # List of files to include as package data. These are mainly the parameter CSV files in
 # the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
 # README.md files, and specific .txt files inside the pybamm/ directory are also included.
 # These are specified to be included in the SDist through MANIFEST.in.
-[tool.setuptools.package-data]
-pybamm = [
-    "*.txt",
-    "*.md",
-    "*.csv",
-    "*.py",
-    "src/pybamm/CITATIONS.bib",
-    "src/pybamm/plotting/mplstyle",
-]
 
-[tool.setuptools.packages.find]
-where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
@@ -282,9 +257,6 @@ source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
 
 [tool.repo-review]
-ignore = [
-    "PP003"
-]
 
 [tool.mypy]
 ignore_missing_imports = true
