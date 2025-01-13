@@ -48,14 +48,6 @@ jobs:
           with open(output_file, "a", encoding="utf-8") as output_stream:
               output_stream.write(f"count={num_cpus}\n")
 
-      - name: Cache packages installed through vcpkg on Windows
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        env:
-          cache-name: vckpg_binary_cache
-        with:
-          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
-
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@e5c7151931ca95bad1c6f4190c730ecf8c7dde48 # v3.19
@@ -66,10 +58,6 @@ jobs:
         env:
           CIBW_ENVIRONMENT: >
             PYBAMM_DISABLE_TELEMETRY="true"
-            PYBAMM_USE_VCPKG=ON
-            VCPKG_ROOT_DIR=C:\vcpkg
-            VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
-            VCPKG_FEATURE_FLAGS=manifests,registries
             CMAKE_GENERATOR="Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM=x64
             CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
