@@ -81,6 +81,7 @@ plot = [
     "matplotlib>=3.6.0",
 ]
 cite = [
+    "setuptools", # Fix for a pybtex issue
     "pybtex>=0.24.0",
 ]
 # Battery Parameter eXchange format
@@ -276,8 +277,6 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 source = ["src/pybamm"]
 concurrency = ["multiprocessing"]
-
-[tool.repo-review]
 
 [tool.mypy]
 ignore_missing_imports = true
