@@ -37,7 +37,6 @@ def set_environment_variables(env_dict, session):
 def run_coverage(session):
     """Run the coverage tests and generate an XML report."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
     session.install("coverage", silent=False)
     # Using plugin here since coverage runs unit tests on linux with latest python version.
     if "CI" in os.environ:
@@ -50,7 +49,6 @@ def run_coverage(session):
 def run_integration(session):
     """Run the integration tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
     if (
         "CI" in os.environ
         and sys.version_info[:2] == (3, 12)
@@ -66,7 +64,6 @@ def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
     # TODO: Temporary fix for Python 3.12 CI.
     # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
-    session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
     session.run(
         "python",
@@ -81,7 +78,6 @@ def run_doctests(session):
 def run_unit(session):
     """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "unit")
 
@@ -90,7 +86,6 @@ def run_unit(session):
 def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     notebooks_to_test = session.posargs if session.posargs else []
     session.run(
@@ -105,7 +100,6 @@ def run_scripts(session):
     # Temporary fix for Python 3.12 CI. TODO: remove after
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
-    session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
 
@@ -139,7 +133,6 @@ def set_dev(session):
 def run_tests(session):
     """Run the unit tests and integration tests sequentially."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run(
         "python",
@@ -155,7 +148,6 @@ def build_docs(session):
     envbindir = session.bin
     # TODO: Temporary fix for Python 3.12 CI.
     # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
-    session.install("setuptools", silent=False)
     session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
     # Local development
