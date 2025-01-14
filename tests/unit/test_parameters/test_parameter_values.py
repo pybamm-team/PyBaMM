@@ -1024,12 +1024,12 @@ class TestParameterValues:
         parameter_values = ParameterValues(
             {"Negative particle radius [m]": 1e-6, "Positive particle radius [m]": 2e-6}
         )
-        assert (
-            "Negative particle radius [m]" in parameter_values
-        ), "Key should be found in parameter_values"
-        assert (
-            "Invalid key" not in parameter_values
-        ), "Non-existent key should not be found"
+        assert "Negative particle radius [m]" in parameter_values, (
+            "Key should be found in parameter_values"
+        )
+        assert "Invalid key" not in parameter_values, (
+            "Non-existent key should not be found"
+        )
 
     def test_iter_method(self):
         """Test for __iter__ method to check if we can iterate over keys"""

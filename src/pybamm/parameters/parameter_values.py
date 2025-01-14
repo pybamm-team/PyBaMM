@@ -428,7 +428,7 @@ class ParameterValues:
             # specific check for renamed parameter "1 + dlnf/dlnc"
             if "1 + dlnf/dlnc" in param:
                 raise ValueError(
-                    f"parameter '{param}' has been renamed to " "'Thermodynamic factor'"
+                    f"parameter '{param}' has been renamed to 'Thermodynamic factor'"
                 )
             if "electrode diffusivity" in param:
                 new_param = param.replace("electrode", "particle")

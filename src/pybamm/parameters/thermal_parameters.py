@@ -109,8 +109,7 @@ class DomainThermalParameters(BaseParameters):
         }
         Domain = self.domain.capitalize()
         return pybamm.FunctionParameter(
-            f"{Domain} current collector surface heat transfer coefficient "
-            "[W.m-2.K-1]",
+            f"{Domain} current collector surface heat transfer coefficient [W.m-2.K-1]",
             inputs,
         )
 

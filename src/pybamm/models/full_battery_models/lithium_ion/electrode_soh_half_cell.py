@@ -131,8 +131,7 @@ def get_initial_stoichiometry_half_cell(
 
     else:
         raise ValueError(
-            "Initial value must be a float between 0 and 1, "
-            "or a string ending in 'V'"
+            "Initial value must be a float between 0 and 1, or a string ending in 'V'"
         )
 
     x = x_0 + initial_soc * (x_100 - x_0)

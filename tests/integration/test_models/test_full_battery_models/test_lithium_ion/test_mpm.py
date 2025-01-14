@@ -54,10 +54,10 @@ class TestMPM:
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]" "": parameter_values[
+                "Negative electrode lithiation OCP [V]": parameter_values[
                     "Negative electrode OCP [V]"
                 ],
-                "Negative electrode delithiation OCP [V]" "": parameter_values[
+                "Negative electrode delithiation OCP [V]": parameter_values[
                     "Negative electrode OCP [V]"
                 ],
             },
@@ -73,11 +73,13 @@ class TestMPM:
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]"
-                "": lambda sto: parameter_values["Negative electrode OCP [V]"](sto)
+                "Negative electrode lithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
                 - 0.1,
-                "Negative electrode delithiation OCP [V]"
-                "": lambda sto: parameter_values["Negative electrode OCP [V]"](sto)
+                "Negative electrode delithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
                 + 0.1,
                 "Negative particle hysteresis decay rate": 1,
                 "Negative particle hysteresis switching factor": 1,

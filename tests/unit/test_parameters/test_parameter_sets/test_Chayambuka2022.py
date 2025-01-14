@@ -19,14 +19,14 @@ class TestChayambuka2022:
             # Negative electrode
             "Negative particle diffusivity [m2.s-1]": ([sto, T], 1.8761e-15),
             "Negative electrode OCP [V]": ([sto], 0.0859),
-            "Negative electrode exchange-current density [A.m-2]" "": (
+            "Negative electrode exchange-current density [A.m-2]": (
                 [c_e, sto * c_n_max, c_n_max, T],
                 0.0202,
             ),
             # Positive electrode
             "Positive particle diffusivity [m2.s-1]": ([sto, T], 1.8700e-15),
             "Positive electrode OCP [V]": ([sto], 4.1482),
-            "Positive electrode exchange-current density [A.m-2]" "": (
+            "Positive electrode exchange-current density [A.m-2]": (
                 [c_e, sto * c_p_max, c_p_max, T],
                 0.0036,
             ),

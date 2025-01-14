@@ -953,8 +953,7 @@ def get_parameter_values():
         # negative electrode
         "Negative electrode conductivity [S.m-1]": 215.0,
         "Maximum concentration in negative electrode [mol.m-3]": 29583.0,
-        "Negative particle diffusivity [m2.s-1]"
-        "": graphite_LGM50_diffusivity_ORegan2022,
+        "Negative particle diffusivity [m2.s-1]": graphite_LGM50_diffusivity_ORegan2022,
         "Negative electrode OCP [V]": graphite_LGM50_ocp_Chen2020,
         "Negative electrode porosity": 0.25,
         "Negative electrode active material volume fraction": 0.75,

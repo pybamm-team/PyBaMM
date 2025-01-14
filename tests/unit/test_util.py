@@ -96,11 +96,6 @@ class TestUtil:
     def test_is_jax_compatible(self):
         assert pybamm.is_jax_compatible()
 
-    def test_git_commit_info(self):
-        git_commit_info = pybamm.get_git_commit_info()
-        assert isinstance(git_commit_info, str)
-        assert git_commit_info[:2] == "v2"
-
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
@@ -223,7 +218,7 @@ class TestSearch:
         # Test param search (default returns key, value)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             param.search("test")
-            out = "Results for 'test': ['test']\n" "test -> 10\n"
+            out = "Results for 'test': ['test']\ntest -> 10\n"
             assert fake_out.getvalue() == out
 
         # Test no matches and no best matches

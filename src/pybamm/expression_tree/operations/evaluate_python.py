@@ -266,8 +266,7 @@ def find_symbols(
                 and scipy.sparse.issparse(dummy_eval_right)
             ):
                 raise NotImplementedError(
-                    "sparse mat-mat multiplication not supported "
-                    "for output_jax == True"
+                    "sparse mat-mat multiplication not supported for output_jax == True"
                 )
             else:
                 symbol_str = (
@@ -451,7 +450,7 @@ class EvaluatorPython:
 
         # add function def to first line
         python_str = (
-            "def evaluate(constants, t=None, y=None, " "inputs=None):\n" + python_str
+            "def evaluate(constants, t=None, y=None, inputs=None):\n" + python_str
         )
 
         # calculate the final variable that will output the result of calling `evaluate`

@@ -307,8 +307,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 mass_matrix = casadi.DM(model.mass_matrix.entries)
         else:
             raise pybamm.SolverError(
-                "Unsupported option for convert_to_format="
-                f"{model.convert_to_format} "
+                f"Unsupported option for convert_to_format={model.convert_to_format} "
             )
 
         # construct residuals function by binding inputs

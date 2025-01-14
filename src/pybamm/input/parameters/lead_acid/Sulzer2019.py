@@ -289,8 +289,7 @@ def get_parameter_values():
         "Positive electrode oxygen exchange-current density [A.m-2]"
         "": oxygen_exchange_current_density_Sulzer2019,
         "Positive electrode Butler-Volmer transfer coefficient": 0.5,
-        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
-        "": 0.0,
+        "Positive electrode reference exchange-current density (hydrogen) [A.m-2]": 0.0,
         "Positive electrode double-layer capacity [F.m-2]": 0.2,
         "Positive electrode density [kg.m-3]": 9375.0,
         "Positive electrode specific heat capacity [J.kg-1.K-1]": 256.0,
@@ -328,10 +327,8 @@ def get_parameter_values():
         "Reference temperature [K]": 294.85,
         "Maximum temperature [K]": 333.15,
         "Ambient temperature [K]": 294.85,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Total heat transfer coefficient [W.m-2.K-1]": 10.0,

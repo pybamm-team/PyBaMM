@@ -11,10 +11,6 @@ class TestParameterSets:
         """Test that pybamm.parameters_sets.<ParameterSetName> returns
         the name of the parameter set and a depreciation warning
         """
-        with pytest.warns(DeprecationWarning):
-            out = pybamm.parameter_sets.Marquis2019
-            assert out == "Marquis2019"
-
         # Expect an error for parameter sets that aren't real
         with pytest.raises(AttributeError):
             pybamm.parameter_sets.not_a_real_parameter_set

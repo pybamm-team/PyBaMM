@@ -95,7 +95,7 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             if model not in self._model_set_up:
                 raise RuntimeError(
-                    "Model is not set up for solving, run" "`solver.solve(model)` first"
+                    "Model is not set up for solving, run`solver.solve(model)` first"
                 )
 
             self._cached_solves[model] = self.create_solve(model, t_eval)
