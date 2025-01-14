@@ -404,10 +404,8 @@ def get_parameter_values():
         "Electrolyte conductivity [S.m-1]": electrolyte_conductivity_Kim2011,
         # experiment
         "Reference temperature [K]": 298.15,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 25.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 25.0,
         "Edge heat transfer coefficient [W.m-2.K-1]": 0.3,
