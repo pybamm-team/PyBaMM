@@ -202,3 +202,9 @@ class TestIDAKLUSolver:
         # check summary variables are the same if output variables are specified
         for var in model.summary_variables:
             assert summary_vars[0][var] == summary_vars[1][var]
+
+        # check variables are accessible for each cycle
+        np.testing.assert_array_almost_equal(
+            sols[0].cycles[-1]["Current [A]"].data,
+            sols[1].cycles[-1]["Current [A]"].data,
+        )
