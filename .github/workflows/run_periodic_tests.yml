@@ -36,7 +36,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo dot -c
+          sudo apt-get install gfortran gcc graphviz pandoc
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
@@ -100,6 +100,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install graphviz pandoc
           sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
@@ -132,6 +133,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
@@ -161,6 +163,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
