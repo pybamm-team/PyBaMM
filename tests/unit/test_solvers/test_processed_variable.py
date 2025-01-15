@@ -1,7 +1,3 @@
-#
-# Tests for the Processed Variable class
-#
-
 import casadi
 import pybamm
 import tests
@@ -11,10 +7,7 @@ import pytest
 from scipy.interpolate import CubicHermiteSpline
 
 
-if pybamm.has_idaklu():
-    _hermite_args = [True, False]
-else:
-    _hermite_args = [False]
+_hermite_args = [True, False]
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -96,10 +89,9 @@ class TestProcessedVariable:
         )
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
 
         return y_sol, first_sol, second_sol, t_sol, yp_sol
 
@@ -109,7 +101,6 @@ class TestProcessedVariable:
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
-        var.mesh = None
         model = pybamm.BaseModel()
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
@@ -124,7 +115,6 @@ class TestProcessedVariable:
 
         # scalar value
         var = y
-        var.mesh = None
         t_sol = np.array([0])
         y_sol = np.array([1])[:, np.newaxis]
         yp_sol = np.array([1])[:, np.newaxis]
@@ -155,10 +145,9 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(data_t1, data_t2)
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -180,7 +169,6 @@ class TestProcessedVariable:
         data = pybamm.DiscreteTimeData(data_t, data_v, "test_data")
         var = (y - data) ** order
         expected_entries = (y_sol - data_v) ** order
-        var.mesh = None
         model = pybamm.BaseModel()
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
@@ -206,7 +194,6 @@ class TestProcessedVariable:
         var = (y - data) ** order
         expected = (y_sol_interp - data_v) ** order
         expected_entries = (y_sol - data_v_interp) ** order
-        var.mesh = None
         model = pybamm.BaseModel()
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.process_variable(
@@ -227,7 +214,6 @@ class TestProcessedVariable:
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
-        var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         yp_sol = self._get_yps(y_sol, hermite_interp)
@@ -246,7 +232,6 @@ class TestProcessedVariable:
         y = pybamm.StateVector(slice(0, 1))
         a = pybamm.InputParameter("a")
         var = t * y * a
-        var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         inputs = {"a": np.array([1.0])}
@@ -332,10 +317,9 @@ class TestProcessedVariable:
         )
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D_unknown_domain(self, hermite_interp):
@@ -593,8 +577,6 @@ class TestProcessedVariable:
         y = pybamm.StateVector(slice(0, 1))
         var = y
         eqn = t * y
-        var.mesh = None
-        eqn.mesh = None
 
         t_sol = np.linspace(0, 1, 1000)
         y_sol = np.array([5 * t_sol])
@@ -631,10 +613,7 @@ class TestProcessedVariable:
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_var_0D_fixed_t_interpolation(self, hermite_interp):
         y = pybamm.StateVector(slice(0, 1))
-        var = y
         eqn = 2 * y
-        var.mesh = None
-        eqn.mesh = None
 
         t_sol = np.array([10])
         y_sol = np.array([[100]])
@@ -1191,7 +1170,6 @@ class TestProcessedVariable:
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
-        var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
@@ -1224,9 +1202,6 @@ class TestProcessedVariable:
             processed_var._process_spatial_variable_names(["var1", "var2"])
 
     def test_hermite_interpolator(self):
-        if not pybamm.has_idaklu():
-            pytest.skip("Cannot test Hermite interpolation without IDAKLU")
-
         # initialise dummy solution to access method
         def solution_setup(t_sol, sign):
             y_sol = np.array([sign * np.sin(t_sol)])
@@ -1235,12 +1210,8 @@ class TestProcessedVariable:
             return sol
 
         # without spatial dependence
-        t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = y
-        eqn = t * y
-        var.mesh = None
-        eqn.mesh = None
 
         sign1 = +1
         t_sol1 = np.linspace(0, 1, 100)

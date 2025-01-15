@@ -356,8 +356,7 @@ class BasicDFNComposite(BaseModel):
             "[mol.m-3]": c_s_rav_n_p1,
             "R-averaged negative secondary particle concentration "
             "[mol.m-3]": c_s_rav_n_p2,
-            "Average negative primary particle concentration "
-            "[mol.m-3]": c_s_xrav_n_p1,
+            "Average negative primary particle concentration [mol.m-3]": c_s_xrav_n_p1,
             "Average negative secondary particle concentration "
             "[mol.m-3]": c_s_xrav_n_p2,
             "Positive particle concentration [mol.m-3]": c_s_p,

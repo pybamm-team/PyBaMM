@@ -25,7 +25,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
                 ):
                     sto_surf = sto_surf.orphans[0]
                     T = T.orphans[0]
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} particle size"])
+                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
             else:
                 sto_surf = variables[
                     f"{Domain} {phase_name}particle surface stoichiometry"
@@ -42,7 +42,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
 
             # Bulk OCP is from the average SOC and temperature
             sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-            T_bulk = pybamm.xyz_average(pybamm.size_average(T))
+            T_bulk = pybamm.xyzs_average(T)
             ocp_bulk = self.phase_param.U(sto_bulk, T_bulk)
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature [K]"]

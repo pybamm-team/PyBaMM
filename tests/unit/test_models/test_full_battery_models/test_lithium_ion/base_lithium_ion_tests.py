@@ -280,6 +280,18 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_sei_VonKolzenberg2020_model(self):
+        options = {
+            "SEI": "VonKolzenberg2020",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_sei_tunnelling_limited(self):
+        options = {
+            "SEI": "tunnelling limited",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_mechanics_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         self.check_well_posedness(options)
@@ -569,6 +581,7 @@ class BaseUnitTestLithiumIon:
         options = {
             "particle phases": ("2", "1"),
             "SEI": ("ec reaction limited", "none"),
+            "SEI porosity change": "true",
             "lithium plating": ("reversible", "none"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
         }
@@ -577,6 +590,7 @@ class BaseUnitTestLithiumIon:
         options = {
             "particle phases": ("2", "1"),
             "SEI": (("ec reaction limited", "solvent-diffusion limited"), "none"),
+            "SEI porosity change": "true",
             "lithium plating": (("reversible", "irreversible"), "none"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
         }

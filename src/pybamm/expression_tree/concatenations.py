@@ -4,6 +4,7 @@
 from __future__ import annotations
 import copy
 from collections import defaultdict
+from typing import Optional
 
 import numpy as np
 import sympy
@@ -146,9 +147,9 @@ class Concatenation(pybamm.Symbol):
         children before creating the new copy.
         """
         if perform_simplifications:
-            return concatenation(*children)
+            return concatenation(*children, name=self.name)
         else:
-            return self.__class__(*children)
+            return self.__class__(*children, name=self.name)
 
     def _concatenation_jac(self, children_jacs):
         """Calculate the Jacobian of a concatenation."""
@@ -468,17 +469,18 @@ class SparseStack(Concatenation):
 class ConcatenationVariable(Concatenation):
     """A Variable representing a concatenation of variables."""
 
-    def __init__(self, *children):
-        # Name is the intersection of the children names (should usually make sense
-        # if the children have been named consistently)
-        name = intersect(children[0].name, children[1].name)
-        for child in children[2:]:
-            name = intersect(name, child.name)
-        if len(name) == 0:
-            name = None
-        # name is unchanged if its length is 1
-        elif len(name) > 1:
-            name = name[0].capitalize() + name[1:]
+    def __init__(self, *children, name: Optional[str] = None):
+        if name is None:
+            # Name is the intersection of the children names (should usually make sense
+            # if the children have been named consistently)
+            name = intersect(children[0].name, children[1].name)
+            for child in children[2:]:
+                name = intersect(name, child.name)
+            if len(name) == 0:
+                name = None
+            # name is unchanged if its length is 1
+            elif len(name) > 1:
+                name = name[0].capitalize() + name[1:]
 
         if len(children) > 0:
             if all(child.scale == children[0].scale for child in children):
@@ -523,7 +525,7 @@ def intersect(s1: str, s2: str):
     return intersect.lstrip().rstrip()
 
 
-def simplified_concatenation(*children):
+def simplified_concatenation(*children, name: Optional[str] = None):
     """Perform simplifications on a concatenation."""
     # remove children that are None
     children = list(filter(lambda x: x is not None, children))
@@ -534,29 +536,29 @@ def simplified_concatenation(*children):
     elif len(children) == 1:
         return children[0]
     elif all(isinstance(child, pybamm.Variable) for child in children):
-        return pybamm.ConcatenationVariable(*children)
+        return pybamm.ConcatenationVariable(*children, name=name)
     else:
         # Create Concatenation to easily read domains
-        concat = Concatenation(*children)
+        concat = Concatenation(*children, name=name)
         if all(
             isinstance(child, pybamm.Broadcast) and child.child == children[0].child
             for child in children
         ):
             unique_child = children[0].orphans[0]
             if isinstance(children[0], pybamm.PrimaryBroadcast):
-                return pybamm.PrimaryBroadcast(unique_child, concat.domain)
+                return pybamm.PrimaryBroadcast(unique_child, concat.domain, name=name)
             else:
                 return pybamm.FullBroadcast(
-                    unique_child, broadcast_domains=concat.domains
+                    unique_child, broadcast_domains=concat.domains, name=name
                 )
         else:
             return concat
 
 
-def concatenation(*children):
+def concatenation(*children, name: Optional[str] = None):
     """Helper function to create concatenations."""
     # TODO: add option to turn off simplifications
-    return simplified_concatenation(*children)
+    return simplified_concatenation(*children, name=name)
 
 
 def simplified_numpy_concatenation(*children):

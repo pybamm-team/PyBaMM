@@ -265,13 +265,13 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Reversible heating [W.m-3]": Q_rev,
                 "X-averaged reversible heating [W.m-3]": Q_rev_av,
                 "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av,
-                "Reversible heating per unit electrode-pair area " "[W.m-2]": Q_rev_Wm2,
+                "Reversible heating per unit electrode-pair area [W.m-2]": Q_rev_Wm2,
                 "Reversible heating [W]": Q_rev_W,
                 # Mixing
                 "Heat of mixing [W.m-3]": Q_mix,
                 "X-averaged heat of mixing [W.m-3]": Q_mix_av,
                 "Volume-averaged heating of mixing [W.m-3]": Q_mix_vol_av,
-                "Heat of mixing per unit electrode-pair area " "[W.m-2]": Q_mix_Wm2,
+                "Heat of mixing per unit electrode-pair area [W.m-2]": Q_mix_Wm2,
                 "Heat of mixing [W]": Q_mix_W,
                 # Total
                 "Total heating [W.m-3]": Q,
