@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.11.2"
+version = "25.1.0"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
