@@ -28,26 +28,8 @@ t_eval = np.linspace(0, 3600, 100)
 casadi_sol = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 solutions = [casadi_sol]
 
-if pybamm.have_idaklu():
-    klu_sol = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-    solutions.append(klu_sol)
-else:
-    pybamm.logger.error(
-        """
-        Cannot solve model with IDA KLU solver as solver is not installed.
-        Please consult installation instructions on GitHub.
-        """
-    )
-if pybamm.have_scikits_odes():
-    scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-    solutions.append(scikits_sol)
-else:
-    pybamm.logger.error(
-        """
-        Cannot solve model with Scikits DAE solver as solver is not installed.
-        Please consult installation instructions on GitHub.
-        """
-    )
+klu_sol = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
+solutions.append(klu_sol)
 
 # plot
 plot = pybamm.QuickPlot(solutions)

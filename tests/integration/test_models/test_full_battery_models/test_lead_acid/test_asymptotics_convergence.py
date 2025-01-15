@@ -1,14 +1,12 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-from tests import TestCase
 import pybamm
 
 import numpy as np
-import unittest
 
 
-class TestAsymptoticConvergence(TestCase):
+class TestAsymptoticConvergence:
     def test_leading_order_convergence(self):
         """
         Check that the leading-order model solution converges linearly in C_e to the
@@ -30,7 +28,12 @@ class TestAsymptoticConvergence(TestCase):
         var_pts = {"x_n": 3, "x_s": 3, "x_p": 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
 
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
@@ -72,12 +75,3 @@ class TestAsymptoticConvergence(TestCase):
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
 
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

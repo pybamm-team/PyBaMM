@@ -2,14 +2,13 @@
 # Tests lithium-ion parameters load and give expected values
 #
 import os
-from tests import TestCase
+
 import pybamm
 from tempfile import TemporaryDirectory
-import unittest
 import numpy as np
 
 
-class TestLithiumIonParameterValues(TestCase):
+class TestLithiumIonParameterValues:
     def test_print_parameters(self):
         with TemporaryDirectory() as dir_name:
             parameters = pybamm.LithiumIonParameters()
@@ -138,13 +137,3 @@ class TestLithiumIonParameterValues(TestCase):
         c_e_test = 1000
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

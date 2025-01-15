@@ -3,9 +3,7 @@
 #
 import pybamm
 import pandas as pd
-import os
 
-os.chdir(pybamm.__path__[0] + "/..")
 
 pybamm.set_logging_level("INFO")
 
@@ -15,8 +13,9 @@ param = model.default_parameter_values
 
 
 # import drive cycle from file
+data_loader = pybamm.DataLoader()
 drive_cycle = pd.read_csv(
-    "pybamm/input/drive_cycles/US06.csv", comment="#", header=None
+    data_loader.get_data("US06.csv"), comment="#", header=None
 ).to_numpy()
 
 # create interpolant

@@ -76,7 +76,7 @@ for ax, model_, model_name in zip(
             solver.solve(model, t_eval=t_eval)
             time = 0
             runs = 20
-            for k in range(0, runs):
+            for _ in range(0, runs):
                 solution = solver.solve(model, t_eval=t_eval)
                 time += solution.solve_time.value
             time = time / runs

@@ -1,18 +1,13 @@
-# Run all unit tests and integration tests for all Python versions
-# and platforms at 3am UTC every day and on PRs to the main branch
 name: Scheduled
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-    - main
-
-  # Run everyday at 3 am UTC
+  # Run every day at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
 
 env:
+  PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
 
 concurrency:
@@ -24,132 +19,163 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  style:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
-      - name: Check style
-        run: |
-          python -m pip install pre-commit
-          git add .
-          pre-commit run ruff
-
-  build:
-    needs: style
+  run_unit_integration_and_coverage_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: [ ubuntu-latest, macos-13, macos-14, windows-latest ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+    name: Tests (${{ matrix.os }} / Python ${{ matrix.python-version }})
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt install gfortran gcc libopenblas-dev graphviz pandoc
-          sudo apt install texlive-full
+          sudo apt-get install gfortran gcc graphviz pandoc
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          # Speed up CI
+          NONINTERACTIVE: 1
+        # sometimes gfortran cannot be found, so reinstall gcc just to be sure
         run: |
           brew analytics off
-          brew install graphviz openblas libomp
+          brew install graphviz libomp
           brew reinstall gcc
 
       - name: Install Windows system dependencies
         if: matrix.os == 'windows-latest'
-        run: choco install graphviz --version=2.38.0.20190211
+        run: choco install graphviz --version=8.0.5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        run: python -m pip install uv
 
       - name: Install nox
-        run: python -m pip install nox
+        run: python -m uv pip install nox[uv]
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        if: matrix.os != 'windows-latest'
-        run: python -m nox -s pybamm-requires
-
-      - name: Run unit tests for GNU/Linux with Python 3.8, 3.9, 3.10, and 3.12; and for macOS and Windows with all Python versions
-        if: (matrix.os == 'ubuntu-latest' && matrix.python-version != 3.11) || (matrix.os != 'ubuntu-latest')
+      - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
 
-      - name: Run unit tests for GNU/Linux with Python 3.11 and generate coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
+      - name: Run coverage tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: python -m nox -s coverage
 
       - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.11
-        uses: codecov/codecov-action@v3.1.4
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Run integration tests
+      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-      - name: Install docs dependencies and run doctests
-        if: matrix.os == 'ubuntu-latest'
-        run: python -m nox -s doctests
-
-      - name: Check if the documentation can be built
-        if: matrix.os == 'ubuntu-latest'
-        run: python -m nox -s docs
-
-      - name: Install dev dependencies and run example tests
-        if: matrix.os == 'ubuntu-latest'
-        run: python -m nox -s examples
-
-      - name: Run example scripts tests
-        if: matrix.os == 'ubuntu-latest'
-        run: python -m nox -s scripts
-
-  #M-series Mac Mini
-  build-apple-mseries:
-    if: github.repository_owner == 'pybamm-team'
-    needs: style
-    runs-on: [self-hosted, macOS, ARM64]
-    env:
-      GITHUB_PATH: ${PYENV_ROOT/bin:$PATH}
+  run_doctests:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+    name: Doctests (ubuntu-latest / Python 3.11)
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Install python & create virtualenv
-        shell: bash
-        run: |
-          eval "$(pyenv init -)"
-          pyenv install ${{ matrix.python-version }} -s
-          pyenv virtualenv ${{ matrix.python-version }} pybamm-${{ matrix.python-version }}
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
 
-      - name: Install dependencies & run unit tests for Windows and MacOS
-        shell: bash
+      - name: Install Linux system dependencies
         run: |
-          eval "$(pyenv init -)"
-          pyenv activate pybamm-${{ matrix.python-version }}
-          python -m pip install --upgrade pip wheel setuptools nox
-          python -m nox -s unit
+          sudo apt-get update
+          sudo apt-get install graphviz pandoc
+          sudo apt-get install texlive-latex-extra dvipng
 
-      - name: Run integration tests for Windows and MacOS
-        run: |
-          eval "$(pyenv init -)"
-          pyenv activate pybamm-${{ matrix.python-version }}
-          python -m nox -s integration
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: 3.11
 
-      - name: Uninstall pyenv-virtualenv & python
-        if: always()
-        shell: bash
+      - name: Set up uv
+        run: python -m pip install uv
+
+      - name: Install nox
+        run: python -m uv pip install nox[uv]
+
+      - name: Install docs dependencies and run doctests for GNU/Linux
+        run: python -m nox -s doctests
+
+      - name: Check if the documentation can be built for GNU/Linux
+        run: python -m nox -s docs
+
+  run_example_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Example notebooks (ubuntu-latest / Python 3.12)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Linux system dependencies
         run: |
-          eval "$(pyenv init -)"
-          pyenv activate pybamm-${{ matrix.python-version }}
-          pyenv uninstall -f $( python --version )
+          sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: 3.12
+
+      - name: Set up uv
+        run: python -m pip install uv
+
+      - name: Install nox
+        run: python -m uv pip install nox[uv]
+
+      - name: Run example notebooks tests for GNU/Linux with Python 3.12
+        run: python -m nox -s examples
+
+  run_scripts_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    name: Example scripts (ubuntu-latest / Python 3.12)
+
+    steps:
+      - name: Check out PyBaMM repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz
+          sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: 3.12
+
+      - name: Set up uv
+        run: python -m pip install uv
+
+      - name: Install nox
+        run: python -m uv pip install nox[uv]
+
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
+        run: python -m nox -s scripts

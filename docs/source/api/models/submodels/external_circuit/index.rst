@@ -11,5 +11,6 @@ variable to be constant.
 .. toctree::
   :maxdepth: 1
 
+  discharge_throughput
   explicit_control_external_circuit
   function_control_external_circuit

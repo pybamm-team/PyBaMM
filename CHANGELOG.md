@@ -2,6 +2,193 @@
 
 ## Features
 
+- Added a `dt_min` option to the (`IDAKLUSolver`). ([#4736](https://github.com/pybamm-team/PyBaMM/pull/4736))
+- Automatically add state variables of the model to the output variables if they are not already present ([#4700](https://github.com/pybamm-team/PyBaMM/pull/4700))
+- Enabled using SEI models with particle size distributions. ([#4693](https://github.com/pybamm-team/PyBaMM/pull/4693))
+- Added symbolic mesh which allows for using InputParameters for geometric parameters ([#4665](https://github.com/pybamm-team/PyBaMM/pull/4665))
+- Enhanced the `search` method to accept multiple search terms in the form of a string or a list. ([#4650](https://github.com/pybamm-team/PyBaMM/pull/4650))
+- Made composite electrode model compatible with particle size distribution ([#4687](https://github.com/pybamm-team/PyBaMM/pull/4687))
+- Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
+- Porosity change now works for composite electrode ([#4417](https://github.com/pybamm-team/PyBaMM/pull/4417))
+- Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
+
+## Breaking changes
+
+- Updated BPX to v0.5.0 and made changes for the switch to Pydantic V2 ([#4701](https://github.com/pybamm-team/PyBaMM/pull/4701))
+- Summary variables now calculated only when called, accessed via a class in the same manner as other variables rather than a dictionary. ([#4621](https://github.com/pybamm-team/PyBaMM/pull/4621))
+- The conda distribution (`pybamm`) now installs all optional dependencies available on conda-forge. Use the new `pybamm-base` conda
+package to install PyBaMM with only the required dependencies. ([conda-forge/pybamm-feedstock#70](https://github.com/conda-forge/pybamm-feedstock/pull/70))
+- Separated extrapolation options for `pybamm.BoundaryValue` and `pybamm.BoundaryGradient`, and updated the default to be "linear" for the value and "quadratic" for the gradient. ([#4614](https://github.com/pybamm-team/PyBaMM/pull/4614))
+- Double-layer SEI models have been removed (with the corresponding parameters). All models assume now a single SEI layer. ([#4470](https://github.com/pybamm-team/PyBaMM/pull/4470))
+- Moved the IDAKLU solver to a standalone `pybammsolvers` package. This will
+  make PyBaMM a pure Python package and make installing and using the solver
+  easier. ([#4487](https://github.com/pybamm-team/PyBaMM/pull/4487))
+- Wycisk OCP model now requires an parameter to set the initial condition. ([#4374](https://github.com/pybamm-team/PyBaMM/pull/4374))
+
+## Bug fixes
+
+- Fixed bug when using stoichiometry-dependent diffusivity with the DFN model with a particle size distribution. ([#4726](https://github.com/pybamm-team/PyBaMM/pull/4726))
+- Remove internal use of deprecated `set_parameters` function in the `Simulation` class which caused warnings. ([#4638](https://github.com/pybamm-team/PyBaMM/pull/4638))
+- Provide default value for `Symbol.mesh` attribute to avoid errors when adding variables after discretisation. ([#4644](https://github.com/pybamm-team/PyBaMM/pull/4644))
+
+# [v24.11.2](https://github.com/pybamm-team/PyBaMM/tree/v24.11.2) - 2024-11-27
+
+## Bug fixes
+
+- Reverted modifications to quickplot from [#4529](https://github.com/pybamm-team/PyBaMM/pull/4529) which caused issues with the plots displaying correct variable names. ([#4622](https://github.com/pybamm-team/PyBaMM/pull/4622))
+
+# [v24.11.1](https://github.com/pybamm-team/PyBaMM/tree/v24.11.1) - 2024-11-22
+
+## Features
+
+- Modified `quick_plot.plot` to accept a list of times and generate superimposed graphs for specified time points. ([#4529](https://github.com/pybamm-team/PyBaMM/pull/4529))
+
+## Bug Fixes
+
+- Added some dependencies which were left out of the `pyproject.toml` file ([#4602](https://github.com/pybamm-team/PyBaMM/pull/4602))
+
+# [v24.11.0](https://github.com/pybamm-team/PyBaMM/tree/v24.11.0) - 2024-11-20
+
+## Features
+
+- Added `CoupledVariable` which provides a placeholder variable whose equation can be elsewhere in the model. ([#4556](https://github.com/pybamm-team/PyBaMM/pull/4556))
+- Adds support to `pybamm.Experiment` for the `output_variables` option in the `IDAKLUSolver`. ([#4534](https://github.com/pybamm-team/PyBaMM/pull/4534))
+- Adds an option "voltage as a state" that can be "false" (default) or "true". If "true" adds an explicit algebraic equation for the voltage. ([#4507](https://github.com/pybamm-team/PyBaMM/pull/4507))
+- Improved `QuickPlot` accuracy for simulations with Hermite interpolation. ([#4483](https://github.com/pybamm-team/PyBaMM/pull/4483))
+- Added Hermite interpolation to the (`IDAKLUSolver`) that improves the accuracy and performance of post-processing variables. ([#4464](https://github.com/pybamm-team/PyBaMM/pull/4464))
+- Added basic telemetry to record which functions are being run. See [Telemetry section in the User Guide](https://docs.pybamm.org/en/latest/source/user_guide/index.html#telemetry) for more information. ([#4441](https://github.com/pybamm-team/PyBaMM/pull/4441))
+- Added `BasicDFN` model for sodium-ion batteries ([#4451](https://github.com/pybamm-team/PyBaMM/pull/4451))
+- Added sensitivity calculation support for `pybamm.Simulation` and `pybamm.Experiment` ([#4415](https://github.com/pybamm-team/PyBaMM/pull/4415))
+- Added OpenMP parallelization to IDAKLU solver for lists of input parameters ([#4449](https://github.com/pybamm-team/PyBaMM/pull/4449))
+- Added phase-dependent particle options to LAM ([#4369](https://github.com/pybamm-team/PyBaMM/pull/4369))
+- Added a lithium ion equivalent circuit model with split open circuit voltages for each electrode (`SplitOCVR`). ([#4330](https://github.com/pybamm-team/PyBaMM/pull/4330))
+- Added the `pybamm.DiscreteTimeSum` expression node to sum an expression over a sequence of data times, and accompanying `pybamm.DiscreteTimeData` class to store the data times and values ([#4501](https://github.com/pybamm-team/PyBaMM/pull/4501))
+
+## Optimizations
+
+- Performance refactor of JAX BDF Solver with default Jax method set to `"BDF"`. ([#4456](https://github.com/pybamm-team/PyBaMM/pull/4456))
+- Improved performance of initialization and reinitialization of ODEs in the (`IDAKLUSolver`). ([#4453](https://github.com/pybamm-team/PyBaMM/pull/4453))
+- Removed the `start_step_offset` setting and disabled minimum `dt` warnings for drive cycles with the (`IDAKLUSolver`). ([#4416](https://github.com/pybamm-team/PyBaMM/pull/4416))
+
+## Bug Fixes
+- Added error for binary operators on two concatenations with different numbers of children. Previously, the extra children were dropped. Also fixed bug where Q_rxn was dropped from the total heating term in half-cell models. ([#4562](https://github.com/pybamm-team/PyBaMM/pull/4562))
+- Fixed bug where Q_rxn was set to 0 for the negative electrode in half-cell models. ([#4557](https://github.com/pybamm-team/PyBaMM/pull/4557))
+- Fixed bug in post-processing solutions with infeasible experiments using the (`IDAKLUSolver`). ([#4541](https://github.com/pybamm-team/PyBaMM/pull/4541))
+- Disabled IREE on MacOS due to compatibility issues and added the CasADI
+  path to the environment to resolve issues on MacOS and Linux. Windows
+  users may still experience issues with interpolation. ([#4528](https://github.com/pybamm-team/PyBaMM/pull/4528))
+- Added `_from_json()` functionality to `Sign` which was erroneously omitted previously. ([#4517](https://github.com/pybamm-team/PyBaMM/pull/4517))
+- Fixed bug where IDAKLU solver failed when `output variables` were specified and an extrapolation event is present. ([#4440](https://github.com/pybamm-team/PyBaMM/pull/4440))
+
+## Breaking changes
+
+- Deprecated `pybamm.Simulation.set_parameters` and `pybamm.Simulation.     set_up_and_parameterise_experiment` functions in `pybamm.simulation.py`. ([#3752](https://github.com/pybamm-team/PyBaMM/pull/3752))
+- Removed all instances of `param = self.param` and now directly access `self.param` across the codebase. This change simplifies parameter references and enhances readability. ([#4484](https://github.com/pybamm-team/PyBaMM/pull/4494))
+- Removed the deprecation warning for the chemistry argument in
+  ParameterValues ([#4466](https://github.com/pybamm-team/PyBaMM/pull/4466))
+- The parameters "... electrode OCP entropic change [V.K-1]" and "... electrode volume change" are now expected to be functions of stoichiometry only instead of functions of both stoichiometry and maximum concentration ([#4427](https://github.com/pybamm-team/PyBaMM/pull/4427))
+- Renamed `set_events` function to `add_events_from` to better reflect its purpose. ([#4421](https://github.com/pybamm-team/PyBaMM/pull/4421))
+
+# [v24.9.0](https://github.com/pybamm-team/PyBaMM/tree/v24.9.0) - 2024-09-03
+
+## Features
+
+- Added additional user-configurable options to the (`IDAKLUSolver`) and adjusted the default values to improve performance. ([#4282](https://github.com/pybamm-team/PyBaMM/pull/4282))
+- Added the diffusion element to be used in the Thevenin model. ([#4254](https://github.com/pybamm-team/PyBaMM/pull/4254))
+- Added lumped surface thermal model ([#4203](https://github.com/pybamm-team/PyBaMM/pull/4203))
+
+## Optimizations
+
+- Update `IDAKLU` tests and benchmarks to use adaptive time stepping. ([#4390](https://github.com/pybamm-team/PyBaMM/pull/4390))
+- Improved adaptive time-stepping performance of the (`IDAKLUSolver`). ([#4351](https://github.com/pybamm-team/PyBaMM/pull/4351))
+- Improved performance and reliability of DAE consistent initialization. ([#4301](https://github.com/pybamm-team/PyBaMM/pull/4301))
+- Replaced rounded Faraday constant with its exact value in `bpx.py` for better comparison between different tools. ([#4290](https://github.com/pybamm-team/PyBaMM/pull/4290))
+
+## Bug Fixes
+
+- Fixed memory issue that caused failure when `output variables` were specified with (`IDAKLUSolver`). ([#4379](https://github.com/pybamm-team/PyBaMM/pull/4379))
+- Fixed bug where IDAKLU solver failed when `output variables` were specified and an event triggered. ([#4300](https://github.com/pybamm-team/PyBaMM/pull/4300))
+
+## Breaking changes
+
+- Replaced `have_jax` with `has_jax`, `have_idaklu` with `has_idaklu`, and
+  `have_iree` with `has_iree` ([#4398](https://github.com/pybamm-team/PyBaMM/pull/4398))
+- Remove deprecated function `pybamm_install_jax` ([#4362](https://github.com/pybamm-team/PyBaMM/pull/4362))
+- Removed legacy python-IDAKLU solver. ([#4326](https://github.com/pybamm-team/PyBaMM/pull/4326))
+
+# [v24.5](https://github.com/pybamm-team/PyBaMM/tree/v24.5) - 2024-07-26
+
+## Features
+
+- Added functionality to pass in arbitrary functions of time as the argument for a (`pybamm.step`). ([#4222](https://github.com/pybamm-team/PyBaMM/pull/4222))
+- Added new parameters `"f{pref]Initial inner SEI on cracks thickness [m]"` and `"f{pref]Initial outer SEI on cracks thickness [m]"`, instead of hardcoding these to `L_inner_0 / 10000` and `L_outer_0 / 10000`. ([#4168](https://github.com/pybamm-team/PyBaMM/pull/4168))
+- Added `pybamm.DataLoader` class to fetch data files from [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0) and store it under local cache. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
+- Added `time` as an option for `Experiment.termination`. Now allows solving up to a user-specified time while also allowing different cycles and steps in an experiment to be handled normally. ([#4073](https://github.com/pybamm-team/PyBaMM/pull/4073))
+- Added `plot_thermal_components` to plot the contributions to the total heat generation in a battery ([#4021](https://github.com/pybamm-team/PyBaMM/pull/4021))
+- Added functions for normal probability density function (`pybamm.normal_pdf`) and cumulative distribution function (`pybamm.normal_cdf`) ([#3999](https://github.com/pybamm-team/PyBaMM/pull/3999))
+- "Basic" models are now compatible with experiments ([#3995](https://github.com/pybamm-team/PyBaMM/pull/3995))
+- Updates multiprocess `Pool` in `BaseSolver.solve()` to be constructed with context `fork`. Adds small example for multiprocess inputs. ([#3974](https://github.com/pybamm-team/PyBaMM/pull/3974))
+- Lithium plating now works on composite electrodes ([#3919](https://github.com/pybamm-team/PyBaMM/pull/3919))
+- Added lithium plating parameters to `Ecker2015` and `Ecker2015_graphite_halfcell` parameter sets ([#3919](https://github.com/pybamm-team/PyBaMM/pull/3919))
+- Added custom experiment steps ([#3835](https://github.com/pybamm-team/PyBaMM/pull/3835))
+- MSMR open-circuit voltage model now depends on the temperature ([#3832](https://github.com/pybamm-team/PyBaMM/pull/3832))
+- Added support for macOS arm64 (M-series) platforms. ([#3789](https://github.com/pybamm-team/PyBaMM/pull/3789))
+- Added the ability to specify a custom solver tolerance in `get_initial_stoichiometries` and related functions ([#3714](https://github.com/pybamm-team/PyBaMM/pull/3714))
+- Added a JAX interface to the IDAKLU solver ([#3658](https://github.com/pybamm-team/PyBaMM/pull/3658))
+- Modified `step` function to take an array of time `t_eval` as an argument and deprecated use of `npts`. ([#3627](https://github.com/pybamm-team/PyBaMM/pull/3627))
+- Renamed "electrode diffusivity" to "particle diffusivity" as a non-breaking change with a deprecation warning ([#3624](https://github.com/pybamm-team/PyBaMM/pull/3624))
+- Add support for BPX version 0.4.0 which allows for blended electrodes and user-defined parameters in BPX([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
+- Added `by_submodel` feature in `print_parameter_info` method to allow users to print parameters and types of submodels in a tabular and readable format ([#3628](https://github.com/pybamm-team/PyBaMM/pull/3628))
+- Added `WyciskOpenCircuitPotential` for differential capacity hysteresis state open-circuit potential submodel ([#3593](https://github.com/pybamm-team/PyBaMM/pull/3593))
+- Transport efficiency submodel has new options from the literature relating to different tortuosity factor models and also a new option called "tortuosity factor" for specifying the value or function directly as parameters ([#3437](https://github.com/pybamm-team/PyBaMM/pull/3437))
+- Heat of mixing source term can now be included into thermal models ([#2837](https://github.com/pybamm-team/PyBaMM/pull/2837))
+
+## Bug Fixes
+
+- Fixed bug where passing deprecated `electrode diffusivity` parameter resulted in a breaking change and/or the corresponding diffusivity parameter not updating. Improved the deprecated translation around BPX. ([#4176](https://github.com/pybamm-team/PyBaMM/pull/4176))
+- Fixed a bug where a factor of electrode surface area to volume ratio is missing in the rhs of the LeadingOrderDifferential conductivity model ([#4139](https://github.com/pybamm-team/PyBaMM/pull/4139))
+- Fixes the breaking changes caused by [#3624](https://github.com/pybamm-team/PyBaMM/pull/3624), specifically enables the deprecated parameter `electrode diffusivity` to be used by `ParameterValues.update({name:value})` and `Solver.solve(inputs={name:value})`. Fixes parameter translation from old name to new name, with corrected tests. ([#4072](https://github.com/pybamm-team/PyBaMM/pull/4072)
+- Set the `remove_independent_variables_from_rhs` to `False` by default, and moved the option from `Discretisation.process_model` to `Discretisation.__init__`. This fixes a bug related to the discharge capacity, but may make the simulation slower in some cases. To set the option to `True`, use `Simulation(..., discretisation_kwargs={"remove_independent_variables_from_rhs": True})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
+- Fixed a bug where independent variables were removed from models even if they appeared in events ([#4019](https://github.com/pybamm-team/PyBaMM/pull/4019))
+- Fix bug with upwind and downwind schemes producing the wrong discretised system ([#3979](https://github.com/pybamm-team/PyBaMM/pull/3979))
+- Allow evaluation of an `Interpolant` object with a number ([#3932](https://github.com/pybamm-team/PyBaMM/pull/3932))
+- Added scale to dead lithium variable ([#3919](https://github.com/pybamm-team/PyBaMM/pull/3919))
+- `plot_voltage_components` now works even if the time does not start at 0 ([#3915](https://github.com/pybamm-team/PyBaMM/pull/3915))
+- Fixed bug where separator porosity was used in calculation instead of transport efficiency ([#3905](https://github.com/pybamm-team/PyBaMM/pull/3905))
+- Initial voltage can now match upper or lower cut-offs exactly ([#3842](https://github.com/pybamm-team/PyBaMM/pull/3842))
+- Fixed a bug where 1+1D and 2+1D models would not work with voltage or power controlled experiments([#3829](https://github.com/pybamm-team/PyBaMM/pull/3829))
+- Update IDAKLU solver to fail gracefully when a variable is requested that was not in the solves `output_variables` list ([#3803](https://github.com/pybamm-team/PyBaMM/pull/3803))
+- Updated `_steps_util.py` to throw a specific exception when drive cycle starts at t>0 ([#3756](https://github.com/pybamm-team/PyBaMM/pull/3756))
+- Updated `plot_voltage_components.py` to support both `Simulation` and `Solution` objects. Added new methods in both `Simulation` and `Solution` classes for allow the syntax `simulation.plot_voltage_components` and `solution.plot_voltage_components`. Updated `test_plot_voltage_components.py` to reflect these changes ([#3723](https://github.com/pybamm-team/PyBaMM/pull/3723)).
+- The SEI thickness decreased at some intervals when the 'electron-migration limited' model was used. It has been corrected ([#3622](https://github.com/pybamm-team/PyBaMM/pull/3622))
+- Allow input parameters in ESOH model ([#3921](https://github.com/pybamm-team/PyBaMM/pull/3921))
+- Use casadi MX.interpn_linear function instead of plugin to fix casadi_interpolant_linear.dll not found on Windows ([#4077](https://github.com/pybamm-team/PyBaMM/pull/4077))
+
+## Optimizations
+
+- Sped up initialization of a `ProcessedVariable` by making the internal `xarray.DataArray` initialization lazy (only gets created if interpolation is needed) ([#3862](https://github.com/pybamm-team/PyBaMM/pull/3862))
+
+## Breaking changes
+
+- Functions that are created using `pybamm.Function(function_object, children)` can no longer be differentiated symbolically (e.g. to compute the Jacobian). This should affect no users, since function derivatives for all "standard" functions are explicitly implemented ([#4196](https://github.com/pybamm-team/PyBaMM/pull/4196))
+- Removed data files under `pybamm/input` and released them in a separate repository upstream at [pybamm-data](https://github.com/pybamm-team/pybamm-data/releases/tag/v1.0.0). Note that data files under `pybamm/input/parameters` have not been removed. ([#4098](https://github.com/pybamm-team/PyBaMM/pull/4098))
+- Removed `check_model` argument from `Simulation.solve`. To change the `check_model` option, use `Simulation(..., discretisation_kwargs={"check_model": False})`. ([#4020](https://github.com/pybamm-team/PyBaMM/pull/4020))
+- Removed multiple Docker images. Here on, a single Docker image tagged `pybamm/pybamm:latest` will be provided with both solvers (`IDAKLU` and `JAX`) pre-installed. ([#3992](https://github.com/pybamm-team/PyBaMM/pull/3992))
+- Removed support for Python 3.8 ([#3961](https://github.com/pybamm-team/PyBaMM/pull/3961))
+- Renamed "ocp_soc_0_dimensional" to "ocp_soc_0" and "ocp_soc_100_dimensional" to "ocp_soc_100" ([#3942](https://github.com/pybamm-team/PyBaMM/pull/3942))
+- The ODES solver was removed due to compatibility issues. Users should use IDAKLU, Casadi, or JAX instead. ([#3932](https://github.com/pybamm-team/PyBaMM/pull/3932))
+- Integrated the `[pandas]` extra into the core PyBaMM package, deprecating the `pybamm[pandas]` optional dependency. Pandas is now a required dependency and will be installed upon installing PyBaMM ([#3892](https://github.com/pybamm-team/PyBaMM/pull/3892))
+- Renamed "have_optional_dependency" to "import_optional_dependency" ([#3866](https://github.com/pybamm-team/PyBaMM/pull/3866))
+- Integrated the `[latexify]` extra into the core PyBaMM package, deprecating the `pybamm[latexify]` set of optional dependencies. SymPy is now a required dependency and will be installed upon installing PyBaMM ([#3848](https://github.com/pybamm-team/PyBaMM/pull/3848))
+- Renamed "testing" argument for plots to "show_plot" and flipped its meaning (show_plot=True is now the default and shows the plot) ([#3842](https://github.com/pybamm-team/PyBaMM/pull/3842))
+- The function `get_spatial_var` in `pybamm.QuickPlot.py` is made private. ([#3755](https://github.com/pybamm-team/PyBaMM/pull/3755))
+- Dropped support for BPX version 0.3.0 and below ([#3414](https://github.com/pybamm-team/PyBaMM/pull/3414))
+
+# [v24.1](https://github.com/pybamm-team/PyBaMM/tree/v24.1) - 2024-01-31
+
+## Features
+
+- The `pybamm_install_odes` command now includes support for macOS systems and can be used to set up SUNDIALS and install the `scikits.odes` solver on macOS ([#3417](https://github.com/pybamm-team/PyBaMM/pull/3417))
 - Added support for Python 3.12 ([#3531](https://github.com/pybamm-team/PyBaMM/pull/3531))
 - Added method to get QuickPlot axes by variable ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
 - Added custom experiment terminations ([#3596](https://github.com/pybamm-team/PyBaMM/pull/3596))
@@ -10,11 +197,13 @@
 - Added a method, `insert_reference_electrode`, to `pybamm.lithium_ion.BaseModel` that insert a reference electrode to measure the electrolyte potential at a given position in space and adds new variables that mimic a 3E cell setup. ([#3573](https://github.com/pybamm-team/PyBaMM/pull/3573))
 - Serialisation added so models can be written to/read from JSON ([#3397](https://github.com/pybamm-team/PyBaMM/pull/3397))
 - Added a `get_parameter_info` method for models and modified "print_parameter_info" functionality to extract all parameters and their type in a tabular and readable format ([#3584](https://github.com/pybamm-team/PyBaMM/pull/3584))
-- Mechanical parameters are now a function of stoichiometry and temperature ([#3576](https://github.com/pybamm-team/PyBaMM/pull/3576))
-
 
 ## Bug fixes
 
+- Fixed a bug that lead to a `ShapeError` when specifying "Ambient temperature [K]" as an `Interpolant` with an isothermal model ([#3761](https://github.com/pybamm-team/PyBaMM/pull/3761))
+- Fixed a bug where if the first step(s) in a cycle are skipped then the cycle solution started from the model's initial conditions instead of from the last state of the previous cycle ([#3708](https://github.com/pybamm-team/PyBaMM/pull/3708))
+- Fixed a bug where the lumped thermal model conflates cell volume with electrode volume ([#3707](https://github.com/pybamm-team/PyBaMM/pull/3707))
+- Reverted a change to the coupled degradation example notebook that caused it to be unstable for large numbers of cycles ([#3691](https://github.com/pybamm-team/PyBaMM/pull/3691))
 - Fixed a bug where simulations using the CasADi-based solvers would fail randomly with the half-cell model ([#3494](https://github.com/pybamm-team/PyBaMM/pull/3494))
 - Fixed bug that made identical Experiment steps with different end times crash ([#3516](https://github.com/pybamm-team/PyBaMM/pull/3516))
 - Fixed bug in calculation of theoretical energy that made it very slow ([#3506](https://github.com/pybamm-team/PyBaMM/pull/3506))
@@ -26,6 +215,7 @@
 
 ## Breaking changes
 
+- The parameters `GeometricParameters.A_cooling` and `GeometricParameters.V_cell` are now automatically computed from the electrode heights, widths and thicknesses if the "cell geometry" option is "pouch" and from the parameters "Cell cooling surface area [m2]" and "Cell volume [m3]", respectively, otherwise. When using the lumped thermal model we recommend using the "arbitrary" cell geometry and specifying the parameters "Cell cooling surface area [m2]", "Cell volume [m3]" and "Total heat transfer coefficient [W.m-2.K-1]" directly. ([#3707](https://github.com/pybamm-team/PyBaMM/pull/3707))
 - Dropped support for the `[jax]` extra, i.e., the Jax solver when running on Python 3.8. The Jax solver is now available on Python 3.9 and above ([#3550](https://github.com/pybamm-team/PyBaMM/pull/3550))
 
 # [v23.9](https://github.com/pybamm-team/PyBaMM/tree/v23.9) - 2023-10-31

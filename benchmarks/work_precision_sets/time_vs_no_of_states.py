@@ -16,6 +16,7 @@ models = {"SPM": pybamm.lithium_ion.SPM(), "DFN": pybamm.lithium_ion.DFN()}
 npts = [4, 8, 16, 32, 64]
 
 solvers = {
+    "IDAKLUSolver": pybamm.IDAKLUSolver(),
     "Casadi - safe": pybamm.CasadiSolver(),
     "Casadi - fast": pybamm.CasadiSolver(mode="fast"),
 }
@@ -54,7 +55,7 @@ for ax, i, j in zip(
 
             time = 0
             runs = 20
-            for k in range(0, runs):
+            for _ in range(0, runs):
                 solution = sim.solve([0, 3500])
                 time += solution.solve_time.value
             time = time / runs

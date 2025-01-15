@@ -1,22 +1,25 @@
 #
 # Test for the extrapolations in the finite volume class
 #
-from tests import TestCase
+
 import pybamm
+import pytest
 from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_mesh_for_testing_symbolic,
 )
 import numpy as np
-import unittest
 
 
-def errors(pts, function, method_options, bcs=None):
+def errors(
+    pts, function, method_options, bcs=None, submesh_type=pybamm.Uniform1DSubMesh
+):
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
     geometry = {domain: {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-    submesh_types = {domain: pybamm.Uniform1DSubMesh}
+    submesh_types = {domain: submesh_type}
     var_pts = {x: pts}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -26,12 +29,26 @@ def errors(pts, function, method_options, bcs=None):
     var = pybamm.Variable("var", domain="test")
     left_extrap = pybamm.BoundaryValue(var, "left")
     right_extrap = pybamm.BoundaryValue(var, "right")
+    left_grad = pybamm.BoundaryGradient(var, "left")
+    right_grad = pybamm.BoundaryGradient(var, "right")
 
     if bcs:
         model = pybamm.BaseBatteryModel()
         bc_dict = {var: bcs}
         model.boundary_conditions = bc_dict
         disc.bcs = disc.process_boundary_conditions(model)
+        # Note that we will have to be careful to make sure to only use these when necessary.
+        if bcs["left"][1] == "Neumann":
+            l_true_grad = bcs["left"][0].evaluate(None, None)
+        else:
+            l_true_grad = 0
+        if bcs["right"][1] == "Neumann":
+            r_true_grad = bcs["right"][0].evaluate(None, None)
+        else:
+            r_true_grad = 0
+    else:
+        l_true_grad = 0
+        r_true_grad = 0
 
     submesh = mesh["test"]
     y, l_true, r_true = function(submesh.nodes)
@@ -39,29 +56,80 @@ def errors(pts, function, method_options, bcs=None):
     disc.set_variable_slices([var])
     left_extrap_processed = disc.process_symbol(left_extrap)
     right_extrap_processed = disc.process_symbol(right_extrap)
+    left_grad_processed = disc.process_symbol(left_grad)
+    right_grad_processed = disc.process_symbol(right_grad)
 
     # address numpy 1.25 deprecation warning: array should have ndim=0 before conversion
     l_error = np.abs(l_true - left_extrap_processed.evaluate(None, y)).item()
     r_error = np.abs(r_true - right_extrap_processed.evaluate(None, y)).item()
+    l_grad_error = np.abs(l_true_grad - left_grad_processed.evaluate(None, y)).item()
+    r_grad_error = np.abs(r_true_grad - right_grad_processed.evaluate(None, y)).item()
 
-    return l_error, r_error
+    return l_error, r_error, l_grad_error, r_grad_error
 
 
-def get_errors(function, method_options, pts, bcs=None):
+def get_errors(
+    function, method_options, pts, bcs=None, submesh_type=pybamm.Uniform1DSubMesh
+):
     l_errors = np.zeros(pts.shape)
     r_errors = np.zeros(pts.shape)
+    l_grad_errors = np.zeros(pts.shape)
+    r_grad_errors = np.zeros(pts.shape)
 
     for i, pt in enumerate(pts):
-        l_errors[i], r_errors[i] = errors(pt, function, method_options, bcs)
+        l_errors[i], r_errors[i], l_grad_errors[i], r_grad_errors[i] = errors(
+            pt, function, method_options, bcs, submesh_type
+        )
 
-    return l_errors, r_errors
+    return l_errors, r_errors, l_grad_errors, r_grad_errors
 
 
-class TestExtrapolation(TestCase):
+class TestExtrapolation:
+    def test_raises_error_for_high_order_extrapolation(self):
+        value_cubic = {
+            "extrapolation": {"order": {"gradient": "linear", "value": "cubic"}}
+        }
+        gradient_cubic = {
+            "extrapolation": {"order": {"gradient": "cubic", "value": "linear"}}
+        }
+
+        geometry = {"domain": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        submesh_types = {"domain": pybamm.Uniform1DSubMesh}
+        var_pts = {"x": 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods_value_cubic = {"domain": pybamm.FiniteVolume(value_cubic)}
+        spatial_methods_gradient_cubic = {"domain": pybamm.FiniteVolume(gradient_cubic)}
+
+        disc_value_cubic = pybamm.Discretisation(mesh, spatial_methods_value_cubic)
+        disc_gradient_cubic = pybamm.Discretisation(
+            mesh, spatial_methods_gradient_cubic
+        )
+
+        var = pybamm.Variable("var", domain="domain")
+        left_extrap = pybamm.BoundaryValue(var, "left")
+        right_extrap = pybamm.BoundaryValue(var, "right")
+        left_grad = pybamm.BoundaryGradient(var, "left")
+        right_grad = pybamm.BoundaryGradient(var, "right")
+
+        disc_value_cubic.set_variable_slices([var])
+        disc_gradient_cubic.set_variable_slices([var])
+
+        with pytest.raises(NotImplementedError):
+            disc_value_cubic.process_symbol(left_extrap)
+        with pytest.raises(NotImplementedError):
+            disc_value_cubic.process_symbol(right_extrap)
+        with pytest.raises(NotImplementedError):
+            disc_gradient_cubic.process_symbol(left_grad)
+        with pytest.raises(NotImplementedError):
+            disc_gradient_cubic.process_symbol(right_grad)
+
     def test_convergence_without_bcs(self):
         # all tests are performed on x in [0, 1]
-        linear = {"extrapolation": {"order": "linear"}}
-        quad = {"extrapolation": {"order": "quadratic"}}
+        linear = {"extrapolation": {"order": {"gradient": "linear", "value": "linear"}}}
+        quad = {
+            "extrapolation": {"order": {"gradient": "quadratic", "value": "quadratic"}}
+        }
 
         def x_squared(x):
             y = x**2
@@ -72,8 +140,12 @@ class TestExtrapolation(TestCase):
         pts = 10 ** np.arange(1, 6, 1)
         dx = 1 / pts
 
-        l_errors_lin, r_errors_lin = get_errors(x_squared, linear, pts)
-        l_errors_quad, r_errors_quad = get_errors(x_squared, quad, pts)
+        l_errors_lin, r_errors_lin, l_grad_errors_lin, r_grad_errors_lin = get_errors(
+            x_squared, linear, pts
+        )
+        l_errors_quad, r_errors_quad, l_grad_errors_quad, r_grad_errors_quad = (
+            get_errors(x_squared, quad, pts)
+        )
 
         l_lin_rates = np.log(l_errors_lin[:-1] / l_errors_lin[1:]) / np.log(
             dx[:-1] / dx[1:]
@@ -82,7 +154,6 @@ class TestExtrapolation(TestCase):
         r_lin_rates = np.log(r_errors_lin[:-1] / r_errors_lin[1:]) / np.log(
             dx[:-1] / dx[1:]
         )
-
         np.testing.assert_array_almost_equal(l_lin_rates, 2)
         np.testing.assert_array_almost_equal(r_lin_rates, 2)
 
@@ -96,7 +167,9 @@ class TestExtrapolation(TestCase):
             r_true = 1
             return y, l_true, r_true
 
-        l_errors_lin, r_errors_lin = get_errors(x_squared, linear, pts)
+        l_errors_lin, r_errors_lin, l_grad_errors_lin, r_grad_errors_lin = get_errors(
+            x_squared, linear, pts
+        )
 
         l_lin_rates = np.log(l_errors_lin[:-1] / l_errors_lin[1:]) / np.log(
             dx[:-1] / dx[1:]
@@ -112,7 +185,9 @@ class TestExtrapolation(TestCase):
         # quadratic case
         pts = 5 ** np.arange(1, 7, 1)
         dx = 1 / pts
-        l_errors_quad, r_errors_quad = get_errors(x_cubed, quad, pts)
+        l_errors_quad, r_errors_quad, l_grad_errors_quad, r_grad_errors_quad = (
+            get_errors(x_cubed, quad, pts)
+        )
 
         l_quad_rates = np.log(l_errors_quad[:-1] / l_errors_quad[1:]) / np.log(
             dx[:-1] / dx[1:]
@@ -148,37 +223,68 @@ class TestExtrapolation(TestCase):
 
         bcs = {"left": (left_val, "Dirichlet"), "right": (right_flux, "Neumann")}
 
-        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
-        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
-        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
-        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
+        linear = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        quad = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
+        for submesh_type in [pybamm.Uniform1DSubMesh, pybamm.SymbolicUniform1DSubMesh]:
+            (
+                l_errors_lin_no_bc,
+                r_errors_lin_no_bc,
+                l_grad_errors_lin_no_bc,
+                r_grad_errors_lin_no_bc,
+            ) = get_errors(x_cubed, linear, pts, submesh_type=submesh_type)
+            (
+                l_errors_quad_no_bc,
+                r_errors_quad_no_bc,
+                l_grad_errors_quad_no_bc,
+                r_grad_errors_quad_no_bc,
+            ) = get_errors(x_cubed, quad, pts, submesh_type=submesh_type)
 
-        l_errors_lin_with_bc, r_errors_lin_with_bc = get_errors(
-            x_cubed, linear, pts, bcs
-        )
-        l_errors_quad_with_bc, r_errors_quad_with_bc = get_errors(
-            x_cubed, quad, pts, bcs
-        )
+            (
+                l_errors_lin_with_bc,
+                r_errors_lin_with_bc,
+                l_grad_errors_lin_with_bc,
+                r_grad_errors_lin_with_bc,
+            ) = get_errors(x_cubed, linear, pts, bcs, submesh_type=submesh_type)
+            (
+                l_errors_quad_with_bc,
+                r_errors_quad_with_bc,
+                l_grad_errors_quad_with_bc,
+                r_grad_errors_quad_with_bc,
+            ) = get_errors(x_cubed, quad, pts, bcs, submesh_type=submesh_type)
 
-        # test that with bc is better than without
+            # test that with bc is better than without
 
-        np.testing.assert_array_less(l_errors_lin_with_bc, l_errors_lin_no_bc)
-        np.testing.assert_array_less(r_errors_lin_with_bc, r_errors_lin_no_bc)
-        np.testing.assert_array_less(l_errors_quad_with_bc, l_errors_quad_no_bc)
-        np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
+            np.testing.assert_array_less(l_errors_lin_with_bc, l_errors_lin_no_bc)
+            np.testing.assert_array_less(r_errors_lin_with_bc, r_errors_lin_no_bc)
+            np.testing.assert_array_less(l_errors_quad_with_bc, l_errors_quad_no_bc)
+            np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
 
-        # note that with bcs we now obtain the left Dirichlet condition exactly
+            # Test that the RIGHT gradient is correct
+            np.testing.assert_array_almost_equal(r_grad_errors_lin_with_bc, 0)
+            np.testing.assert_array_almost_equal(r_grad_errors_quad_with_bc, 0)
 
-        r_lin_rates_bc = np.log(
-            r_errors_lin_with_bc[:-1] / r_errors_lin_with_bc[1:]
-        ) / np.log(dx[:-1] / dx[1:])
-        r_quad_rates_bc = np.log(
-            r_errors_quad_with_bc[:-1] / r_errors_quad_with_bc[1:]
-        ) / np.log(dx[:-1] / dx[1:])
+            # note that with bcs we now obtain the left Dirichlet condition exactly
 
-        # check convergence is about the correct order
-        np.testing.assert_array_almost_equal(r_lin_rates_bc, 2, decimal=2)
-        np.testing.assert_array_almost_equal(r_quad_rates_bc, 3, decimal=1)
+            r_lin_rates_bc = np.log(
+                r_errors_lin_with_bc[:-1] / r_errors_lin_with_bc[1:]
+            ) / np.log(dx[:-1] / dx[1:])
+            r_quad_rates_bc = np.log(
+                r_errors_quad_with_bc[:-1] / r_errors_quad_with_bc[1:]
+            ) / np.log(dx[:-1] / dx[1:])
+
+            # check convergence is about the correct order
+            np.testing.assert_array_almost_equal(r_lin_rates_bc, 2, decimal=2)
+            np.testing.assert_array_almost_equal(r_quad_rates_bc, 3, decimal=1)
 
     def test_extrapolation_with_bcs_left_neumann(self):
         # simple particle with a flux bc
@@ -203,42 +309,78 @@ class TestExtrapolation(TestCase):
 
         bcs = {"left": (left_flux, "Neumann"), "right": (right_val, "Dirichlet")}
 
-        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
-        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
-        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
-        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
+        linear = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
+        quad = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": True,
+            }
+        }
+        for submesh_type in [pybamm.Uniform1DSubMesh, pybamm.SymbolicUniform1DSubMesh]:
+            (
+                l_errors_lin_no_bc,
+                r_errors_lin_no_bc,
+                l_grad_errors_lin_no_bc,
+                r_grad_errors_lin_no_bc,
+            ) = get_errors(x_cubed, linear, pts, submesh_type=submesh_type)
+            (
+                l_errors_quad_no_bc,
+                r_errors_quad_no_bc,
+                l_grad_errors_quad_no_bc,
+                r_grad_errors_quad_no_bc,
+            ) = get_errors(x_cubed, quad, pts, submesh_type=submesh_type)
 
-        l_errors_lin_with_bc, r_errors_lin_with_bc = get_errors(
-            x_cubed, linear, pts, bcs
-        )
-        l_errors_quad_with_bc, r_errors_quad_with_bc = get_errors(
-            x_cubed, quad, pts, bcs
-        )
+            (
+                l_errors_lin_with_bc,
+                r_errors_lin_with_bc,
+                l_grad_errors_lin_with_bc,
+                r_grad_errors_lin_with_bc,
+            ) = get_errors(x_cubed, linear, pts, bcs, submesh_type=submesh_type)
+            (
+                l_errors_quad_with_bc,
+                r_errors_quad_with_bc,
+                l_grad_errors_quad_with_bc,
+                r_grad_errors_quad_with_bc,
+            ) = get_errors(x_cubed, quad, pts, bcs, submesh_type=submesh_type)
 
-        # test that with bc is better than without
+            # test that with bc is better than without
 
-        np.testing.assert_array_less(l_errors_lin_with_bc, l_errors_lin_no_bc)
-        np.testing.assert_array_less(r_errors_lin_with_bc, r_errors_lin_no_bc)
-        np.testing.assert_array_less(l_errors_quad_with_bc, l_errors_quad_no_bc)
-        np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
+            np.testing.assert_array_less(l_errors_lin_with_bc, l_errors_lin_no_bc)
+            np.testing.assert_array_less(r_errors_lin_with_bc, r_errors_lin_no_bc)
+            np.testing.assert_array_less(l_errors_quad_with_bc, l_errors_quad_no_bc)
+            np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
 
-        # note that with bcs we now obtain the right Dirichlet condition exactly
+            # assert that the LEFT gradient is correct
+            np.testing.assert_array_almost_equal(l_grad_errors_lin_with_bc, 0)
+            np.testing.assert_array_almost_equal(l_grad_errors_quad_with_bc, 0)
 
-        l_lin_rates_bc = np.log(
-            l_errors_lin_with_bc[:-1] / l_errors_lin_with_bc[1:]
-        ) / np.log(dx[:-1] / dx[1:])
-        l_quad_rates_bc = np.log(
-            l_errors_quad_with_bc[:-1] / l_errors_quad_with_bc[1:]
-        ) / np.log(dx[:-1] / dx[1:])
+            # note that with bcs we now obtain the right Dirichlet condition exactly
 
-        # check convergence is about the correct order
-        np.testing.assert_array_less(2, l_lin_rates_bc)
-        np.testing.assert_array_almost_equal(l_quad_rates_bc, 3, decimal=1)
+            l_lin_rates_bc = np.log(
+                l_errors_lin_with_bc[:-1] / l_errors_lin_with_bc[1:]
+            ) / np.log(dx[:-1] / dx[1:])
+            l_quad_rates_bc = np.log(
+                l_errors_quad_with_bc[:-1] / l_errors_quad_with_bc[1:]
+            ) / np.log(dx[:-1] / dx[1:])
+
+            # check convergence is about the correct order
+            np.testing.assert_array_less(2, l_lin_rates_bc)
+            np.testing.assert_array_almost_equal(l_quad_rates_bc, 3, decimal=1)
 
     def test_linear_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "linear", "use bcs": True}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": True,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -262,8 +404,8 @@ class TestExtrapolation(TestCase):
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(macro_submesh.nodes[:, np.newaxis])
-        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 2)
-        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 3)
+        assert extrap_left_disc.evaluate(None, constant_y) == 2
+        assert extrap_right_disc.evaluate(None, constant_y) == 3
 
         # check linear variable extrapolates correctly
         linear_y = macro_submesh.nodes
@@ -297,7 +439,7 @@ class TestExtrapolation(TestCase):
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(micro_submesh.nodes[:, np.newaxis])
-        self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1.0)
+        assert surf_eqn_disc.evaluate(None, constant_y) == 1.0
 
         # check linear variable extrapolates correctly
         linear_y = micro_submesh.nodes
@@ -306,10 +448,104 @@ class TestExtrapolation(TestCase):
             surf_eqn_disc.evaluate(None, linear_y), y_surf
         )
 
+    def test_extrapolate_symbolic(self):
+        mesh = get_mesh_for_testing_symbolic()
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
+        spatial_methods = {
+            "domain": pybamm.FiniteVolume(method_options),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="domain")
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        extrap_grad_left = pybamm.BoundaryGradient(var, "left")
+        extrap_grad_right = pybamm.BoundaryGradient(var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        extrap_grad_left_disc = disc.process_symbol(extrap_grad_left)
+        extrap_grad_right_disc = disc.process_symbol(extrap_grad_right)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(mesh["domain"].nodes[:, np.newaxis])
+        assert extrap_left_disc.evaluate(None, constant_y) == 1
+        assert extrap_right_disc.evaluate(None, constant_y) == 1
+
+        # check linear variable extrapolates correctly
+        linear_y = mesh["domain"].nodes
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 1
+        )
+
+        # check gradient extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2
+        )
+
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": False,
+            }
+        }
+        spatial_methods = {"domain": pybamm.FiniteVolume(method_options)}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="domain")
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        extrap_grad_left = pybamm.BoundaryGradient(var, "left")
+        extrap_grad_right = pybamm.BoundaryGradient(var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        extrap_grad_left_disc = disc.process_symbol(extrap_grad_left)
+        extrap_grad_right_disc = disc.process_symbol(extrap_grad_right)
+
+        # check constant extrapolates to constant
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, constant_y), 1
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, constant_y), 1
+        )
+
+        # check linear variable extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 1
+        )
+
+        # check gradient extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2
+        )
+
     def test_quadratic_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "quadratic", "value": "quadratic"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -359,7 +595,7 @@ class TestExtrapolation(TestCase):
         np.testing.assert_array_almost_equal(
             extrap_flux_left_disc.evaluate(None, constant_y), 0
         )
-        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+        assert extrap_flux_right_disc.evaluate(None, constant_y) == 0
 
         # check linear variable extrapolates correctly
         np.testing.assert_array_almost_equal(
@@ -403,7 +639,12 @@ class TestExtrapolation(TestCase):
         rpts = 10
         var_pts = {"r_n": rpts, "r_p": rpts}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {"negative particle": pybamm.FiniteVolume(method_options)}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -430,7 +671,12 @@ class TestExtrapolation(TestCase):
     def test_extrapolate_2d_models(self):
         # create discretisation
         mesh = get_p2d_mesh_for_testing()
-        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        method_options = {
+            "extrapolation": {
+                "order": {"gradient": "linear", "value": "linear"},
+                "use bcs": False,
+            }
+        }
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
@@ -448,7 +694,7 @@ class TestExtrapolation(TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
+        assert extrap_right_disc.domain == ["negative electrode"]
         # evaluate
         y_macro = mesh["negative electrode"].nodes
         y_micro = mesh["negative particle"].nodes
@@ -462,7 +708,7 @@ class TestExtrapolation(TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, [])
+        assert extrap_right_disc.domain == []
 
         # 2d macroscale
         mesh = get_1p1d_mesh_for_testing()
@@ -471,7 +717,7 @@ class TestExtrapolation(TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, [])
+        assert extrap_right_disc.domain == []
 
         # test extrapolate to "negative tab" gives same as "left" and
         # "positive tab" gives same "right" (see get_mesh_for_testing)
@@ -497,13 +743,3 @@ class TestExtrapolation(TestCase):
             extrap_pos_disc.evaluate(None, constant_y),
             extrap_right_disc.evaluate(None, constant_y),
         )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

@@ -2,13 +2,12 @@
 # Tests particle size distribution parameters are loaded into a parameter set
 # and give expected values
 #
+import pytest
 import pybamm
-import unittest
 import numpy as np
-from tests import TestCase
 
 
-class TestSizeDistributionParameters(TestCase):
+class TestSizeDistributionParameters:
     def test_parameter_values(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
@@ -20,7 +19,7 @@ class TestSizeDistributionParameters(TestCase):
         )
 
         # check negative parameters aren't there yet
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             values["Negative maximum particle radius [m]"]
 
         # now add distribution parameter values for negative electrode
@@ -42,12 +41,75 @@ class TestSizeDistributionParameters(TestCase):
         values.evaluate(param.n.prim.f_a_dist(R_test))
         values.evaluate(param.p.prim.f_a_dist(R_test))
 
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        # check that the composite parameters works as well
+        params_composite = pybamm.ParameterValues("Chen2020_composite")
+        params_composite.update(
+            {
+                "Primary: Positive particle radius [m]": 1e-6,
+                "Secondary: Positive particle radius [m]": 1e-6,
+                "Negative particle radius [m]": 1e-6,
+            },
+            check_already_exists=False,
+        )
+        values_composite = pybamm.get_size_distribution_parameters(
+            params_composite,
+            composite="negative",
+        )
+        assert "Primary: Negative maximum particle radius [m]" in values_composite
+        param = pybamm.LithiumIonParameters({"particle phases": ("2", "1")})
+        R_test_n_prim = pybamm.Scalar(1e-6)
+        R_test_n_prim.domains = {"primary": ["negative primary particle size"]}
+        R_test_n_sec = pybamm.Scalar(1e-6)
+        R_test_n_sec.domains = {"primary": ["negative secondary particle size"]}
+        values_composite.evaluate(param.n.prim.f_a_dist(R_test_n_prim))
+        values_composite.evaluate(param.n.sec.f_a_dist(R_test_n_sec))
+        params_composite = pybamm.ParameterValues("Chen2020_composite")
+        params_composite.update(
+            {
+                "Primary: Positive particle radius [m]": 1e-6,
+                "Secondary: Positive particle radius [m]": 1e-6,
+                "Negative particle radius [m]": 1e-6,
+            },
+            check_already_exists=False,
+        )
+        values_composite = pybamm.get_size_distribution_parameters(
+            params_composite,
+            composite="positive",
+        )
+        assert "Primary: Positive maximum particle radius [m]" in values_composite
+        param = pybamm.LithiumIonParameters({"particle phases": ("1", "2")})
+        R_test_p_prim = pybamm.Scalar(1e-6)
+        R_test_p_prim.domains = {"primary": ["positive primary particle size"]}
+        R_test_p_sec = pybamm.Scalar(1e-6)
+        R_test_p_sec.domains = {"primary": ["positive secondary particle size"]}
+        values_composite.evaluate(param.p.prim.f_a_dist(R_test_p_prim))
+        values_composite.evaluate(param.p.sec.f_a_dist(R_test_p_sec))
+        params_composite = pybamm.ParameterValues("Chen2020_composite")
+        params_composite.update(
+            {
+                "Primary: Positive particle radius [m]": 1e-6,
+                "Secondary: Positive particle radius [m]": 1e-6,
+                "Negative particle radius [m]": 1e-6,
+            },
+            check_already_exists=False,
+        )
+        values_composite = pybamm.get_size_distribution_parameters(
+            params_composite,
+            composite="both",
+        )
+        assert "Primary: Negative maximum particle radius [m]" in values_composite
+        assert "Primary: Positive maximum particle radius [m]" in values_composite
+        params_composite = pybamm.ParameterValues("Chen2020_composite")
+        params_composite.update(
+            {
+                "Primary: Positive particle radius [m]": 1e-6,
+                "Secondary: Positive particle radius [m]": 1e-6,
+                "Negative particle radius [m]": 1e-6,
+            },
+            check_already_exists=False,
+        )
+        values_composite = pybamm.get_size_distribution_parameters(
+            params_composite,
+        )
+        assert "Primary: Negative maximum particle radius [m]" not in values_composite
+        assert "Primary: Positive maximum particle radius [m]" not in values_composite

@@ -1,14 +1,11 @@
 #
 # Tests for the Dummy Solver class
 #
-from tests import TestCase
 import pybamm
 import numpy as np
-import unittest
-import sys
 
 
-class TestDummySolver(TestCase):
+class TestDummySolver:
     def test_dummy_solver(self):
         model = pybamm.BaseModel()
         v = pybamm.Scalar(1)
@@ -44,12 +41,3 @@ class TestDummySolver(TestCase):
         np.testing.assert_array_equal(len(sol.t), t_eval.size * 2 - 2)
         np.testing.assert_array_equal(sol.y, np.zeros((1, sol.t.size)))
         np.testing.assert_array_equal(sol["v"].data, np.ones(sol.t.size))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

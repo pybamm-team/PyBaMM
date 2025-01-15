@@ -1,6 +1,8 @@
 name: Remove needs-reply label
 
 on:
+  schedule:
+      - cron:  '0 3 * * 1'
   issue_comment:
     types:
       - created
@@ -11,10 +13,11 @@ jobs:
     if: |
       github.event.comment.author_association != 'OWNER' &&
       github.event.comment.author_association != 'COLLABORATOR' &&
-      github.repository_owner == 'pybamm-team'
+      github.repository_owner == 'pybamm-team' &&
+      github.event_name != 'pull_request'
     steps:
       - name: Remove needs-reply label
-        uses: octokit/request-action@v2.x
+        uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # v2.4.0
         continue-on-error: true
         with:
           route: DELETE /repos/:repository/issues/:issue/labels/:label

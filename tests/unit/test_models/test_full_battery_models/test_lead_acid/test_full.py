@@ -1,12 +1,10 @@
 #
 # Tests for the lead-acid Full model
 #
-from tests import TestCase
 import pybamm
-import unittest
 
 
-class TestLeadAcidFull(TestCase):
+class TestLeadAcidFull:
     def test_well_posed(self):
         model = pybamm.lead_acid.Full()
         model.check_well_posedness()
@@ -21,7 +19,7 @@ class TestLeadAcidFull(TestCase):
         model.check_well_posedness()
 
 
-class TestLeadAcidFullSurfaceForm(TestCase):
+class TestLeadAcidFullSurfaceForm:
     def test_well_posed_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
@@ -38,7 +36,7 @@ class TestLeadAcidFullSurfaceForm(TestCase):
         model.check_well_posedness()
 
 
-class TestLeadAcidFullSideReactions(TestCase):
+class TestLeadAcidFullSideReactions:
     def test_well_posed(self):
         options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)
@@ -48,20 +46,10 @@ class TestLeadAcidFullSideReactions(TestCase):
         options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
+        assert isinstance(model.default_solver, pybamm.CasadiSolver)
 
     def test_well_posed_surface_form_algebraic(self):
         options = {"hydrolysis": "true", "surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+        assert isinstance(model.default_solver, pybamm.CasadiSolver)
