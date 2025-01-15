@@ -1022,8 +1022,7 @@ class Simulation:
     def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
-            or isinstance(self._model, pybamm.lead_acid.BaseModel)
-            or isinstance(self._model, pybamm.equivalent_circuit.Thevenin)
+            or not isinstance(self._model, pybamm.lithium_ion.BaseModel)
             or self._model.options["working electrode"] != "both"
         ):
             return None
