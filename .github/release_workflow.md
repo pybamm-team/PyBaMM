@@ -13,7 +13,6 @@ GitHub, PyPI, and conda-forge by the maintainers.
    - `docs/conf.py`
    - `CITATION.cff`
    - `pyproject.toml`
-   - `vcpkg.json`
    - `CHANGELOG.md`
 
    These changes will be automatically pushed to a new branch `vYY.MM`
@@ -42,7 +41,6 @@ If a new release is required after the release of `vYY.MM.{x-1}` -
    - `docs/conf.py`
    - `CITATION.cff`
    - `pyproject.toml`
-   - `vcpkg.json`
    - `CHANGELOG.md`
 
    Commit the changes to your release branch.

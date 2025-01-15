@@ -1130,6 +1130,10 @@ def make_cycle_solution(
         sum_sols.all_yps,
         sum_sols.variables_returned,
     )
+
+    if sum_sols.variables_returned:
+        cycle_solution._variables = sum_sols._variables
+
     cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
     cycle_solution._sub_solutions = sum_sols.sub_solutions
 
