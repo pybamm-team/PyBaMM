@@ -1023,6 +1023,7 @@ class Simulation:
         if (
             calc_esoh is False
             or not isinstance(self._model, pybamm.lithium_ion.BaseModel)
+            or self._model.options["particle phases"] not in ["1", ("1", "1")]
             or self._model.options["working electrode"] != "both"
         ):
             return None
