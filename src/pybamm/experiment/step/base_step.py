@@ -69,6 +69,11 @@ class BaseStep:
         description=None,
         direction=None,
     ):
+        potential_directions = ["Charge", "Discharge", "Rest", None]
+        if direction not in potential_directions:
+            raise ValueError(
+                f"Invalid direction: {direction}. Must be one of {potential_directions}"
+            )
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle

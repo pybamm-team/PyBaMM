@@ -726,8 +726,6 @@ class Discretisation:
         """
         new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
-            if eqn_key == "Negative electrode open-circuit potential [V]":
-                print(eqn_key)
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
             if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
                 if eqn_key.domain == []:

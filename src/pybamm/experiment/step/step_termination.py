@@ -71,15 +71,15 @@ class CurrentTermination(BaseTermination):
         See :meth:`BaseTermination.get_event`
         """
         operator = self.operator
-        if operator is None:
-            expr = abs(variables["Current [A]"]) - self.value
-            string = f"abs(Current [A]) < {self.value} [A] [experiment]"
-        elif operator == ">":
+        if operator == ">":
             expr = self.value - variables["Current [A]"]
             string = f"Current [A] > {self.value} [A] [experiment]"
         elif operator == "<":
             expr = variables["Current [A]"] - self.value
             string = f"Current [A] < {self.value} [A] [experiment]"
+        else:
+            expr = abs(variables["Current [A]"]) - self.value
+            string = f"abs(Current [A]) < {self.value} [A] [experiment]"
         event = pybamm.Event(
             string,
             expr,
@@ -109,7 +109,7 @@ class VoltageTermination(BaseTermination):
                 operator = ">"
             elif direction == "Discharge":
                 operator = "<"
-            elif direction == "Rest":
+            else:
                 # No event for rest steps
                 return None
 
@@ -117,6 +117,7 @@ class VoltageTermination(BaseTermination):
             sign = -1
         elif operator == "<":
             sign = 1
+        # operator must be "<" or ">"
 
         # Event should be positive at initial conditions for both
         # charge and discharge
@@ -125,6 +126,22 @@ class VoltageTermination(BaseTermination):
             sign * (variables["Battery voltage [V]"] - self.value),
         )
         return event
+
+
+class Voltage:
+    def __gt__(self, value):
+        return VoltageTermination(value, operator=">")
+
+    def __lt__(self, value):
+        return VoltageTermination(value, operator="<")
+
+
+class Current:
+    def __gt__(self, value):
+        return CurrentTermination(value, operator=">")
+
+    def __lt__(self, value):
+        return CurrentTermination(value, operator="<")
 
 
 class CustomTermination(BaseTermination):
