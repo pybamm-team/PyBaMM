@@ -1,11 +1,9 @@
 name: Alert validation repository
 on:
+  workflow_dispatch:
   release:
     types:
       - published
-  push:
-    branches:
-      - develop
 
 jobs:
   build:
