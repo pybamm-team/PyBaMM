@@ -69,7 +69,15 @@ class BaseStep:
         description=None,
         direction=None,
     ):
-        potential_directions = ["Charge", "Discharge", "Rest", None]
+        potential_directions = [
+            "charge",
+            "discharge",
+            "rest",
+            "Charge",
+            "Discharge",
+            "Rest",
+            None,
+        ]
         if direction not in potential_directions:
             raise ValueError(
                 f"Invalid direction: {direction}. Must be one of {potential_directions}"
