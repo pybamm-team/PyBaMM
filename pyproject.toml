@@ -41,6 +41,7 @@ dependencies = [
     "posthog",
     "pyyaml",
     "platformdirs",
+    "deprecation"
 ]
 
 [project.urls]
