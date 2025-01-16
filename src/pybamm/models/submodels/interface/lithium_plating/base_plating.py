@@ -64,7 +64,9 @@ class BasePlating(BaseInterface):
         phase_name = self.phase_name
         phase_param = self.phase_param
         domain, Domain = self.domain_Domain
-
+        if self.size_distribution is True:
+            c_plated_Li = pybamm.size_average(c_plated_Li)
+            c_dead_Li = pybamm.size_average(c_dead_Li)
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general
         if isinstance(self, pybamm.lithium_plating.NoPlating):
@@ -101,10 +103,10 @@ class BasePlating(BaseInterface):
             "[m]": L_plated_Li_av,
             f"{Domain} {phase_name}dead lithium thickness [m]": L_dead_Li,
             f"X-averaged {domain} {phase_name}dead lithium thickness [m]": L_dead_Li_av,
-            f"Loss of lithium to {domain} {phase_name}lithium plating " "[mol]": (
+            f"Loss of lithium to {domain} {phase_name}lithium plating [mol]": (
                 Q_plated_Li + Q_dead_Li
             ),
-            f"Loss of capacity to {domain} {phase_name}lithium plating " "[A.h]": (
+            f"Loss of capacity to {domain} {phase_name}lithium plating [A.h]": (
                 Q_plated_Li + Q_dead_Li
             )
             * self.param.F
@@ -133,6 +135,27 @@ class BasePlating(BaseInterface):
             f"{Domain} electrode {self.phase_name}lithium plating "
             "interfacial current density [A.m-2]": j_stripping,
             f"X-averaged {domain} electrode {self.phase_name}lithium plating "
+            "interfacial current density [A.m-2]": j_stripping_av,
+        }
+
+        return variables
+
+    def _get_standard_size_distribution_reaction_variables(self, j_stripping):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the lithum stripping interfacial reaction current
+        """
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        j_stripping_sav = pybamm.size_average(j_stripping)
+        j_stripping_av = pybamm.x_average(j_stripping_sav)
+
+        variables = {
+            f"{Domain} electrode {phase_name}lithium plating "
+            "interfacial current density distribution [A.m-2]": j_stripping,
+            f"{Domain} electrode {phase_name}lithium plating "
+            "interfacial current density [A.m-2]": j_stripping_sav,
+            f"X-averaged {domain} electrode {phase_name}lithium plating "
             "interfacial current density [A.m-2]": j_stripping_av,
         }
 

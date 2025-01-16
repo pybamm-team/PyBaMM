@@ -357,13 +357,13 @@ class TestCitations:
 
         citations._reset()
         assert "Sripad2020" not in citations._papers_to_cite
-        pybamm.kinetics.Marcus(None, None, None, None, None)
+        pybamm.kinetics.Marcus(None, "negative", None, None, None)
         assert "Sripad2020" in citations._papers_to_cite
         assert "Sripad2020" in citations._citation_tags.keys()
 
         citations._reset()
         assert "Sripad2020" not in citations._papers_to_cite
-        pybamm.kinetics.MarcusHushChidsey(None, None, None, None, None)
+        pybamm.kinetics.MarcusHushChidsey(None, "negative", None, None, None)
         assert "Sripad2020" in citations._papers_to_cite
         assert "Sripad2020" in citations._citation_tags.keys()
 
@@ -455,12 +455,11 @@ class TestCitations:
         assert "Virtanen2020" in citations._papers_to_cite
         assert "Virtanen2020" in citations._citation_tags.keys()
 
-        if pybamm.has_idaklu():
-            citations._reset()
-            assert "Hindmarsh2005" not in citations._papers_to_cite
-            pybamm.IDAKLUSolver()
-            assert "Hindmarsh2005" in citations._papers_to_cite
-            assert "Hindmarsh2005" in citations._citation_tags.keys()
+        citations._reset()
+        assert "Hindmarsh2005" not in citations._papers_to_cite
+        pybamm.IDAKLUSolver()
+        assert "Hindmarsh2005" in citations._papers_to_cite
+        assert "Hindmarsh2005" in citations._citation_tags.keys()
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
     def test_jax_citations(self):

@@ -9,8 +9,6 @@ on:
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
-  PYBAMM_IDAKLU_EXPR_CASADI: ON
-  PYBAMM_IDAKLU_EXPR_IREE: ON
 
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
@@ -38,7 +36,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo dot -c
+          sudo apt-get install gfortran gcc graphviz pandoc
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
@@ -70,11 +68,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        timeout-minutes: 10
-        if: matrix.os != 'windows-latest'
-        run: python -m nox -s pybamm-requires
-
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
@@ -85,14 +78,13 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-  # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
     strategy:
@@ -108,6 +100,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install graphviz pandoc
           sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
@@ -140,6 +133,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
@@ -152,10 +146,6 @@ jobs:
 
       - name: Install nox
         run: python -m uv pip install nox[uv]
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
 
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
@@ -173,6 +163,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
@@ -185,10 +176,6 @@ jobs:
 
       - name: Install nox
         run: python -m uv pip install nox[uv]
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts

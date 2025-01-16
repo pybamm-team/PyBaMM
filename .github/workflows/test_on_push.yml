@@ -3,13 +3,10 @@ name: PyBaMM
 on:
   workflow_dispatch:
   pull_request:
-    paths-ignore: [".all-contributorsrc", "all_contributors.md"]
 
 env:
   PYBAMM_DISABLE_TELEMETRY: "true"
   FORCE_COLOR: 3
-  PYBAMM_IDAKLU_EXPR_CASADI: ON
-  PYBAMM_IDAKLU_EXPR_IREE: ON
 
 concurrency:
   # github.workflow: name of the workflow, so that we don't cancel other workflows
@@ -51,7 +48,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@5902b33ae29014e6ca012c5d8025d4346556bd40 # v1.4.3
         if: matrix.os == 'ubuntu-latest'
         with:
           packages: gfortran gcc graphviz pandoc
@@ -96,24 +93,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux and macOS
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        if: matrix.os != 'windows-latest'
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux and macOS
-        timeout-minutes: 10
-        if: matrix.os != 'windows-latest'
-        run: python -m nox -s pybamm-requires
-
       - name: Run unit tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: python -m nox -s unit
@@ -124,14 +103,13 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
         run: python -m nox -s integration
 
-  # Skips IDAKLU module compilation for speedups, which is already tested in other jobs.
   run_doctests:
     runs-on: ubuntu-latest
     strategy:
@@ -145,7 +123,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@5902b33ae29014e6ca012c5d8025d4346556bd40 # v1.4.3
         with:
           packages: graphviz pandoc
           execute_install_scripts: true
@@ -187,7 +165,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@5902b33ae29014e6ca012c5d8025d4346556bd40 # v1.4.3
         with:
           packages: gfortran gcc graphviz pandoc
           execute_install_scripts: true
@@ -212,22 +190,6 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
-
       - name: Run example notebooks tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
@@ -242,7 +204,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Linux system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad # v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@5902b33ae29014e6ca012c5d8025d4346556bd40 # v1.4.3
         with:
           packages: gfortran gcc graphviz
           execute_install_scripts: true
@@ -266,22 +228,6 @@ jobs:
 
       - name: Install nox
         run: python -m uv pip install nox[uv]
-
-      - name: Cache pybamm-requires nox environment for GNU/Linux
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        with:
-          path: |
-            # Repository files
-            ${{ github.workspace }}/pybind11/
-            ${{ github.workspace }}/install_KLU_Sundials/
-            # Headers and dynamic library files for SuiteSparse and SUNDIALS
-            ${{ env.HOME }}/.local/lib/
-            ${{ env.HOME }}/.local/include/
-          key: nox-${{ matrix.os }}-pybamm-requires-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/install_KLU_Sundials.py', '**/noxfile.py', '**/test_on_push.yml') }}
-
-      - name: Install SuiteSparse and SUNDIALS on GNU/Linux
-        timeout-minutes: 10
-        run: python -m nox -s pybamm-requires
 
       - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s scripts

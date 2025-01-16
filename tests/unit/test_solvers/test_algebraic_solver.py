@@ -58,11 +58,6 @@ class TestAlgebraicSolver:
         solution = solver._integrate(model, np.array([0]))
         np.testing.assert_array_equal(solution.y, -2)
 
-        # Relax options and see worse results
-        solver = pybamm.AlgebraicSolver(extra_options={"ftol": 1})
-        solution = solver._integrate(model, np.array([0]))
-        assert solution.y != -2
-
     def test_root_find_fail(self):
         class Model(pybamm.BaseModel):
             y0 = np.array([2])
