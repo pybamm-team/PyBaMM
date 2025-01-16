@@ -358,11 +358,11 @@ class Symbol:
 
     @property
     @deprecated(
-    deprecated_in="25.1.0", 
-    removed_in="26.0.0", 
-    current_version=pybamm.__version__,
-    details="Use `symbol.domains` instead."
-)
+        deprecated_in="25.1.0",
+        removed_in="26.0.0",
+        current_version=pybamm.__version__,
+        details="Use `symbol.domains` instead.",
+    )
     def auxiliary_domains(self):
         """Returns auxiliary domains."""
         raise NotImplementedError(
@@ -1000,13 +1000,13 @@ class Symbol:
         """
         children = self._children_for_copying(new_children)
         return self.__class__(self.name, children, domains=self.domains)
-    
+
     @deprecated(
-    deprecated_in="25.1.0", 
-    removed_in="26.0.0", 
-    current_version=pybamm.__version__,
-    details="Use `create_copy` instead."
-)
+        deprecated_in="25.1.0",
+        removed_in="26.0.0",
+        current_version=pybamm.__version__,
+        details="Use `create_copy` instead.",
+    )
     def new_copy(
         self,
         new_children: list[Symbol] | None = None,
