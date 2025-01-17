@@ -20,7 +20,7 @@ class CasadiSolver(pybamm.BaseSolver):
             - "fast with events": perform direct integration of the whole timespan, \
             then go back and check where events were crossed. Experimental only.
             - "safe": perform step-and-check integration in global steps of size \
-            dt_max, checking whether events have been triggered. Recommended for \
+            dt_event, checking whether events have been triggered. Recommended for \
             simulations of a full charge or discharge.
             - "safe without grid": perform step-and-check integration step-by-step. \
             Takes more steps than "safe" mode, but doesn't require creating the grid \
@@ -38,12 +38,18 @@ class CasadiSolver(pybamm.BaseSolver):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     max_step_decrease_count : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
-    dt_max : float, optional
-        The maximum global step size (in seconds) used in "safe" mode. If None
+    dt_event : float, optional
+        The maximum global step size (in seconds) used in "safe" mode. If None,
         the default value is 600 seconds.
+    dt_max : float, optional
+        Deprecated. Use `dt_event` instead. The maximum global step size (in
+        seconds) used in "safe" mode. If None, the default value is 600 seconds.
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
@@ -78,7 +84,9 @@ class CasadiSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
+        max_step=np.inf,
         max_step_decrease_count=5,
+        dt_event=None,
         dt_max=None,
         extrap_tol=None,
         extra_options_setup=None,
@@ -94,6 +102,7 @@ class CasadiSolver(pybamm.BaseSolver):
             root_method,
             root_tol,
             extrap_tol,
+            max_step,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode
@@ -103,8 +112,24 @@ class CasadiSolver(pybamm.BaseSolver):
                 "'fast', for solving quickly without events, or 'safe without grid' or "
                 "'fast with events' (both experimental)"
             )
+        self.max_step = max_step
         self.max_step_decrease_count = max_step_decrease_count
-        self.dt_max = dt_max or 600
+
+        # Handle dt_event and dt_max with deprecation warning
+        if dt_max is not None:
+            if dt_event is not None:
+                raise ValueError(
+                    "Cannot specify both `dt_event` and the deprecated `dt_max`. "
+                    "Use `dt_event` only."
+                )
+            else:
+                pybamm.logger.warning(
+                    "`dt_max` is deprecated and will be removed in a future release. "
+                    "Use `dt_event` instead."
+                )
+                dt_event = dt_max
+
+        self.dt_event = dt_event or 600
 
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
@@ -145,6 +170,8 @@ class CasadiSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
+        max_step : float, optional
+            Maximum allowed step size. Default is np.inf.
         """
 
         # Record whether there are any symbolic inputs
@@ -164,10 +191,14 @@ class CasadiSolver(pybamm.BaseSolver):
                 use_event_switch = False
             # Create an integrator with the grid (we just need to do this once)
             self.create_integrator(
-                model, inputs, t_eval, use_event_switch=use_event_switch
+                model,
+                inputs,
+                t_eval,
+                use_event_switch=use_event_switch,
+                max_step=self.max_step,
             )
             solution = self._run_integrator(
-                model, model.y0, inputs_dict, inputs, t_eval
+                model, model.y0, inputs_dict, inputs, t_eval, max_step=self.max_step
             )
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
@@ -186,7 +217,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # in "safe without grid" mode,
                 # create integrator once, without grid,
                 # to avoid having to create several times
-                self.create_integrator(model, inputs)
+                self.create_integrator(model, inputs, max_step=self.max_step)
                 # Initialize solution
                 solution = pybamm.Solution(
                     np.array([t]),
@@ -202,24 +233,24 @@ class CasadiSolver(pybamm.BaseSolver):
                 solution = None
                 use_grid = True
 
-            # Try to integrate in global steps of size dt_max. Note: dt_max must
+            # Try to integrate in global steps of size dt_event. Note: dt_event must
             # be at least as big as the the biggest step in t_eval (multiplied
             # by some tolerance, here 1.01) to avoid an empty integration window below
-            dt_max = self.dt_max
+            dt_event = self.dt_event
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
-            if dt_max < dt_eval_max:
+            if dt_event < dt_eval_max:
                 pybamm.logger.debug(
-                    "Setting dt_max to be as big as the largest step in "
+                    "Setting dt_event to be as big as the largest step in "
                     f"t_eval ({dt_eval_max})"
                 )
-                dt_max = dt_eval_max
+                dt_event = dt_eval_max
             termination_due_to_small_dt = False
             first_ts_solved = False
             while t < t_f:
                 # Step
                 solved = False
                 count = 0
-                dt = dt_max
+                dt = dt_event
                 while not solved:
                     # Get window of time to integrate over (so that we return
                     # all the points in t_eval, not just t and t+dt)
@@ -234,7 +265,10 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     if self.mode == "safe":
                         # update integrator with the grid
-                        self.create_integrator(model, inputs, t_window)
+                        self.create_integrator(
+                            model, inputs, t_window, max_step=self.max_step
+                        )
+
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
@@ -250,6 +284,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             t_window,
                             use_grid=use_grid,
                             extract_sensitivities_in_solution=False,
+                            max_step=self.max_step,
                         )
                         first_ts_solved = True
                         solved = True
@@ -263,13 +298,13 @@ class CasadiSolver(pybamm.BaseSolver):
                         # needed, but this won't affect the global timesteps. The
                         # global timestep will only be reduced after the first timestep.
                         if first_ts_solved:
-                            dt_max = dt
+                            dt_event = dt
                         if count > self.max_step_decrease_count:
                             message = (
                                 "Maximum number of decreased steps occurred at "
                                 f"t={t} (final SolverError: '{error}'). "
-                                "For a full solution try reducing dt_max (currently, "
-                                f"dt_max={dt_max}) and/or reducing the size of the "
+                                "For a full solution try reducing dt_event (currently, "
+                                f"dt_event={dt_event}) and/or reducing the size of the "
                                 "time steps or period of the experiment."
                             )
                             if first_ts_solved and self.return_solution_if_failed_early:
