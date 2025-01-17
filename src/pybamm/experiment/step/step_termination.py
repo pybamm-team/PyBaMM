@@ -118,7 +118,6 @@ class VoltageTermination(BaseTermination):
         else:
             # operator can only be "<" or ">"
             sign = 1
-        # operator must be "<" or ">"
 
         # Event should be positive at initial conditions for both
         # charge and discharge
