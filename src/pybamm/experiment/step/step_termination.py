@@ -115,7 +115,8 @@ class VoltageTermination(BaseTermination):
 
         if operator == ">":
             sign = -1
-        elif operator == "<":
+        else:
+            # operator can only be "<" or ">"
             sign = 1
         # operator must be "<" or ">"
 
