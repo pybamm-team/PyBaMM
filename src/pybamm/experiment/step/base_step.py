@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime
 from .step_termination import _read_termination
 import numbers
+from enum import Enum
 
 _examples = """
 
@@ -22,6 +23,12 @@ _examples = """
     "Discharge at C/3 for 2 hours or until 2.5 V",
 
     """
+
+
+class Direction(Enum):
+    charge = "charge"
+    discharge = "discharge"
+    rest = "rest"
 
 
 class BaseStep:
@@ -69,18 +76,9 @@ class BaseStep:
         description=None,
         direction=None,
     ):
-        potential_directions = [
-            "charge",
-            "discharge",
-            "rest",
-            "Charge",
-            "Discharge",
-            "Rest",
-            None,
-        ]
-        if direction not in potential_directions:
+        if direction is not None and direction not in Direction:
             raise ValueError(
-                f"Invalid direction: {direction}. Must be one of {potential_directions}"
+                f"Invalid direction: {direction}. Must be one of {Direction.__members__.values()}"
             )
         self.input_duration = duration
         self.input_value = value
@@ -399,11 +397,11 @@ class BaseStep:
             init_curr = self.value
         sign = np.sign(init_curr)
         if sign == 0:
-            return "Rest"
+            return "rest"
         elif sign > 0:
-            return "Discharge"
+            return "discharge"
         else:
-            return "Charge"
+            return "charge"
 
     def record_tags(
         self,
