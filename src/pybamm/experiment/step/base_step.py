@@ -4,6 +4,8 @@ import numpy as np
 from datetime import datetime
 from .step_termination import _read_termination
 import numbers
+from enum import Enum
+from typing import Union, Optional
 
 _examples = """
 
@@ -22,6 +24,12 @@ _examples = """
     "Discharge at C/3 for 2 hours or until 2.5 V",
 
     """
+
+
+class Direction(Enum):
+    charge = "charge"
+    discharge = "discharge"
+    rest = "rest"
 
 
 class BaseStep:
@@ -67,8 +75,18 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
-        direction=None,
+        direction: Optional[Union[str, Direction]] = None,
     ):
+        try:
+            direction = Direction(direction)
+        except ValueError as e:
+            if direction is None:
+                pass
+            else:
+                raise ValueError(
+                    f"Invalid direction: {direction}. Must be one of {Direction.__members__.values()}"
+                ) from e
+        self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle
@@ -386,11 +404,11 @@ class BaseStep:
             init_curr = self.value
         sign = np.sign(init_curr)
         if sign == 0:
-            return "Rest"
+            return "rest"
         elif sign > 0:
-            return "Discharge"
+            return "discharge"
         else:
-            return "Charge"
+            return "charge"
 
     def record_tags(
         self,
