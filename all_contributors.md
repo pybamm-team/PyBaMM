@@ -1,6 +1,6 @@
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-97-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-98-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
@@ -134,6 +134,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/AndEsterson"><img src="https://avatars.githubusercontent.com/u/55912083?v=4?s=100" width="100px;" alt="Andrew Esterson"/><br /><sub><b>Andrew Esterson</b></sub></a><br /><a href="#infra-AndEsterson" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ahamed24"><img src="https://avatars.githubusercontent.com/u/153092659?v=4?s=100" width="100px;" alt="ahamed24"/><br /><sub><b>ahamed24</b></sub></a><br /><a href="#infra-ahamed24" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/RohitP2005"><img src="https://avatars.githubusercontent.com/u/122815777?v=4?s=100" width="100px;" alt="RohitP2005"/><br /><sub><b>RohitP2005</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=RohitP2005" title="Documentation">📖</a> <a href="#infra-RohitP2005" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/vidipsingh"><img src="https://avatars.githubusercontent.com/u/112854574?v=4?s=100" width="100px;" alt="Vidip Singh"/><br /><sub><b>Vidip Singh</b></sub></a><br /><a href="#infra-vidipsingh" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
     </tr>
   </tbody>
 </table>
