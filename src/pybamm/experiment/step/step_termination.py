@@ -104,7 +104,7 @@ class VoltageTermination(BaseTermination):
         # event accordingly
         operator = self.operator
         if operator is None:
-            direction = step.direction.lower()
+            direction = step.direction
             if direction == "charge":
                 operator = ">"
             elif direction == "discharge":
