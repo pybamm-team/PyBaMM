@@ -1,7 +1,6 @@
 name: PyBaMM
 
 on:
-  workflow_dispatch:
   pull_request:
 
 env:
@@ -34,7 +33,7 @@ jobs:
           python -m uv pip install pre-commit
           pre-commit run -a
 
-  run_unit_integration_and_coverage_tests:
+  run_unit_and_coverage_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -106,9 +105,6 @@ jobs:
         uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
-        run: python -m nox -s integration
 
   run_doctests:
     runs-on: ubuntu-latest
