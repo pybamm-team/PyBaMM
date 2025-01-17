@@ -80,9 +80,12 @@ class BaseStep:
         try:
             direction = Direction(direction)
         except ValueError as e:
-            raise ValueError(
-                f"Invalid direction: {direction}. Must be one of {Direction.__members__.values()}"
-            ) from e
+            if direction is None:
+                pass
+            else:
+                raise ValueError(
+                    f"Invalid direction: {direction}. Must be one of {Direction.__members__.values()}"
+                ) from e
         self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
