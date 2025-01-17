@@ -5,6 +5,7 @@ from datetime import datetime
 from .step_termination import _read_termination
 import numbers
 from enum import Enum
+from typing import Union, Optional
 
 _examples = """
 
@@ -74,12 +75,15 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
-        direction=None,
+        direction: Optional[Union[str, Direction]] = None,
     ):
-        if direction is not None and direction not in Direction:
+        try:
+            direction = Direction(direction)
+        except ValueError as e:
             raise ValueError(
                 f"Invalid direction: {direction}. Must be one of {Direction.__members__.values()}"
-            )
+            ) from e
+        self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle
