@@ -1,44 +1,37 @@
-#
-# Tests for the lead-acid LOQS model
-#
 import pybamm
 import tests
-
+import pytest
 import numpy as np
 
 
+@pytest.fixture
+def loqs_model():
+    return pybamm.lead_acid.LOQS()
+
+
 class TestLOQS:
-    def test_basic_processing(self):
-        model = pybamm.lead_acid.LOQS()
-        modeltest = tests.StandardModelTest(model)
+    def test_basic_processing(self, loqs_model):
+        modeltest = tests.StandardModelTest(loqs_model)
         modeltest.test_all()
 
-    def test_optimisations(self):
-        model = pybamm.lead_acid.LOQS()
-        optimtest = tests.OptimisationsTest(model)
-
+    def test_optimisations(self, loqs_model):
+        optimtest = tests.OptimisationsTest(loqs_model)
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, to_python)
 
-    def test_set_up(self):
-        model = pybamm.lead_acid.LOQS()
-        optimtest = tests.OptimisationsTest(model)
+    def test_set_up(self, loqs_model):
+        optimtest = tests.OptimisationsTest(loqs_model)
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
 
-    def test_charge(self):
-        model = pybamm.lead_acid.LOQS()
-        parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function [A]": -1})
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-        modeltest.test_all()
-
-    def test_zero_current(self):
-        model = pybamm.lead_acid.LOQS()
-        parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function [A]": 0})
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+    @pytest.mark.parametrize("current_value", [-1, 0], ids=["charge", "zero_current"])
+    def test_current(self, current_value, loqs_model):
+        parameter_values = loqs_model.default_parameter_values
+        parameter_values.update({"Current function [A]": current_value})
+        modeltest = tests.StandardModelTest(
+            loqs_model, parameter_values=parameter_values
+        )
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
@@ -46,29 +39,30 @@ class TestLOQS:
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_thermal(self):
-        options = {"thermal": "lumped"}
+    @pytest.mark.parametrize(
+        "options",
+        [{"thermal": "lumped"}, {"thermal": "x-full"}],
+        ids=["lumped", "x_full"],
+    )
+    def test_thermal(self, options):
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "x-full"}
-        model = pybamm.lead_acid.LOQS(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-    def test_basic_processing_1plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 1}
-        model = pybamm.lead_acid.LOQS(options)
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {"current collector": "potential pair", "dimensionality": 1},
+            {
+                "current collector": "potential pair",
+                "dimensionality": 1,
+                "convection": "full transverse",
+            },
+        ],
+        ids=["basic_1plus1D", "1plus1D_with_convection"],
+    )
+    def test_basic_processing_1plus1D(self, options):
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "y": 5, "z": 5}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
-
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "convection": "full transverse",
-        }
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
