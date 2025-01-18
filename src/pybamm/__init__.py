@@ -16,7 +16,6 @@ from .util import (
     has_jax,
     import_optional_dependency,
     is_jax_compatible,
-    get_git_commit_info,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
@@ -175,7 +174,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, has_idaklu, has_iree
+from .solvers.idaklu_solver import IDAKLUSolver, has_iree
 
 # Experiments
 from .experiment.experiment import Experiment

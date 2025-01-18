@@ -1,8 +1,4 @@
-#
-# Simulation class
-#
 from __future__ import annotations
-
 import pickle
 import pybamm
 import numpy as np
@@ -917,7 +913,7 @@ class Simulation:
                 logs["elapsed time"] = timer.time()
 
                 # Add minimum voltage to summary variable logs if there is a voltage stop
-                # See PR #3995
+                min_voltage = None
                 if voltage_stop is not None:
                     min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
                     logs["Minimum voltage [V]"] = min_voltage
@@ -935,8 +931,7 @@ class Simulation:
                     if min_voltage <= voltage_stop[0]:
                         break
 
-                # Break if the experiment is infeasible (or errored)
-                if feasible is False:
+                if not feasible:
                     break
 
             if self._solution is not None and len(all_cycle_solutions) > 0:
@@ -1028,8 +1023,8 @@ class Simulation:
     def _get_esoh_solver(self, calc_esoh):
         if (
             calc_esoh is False
-            or isinstance(self._model, pybamm.lead_acid.BaseModel)
-            or isinstance(self._model, pybamm.equivalent_circuit.Thevenin)
+            or not isinstance(self._model, pybamm.lithium_ion.BaseModel)
+            or self._model.options["particle phases"] not in ["1", ("1", "1")]
             or self._model.options["working electrode"] != "both"
         ):
             return None

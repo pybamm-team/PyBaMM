@@ -581,6 +581,7 @@ class BaseUnitTestLithiumIon:
         options = {
             "particle phases": ("2", "1"),
             "SEI": ("ec reaction limited", "none"),
+            "SEI porosity change": "true",
             "lithium plating": ("reversible", "none"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
         }
@@ -589,6 +590,7 @@ class BaseUnitTestLithiumIon:
         options = {
             "particle phases": ("2", "1"),
             "SEI": (("ec reaction limited", "solvent-diffusion limited"), "none"),
+            "SEI porosity change": "true",
             "lithium plating": (("reversible", "irreversible"), "none"),
             "open-circuit potential": (("current sigmoid", "single"), "single"),
         }

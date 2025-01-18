@@ -103,10 +103,10 @@ class BasePlating(BaseInterface):
             "[m]": L_plated_Li_av,
             f"{Domain} {phase_name}dead lithium thickness [m]": L_dead_Li,
             f"X-averaged {domain} {phase_name}dead lithium thickness [m]": L_dead_Li_av,
-            f"Loss of lithium to {domain} {phase_name}lithium plating " "[mol]": (
+            f"Loss of lithium to {domain} {phase_name}lithium plating [mol]": (
                 Q_plated_Li + Q_dead_Li
             ),
-            f"Loss of capacity to {domain} {phase_name}lithium plating " "[A.h]": (
+            f"Loss of capacity to {domain} {phase_name}lithium plating [A.h]": (
                 Q_plated_Li + Q_dead_Li
             )
             * self.param.F

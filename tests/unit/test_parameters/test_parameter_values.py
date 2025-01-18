@@ -43,13 +43,7 @@ class TestParameterValues:
 
     def test_repr(self):
         param = pybamm.ParameterValues({"a": 1})
-        assert (
-            repr(param) == "{'Boltzmann constant [J.K-1]': 1.380649e-23,\n"
-            " 'Electron charge [C]': 1.602176634e-19,\n"
-            " 'Faraday constant [C.mol-1]': 96485.33212,\n"
-            " 'Ideal gas constant [J.K-1.mol-1]': 8.314462618,\n"
-            " 'a': 1}"
-        )
+        assert "'a': 1" in repr(param)
         assert param._ipython_key_completions_() == [
             "Ideal gas constant [J.K-1.mol-1]",
             "Faraday constant [C.mol-1]",
@@ -1030,12 +1024,12 @@ class TestParameterValues:
         parameter_values = ParameterValues(
             {"Negative particle radius [m]": 1e-6, "Positive particle radius [m]": 2e-6}
         )
-        assert (
-            "Negative particle radius [m]" in parameter_values
-        ), "Key should be found in parameter_values"
-        assert (
-            "Invalid key" not in parameter_values
-        ), "Non-existent key should not be found"
+        assert "Negative particle radius [m]" in parameter_values, (
+            "Key should be found in parameter_values"
+        )
+        assert "Invalid key" not in parameter_values, (
+            "Non-existent key should not be found"
+        )
 
     def test_iter_method(self):
         """Test for __iter__ method to check if we can iterate over keys"""

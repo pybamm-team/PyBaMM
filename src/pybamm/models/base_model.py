@@ -1151,7 +1151,7 @@ class BaseModel:
 
         Parameters
         ----------
-        parameter_name : str
+        symbol_name : str
         """
         # Should we deprecate this? Not really sure how it's used?
 

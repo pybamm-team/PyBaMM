@@ -1,6 +1,3 @@
-#
-# Base integration tests for lithium-ion models
-#
 import numpy as np
 
 import pybamm
@@ -22,10 +19,7 @@ class BaseIntegrationTestLithiumIon:
         param = pybamm.ParameterValues("Ecker2015")
         rtol = 1e-6
         atol = 1e-6
-        if pybamm.has_idaklu():
-            solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
-        else:
-            solver = pybamm.CasadiSolver(rtol=rtol, atol=atol)
+        solver = pybamm.IDAKLUSolver(rtol=rtol, atol=atol)
         modeltest = tests.StandardModelTest(
             model, parameter_values=param, solver=solver
         )
@@ -356,6 +350,7 @@ class BaseIntegrationTestLithiumIon:
             "particle phases": ("2", "1"),
             "open-circuit potential": (("single", "current sigmoid"), "single"),
             "SEI": "ec reaction limited",
+            "SEI porosity change": "true",
         }
         parameter_values = pybamm.ParameterValues("Chen2020_composite")
         name = "Negative electrode active material volume fraction"

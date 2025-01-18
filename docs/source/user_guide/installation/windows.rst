@@ -65,10 +65,6 @@ PyBaMM can be installed via pip:
 
 .. tab:: conda
 
-   .. note::
-
-      At the moment, PyBaMM's conda-forge distribution does not include ``IDAKLUSolver``.
-
    .. code:: bash
 
       conda install -c conda-forge pybamm-base
