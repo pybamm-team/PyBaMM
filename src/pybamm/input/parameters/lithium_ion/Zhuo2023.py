@@ -361,7 +361,7 @@ def get_parameter_values():
         # same as 'Initial concentration in positive electrode [mol.m-3]' below
         "Initial oxygen concentration in positive shell [mol.m-3]"
         "": initial_oxygen_concentration,
-        "Initial core-shell phase boundary location" "": 0.9868421,  # 3.75e-6 / 3.8e-6
+        "Initial core-shell phase boundary location": 0.9868421,  # 3.75e-6 / 3.8e-6
         # cell
         # "Negative current collector thickness [m]": 1.2e-05,
         "Negative electrode thickness [m]": 86.7e-6,

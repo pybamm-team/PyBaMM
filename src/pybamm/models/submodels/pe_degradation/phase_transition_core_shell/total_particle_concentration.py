@@ -29,7 +29,7 @@ class TotalConcentration(BasePhaseTransition):
         phase_param = self.phase_param
 
         c_c_rav = variables[
-            f"R-averaged {domain} {phase_name}core " "lithium concentration [mol.m-3]"
+            f"R-averaged {domain} {phase_name}core lithium concentration [mol.m-3]"
         ]
         eps_s = variables[
             f"{Domain} electrode {phase_name}active material volume fraction"
@@ -54,8 +54,7 @@ class TotalConcentration(BasePhaseTransition):
 
         variables.update(
             {
-                f"{Domain} electrode {phase_name}stoichiometry" "": c_c_vol_av
-                / c_scale,
+                f"{Domain} electrode {phase_name}stoichiometry": c_c_vol_av / c_scale,
                 f"{Domain} electrode {phase_name}volume-averaged "
                 "concentration": c_c_vol_av / c_scale,
                 f"{Domain} electrode {phase_name}volume-averaged "

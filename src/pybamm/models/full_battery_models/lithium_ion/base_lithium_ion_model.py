@@ -165,7 +165,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 Domain = domain.capitalize()
                 self.variables[f"Total cyclable lithium in {domain} [mol]"] = sum(
                     self.variables[
-                        f"Total cyclable lithium in {phase} phase " f"in {domain} [mol]"
+                        f"Total cyclable lithium in {phase} phase in {domain} [mol]"
                     ]
                     for phase in self.options.phases[domain.split()[0]]
                 )
@@ -174,14 +174,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                 for domain in domains
             )
             n_Li_cyc = n_Li_particles_cyc + n_Li_e
-            LLI_cyc = (1 - n_Li_particles_cyc / self.param.n_Li_particles_init_cyc) * 100
+            LLI_cyc = (
+                1 - n_Li_particles_cyc / self.param.n_Li_particles_init_cyc
+            ) * 100
 
             self.variables.update(
                 {
                     "LLI_cyc [%]": LLI_cyc,
                     "Loss of cyclable lithium inventory [%]": LLI_cyc,
                     "Total cyclable lithium [mol]": n_Li_cyc,
-                    "Total cyclable lithium in particles [mol]" "": n_Li_particles_cyc,
+                    "Total cyclable lithium in particles [mol]": n_Li_particles_cyc,
                 }
             )
 

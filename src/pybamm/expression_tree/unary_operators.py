@@ -1106,6 +1106,7 @@ class BoundaryCellValue(BoundaryOperator):
         else:
             return BoundaryCellValue(child, self.side)
 
+
 class BoundaryCellLength(BoundaryOperator):
     """A node in the expression tree which gets half the cell length of the
     boundary cell on its primary domain.
@@ -1125,13 +1126,14 @@ class BoundaryCellLength(BoundaryOperator):
         """
         Creates a new copy of the operator with the child `child`.
 
-        Uses the convenience function :meth:`boundary_cell_length` to perform 
+        Uses the convenience function :meth:`boundary_cell_length` to perform
         checks before creating a BoundaryValue object.
         """
         if perform_simplifications:
             return boundary_cell_length(child, self.side)
         else:
             return BoundaryCellLength(child, self.side)
+
 
 class ExplicitTimeIntegral(UnaryOperator):
     def __init__(self, children, initial_condition):

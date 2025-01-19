@@ -149,7 +149,7 @@ class PhaseTransition(BasePhaseTransition):
 
             R_nd = variables[f"{Domain} {phase_name}particle radius"]
             j = variables[
-                f"{Domain} electrode {phase_name}" "interfacial current density [A.m-2]"
+                f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
             ]
 
             # variable values at the moving core-shell phase boundary
