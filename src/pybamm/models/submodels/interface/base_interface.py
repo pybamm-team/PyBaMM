@@ -239,8 +239,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.PrimaryBroadcast(j, f"{domain} electrode")
 
         variables = {
-            f"{Domain} electrode {reaction_name}"
-            "interfacial current density [A.m-2]": j,
+            f"{Domain} electrode {reaction_name}interfacial current density [A.m-2]": j,
             f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density [A.m-2]": j_av,
         }
@@ -296,8 +295,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j0 = pybamm.PrimaryBroadcast(j0, f"{domain} electrode")
 
         variables = {
-            f"{Domain} electrode {reaction_name}"
-            "exchange current density [A.m-2]": j0,
+            f"{Domain} electrode {reaction_name}exchange current density [A.m-2]": j0,
             f"X-averaged {domain} electrode {reaction_name}"
             "exchange current density [A.m-2]": j0_av,
         }

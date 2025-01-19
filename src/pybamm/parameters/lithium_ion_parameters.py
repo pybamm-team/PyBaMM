@@ -641,8 +641,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} particle {lithiation}"
-            "diffusivity [m2.s-1]",
+            f"{self.phase_prefactor}{Domain} particle {lithiation}diffusivity [m2.s-1]",
             inputs,
         )
 
