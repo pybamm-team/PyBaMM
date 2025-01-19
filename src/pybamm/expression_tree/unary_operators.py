@@ -1094,10 +1094,17 @@ class BoundaryCellValue(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary cell value", child, side)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return boundary_cell_value(child, self.side)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
 
+        Uses the convenience function :meth:`boundary_value` to perform checks before
+        creating a BoundaryValue object.
+        """
+        if perform_simplifications:
+            return boundary_cell_value(child, self.side)
+        else:
+            return BoundaryCellValue(child, self.side)
 
 class BoundaryCellLength(BoundaryOperator):
     """A node in the expression tree which gets half the cell length of the
@@ -1114,10 +1121,17 @@ class BoundaryCellLength(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary cell length", child, side)
 
-    def _unary_new_copy(self, child):
-        """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return boundary_cell_length(child, self.side)
+    def _unary_new_copy(self, child, perform_simplifications: bool = True):
+        """
+        Creates a new copy of the operator with the child `child`.
 
+        Uses the convenience function :meth:`boundary_cell_length` to perform 
+        checks before creating a BoundaryValue object.
+        """
+        if perform_simplifications:
+            return boundary_cell_length(child, self.side)
+        else:
+            return BoundaryCellLength(child, self.side)
 
 class ExplicitTimeIntegral(UnaryOperator):
     def __init__(self, children, initial_condition):

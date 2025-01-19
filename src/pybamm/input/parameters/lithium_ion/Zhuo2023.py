@@ -35,7 +35,7 @@ def sic_18650_ocp_Zhuo2023(sto):
     return pybamm.Interpolant(x, y, sto, name=name)
 
 
-def sic_18650_dUdT_Zhuo2023(sto, c_max):
+def sic_18650_dUdT_Zhuo2023(sto):
     name, (x, y) = sic_18650_dUdT_Zhuo2023_data
     return pybamm.Interpolant(x, y, sto, name=name)
 
@@ -45,7 +45,7 @@ def nmc811_18650_ocp_Zhuo2023(sto):
     return pybamm.Interpolant(x, y, sto, name=name)
 
 
-def nmc811_18650_dUdT_Zhuo2023(sto, c_max):
+def nmc811_18650_dUdT_Zhuo2023(sto):
     name, (x, y) = nmc811_18650_dUdT_Zhuo2023_data
     return pybamm.Interpolant(x, y, sto, name=name)
 
