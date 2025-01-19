@@ -14,6 +14,10 @@
 - Porosity change now works for composite electrode ([#4417](https://github.com/pybamm-team/PyBaMM/pull/4417))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
 
+## Optimizations
+
+- Improved search to handle cases with shorter input strings and provide more relevant results.([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
+
 ## Breaking changes
 
 - Updated BPX to v0.5.0 and made changes for the switch to Pydantic V2 ([#4701](https://github.com/pybamm-team/PyBaMM/pull/4701))
