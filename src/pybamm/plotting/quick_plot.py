@@ -169,22 +169,21 @@ class QuickPlot:
         else:
             raise ValueError(f"spatial unit '{spatial_unit}' not recognized")
 
-        # Set time or discharge capacity as x-axis
-        if x_axis == "Discharge Capacity [A.h]":
-            print("yay")
-            # Use discharge capacity as x-axis
-            self.x_axis = "Discharge capacity [A.h]"
+        # set x_axis
+        self.x_axis = x_axis
 
+        if x_axis == "Discharge Capacity [A.h]":
+            # Use discharge capacity as x-axis
             discharge_capacities = [
                 solution["Discharge capacity [A.h]"].entries for solution in solutions
             ]
-            self.dc_values = discharge_capacities 
+            self.dc_values = discharge_capacities
 
             self.min_dc = min(dc[0] for dc in discharge_capacities)
             self.max_dc = max(dc[-1] for dc in discharge_capacities)
 
             self.dc_unit = "A.h"
-        
+
         # Default to time
         self.ts_seconds = [solution.t for solution in solutions]
         min_t = np.min([t[0] for t in self.ts_seconds])
@@ -200,6 +199,7 @@ class QuickPlot:
             else:
                 t_plot = sol.t
             return t_plot
+
         ts_seconds = []
         for sol in solutions:
             # Sample time points for each sub-solution
