@@ -150,7 +150,7 @@ class Mesh(dict):
                 raise KeyError(
                     f"'{domains[0]}' is not a valid key for the mesh. "
                     "Check whether a corresponding geometry has been set up."
-                )
+                ) from None
 
     def __setitem__(self, domains, value):
         if isinstance(domains, str):
