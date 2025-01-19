@@ -175,66 +175,61 @@ class QuickPlot:
             # Use discharge capacity as x-axis
             self.x_axis = "Discharge capacity [A.h]"
 
-            # Extract discharge capacities for all solutions
             discharge_capacities = [
                 solution["Discharge capacity [A.h]"].entries for solution in solutions
             ]
-            self.dc_values = discharge_capacities  # Store as the x-axis values
+            self.dc_values = discharge_capacities 
 
-            # Set discharge capacity range
             self.min_dc = min(dc[0] for dc in discharge_capacities)
             self.max_dc = max(dc[-1] for dc in discharge_capacities)
 
-            # Scaling and unit specific to discharge capacity
-            self.dc_scaling_factor = 1  # No scaling needed for discharge capacity
             self.dc_unit = "A.h"
-        else:
-            # Default to time
-            self.ts_seconds = [solution.t for solution in solutions]
-            min_t = np.min([t[0] for t in self.ts_seconds])
-            max_t = np.max([t[-1] for t in self.ts_seconds])
+        
+        # Default to time
+        self.ts_seconds = [solution.t for solution in solutions]
+        min_t = np.min([t[0] for t in self.ts_seconds])
+        max_t = np.max([t[-1] for t in self.ts_seconds])
 
-            hermite_interp = all(sol.hermite_interpolation for sol in solutions)
+        hermite_interp = all(sol.hermite_interpolation for sol in solutions)
 
-            def t_sample(sol):
-                if hermite_interp and n_t_linear > 2:
-                    # Linearly spaced time points
-                    t_linspace = np.linspace(sol.t[0], sol.t[-1], n_t_linear + 2)[1:-1]
-                    t_plot = np.union1d(sol.t, t_linspace)
-                else:
-                    t_plot = sol.t
-                return t_plot
+        def t_sample(sol):
+            if hermite_interp and n_t_linear > 2:
+                # Linearly spaced time points
+                t_linspace = np.linspace(sol.t[0], sol.t[-1], n_t_linear + 2)[1:-1]
+                t_plot = np.union1d(sol.t, t_linspace)
+            else:
+                t_plot = sol.t
+            return t_plot
+        ts_seconds = []
+        for sol in solutions:
+            # Sample time points for each sub-solution
+            t_sol = [t_sample(sub_sol) for sub_sol in sol.sub_solutions]
+            ts_seconds.append(np.concatenate(t_sol))
+        self.ts_seconds = ts_seconds
 
-            ts_seconds = []
-            for sol in solutions:
-                # Sample time points for each sub-solution
-                t_sol = [t_sample(sub_sol) for sub_sol in sol.sub_solutions]
-                ts_seconds.append(np.concatenate(t_sol))
-            self.ts_seconds = ts_seconds
-
-            # Set timescale
-            if time_unit is None:
-                # defaults depend on how long the simulation is
-                if max_t >= 3600:
-                    time_scaling_factor = 3600  # time in hours
-                    self.time_unit = "h"
-                else:
-                    time_scaling_factor = 1  # time in seconds
-                    self.time_unit = "s"
-            elif time_unit == "seconds":
-                time_scaling_factor = 1
-                self.time_unit = "s"
-            elif time_unit == "minutes":
-                time_scaling_factor = 60
-                self.time_unit = "min"
-            elif time_unit == "hours":
-                time_scaling_factor = 3600
+        # Set timescale
+        if time_unit is None:
+            # defaults depend on how long the simulation is
+            if max_t >= 3600:
+                time_scaling_factor = 3600  # time in hours
                 self.time_unit = "h"
             else:
-                raise ValueError(f"time unit '{time_unit}' not recognized")
-            self.time_scaling_factor = time_scaling_factor
-            self.min_t = min_t / time_scaling_factor
-            self.max_t = max_t / time_scaling_factor
+                time_scaling_factor = 1  # time in seconds
+                self.time_unit = "s"
+        elif time_unit == "seconds":
+            time_scaling_factor = 1
+            self.time_unit = "s"
+        elif time_unit == "minutes":
+            time_scaling_factor = 60
+            self.time_unit = "min"
+        elif time_unit == "hours":
+            time_scaling_factor = 3600
+            self.time_unit = "h"
+        else:
+            raise ValueError(f"time unit '{time_unit}' not recognized")
+        self.time_scaling_factor = time_scaling_factor
+        self.min_t = min_t / time_scaling_factor
+        self.max_t = max_t / time_scaling_factor
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
@@ -435,8 +430,12 @@ class QuickPlot:
         self.axis_limits = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 0:
-                x_min = self.min_t
-                x_max = self.max_t
+                if self.x_axis == "Discharge capacity [A.h]":
+                    x_min = self.min_dc
+                    x_max = self.max_dc
+                else:
+                    x_min = self.min_t
+                    x_max = self.max_t
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
@@ -458,22 +457,38 @@ class QuickPlot:
 
             # Get min and max variable values
             if self.variable_limits[key] == "fixed":
-                # fixed variable limits: calculate "globlal" min and max
+                # fixed variable limits: calculate "global" min and max
                 spatial_vars = self.spatial_variable_dict[key]
-                var_min = np.min(
-                    [
-                        ax_min(var(self.ts_seconds[i], **spatial_vars))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                var_max = np.max(
-                    [
-                        ax_max(var(self.ts_seconds[i], **spatial_vars))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
+                if self.x_axis == "Discharge capacity [A.h]":
+                    var_min = np.min(
+                        [
+                            ax_min(var(self.dc_values[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
+                    var_max = np.max(
+                        [
+                            ax_max(var(self.dc_values[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
+                else:
+                    var_min = np.min(
+                        [
+                            ax_min(var(self.ts_seconds[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
+                    var_max = np.max(
+                        [
+                            ax_max(var(self.ts_seconds[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
                 if np.isnan(var_min) or np.isnan(var_max):
                     raise ValueError(
                         "The variable limits are set to 'fixed' but the min and max "
@@ -568,7 +583,7 @@ class QuickPlot:
                         elif self.x_axis == "Discharge capacity [A.h]":
                             full_dc = self.dc_values[i]
                             (self.plots[key][i][j],) = ax.plot(
-                                full_dc / self.dc_scaling_factor,
+                                full_dc,
                                 variable(full_dc),
                                 color=self.colors[i],
                                 linestyle=linestyle,
