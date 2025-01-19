@@ -2,18 +2,22 @@
 
 ## Optimizations
 
-- Enhanced option checking by converting string-based options into tuples for consistent handling.([#4707](https://github.com/pybamm-team/PyBaMM/pull/4707))
+- Enhanced option checking by converting string-based options into tuples for consistent handling.([#4707](https://github.com/pybamm-team/PyBaMM/pull/4707)
+
+
+# [v25.1.0](https://github.com/pybamm-team/PyBaMM/tree/v25.1.0) - 2025-0
 
 ## Features
 
 - Added a `dt_min` option to the (`IDAKLUSolver`). ([#4736](https://github.com/pybamm-team/PyBaMM/pull/4736))
+- Automatically add state variables of the model to the output variables if they are not already present ([#4700](https://github.com/pybamm-team/PyBaMM/pull/4700))
 - Enabled using SEI models with particle size distributions. ([#4693](https://github.com/pybamm-team/PyBaMM/pull/4693))
 - Added symbolic mesh which allows for using InputParameters for geometric parameters ([#4665](https://github.com/pybamm-team/PyBaMM/pull/4665))
 - Enhanced the `search` method to accept multiple search terms in the form of a string or a list. ([#4650](https://github.com/pybamm-team/PyBaMM/pull/4650))
 - Made composite electrode model compatible with particle size distribution ([#4687](https://github.com/pybamm-team/PyBaMM/pull/4687))
 - Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
+- Porosity change now works for composite electrode ([#4417](https://github.com/pybamm-team/PyBaMM/pull/4417))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
-- Automatically add state variables of the model to the output variables if they are not already present ([#4700](https://github.com/pybamm-team/PyBaMM/pull/4700))
 
 ## Breaking changes
 

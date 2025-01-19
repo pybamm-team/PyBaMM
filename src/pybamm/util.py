@@ -5,7 +5,6 @@ import numbers
 import os
 import pathlib
 import pickle
-import subprocess
 import timeit
 import difflib
 from warnings import warn
@@ -21,23 +20,6 @@ JAXLIB_VERSION = "0.4.27"
 def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent.parent)
-
-
-def get_git_commit_info():
-    """
-    Get the git commit info for the current PyBaMM version, e.g. v22.8-39-gb25ce8c41
-    (version 22.8, commit b25ce8c41)
-    """
-    try:
-        # Get the latest git commit hash
-        return str(
-            subprocess.check_output(["git", "describe", "--tags"], cwd=root_dir())
-            .strip()
-            .decode()
-        )
-    except subprocess.CalledProcessError:  # pragma: no cover
-        # Not a git repository so just return the version number
-        return f"v{pybamm.__version__}"
 
 
 class FuzzyDict(dict):
@@ -370,7 +352,6 @@ def is_constant_and_can_evaluate(symbol):
         return False
 
 
-# https://docs.pybamm.org/en/latest/source/user_guide/contributing.html#managing-optional-dependencies-and-their-imports
 def import_optional_dependency(module_name, attribute=None):
     err_msg = f"Optional dependency {module_name} is not available. See https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html#optional-dependencies for more details."
     try:
