@@ -65,7 +65,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
         c_c_outer = c_c_surf
         c_c_outer_av = c_c_surf_av
 
-        c_o_surf = pybamm.surf(c_o) # i.e., c_o_outer
+        c_o_surf = pybamm.surf(c_o)  # i.e., c_o_outer
         c_o_surf_av = pybamm.x_average(c_o_surf)
         c_o_inner = pybamm.boundary_value(c_o, "left")
         c_o_inner_av = pybamm.x_average(c_o_inner)
@@ -126,10 +126,10 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             "lithium concentration [mol.m-3]": c_c_outer,
             f"X-averaged {domain} {phase_name}core outer boundary "
             "lithium concentration [mol.m-3]": c_c_outer_av,
-            f"Minimum {domain} {phase_name}core concentration [mol.m-3]" "": pybamm.min(
+            f"Minimum {domain} {phase_name}core concentration [mol.m-3]": pybamm.min(
                 c_c
             ),
-            f"Maximum {domain} {phase_name}core concentration [mol.m-3]" "": pybamm.max(
+            f"Maximum {domain} {phase_name}core concentration [mol.m-3]": pybamm.max(
                 c_c
             ),
             f"Minimum {domain} {phase_name}core "
@@ -161,7 +161,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             f"X-averaged {domain} {phase_name}core "
             "surface lithium stoichiometry": c_c_surf_av / c_scale,
             # Dimensional oxygen concentration in the shell
-            f"{Domain} {phase_name}shell oxygen concentration [mol.m-3]" "": c_o,
+            f"{Domain} {phase_name}shell oxygen concentration [mol.m-3]": c_o,
             f"X-averaged {domain} {phase_name}shell "
             "oxygen concentration [mol.m-3]": c_o_xav,
             f"R-averaged {domain} {phase_name}shell "
@@ -177,7 +177,7 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             f"X-averaged {domain} {phase_name}shell surface"
             "oxygen concentration [mol.m-3]": c_o_surf_av,
             # Core-shell phase boundary
-            f"{Domain} {phase_name}particle moving phase boundary location" "": s_nd,
+            f"{Domain} {phase_name}particle moving phase boundary location": s_nd,
             f"X-averaged {domain} {phase_name}particle "
             "moving phase boundary location": s_nd_av,
             # Boundary cell values
@@ -191,26 +191,21 @@ class BasePhaseTransition(pybamm.BaseSubModel):
             "oxygen concentration [mol.m-3]": c_o_1_av,
             # Boundary half cell length (central node to edge)
             f"{Domain} {phase_name}core surface cell length [m]": dx_core,
-            f"X-averaged {domain} {phase_name}core surface cell length [m]"
-            "": dx_core_av,
+            f"X-averaged {domain} {phase_name}core surface cell length [m]": dx_core_av,
             f"{Domain} {phase_name}shell inner cell length [m]": dx_shell,
-            f"X-averaged {domain} {phase_name}shell inner cell length [m]"
-            "": dx_shell_av,
+            f"X-averaged {domain} {phase_name}shell inner cell length [m]": dx_shell_av,
             # Loss of active material (LAM) due to progressing of s
             # the shell is considered as LAM
             "Loss of active material due to PE phase transition": lam_pe,
-            "X-averaged loss of active material due to PE phase transition"
-            "": lam_pe_av,
+            "X-averaged loss of active material due to PE phase transition": lam_pe_av,
             # ---------------------------------------------------------------------
             # We need to supply a variable to
             # submodel 'positive interface' (set_interfacial_submodel)
             # for voltage calculation
-            f"{Domain} {phase_name}particle surface concentration [mol.m-3]"
-            "": c_c_surf,
+            f"{Domain} {phase_name}particle surface concentration [mol.m-3]": c_c_surf,
             # For submodel 'positive primary open-circuit potential'
             # f"{Domain} {phase_name}core surface lithium stoichiometry"
-            f"{Domain} {phase_name}particle surface stoichiometry" "": c_c_surf
-            / c_scale,
+            f"{Domain} {phase_name}particle surface stoichiometry": c_c_surf / c_scale,
             # ---------------------------------------------------------------------
         }
 
