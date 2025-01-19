@@ -1,6 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-# [v25.1.0](https://github.com/pybamm-team/PyBaMM/tree/v25.1.0) - 2025-01-14
+## Optimizations
+
+- Enhanced option checking by converting string-based options into tuples for consistent handling.([#4707](https://github.com/pybamm-team/PyBaMM/pull/4707)
+
+
+# [v25.1.0](https://github.com/pybamm-team/PyBaMM/tree/v25.1.0) - 2025-0
 
 ## Features
 

@@ -1,7 +1,6 @@
 #
 # Base battery model class
 #
-
 import pybamm
 from functools import cached_property
 
@@ -445,8 +444,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["SEI"] = "none"
         # The "SEI" option will still be overridden by extra_options if provided
 
-        options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
+        options = pybamm.FuzzyDict(default_options)
         for name, opt in extra_options.items():
             if name in default_options:
                 options[name] = opt
@@ -467,7 +466,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # half-cells where you must pass a tuple of options to only set MSMR models in
         # the working electrode
         msmr_check_list = [
-            options[opt] == "MSMR"
+            "MSMR" in options[opt]
             for opt in ["open-circuit potential", "particle", "intercalation kinetics"]
         ]
         if (
@@ -524,7 +523,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
 
         # Options not yet compatible with particle-size distributions
-        if options["particle size"] == "distribution":
+        if "distribution" in options["particle size"]:
             if options["lithium plating porosity change"] != "false":
                 raise pybamm.OptionError(
                     "Lithium plating porosity change not yet supported for particle-size"
@@ -540,22 +539,29 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Heat of mixing submodels do not yet support particle-size "
                     "distributions."
                 )
-            if options["particle"] in ["quadratic profile", "quartic profile"]:
+            if (
+                "quadratic profile" in options["particle"]
+                or "quartic profile" in options["particle"]
+            ):
                 raise NotImplementedError(
                     "'quadratic' and 'quartic' concentration profiles have not yet "
                     "been implemented for particle-size ditributions"
                 )
-            if options["particle mechanics"] != "none":
+            if "none" not in options["particle mechanics"]:
                 raise NotImplementedError(
                     "Particle mechanics submodels do not yet support particle-size"
                     " distributions."
                 )
-            if options["particle shape"] != "spherical":
+            if "spherical" not in options["particle shape"]:
                 raise NotImplementedError(
                     "Particle shape must be 'spherical' for particle-size distribution"
                     " submodels."
                 )
-            if options["stress-induced diffusion"] == "true":
+            if "none" not in options["SEI"]:
+                raise NotImplementedError(
+                    "SEI submodels do not yet support particle-size distributions."
+                )
+            if "true" in options["stress-induced diffusion"]:
                 raise NotImplementedError(
                     "stress-induced diffusion cannot yet be included in "
                     "particle-size distributions."
@@ -624,7 +630,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if options["particle phases"] not in ["1", ("1", "1")]:
             if not (
                 options["surface form"] != "false"
-                and options["particle"] == "Fickian diffusion"
+                and "Fickian diffusion" in options["particle"]
             ):
                 raise pybamm.OptionError(
                     "If there are multiple particle phases: 'surface form' cannot be "
@@ -644,7 +650,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             if isinstance(p_mechanics, str) and isinstance(sei_on_cr, tuple):
                 p_mechanics = (p_mechanics, p_mechanics)
             if any(
-                sei == "true" and mech != "swelling and cracking"
+                "true" in sei and "swelling and cracking" not in mech
                 for mech, sei in zip(p_mechanics, sei_on_cr)
             ):
                 raise pybamm.OptionError(
