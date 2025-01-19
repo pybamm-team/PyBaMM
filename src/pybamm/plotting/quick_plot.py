@@ -109,6 +109,7 @@ class QuickPlot:
         spatial_unit="um",
         variable_limits="fixed",
         n_t_linear=100,
+        x_axis="Time",
     ):
         solutions = self.preprocess_solutions(solutions)
 
@@ -168,7 +169,22 @@ class QuickPlot:
         else:
             raise ValueError(f"spatial unit '{spatial_unit}' not recognized")
 
-        # Time parameters
+        # set x_axis
+        self.x_axis = x_axis
+
+        if x_axis == "Discharge Capacity [A.h]":
+            # Use discharge capacity as x-axis
+            discharge_capacities = [
+                solution["Discharge capacity [A.h]"].entries for solution in solutions
+            ]
+            self.dc_values = discharge_capacities
+
+            self.min_dc = min(dc[0] for dc in discharge_capacities)
+            self.max_dc = max(dc[-1] for dc in discharge_capacities)
+
+            self.dc_unit = "A.h"
+
+        # Default to time
         self.ts_seconds = [solution.t for solution in solutions]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
@@ -414,8 +430,12 @@ class QuickPlot:
         self.axis_limits = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 0:
-                x_min = self.min_t
-                x_max = self.max_t
+                if self.x_axis == "Discharge capacity [A.h]":
+                    x_min = self.min_dc
+                    x_max = self.max_dc
+                else:
+                    x_min = self.min_t
+                    x_max = self.max_t
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
@@ -437,22 +457,38 @@ class QuickPlot:
 
             # Get min and max variable values
             if self.variable_limits[key] == "fixed":
-                # fixed variable limits: calculate "globlal" min and max
+                # fixed variable limits: calculate "global" min and max
                 spatial_vars = self.spatial_variable_dict[key]
-                var_min = np.min(
-                    [
-                        ax_min(var(self.ts_seconds[i], **spatial_vars))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                var_max = np.max(
-                    [
-                        ax_max(var(self.ts_seconds[i], **spatial_vars))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
+                if self.x_axis == "Discharge capacity [A.h]":
+                    var_min = np.min(
+                        [
+                            ax_min(var(self.dc_values[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
+                    var_max = np.max(
+                        [
+                            ax_max(var(self.dc_values[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
+                else:
+                    var_min = np.min(
+                        [
+                            ax_min(var(self.ts_seconds[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
+                    var_max = np.max(
+                        [
+                            ax_max(var(self.ts_seconds[i], **spatial_vars))
+                            for i, variable_list in enumerate(variable_lists)
+                            for var in variable_list
+                        ]
+                    )
                 if np.isnan(var_min) or np.isnan(var_max):
                     raise ValueError(
                         "The variable limits are set to 'fixed' but the min and max "
@@ -520,8 +556,12 @@ class QuickPlot:
             variable_handles = []
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
-                # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel(f"Time [{self.time_unit}]")
+                if self.x_axis == "Time":
+                    # 0D plot: plot as a function of time, indicating time t with a line
+                    ax.set_xlabel(f"Time [{self.time_unit}]")
+                elif self.x_axis == "Discharge capacity [A.h]":
+                    ax.set_xlabel(f"Discharge Capacity [{self.dc_unit}]")
+
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -531,13 +571,24 @@ class QuickPlot:
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
-                        full_t = self.ts_seconds[i]
-                        (self.plots[key][i][j],) = ax.plot(
-                            full_t / self.time_scaling_factor,
-                            variable(full_t),
-                            color=self.colors[i],
-                            linestyle=linestyle,
-                        )
+
+                        if self.x_axis[:4] == "Time":
+                            full_t = self.ts_seconds[i]
+                            (self.plots[key][i][j],) = ax.plot(
+                                full_t / self.time_scaling_factor,
+                                variable(full_t),
+                                color=self.colors[i],
+                                linestyle=linestyle,
+                            )
+                        elif self.x_axis == "Discharge capacity [A.h]":
+                            full_dc = self.dc_values[i]
+                            (self.plots[key][i][j],) = ax.plot(
+                                full_dc,
+                                variable(full_dc),
+                                color=self.colors[i],
+                                linestyle=linestyle,
+                            )
+
                         variable_handles.append(self.plots[key][0][j])
                     solution_handles.append(self.plots[key][i][0])
                 y_min, y_max = ax.get_ylim()
@@ -668,13 +719,13 @@ class QuickPlot:
 
     def dynamic_plot(self, show_plot=True, step=None):
         """
-        Generate a dynamic plot with a slider to control the time.
+        Generate a dynamic plot with a slider to control the x-axis.
 
         Parameters
         ----------
         step : float, optional
             For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
-            of the total time.
+            of the total range (time or discharge capacity).
         show_plot : bool, optional
             Whether to show the plots. Default is True. Set to False if you want to
             only display the plot after plt.show() has been called.
@@ -683,29 +734,53 @@ class QuickPlot:
         if pybamm.is_notebook():  # pragma: no cover
             import ipywidgets as widgets
 
-            step = step or self.max_t / 100
-            widgets.interact(
-                lambda t: self.plot(t, dynamic=False),
-                t=widgets.FloatSlider(
-                    min=self.min_t, max=self.max_t, step=step, value=self.min_t
-                ),
-                continuous_update=False,
-            )
+            # Determine step size based on x-axis
+            if self.x_axis == "Discharge capacity [A.h]":
+                step = step or (self.max_dc - self.min_dc) / 100
+                widgets.interact(
+                    lambda dc: self.plot(dc, dynamic=False),
+                    dc=widgets.FloatSlider(
+                        min=self.min_dc,
+                        max=self.max_dc,
+                        step=step,
+                        value=self.min_dc,
+                    ),
+                    continuous_update=False,
+                )
+            else:  # Default to time
+                step = step or self.max_t / 100
+                widgets.interact(
+                    lambda t: self.plot(t, dynamic=False),
+                    t=widgets.FloatSlider(
+                        min=self.min_t,
+                        max=self.max_t,
+                        step=step,
+                        value=self.min_t,
+                    ),
+                    continuous_update=False,
+                )
         else:
             plt = import_optional_dependency("matplotlib.pyplot")
             Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
-            # create an initial plot at time self.min_t
-            self.plot(self.min_t, dynamic=True)
+            # Set initial x-axis values and slider
+            if self.x_axis == "Discharge capacity [A.h]":
+                self.plot(self.min_dc, dynamic=True)
+                ax_label = f"Discharge capacity [{self.time_unit}]"  # Update time_unit to relevant unit
+                ax_min, ax_max, val_init = self.min_dc, self.max_dc, self.min_dc
+            else:  # Default to time
+                self.plot(self.min_t, dynamic=True)
+                ax_label = f"Time [{self.time_unit}]"
+                ax_min, ax_max, val_init = self.min_t, self.max_t, self.min_t
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
                 ax_slider,
-                f"Time [{self.time_unit}]",
-                self.min_t,
-                self.max_t,
-                valinit=self.min_t,
+                ax_label,
+                ax_min,
+                ax_max,
+                valinit=val_init,
                 color="#1f77b4",
             )
             self.slider.on_changed(self.slider_update)
