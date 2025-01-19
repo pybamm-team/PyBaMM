@@ -268,5 +268,5 @@ class TestSearch:
         # Test smaller strings
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             model.variables.search(["El", "co"], print_values=True)
-            out = "No matches found for 'El'\n" "No matches found for 'co'\n"
+            out = "No matches found for 'El'\nNo matches found for 'co'\n"
             assert fake_out.getvalue() == out
