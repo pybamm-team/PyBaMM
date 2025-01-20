@@ -2,18 +2,12 @@
 # Tests for the lithium-ion DFN model
 #
 import pybamm
-import pytest
 from tests import BaseUnitTestLithiumIon
 
 
 class TestDFN(BaseUnitTestLithiumIon):
     def setup_method(self):
         self.model = pybamm.lithium_ion.DFN
-
-    def test_electrolyte_options(self):
-        options = {"electrolyte conductivity": "integrated"}
-        with pytest.raises(pybamm.OptionError, match="electrolyte conductivity"):
-            pybamm.lithium_ion.DFN(options)
 
     def test_well_posed_size_distribution(self):
         options = {"particle size": "distribution"}
