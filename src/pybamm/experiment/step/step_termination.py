@@ -73,15 +73,15 @@ class CurrentTermination(BaseTermination):
         operator = self.operator
         if operator == ">":
             expr = self.value - variables["Current [A]"]
-            string = f"Current [A] > {self.value} [A] [experiment]"
+            event_string = f"Current [A] > {self.value} [A] [experiment]"
         elif operator == "<":
             expr = variables["Current [A]"] - self.value
-            string = f"Current [A] < {self.value} [A] [experiment]"
+            event_string = f"Current [A] < {self.value} [A] [experiment]"
         else:
             expr = abs(variables["Current [A]"]) - self.value
-            string = f"abs(Current [A]) < {self.value} [A] [experiment]"
+            event_string = f"abs(Current [A]) < {self.value} [A] [experiment]"
         event = pybamm.Event(
-            string,
+            event_string,
             expr,
         )
         return event

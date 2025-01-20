@@ -4,8 +4,6 @@ import numpy as np
 from datetime import datetime
 from .step_termination import _read_termination
 import numbers
-from enum import Enum
-from typing import Union, Optional
 
 _examples = """
 
@@ -24,12 +22,6 @@ _examples = """
     "Discharge at C/3 for 2 hours or until 2.5 V",
 
     """
-
-
-class Direction(Enum):
-    charge = "charge"
-    discharge = "discharge"
-    rest = "rest"
 
 
 class BaseStep:
@@ -75,17 +67,13 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
-        direction: Optional[Union[str, Direction]] = None,
+        direction: str | None = None,
     ):
-        try:
-            direction = Direction(direction)
-        except ValueError as e:
-            if direction is None:
-                pass
-            else:
-                raise ValueError(
-                    f"Invalid direction: {direction}. Must be one of {Direction.__members__.values()}"
-                ) from e
+        potential_directions = ["charge", "discharge", "rest", None]
+        if direction not in potential_directions:
+            raise ValueError(
+                f"Invalid direction: {direction}. Must be one of {potential_directions}"
+            )
         self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
