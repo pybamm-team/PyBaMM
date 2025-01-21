@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v25.1.1](https://github.com/pybamm-team/PyBaMM/tree/v25.1.1) - 2025-01-20
+
 ## Features
 
 - Added Operators to current and voltage termination events. ([#4770](https://github.com/pybamm-team/PyBaMM/pull/4770))
