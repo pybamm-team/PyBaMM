@@ -64,8 +64,7 @@ def run_integration(session):
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    # TODO: Temporary fix for Python 3.12 CI.
-    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,docs]", silent=False)
     session.run(
@@ -102,9 +101,7 @@ def run_examples(session):
 def run_scripts(session):
     """Run the scripts tests for Python scripts."""
     set_environment_variables(PYBAMM_ENV, session=session)
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
+    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,dev,jax]", silent=False)
     session.run("python", "-m", "pytest", "-m", "scripts")
@@ -119,9 +116,7 @@ def set_dev(session):
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
     components = ["all", "dev", "jax"]
     args = []
-    # Temporary fix for Python 3.12 CI. TODO: remove after
-    # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
-    # is fixed
+    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.run(python, "-m", "pip", "install", "setuptools", external=True)
     session.run(
         python,
@@ -153,8 +148,7 @@ def run_tests(session):
 def build_docs(session):
     """Build the documentation and load it in a browser tab, rebuilding on changes."""
     envbindir = session.bin
-    # TODO: Temporary fix for Python 3.12 CI.
-    # See: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
     session.install("-e", ".[all,docs]", silent=False)
     session.chdir("docs")
