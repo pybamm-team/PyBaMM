@@ -110,8 +110,8 @@ class BaseModel(BaseInterface):
             if self.reaction == "SEI":
                 variables.update(
                     {
-                        f"X-averaged {domain} electrode resistance "
-                        "[Ohm.m2]": L_sei_av * R_sei,
+                        f"X-averaged {domain} electrode resistance [Ohm.m2]": L_sei_av
+                        * R_sei,
                     }
                 )
         return variables
@@ -120,6 +120,7 @@ class BaseModel(BaseInterface):
         """Update variables related to the SEI concentration."""
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
+        phase_name = phase_param.phase_name
         reaction_name = self.reaction_name
 
         # Set scales to one for the "no SEI" model so that they are not required
@@ -152,7 +153,11 @@ class BaseModel(BaseInterface):
             L = variables[f"{Domain} {reaction_name}thickness [m]"]
 
             n_SEI = L * L_to_n
-            n_SEI_xav = pybamm.x_average(n_SEI)
+            if self.size_distribution:
+                n_SEI_sav = pybamm.size_average(n_SEI)
+                n_SEI_xav = pybamm.x_average(n_SEI_sav)
+            else:
+                n_SEI_xav = pybamm.x_average(n_SEI)
             n_SEI_av = pybamm.yz_average(n_SEI_xav)
 
             # Calculate change in SEI concentration with respect to initial state
@@ -185,11 +190,16 @@ class BaseModel(BaseInterface):
         # Concentration variables are handled slightly differently for SEI on cracks
         elif self.reaction == "SEI on cracks":
             L_cr = variables[f"{Domain} {reaction_name}thickness [m]"]
-            roughness = variables[f"{Domain} electrode roughness ratio"]
+            roughness = variables[f"{Domain} {phase_name}electrode roughness ratio"]
 
             n_SEI_cr = L_cr * L_to_n * (roughness - 1)  # SEI on cracks concentration
-            n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
-            n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
+            if self.size_distribution:
+                n_SEI_cr_sav = pybamm.size_average(n_SEI_cr)
+                n_SEI_cr_xav = pybamm.x_average(n_SEI_cr_sav)
+                n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
+            else:
+                n_SEI_cr_xav = pybamm.x_average(n_SEI_cr)
+                n_SEI_cr_av = pybamm.yz_average(n_SEI_cr_xav)
 
             # Calculate change in SEI cracks concentration
             # Initial state depends on roughness (to avoid division by zero)
@@ -209,7 +219,7 @@ class BaseModel(BaseInterface):
 
             variables.update(
                 {
-                    f"{Domain} {reaction_name}" "concentration [mol.m-3]": n_SEI_cr,
+                    f"{Domain} {reaction_name}concentration [mol.m-3]": n_SEI_cr,
                     f"X-averaged {domain} {reaction_name}"
                     "concentration [mol.m-3]": n_SEI_cr_xav,
                     f"Loss of lithium to {domain} {reaction_name}[mol]": Q_sei_cr,
@@ -238,6 +248,39 @@ class BaseModel(BaseInterface):
         """
         domain, Domain = self.domain_Domain
 
+        variables = {
+            f"{Domain} electrode {self.reaction_name}"
+            "interfacial current density [A.m-2]": j_sei,
+        }
+
+        if self.reaction_loc != "interface":
+            j_sei_av = pybamm.x_average(j_sei)
+            variables.update(
+                {
+                    f"X-averaged {domain} electrode {self.reaction_name}"
+                    "interfacial current density [A.m-2]": j_sei_av,
+                }
+            )
+
+        return variables
+
+    def _get_standard_reaction_distribution_variables(self, j_sei):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the SEI interfacial reaction current
+
+        Parameters
+        ----------
+        j_sei : :class:`pybamm.Symbol`
+            The SEI interfacial reaction current.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the SEI currents.
+        """
+        domain, Domain = self.domain_Domain
+        j_sei = pybamm.size_average(j_sei)
         variables = {
             f"{Domain} electrode {self.reaction_name}"
             "interfacial current density [A.m-2]": j_sei,

@@ -54,10 +54,10 @@ class TestMPM:
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]" "": parameter_values[
+                "Negative electrode lithiation OCP [V]": parameter_values[
                     "Negative electrode OCP [V]"
                 ],
-                "Negative electrode delithiation OCP [V]" "": parameter_values[
+                "Negative electrode delithiation OCP [V]": parameter_values[
                     "Negative electrode OCP [V]"
                 ],
             },
@@ -73,15 +73,17 @@ class TestMPM:
         parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
         parameter_values.update(
             {
-                "Negative electrode lithiation OCP [V]"
-                "": lambda sto: parameter_values["Negative electrode OCP [V]"](sto)
+                "Negative electrode lithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
                 - 0.1,
-                "Negative electrode delithiation OCP [V]"
-                "": lambda sto: parameter_values["Negative electrode OCP [V]"](sto)
+                "Negative electrode delithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
                 + 0.1,
                 "Negative particle hysteresis decay rate": 1,
                 "Negative particle hysteresis switching factor": 1,
-                # "Negative electrode OCP hysteresis [V]": lambda sto: 1,
+                "Initial hysteresis state in negative electrode": -0.5,
             },
             check_already_exists=False,
         )
@@ -122,3 +124,11 @@ class TestMPM:
         # compare
         np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
+
+    def test_basic_processing_nonlinear_diffusion(self):
+        model = pybamm.lithium_ion.MPM()
+        # Ecker2015 has a nonlinear diffusion coefficient
+        parameter_values = pybamm.ParameterValues("Ecker2015")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)

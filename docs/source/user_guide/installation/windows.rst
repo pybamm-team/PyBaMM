@@ -65,15 +65,12 @@ PyBaMM can be installed via pip:
 
 .. tab:: conda
 
-   .. note::
-
-      At the moment, PyBaMM's conda-forge distribution does not include ``IDAKLUSolver``.
-
    .. code:: bash
 
       conda install -c conda-forge pybamm-base
 
-PyBaMM’s `required dependencies <index.html#install-required-dependencies>`_
+PyBaMM’s :ref:`required dependencies <install-required-dependencies>`
+
 (such as ``numpy``, ``casadi``, etc) will be installed automatically when you
 install ``pybamm`` using ``pip`` or ``pybamm-base`` using ``conda``.
 
@@ -91,7 +88,7 @@ Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
 
 The ``pip install "pybamm[jax]"`` command automatically downloads and installs ``pybamm`` and the compatible versions of ``jax`` and ``jaxlib`` on your system.
 
-PyBaMM's full `conda-forge distribution <index.html#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
+PyBaMM's full `conda-forge distribution <index.rst#installation>`_ (``pybamm``) includes ``jax`` and ``jaxlib`` by default.
 
 Uninstall PyBaMM
 ----------------
@@ -109,4 +106,4 @@ Installation using WSL
 
 If you want to install the optional PyBaMM solvers, you have to use the
 Windows Subsystem for Linux (WSL). You can find the installation
-instructions `here <windows-wsl.html>`__.
+instructions on the `Installation <windows-wsl.rst>`_ page.

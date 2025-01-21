@@ -37,17 +37,6 @@ class SolveModel:
     t_interp: np.ndarray | None
 
     def solve_setup(self, parameter, model_, option, value, solver_class):
-        import importlib
-
-        idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-        if idaklu_spec is not None:
-            try:
-                idaklu = importlib.util.module_from_spec(idaklu_spec)
-                idaklu_spec.loader.exec_module(idaklu)
-            except ImportError as e:  # pragma: no cover
-                print("XXXXX cannot find klu", e)
-                idaklu_spec = None
-
         self.solver = solver_class()
         self.model = model_({option: value})
         c_rate = 1

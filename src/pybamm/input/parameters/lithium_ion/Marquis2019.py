@@ -9,7 +9,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ def graphite_mcmb2528_ocp_Dualfoil1998(sto):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
     """
 
     u_eq = (
@@ -68,7 +68,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -134,7 +134,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -166,7 +166,7 @@ def lico2_ocp_Dualfoil1998(sto):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
     .. [2] CM Doyle. Design and simulation of lithium rechargeable batteries,
            1995.
 
@@ -200,7 +200,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -269,7 +269,7 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
     .. [1] C Capiglia et al. 7Li and 19F diffusion coefficients and thermal
     properties of non-aqueous electrolyte solutions for rechargeable lithium batteries.
     Journal of power sources 81 (1999): 859-862.
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -302,7 +302,7 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
     .. [1] C Capiglia et al. 7Li and 19F diffusion coefficients and thermal
     properties of non-aqueous electrolyte solutions for rechargeable lithium batteries.
     Journal of power sources 81 (1999): 859-862.
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -450,10 +450,8 @@ def get_parameter_values():
         # experiment
         "Reference temperature [K]": 298.15,
         "Ambient temperature [K]": 298.15,
-        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
-        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        "": 0.0,
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.0,
         "Negative tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Positive tab heat transfer coefficient [W.m-2.K-1]": 10.0,
         "Edge heat transfer coefficient [W.m-2.K-1]": 0.3,

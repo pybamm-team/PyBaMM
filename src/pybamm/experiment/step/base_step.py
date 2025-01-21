@@ -67,8 +67,14 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
-        direction=None,
+        direction: str | None = None,
     ):
+        potential_directions = ["charge", "discharge", "rest", None]
+        if direction not in potential_directions:
+            raise ValueError(
+                f"Invalid direction: {direction}. Must be one of {potential_directions}"
+            )
+        self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
         # Check if drive cycle
@@ -386,11 +392,11 @@ class BaseStep:
             init_curr = self.value
         sign = np.sign(init_curr)
         if sign == 0:
-            return "Rest"
+            return "rest"
         elif sign > 0:
-            return "Discharge"
+            return "discharge"
         else:
-            return "Charge"
+            return "charge"
 
     def record_tags(
         self,

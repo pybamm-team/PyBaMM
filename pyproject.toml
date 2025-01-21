@@ -1,18 +1,12 @@
 [build-system]
 requires = [
-    "setuptools>=70.1.1",
-    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.7; platform_system!='Windows'",
-    # Note: the version of CasADi as a build-time dependency should be matched
-    # across platforms, so updates to its minimum version here should be accompanied
-    # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
-    "cmake; platform_system!='Windows'",
+    "setuptools",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybamm"
-version = "24.11.2"
+version = "25.1.1"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -34,6 +28,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "pybammsolvers",
     "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
     "casadi>=3.6.7",
@@ -91,7 +86,7 @@ cite = [
 ]
 # Battery Parameter eXchange format
 bpx = [
-    "bpx==0.4.0",
+    "bpx>=0.5.0,<0.6.0",
 ]
 # Low-overhead progress bars
 tqdm = [
@@ -124,11 +119,6 @@ dev = [
 jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
-]
-# For MLIR expression evaluation (IDAKLU Solver)
-iree = [
-    # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
-    "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
 ]
 # Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
@@ -237,7 +227,6 @@ required_plugins = [
     "pytest-mock",
     "pytest-subtests",
 ]
-norecursedirs = 'pybind11*'
 addopts = [
     "-nauto",
     "-vra",

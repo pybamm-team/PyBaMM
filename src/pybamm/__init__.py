@@ -16,7 +16,6 @@ from .util import (
     has_jax,
     import_optional_dependency,
     is_jax_compatible,
-    get_git_commit_info,
 )
 from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
@@ -138,6 +137,7 @@ from .meshes.one_dimensional_submeshes import (
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
     SpectralVolume1DSubMesh,
+    SymbolicUniform1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -162,6 +162,7 @@ from .solvers.solution import Solution, EmptySolution, make_cycle_solution
 from .solvers.processed_variable_time_integral import ProcessedVariableTimeIntegral
 from .solvers.processed_variable import ProcessedVariable, process_variable
 from .solvers.processed_variable_computed import ProcessedVariableComputed
+from .solvers.summary_variable import SummaryVariables
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
@@ -173,7 +174,7 @@ from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_jax import IDAKLUJax
-from .solvers.idaklu_solver import IDAKLUSolver, has_idaklu, has_iree
+from .solvers.idaklu_solver import IDAKLUSolver, has_iree
 
 # Experiments
 from .experiment.experiment import Experiment
