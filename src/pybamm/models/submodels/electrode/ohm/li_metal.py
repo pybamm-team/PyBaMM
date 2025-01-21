@@ -107,9 +107,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
                 domain="current collector",
             )
             self.coupled_variables.update({T_neg.name: T_neg})
-            T = pybamm.boundary_value(
-                variables["Negative electrode temperature [K]"], "right"
-            )
+            T = pybamm.boundary_value(T_neg, "right")
 
             C_dl = self.domain_param.C_dl(T)
 

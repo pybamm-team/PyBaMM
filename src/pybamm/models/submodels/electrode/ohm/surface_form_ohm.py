@@ -37,6 +37,7 @@ class SurfaceForm(BaseModel):
             f"{Domain} electrolyte current density [A.m-2]",
             f"{self.domain} electrode",
             auxiliary_domains={"secondary": "current collector"},
+            evaluates_on_edges=True,
         )
         self.coupled_variables.update({i_e.name: i_e})
         tor = pybamm.CoupledVariable(
@@ -82,10 +83,7 @@ class SurfaceForm(BaseModel):
         variables = self._get_standard_potential_variables(phi_s)
         variables.update(self._get_standard_current_variables(i_s))
 
-        if (
-            self.options.electrode_types["negative"] == "planar"
-            or "Negative electrode current density [A.m-2]" in variables
-        ) and "Positive electrode current density [A.m-2]" in variables:
+        if self.domain == "positive":
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         self.variables.update(variables)

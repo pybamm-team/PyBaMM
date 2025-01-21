@@ -26,10 +26,16 @@ class CoupledVariable(pybamm.Symbol):
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,
         domains: DomainsType = None,
+        evaluates_on_edges: bool = False,
     ) -> None:
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
         )
+        self._evaluates_on_edges_coupled_variable = evaluates_on_edges
+
+    # because we dont know whether or not the incoming variable evaluates on edges, we need to be able to override the default behaviour.
+    def _evaluates_on_edges(self, dimension):
+        return self._evaluates_on_edges_coupled_variable
 
     def _evaluate_for_shape(self):
         """

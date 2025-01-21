@@ -26,7 +26,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def get_fundamental_variables(self):
+    def build(self, submodels):
         delta_phi_av = pybamm.Variable(
             f"X-averaged {self.domain} electrode surface potential difference [V]",
             domain="current collector",
@@ -39,33 +39,23 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi_av)
         )
-        return variables
-
-    def get_coupled_variables(self, variables):
         # Only update coupled variables once
         if self.domain == "negative":
-            return super().get_coupled_variables(variables)
-        else:
-            return variables
-
-    def set_initial_conditions(self, variables):
-        domain = self.domain
-        delta_phi = variables[
-            f"X-averaged {domain} electrode surface potential difference [V]"
-        ]
+            super().build(submodels)
+        delta_phi = delta_phi_av
         delta_phi_init = self.domain_param.prim.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
-
-    def set_boundary_conditions(self, variables):
         if self.domain == "negative":
-            phi_e = variables["Electrolyte potential [V]"]
+            phi_e = self.variables["Electrolyte potential [V]"]
             self.boundary_conditions = {
                 phi_e: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(0), "Neumann"),
                 }
             }
+        self._set_eqn(variables)
+        self.variables.update(variables)
 
 
 class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
@@ -84,26 +74,36 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_rhs(self, variables):
+    def _set_eqn(self, variables):
         domain = self.domain
-        T = variables[f"X-averaged {domain} electrode temperature [K]"]
+        T = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode temperature [K]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({T.name: T})
         C_dl = self.domain_param.C_dl(T)
 
         delta_phi = variables[
             f"X-averaged {domain} electrode surface potential difference [V]"
         ]
 
-        sum_a_j = variables[
+        sum_a_j = pybamm.CoupledVariable(
             f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
-        sum_a_j_av = variables[
+            "interfacial current densities [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j.name: sum_a_j})
+        sum_a_j_av = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
-        a = variables[
-            f"X-averaged {domain} electrode surface area to volume ratio [m-1]"
-        ]
+            "interfacial current density [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j_av.name: sum_a_j_av})
+        a = pybamm.CoupledVariable(
+            f"X-averaged {domain} electrode surface area to volume ratio [m-1]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({a.name: a})
 
         self.rhs[delta_phi] = 1 / (a * C_dl) * (sum_a_j_av - sum_a_j)
 
@@ -124,17 +124,21 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     def __init__(self, param, domain, options=None):
         super().__init__(param, domain, options)
 
-    def set_algebraic(self, variables):
+    def _set_eqn(self, variables):
         domain = self.domain
-        sum_a_j = variables[
+        sum_a_j = pybamm.CoupledVariable(
             f"Sum of x-averaged {domain} electrode volumetric "
-            "interfacial current densities [A.m-3]"
-        ]
+            "interfacial current densities [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j.name: sum_a_j})
 
-        sum_a_j_av = variables[
+        sum_a_j_av = pybamm.CoupledVariable(
             f"X-averaged {domain} electrode total volumetric "
-            "interfacial current density [A.m-3]"
-        ]
+            "interfacial current density [A.m-3]",
+            domain="current collector",
+        )
+        self.coupled_variables.update({sum_a_j_av.name: sum_a_j_av})
         delta_phi = variables[
             f"X-averaged {domain} electrode surface potential difference [V]"
         ]

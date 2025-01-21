@@ -1142,7 +1142,6 @@ class BaseModel:
         # have been discretised to slices but keys will still be variables
         extra_algebraic_keys = all_vars_in_algebraic_keys.difference(all_vars_in_eqns)
         if extra_algebraic_keys and not post_discretisation:
-            print(extra_algebraic_keys)
             raise pybamm.ModelError("model is overdetermined (extra algebraic keys)")
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
@@ -1150,6 +1149,7 @@ class BaseModel:
         extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
 
         if extra_variables_in_equations:
+            print(extra_variables_in_equations)
             raise pybamm.ModelError("model is underdetermined (too many variables)")
 
     def check_algebraic_equations(self, post_discretisation):
