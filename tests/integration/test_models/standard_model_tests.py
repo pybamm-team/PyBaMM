@@ -182,8 +182,11 @@ class StandardModelTest:
         new_solution = new_solver.solve(new_model, t_eval)
 
         for x, _ in enumerate(self.solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                new_solution.all_ys[x], self.solution.all_ys[x], decimal=accuracy
+            np.testing.assert_allclose(
+                new_solution.all_ys[x],
+                self.solution.all_ys[x],
+                rtol=1e-6,
+                atol=10 ** (-accuracy),
             )
         temp.close()
 
