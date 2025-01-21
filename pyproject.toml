@@ -227,7 +227,6 @@ required_plugins = [
     "pytest-mock",
     "pytest-subtests",
 ]
-norecursedirs = 'pybind11*'
 addopts = [
     "-nauto",
     "-vra",
