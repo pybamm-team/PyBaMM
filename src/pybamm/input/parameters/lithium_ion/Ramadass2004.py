@@ -9,7 +9,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
