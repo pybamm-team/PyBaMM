@@ -1,6 +1,3 @@
-#
-# Test setting up a simulation with an experiment
-#
 import pytest
 import casadi
 import pybamm
@@ -36,10 +33,10 @@ class TestSimulationExperiment:
             steps[1].basic_repr()
         ]  # CC charge
         model_V = sim.experiment_unique_steps_to_model[steps[2].basic_repr()]  # CV hold
-        assert "Current cut-off [A] [experiment]" in [
+        assert "abs(Current [A]) < 0.05 [A] [experiment]" in [
             event.name for event in model_V.events
         ]
-        assert "Charge voltage cut-off [V] [experiment]" in [
+        assert "Voltage > 4.1 [V] [experiment]" in [
             event.name for event in model_I.events
         ]
 
@@ -167,9 +164,6 @@ class TestSimulationExperiment:
             sol1["Voltage [V]"].data, sol2["Voltage [V]"].data
         )
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_run_experiment_cccv_solvers(self):
         experiment_2step = pybamm.Experiment(
             [
@@ -202,9 +196,6 @@ class TestSimulationExperiment:
         )
         assert solutions[1].termination == "final time"
 
-    @pytest.mark.skipif(
-        not pybamm.has_idaklu(), reason="idaklu solver is not installed"
-    )
     def test_solve_with_sensitivities_and_experiment(self):
         experiment_2step = pybamm.Experiment(
             [

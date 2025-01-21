@@ -19,10 +19,6 @@ It can be installed using ``pip`` or ``conda``, or from source.
 
    The ``pybamm`` package on conda-forge installs PyBaMM with all the `required and optional dependencies <#dependencies>`_ available on conda-forge.
 
-   .. note::
-
-      At the moment, PyBaMM's conda-forge distribution does not include ``IDAKLUSolver``.
-
    .. code:: bash
 
       conda install -c conda-forge pybamm
@@ -65,6 +61,7 @@ PyBaMM requires the following dependencies.
 =================================================================== ==========================
 Package                                                             Supported version(s)
 =================================================================== ==========================
+`PyBaMM solvers <https://github.com/pybamm-team/pybammsolvers>`__     0.0.4
 `NumPy <https://numpy.org>`__                                         >= 1.23.5, <2
 `SciPy <https://docs.scipy.org/doc/scipy/>`__                         Whatever recent versions work. >= 1.9.3
 `CasADi <https://web.casadi.org/docs/>`__                             Whatever recent versions work. >= 3.6.7

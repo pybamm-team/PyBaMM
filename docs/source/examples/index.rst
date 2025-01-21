@@ -89,6 +89,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/parameterization/parameterization.ipynb
     notebooks/parameterization/sensitivities_and_data_fitting.ipynb
     notebooks/parameterization/bpx.ipynb
+    notebooks/parameterization/geometric_parameters.ipynb
 
 .. nbgallery::
     :caption: Simulations and Experiments

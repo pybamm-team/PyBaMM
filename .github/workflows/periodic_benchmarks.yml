@@ -39,22 +39,15 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          python -m uv pip install --upgrade pip wheel setuptools wget cmake casadi numpy
           python -m uv pip install asv[virtualenv]
-
-      - name: Install SuiteSparse and SUNDIALS
-        run: python scripts/install_KLU_Sundials.py
 
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
           asv run --machine "GitHubRunner" NEW --show-stderr -v
-        env:
-          SUNDIALS_INST: $HOME/.local
-          LD_LIBRARY_PATH: $HOME/.local/lib
 
       - name: Upload results as artifact
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: asv_periodic_results
           path: results
