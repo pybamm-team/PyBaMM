@@ -117,8 +117,6 @@ def set_dev(session):
     session.install("virtualenv", "cmake")
     session.run("virtualenv", os.fsdecode(VENV_DIR), silent=True)
     python = os.fsdecode(VENV_DIR.joinpath("bin/python"))
-    components = ["all", "dev", "jax"]
-    args = []
     # Temporary fix for Python 3.12 CI. TODO: remove after
     # https://bitbucket.org/pybtex-devs/pybtex/issues/169/replace-pkg_resources-with
     # is fixed
@@ -129,8 +127,7 @@ def set_dev(session):
         "pip",
         "install",
         "-e",
-        ".[{}]".format(",".join(components)),
-        *args,
+        ".[all,dev,jax]",
         external=True,
     )
 
