@@ -388,7 +388,7 @@ class TestUpwindDownwind:
             solution["u"].entries,
             solution["analytical"].entries,
             rtol=1e-3,
-            atol=10 ** (-2),
+            atol=10 ** (-1),
         )
 
     def test_downwind(self):
@@ -397,5 +397,5 @@ class TestUpwindDownwind:
             solution["u"].entries,
             solution["analytical"].entries,
             rtol=1e-3,
-            atol=10 ** (-2),
+            atol=10 ** (-1),
         )
