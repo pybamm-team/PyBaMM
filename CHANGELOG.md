@@ -1,7 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
+
 - Added Operators to current and voltage termination events. ([#4770](https://github.com/pybamm-team/PyBaMM/pull/4770))
+
+## Bug fixes
+
+- Fixed a bug which caused the wc-reaction limited SEI model to give
+  incorrect results ([#4774](https://github.com/pybamm-team/PyBaMM/pull/4774))
 
 # [v25.1.0](https://github.com/pybamm-team/PyBaMM/tree/v25.1.0) - 2025-01-14
 
