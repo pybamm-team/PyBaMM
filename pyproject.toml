@@ -120,7 +120,6 @@ jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-
 # Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
