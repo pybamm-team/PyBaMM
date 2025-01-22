@@ -7,7 +7,6 @@ import pybamm
 from tests import get_discretisation_for_testing
 
 
-@pytest.mark.cibw
 class TestIDAKLUSolver:
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
