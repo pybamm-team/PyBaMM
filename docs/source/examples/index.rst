@@ -60,6 +60,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/latexify.ipynb
     notebooks/models/lead-acid.ipynb
     notebooks/models/lithium-plating.ipynb
+    notebooks/models/lithium-plating-composite.ipynb
     notebooks/models/MPM.ipynb
     notebooks/models/MSMR.ipynb
     notebooks/models/pouch-cell-model.ipynb
