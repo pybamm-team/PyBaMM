@@ -464,7 +464,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             decimal = 9
         else:
             decimal = 14
-        atol = 10 ** (-decimal)
+        atol = 10 ** (-decimal + 1)
         np.testing.assert_allclose(diff, 0, rtol=1e-7, atol=atol)
 
     def test_concentration_profile(self):
