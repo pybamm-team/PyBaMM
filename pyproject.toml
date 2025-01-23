@@ -152,22 +152,6 @@ build.targets.sdist.include = [
   "CITATION.cff",
 ]
 
-# List of files to include as package data. These are mainly the parameter CSV files in
-# the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
-# README.md files, and specific .txt files inside the pybamm/ directory are also included.
-# These are specified to be included in the SDist through MANIFEST.in.
-[tool.setuptools.package-data]
-pybamm = [
-    "*.txt",
-    "*.md",
-    "*.csv",
-    "*.py",
-    "src/pybamm/CITATIONS.bib",
-    "src/pybamm/plotting/mplstyle",
-]
-
-[tool.setuptools.packages.find]
-where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
