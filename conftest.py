@@ -19,19 +19,12 @@ def pytest_addoption(parser):
         default=False,
         help="run integration tests",
     )
-    parser.addoption(
-        "--cibw",
-        action="store_true",
-        default=False,
-        help="test build wheels",
-    )
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "scripts: mark test as an example script")
     config.addinivalue_line("markers", "unit: mark test as a unit test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
-    config.addinivalue_line("markers", "cibw: mark test as build wheel test")
 
 
 def pytest_collection_modifyitems(items):
