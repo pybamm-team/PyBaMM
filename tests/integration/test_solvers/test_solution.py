@@ -46,5 +46,5 @@ class TestSolution:
             solution["Voltage [V]"](solution.t[:-1]),
             step_solution["Voltage [V]"](solution.t[:-1]),
             rtol=1e-5,
-            atol=10 ** (-4),
+            atol=1e-4,
         )

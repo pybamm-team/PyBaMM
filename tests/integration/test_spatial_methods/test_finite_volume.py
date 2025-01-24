@@ -324,7 +324,7 @@ class TestFiniteVolumeLaplacian:
             solution["u"].entries,
             solution["r"].entries - 1,
             rtol=1e-11,
-            atol=10 ** (-10),
+            atol=1e-10,
         )
 
     def test_laplacian_cylindrical(self):
@@ -333,7 +333,7 @@ class TestFiniteVolumeLaplacian:
             solution["u"].entries,
             np.log(solution["r"].entries) / np.log(2),
             rtol=1e-6,
-            atol=10 ** (-5),
+            atol=1e-5,
         )
 
     def test_laplacian_spherical(self):
@@ -342,7 +342,7 @@ class TestFiniteVolumeLaplacian:
             solution["u"].entries,
             2 - 2 / solution["r"].entries,
             rtol=1e-6,
-            atol=10 ** (-5),
+            atol=1e-5,
         )
 
 
@@ -388,7 +388,7 @@ class TestUpwindDownwind:
             solution["u"].entries,
             solution["analytical"].entries,
             rtol=1e-3,
-            atol=10 ** (-1),
+            atol=1e-1,
         )
 
     def test_downwind(self):
@@ -397,5 +397,5 @@ class TestUpwindDownwind:
             solution["u"].entries,
             solution["analytical"].entries,
             rtol=1e-3,
-            atol=10 ** (-1),
+            atol=1e-1,
         )
