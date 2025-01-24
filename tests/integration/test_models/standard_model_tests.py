@@ -167,8 +167,6 @@ class StandardModelTest:
             new_solver.rtol = 1e-8
             new_solver.atol = 1e-8
 
-        accuracy = 5
-
         Crate = abs(
             self.parameter_values["Current function [A]"]
             / self.parameter_values["Nominal cell capacity [A.h]"]
@@ -186,7 +184,7 @@ class StandardModelTest:
                 new_solution.all_ys[x],
                 self.solution.all_ys[x],
                 rtol=1e-6,
-                atol=10 ** (-accuracy),
+                atol=1e-6,
             )
         temp.close()
 
