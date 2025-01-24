@@ -39,6 +39,9 @@ class JaxSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    max_step : float, optional
+        Maximum allowed step size. Default is np.inf, i.e., the step size is not
+        bounded and determined solely by the solver.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation
@@ -53,6 +56,7 @@ class JaxSolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=None,
+        max_step=onp.inf,
         extra_options=None,
     ):
         if not pybamm.has_jax():
@@ -63,7 +67,12 @@ class JaxSolver(pybamm.BaseSolver):
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
         super().__init__(
-            method, rtol, atol, root_method=root_method, extrap_tol=extrap_tol
+            method,
+            rtol,
+            atol,
+            root_method=root_method,
+            extrap_tol=extrap_tol,
+            max_step=max_step,
         )
         method_options = ["RK45", "BDF"]
         if method not in method_options:
@@ -71,6 +80,7 @@ class JaxSolver(pybamm.BaseSolver):
         self._ode_solver = method == "RK45"
         self.extra_options = extra_options or {}
         self.name = f"JAX solver ({method})"
+        self.max_step = max_step
         self._cached_solves = dict()
         pybamm.citations.register("jax2018")
 
@@ -201,7 +211,8 @@ class JaxSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs : dict, list[dict], optional
             Any input parameters to pass to the model when solving
-
+        max_step : float, optional
+            Maximum allowed step size. Default is np.inf.
         Returns
         -------
         list of `pybamm.Solution`
@@ -242,7 +253,9 @@ class JaxSolver(pybamm.BaseSolver):
             inputs_v = {
                 key: jnp.array([dic[key] for dic in inputs]) for key in inputs[0]
             }
-            y.extend(jax.vmap(self._cached_solves[model])(inputs_v))
+            y.extend(
+                jax.vmap(self._cached_solves[model])(inputs_v, max_step=self.max_step)
+            )
         else:
             # Unknown platform, use serial execution as fallback
             print(
@@ -250,7 +263,7 @@ class JaxSolver(pybamm.BaseSolver):
                 "falling back to serial execution"
             )
             for inputs_v in inputs:
-                y.append(self._cached_solves[model](inputs_v))
+                y.append(self._cached_solves[model](inputs_v, max_step=self.max_step))
 
         # This code block implements single-program multiple-data execution
         # using pmap across multiple XLAs. It is currently commented out
