@@ -895,7 +895,6 @@ class Simulation:
                     logs["summary variables"] = cycle_sum_vars
 
                 # Calculate capacity_start using the first cycle
-                capacity_stop = None
                 if cycle_num == 1:
                     # Note capacity_start could be defined as
                     # self._parameter_values["Nominal cell capacity [A.h]"] instead
@@ -907,6 +906,8 @@ class Simulation:
                             capacity_stop = value
                         elif typ == "%":
                             capacity_stop = value / 100 * capacity_start
+                    else:
+                        capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
 
                 logs["elapsed time"] = timer.time()

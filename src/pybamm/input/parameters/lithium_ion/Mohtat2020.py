@@ -9,7 +9,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -63,7 +63,7 @@ def graphite_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, c_s_m
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -126,7 +126,7 @@ def NMC_diffusivity_PeymanMPM(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -257,7 +257,7 @@ def electrolyte_diffusivity_PeymanMPM(c_e, T):
     .. [1] C Capiglia et al. 7Li and 19F diffusion coefficients and thermal
     properties of non-aqueous electrolyte solutions for rechargeable lithium batteries.
     Journal of power sources 81 (1999): 859-862.
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -290,7 +290,7 @@ def electrolyte_conductivity_PeymanMPM(c_e, T):
     .. [1] C Capiglia et al. 7Li and 19F diffusion coefficients and thermal
     properties of non-aqueous electrolyte solutions for rechargeable lithium batteries.
     Journal of power sources 81 (1999): 859-862.
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
     Parameters
     ----------
     c_e: :class:`pybamm.Symbol`

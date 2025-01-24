@@ -14,8 +14,11 @@ class BaseTermination:
         The value at which the event is triggered
     """
 
-    def __init__(self, value):
+    def __init__(self, value, operator=None):
         self.value = value
+        if operator not in ["<", ">", None]:
+            raise ValueError(f"Invalid operator: {operator}")
+        self.operator = operator
 
     def get_event(self, variables, step):
         """
@@ -67,9 +70,19 @@ class CurrentTermination(BaseTermination):
         """
         See :meth:`BaseTermination.get_event`
         """
+        operator = self.operator
+        if operator == ">":
+            expr = self.value - variables["Current [A]"]
+            event_string = f"Current [A] > {self.value} [A] [experiment]"
+        elif operator == "<":
+            expr = variables["Current [A]"] - self.value
+            event_string = f"Current [A] < {self.value} [A] [experiment]"
+        else:
+            expr = abs(variables["Current [A]"]) - self.value
+            event_string = f"abs(Current [A]) < {self.value} [A] [experiment]"
         event = pybamm.Event(
-            "Current cut-off [A] [experiment]",
-            abs(variables["Current [A]"]) - self.value,
+            event_string,
+            expr,
         )
         return event
 
@@ -89,22 +102,46 @@ class VoltageTermination(BaseTermination):
         # figure out whether the voltage event is greater than the starting
         # voltage (charge) or less (discharge) and set the sign of the
         # event accordingly
-        direction = step.direction.capitalize()
-        if direction == "Charge":
+        operator = self.operator
+        if operator is None:
+            direction = step.direction
+            if direction == "charge":
+                operator = ">"
+            elif direction == "discharge":
+                operator = "<"
+            else:
+                # No event for rest steps
+                return None
+
+        if operator == ">":
             sign = -1
-        elif direction == "Discharge":
+        else:
+            # operator can only be "<" or ">"
             sign = 1
-        elif direction == "Rest":
-            # No event for rest steps
-            return None
 
         # Event should be positive at initial conditions for both
         # charge and discharge
         event = pybamm.Event(
-            f"{direction} voltage cut-off [V] [experiment]",
+            f"Voltage {operator} {self.value} [V] [experiment]",
             sign * (variables["Battery voltage [V]"] - self.value),
         )
         return event
+
+
+class Voltage:
+    def __gt__(self, value):
+        return VoltageTermination(value, operator=">")
+
+    def __lt__(self, value):
+        return VoltageTermination(value, operator="<")
+
+
+class Current:
+    def __gt__(self, value):
+        return CurrentTermination(value, operator=">")
+
+    def __lt__(self, value):
+        return CurrentTermination(value, operator="<")
 
 
 class CustomTermination(BaseTermination):
