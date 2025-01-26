@@ -1,12 +1,13 @@
 [build-system]
 requires = [
     "hatchling>=1.13.0",
+    "hatch-vcs>=0.3.0",
 ]
 build-backend = "hatchling.build"
 
 [project]
 name = "pybamm"
-version = "25.1.1"
+dynamic = ["version"]
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -49,6 +50,9 @@ Documentation = "https://docs.pybamm.org"
 Repository = "https://github.com/pybamm-team/PyBaMM"
 Releases = "https://github.com/pybamm-team/PyBaMM/releases"
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
+
+[tool.hatch.version]
+source = "vcs"
 
 [project.optional-dependencies]
 docs = [
