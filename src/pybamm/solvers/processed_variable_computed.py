@@ -534,7 +534,7 @@ class ProcessedVariableComputed:
             axis=2,
         )
 
-        # Process r-x, x-z, r-R, R-x, or R-z
+        # Process r-R-x only
         if (
             self.domain[0].endswith("particle")
             and self.domains["secondary"][0].endswith("particle size")
