@@ -122,6 +122,11 @@ class BaseModel:
                 else:
                     var.secondary_mesh = None
 
+                if var.domains["tertiary"] != []:
+                    var.tertiary_mesh = properties["mesh"][var.domains["tertiary"]]
+                else:
+                    var.tertiary_mesh = None
+
             if properties["geometry"]:
                 instance._geometry = pybamm.Geometry(properties["geometry"])
         else:
@@ -875,8 +880,10 @@ class BaseModel:
                     final_state_eval = final_state[:, -1]
                 elif final_state.ndim == 3:
                     final_state_eval = final_state[:, :, -1].flatten(order="F")
+                elif final_state.ndim == 4:
+                    final_state_eval = final_state[:, :, :, -1].flatten(order="F")
                 else:
-                    raise NotImplementedError("Variable must be 0D, 1D, or 2D")
+                    raise NotImplementedError("Variable must be 0D, 1D, 2D, or 3D")
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:

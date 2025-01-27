@@ -16,7 +16,7 @@ class ProcessedVariableComputed:
 
     The 'Computed' variant of ProcessedVariable deals with variables that have
     been derived at solve time (see the 'output_variables' solver option),
-    where the full state-vector is not itself propogated and returned.
+    where the full state-vector is not itself propagated and returned.
 
     Parameters
     ----------
@@ -421,6 +421,157 @@ class ProcessedVariableComputed:
         self._xr_data_array = xr.DataArray(
             entries,
             coords={"y": y_sol, "z": z_sol, "t": self.t_pts},
+        )
+
+    def initialise_3D(self):
+        """
+        Initialise a 3D object that depends on x, y, and z, or x, r, and R.
+        """
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
+        second_dim_edges = self.base_variables[0].secondary_mesh.edges
+        third_dim_nodes = self.base_variables[0].tertiary_mesh.nodes
+        third_dim_edges = self.base_variables[0].tertiary_mesh.edges
+        if self.base_eval_size // (len(second_dim_nodes) * len(third_dim_nodes)) == len(
+            first_dim_nodes
+        ):
+            first_dim_pts = first_dim_nodes
+        elif self.base_eval_size // (
+            len(second_dim_nodes) * len(third_dim_nodes)
+        ) == len(first_dim_edges):
+            first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        third_dim_pts = third_dim_nodes
+
+        first_dim_size = len(first_dim_pts)
+        second_dim_size = len(second_dim_pts)
+        third_dim_size = len(third_dim_pts)
+
+        entries = self.unroll_3D(
+            realdata=None,
+            n_dim1=third_dim_size,
+            n_dim2=second_dim_size,
+            n_dim3=first_dim_size,
+            axis_swaps=[(0, 3), (0, 2), (0, 1)],
+        )
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array(
+            [2 * first_dim_pts[0] - first_dim_pts[1]]
+        )
+        extrap_space_first_dim_right = np.array(
+            [2 * first_dim_pts[-1] - first_dim_pts[-2]]
+        )
+        first_dim_pts = np.concatenate(
+            [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        second_dim_pts = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
+
+        # add points outside tertiary dimension domain for extrapolation to
+        # boundaries
+        extrap_space_third_dim_left = np.array(
+            [2 * third_dim_pts[0] - third_dim_pts[1]]
+        )
+        extrap_space_third_dim_right = np.array(
+            [2 * third_dim_pts[-1] - third_dim_pts[-2]]
+        )
+        third_dim_pts = np.concatenate(
+            [
+                extrap_space_third_dim_left,
+                third_dim_pts,
+                extrap_space_third_dim_right,
+            ]
+        )
+        extrap_entries_third_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, :, 0] - entries_for_interp[:, :, 1], axis=2
+        )
+        extrap_entries_third_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, :, -1] - entries_for_interp[:, :, -2], axis=2
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_third_dim_left,
+                entries_for_interp,
+                extrap_entries_third_dim_right,
+            ],
+            axis=2,
+        )
+
+        # Process r-x, x-z, r-R, R-x, or R-z
+        if (
+            self.domain[0].endswith("particle")
+            and self.domains["secondary"][0].endswith("particle size")
+            and self.domains["tertiary"][0].endswith("electrode")
+        ):
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.third_dimension = "x"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+            self.x_sol = third_dim_pts
+        else:  # pragma: no cover
+            raise pybamm.DomainError(
+                f"Cannot process 3D object with domains '{self.domains}'."
+            )
+
+        # assign attributes for reference
+        self.entries = entries
+        self.dimensions = 3
+        first_dim_pts_for_interp = first_dim_pts
+        second_dim_pts_for_interp = second_dim_pts
+        third_dim_pts_for_interp = third_dim_pts
+
+        # Set pts to edges for nicer plotting
+        self.first_dim_pts = first_dim_edges
+        self.second_dim_pts = second_dim_edges
+        self.third_dim_pts = third_dim_edges
+
+        # set up interpolation
+        self._xr_data_array = xr.DataArray(
+            entries_for_interp,
+            coords={
+                self.first_dimension: first_dim_pts_for_interp,
+                self.second_dimension: second_dim_pts_for_interp,
+                self.third_dimension: third_dim_pts_for_interp,
+                "t": self.t_pts,
+            },
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
