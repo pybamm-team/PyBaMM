@@ -920,8 +920,10 @@ class ProcessedVariable3D(ProcessedVariable):
         Initialise a 3D object that depends on x, y, and z or x, r, and R.
         """
         pybamm.logger.debug("Observing the variable raw data in Python")
-        first_dim_size, second_dim_size, t_size = self._shape(self.t_pts)
-        entries = np.empty((first_dim_size, second_dim_size, t_size))
+        first_dim_size, second_dim_size, third_dim_size, t_size = self._shape(
+            self.t_pts
+        )
+        entries = np.empty((first_dim_size, second_dim_size, third_dim_size, t_size))
 
         # Evaluate the base_variable index-by-index
         idx = 0
@@ -931,9 +933,9 @@ class ProcessedVariable3D(ProcessedVariable):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
+                entries[:, :, :, idx] = np.reshape(
                     base_var_casadi(t, y, inputs).full(),
-                    [first_dim_size, second_dim_size],
+                    [first_dim_size, second_dim_size, third_dim_size],
                     order="F",
                 )
                 idx += 1
@@ -1075,6 +1077,82 @@ class ProcessedVariable3D(ProcessedVariable):
         return [first_dim_size, second_dim_size, third_dim_size, t_size]
 
 
+class ProcessedVariable3DSciKitFEM(ProcessedVariable3D):
+    """
+    An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
+    returns the (interpolated) value of the base variable at that t and x.
+
+    Parameters
+    ----------
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
+        just a :class:`pybamm.Variable`.
+        When evaluated, returns an array of size (m,n)
+    base_variables_casadi : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
+    """
+
+    def __init__(
+        self,
+        base_variables,
+        base_variables_casadi,
+        solution,
+        time_integral: Optional[pybamm.ProcessedVariableTimeIntegral] = None,
+    ):
+        self.dimensions = 3
+        super(ProcessedVariable3D, self).__init__(
+            base_variables,
+            base_variables_casadi,
+            solution,
+            time_integral=time_integral,
+        )
+        x_nodes = self.mesh.nodes
+        x_edges = self.mesh.edges
+        y_sol = self.base_variables[0].secondary_mesh.edges["y"]
+        z_sol = self.base_variables[0].secondary_mesh.edges["z"]
+        if self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_nodes):
+            x_sol = x_nodes
+        elif self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_edges):
+            x_sol = x_edges
+
+        self.first_dim_size = len(x_sol)
+        self.second_dim_size = len(y_sol)
+        self.third_dim_size = len(z_sol)
+
+    def _interp_setup(self, entries, t):
+        x_nodes = self.mesh.nodes
+        x_edges = self.mesh.edges
+        y_sol = self.base_variables[0].secondary_mesh.edges["y"]
+        z_sol = self.base_variables[0].secondary_mesh.edges["z"]
+        if self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_nodes):
+            x_sol = x_nodes
+        elif self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_edges):
+            x_sol = x_edges
+
+        # assign attributes for reference
+        self.x_sol = x_sol
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "x"
+        self.second_dimension = "y"
+        self.third_dimension = "z"
+        self.first_dim_pts = x_sol
+        self.second_dim_pts = y_sol
+        self.third_dim_pts = z_sol
+
+        # save attributes for interpolation
+        coords_for_interp = {"x": x_sol, "y": y_sol, "z": z_sol, "t": t}
+
+        return entries, coords_for_interp
+
+
 def process_variable(base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
     domain = base_variables[0].domain
@@ -1095,10 +1173,7 @@ def process_variable(base_variables, *args, **kwargs):
         and "current collector" in base_variables[0].domains["secondary"]
         and isinstance(base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D)
     ):
-        raise NotImplementedError(
-            "3D variables with secondary domain 'current collector' using the ScikitFEM"
-            " discretisation are not supported as processed variables"
-        )
+        return ProcessedVariable3DSciKitFEM(base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:

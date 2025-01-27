@@ -546,6 +546,15 @@ class ProcessedVariableComputed:
             self.r_sol = first_dim_pts
             self.R_sol = second_dim_pts
             self.x_sol = third_dim_pts
+        elif self.domain[0].endswith("electrode") and self.domains["secondary"] == [
+            "current collector"
+        ]:
+            self.first_dimension = "x"
+            self.second_dimension = "y"
+            self.third_dimension = "z"
+            self.x_sol = first_dim_pts
+            self.y_sol = second_dim_pts
+            self.z_sol = third_dim_pts
         else:  # pragma: no cover
             raise pybamm.DomainError(
                 f"Cannot process 3D object with domains '{self.domains}'."
