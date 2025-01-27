@@ -48,7 +48,7 @@ class TestLeadAcidLoqsSurfaceForm:
 
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python, decimal=5)
+        np.testing.assert_allclose(original, to_python, rtol=1e-6, atol=1e-5)
 
     def test_set_up(self):
         options = {"surface form": "differential"}
