@@ -22,7 +22,7 @@ public:
   /**
    * @brief Default destructor
    */
-  ~IDAKLUSolver() = default;
+  virtual ~IDAKLUSolver() = default;
 
   /**
    * @brief Abstract solver method that executes the solver

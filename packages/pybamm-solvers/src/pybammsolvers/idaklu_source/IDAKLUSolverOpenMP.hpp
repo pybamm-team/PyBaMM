@@ -106,7 +106,7 @@ public:
   /**
    * @brief Destructor
    */
-  ~IDAKLUSolverOpenMP();
+  virtual ~IDAKLUSolverOpenMP();
 
   /**
    * @brief The main solve method that solves for each variable and time step
