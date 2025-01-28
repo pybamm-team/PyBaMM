@@ -525,10 +525,18 @@ class BaseUnitTestLithiumIon:
         options = {"particle size": "distribution", "surface form": "algebraic"}
         self.check_well_posedness(options)
 
-    def test_well_posed_psd_mechanics(self):
+    def test_well_posed_psd_swelling_and_cracking(self):
         options = {
             "particle size": "distribution",
             "particle mechanics": "swelling and cracking",
+            "surface form": "algebraic",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_psd_swelling_only(self):
+        options = {
+            "particle size": "distribution",
+            "particle mechanics": "swelling only",
             "surface form": "algebraic",
         }
         self.check_well_posedness(options)
