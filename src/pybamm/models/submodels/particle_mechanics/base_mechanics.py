@@ -39,21 +39,25 @@ class BaseMechanics(pybamm.BaseSubModel):
         }
         return variables
 
+    def _get_standard_size_distribution_variables(self, l_cr_dist):
+        domain, Domain = self.domain_Domain
+        l_cr_av_dist = pybamm.x_average(l_cr_dist)
+        variables = {
+            f"{Domain} {self.phase_param.phase_name}particle crack length distribution [m]": l_cr_dist,
+            f"X-averaged {domain} {self.phase_param.phase_name}particle crack length distribution [m]": l_cr_av_dist,
+        }
+        return variables
+
     def _get_mechanical_size_distribution_results(self, variables):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_param.phase_name
         phase_param = self.phase_param
-        domain_param = self.domain_param
         c_s_rav = variables[
             f"R-averaged {domain} {phase_name}particle concentration distribution [mol.m-3]"
-        ]
-        sto_rav = variables[
-            f"R-averaged {domain} {phase_name}particle concentration distribution"
         ]
         c_s_surf = variables[
             f"{Domain} {phase_name}particle surface concentration distribution [mol.m-3]"
         ]
-        T_xav = variables["X-averaged cell temperature [K]"]
         T = pybamm.PrimaryBroadcast(
             variables[f"{Domain} electrode temperature [K]"],
             [f"{domain} {phase_name}particle size"],
@@ -62,10 +66,6 @@ class BaseMechanics(pybamm.BaseSubModel):
             T,
             [f"{domain} {phase_name}particle"],
         )
-
-        eps_s = variables[
-            f"{Domain} electrode {phase_name}active material volume fraction"
-        ]
 
         # use a tangential approximation for omega
         c_0 = phase_param.c_0
