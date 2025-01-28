@@ -525,6 +525,13 @@ class BaseUnitTestLithiumIon:
         options = {"particle size": "distribution", "surface form": "algebraic"}
         self.check_well_posedness(options)
 
+    def test_well_posed_psd_mechanics(self):
+        options = {
+            "particle size": "distribution",
+            "particle mechanics": "swelling and cracking",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_transport_efficiency_Bruggeman(self):
         options = {"transport efficiency": "Bruggeman"}
         self.check_well_posedness(options)
