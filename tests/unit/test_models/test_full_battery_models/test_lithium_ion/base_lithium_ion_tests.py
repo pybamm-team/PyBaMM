@@ -529,6 +529,7 @@ class BaseUnitTestLithiumIon:
         options = {
             "particle size": "distribution",
             "particle mechanics": "swelling and cracking",
+            "surface form": "algebraic",
         }
         self.check_well_posedness(options)
 

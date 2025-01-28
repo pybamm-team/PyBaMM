@@ -37,7 +37,7 @@ class CrackPropagation(BaseMechanics):
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_param.phase_name
-        if self.x_average is True:
+        if self.x_average:
             if self.size_distribution:
                 l_cr_av_dist = pybamm.Variable(
                     f"X-averaged {domain} {phase_name}particle crack length distribution [m]",
@@ -47,8 +47,10 @@ class CrackPropagation(BaseMechanics):
                     },
                     scale=self.phase_param.l_cr_0,
                 )
+                l_cr_dist = pybamm.SecondaryBroadcast(
+                    l_cr_av_dist, f"{domain} electrode"
+                )
                 l_cr_av = pybamm.size_average(l_cr_av_dist)
-                l_cr_dist = pybamm.PrimaryBroadcast(l_cr_av_dist, f"{domain} electrode")
             else:
                 l_cr_av = pybamm.Variable(
                     f"X-averaged {domain} {phase_name}particle crack length [m]",
