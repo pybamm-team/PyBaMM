@@ -6,7 +6,6 @@
 #  values itself since it does not have access to the full state vector
 #
 
-import pytest
 import casadi
 import pybamm
 import tests
