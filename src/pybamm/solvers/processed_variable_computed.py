@@ -99,17 +99,23 @@ class ProcessedVariableComputed:
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
         second_dim_pts = self.base_variables[0].secondary_mesh.nodes
-        if self.base_eval_size // len(second_dim_pts) not in [
+        if self.base_eval_size // len(second_dim_pts) in [
             len(first_dim_nodes),
             len(first_dim_edges),
         ]:
-            # Raise error for 3D variable
-            raise NotImplementedError(
-                f"Shape not recognized for {base_variables[0]} "
-                + "(note processing of 3D variables is not yet implemented)"
-            )
+            self.initialise_2D()
+            return
 
-        self.initialise_2D()
+        # Try some shapes that could make the variable a 3D variable
+        tertiary_pts = self.base_variables[0].tertiary_mesh.nodes
+        if self.base_eval_size // (len(second_dim_pts) * len(tertiary_pts)) in [
+            len(first_dim_nodes),
+            len(first_dim_edges),
+        ]:
+            self.initialise_3D()
+            return
+
+        raise NotImplementedError(f"Shape not recognized for {base_variables[0]}")
 
     def add_sensitivity(self, param, data):
         # unroll from sparse representation into n-d matrix
@@ -179,6 +185,28 @@ class ProcessedVariableComputed:
             entries = np.moveaxis(entries, a, b)
         return entries
 
+    def unroll_3D(
+        self, realdata=None, n_dim1=None, n_dim2=None, n_dim3=None, axis_swaps=None
+    ):
+        if axis_swaps is None:
+            axis_swaps = []
+        if not self.unroll_params:
+            self.unroll_params["n_dim1"] = n_dim1
+            self.unroll_params["n_dim2"] = n_dim2
+            self.unroll_params["n_dim3"] = n_dim3
+            self.unroll_params["axis_swaps"] = axis_swaps
+        if n_dim1 is None:
+            n_dim1 = self.unroll_params["n_dim1"]
+            n_dim2 = self.unroll_params["n_dim2"]
+            n_dim3 = self.unroll_params["n_dim3"]
+            axis_swaps = self.unroll_params["axis_swaps"]
+        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
+            (len(self.t_pts), n_dim1, n_dim2, n_dim3)
+        )
+        for a, b in axis_swaps:
+            entries = np.moveaxis(entries, a, b)
+        return entries
+
     def unroll(self, realdata=None):
         if self.dimensions == 0:
             return self.unroll_0D(realdata=realdata)
@@ -186,8 +214,9 @@ class ProcessedVariableComputed:
             return self.unroll_1D(realdata=realdata)
         elif self.dimensions == 2:
             return self.unroll_2D(realdata=realdata)
+        elif self.dimensions == 3:
+            return self.unroll_3D(realdata=realdata)
         else:
-            # Raise error for 3D variable
             raise NotImplementedError(f"Unsupported data dimension: {self.dimensions}")
 
     def initialise_0D(self):

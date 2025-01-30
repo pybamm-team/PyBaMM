@@ -446,11 +446,6 @@ class TestProcessedVariableComputed:
         # Check unroll function (2D)
         np.testing.assert_array_equal(processed_var.unroll(), y_sol.reshape(10, 40, 1))
 
-        # Check unroll function (3D)
-        with pytest.raises(NotImplementedError):
-            processed_var.dimensions = 3
-            processed_var.unroll()
-
     def test_processed_variable_2D_fixed_t_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
 
@@ -474,24 +469,39 @@ class TestProcessedVariableComputed:
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
         )
 
-    def test_3D_raises_error(self):
+    def test_processed_variable_3D(self):
         var = pybamm.Variable(
             "var",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": ["current collector"]},
+            domain=["negative particle"],
+            auxiliary_domains={
+                "secondary": ["negative particle size"],
+                "tertiary": ["negative electrode"],
+            },
+        )
+        disc = tests.get_size_distribution_disc_for_testing(xpts=3, rpts=4, Rpts=5)
+        disc.set_variable_slices([var])
+        x_sol = disc.mesh["negative electrode"].nodes
+        R_sol = disc.mesh["negative particle size"].nodes
+        r_sol = disc.mesh["negative particle"].nodes
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1, 2)
+        u_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
+
+        var_casadi = to_casadi(var_sol, u_sol)
+        geometry_options = {"options": {"particle size": "distribution"}}
+        model = tests.get_base_model_with_battery_geometry(**geometry_options)
+        processed_var = pybamm.ProcessedVariableComputed(
+            [var_sol],
+            [var_casadi],
+            [u_sol],
+            pybamm.Solution(t_sol, u_sol, model, {}),
         )
 
-        disc = tests.get_2p1d_discretisation_for_testing()
-        disc.set_variable_slices([var])
-        var_sol = disc.process_symbol(var)
-        t_sol = np.array([0, 1, 2])
-        u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
-        var_casadi = to_casadi(var_sol, u_sol)
+        # Check shape (prim, sec, ter, time)
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(u_sol, [len(r_sol), len(R_sol), len(x_sol), len(t_sol)]),
+        )
 
-        with pytest.raises(NotImplementedError, match="Shape not recognized"):
-            pybamm.ProcessedVariableComputed(
-                [var_sol],
-                [var_casadi],
-                [u_sol],
-                pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
-            )
+        # Check unroll function (3D)
+        np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(6, 7, 5, 2))

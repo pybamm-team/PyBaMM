@@ -1168,12 +1168,11 @@ def process_variable(base_variables, *args, **kwargs):
         and isinstance(mesh, pybamm.ScikitSubMesh2D)
     ):
         return ProcessedVariable2DSciKitFEM(base_variables, *args, **kwargs)
-    if (
-        base_variables[0].secondary_mesh
-        and "current collector" in base_variables[0].domains["secondary"]
-        and isinstance(base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D)
-    ):
-        return ProcessedVariable3DSciKitFEM(base_variables, *args, **kwargs)
+    if hasattr(base_variables[0], "secondary_mesh"):
+        if "current collector" in base_variables[0].domains["secondary"] and isinstance(
+            base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D
+        ):
+            return ProcessedVariable3DSciKitFEM(base_variables, *args, **kwargs)
 
     # check variable shape
     if len(base_eval_shape) == 0 or base_eval_shape[0] == 1:
