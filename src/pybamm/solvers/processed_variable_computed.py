@@ -483,7 +483,6 @@ class ProcessedVariableComputed:
             n_dim1=third_dim_size,
             n_dim2=second_dim_size,
             n_dim3=first_dim_size,
-            axis_swaps=[(0, 3), (0, 2), (0, 1)],
         )
 
         # add points outside first dimension domain for extrapolation to

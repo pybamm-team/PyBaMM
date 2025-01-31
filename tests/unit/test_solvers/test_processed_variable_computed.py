@@ -504,4 +504,4 @@ class TestProcessedVariableComputed:
         )
 
         # Check unroll function (3D)
-        np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(6, 7, 5, 2))
+        np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(4, 5, 3, 2))
