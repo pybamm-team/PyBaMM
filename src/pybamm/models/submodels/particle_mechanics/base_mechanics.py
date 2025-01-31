@@ -83,7 +83,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         stress_r_surf = pybamm.Scalar(0)
         # Ai2019 eq [8] with r=R
         # c_s_rav is already multiplied by 3/R^3 inside r_average
-        stress_t_surf = Omega * E0 / 3.0 / (1.0 - nu) * (c_s_rav - c_s_surf)
+        stress_t_surf = Omega * E0 * (c_s_rav - c_s_surf) / (3.0 * (1.0 - nu))
 
         # Averages
         stress_r_surf_av = pybamm.x_average(stress_r_surf)
@@ -149,7 +149,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         stress_r_surf = pybamm.Scalar(0)
         # Ai2019 eq [8] with r=R
         # c_s_rav is already multiplied by 3/R^3 inside r_average
-        stress_t_surf = Omega * E0 / 3.0 / (1.0 - nu) * (c_s_rav - c_s_surf)
+        stress_t_surf = Omega * E0 * (c_s_rav - c_s_surf) / (3.0 * (1.0 - nu))
 
         # Averages
         stress_r_surf_av = pybamm.x_average(stress_r_surf)
