@@ -307,3 +307,42 @@ class TestExperimentSteps:
 
         with pytest.raises(ValueError, match="control must be"):
             pybamm.step.CustomStepImplicit(custom_step_voltage, control="bla")
+
+    def test_bad_direction(self):
+        with pytest.raises(ValueError, match="Invalid direction"):
+            pybamm.step.Voltage(4.1, direction="foo")
+
+    def test_steps_with_operators(self):
+        # voltage
+        step = pybamm.step.voltage(1, duration=3600)
+        termination_lt_4_1 = pybamm.step.VoltageTermination(4.1, operator="<")
+        termination_gt_4_1 = pybamm.step.VoltageTermination(4.1, operator=">")
+        variables = {"Battery voltage [V]": 4.2}
+        event_lt_4_1 = termination_lt_4_1.get_event(variables, step)
+        np.testing.assert_allclose(event_lt_4_1.expression, 4.2 - 4.1)
+        event_gt_4_1 = termination_gt_4_1.get_event(variables, step)
+        np.testing.assert_allclose(event_gt_4_1.expression, 4.1 - 4.2)
+
+        # current
+        step = pybamm.step.current(1, duration=3600)
+        termination_lt_0_05 = pybamm.step.CurrentTermination(0.05, operator="<")
+        termination_gt_0_05 = pybamm.step.CurrentTermination(0.05, operator=">")
+        variables = {"Current [A]": 0.06}
+        event_lt_0_05 = termination_lt_0_05.get_event(variables, step)
+        np.testing.assert_allclose(event_lt_0_05.expression, 0.06 - 0.05)
+        event_gt_0_05 = termination_gt_0_05.get_event(variables, step)
+        np.testing.assert_allclose(event_gt_0_05.expression, 0.05 - 0.06)
+
+        # error
+        with pytest.raises(ValueError, match="Invalid operator"):
+            pybamm.step.CurrentTermination(0.05, operator="=")
+
+        # operator overloading
+        termination_lt_0_05_oo = pybamm.step.step_termination.Current() < 0.05
+        termination_gt_0_05_oo = pybamm.step.step_termination.Current() > 0.05
+        assert termination_lt_0_05_oo == termination_gt_0_05
+        assert termination_gt_0_05_oo == termination_gt_0_05
+        termination_lt_4_1_oo = pybamm.step.step_termination.Voltage() < 4.1
+        termination_gt_4_1_oo = pybamm.step.step_termination.Voltage() > 4.1
+        assert termination_lt_4_1_oo == termination_gt_4_1
+        assert termination_gt_4_1_oo == termination_gt_4_1

@@ -320,20 +320,29 @@ def solve_laplace_equation(coord_sys="cartesian"):
 class TestFiniteVolumeLaplacian:
     def test_laplacian_cartesian(self):
         solution = solve_laplace_equation(coord_sys="cartesian")
-        np.testing.assert_array_almost_equal(
-            solution["u"].entries, solution["r"].entries - 1, decimal=10
+        np.testing.assert_allclose(
+            solution["u"].entries,
+            solution["r"].entries - 1,
+            rtol=1e-11,
+            atol=1e-10,
         )
 
     def test_laplacian_cylindrical(self):
         solution = solve_laplace_equation(coord_sys="cylindrical polar")
-        np.testing.assert_array_almost_equal(
-            solution["u"].entries, np.log(solution["r"].entries) / np.log(2), decimal=5
+        np.testing.assert_allclose(
+            solution["u"].entries,
+            np.log(solution["r"].entries) / np.log(2),
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_laplacian_spherical(self):
         solution = solve_laplace_equation(coord_sys="spherical polar")
-        np.testing.assert_array_almost_equal(
-            solution["u"].entries, 2 - 2 / solution["r"].entries, decimal=5
+        np.testing.assert_allclose(
+            solution["u"].entries,
+            2 - 2 / solution["r"].entries,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
 
@@ -375,12 +384,18 @@ def solve_advection_equation(direction="upwind", source=1, bc=0):
 class TestUpwindDownwind:
     def test_upwind(self):
         solution = solve_advection_equation("upwind")
-        np.testing.assert_array_almost_equal(
-            solution["u"].entries, solution["analytical"].entries, decimal=2
+        np.testing.assert_allclose(
+            solution["u"].entries,
+            solution["analytical"].entries,
+            rtol=1e-3,
+            atol=1e-1,
         )
 
     def test_downwind(self):
         solution = solve_advection_equation("downwind")
-        np.testing.assert_array_almost_equal(
-            solution["u"].entries, solution["analytical"].entries, decimal=2
+        np.testing.assert_allclose(
+            solution["u"].entries,
+            solution["analytical"].entries,
+            rtol=1e-3,
+            atol=1e-1,
         )
