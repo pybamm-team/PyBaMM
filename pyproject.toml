@@ -51,9 +51,6 @@ Repository = "https://github.com/pybamm-team/PyBaMM"
 Releases = "https://github.com/pybamm-team/PyBaMM/releases"
 Changelog = "https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md"
 
-[tool.hatch.version]
-source = "vcs"
-
 [project.optional-dependencies]
 docs = [
     "sphinx>=6",
@@ -151,10 +148,12 @@ MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_paramet
 Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
 [tool.hatch]
+version.source = "vcs"
 build.targets.sdist.include = [
   "src/pybamm",
   "CITATION.cff",
 ]
+build.hooks.vcs.version-file = "src/pybamm/_version.py"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
