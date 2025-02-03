@@ -1,13 +1,12 @@
 #
 # Tests each parameter set with the standard model associated with that parameter set
 #
-from tests import TestCase
+
 import pybamm
-import unittest
 
 
-class TestParameterValuesWithModel(TestCase):
-    def test_parameter_values_with_model(self):
+class TestParameterValuesWithModel:
+    def test_parameter_values_with_model(self, subtests):
         param_to_model = {
             "Ai2020": pybamm.lithium_ion.DFN(
                 {"particle mechanics": "swelling and cracking"}
@@ -46,16 +45,6 @@ class TestParameterValuesWithModel(TestCase):
 
         # Loop over each parameter set, testing that parameters can be set
         for param, model in param_to_model.items():
-            with self.subTest(param=param):
+            with subtests.test(param=param):
                 parameter_values = pybamm.ParameterValues(param)
                 parameter_values.process_model(model)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

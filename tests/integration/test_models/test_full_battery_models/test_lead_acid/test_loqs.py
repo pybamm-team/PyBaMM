@@ -1,15 +1,13 @@
 #
 # Tests for the lead-acid LOQS model
 #
-from tests import TestCase
 import pybamm
 import tests
 
-import unittest
 import numpy as np
 
 
-class TestLOQS(TestCase):
+class TestLOQS:
     def test_basic_processing(self):
         model = pybamm.lead_acid.LOQS()
         modeltest = tests.StandardModelTest(model)
@@ -21,7 +19,7 @@ class TestLOQS(TestCase):
 
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python)
+        np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-6)
 
     def test_set_up(self):
         model = pybamm.lead_acid.LOQS()
@@ -74,12 +72,3 @@ class TestLOQS(TestCase):
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

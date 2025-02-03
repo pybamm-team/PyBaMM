@@ -1,13 +1,11 @@
 #
 # Tests for the Solution class
 #
-from tests import TestCase
 import pybamm
-import unittest
 import numpy as np
 
 
-class TestSolution(TestCase):
+class TestSolution:
     def test_append(self):
         model = pybamm.lithium_ion.SPMe()
         # create geometry
@@ -44,18 +42,9 @@ class TestSolution(TestCase):
             old_t = t
 
         # Check both give the same answer
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["Voltage [V]"](solution.t[:-1]),
             step_solution["Voltage [V]"](solution.t[:-1]),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

@@ -20,8 +20,6 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/getting_started/tutorial-7-model-options.ipynb
     notebooks/getting_started/tutorial-8-solver-options.ipynb
     notebooks/getting_started/tutorial-9-changing-the-mesh.ipynb
-    notebooks/getting_started/tutorial-10-creating-a-model.ipynb
-    notebooks/getting_started/tutorial-11-creating-a-submodel.ipynb
 
 .. nbgallery::
     :caption: Creating Models
@@ -33,6 +31,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/creating_models/4-comparing-full-and-reduced-order-models.ipynb
     notebooks/creating_models/5-half-cell-model.ipynb
     notebooks/creating_models/6-a-simple-SEI-model.ipynb
+    notebooks/creating_models/7-creating-a-submodel.ipynb
 
 .. nbgallery::
     :caption: Expression Tree
@@ -51,9 +50,11 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/compare-particle-diffusion-models.ipynb
     notebooks/models/composite_particle.ipynb
     notebooks/models/coupled-degradation.ipynb
+    notebooks/models/differential-capacity-hysteresis-state.ipynb
     notebooks/models/DFN-with-particle-size-distributions.ipynb
     notebooks/models/DFN.ipynb
     notebooks/models/electrode-state-of-health.ipynb
+    notebooks/models/graded-electrodes.ipynb
     notebooks/models/half-cell.ipynb
     notebooks/models/jelly-roll-model.ipynb
     notebooks/models/latexify.ipynb
@@ -67,11 +68,13 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/models/SEI-on-cracks.ipynb
     notebooks/models/simulate-3E-cell.ipynb
     notebooks/models/simulating-ORegan-2022-parameter-set.ipynb
+    notebooks/models/sodium-ion.ipynb
     notebooks/models/SPM.ipynb
     notebooks/models/SPMe.ipynb
     notebooks/models/submodel_cracking_DFN_or_SPM.ipynb
     notebooks/models/loss_of_active_materials.ipynb
     notebooks/models/thermal-models.ipynb
+    notebooks/models/tortuosity_models.ipynb
     notebooks/models/unsteady-heat-equation.ipynb
     notebooks/models/using-model-options_thermal-example.ipynb
     notebooks/models/using-submodels.ipynb
@@ -84,6 +87,9 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/parameterization/change-input-current.ipynb
     notebooks/parameterization/parameter-values.ipynb
     notebooks/parameterization/parameterization.ipynb
+    notebooks/parameterization/sensitivities_and_data_fitting.ipynb
+    notebooks/parameterization/bpx.ipynb
+    notebooks/parameterization/geometric_parameters.ipynb
 
 .. nbgallery::
     :caption: Simulations and Experiments
@@ -109,6 +115,7 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
 
     notebooks/solvers/dae-solver.ipynb
     notebooks/solvers/ode-solver.ipynb
+    notebooks/solvers/idaklu-jax-interface.ipynb
     notebooks/solvers/speed-up-solver.ipynb
 
 .. nbgallery::
@@ -125,3 +132,4 @@ The notebooks are organised into subfolders, and can be viewed in the galleries 
     notebooks/change-settings.ipynb
     notebooks/initialize-model-with-solution.ipynb
     notebooks/solution-data-and-processed-variables.ipynb
+    notebooks/pybamm_data.ipynb

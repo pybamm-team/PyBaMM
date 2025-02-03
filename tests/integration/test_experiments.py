@@ -1,13 +1,11 @@
 #
 # Test some experiments
 #
-from tests import TestCase
 import pybamm
 import numpy as np
-import unittest
 
 
-class TestExperiments(TestCase):
+class TestExperiments:
     def test_discharge_rest_charge(self):
         experiment = pybamm.Experiment(
             [
@@ -22,14 +20,18 @@ class TestExperiments(TestCase):
             model, experiment=experiment, solver=pybamm.CasadiSolver()
         )
         sim.solve()
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim._solution["Time [h]"].entries,
             np.array([0, 0.5, 1, 1 + 1e-9, 1.5, 2, 2 + 1e-9, 2.5, 3]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim._solution["Current [A]"].entries,
             [cap / 2] * 3 + [0] * 3 + [-cap / 2] * 3,
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_rest_discharge_rest(self):
@@ -47,8 +49,10 @@ class TestExperiments(TestCase):
             solver=pybamm.CasadiSolver(),
         )
         sol = sim.solve()
-        np.testing.assert_array_almost_equal(sol["Current [A]"].data[:5], 0)
-        np.testing.assert_array_almost_equal(sol["Current [A]"].data[-29:], 0)
+        np.testing.assert_allclose(sol["Current [A]"].data[:5], 0, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            sol["Current [A]"].data[-29:], 0, rtol=1e-7, atol=1e-6
+        )
 
     def test_gitt(self):
         experiment = pybamm.Experiment(
@@ -60,9 +64,11 @@ class TestExperiments(TestCase):
         )
         sim.solve()
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim._solution["Current [A]"].entries,
             [cap / 20] * 11 + [0] * 11 + ([cap / 20] * 11 + [0] * 11) * 9,
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_infeasible(self):
@@ -78,7 +84,7 @@ class TestExperiments(TestCase):
         )
         sol = sim.solve()
         # this experiment fails during the third cycle (i.e. is infeasible)
-        self.assertEqual(len(sol.cycles), 3)
+        assert len(sol.cycles) == 3
 
     def test_drive_cycle(self):
         drive_cycle = np.array([np.arange(100), 5 * np.ones(100)]).T
@@ -100,13 +106,3 @@ class TestExperiments(TestCase):
         )
         sol = sim.solve()
         assert np.all(sol["Terminal voltage [V]"].entries >= 4.00)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

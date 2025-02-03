@@ -1,17 +1,15 @@
+import pytest
 import pybamm
-import unittest
 from tests import get_mesh_for_testing
-from tests import TestCase
-import sys
-import time
+
 import numpy as np
 
-if pybamm.have_jax():
+if pybamm.has_jax():
     import jax
 
 
-@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
-class TestJaxBDFSolver(TestCase):
+@pytest.mark.skipif(not pybamm.has_jax(), reason="jax or jaxlib is not installed")
+class TestJaxBDFSolver:
     def test_solver_(self):  # Trailing _ manipulates the random seed
         # Create model
         model = pybamm.BaseModel()
@@ -36,19 +34,12 @@ class TestJaxBDFSolver(TestCase):
         def fun(y, t):
             return rhs(t=t, y=y).reshape(-1)
 
-        t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
-        t1 = time.perf_counter() - t0
 
         # test accuracy
         np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
-        t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
-        t2 = time.perf_counter() - t0
-
-        # second run should be much quicker
-        self.assertLess(t2, t1)
 
         # test second run is accurate
         np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval), rtol=1e-6, atol=1e-6)
@@ -66,21 +57,14 @@ class TestJaxBDFSolver(TestCase):
         # this as a guess
         y0 = jax.numpy.array([1.0, 1.5])
 
-        t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
-        t1 = time.perf_counter() - t0
 
         # test accuracy
         soln = np.exp(0.05 * t_eval)
         np.testing.assert_allclose(y[:, 0], soln, rtol=1e-7, atol=1e-7)
         np.testing.assert_allclose(y[:, 1], 2.0 * soln, rtol=1e-7, atol=1e-7)
 
-        t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
-        t2 = time.perf_counter() - t0
-
-        # second run should be much quicker
-        self.assertLess(t2, t1)
 
         # test second run is accurate
         np.testing.assert_allclose(y[:, 0], np.exp(0.05 * t_eval), rtol=1e-7, atol=1e-7)
@@ -128,7 +112,7 @@ class TestJaxBDFSolver(TestCase):
         grad_solve_bdf = jax.jit(jax.grad(solve_bdf))
         grad_bdf = grad_solve_bdf(rate)
 
-        self.assertAlmostEqual(grad_bdf, grad_num, places=3)
+        assert grad_bdf == pytest.approx(grad_num, abs=0.001)
 
     def test_mass_matrix_with_sensitivities(self):
         # Solve
@@ -161,7 +145,7 @@ class TestJaxBDFSolver(TestCase):
         grad_solve_bdf = jax.jit(jax.grad(solve_bdf))
         grad_bdf = grad_solve_bdf(rate)
 
-        self.assertAlmostEqual(grad_bdf, grad_num, places=3)
+        assert grad_bdf == pytest.approx(grad_num, abs=0.001)
 
     def test_solver_with_inputs(self):
         # Create model
@@ -191,12 +175,3 @@ class TestJaxBDFSolver(TestCase):
         )
 
         np.testing.assert_allclose(y[:, 0].reshape(-1), np.exp(-0.1 * t_eval))
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

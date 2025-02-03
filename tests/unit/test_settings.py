@@ -1,52 +1,49 @@
 #
 # Tests the settings class.
 #
-from tests import TestCase
+
 import pybamm
-import unittest
+import pytest
 
 
-class TestSettings(TestCase):
+class TestSettings:
     def test_simplify(self):
-        self.assertTrue(pybamm.settings.simplify)
+        with pytest.raises(TypeError):
+            pybamm.settings.simplify = "Not Bool"
+
+        assert pybamm.settings.simplify
 
         pybamm.settings.simplify = False
-        self.assertFalse(pybamm.settings.simplify)
+        assert not pybamm.settings.simplify
 
         pybamm.settings.simplify = True
 
+    def test_debug_mode(self):
+        with pytest.raises(TypeError):
+            pybamm.settings.debug_mode = "Not bool"
+
     def test_smoothing_parameters(self):
-        self.assertEqual(pybamm.settings.min_max_mode, "exact")
-        self.assertEqual(pybamm.settings.heaviside_smoothing, "exact")
-        self.assertEqual(pybamm.settings.abs_smoothing, "exact")
+        assert pybamm.settings.min_max_mode == "exact"
+        assert pybamm.settings.heaviside_smoothing == "exact"
+        assert pybamm.settings.abs_smoothing == "exact"
 
         pybamm.settings.set_smoothing_parameters(10)
-        self.assertEqual(pybamm.settings.min_max_smoothing, 10)
-        self.assertEqual(pybamm.settings.heaviside_smoothing, 10)
-        self.assertEqual(pybamm.settings.abs_smoothing, 10)
+        assert pybamm.settings.min_max_smoothing == 10
+        assert pybamm.settings.heaviside_smoothing == 10
+        assert pybamm.settings.abs_smoothing == 10
         pybamm.settings.set_smoothing_parameters("exact")
 
         # Test errors
-        with self.assertRaisesRegex(ValueError, "greater than 1"):
+        with pytest.raises(ValueError, match="greater than 1"):
             pybamm.settings.min_max_mode = "smooth"
             pybamm.settings.min_max_smoothing = 0.9
-        with self.assertRaisesRegex(ValueError, "positive number"):
+        with pytest.raises(ValueError, match="positive number"):
             pybamm.settings.min_max_mode = "soft"
             pybamm.settings.min_max_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "positive number"):
+        with pytest.raises(ValueError, match="positive number"):
             pybamm.settings.heaviside_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "positive number"):
+        with pytest.raises(ValueError, match="positive number"):
             pybamm.settings.abs_smoothing = -10
-        with self.assertRaisesRegex(ValueError, "'soft', or 'smooth'"):
+        with pytest.raises(ValueError, match="'soft', or 'smooth'"):
             pybamm.settings.min_max_mode = "unknown"
         pybamm.settings.set_smoothing_parameters("exact")
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

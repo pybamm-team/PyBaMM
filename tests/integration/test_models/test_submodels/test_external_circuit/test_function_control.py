@@ -1,13 +1,11 @@
 #
 # Test function control submodel
 #
-from tests import TestCase
 import numpy as np
 import pybamm
-import unittest
 
 
-class TestFunctionControl(TestCase):
+class TestFunctionControl:
     def test_constant_current(self):
         def constant_current(variables):
             I = variables["Current [A]"]
@@ -43,14 +41,17 @@ class TestFunctionControl(TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Discharge capacity [A.h]"].entries,
             solutions[0]["Current [A]"].entries * solutions[0]["Time [h]"].entries,
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Voltage [V]"](solutions[0].t),
             solutions[1]["Voltage [V]"](solutions[0].t),
-            decimal=5,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_constant_voltage(self):
@@ -89,11 +90,11 @@ class TestFunctionControl(TestCase):
 
         V0 = solutions[0]["Voltage [V]"].entries
         V1 = solutions[1]["Voltage [V]"].entries
-        np.testing.assert_array_almost_equal(V0, V1)
+        np.testing.assert_allclose(V0, V1, rtol=1e-7, atol=1e-6)
 
         I0 = solutions[0]["Current [A]"].entries
         I1 = solutions[1]["Current [A]"].entries
-        np.testing.assert_array_almost_equal(abs((I1 - I0) / I0), 0, decimal=1)
+        np.testing.assert_allclose(abs((I1 - I0) / I0), 0, rtol=1e-2, atol=1e-1)
 
     def test_constant_power(self):
         def constant_power(variables):
@@ -128,8 +129,8 @@ class TestFunctionControl(TestCase):
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
-                np.testing.assert_array_almost_equal(
-                    solutions[0][var].data, sol[var].data
+                np.testing.assert_allclose(
+                    solutions[0][var].data, sol[var].data, rtol=1e-7, atol=1e-6
                 )
 
     def test_constant_resistance(self):
@@ -165,8 +166,8 @@ class TestFunctionControl(TestCase):
 
         for var in ["Voltage [V]", "Current [A]"]:
             for sol in solutions[1:]:
-                np.testing.assert_array_almost_equal(
-                    solutions[0][var].data, sol[var].data
+                np.testing.assert_allclose(
+                    solutions[0][var].data, sol[var].data, rtol=1e-7, atol=1e-6
                 )
 
     def test_cccv(self):
@@ -193,13 +194,3 @@ class TestFunctionControl(TestCase):
         # solve model
         t_eval = np.linspace(0, 3600, 100)
         model.default_solver.solve(model, t_eval)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()

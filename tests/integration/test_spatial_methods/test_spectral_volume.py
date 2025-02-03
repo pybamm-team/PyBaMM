@@ -1,11 +1,8 @@
 #
 # Test for the operator class
 #
-from tests import TestCase
 import pybamm
-
 import numpy as np
-import unittest
 
 
 def get_mesh_for_testing(
@@ -76,7 +73,7 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
 
 
-class TestSpectralVolumeConvergence(TestCase):
+class TestSpectralVolumeConvergence:
     def test_grad_div_broadcast(self):
         # create mesh and discretisation
         spatial_methods = {"macroscale": pybamm.SpectralVolume()}
@@ -324,12 +321,3 @@ class TestSpectralVolumeConvergence(TestCase):
         err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
         rates = np.log2(err_norm[:-1] / err_norm[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

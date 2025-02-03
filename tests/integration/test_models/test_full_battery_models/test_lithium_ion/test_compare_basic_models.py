@@ -1,14 +1,12 @@
 #
 # Compare basic models with full models
 #
-from tests import TestCase
 import pybamm
 
 import numpy as np
-import unittest
 
 
-class TestCompareBasicModels(TestCase):
+class TestCompareBasicModels:
     def test_compare_dfns(self):
         parameter_values = pybamm.ParameterValues("Ecker2015")
         basic_dfn = pybamm.lithium_ion.BasicDFN()
@@ -88,12 +86,3 @@ class TestCompareBasicModels(TestCase):
             np.testing.assert_allclose(
                 basic_sol[name].entries, sol[name].entries, rtol=1e-4
             )
-
-
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
-
-    if "-v" in sys.argv:
-        debug = True
-    unittest.main()

@@ -1,5 +1,8 @@
+.. _install-from-source:
+
 Install from source (GNU Linux and macOS)
 =========================================
+
 
 .. contents::
 
@@ -25,78 +28,48 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM supports versions 3.8, 3.9, 3.10, 3.11, and 3.12)
+- Python 3 (PyBaMM supports versions 3.9, 3.10, 3.11, and 3.12)
 - The Python headers file for your current Python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
 - A Fortran compiler (ex: ``gfortran``).
 - ``graphviz`` (optional), if you wish to build the documentation locally.
+- ``pandoc`` (optional) to convert the example Jupyter notebooks when building the documentation.
 
 You can install the above with
 
-.. tab:: Ubuntu
+.. tab:: Ubuntu/Debian
 
 	.. code:: bash
 
-		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz
+		sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran graphviz cmake pandoc
 
 	Where ``X`` is the version sub-number.
-
-	.. note::
-
-		On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or
-		follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 .. tab:: MacOS
 
 	.. code:: bash
 
-		brew install python openblas gcc gfortran graphviz libomp
+		brew install python openblas gcc gfortran graphviz libomp cmake pandoc
+
+.. note::
+
+    If you are using some other linux distribution you can install the equivalent packages for ``python3, cmake, gcc, gfortran, openblas, pandoc``.
+
+    On Windows, you can install ``graphviz`` using the `Chocolatey <https://chocolatey.org/>`_ package manager, or follow the instructions on the `graphviz website <https://graphviz.org/download/>`_.
 
 Finally, we recommend using `Nox <https://nox.thea.codes/en/stable/>`_.
-You can install it with
+You can install it to your local user account (make sure you are not within a virtual environment) with
 
 .. code:: bash
 
 	  python3.X -m pip install --user nox
 
+Note that running ``nox`` will create new virtual environments for you to use, so you do not need to create one yourself.
+
 Depending on your operating system, you may or may not have ``pip`` installed along Python.
 If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
 
-Installing the build-time requirements
---------------------------------------
-
-PyBaMM comes with a DAE solver based on the IDA solver provided by the SUNDIALS library.
-To use this solver, you must make sure that you have the necessary SUNDIALS components
-installed on your system.
-
-The IDA-based solver is currently unavailable on windows.
-If you are running windows, you can simply skip this section and jump to :ref:`pybamm-install`.
-
-.. code:: bash
-
-	  # in the PyBaMM/ directory
-	  nox -s pybamm-requires
-
-This will download, compile and install the SuiteSparse and SUNDIALS libraries.
-Both libraries are installed in ``~/.local``.
-
-Manual install of build time requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you'd rather do things yourself,
-
-1. Make sure you have CMake installed
-2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
-3. Compile and install SUNDIALS.
-4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
-
-
-PyBaMM ships with a Python script that automates points 2. and 3. You can run it with
-
-.. code:: bash
-
-	  python scripts/install_KLU_Sundials.py
 
 .. _pybamm-install:
 
@@ -121,7 +94,7 @@ It comes ready with PyBaMM and some useful development tools like `pre-commit <h
 
 You can now activate the environment with
 
-.. tab:: GNU/Linux and MacOS
+.. tab:: GNU/Linux and MacOS (bash)
 
 	.. code:: bash
 
@@ -152,7 +125,7 @@ tools for development and documentation:
 
 	  pip install -e .[all,dev,docs]
 
-If you are using ``zsh``, you would need to use different pattern matching:
+If you are using ``zsh`` or ``tcsh``, you would need to use different pattern matching:
 
 .. code:: bash
 
@@ -196,7 +169,7 @@ Finally, to run the unit and the integration suites sequentially, use
 
 	nox -s tests
 
-Using the test runner
+Using pytest
 ~~~~~~~~~~~~~~~~~~~~~~
 
 You can run unit tests for PyBaMM using
@@ -204,23 +177,19 @@ You can run unit tests for PyBaMM using
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  python run-tests.py --unit
+	  pytest -m unit
 
 
-The above starts a sub-process using the current python interpreter (i.e. using your current
-Python environment) and run the unit tests. This can take a few minutes.
+The above uses pytest (in your current
+Python environment) to run the unit tests. This can take a few minutes.
 
-You can also use the test runner to run the doctests:
-
-.. code:: bash
-
-	  python run-tests.py --doctest
-
-There is more to the PyBaMM test runner. To see a list of all options, type
+You can also use pytest to run the doctests:
 
 .. code:: bash
 
-	  python run-tests.py --help
+	  pytest --doctest-plus src
+
+Refer to the `testing <https://docs.pybamm.org/en/stable/source/user_guide/contributing.html#testing>`_ docs to find out more ways to test PyBaMM using pytest.
 
 How to build the PyBaMM documentation
 -------------------------------------
@@ -269,30 +238,3 @@ not being used when I run my Python script.
 **Solution:** Make sure you have installed PyBaMM using the ``-e`` flag,
 i.e. ``pip install -e .``. This sets the installed location of the
 source files to your current directory.
-
-**Problem:** Errors when solving model
-``ValueError: Integrator name ida does not exist``, or
-``ValueError: Integrator name cvode does not exist``.
-
-**Solution:** This could mean that you have not installed
-``scikits.odes`` correctly, check the instructions given above and make
-sure each command was successful.
-
-One possibility is that you have not set your ``LD_LIBRARY_PATH`` to
-point to the sundials library, type ``echo $LD_LIBRARY_PATH`` and make
-sure one of the directories printed out corresponds to where the
-SUNDIALS libraries are located.
-
-Another common reason is that you forget to install a BLAS library such
-as OpenBLAS before installing SUNDIALS. Check the cmake output when you
-configured SUNDIALS, it might say:
-
-::
-
-   -- A library with BLAS API not found. Please specify library location.
-   -- LAPACK requires BLAS
-
-If this is the case, on a Debian or Ubuntu system you can install
-OpenBLAS using ``sudo apt-get install libopenblas-dev`` (or
-``brew install openblas`` for Mac OS) and then re-install SUNDIALS using
-the instructions above.
