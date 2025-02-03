@@ -78,32 +78,12 @@ class TestMPM:
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_loss_active_material_stress_negative_not_implemented(self):
-        options = {"loss of active material": ("stress-driven", "none")}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_loss_active_material_stress_positive_not_implemented(self):
-        options = {"loss of active material": ("none", "stress-driven")}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_loss_active_material_stress_both_not_implemented(self):
-        options = {"loss of active material": "stress-driven"}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
     def test_reversible_plating_with_porosity_not_implemented(self):
         options = {
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
         with pytest.raises(pybamm.OptionError, match="distributions"):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_stress_induced_diffusion_not_implemented(self):
-        options = {"stress-induced diffusion": "true"}
-        with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
     def test_msmr(self):
@@ -184,27 +164,5 @@ class TestMPMWithSEI:
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
         }
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-
-class TestMPMWithMechanics:
-    def test_well_posed_negative_cracking_not_implemented(self):
-        options = {"particle mechanics": ("swelling and cracking", "none")}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_well_posed_positive_cracking_not_implemented(self):
-        options = {"particle mechanics": ("none", "swelling and cracking")}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_well_posed_both_cracking_not_implemented(self):
-        options = {"particle mechanics": "swelling and cracking"}
-        with pytest.raises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
-
-    def test_well_posed_both_swelling_only_not_implemented(self):
-        options = {"particle mechanics": "swelling only"}
         with pytest.raises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
