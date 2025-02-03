@@ -125,7 +125,7 @@ class TestUnaryOperators:
     @given(
         random_value=st.integers(),
         random_matrix=st.lists(
-            st.floats(min_value=-10, max_value=10), min_size=5, max_size=5
+            st.floats(min_value=-10, max_value=10), min_size=10, max_size=15
         ),
     )
     def test_sign(self, random_value, random_matrix):
