@@ -2,178 +2,9 @@ name: Build and publish package to PyPI
 on:
   release:
     types: [published]
-  schedule:
-    # Run at 10 am UTC on day-of-month 1 and 15.
-    - cron: "0 10 1,15 * *"
-  workflow_dispatch:
-    inputs:
-      target:
-        description: 'Deployment target. Can be "pypi" or "testpypi"'
-        default: "testpypi"
-      debug_enabled:
-        type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
-
-# Set options available for all jobs that use cibuildwheel
-env:
-  PYBAMM_DISABLE_TELEMETRY: "true"
-  # Increase pip debugging output, equivalent to `pip -vv`
-  CIBW_BUILD_VERBOSITY: 2
-  # Disable build isolation to allow pre-installing build-time dependencies.
-  # Note: CIBW_BEFORE_BUILD must be present in all jobs using cibuildwheel.
-  CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
-  # Skip PyPy and MUSL builds in any and all jobs
-  CIBW_SKIP: "pp* *musllinux*"
-  FORCE_COLOR: 3
 
 jobs:
-  build_windows_wheels:
-    name: Wheels (windows-latest)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
-        with:
-          python-version: 3.11
-
-      - name: Get number of cores on Windows
-        id: get_num_cores
-        shell: python
-        run: |
-          from os import environ, cpu_count
-          num_cpus = cpu_count()
-          output_file = environ['GITHUB_OUTPUT']
-          with open(output_file, "a", encoding="utf-8") as output_stream:
-              output_stream.write(f"count={num_cpus}\n")
-
-      - name: Cache packages installed through vcpkg on Windows
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
-        env:
-          cache-name: vckpg_binary_cache
-        with:
-          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
-
-      # Enable tmate debugging of manually-triggered workflows if the input option was provided
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@e5c7151931ca95bad1c6f4190c730ecf8c7dde48 # v3.19
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-
-      - name: Build 64-bit wheels on Windows
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ENVIRONMENT: >
-            PYBAMM_DISABLE_TELEMETRY="true"
-            PYBAMM_USE_VCPKG=ON
-            VCPKG_ROOT_DIR=C:\vcpkg
-            VCPKG_DEFAULT_TRIPLET=x64-windows-static-md
-            VCPKG_FEATURE_FLAGS=manifests,registries
-            CMAKE_GENERATOR="Visual Studio 17 2022"
-            CMAKE_GENERATOR_PLATFORM=x64
-            CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.get_num_cores.outputs.count }}
-          CIBW_ARCHS: AMD64
-          CIBW_BEFORE_BUILD: python -m pip install setuptools delvewheel # skip CasADi and CMake
-          # Fix access violation because GHA runners have modified PATH that picks wrong
-          # msvcp140.dll, see https://github.com/adang1345/delvewheel/issues/54
-          CIBW_REPAIR_WHEEL_COMMAND: delvewheel repair --add-path C:/Windows/System32 -w {dest_dir} {wheel}
-          CIBW_TEST_EXTRAS: "all,dev,jax"
-          CIBW_TEST_COMMAND: |
-            python -m pytest -m cibw {project}/tests/unit
-      - name: Upload Windows wheels
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        with:
-          name: wheels_windows
-          path: ./wheelhouse/*.whl
-          if-no-files-found: error
-
-  build_manylinux_wheels:
-    name: Wheels (linux-amd64)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        name: Check out PyBaMM repository
-
-      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
-        name: Set up Python
-        with:
-          python-version: 3.11
-
-      - name: Build wheels on Linux
-        run: pipx run cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ENVIRONMENT: >
-            PYBAMM_DISABLE_TELEMETRY="true"
-          CIBW_ARCHS_LINUX: x86_64
-          CIBW_BEFORE_BUILD_LINUX: python -m pip install setuptools
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
-          CIBW_TEST_EXTRAS: "all,dev,jax"
-          CIBW_TEST_COMMAND: |
-            set -e -x
-            python -m pytest -m cibw {project}/tests/unit
-
-      - name: Upload wheels for Linux
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        with:
-          name: wheels_manylinux
-          path: ./wheelhouse/*.whl
-          if-no-files-found: error
-
-  build_macos_wheels:
-    name: Wheels (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-13, macos-14]
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
-        with:
-          python-version: '3.11'
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel
-
-      - name: Build wheels on macOS
-        shell: bash
-        run: |
-            set -e -x
-
-            # cibuildwheel not recognising its environment variable, so set manually
-            export CIBUILDWHEEL="1"
-
-            python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ENVIRONMENT: >
-            PYBAMM_DISABLE_TELEMETRY="true"
-          # 10.13 for Intel (macos-13), 11.0 for Apple Silicon (macos-14 and macos-latest)
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '11.0' || '10.13' }}
-          CIBW_ARCHS_MACOS: auto
-          CIBW_BEFORE_BUILD: python -m pip install setuptools delocate
-          CIBW_REPAIR_WHEEL_COMMAND: |
-            if [[ $(uname -m) == "x86_64" ]]; then
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}
-            elif [[ $(uname -m) == "arm64" ]]; then
-              # Use higher macOS target for now since casadi/libc++.1.0.dylib is still not fixed
-              delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel} --require-target-macos-version 11.1
-              for file in {dest_dir}/*.whl; do mv "$file" "${file//macosx_11_1/macosx_11_0}"; done
-            fi
-          CIBW_TEST_EXTRAS: "all,dev,jax"
-          CIBW_TEST_COMMAND: |
-            set -e -x
-            python -m pytest -m cibw {project}/tests/unit
-
-      - name: Upload wheels for macOS (amd64, arm64)
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        with:
-          name: wheels_${{ matrix.os }}
-          path: ./wheelhouse/*.whl
-          if-no-files-found: error
-
-  build_sdist:
-    name: Build SDist
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -182,71 +13,31 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Build SDist
-        run: pipx run build --sdist
+      - name: Build wheel
+        run: pipx run build --outdir deploy
 
-      - name: Upload SDist
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      - name: Upload package
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: sdist
-          path: ./dist/*.tar.gz
+          name: distributions
+          path: deploy/
           if-no-files-found: error
 
-  publish_pypi:
-    # This job is only of value to PyBaMM and would always be skipped in forks
-    if: github.event_name != 'schedule' && github.repository == 'pybamm-team/PyBaMM'
-    name: Upload package to PyPI
-    needs: [
-      build_manylinux_wheels,
-      build_macos_wheels,
-      build_windows_wheels,
-      build_sdist
-    ]
+  publish:
+    needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/pybamm
+    environment: pypi
     permissions:
       id-token: write
 
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          path: artifacts
+          path: deploy
           merge-multiple: true
 
-      - name: Sanity check downloaded artifacts
-        run: ls -lA artifacts/
-
-      - name: Publish to PyPI
-        if: github.event.inputs.target == 'pypi' || github.event_name == 'release'
-        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70 # v1.12.3
+      - name: Publish on PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
-          packages-dir: artifacts/
-
-      - name: Publish to TestPyPI
-        if: github.event.inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70 # v1.12.3
-        with:
-          packages-dir: artifacts/
-          repository-url: https://test.pypi.org/legacy/
-
-  open_failure_issue:
-    needs: [
-      build_windows_wheels,
-      build_manylinux_wheels,
-      build_macos_wheels,
-      build_sdist
-    ]
-    name: Open an issue if build fails
-    if: ${{ always() && contains(needs.*.result, 'failure') && github.repository_owner == 'pybamm-team'}}
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5 # v2.9.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        LOGS: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      with:
-        filename: .github/wheel_failure.md
+          packages-dir: deploy/

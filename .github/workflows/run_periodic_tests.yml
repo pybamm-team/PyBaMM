@@ -36,7 +36,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo dot -c
+          sudo apt-get install gfortran gcc graphviz pandoc
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Install macOS system dependencies
@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -100,6 +100,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install graphviz pandoc
           sudo apt-get install texlive-latex-extra dvipng
 
       - name: Set up Python
@@ -132,6 +133,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz pandoc
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
@@ -161,6 +163,7 @@ jobs:
       - name: Install Linux system dependencies
         run: |
           sudo apt-get update
+          sudo apt-get install gfortran gcc graphviz
           sudo apt-get install libopenblas-dev texlive-latex-extra dvipng
 
       - name: Set up Python 3.12
