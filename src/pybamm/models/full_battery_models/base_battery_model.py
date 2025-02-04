@@ -545,20 +545,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "'quadratic' and 'quartic' concentration profiles have not yet "
                     "been implemented for particle-size ditributions"
                 )
-            if options["particle mechanics"] != "none":
-                raise NotImplementedError(
-                    "Particle mechanics submodels do not yet support particle-size"
-                    " distributions."
-                )
             if options["particle shape"] != "spherical":
                 raise NotImplementedError(
                     "Particle shape must be 'spherical' for particle-size distribution"
                     " submodels."
-                )
-            if options["stress-induced diffusion"] == "true":
-                raise NotImplementedError(
-                    "stress-induced diffusion cannot yet be included in "
-                    "particle-size distributions."
                 )
             if options["thermal"] == "x-full":
                 raise NotImplementedError(
