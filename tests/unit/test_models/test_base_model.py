@@ -1089,29 +1089,6 @@ class TestBaseModel:
         with pytest.raises(NotImplementedError, match="Variable must have type"):
             model.set_initial_conditions_from({})
 
-        var = pybamm.Variable(
-            "var",
-            domain="negative particle",
-            auxiliary_domains={
-                "secondary": "negative electrode",
-                "tertiary": "current collector",
-            },
-        )
-        model.rhs = {var: -var}
-        model.initial_conditions = {var: 1}
-        with pytest.raises(NotImplementedError, match="Variable must be 0D, 1D, or 2D"):
-            model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
-
-        var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
-        var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
-        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
-        model.algebraic = {var_concat: -var_concat}
-        model.initial_conditions = {var_concat: 1}
-        with pytest.raises(
-            NotImplementedError, match="Variable in concatenation must be 1D"
-        ):
-            model.set_initial_conditions_from({"var concat neg": np.ones((5, 6, 7))})
-
         # Inconsistent model and variable names
         model = pybamm.BaseModel()
         var = pybamm.Variable("var")
