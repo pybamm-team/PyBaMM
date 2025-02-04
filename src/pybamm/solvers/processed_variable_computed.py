@@ -200,8 +200,12 @@ class ProcessedVariableComputed:
             n_dim2 = self.unroll_params["n_dim2"]
             n_dim3 = self.unroll_params["n_dim3"]
             axis_swaps = self.unroll_params["axis_swaps"]
-        entries = np.concatenate(self._unroll_nnz(realdata), axis=0).reshape(
-            (len(self.t_pts), n_dim1, n_dim2, n_dim3)
+        entries = (
+            np.concatenate(self._unroll_nnz(realdata), axis=0)
+            .transpose()
+            .reshape(
+                (len(self.t_pts), n_dim1, n_dim2, n_dim3),
+            )
         )
         for a, b in axis_swaps:
             entries = np.moveaxis(entries, a, b)
@@ -483,6 +487,7 @@ class ProcessedVariableComputed:
             n_dim1=third_dim_size,
             n_dim2=second_dim_size,
             n_dim3=first_dim_size,
+            axis_swaps=[(0, 3), (0, 2), (0, 1)],
         )
 
         # add points outside first dimension domain for extrapolation to
