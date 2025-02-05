@@ -4,9 +4,9 @@ Parameterization
 .. toctree::
     :maxdepth: 1
 
-    notebooks/parameterization/change-input-current.ipynb
-    notebooks/parameterization/parameter-values.ipynb
-    notebooks/parameterization/parameterization.ipynb
-    notebooks/parameterization/sensitivities_and_data_fitting.ipynb
-    notebooks/parameterization/bpx.ipynb
-    notebooks/parameterization/geometric_parameters.ipynb
+    change-input-current.ipynb
+    parameter-values.ipynb
+    parameterization.ipynb
+    sensitivities_and_data_fitting.ipynb
+    bpx.ipynb
+    geometric_parameters.ipynb

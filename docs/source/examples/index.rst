@@ -3,12 +3,13 @@
 Examples
 ========
 
-This section contains a collection of Jupyter notebooks that demonstrate how to use PyBaMM and reveal some of its functionalities and inner workings.
-The notebooks are organised into subfolders, and can be viewed in the galleries below.
+This section contains a collection of Jupyter notebooks that demonstrate how
+to use PyBaMM and reveal some of its functionalities and inner workings.
+The notebooks are organised into subsections, and can be viewed below.
 
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     notebooks/getting_started/index
     notebooks/creating_models/index
