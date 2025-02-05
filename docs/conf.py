@@ -57,15 +57,14 @@ extensions = [
     # Third-party extensions
     "sphinx_design",
     "sphinx_copybutton",
-    "myst_parser",
     "sphinx_inline_tabs",
     "sphinxcontrib.bibtex",
     "sphinx_docsearch",
     "sphinx_last_updated_by_git",
-    "nbsphinx",  # to be kept below JavaScript-enabled extensions, always
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.load_style",
     "hoverxref.extension",
+    "myst_nb",
 ]
 
 
