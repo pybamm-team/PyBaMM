@@ -59,21 +59,6 @@ def run_integration(session):
     session.run("python", "-m", "pytest", "-m", "integration")
 
 
-@nox.session(name="doctests")
-def run_doctests(session):
-    """Run the doctests and generate the output(s) in the docs/build/ directory."""
-    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
-    session.install("setuptools", silent=False)
-    session.install("-e", ".[all,dev,docs]", silent=False)
-    session.run(
-        "python",
-        "-m",
-        "pytest",
-        "--doctest-plus",
-        "src",
-    )
-
-
 @nox.session(name="unit")
 def run_unit(session):
     """Run the unit tests."""
@@ -161,6 +146,19 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
 
+@nox.session(name="doctests")
+def run_doctests(session):
+    """Run the doctests and generate the output(s) in the docs/build/ directory."""
+    # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
+    session.install("setuptools", silent=False)
+    session.install("-e", ".[all,dev,docs]", silent=False)
+    session.run(
+        "python",
+        "-m",
+        "pytest",
+        "--doctest-plus",
+        "src",
+    )
 
 @nox.session(name="pre-commit")
 def lint(session):
