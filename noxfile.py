@@ -87,9 +87,9 @@ def run_examples(session):
     """Run the examples tests for Jupyter notebooks."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("-e", ".[all,dev,jax]", silent=False)
-    notebooks_to_test = session.posargs if session.posargs else []
+    scripts_to_test = session.posargs if session.posargs else []
     session.run(
-        "pytest", "--nbmake", *notebooks_to_test, "docs/source/examples/", external=True
+        "pytest", *scripts_to_test, "docs/source/examples/", external=True
     )
 
 

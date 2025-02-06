@@ -158,7 +158,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Example notebooks (ubuntu-latest / Python 3.12)
+    name: Example scripts (ubuntu-latest / Python 3.12)
 
     steps:
       - name: Check out PyBaMM repository
@@ -190,7 +190,7 @@ jobs:
       - name: Install nox
         run: python -m uv pip install nox[uv]
 
-      - name: Run example notebooks tests for GNU/Linux with Python 3.12
+      - name: Run example scripts tests for GNU/Linux with Python 3.12
         run: python -m nox -s examples
 
   run_scripts_tests:
