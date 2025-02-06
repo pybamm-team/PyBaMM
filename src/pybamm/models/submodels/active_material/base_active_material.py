@@ -99,13 +99,13 @@ class BaseModel(pybamm.BaseSubModel):
             R_av = pybamm.x_average(R)
 
             # Compute dimensional particle shape
-            if self.options["particle shape"] == "spherical":
+            if domain_options["particle shape"] == "spherical":
                 a = 3 * eps_solid / R
                 a_av = pybamm.x_average(a)
-            elif self.options["particle shape"] == "cylindrical":
+            elif domain_options["particle shape"] == "cylindrical":
                 a = 2 * eps_solid / R
                 a_av = pybamm.x_average(a)
-            elif self.options["particle shape"] == "platelet":
+            elif domain_options["particle shape"] == "platelet":
                 a = eps_solid / R
                 a_av = pybamm.x_average(a)
 

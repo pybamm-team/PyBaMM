@@ -100,16 +100,18 @@ class BaseModel(pybamm.BaseBatteryModel):
         var = pybamm.standard_spatial_vars
         if self.options.electrode_types["negative"] == "porous":
             r_n = var.r_n.create_copy()
-            if self.options["particle shape"] == "cylindrical":
+            particle_shape = self.options.negative["particle shape"]
+            if particle_shape == "cylindrical":
                 r_n.coord_sys = "cylindrical polar"
-            elif self.options["particle shape"] == "platelet":
+            elif particle_shape == "platelet":
                 r_n.coord_sys = "cartesian"
             self.variables.update({"r_n [m]": r_n})
         if self.options.electrode_types["positive"] == "porous":
             r_p = var.r_p.create_copy()
-            if self.options["particle shape"] == "cylindrical":
+            particle_shape = self.options.positive["particle shape"]
+            if particle_shape == "cylindrical":
                 r_p.coord_sys = "cylindrical polar"
-            elif self.options["particle shape"] == "platelet":
+            elif particle_shape == "platelet":
                 r_p.coord_sys = "cartesian"
             self.variables.update({"r_p [m]": r_p})
 
