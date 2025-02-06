@@ -134,7 +134,7 @@ def build_docs(session):
     envbindir = session.bin
     # Fix for Python 3.12 CI. This can be removed after pybtex is replaced.
     session.install("setuptools", silent=False)
-    session.install("-e", ".[all,docs]", silent=False)
+    session.install("-e", ".[all,jax,docs]", silent=False)
     session.chdir("docs")
     # Local development
     if session.interactive:
