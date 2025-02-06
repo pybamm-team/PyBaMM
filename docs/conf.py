@@ -67,6 +67,7 @@ extensions = [
     "myst_nb",
 ]
 
+myst_heading_anchors = 3
 
 napoleon_use_rtype = True
 napoleon_google_docstring = False
