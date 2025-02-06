@@ -146,6 +146,7 @@ def build_docs(session):
             f"{envbindir}/../tmp/html",
         )
 
+
 @nox.session(name="doctests")
 def run_doctests(session):
     """Run the doctests and generate the output(s) in the docs/build/ directory."""
@@ -159,6 +160,7 @@ def run_doctests(session):
         "--doctest-plus",
         "src",
     )
+
 
 @nox.session(name="pre-commit")
 def lint(session):
