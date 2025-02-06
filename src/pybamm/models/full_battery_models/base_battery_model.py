@@ -141,7 +141,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle shape" : str
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default), or "no particles".
+                (default), "cylindrical", "platelet", or "no particles".
             * "particle size" : str
                 Sets the model to include a single active particle size or a
                 distribution of sizes at any macroscale location. Can be "single"
@@ -294,7 +294,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
             "particle phases": ["1", "2"],
-            "particle shape": ["spherical", "no particles"],
+            "particle shape": ["spherical", "cylindrical", "platelet", "no particles"],
             "particle size": ["single", "distribution"],
             "SEI": [
                 "none",

@@ -39,7 +39,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'uniform profile', 'quadratic profile', 'quartic profile', 'MSMR'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle phases': '1' (possible: ['1', '2'])
-'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
+'particle shape': 'spherical' (possible: ['spherical', 'cylindrical', 'platelet', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'reaction limited (asymmetric)', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited', 'ec reaction limited (asymmetric)', 'VonKolzenberg2020', 'tunnelling limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])

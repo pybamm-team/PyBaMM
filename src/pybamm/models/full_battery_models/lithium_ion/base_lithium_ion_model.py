@@ -99,9 +99,19 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Particle concentration position
         var = pybamm.standard_spatial_vars
         if self.options.electrode_types["negative"] == "porous":
-            self.variables.update({"r_n [m]": var.r_n})
+            r_n = var.r_n.create_copy()
+            if self.options["particle shape"] == "cylindrical":
+                r_n.coord_sys = "cylindrical polar"
+            elif self.options["particle shape"] == "platelet":
+                r_n.coord_sys = "cartesian"
+            self.variables.update({"r_n [m]": r_n})
         if self.options.electrode_types["positive"] == "porous":
-            self.variables.update({"r_p [m]": var.r_p})
+            r_p = var.r_p.create_copy()
+            if self.options["particle shape"] == "cylindrical":
+                r_p.coord_sys = "cylindrical polar"
+            elif self.options["particle shape"] == "platelet":
+                r_p.coord_sys = "cartesian"
+            self.variables.update({"r_p [m]": r_p})
 
     def set_degradation_variables(self):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""
