@@ -125,7 +125,6 @@ Dependency                                                                      
 `nbsphinx <https://nbsphinx.readthedocs.io/en/0.9.5/>`__                                          \-                 docs               Sphinx extension that provides a source parser for .ipynb files
 `ipykernel <https://pypi.org/project/ipykernel/>`__                                               \-                 docs               Provides the IPython kernel for Jupyter.
 `ipywidgets <https://ipywidgets.readthedocs.io/en/latest/>`__                                     \-                 docs               Interactive HTML widgets for Jupyter notebooks and the IPython kernel.
-`sphinx-gallery <https://pypi.org/project/sphinx-gallery/>`__                                     \-                 docs               Builds an HTML gallery of examples from any set of Python scripts.
 `sphinx-hoverxref <https://sphinx-hoverxref.readthedocs.io/en/latest/index.html>`__               \-                 docs               Sphinx extension to show a floating window.
 `sphinx-docsearch <https://sphinx-docsearch.readthedocs.io/>`__                                   \-                 docs               To replaces Sphinx’s built-in search with Algolia DocSearch.
 ================================================================================================= ================== ================== =======================================================================

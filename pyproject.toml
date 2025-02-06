@@ -63,7 +63,6 @@ docs = [
     "sphinx-last-updated-by-git",
     "ipykernel",
     "ipywidgets",
-    "sphinx-gallery",
     "sphinx-hoverxref",
     "sphinx-docsearch",
     "myst_nb",

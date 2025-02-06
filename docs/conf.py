@@ -62,8 +62,7 @@ extensions = [
     "sphinx_docsearch",
     "sphinx_last_updated_by_git",
     "IPython.sphinxext.ipython_console_highlighting",
-    "sphinx_gallery.load_style",
-    #"hoverxref.extension",
+    "hoverxref.extension",
     "myst_nb",
 ]
 
@@ -75,7 +74,7 @@ napoleon_google_docstring = False
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
-source_suffix = ['.rst', '.md']
+source_suffix = [".rst", ".md"]
 master_doc = "index"
 language = "en"
 
@@ -281,6 +280,8 @@ nbsphinx_requirejs_path = ""
 # made to a notebook, if any.
 # On local builds, the version is not set, so we use "latest".
 
+append_to_url = ""
+notebooks_version = "develop"
 if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
     os.environ.get("READTHEDOCS_VERSION") is None
 ):
