@@ -1,13 +1,12 @@
 import pybamm
-import numpy as np
+
 
 class singleparticletry(pybamm.lithium_ion.base_lithium_ion_model):
-    def __init__(self,options,name="SEItry"):
-
+    def __init__(self, options, name="SEItry"):
         options = options or {}
-        
+
         super().__init__(options, name)
-        
+
         param = self.param
         R = pybamm.Parameter("Particle radius [m]")
         D = pybamm.Parameter("Diffusion coefficient [m2.s-1]")
@@ -24,7 +23,9 @@ class singleparticletry(pybamm.lithium_ion.base_lithium_ion_model):
         # boundary conditions
         lbc = pybamm.Scalar(0)
         rbc = -j / F / D
-        self.boundary_conditions = {c: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")}}
+        self.boundary_conditions = {
+            c: {"left": (lbc, "Neumann"), "right": (rbc, "Neumann")}
+        }
 
         # initial conditions
         self.initial_conditions = {c: c0}

@@ -2,6 +2,7 @@ import pybamm
 
 from .base_sei import BaseModel
 
+
 class mytotalSEI(BaseModel):
     def __init__(
         self, param, domain, reaction_loc, options, phase="primary", cracks=False
@@ -97,12 +98,11 @@ class mytotalSEI(BaseModel):
             # Scott Marquis thesis (eq. 5.92)
             k1 = -phase_param.j0_sei * pybamm.exp(-alpha_SEI * F_RT * eta_SEI)
 
-        
             # Scott Marquis thesis (eq. 5.94)
             eta_inner = delta_phi - phase_param.U_sei
             k2 = (eta_inner < 0) * phase_param.kappa_inner * eta_inner / L_sei
 
-            #elif SEI_option == "tunnelling limited":  #
+            # elif SEI_option == "tunnelling limited":  #
             # This comes from eq.25 in Tang, M., Lu, S. and Newman, J., 2012.
             # Experimental and theoretical investigation of solid-electrolyte-interphase formation mechanisms on glassy carbon.
             # Journal of The Electrochemical Society, 159(11), p.A1775.
@@ -112,7 +112,7 @@ class mytotalSEI(BaseModel):
                 * pybamm.exp(-phase_param.beta_tunnelling * L_sei)
             )
 
-            #elif SEI_option == "VonKolzenberg2020":
+            # elif SEI_option == "VonKolzenberg2020":
             # Equation 19 in
             # von Kolzenberg L, Latz A, Horstmann B.
             # Solid electrolyte interphase during battery cycling:
@@ -138,17 +138,17 @@ class mytotalSEI(BaseModel):
             )
             k4 = -phase_param.j0_sei * LL_k * pybamm.exp(-alpha_SEI * eta_bar)
 
-            #elif SEI_option == "interstitial-diffusion limited":
+            # elif SEI_option == "interstitial-diffusion limited":
             # Scott Marquis thesis (eq. 5.96)
             k5 = -(
                 phase_param.D_li * phase_param.c_li_0 * self.param.F / L_sei
             ) * pybamm.exp(-F_RT * delta_phi)
 
-            #elif SEI_option == "solvent-diffusion limited":
+            # elif SEI_option == "solvent-diffusion limited":
             # Scott Marquis thesis (eq. 5.91)
             k6 = -phase_param.D_sol * phase_param.c_sol * self.param.F / L_sei
 
-            #elif SEI_option.startswith("ec reaction limited"):
+            # elif SEI_option.startswith("ec reaction limited"):
             # we have a linear system for j and c
             #  c = c_0 + j * L / F / D          [1] (eq 11 in the Yang2017 paper)
             #  j = - F * c * k_exp()            [2] (eq 10 in the Yang2017 paper, factor
@@ -244,5 +244,3 @@ class mytotalSEI(BaseModel):
         else:
             L_sei_0 = self.phase_param.L_sei_0
         self.initial_conditions = {L_sei: L_sei_0}
-
-    

@@ -4279,8 +4279,7 @@ def get_parameter_values():
         "Electrolyte conductivity scaling": 0.17082208852998965,
         "Initial concentration in electrolyte [mol.m-3]": 1000,
         "Thermodynamic factor": 1.0,
-        "Electrolyte reference diffusivity [m2.s-1]"
-        "": electrolyte_diffusivity_Nyman2008,
+        "Electrolyte reference diffusivity [m2.s-1]": electrolyte_diffusivity_Nyman2008,
         "Electrolyte reference conductivity [S.m-1]"
         "": electrolyte_conductivity_Nyman2008,
         "Electrolyte diffusivity activation energy [J.mol-1]": 0,
@@ -4333,8 +4332,7 @@ def get_parameter_values():
         "Negative particle reference diffusivity [m2.s-1]": 1.0662704683936447e-14,
         "Positive particle reference diffusivity [m2.s-1]": 2.2293344233982313e-14,
         "Negative particle diffusivity activation energy [J.mol-1]": 80000.0,
-        "Positive particle diffusivity activation energy [J.mol-1]"
-        "": 45718.017369120535,
+        "Positive particle diffusivity activation energy [J.mol-1]": 45718.017369120535,
         "Casing heat capacity [J.K-1]": 59.286472861544645,
         "Environment thermal resistance [K.W-1]": 8.460087134993298,
     }
