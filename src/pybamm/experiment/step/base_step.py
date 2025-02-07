@@ -68,6 +68,7 @@ class BaseStep:
         start_time=None,
         description=None,
         direction: str | None = None,
+        input_parameters: dict[str, any] | None = None,
     ):
         potential_directions = ["charge", "discharge", "rest", None]
         if direction not in potential_directions:
@@ -77,6 +78,7 @@ class BaseStep:
         self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
+        self.input_parameters = input_parameters if input_parameters is not None else {}
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
@@ -194,7 +196,7 @@ class BaseStep:
         self.next_start_time = None
         self.end_time = None
 
-    def copy(self):
+    def copy(self, input_parameters: dict[str, any] | None = None):
         """
         Return a copy of the step.
 
@@ -203,6 +205,12 @@ class BaseStep:
         :class:`pybamm.Step`
             A copy of the step.
         """
+
+        new_input_parameters = (
+            input_parameters
+            if input_parameters is not None
+            else getattr(self, "input_parameters", {})
+        )
         return self.__class__(
             self.input_value,
             duration=self.input_duration,
@@ -213,6 +221,7 @@ class BaseStep:
             start_time=self.start_time,
             description=self.description,
             direction=self.direction,
+            input_parameters=new_input_parameters,
         )
 
     def __str__(self):
@@ -387,7 +396,18 @@ class BaseStep:
         """
         if isinstance(self.value, pybamm.Symbol):
             inpt = {"start time": 0}
-            init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
+            merged_inputs = {}
+            if hasattr(self, "input_parameters"):
+                merged_inputs.update(self.input_parameters)
+            merged_inputs.update(inpt)
+            if (
+                isinstance(self.value, pybamm.InputParameter)
+                and self.value.name not in merged_inputs
+            ):
+                merged_inputs[self.value.name] = self.input_parameters.get(
+                    self.value.name
+                )
+            init_curr = self.value.evaluate(t=0, inputs=merged_inputs).flatten()[0]
         else:
             init_curr = self.value
         sign = np.sign(init_curr)
