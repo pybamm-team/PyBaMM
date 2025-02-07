@@ -2,6 +2,7 @@
 
 ## Features
 
+- Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
 
 # [v25.1.1](https://github.com/pybamm-team/PyBaMM/tree/v25.1.1) - 2025-01-20
