@@ -648,49 +648,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
         return out
 
-    def U_hysteresis_branch(self, sto, T, branch="lithiation"):
-        """
-        Dimensional open-circuit potential [V] for lithiation or delithiation,
-        calculated as U(x,T) = U_ref(x) + dUdT(x) * (T - T_ref).
-        See the documentation for dUdT for more details.
-        """
-        # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
-        # will ensure that ocp goes to +- infinity if sto goes into that region
-        # anyway
-        Domain = self.domain.capitalize()
-        tol = pybamm.settings.tolerances["U__c_s"]
-        sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
-        inputs = {f"{self.phase_prefactor}{Domain} particle stoichiometry": sto}
-
-        # if "branch" takes a value different from "lithiation" or "delithiation",
-        # the function "u_ref" defaults to a hysteresis-free ocp
-        if branch == "lithiation":
-            u_ref = pybamm.FunctionParameter(
-                f"{self.phase_prefactor}{Domain} electrode lithiation OCP [V]", inputs
-            )
-        elif branch == "delithiation":
-            u_ref = pybamm.FunctionParameter(
-                f"{self.phase_prefactor}{Domain} electrode delithiation OCP [V]", inputs
-            )
-        else:
-            u_ref = pybamm.FunctionParameter(
-                f"{self.phase_prefactor}{Domain} electrode OCP [V]", inputs
-            )
-
-        dudt_func = self.dUdT(sto)
-        u_ref = u_ref + (T - self.main_param.T_ref) * dudt_func
-
-        # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
-        # this will not affect the OCP for most values of sto
-        # see #1435
-        out = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-
-        if self.domain == "negative":
-            out.print_name = r"U_\mathrm{n}(c^\mathrm{surf}_\mathrm{s,n}, T)"
-        elif self.domain == "positive":
-            out.print_name = r"U_\mathrm{p}(c^\mathrm{surf}_\mathrm{s,p}, T)"
-        return out
-
     def dUdT(self, sto):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1].

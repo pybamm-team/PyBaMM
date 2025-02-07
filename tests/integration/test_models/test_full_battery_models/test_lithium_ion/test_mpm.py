@@ -90,6 +90,30 @@ class TestMPM:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
+    def test_axen_ocp(self):
+        options = {"open-circuit potential": ("Axen", "single")}
+        model = pybamm.lithium_ion.MPM(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
+                - 0.1,
+                "Negative electrode delithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
+                + 0.1,
+                "Negative particle hysteresis decay rate for lithiation": 15,
+                "Negative particle hysteresis decay rate for delithiation": 15,
+                "Initial hysteresis state in negative electrode": 0.5,
+            },
+            check_already_exists=False,
+        )
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
+
     def test_voltage_control(self):
         options = {"operating mode": "voltage"}
         model = pybamm.lithium_ion.MPM(options)

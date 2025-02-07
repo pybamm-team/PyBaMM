@@ -12,9 +12,6 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
     a decay rate parameter.
     """
 
-    def __init__(self, param, domain, reaction, options, phase="primary"):
-        super().__init__(param, domain, reaction, options=options, phase=phase)
-
     def get_fundamental_variables(self):
         domain, Domain = self.domain_Domain
         phase_name = self.phase_name
@@ -68,12 +65,8 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
             ] = h
 
             # Bulk OCP is from the average SOC and temperature
-            lith_ref = self.phase_param.U_hysteresis_branch(
-                sto_surf, T, branch="lithiation"
-            )
-            delith_ref = self.phase_param.U_hysteresis_branch(
-                sto_surf, T, branch="delithiation"
-            )
+            lith_ref = self.phase_param.U(sto_surf, T, "lithiation")
+            delith_ref = self.phase_param.U(sto_surf, T, "delithiation")
             H = lith_ref - delith_ref
             variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
 
@@ -102,7 +95,11 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
             else:
                 ocp_surf = delith_ref + H * h
 
-            ocp_bulk = delith_ref_x_av + H_x_av * h_x_av
+            delith_ref_s_av = pybamm.size_average(delith_ref_x_av)
+            H_s_av = pybamm.size_average(H_x_av)
+            h_s_av = pybamm.size_average(h_x_av)
+
+            ocp_bulk = delith_ref_s_av + H_s_av * h_s_av
 
             dUdT = self.phase_param.dUdT(sto_surf)
 
@@ -127,10 +124,12 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
         S_delith = -i_vol * K_delith / (self.param.F * c_max * epsl)
 
         i_vol_sign = pybamm.sign(i_vol)
-        f = 0.5 * (1 - i_vol_sign) + i_vol_sign * h
-        d = 0.5 * (1 - i_vol_sign) * S_lith + 0.5 * (1 + i_vol_sign) * S_delith
+        signed_h = 0.5 * (1 - i_vol_sign) + i_vol_sign * h
+        rate_coefficient = (
+            0.5 * (1 - i_vol_sign) * S_lith + 0.5 * (1 + i_vol_sign) * S_delith
+        )
 
-        dhdt = f * d
+        dhdt = rate_coefficient * signed_h
 
         self.rhs[h] = dhdt
 

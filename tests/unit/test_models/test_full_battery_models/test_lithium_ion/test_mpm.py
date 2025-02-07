@@ -123,6 +123,13 @@ class TestMPM:
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
+    def test_axen_ocp(self):
+        options = {
+            "open-circuit potential": "Axen",
+        }
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
+
     def test_mpm_with_lithium_plating(self):
         options = {
             "lithium plating": "irreversible",
