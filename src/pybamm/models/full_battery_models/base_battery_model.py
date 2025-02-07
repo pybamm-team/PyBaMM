@@ -226,6 +226,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     """
 
     def __init__(self, extra_options):
+        print("modified")
         self.possible_options = {
             "calculate discharge energy": ["false", "true"],
             "calculate heat source for isothermal models": ["false", "true"],
@@ -308,6 +309,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited (asymmetric)",
                 "VonKolzenberg2020",
                 "tunnelling limited",
+                "my sei",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI on cracks": ["false", "true"],

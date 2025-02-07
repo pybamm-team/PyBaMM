@@ -276,7 +276,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                         self.param, domain, self.options, phase
                     )
                 else:
-                    submodel = pybamm.sei.SEIGrowth(
+                    submodel = pybamm.sei.mytotalSEI(
                         self.param,
                         domain,
                         reaction_loc,
