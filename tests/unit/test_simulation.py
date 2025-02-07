@@ -665,3 +665,15 @@ class TestSimulation:
         inputs = {"Electrode height [m]": 0.2}
         sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
         sim.solve(t_eval=t_eval, inputs=inputs)
+
+    def test_simulation_cannot_force_calc_esoh(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -v}
+        model.initial_conditions = {v: 1}
+        sim = pybamm.Simulation(model)
+
+        with pytest.warns(
+            UserWarning, match="Model is not suitable for calculating eSOH"
+        ):
+            sim.solve([0, 1], calc_esoh=True)
