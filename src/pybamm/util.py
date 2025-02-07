@@ -102,7 +102,8 @@ class FuzzyDict(dict):
         known_keys : list of str
             The list of known dictionary keys to search within.
         min_similarity : float, optional
-            The minimum similarity threshold for a match (default is 0.4).
+            The minimum similarity threshold for a match.
+            Default is 0.4 
         """
         search_key = search_key.lower()
         exact_matches = []
@@ -143,7 +144,8 @@ class FuzzyDict(dict):
             If True, print both keys and values. Otherwise, print only keys.
             Default is False.
         min_similarity : float, optional
-            The minimum similarity threshold for a match (default is 0.4).
+            The minimum similarity threshold for a match.
+            Default is 0.4
         """
 
         if not isinstance(keys, (str, list)) or not all(
