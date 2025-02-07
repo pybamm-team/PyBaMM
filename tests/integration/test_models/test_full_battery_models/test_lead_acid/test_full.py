@@ -28,7 +28,7 @@ class TestLeadAcidFull:
 
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python)
+        np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-6)
 
     def test_set_up(self):
         options = {"thermal": "isothermal"}

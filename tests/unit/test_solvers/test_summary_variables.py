@@ -167,5 +167,7 @@ class TestSummaryVariables:
         sol = sim.solve()
 
         assert len(sol.summary_variables.cycles) == 10
+        assert sol.summary_variables["Cycle number"][0] == 1
+        assert sol.summary_variables["Cycle number"][9] == 10
         assert len(sol.summary_variables["x_100"]) == 10
         assert np.isclose(sol.summary_variables["x_100"][0], 0.9493)
