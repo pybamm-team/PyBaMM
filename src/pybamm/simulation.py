@@ -474,8 +474,9 @@ class Simulation:
                 warnings.warn(
                     UserWarning(
                         "Model is not suitable for calculating eSOH, "
-                        "setting `calc_esoh` to False"
-                    )
+                        "setting `calc_esoh` to False",
+                    ),
+                    stacklevel=2,
                 )
 
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
