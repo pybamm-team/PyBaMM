@@ -33,7 +33,7 @@ jobs:
           python -m uv pip install pre-commit
           pre-commit run -a
 
-  run_unit_and_coverage_tests:
+  run_unit_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -105,6 +105,10 @@ jobs:
         uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run integration tests for ${{ matrix.os }} with Python ${{ matrix.python-version }}
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: python -m nox -s integration
 
   run_doctests:
     runs-on: ubuntu-latest
