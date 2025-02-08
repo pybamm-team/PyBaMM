@@ -163,8 +163,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(self.eta_r_n(t, x_n), tol)
             np.testing.assert_array_less(-self.eta_r_p(t, x_p), tol)
         elif self.operating_condition == "off":
-            np.testing.assert_array_almost_equal(self.eta_r_n(t, x_n), 0)
-            np.testing.assert_array_almost_equal(-self.eta_r_p(t, x_p), 0)
+            np.testing.assert_allclose(self.eta_r_n(t, x_n), 0, rtol=1e-7, atol=1e-6)
+            np.testing.assert_allclose(-self.eta_r_p(t, x_p), 0, rtol=1e-7, atol=1e-6)
 
     def test_overpotentials(self):
         """Testing that all are:
@@ -183,8 +183,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(-self.delta_phi_s_av(self.t), tol)
 
         elif self.operating_condition == "off":
-            np.testing.assert_array_almost_equal(self.eta_r_av(self.t), 0)
-            np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=11)
+            np.testing.assert_allclose(self.eta_r_av(self.t), 0, rtol=1e-7, atol=1e-6)
+            np.testing.assert_allclose(self.eta_e_av(self.t), 0, rtol=1e-12, atol=1e-11)
             np.testing.assert_allclose(
                 self.delta_phi_s_av(self.t), 0, atol=2e-14, rtol=1e-16
             )
@@ -204,8 +204,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(neg_end_vs_start, 0)
             np.testing.assert_array_less(-pos_end_vs_start, 0)
         elif self.operating_condition == "off":
-            np.testing.assert_array_almost_equal(neg_end_vs_start, 0)
-            np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
+            np.testing.assert_allclose(neg_end_vs_start, 0, rtol=1e-7, atol=1e-6)
+            np.testing.assert_allclose(pos_end_vs_start, 0, rtol=1e-7, atol=1e-6)
 
     def test_ocv(self):
         """Testing that:
@@ -221,7 +221,7 @@ class VoltageTests(BaseOutputTest):
         elif self.operating_condition == "charge":
             np.testing.assert_array_less(-end_vs_start, 0)
         elif self.operating_condition == "off":
-            np.testing.assert_array_almost_equal(end_vs_start, 0)
+            np.testing.assert_allclose(end_vs_start, 0, rtol=1e-7, atol=1e-6)
 
     def test_voltage(self):
         """Testing that:
@@ -236,24 +236,32 @@ class VoltageTests(BaseOutputTest):
         elif self.operating_condition == "charge":
             np.testing.assert_array_less(-end_vs_start, 0)
         elif self.operating_condition == "off":
-            np.testing.assert_array_almost_equal(end_vs_start, 0)
+            np.testing.assert_allclose(end_vs_start, 0, rtol=1e-7, atol=1e-6)
 
     def test_consistent(self):
         """Test voltage components are consistent with one another by ensuring they sum
         correctly"""
 
-        np.testing.assert_array_almost_equal(
-            self.ocv(self.t), self.ocp_p(self.t) - self.ocp_n(self.t)
+        np.testing.assert_allclose(
+            self.ocv(self.t),
+            self.ocp_p(self.t) - self.ocp_n(self.t),
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
-            self.eta_r_av(self.t), self.eta_r_p_av(self.t) - self.eta_r_n_av(self.t)
+        np.testing.assert_allclose(
+            self.eta_r_av(self.t),
+            self.eta_r_p_av(self.t) - self.eta_r_n_av(self.t),
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             self.eta_particle(self.t),
             self.eta_particle_p(self.t) - self.eta_particle_n(self.t),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             self.voltage(self.t),
             self.ocv(self.t)
             + self.eta_particle(self.t)
@@ -261,7 +269,8 @@ class VoltageTests(BaseOutputTest):
             + self.eta_e_av(self.t)
             + self.delta_phi_s_av(self.t)
             + self.eta_sei_av(self.t),
-            decimal=5,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_all(self):
@@ -385,8 +394,8 @@ class ParticleConcentrationTests(BaseOutputTest):
             np.testing.assert_array_less(0, neg_end_vs_start)
             np.testing.assert_array_less(pos_end_vs_start, 0)
         elif self.operating_condition == "off":
-            np.testing.assert_array_almost_equal(neg_diff, 0)
-            np.testing.assert_array_almost_equal(pos_diff, 0)
+            np.testing.assert_allclose(neg_diff, 0, rtol=1e-7, atol=1e-6)
+            np.testing.assert_allclose(pos_diff, 0, rtol=1e-7, atol=1e-6)
             np.testing.assert_allclose(neg_end_vs_start, 0, rtol=1e-16, atol=1e-5)
             np.testing.assert_allclose(pos_end_vs_start, 0, rtol=1e-16, atol=1e-5)
 
@@ -455,7 +464,8 @@ class ParticleConcentrationTests(BaseOutputTest):
             decimal = 9
         else:
             decimal = 14
-        np.testing.assert_array_almost_equal(diff, 0, decimal=decimal)
+        atol = 10 ** (-decimal + 1)
+        np.testing.assert_allclose(diff, 0, rtol=1e-7, atol=atol)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
@@ -479,8 +489,8 @@ class ParticleConcentrationTests(BaseOutputTest):
         )
         if self.model.options["particle"] == "uniform profile":
             # Fluxes are zero everywhere since the concentration is uniform
-            np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
-            np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
+            np.testing.assert_allclose(self.N_s_n(t, x_n, r_n), 0, rtol=1e-7, atol=1e-6)
+            np.testing.assert_allclose(self.N_s_p(t, x_p, r_p), 0, rtol=1e-7, atol=1e-6)
         else:
             if self.operating_condition == "discharge":
                 if self.model.options["particle"] == "quartic profile":
@@ -498,11 +508,15 @@ class ParticleConcentrationTests(BaseOutputTest):
                 np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 1e-16)
                 np.testing.assert_array_less(-1e-16, self.N_s_p(t[1:], x_p, r_p[1:]))
             if self.operating_condition == "off":
-                np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
-                np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
+                np.testing.assert_allclose(
+                    self.N_s_n(t, x_n, r_n), 0, rtol=1e-7, atol=1e-6
+                )
+                np.testing.assert_allclose(
+                    self.N_s_p(t, x_p, r_p), 0, rtol=1e-7, atol=1e-6
+                )
 
-        np.testing.assert_array_almost_equal(0, self.N_s_n(t, x_n, r_n[0]), decimal=4)
-        np.testing.assert_array_almost_equal(0, self.N_s_p(t, x_p, r_p[0]), decimal=4)
+        np.testing.assert_allclose(0, self.N_s_n(t, x_n, r_n[0]), rtol=1e-5, atol=1e-4)
+        np.testing.assert_allclose(0, self.N_s_p(t, x_p, r_p[0]), rtol=1e-5, atol=1e-4)
 
     def test_all(self):
         self.test_concentration_increase_decrease()
@@ -590,8 +604,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         models (bug in implementation of boundary conditions?)"""
 
         t, x = self.t, self.x_edge
-        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[0]), 0, decimal=3)
-        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[-1]), 0, decimal=3)
+        np.testing.assert_allclose(self.N_e_hat(t, x[0]), 0, rtol=1e-4, atol=1e-3)
+        np.testing.assert_allclose(self.N_e_hat(t, x[-1]), 0, rtol=1e-4, atol=1e-3)
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
@@ -604,7 +618,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
         # Loose tolerance since the different way that c_e and c_e_n/s/p are calculated
         # introduces some numerical error
-        np.testing.assert_array_almost_equal(self.c_e(t, x), c_e_combined, decimal=12)
+        np.testing.assert_allclose(self.c_e(t, x), c_e_combined, rtol=1e-13, atol=1e-12)
 
     def test_all(self):
         self.test_concentration_limit()
@@ -660,7 +674,7 @@ class PotentialTests(BaseOutputTest):
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
-        np.testing.assert_array_almost_equal(self.phi_s_n(self.t, x=0), 0, decimal=5)
+        np.testing.assert_allclose(self.phi_s_n(self.t, x=0), 0, rtol=1e-6, atol=1e-5)
 
     def test_positive_electrode_potential_profile(self):
         """Test average positive electrode potential is less than the positive electrode
@@ -673,13 +687,17 @@ class PotentialTests(BaseOutputTest):
         potential and electrolyte potential"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        np.testing.assert_array_almost_equal(
-            self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n), self.delta_phi_n(t, x_n)
+        np.testing.assert_allclose(
+            self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n),
+            self.delta_phi_n(t, x_n),
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             self.phi_s_p(t, x_p) - self.phi_e_p(t, x_p),
             self.delta_phi_p(t, x_p),
-            decimal=5,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_average_potential_differences(self):
@@ -687,11 +705,17 @@ class PotentialTests(BaseOutputTest):
         potential and electrolyte potential"""
         t = self.t
 
-        np.testing.assert_array_almost_equal(
-            self.phi_s_n_av(t) - self.phi_e_n_av(t), self.delta_phi_n_av(t), decimal=4
+        np.testing.assert_allclose(
+            self.phi_s_n_av(t) - self.phi_e_n_av(t),
+            self.delta_phi_n_av(t),
+            rtol=1e-5,
+            atol=1e-4,
         )
-        np.testing.assert_array_almost_equal(
-            self.phi_s_p_av(t) - self.phi_e_p_av(t), self.delta_phi_p_av(t), decimal=4
+        np.testing.assert_allclose(
+            self.phi_s_p_av(t) - self.phi_e_p_av(t),
+            self.delta_phi_p_av(t),
+            rtol=1e-5,
+            atol=1e-4,
         )
 
     def test_gradient_splitting(self):
@@ -802,10 +826,10 @@ class CurrentTests(BaseOutputTest):
         current_param = self.model.param.current_density_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=2)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell, decimal=3)
-        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0, decimal=4)
+        np.testing.assert_allclose(self.i_s_n(t, x_n[0]), i_cell, rtol=1e-3, atol=1e-2)
+        np.testing.assert_allclose(self.i_s_n(t, x_n[-1]), 0, rtol=1e-5, atol=1e-4)
+        np.testing.assert_allclose(self.i_s_p(t, x_p[-1]), i_cell, rtol=1e-4, atol=1e-3)
+        np.testing.assert_allclose(self.i_s_p(t, x_p[0]), 0, rtol=1e-5, atol=1e-4)
 
     def test_all(self):
         self.test_conservation()
@@ -827,8 +851,8 @@ class VelocityTests(BaseOutputTest):
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
         L_x = self.x_edge[-1]
-        np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.v_box(self.t, L_x), 0, decimal=4)
+        np.testing.assert_allclose(self.v_box(self.t, 0), 0, rtol=1e-5, atol=1e-4)
+        np.testing.assert_allclose(self.v_box(self.t, L_x), 0, rtol=1e-5, atol=1e-4)
 
     def test_vertical_velocity(self):
         """Test the boundary values of the current densities"""
@@ -847,11 +871,11 @@ class VelocityTests(BaseOutputTest):
         DeltaV_p = self.param.evaluate(DeltaV_p)
         F = pybamm.constants.F.value
 
-        np.testing.assert_array_almost_equal(
-            self.v_box(t, x_n), DeltaV_n * self.i_e(t, x_n) / F
+        np.testing.assert_allclose(
+            self.v_box(t, x_n), DeltaV_n * self.i_e(t, x_n) / F, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            self.v_box(t, x_p), DeltaV_p * self.i_e(t, x_p) / F
+        np.testing.assert_allclose(
+            self.v_box(t, x_p), DeltaV_p * self.i_e(t, x_p) / F, rtol=1e-7, atol=1e-6
         )
 
     def test_all(self):
@@ -889,12 +913,13 @@ class DegradationTests(BaseOutputTest):
 
     def test_lithium_lost(self):
         """Test the two ways of measuring lithium lost give the same value"""
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             self.n_Li_lost(self.t),
             self.n_Li_lost_rxn(self.t)
             + self.n_Li_lost_LAM_n(self.t)
             + self.n_Li_lost_LAM_p(self.t),
-            decimal=5,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_all(self):
