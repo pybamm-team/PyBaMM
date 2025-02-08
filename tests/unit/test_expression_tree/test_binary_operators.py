@@ -687,7 +687,9 @@ class TestBinaryOperators:
         # Do (A/vec) first if it is constant
         expr = (A @ var) / vec
         assert isinstance(expr, pybamm.MatrixMultiplication)
-        np.testing.assert_array_almost_equal(expr.left.evaluate(), (A / vec).evaluate())
+        np.testing.assert_allclose(
+            expr.left.evaluate(), (A / vec).evaluate(), rtol=1e-7, atol=1e-6
+        )
         assert expr.children[1] == var
 
         # simplify additions and subtractions
