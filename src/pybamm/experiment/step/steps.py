@@ -320,8 +320,13 @@ class CustomStepExplicit(BaseStepExplicit):
     def current_value(self, variables):
         return self.current_value_function(variables)
 
-    def copy(self):
-        return CustomStepExplicit(self.current_value_function, **self.kwargs)
+    def copy(self, input_parameters: dict[str, any] | None = None):
+        new_kwargs = dict(self.kwargs)
+        if input_parameters is not None:
+            new_kwargs["input_parameters"] = input_parameters
+        elif "input_parameters" not in new_kwargs:
+            new_kwargs["input_parameters"] = {}
+        return CustomStepExplicit(self.current_value_function, **new_kwargs)
 
 
 class CustomStepImplicit(BaseStepImplicit):
@@ -414,7 +419,10 @@ class CustomStepImplicit(BaseStepImplicit):
             model.param, self.current_rhs_function, model.options, control=self.control
         )
 
-    def copy(self):
-        return CustomStepImplicit(
-            self.current_rhs_function, self.control, **self.kwargs
-        )
+    def copy(self, input_parameters: dict[str, any] | None = None):
+        new_kwargs = dict(self.kwargs)
+        if input_parameters is not None:
+            new_kwargs["input_parameters"] = input_parameters
+        elif "input_parameters" not in new_kwargs:
+            new_kwargs["input_parameters"] = {}
+        return CustomStepImplicit(self.current_rhs_function, self.control, **new_kwargs)
