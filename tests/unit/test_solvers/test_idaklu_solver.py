@@ -1094,8 +1094,8 @@ class TestIDAKLUSolver:
                 np.testing.assert_allclose(
                     sol[varname](t_interp),
                     sol_all[varname](t_interp),
-                    rtol=1e-7,
-                    atol=1e-6,
+                    rtol=tol,
+                    atol=tol,
                     err_msg=f"Failed for {varname} with form {form}",
                 )
 
