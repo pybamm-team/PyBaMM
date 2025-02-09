@@ -7,6 +7,9 @@
 .. autoclass:: pybamm.Uniform1DSubMesh
     :members:
 
+.. autoclass:: pybamm.SymbolicUniform1DSubMesh
+    :members:
+
 .. autoclass:: pybamm.Exponential1DSubMesh
     :members:
 
