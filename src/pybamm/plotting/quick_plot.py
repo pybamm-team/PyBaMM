@@ -226,16 +226,16 @@ class QuickPlot:
             ]
             self.x_values = discharge_capacities
 
-            self.x_min = min(dc[0] for dc in discharge_capacities)
-            self.x_max = max(dc[-1] for dc in discharge_capacities)
+            self.x_axis_min = min(dc[0] for dc in discharge_capacities)
+            self.x_axis_max = max(dc[-1] for dc in discharge_capacities)
             self.x_scaling_factor = 1
             self.x_unit = "A.h"
 
         elif x_axis == "Time":
             self.x_values = ts_seconds
 
-            self.x_min = self.min_t
-            self.x_max = self.max_t
+            self.x_axis_min = self.min_t
+            self.x_axis_max = self.max_t
             self.x_scaling_factor = self.time_scaling_factor
 
             self.x_unit = self.time_unit
@@ -439,8 +439,8 @@ class QuickPlot:
         self.axis_limits = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 0:
-                x_min = self.x_min
-                x_max = self.x_max
+                x_min = self.x_axis_min
+                x_max = self.x_axis_max
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
@@ -546,7 +546,7 @@ class QuickPlot:
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel(f"{self.x_axis} [{self.x_unit}]")
+                ax.set_xlabel(f"Time [{self.time_unit}]")
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -556,11 +556,10 @@ class QuickPlot:
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
-
-                        full_val = self.x_values[i]
+                        full_t = self.ts_seconds[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_val,
-                            variable(full_val),
+                            full_t / self.time_scaling_factor,
+                            variable(full_t),
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
@@ -725,11 +724,11 @@ class QuickPlot:
             Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
             # Set initial x-axis values and slider
-            self.plot(self.x_min, dynamic=True)
+            self.plot(self.x_axis_min, dynamic=True)
             ax_label = (
                 f"{self.x_axis}[{self.x_unit}]"  # Update time_unit to relevant unit
             )
-            ax_min, ax_max, val_init = self.x_min, self.x_max, self.x_min
+            ax_min, ax_max, val_init = self.x_axis_min, self.x_axis_max, self.x_axis_min
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
