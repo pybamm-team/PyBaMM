@@ -154,12 +154,12 @@ class TestExtrapolation:
         r_lin_rates = np.log(r_errors_lin[:-1] / r_errors_lin[1:]) / np.log(
             dx[:-1] / dx[1:]
         )
-        np.testing.assert_array_almost_equal(l_lin_rates, 2)
-        np.testing.assert_array_almost_equal(r_lin_rates, 2)
+        np.testing.assert_allclose(l_lin_rates, 2, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(r_lin_rates, 2, rtol=1e-7, atol=1e-6)
 
         # check quadratic is equal up to machine precision
-        np.testing.assert_array_almost_equal(l_errors_quad, 0, decimal=14)
-        np.testing.assert_array_almost_equal(r_errors_quad, 0, decimal=14)
+        np.testing.assert_allclose(l_errors_quad, 0, rtol=1e-15, atol=1e-14)
+        np.testing.assert_allclose(r_errors_quad, 0, rtol=1e-15, atol=1e-14)
 
         def x_cubed(x):
             y = x**3
@@ -179,8 +179,8 @@ class TestExtrapolation:
             dx[:-1] / dx[1:]
         )
 
-        np.testing.assert_array_almost_equal(l_lin_rates, 2)
-        np.testing.assert_array_almost_equal(r_lin_rates, 2)
+        np.testing.assert_allclose(l_lin_rates, 2, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(r_lin_rates, 2, rtol=1e-7, atol=1e-6)
 
         # quadratic case
         pts = 5 ** np.arange(1, 7, 1)
@@ -197,8 +197,8 @@ class TestExtrapolation:
             dx[:-1] / dx[1:]
         )
 
-        np.testing.assert_array_almost_equal(l_quad_rates, 3)
-        np.testing.assert_array_almost_equal(r_quad_rates, 3, decimal=3)
+        np.testing.assert_allclose(l_quad_rates, 3, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(r_quad_rates, 3, rtol=1e-4, atol=1e-3)
 
     def test_extrapolation_with_bcs_right_neumann(self):
         # simple particle with a flux bc
@@ -270,8 +270,12 @@ class TestExtrapolation:
             np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
 
             # Test that the RIGHT gradient is correct
-            np.testing.assert_array_almost_equal(r_grad_errors_lin_with_bc, 0)
-            np.testing.assert_array_almost_equal(r_grad_errors_quad_with_bc, 0)
+            np.testing.assert_allclose(
+                r_grad_errors_lin_with_bc, 0, rtol=1e-7, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                r_grad_errors_quad_with_bc, 0, rtol=1e-7, atol=1e-6
+            )
 
             # note that with bcs we now obtain the left Dirichlet condition exactly
 
@@ -283,8 +287,8 @@ class TestExtrapolation:
             ) / np.log(dx[:-1] / dx[1:])
 
             # check convergence is about the correct order
-            np.testing.assert_array_almost_equal(r_lin_rates_bc, 2, decimal=2)
-            np.testing.assert_array_almost_equal(r_quad_rates_bc, 3, decimal=1)
+            np.testing.assert_allclose(r_lin_rates_bc, 2, rtol=1e-3, atol=1e-2)
+            np.testing.assert_allclose(r_quad_rates_bc, 3, rtol=1e-2, atol=1e-1)
 
     def test_extrapolation_with_bcs_left_neumann(self):
         # simple particle with a flux bc
@@ -356,8 +360,12 @@ class TestExtrapolation:
             np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
 
             # assert that the LEFT gradient is correct
-            np.testing.assert_array_almost_equal(l_grad_errors_lin_with_bc, 0)
-            np.testing.assert_array_almost_equal(l_grad_errors_quad_with_bc, 0)
+            np.testing.assert_allclose(
+                l_grad_errors_lin_with_bc, 0, rtol=1e-7, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                l_grad_errors_quad_with_bc, 0, rtol=1e-7, atol=1e-6
+            )
 
             # note that with bcs we now obtain the right Dirichlet condition exactly
 
@@ -370,7 +378,7 @@ class TestExtrapolation:
 
             # check convergence is about the correct order
             np.testing.assert_array_less(2, l_lin_rates_bc)
-            np.testing.assert_array_almost_equal(l_quad_rates_bc, 3, decimal=1)
+            np.testing.assert_allclose(l_quad_rates_bc, 3, rtol=1e-2, atol=1e-1)
 
     def test_linear_extrapolate_left_right(self):
         # create discretisation
@@ -409,11 +417,11 @@ class TestExtrapolation:
 
         # check linear variable extrapolates correctly
         linear_y = macro_submesh.nodes
-        np.testing.assert_array_almost_equal(
-            extrap_left_disc.evaluate(None, linear_y), 0
+        np.testing.assert_allclose(
+            extrap_left_disc.evaluate(None, linear_y), 0, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(None, linear_y), 3
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(None, linear_y), 3, rtol=1e-7, atol=1e-6
         )
 
         # Fluxes
@@ -444,8 +452,8 @@ class TestExtrapolation:
         # check linear variable extrapolates correctly
         linear_y = micro_submesh.nodes
         y_surf = micro_submesh.edges[-1]
-        np.testing.assert_array_almost_equal(
-            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        np.testing.assert_allclose(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf, rtol=1e-7, atol=1e-6
         )
 
     def test_extrapolate_symbolic(self):
@@ -479,19 +487,19 @@ class TestExtrapolation:
 
         # check linear variable extrapolates correctly
         linear_y = mesh["domain"].nodes
-        np.testing.assert_array_almost_equal(
-            extrap_left_disc.evaluate(None, linear_y), 0
+        np.testing.assert_allclose(
+            extrap_left_disc.evaluate(None, linear_y), 0, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(None, linear_y), 1
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(None, linear_y), 1, rtol=1e-7, atol=1e-6
         )
 
         # check gradient extrapolates correctly
-        np.testing.assert_array_almost_equal(
-            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2
+        np.testing.assert_allclose(
+            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2
+        np.testing.assert_allclose(
+            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2, rtol=1e-7, atol=1e-6
         )
 
         method_options = {
@@ -514,27 +522,27 @@ class TestExtrapolation:
         extrap_grad_right_disc = disc.process_symbol(extrap_grad_right)
 
         # check constant extrapolates to constant
-        np.testing.assert_array_almost_equal(
-            extrap_left_disc.evaluate(None, constant_y), 1
+        np.testing.assert_allclose(
+            extrap_left_disc.evaluate(None, constant_y), 1, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(None, constant_y), 1
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(None, constant_y), 1, rtol=1e-7, atol=1e-6
         )
 
         # check linear variable extrapolates correctly
-        np.testing.assert_array_almost_equal(
-            extrap_left_disc.evaluate(None, linear_y), 0
+        np.testing.assert_allclose(
+            extrap_left_disc.evaluate(None, linear_y), 0, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(None, linear_y), 1
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(None, linear_y), 1, rtol=1e-7, atol=1e-6
         )
 
         # check gradient extrapolates correctly
-        np.testing.assert_array_almost_equal(
-            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2
+        np.testing.assert_allclose(
+            extrap_grad_left_disc.evaluate(None, linear_y), 1 / 2, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2
+        np.testing.assert_allclose(
+            extrap_grad_right_disc.evaluate(None, linear_y), 1 / 2, rtol=1e-7, atol=1e-6
         )
 
     def test_quadratic_extrapolate_left_right(self):
@@ -569,20 +577,20 @@ class TestExtrapolation:
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(macro_submesh.nodes[:, np.newaxis])
-        np.testing.assert_array_almost_equal(
-            extrap_left_disc.evaluate(None, constant_y), 2.0
+        np.testing.assert_allclose(
+            extrap_left_disc.evaluate(None, constant_y), 2.0, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(None, constant_y), 3.0
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(None, constant_y), 3.0, rtol=1e-7, atol=1e-6
         )
 
         # check linear variable extrapolates correctly
         linear_y = macro_submesh.nodes
-        np.testing.assert_array_almost_equal(
-            extrap_left_disc.evaluate(None, linear_y), 0
+        np.testing.assert_allclose(
+            extrap_left_disc.evaluate(None, linear_y), 0, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(None, linear_y), 3
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(None, linear_y), 3, rtol=1e-7, atol=1e-6
         )
 
         # Fluxes
@@ -592,17 +600,17 @@ class TestExtrapolation:
         extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
 
         # check constant extrapolates to constant
-        np.testing.assert_array_almost_equal(
-            extrap_flux_left_disc.evaluate(None, constant_y), 0
+        np.testing.assert_allclose(
+            extrap_flux_left_disc.evaluate(None, constant_y), 0, rtol=1e-7, atol=1e-6
         )
         assert extrap_flux_right_disc.evaluate(None, constant_y) == 0
 
         # check linear variable extrapolates correctly
-        np.testing.assert_array_almost_equal(
-            extrap_flux_left_disc.evaluate(None, linear_y), 2
+        np.testing.assert_allclose(
+            extrap_flux_left_disc.evaluate(None, linear_y), 2, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_flux_right_disc.evaluate(None, linear_y), -1
+        np.testing.assert_allclose(
+            extrap_flux_right_disc.evaluate(None, linear_y), -1, rtol=1e-7, atol=1e-6
         )
 
         # Microscale
@@ -614,15 +622,15 @@ class TestExtrapolation:
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(micro_submesh.nodes[:, np.newaxis])
-        np.testing.assert_array_almost_equal(
-            surf_eqn_disc.evaluate(None, constant_y), 1
+        np.testing.assert_allclose(
+            surf_eqn_disc.evaluate(None, constant_y), 1, rtol=1e-7, atol=1e-6
         )
 
         # check linear variable extrapolates correctly
         linear_y = micro_submesh.nodes
         y_surf = micro_submesh.edges[-1]
-        np.testing.assert_array_almost_equal(
-            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        np.testing.assert_allclose(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf, rtol=1e-7, atol=1e-6
         )
 
     def test_extrapolate_on_nonuniform_grid(self):
@@ -657,15 +665,15 @@ class TestExtrapolation:
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(micro_submesh.nodes[:, np.newaxis])
-        np.testing.assert_array_almost_equal(
-            surf_eqn_disc.evaluate(None, constant_y), 1
+        np.testing.assert_allclose(
+            surf_eqn_disc.evaluate(None, constant_y), 1, rtol=1e-7, atol=1e-6
         )
 
         # check linear variable extrapolates correctly
         linear_y = micro_submesh.nodes
         y_surf = micro_submesh.edges[-1]
-        np.testing.assert_array_almost_equal(
-            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        np.testing.assert_allclose(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf, rtol=1e-7, atol=1e-6
         )
 
     def test_extrapolate_2d_models(self):
@@ -700,8 +708,8 @@ class TestExtrapolation:
         y_micro = mesh["negative particle"].nodes
         y = np.outer(y_macro, y_micro).reshape(-1, 1)
         # extrapolate to r=0.5 --> should evaluate to 0.5*y_macro
-        np.testing.assert_array_almost_equal(
-            extrap_right_disc.evaluate(y=y)[:, 0], 0.5 * y_macro
+        np.testing.assert_allclose(
+            extrap_right_disc.evaluate(y=y)[:, 0], 0.5 * y_macro, rtol=1e-7, atol=1e-6
         )
 
         var = pybamm.Variable("var", domain="positive particle")

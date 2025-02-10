@@ -171,3 +171,13 @@ class TestSummaryVariables:
         assert sol.summary_variables["Cycle number"][9] == 10
         assert len(sol.summary_variables["x_100"]) == 10
         assert np.isclose(sol.summary_variables["x_100"][0], 0.9493)
+
+    def test_summary_vars_get_all_variables(self):
+        # no esoh
+        sum_vars, _ = self.create_sum_vars()
+
+        summary_vars = sum_vars.get_summary_variables()
+
+        assert isinstance(summary_vars, dict)
+        assert list(summary_vars.keys()) == ["2c", "Change in 2c", "Cycle number"]
+        np.isclose(summary_vars["2c"], 0.735758)

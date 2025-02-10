@@ -16,7 +16,9 @@ class TestSimulation:
         model.initial_conditions = {v: 1}
         sim = pybamm.Simulation(model)
         sol = sim.solve([0, 1])
-        np.testing.assert_array_almost_equal(sol.y.full()[0], np.exp(-sol.t), decimal=5)
+        np.testing.assert_allclose(
+            sol.y.full()[0], np.exp(-sol.t), rtol=1e-6, atol=1e-5
+        )
 
     def test_basic_ops(self):
         model = pybamm.lithium_ion.SPM()
@@ -93,8 +95,8 @@ class TestSimulation:
         t = sol["Time [s]"].data
         I = sol["Current [A]"].data
         q = sol["Discharge capacity [A.h]"].data
-        np.testing.assert_array_almost_equal(
-            q, cumulative_trapezoid(I, t, initial=0) / 3600
+        np.testing.assert_allclose(
+            q, cumulative_trapezoid(I, t, initial=0) / 3600, rtol=1e-7, atol=1e-6
         )
 
     def test_solve_non_battery_model(self):
@@ -109,8 +111,11 @@ class TestSimulation:
 
         sim.solve(np.linspace(0, 1, 100))
         np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
-        np.testing.assert_array_almost_equal(
-            sim.solution["v"].entries, np.exp(-np.linspace(0, 1, 100))
+        np.testing.assert_allclose(
+            sim.solution["v"].entries,
+            np.exp(-np.linspace(0, 1, 100)),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_solve_already_partially_processed_model(self):
@@ -163,25 +168,27 @@ class TestSimulation:
 
         sim.step(dt)  # 1 step stores first two points
         assert sim.solution.y.full()[0, :].size == 2
-        np.testing.assert_array_almost_equal(sim.solution.t, np.array([0, dt]))
+        np.testing.assert_allclose(
+            sim.solution.t, np.array([0, dt]), rtol=1e-7, atol=1e-6
+        )
         saved_sol = sim.solution
 
         sim.step(dt)  # automatically append the next step
         assert sim.solution.y.full()[0, :].size == 4
-        np.testing.assert_array_almost_equal(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
+        np.testing.assert_allclose(
+            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
         )
 
         sim.step(dt, save=False)  # now only store the two end step points
         assert sim.solution.y.full()[0, :].size == 2
-        np.testing.assert_array_almost_equal(
-            sim.solution.t, np.array([2 * dt + 1e-9, 3 * dt])
+        np.testing.assert_allclose(
+            sim.solution.t, np.array([2 * dt + 1e-9, 3 * dt]), rtol=1e-7, atol=1e-6
         )
         # Start from saved solution
         sim.step(dt, starting_solution=saved_sol)
         assert sim.solution.y.full()[0, :].size == 4
-        np.testing.assert_array_almost_equal(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
+        np.testing.assert_allclose(
+            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
         )
 
     @pytest.mark.skipif(
@@ -366,7 +373,7 @@ class TestSimulation:
         assert "Current function [A]" not in sol2.sensitivities
 
         # check that the sensitivities are roughly correct
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sol1["Terminal voltage [V]"].entries
             + h
             * sol1["Terminal voltage [V]"]
@@ -374,7 +381,8 @@ class TestSimulation:
             .full()
             .flatten(),
             sol2["Terminal voltage [V]"].entries,
-            decimal=5,
+            rtol=1e-6,
+            atol=1e-5,
         )
 
     def test_step_with_inputs(self):
@@ -397,8 +405,8 @@ class TestSimulation:
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
         assert sim.solution.y.full()[0, :].size == 4
-        np.testing.assert_array_almost_equal(
-            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt])
+        np.testing.assert_allclose(
+            sim.solution.t, np.array([0, dt, dt + 1e-9, 2 * dt]), rtol=1e-7, atol=1e-6
         )
         np.testing.assert_array_equal(
             sim.solution.all_inputs[1]["Current function [A]"], 2
@@ -428,8 +436,11 @@ class TestSimulation:
             sim.solve()
             for sol in sim.solution.sub_solutions:
                 t0 = sol.t[0]
-                np.testing.assert_array_almost_equal(
-                    sol[name].entries, np.array(oscillating(sol.t - t0))
+                np.testing.assert_allclose(
+                    sol[name].entries,
+                    np.array(oscillating(sol.t - t0)),
+                    rtol=1e-7,
+                    atol=1e-6,
                 )
 
             # check improper inputs
@@ -605,7 +616,7 @@ class TestSimulation:
 
         # check solution is returned at the times in the data
         sim.solve()
-        np.testing.assert_array_almost_equal(sim.solution.t, time_data)
+        np.testing.assert_allclose(sim.solution.t, time_data, rtol=1e-7, atol=1e-6)
 
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
@@ -654,7 +665,9 @@ class TestSimulation:
 
         # tests list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
-        np.testing.assert_array_almost_equal(sim.solution.t, np.linspace(0, 10, 100))
+        np.testing.assert_allclose(
+            sim.solution.t, np.linspace(0, 10, 100), rtol=1e-7, atol=1e-6
+        )
 
     def test_battery_model_with_input_height(self):
         parameter_values = pybamm.ParameterValues("Marquis2019")
