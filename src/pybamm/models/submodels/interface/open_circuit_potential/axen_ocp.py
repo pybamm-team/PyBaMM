@@ -83,23 +83,23 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
                 if f"{domain} particle size" in sto_surf.domains["primary"]:
                     # check if MPM Model
                     if "current collector" in sto_surf.domains["secondary"]:
-                        ocp_surf = delith_ref_x_av + H_x_av * h_x_av
+                        ocp_surf = delith_ref_x_av + H_x_av * (1 - h_x_av) / 2
                     # must be DFN with PSD model
                     elif (
                         f"{domain} electrode" in sto_surf.domains["secondary"]
                         or f"{domain} {phase_name}particle size"
                         in sto_surf.domains["primary"]
                     ):
-                        ocp_surf = delith_ref + H * h
+                        ocp_surf = delith_ref + H * (1 - h) / 2
             # must not be a psd
             else:
-                ocp_surf = delith_ref + H * h
+                ocp_surf = delith_ref + H * (1 - h) / 2
 
             delith_ref_s_av = pybamm.size_average(delith_ref_x_av)
             H_s_av = pybamm.size_average(H_x_av)
             h_s_av = pybamm.size_average(h_x_av)
 
-            ocp_bulk = delith_ref_s_av + H_s_av * h_s_av
+            ocp_bulk = delith_ref_s_av + H_s_av * (1 - h_s_av) / 2
 
             dUdT = self.phase_param.dUdT(sto_surf)
 
@@ -120,11 +120,11 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
         K_delith = self.phase_param.hysteresis_decay_delithiation
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
-        S_lith = -i_vol * K_lith / (self.param.F * c_max * epsl)
-        S_delith = -i_vol * K_delith / (self.param.F * c_max * epsl)
+        S_lith = i_vol * K_lith / (self.param.F * c_max * epsl)
+        S_delith = i_vol * K_delith / (self.param.F * c_max * epsl)
 
         i_vol_sign = pybamm.sign(i_vol)
-        signed_h = 0.5 * (1 - i_vol_sign) + i_vol_sign * h
+        signed_h = 1 - i_vol_sign * h
         rate_coefficient = (
             0.5 * (1 - i_vol_sign) * S_lith + 0.5 * (1 + i_vol_sign) * S_delith
         )
