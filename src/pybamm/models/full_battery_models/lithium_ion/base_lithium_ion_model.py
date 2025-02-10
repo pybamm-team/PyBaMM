@@ -106,6 +106,14 @@ class BaseModel(pybamm.BaseBatteryModel):
             self._calc_esoh = False
         return self._calc_esoh
 
+    @calc_esoh.setter
+    def calc_esoh(self, value: bool):
+        "Set whether to include eSOH variables in the summary variables."
+        if not isinstance(value, bool):
+            raise TypeError("`calc_esoh` arg needs to be a bool")
+
+        self._calc_esoh = value
+
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
 
