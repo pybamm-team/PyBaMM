@@ -164,6 +164,16 @@ class BaseUnitTestLithiumIon:
         options = {"particle": ("Fickian diffusion", "quartic profile")}
         self.check_well_posedness(options)
 
+    def test_well_posed_particle_shape(self):
+        options = {"particle shape": "cylindrical"}
+        self.check_well_posedness(options)
+
+        options = {"particle shape": "platelet"}
+        self.check_well_posedness(options)
+
+        options = {"particle shape": ("cylindrical", "platelet")}
+        self.check_well_posedness(options)
+
     def test_well_posed_constant_utilisation(self):
         options = {"interface utilisation": "constant"}
         self.check_well_posedness(options)
