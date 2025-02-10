@@ -89,6 +89,14 @@ class BaseIntegrationTestLithiumIon:
         options = {"particle": "quartic profile"}
         self.run_basic_processing_test(options)
 
+    def test_particle_shape_cylindrical(self):
+        options = {"particle shape": "cylindrical"}
+        self.run_basic_processing_test(options)
+
+    def test_particle_shape_platelet(self):
+        options = {"particle shape": "platelet"}
+        self.run_basic_processing_test(options)
+
     def test_constant_utilisation(self):
         options = {"interface utilisation": "constant"}
         parameter_values = pybamm.ParameterValues("Marquis2019")
