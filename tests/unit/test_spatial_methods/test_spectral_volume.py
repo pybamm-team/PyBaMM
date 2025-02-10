@@ -140,9 +140,11 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test operations on linear x
@@ -158,15 +160,19 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, linear_y),
             np.ones_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y),
             np.zeros_like(submesh.nodes[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -205,8 +211,11 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, constant_y), np.zeros((total_npts_edges, 1))
+        np.testing.assert_allclose(
+            grad_eqn_disc.evaluate(None, constant_y),
+            np.zeros((total_npts_edges, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # grad(r) == 1
         y_linear = np.tile(
@@ -222,8 +231,11 @@ class TestSpectralVolume:
         }
         disc.bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, y_linear), np.ones((total_npts_edges, 1))
+        np.testing.assert_allclose(
+            grad_eqn_disc.evaluate(None, y_linear),
+            np.ones((total_npts_edges, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test divergence of gradient
@@ -244,8 +256,8 @@ class TestSpectralVolume:
         div_eqn_disc = disc.process_symbol(div_eqn)
         div_eval = div_eqn_disc.evaluate(None, y_squared)
         div_eval = np.reshape(div_eval, [sec_npts, npts])
-        np.testing.assert_array_almost_equal(
-            div_eval[:, 2:-2], 6 * np.ones([sec_npts, npts - 4])
+        np.testing.assert_allclose(
+            div_eval[:, 2:-2], 6 * np.ones([sec_npts, npts - 4]), rtol=1e-7, atol=1e-6
         )
 
     def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -284,8 +296,8 @@ class TestSpectralVolume:
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         grad_eval = grad_eqn_disc.evaluate(None, constant_y)
         grad_eval = np.reshape(grad_eval, [sec_pts, prim_pts + 1])
-        np.testing.assert_array_almost_equal(
-            grad_eval, np.zeros([sec_pts, prim_pts + 1])
+        np.testing.assert_allclose(
+            grad_eval, np.zeros([sec_pts, prim_pts + 1]), rtol=1e-7, atol=1e-6
         )
 
         # Test divergence of gradient
@@ -303,8 +315,11 @@ class TestSpectralVolume:
         div_eqn_disc = disc.process_symbol(div_eqn)
         div_eval = div_eqn_disc.evaluate(None, y_squared)
         div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
-        np.testing.assert_array_almost_equal(
-            div_eval[:, 2:-2], 6 * np.ones([sec_pts, prim_pts - 4])
+        np.testing.assert_allclose(
+            div_eval[:, 2:-2],
+            6 * np.ones([sec_pts, prim_pts - 4]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_grad_div_shapes_Neumann_bcs(self):
@@ -332,9 +347,11 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test operations on linear x
@@ -350,15 +367,19 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, linear_y),
             np.ones_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y),
             np.zeros_like(submesh.nodes[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_grad_div_shapes_Dirichlet_and_Neumann_bcs(self):
@@ -389,15 +410,19 @@ class TestSpectralVolume:
         disc.set_variable_slices([var])
         # grad(1) = 0
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # div(grad(1)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(submesh.nodes[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test gradient and divergence of linear x
@@ -411,15 +436,19 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, linear_y),
             np.ones_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y),
             np.zeros_like(submesh.nodes[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_spherical_grad_div_shapes_Neumann_bcs(self):
@@ -447,9 +476,11 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # grad(r) == 1
         linear_y = submesh.nodes
@@ -461,9 +492,11 @@ class TestSpectralVolume:
         }
         disc.bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, linear_y),
             np.ones_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test divergence of gradient
@@ -479,9 +512,11 @@ class TestSpectralVolume:
         }
         disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, quadratic_y),
             6 * np.ones((submesh.npts, 1)),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
@@ -534,7 +569,9 @@ class TestSpectralVolume:
         div_eqn_disc = disc.process_symbol(div_eqn)
         div_eval = div_eqn_disc.evaluate(None, y_squared)
         div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
-        np.testing.assert_array_almost_equal(div_eval, 6 * np.ones([sec_pts, prim_pts]))
+        np.testing.assert_allclose(
+            div_eval, 6 * np.ones([sec_pts, prim_pts]), rtol=1e-7, atol=1e-6
+        )
 
     def test_grad_div_shapes_mixed_domain(self):
         # Create discretisation
@@ -557,9 +594,11 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test operations on linear x
@@ -575,15 +614,19 @@ class TestSpectralVolume:
         disc.bcs = boundary_conditions
         # grad(x) = 1
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_eqn_disc.evaluate(None, linear_y),
             np.ones_like(submesh.edges[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # div(grad(x)) = 0
         div_eqn_disc = disc.process_symbol(div_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y),
             np.zeros_like(submesh.nodes[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_grad_1plus1d(self):
@@ -625,6 +668,6 @@ class TestSpectralVolume:
         expected = np.outer(np.linspace(0, 1, 15), np.ones_like(submesh.edges)).reshape(
             -1, 1
         )
-        np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, linear_y), expected
+        np.testing.assert_allclose(
+            grad_eqn_disc.evaluate(None, linear_y), expected, rtol=1e-7, atol=1e-6
         )
