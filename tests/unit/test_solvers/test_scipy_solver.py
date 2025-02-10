@@ -100,7 +100,9 @@ class TestScipySolver:
         np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
         # Test event in solution variables_and_events
-        np.testing.assert_array_almost_equal(solution["Event: var=0.5"].data[-1], 0)
+        np.testing.assert_allclose(
+            solution["Event: var=0.5"].data[-1], 0, rtol=1e-7, atol=1e-6
+        )
 
     def test_model_solver_ode_with_jacobian_python(self):
         # Create model
@@ -143,13 +145,17 @@ class TestScipySolver:
         np.testing.assert_array_equal(solution.t, t_eval)
 
         T, Y = solution.t, solution.y
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             model.variables["var1"].evaluate(T, Y),
             np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             model.variables["var2"].evaluate(T, Y),
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_model_step_python(self):
@@ -173,21 +179,23 @@ class TestScipySolver:
         dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_array_almost_equal(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(
+            step_sol.y[0], np.exp(0.1 * step_sol.t), rtol=1e-7, atol=1e-6
+        )
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.array([0, 1, np.nextafter(1, np.inf), 1.25, 1.5, 1.75, 2])
         )
-        np.testing.assert_array_almost_equal(
-            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
+        np.testing.assert_allclose(
+            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t), rtol=1e-7, atol=1e-6
         )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0], rtol=1e-7, atol=1e-6)
 
     def test_step_different_model(self):
         disc = pybamm.Discretisation()
@@ -216,7 +224,9 @@ class TestScipySolver:
         dt = 1
         step_sol1 = solver.step(None, model1, dt)
         np.testing.assert_array_equal(step_sol1.t, [0, dt])
-        np.testing.assert_array_almost_equal(step_sol1.y[0], np.exp(0.1 * step_sol1.t))
+        np.testing.assert_allclose(
+            step_sol1.y[0], np.exp(0.1 * step_sol1.t), rtol=1e-7, atol=1e-6
+        )
 
         # Step again, the model has changed so this raises an error
         with pytest.raises(RuntimeError, match="already been initialised"):
@@ -433,14 +443,14 @@ class TestScipySolver:
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": -1, "ic 1": 0.1})
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 0.1 * np.exp(-solution.t), decimal=5
+        np.testing.assert_allclose(
+            solution.y[0], 0.1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Solve again with different initial conditions
         solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
+        np.testing.assert_allclose(
+            solution.y[0], 1 * np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-5
         )
 
     def test_model_solver_manually_update_initial_conditions(self):
@@ -454,8 +464,8 @@ class TestScipySolver:
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 1 * np.exp(-solution.t), decimal=5
+        np.testing.assert_allclose(
+            solution.y[0], 1 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
         )
 
         # Change initial conditions and solve again
@@ -464,8 +474,8 @@ class TestScipySolver:
         )
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y[0], 2 * np.exp(-solution.t), decimal=5
+        np.testing.assert_allclose(
+            solution.y[0], 2 * np.exp(-solution.t), rtol=1e-6, atol=1e-5
         )
 
     def test_scale_and_reference(self):
@@ -480,11 +490,11 @@ class TestScipySolver:
         solution = solver.solve(model, t_eval)
 
         # Check that the initial conditions and solution are scaled correctly
-        np.testing.assert_array_almost_equal(
-            model.concatenated_initial_conditions.evaluate(), 1
+        np.testing.assert_allclose(
+            model.concatenated_initial_conditions.evaluate(), 1, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            solution.y[0], (solution["var1"].data - 1) / 2, decimal=14
+        np.testing.assert_allclose(
+            solution.y[0], (solution["var1"].data - 1) / 2, rtol=1e-15, atol=1e-14
         )
 
 
@@ -612,15 +622,17 @@ class TestScipySolverWithSensitivity:
         solution = solver.solve(
             model, t_eval, inputs={"param": 7}, calculate_sensitivities=True
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["var"].data,
             np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["var"].sensitivities["param"],
             np.repeat(-2 * t_eval * np.exp(-7 * t_eval), n)[:, np.newaxis],
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
 
         # More complicated model
@@ -727,24 +739,30 @@ class TestScipySolverWithSensitivity:
             calculate_sensitivities=True,
         )
         l_n = mesh["negative electrode"].edges[-1]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["var"].data,
             np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["var"].sensitivities["param"],
             np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["integral of var"].data,
             2 * np.exp(-7 * t_eval) * l_n,
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["integral of var"].sensitivities["param"],
             np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / n, (n, 1)).T,
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Solve - linspace input
@@ -755,15 +773,20 @@ class TestScipySolverWithSensitivity:
             model, t_eval, inputs={"param": p_eval}, calculate_sensitivities=True
         )
         l_n = mesh["negative electrode"].edges[-1]
-        np.testing.assert_array_almost_equal(
-            solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4
+        np.testing.assert_allclose(
+            solution["var"].data,
+            2 * np.exp(-p_eval[:, np.newaxis] * t_eval),
+            rtol=1e-5,
+            atol=1e-4,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["var"].sensitivities["param"],
             np.vstack([np.diag(-2 * t * np.exp(-p_eval * t)) for t in t_eval]),
+            rtol=1e-7,
+            atol=1e-6,
         )
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["integral of var"].data,
             np.sum(
                 2
@@ -771,8 +794,12 @@ class TestScipySolverWithSensitivity:
                 * mesh["negative electrode"].d_edges[:, np.newaxis],
                 axis=0,
             ),
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["integral of var"].sensitivities["param"],
             np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
+            rtol=1e-7,
+            atol=1e-6,
         )

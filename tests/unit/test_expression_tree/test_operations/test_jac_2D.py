@@ -124,7 +124,7 @@ class TestJacobian:
             [0, 0, 0, 0, 0, 0, 0, 16777216 * (1 + np.log(8))],
         ]
         dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_almost_equal(jacobian, dfunc_dy.toarray())
+        np.testing.assert_allclose(jacobian, dfunc_dy.toarray(), rtol=1e-7, atol=1e-6)
 
         func = u * v
         jacobian = np.array(
