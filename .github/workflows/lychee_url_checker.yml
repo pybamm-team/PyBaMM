@@ -28,7 +28,7 @@ jobs:
 
       # use stable version for now to avoid breaking changes
       - name: Lychee URL checker
-        uses: lycheeverse/lychee-action@f796c8b7d468feb9b8c0a46da3fac0af6874d374 # v2.2.0
+        uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
         with:
           # arguments with file types to check
           args: >-
