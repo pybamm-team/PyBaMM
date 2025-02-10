@@ -207,7 +207,7 @@ class FuzzyDict(dict):
         # If no exact matches, iterate over search keys individually
         for original_key, search_key in zip(original_keys, search_keys):
             exact_key_matches, partial_matches = self._find_matches(
-                search_key, known_keys
+                search_key, known_keys, min_similarity
             )
 
             if exact_key_matches:
