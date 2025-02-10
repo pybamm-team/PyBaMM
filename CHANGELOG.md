@@ -31,7 +31,7 @@
 
 ## Optimizations
 
-- Improved search to handle cases with shorter input strings and provide more relevant results.([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
+- Improved search to handle cases with shorter input strings and provide more relevant results. ([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
 
 ## Breaking changes
 
