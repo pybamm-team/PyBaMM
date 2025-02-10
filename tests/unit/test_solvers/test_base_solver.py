@@ -182,10 +182,12 @@ class TestBaseSolver:
 
         model = VectorModel()
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
         # with casadi
         init_states = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.full().flatten(), vec)
+        np.testing.assert_allclose(
+            init_states.full().flatten(), vec, rtol=1e-7, atol=1e-6
+        )
 
         # With Jacobian
         def jac_dense(t, y, inputs):
@@ -193,7 +195,7 @@ class TestBaseSolver:
 
         model.jac_algebraic_eval = jac_dense
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
         # With sparse Jacobian
         def jac_sparse(t, y, inputs):
@@ -203,7 +205,7 @@ class TestBaseSolver:
 
         model.jac_algebraic_eval = jac_sparse
         init_states = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_states.flatten(), vec)
+        np.testing.assert_allclose(init_states.flatten(), vec, rtol=1e-7, atol=1e-6)
 
     def test_fail_consistent_initialization(self):
         class Model:
