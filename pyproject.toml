@@ -232,7 +232,7 @@ filterwarnings = [
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
     # ignore warnings generated while running tests
-    "ignore::DeprecationWarning",
+    #"ignore::DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
 ]
