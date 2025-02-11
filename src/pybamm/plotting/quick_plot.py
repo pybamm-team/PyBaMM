@@ -803,7 +803,7 @@ class QuickPlot:
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
 
         # create images/plots
-        self.plot(time_array[0])
+        self.plot(self.min_t)
         ani = FuncAnimation(
             self.fig,
             lambda f: self.slider_update(time_array[f - 1]),
