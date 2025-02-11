@@ -431,7 +431,7 @@ class BaseModel:
 
     @property
     def calc_esoh(self):
-        "Whether to include eSOH variables in the summary variables."
+        """Whether to include eSOH variables in the summary variables."""
         return self._calc_esoh
 
     def get_parameter_info(self, by_submodel=False):

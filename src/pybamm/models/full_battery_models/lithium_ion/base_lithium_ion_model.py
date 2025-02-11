@@ -98,7 +98,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def calc_esoh(self):
-        "Whether to include eSOH variables in the summary variables."
+        """Whether to include eSOH variables in the summary variables."""
         if (
             self.options["particle phases"] not in ["1", ("1", "1")]
             or self.options["working electrode"] != "both"
@@ -108,7 +108,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @calc_esoh.setter
     def calc_esoh(self, value: bool):
-        "Set whether to include eSOH variables in the summary variables."
+        """Set whether to include eSOH variables in the summary variables."""
         if not isinstance(value, bool):
             raise TypeError("`calc_esoh` arg needs to be a bool")
 
