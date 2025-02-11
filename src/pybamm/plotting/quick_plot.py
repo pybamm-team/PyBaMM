@@ -219,7 +219,7 @@ class QuickPlot:
         # set x_axis
         self.x_axis = x_axis
 
-        if x_axis == "Discharge capacity":
+        if x_axis == "Discharge capacity [A.h]":
             # Use discharge capacity as x-axis
             discharge_capacities = [
                 solution["Discharge capacity [A.h]"].entries for solution in solutions
@@ -546,7 +546,11 @@ class QuickPlot:
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel(f"Time [{self.time_unit}]")
+                if self.x_axis == "Time":
+                    ax.set_xlabel(f"Time [{self.time_unit}]")
+                if self.x_axis == "Discharge capacity [A.h]":
+                    ax.set_xlabel("Discharge capacity [A.h]")
+
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -556,10 +560,10 @@ class QuickPlot:
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
-                        full_t = self.ts_seconds[i]
+                        full_val = self.x_values[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t / self.time_scaling_factor,
-                            variable(full_t),
+                            full_val / self.x_scaling_factor,
+                            variable(full_val),
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
@@ -708,14 +712,14 @@ class QuickPlot:
         if pybamm.is_notebook():  # pragma: no cover
             import ipywidgets as widgets
 
-            step = step or self.max_t / 100
+            step = step or (self.x_axis_max - self.x_axis_min) / 100
             widgets.interact(
                 lambda t: self.plot(t, dynamic=False),
                 t=widgets.FloatSlider(
-                    min=self.min_t,
-                    max=self.max_t,
+                    min=self.x_axis_min,
+                    max=self.x_axis_max,
                     step=step,
-                    value=self.min_t,
+                    value=self.x_axis_min,
                 ),
                 continuous_update=False,
             )
@@ -725,9 +729,15 @@ class QuickPlot:
 
             # Set initial x-axis values and slider
             self.plot(self.x_axis_min, dynamic=True)
-            ax_label = (
-                f"{self.x_axis}[{self.x_unit}]"  # Update time_unit to relevant unit
-            )
+
+            # Set x-axis label correctly
+            if self.x_axis == "Time":
+                ax_label = f"Time [{self.time_unit}]"
+            elif self.x_axis == "Discharge capacity [A.h]":
+                ax_label = "Discharge capacity [A.h]"
+            else:
+                ax_label = self.x_axis  # Use the string directly if unknown
+
             ax_min, ax_max, val_init = self.x_axis_min, self.x_axis_max, self.x_axis_min
 
             axcolor = "lightgoldenrodyellow"
