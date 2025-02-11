@@ -1,16 +1,12 @@
 # Description
 
-Please include a summary of the change and which issue is fixed. Please also
-include relevant motivation and context. List any dependencies that are required
-for this change.
+Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
 
 Fixes # (issue)
 
 ## Type of change
 
-Please add a line in the relevant section of
-[CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md)
-to document the change (include PR #)
+Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CHANGELOG.md) to document the change (include PR #)
 
 # Important checks:
 
