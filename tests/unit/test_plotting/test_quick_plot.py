@@ -266,6 +266,29 @@ class TestQuickPlot:
 
         pybamm.close_plots()
 
+    def test_plot_with_discharge_capacity(self):
+        """Test that the x-axis is correctly set to Discharge capacity [A.h]"""
+        model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
+        a = pybamm.Variable("a", domain=[])
+        model.rhs = {a: pybamm.Scalar(0.2)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        model.variables = {"a": a, "Discharge capacity [A.h]": a * 2}
+
+        t_eval = np.linspace(0, 2, 100)
+        solution = pybamm.CasadiSolver().solve(model, t_eval)
+
+        quick_plot_capacity = pybamm.QuickPlot(
+            solution,
+            ["a"],
+            x_axis="Discharge capacity [A.h]",
+        )
+        quick_plot_capacity.plot(0)
+
+        np.testing.assert_allclose(
+            quick_plot_capacity.plots[("a",)][0][0].get_xdata(),
+            solution["Discharge capacity [A.h]"].data,
+        )
+
     def test_plot_with_different_models(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
