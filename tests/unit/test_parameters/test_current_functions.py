@@ -77,8 +77,8 @@ class TestCurrentFunctions:
 
         # check output correct value
         time = np.linspace(0, 3600, 600)
-        np.testing.assert_array_almost_equal(
-            user_current(time), 5 * np.sin(2 * np.pi * 3 * time)
+        np.testing.assert_allclose(
+            user_current(time), 5 * np.sin(2 * np.pi * 3 * time), rtol=1e-7, atol=1e-6
         )
 
 

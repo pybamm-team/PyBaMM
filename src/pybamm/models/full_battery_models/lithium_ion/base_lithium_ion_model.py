@@ -33,6 +33,9 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.set_standard_output_variables()
 
+        # Li models should calculate esoh by default
+        self._calc_esoh = True
+
     def set_submodels(self, build):
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
@@ -92,6 +95,24 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Positive electrode potential [V]",
                 "Voltage [V]",
             ]
+
+    @property
+    def calc_esoh(self):
+        """Whether to include eSOH variables in the summary variables."""
+        if (
+            self.options["particle phases"] not in ["1", ("1", "1")]
+            or self.options["working electrode"] != "both"
+        ):
+            self._calc_esoh = False
+        return self._calc_esoh
+
+    @calc_esoh.setter
+    def calc_esoh(self, value: bool):
+        """Set whether to include eSOH variables in the summary variables."""
+        if not isinstance(value, bool):
+            raise TypeError("`calc_esoh` arg needs to be a bool")
+
+        self._calc_esoh = value
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()

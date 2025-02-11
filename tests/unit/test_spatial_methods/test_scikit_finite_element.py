@@ -142,13 +142,17 @@ class TestScikitFiniteElement:
         grad_disc = disc.process_symbol(gradient)
         grad_disc_y, grad_disc_z = grad_disc.children
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_disc_y.evaluate(None, 5 * y + 6 * z),
             5 * np.ones_like(y)[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             grad_disc_z.evaluate(None, 5 * y + 6 * z),
             6 * np.ones_like(z)[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # check grad_squared positive
@@ -170,20 +174,28 @@ class TestScikitFiniteElement:
         disc.set_variable_slices([var])
         var_disc = disc.process_symbol(var)
         z_vertices = mesh["current collector"].coordinates[1, :]
-        np.testing.assert_array_almost_equal(
-            var_disc.evaluate(None, z_vertices), z_vertices[:, np.newaxis]
+        np.testing.assert_allclose(
+            var_disc.evaluate(None, z_vertices),
+            z_vertices[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # linear u = 6*y (to test coordinates to degree of freedom mapping)
         y_vertices = mesh["current collector"].coordinates[0, :]
-        np.testing.assert_array_almost_equal(
-            var_disc.evaluate(None, 6 * y_vertices), 6 * y_vertices[:, np.newaxis]
+        np.testing.assert_allclose(
+            var_disc.evaluate(None, 6 * y_vertices),
+            6 * y_vertices[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # mixed u = y*z (to test coordinates to degree of freedom mapping)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             var_disc.evaluate(None, y_vertices * z_vertices),
             y_vertices[:, np.newaxis] * z_vertices[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # laplace of u = sin(pi*z)
@@ -204,8 +216,11 @@ class TestScikitFiniteElement:
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
         soln = -(np.pi**2) * u
-        np.testing.assert_array_almost_equal(
-            eqn_zz_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=3
+        np.testing.assert_allclose(
+            eqn_zz_disc.evaluate(None, u),
+            mass_disc.entries @ soln,
+            rtol=1e-4,
+            atol=1e-3,
         )
 
         # laplace of u = cos(pi*y)*sin(pi*z)
@@ -227,8 +242,11 @@ class TestScikitFiniteElement:
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
         soln = -(np.pi**2) * u
-        np.testing.assert_array_almost_equal(
-            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=2
+        np.testing.assert_allclose(
+            laplace_eqn_disc.evaluate(None, u),
+            mass_disc.entries @ soln,
+            rtol=1e-2,
+            atol=1e-1,
         )
 
     def test_manufactured_solution_cheb_grid(self):
@@ -288,8 +306,11 @@ class TestScikitFiniteElement:
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
         soln = -(np.pi**2) * u
-        np.testing.assert_array_almost_equal(
-            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
+        np.testing.assert_allclose(
+            laplace_eqn_disc.evaluate(None, u),
+            mass_disc.entries @ soln,
+            rtol=1e-2,
+            atol=1e-1,
         )
 
     def test_manufactured_solution_exponential_grid(self):
@@ -351,8 +372,11 @@ class TestScikitFiniteElement:
         mass = pybamm.Mass(var)
         mass_disc = disc.process_symbol(mass)
         soln = -(np.pi**2) * u
-        np.testing.assert_array_almost_equal(
-            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
+        np.testing.assert_allclose(
+            laplace_eqn_disc.evaluate(None, u),
+            mass_disc.entries @ soln,
+            rtol=1e-2,
+            atol=1e-1,
         )
 
     def test_definite_integral(self):
@@ -372,8 +396,8 @@ class TestScikitFiniteElement:
         fem_mesh = mesh["current collector"]
         ly = fem_mesh.coordinates[0, -1]
         lz = fem_mesh.coordinates[1, -1]
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, y_test), 6 * ly * lz
+        np.testing.assert_allclose(
+            integral_eqn_disc.evaluate(None, y_test), 6 * ly * lz, rtol=1e-7, atol=1e-6
         )
 
     def test_definite_integral_vector(self):
@@ -414,11 +438,11 @@ class TestScikitFiniteElement:
         extrap_pos_disc = disc.process_symbol(extrap_pos)
         # check constant returns constant at tab
         constant_y = np.ones(mesh["current collector"].npts)[:, np.newaxis]
-        np.testing.assert_array_almost_equal(
-            extrap_neg_disc.evaluate(None, constant_y), 1
+        np.testing.assert_allclose(
+            extrap_neg_disc.evaluate(None, constant_y), 1, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            extrap_pos_disc.evaluate(None, constant_y), 1
+        np.testing.assert_allclose(
+            extrap_pos_disc.evaluate(None, constant_y), 1, rtol=1e-7, atol=1e-6
         )
 
         # test BoundaryGradient not implemented
@@ -450,16 +474,16 @@ class TestScikitFiniteElement:
         l_tab_p = 0.1
         constant_y = np.ones(mesh["current collector"].npts)
         # Integral around boundary is exact
-        np.testing.assert_array_almost_equal(
-            full_disc.evaluate(None, constant_y), perimeter
+        np.testing.assert_allclose(
+            full_disc.evaluate(None, constant_y), perimeter, rtol=1e-7, atol=1e-6
         )
         # Ideally mesh edges should line up with tab edges.... then we would get
         # better agreement between actual and numerical tab width
-        np.testing.assert_array_almost_equal(
-            neg_disc.evaluate(None, constant_y), l_tab_n, decimal=1
+        np.testing.assert_allclose(
+            neg_disc.evaluate(None, constant_y), l_tab_n, rtol=1e-2, atol=1e-1
         )
-        np.testing.assert_array_almost_equal(
-            pos_disc.evaluate(None, constant_y), l_tab_p, decimal=1
+        np.testing.assert_allclose(
+            pos_disc.evaluate(None, constant_y), l_tab_p, rtol=1e-2, atol=1e-1
         )
 
     def test_pure_neumann_poisson(self):
@@ -499,7 +523,7 @@ class TestScikitFiniteElement:
 
         z = mesh["current collector"].coordinates[1, :][:, np.newaxis]
         u_exact = z**2 / 2 - 1 / 6
-        np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
+        np.testing.assert_allclose(solution.y[:-1], u_exact, rtol=1e-2, atol=1e-1)
 
     def test_dirichlet_bcs(self):
         # manufactured solution u = a*z^2 + b*z + c
@@ -536,7 +560,9 @@ class TestScikitFiniteElement:
         # indepedent of y, so just check values for one y
         z = mesh["current collector"].edges["z"][:, np.newaxis]
         u_exact = a * z**2 + b * z + c
-        np.testing.assert_array_almost_equal(solution.y[0 : len(z)], u_exact)
+        np.testing.assert_allclose(
+            solution.y[0 : len(z)], u_exact, rtol=1e-7, atol=1e-6
+        )
 
     def test_disc_spatial_var(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=4, zpts=5, include_particles=False)
