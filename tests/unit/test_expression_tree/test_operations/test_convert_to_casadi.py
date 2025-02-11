@@ -163,13 +163,17 @@ class TestCasadiConverter:
             interp = pybamm.Interpolant(x, 2 * x, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
-            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+            np.testing.assert_allclose(
+                interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
+            )
         # square
         y = pybamm.StateVector(slice(0, 1))
         interp = pybamm.Interpolant(x, x**2, y, interpolator="cubic")
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
-        np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+        np.testing.assert_allclose(
+            interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
+        )
 
         # len(x)=1 but y is 2d
         y = pybamm.StateVector(slice(0, 1))
@@ -180,7 +184,9 @@ class TestCasadiConverter:
             interp = pybamm.Interpolant(x, data, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
-            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+            np.testing.assert_allclose(
+                interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
+            )
 
         # error for pchip interpolator
         interp = pybamm.Interpolant(x, data, y, interpolator="pchip")
@@ -221,14 +227,18 @@ class TestCasadiConverter:
             interp = pybamm.Interpolant(x_, Y, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
-            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+            np.testing.assert_allclose(
+                interp.evaluate(y=y_test), f(y_test), rtol=1e-6, atol=1e-6
+            )
         # square
         y = (pybamm.StateVector(slice(0, 1)), pybamm.StateVector(slice(0, 1)))
         Y = (x**2).sum(axis=1).reshape(*[len(el) for el in x_])
         interp = pybamm.Interpolant(x_, Y, y, interpolator="linear")
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
-        np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+        np.testing.assert_allclose(
+            interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6
+        )
 
         # # len(x)=1 but y is 2d
         # y = pybamm.StateVector(slice(0, 1), slice(0, 1))
@@ -239,7 +249,7 @@ class TestCasadiConverter:
         #     interp = pybamm.Interpolant(x_, data, y, interpolator=interpolator)
         #     interp_casadi = interp.to_casadi(y=casadi_y)
         #     f = casadi.Function("f", [casadi_y], [interp_casadi])
-        #     np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+        #     np.testing.assert_allclose(interp.evaluate(y=y_test), f(y_test), rtol=1e-7, atol=1e-6)
 
         # error for pchip interpolator
         with pytest.raises(ValueError, match="interpolator should be"):

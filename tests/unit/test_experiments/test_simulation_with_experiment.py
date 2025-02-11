@@ -80,20 +80,20 @@ class TestSimulationExperiment:
         assert len(sol.cycles) == 1
 
         # Test outputs
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[0]["C-rate"].data, 1 / 20
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[0]["C-rate"].data, 1 / 20, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[1]["Current [A]"].data, -1
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[1]["Current [A]"].data, -1, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, decimal=5
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[2]["Voltage [V]"].data, 4.1, rtol=1e-6, atol=1e-5
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[3]["Power [W]"].data, 2, decimal=5
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[3]["Power [W]"].data, 2, rtol=1e-6, atol=1e-5
         )
-        np.testing.assert_array_almost_equal(
-            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, decimal=5
+        np.testing.assert_allclose(
+            sol.cycles[0].steps[4]["Resistance [Ohm]"].data, 4, rtol=1e-6, atol=1e-5
         )
 
         np.testing.assert_array_equal(
@@ -120,7 +120,9 @@ class TestSimulationExperiment:
             y_right = sol.cycles[0].steps[i + 1].all_ys[0][:len_rhs, 0]
             if isinstance(y_right, casadi.DM):
                 y_right = y_right.full()
-            np.testing.assert_array_almost_equal(y_left.flatten(), y_right.flatten())
+            np.testing.assert_allclose(
+                y_left.flatten(), y_right.flatten(), rtol=1e-7, atol=1e-6
+            )
 
         # Solve again starting from solution
         sol2 = sim.solve(starting_solution=sol)
@@ -184,15 +186,17 @@ class TestSimulationExperiment:
             solution = sim.solve()
             solutions.append(solution)
 
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Voltage [V]"].data,
             solutions[1]["Voltage [V]"](solutions[0].t),
-            decimal=1,
+            rtol=1e-2,
+            atol=1e-1,
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solutions[0]["Current [A]"].data,
             solutions[1]["Current [A]"](solutions[0].t),
-            decimal=0,
+            rtol=1e-0,
+            atol=1e-0,
         )
         assert solutions[1].termination == "final time"
 
@@ -645,14 +649,15 @@ class TestSimulationExperiment:
             model, parameter_values=parameter_values, experiment=experiment2
         )
         sol2 = sim2.solve()
-        np.testing.assert_array_almost_equal(
-            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, decimal=5
+        np.testing.assert_allclose(
+            sol["Voltage [V]"].data, sol2["Voltage [V]"].data, rtol=1e-6, atol=1e-5
         )
         for idx1, idx2 in [(1, 0), (2, 1), (4, 2)]:
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 sol.cycles[0].steps[idx1]["Voltage [V]"].data,
                 sol2.cycles[0].steps[idx2]["Voltage [V]"].data,
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
             )
 
     def test_skipped_step_continuous(self):
@@ -669,7 +674,7 @@ class TestSimulationExperiment:
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve(initial_soc=1)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim.solution.cycles[0].last_state.y.full(),
             sim.solution.cycles[1].steps[-1].first_state.y.full(),
         )
@@ -948,8 +953,8 @@ class TestSimulationExperiment:
                 sim = pybamm.Simulation(model, experiment=experiment)
                 sol = sim.solve()
                 # sol.plot()
-                np.testing.assert_array_almost_equal(
-                    sol["Voltage [V]"].data[2:], 4.2, decimal=3
+                np.testing.assert_allclose(
+                    sol["Voltage [V]"].data[2:], 4.2, rtol=1e-4, atol=1e-3
                 )
 
     def test_experiment_custom_termination(self):

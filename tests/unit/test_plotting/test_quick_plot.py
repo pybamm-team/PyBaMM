@@ -154,29 +154,44 @@ class TestQuickPlot:
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="seconds")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 1
-        np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot, rtol=1e-7, atol=1e-6
         )
-        np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_ydata(),
+            0.2 * t_plot,
+            rtol=1e-7,
+            atol=1e-6,
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 60
-        np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 60
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_xdata(),
+            t_plot / 60,
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_ydata(),
+            0.2 * t_plot,
+            rtol=1e-7,
+            atol=1e-6,
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
         quick_plot.plot(0)
         assert quick_plot.time_scaling_factor == 3600
-        np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_xdata(), t_plot / 3600
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_xdata(),
+            t_plot / 3600,
+            rtol=1e-7,
+            atol=1e-6,
         )
-        np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_plot
+        np.testing.assert_allclose(
+            quick_plot.plots[("a",)][0][0].get_ydata(),
+            0.2 * t_plot,
+            rtol=1e-7,
+            atol=1e-6,
         )
         with pytest.raises(ValueError, match="time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
@@ -362,13 +377,13 @@ class TestQuickPlot:
                 qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                     0
                 ].get_ydata()
-                np.testing.assert_array_almost_equal(qp_data, c_e[:, 0])
+                np.testing.assert_allclose(qp_data, c_e[:, 0], rtol=1e-7, atol=1e-6)
 
                 quick_plot.slider_update(t_eval[-1] / scale)
                 qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                     0
                 ].get_ydata()
-                np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
+                np.testing.assert_allclose(qp_data, c_e[:, 1], rtol=1e-7, atol=1e-6)
 
             # test quick plot of particle for spme
             if (
@@ -397,7 +412,7 @@ class TestQuickPlot:
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
                     c_n_eval = c_n(t_eval[0], r=c_n.first_dim_pts, x=c_n.second_dim_pts)
-                    np.testing.assert_array_almost_equal(qp_data, c_n_eval)
+                    np.testing.assert_allclose(qp_data, c_n_eval, rtol=1e-7, atol=1e-6)
                     quick_plot.slider_update(t_eval[-1] / scale)
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
@@ -405,7 +420,7 @@ class TestQuickPlot:
                     c_n_eval = c_n(
                         t_eval[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts
                     )
-                    np.testing.assert_array_almost_equal(qp_data, c_n_eval)
+                    np.testing.assert_allclose(qp_data, c_n_eval, rtol=1e-7, atol=1e-6)
 
         pybamm.close_plots()
 
@@ -435,11 +450,11 @@ class TestQuickPlot:
             quick_plot.plot(0)
             qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
             c_e_eval = c_e(t_eval[0], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
-            np.testing.assert_array_almost_equal(qp_data.T, c_e_eval)
+            np.testing.assert_allclose(qp_data.T, c_e_eval, rtol=1e-7, atol=1e-6)
             quick_plot.slider_update(t_eval[-1] / scale)
             qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
             c_e_eval = c_e(t_eval[-1], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
-            np.testing.assert_array_almost_equal(qp_data.T, c_e_eval)
+            np.testing.assert_allclose(qp_data.T, c_e_eval, rtol=1e-7, atol=1e-6)
 
         pybamm.close_plots()
 
@@ -481,12 +496,12 @@ class TestQuickPlot:
             qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
                 0
             ][1]
-            np.testing.assert_array_almost_equal(qp_data.T, phi_n[:, :, 0])
+            np.testing.assert_allclose(qp_data.T, phi_n[:, :, 0], rtol=1e-7, atol=1e-6)
             quick_plot.slider_update(t_eval[-1] / scale)
             qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
                 0
             ][1]
-            np.testing.assert_array_almost_equal(qp_data.T, phi_n[:, :, -1])
+            np.testing.assert_allclose(qp_data.T, phi_n[:, :, -1], rtol=1e-7, atol=1e-6)
 
         with pytest.raises(NotImplementedError, match="Shape not recognized for"):
             pybamm.QuickPlot(solution, ["Negative particle concentration [mol.m-3]"])
