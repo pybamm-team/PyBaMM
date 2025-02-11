@@ -618,8 +618,8 @@ class TestParameterValues:
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
-        np.testing.assert_array_almost_equal(
-            processed_func.evaluate(), processed_interp.evaluate(), decimal=3
+        np.testing.assert_allclose(
+            processed_func.evaluate(), processed_interp.evaluate(), rtol=1e-4, atol=1e-3
         )
 
     def test_interpolant_2d_from_json(self):
@@ -649,8 +649,8 @@ class TestParameterValues:
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
-        np.testing.assert_array_almost_equal(
-            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
+        np.testing.assert_allclose(
+            processed_func.evaluate(), processed_interp.evaluate(), rtol=1e-5, atol=1e-4
         )
 
     def test_process_interpolant_3D_from_csv(self):
