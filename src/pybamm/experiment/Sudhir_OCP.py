@@ -25,10 +25,9 @@ def run_temp ():
     "lithium-ion main", model.options, "primary")
     model.build_model()
     parameter_values = pybamm.ParameterValues("Chen2020")
-    
+    parameter_values.update({"Positive electrode RK_OCP [V]": rk_polynomial}, check_already_exists=False)
     parameter_values["Current function [A]"] = 4
     #print(parameter_values)
-    parameter_values["Positive electrode OCP [V]"]= rk_polynomial
 
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
@@ -43,12 +42,8 @@ def run_temp ():
     return t.entries, V.entries
 
 
-model=pybamm.lithium_ion.DFN(build=False)
-model.submodels["positive primary open-circuit potential"] = RK_Open_Circuit_Potential(model.param, "positive",
-"lithium-ion main", model.options, "primary")
-model.build_model()
-print(model.submodels['positive primary open-circuit potential'])
-#t,V=run_temp()
 
-#plt.plot(t,V)
-#plt.show()
+t,V=run_temp()
+
+plt.plot(t,V)
+plt.show()

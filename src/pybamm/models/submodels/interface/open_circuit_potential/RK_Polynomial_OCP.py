@@ -38,15 +38,13 @@ class RK_Open_Circuit_Potential(BaseOpenCircuitPotential):
                     T = T.orphans[0]
 
             inputs = {
-                f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
-                f"{self.phase_prefactor}{Domain} electrode temperature [k]": T
+                f"{Domain} particle stoichiometry": sto,
+                f"{Domain} electrode temperature [k]": T,
             }
         
             OCP_surf = pybamm.FunctionParameter(
-                f"{self.phase_prefactor}{Domain} electrode {lithiation}OCP [V]", inputs
+                f"{Domain} electrode RK_OCP [V]", inputs
             )
-
-
 
             dUdT = self.phase_param.dUdT(sto_surf)
 
