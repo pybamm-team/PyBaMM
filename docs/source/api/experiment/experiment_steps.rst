@@ -37,7 +37,7 @@ Standard step termination events are implemented by the following classes, which
 called when the termination is specified by a specific string. These classes can be
 either be called directly or via the string format specified in the class docstring
 
-.. autoclass:: pybamm.step.CrateTermination
+.. autoclass:: pybamm.step.CRateTermination
     :members:
 
 .. autoclass:: pybamm.step.CurrentTermination
