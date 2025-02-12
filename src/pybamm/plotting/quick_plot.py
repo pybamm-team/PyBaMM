@@ -1,7 +1,6 @@
 #
 # Class for quick plotting of variables from models
 #
-import os
 import numpy as np
 import pybamm
 from collections import defaultdict
@@ -841,30 +840,22 @@ class QuickPlot:
             Name of the generated GIF file.
 
         """
-        imageio = import_optional_dependency("imageio.v2")
-        plt = import_optional_dependency("matplotlib.pyplot")
+        FuncAnimation = import_optional_dependency(
+            "matplotlib.animation", "FuncAnimation"
+        )
 
         # time stamps at which the images/plots will be created
         time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
-        images = []
 
         # create images/plots
-        stub_name = output_filename.split(".")[0]
-        for val in time_array:
-            self.plot(val)
-            temp_name = f"{stub_name}{val}.png"
-            images.append(temp_name)
-            self.fig.savefig(temp_name, dpi=300)
-            plt.close()
-
-        # compile the images/plots to create a GIF
-        with imageio.get_writer(output_filename, mode="I", duration=duration) as writer:
-            for image in images:
-                writer.append_data(imageio.imread(image))
-
-        # remove the generated images
-        for image in images:
-            os.remove(image)
+        self.plot(self.min_t)
+        ani = FuncAnimation(
+            self.fig,
+            lambda f: self.slider_update(time_array[f - 1]),
+            interval=duration,
+            frames=number_of_images,
+        )
+        ani.save(output_filename, dpi=300)
 
 
 class QuickPlotAxes:
