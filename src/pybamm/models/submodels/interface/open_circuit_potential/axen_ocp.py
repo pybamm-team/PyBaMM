@@ -7,9 +7,19 @@ from . import BaseOpenCircuitPotential
 
 class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
     """
-    Class for open-circuit potential with hysteresis based on the approach outlined by Axen et al. https://doi.org/10.1016/j.est.2022.103985.
+    Class for open-circuit potential (OCP) with hysteresis based on the approach outlined by Axen et al. https://doi.org/10.1016/j.est.2022.103985.
     This approach tracks the evolution of the hysteresis using an ODE system scaled by the volumetric interfacial current density and
     a decay rate parameter.
+
+    The original method defines the open-circuit potential as OCP = OCP_delithiation + (OCP_lithiation - OCP_delithiation) * h,
+    where h is the hysteresis state. By allowing h to vary between 0 and 1, the OCP approaches OCP_lithiation when h tends to 1
+    and OCP_delithiation when h tends to 0. These interval limits are achieved by defining the ODE system as dh/dt = S_lith * (1 - h)
+    for lithiation and dh/dt = S_delith * h for delithiation, where S_lith and S_delith are rate coefficients.
+
+    The original implementation is modified to ensure h varies between -1 and 1, thus assuming an unified framework within pybamm.
+    This new variation interval is obtained with the ODE system dh/dt = S_lith * (1 + h) for lithiation and dh/dt = S_delith * (1 - h)
+    for delithiation. Now, OCP = OCP_delithiation + (OCP_lithiation - OCP_delithiation) * (1 - h) / 2, implying that the OCP approaches
+    OCP_lithiation when h tends to -1 and OCP_delithiation when h tends to 1.
     """
 
     def get_fundamental_variables(self):
@@ -116,8 +126,8 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
         c_max = self.phase_param.c_max
         epsl = self.phase_param.epsilon_s
 
-        K_lith = self.phase_param.hysteresis_decay_lithiation
-        K_delith = self.phase_param.hysteresis_decay_delithiation
+        K_lith = self.phase_param.hysteresis_decay("lithiation")
+        K_delith = self.phase_param.hysteresis_decay("delithiation")
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         S_lith = i_vol * K_lith / (self.param.F * c_max * epsl)
