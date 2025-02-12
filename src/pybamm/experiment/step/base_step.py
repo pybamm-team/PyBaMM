@@ -55,6 +55,9 @@ class BaseStep:
         A description of the step.
     direction : str, optional
         The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
+    skip_ok : bool, optional
+        If True, the step will be skipped if it is infeasible at the initial conditions.
+        Default is False.
     """
 
     def __init__(

@@ -898,14 +898,27 @@ class Simulation:
                                     "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
                                     "\tCharge at 1 A until 4.1 V,\n"
                                     "\tHold at 4.1 V until 10 mA\n"
-                                    "])"
+                                    "])\n"
+                                    "Otherwise, set skip_ok=True when instantiating the step to skip this step."
                                 )
                         else:
                             this_cycle = self.experiment.cycles[cycle_num - 1]
-                            raise pybamm.SolverError(
-                                f"All steps in the cycle {this_cycle} are infeasible "
-                                "due to exceeded bounds at initial conditions."
+                            all_steps_skipped = all(
+                                this_step.skip_ok
+                                for this_step in this_cycle
+                                if isinstance(this_step, pybamm.step.BaseStep)
                             )
+                            if all_steps_skipped:
+                                raise pybamm.SolverError(
+                                    f"All steps in the cycle {this_cycle} are infeasible "
+                                    "due to exceeded bounds at initial conditions, though "
+                                    "skip_ok is True for all steps. Please recheck the experiment."
+                                )
+                            else:
+                                raise pybamm.SolverError(
+                                    f"All steps in the cycle {this_cycle} are infeasible "
+                                    "due to exceeded bounds at initial conditions."
+                                )
                     cycle_sol = pybamm.make_cycle_solution(
                         steps,
                         esoh_solver=esoh_solver,

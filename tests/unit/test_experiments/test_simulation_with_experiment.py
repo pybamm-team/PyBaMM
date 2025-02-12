@@ -176,6 +176,15 @@ class TestSimulationExperiment:
         with pytest.raises(pybamm.SolverError):
             sim.solve()
 
+        # make sure we raise an error if all steps are infeasible
+        steps = [
+            (pybamm.step.Current(-5, termination="4.2 V", skip_ok=True),) * 5,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
+            sim.solve()
+
     def test_run_experiment_multiple_times(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(
