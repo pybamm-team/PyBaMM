@@ -458,10 +458,10 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}{Domain} particle hysteresis decay rate"
         )
         self.hysteresis_decay_lithiation = pybamm.Parameter(
-            f"{pref}{Domain} particle hysteresis decay rate for lithiation"
+            f"{pref}{Domain} particle lithiation hysteresis decay rate"
         )
         self.hysteresis_decay_delithiation = pybamm.Parameter(
-            f"{pref}{Domain} particle hysteresis decay rate for delithiation"
+            f"{pref}{Domain} particle delithiation hysteresis decay rate"
         )
         self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"

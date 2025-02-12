@@ -105,9 +105,9 @@ class TestMPM:
                     "Negative electrode OCP [V]"
                 ](sto)
                 + 0.1,
-                "Negative particle hysteresis decay rate for lithiation": 15,
-                "Negative particle hysteresis decay rate for delithiation": 15,
-                "Initial hysteresis state in negative electrode": 0.5,
+                "Negative particle lithiation hysteresis decay rate": 10,
+                "Negative particle delithiation hysteresis decay rate": 10,
+                "Initial hysteresis state in negative electrode": 0.0,
             },
             check_already_exists=False,
         )
