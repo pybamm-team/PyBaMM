@@ -37,3 +37,9 @@ repos:
         - id: rst-backticks
         - id: rst-directive-colons
         - id: rst-inline-touching-normal
+
+  -   repo: https://github.com/kynan/nbstripout
+      rev: 0.6.1
+      hooks:
+      -   id: nbstripout
+          args: [--extra-keys=metadata.language_info.version metadata.kernelspec.name metadata.kernelspec.display_name]

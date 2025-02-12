@@ -43,11 +43,10 @@ The notebooks are not included in PDF formats of the documentation. You may acce
 documentation available at https://docs.pybamm.org/en/latest/source/examples/index.html
 ```
 
-```{nbgallery}
+```{toctree}
 ---
-caption: Getting Started
+caption: Getting started
 maxdepth: 1
-glob:
 ---
 ../examples/notebooks/getting_started/tutorial-1-how-to-run-a-model.ipynb
 ../examples/notebooks/getting_started/tutorial-2-compare-models.ipynb
@@ -60,11 +59,10 @@ glob:
 ../examples/notebooks/getting_started/tutorial-9-changing-the-mesh.ipynb
 ```
 
-```{nbgallery}
+```{toctree}
 ---
-caption: Creating Models
+caption: Creating models
 maxdepth: 1
-glob:
 ---
 ../examples/notebooks/creating_models/1-an-ode-model.ipynb
 ../examples/notebooks/creating_models/2-a-pde-model.ipynb
