@@ -239,7 +239,10 @@ class QuickPlot:
             self.x_scaling_factor = self.time_scaling_factor
 
             self.x_unit = self.time_unit
-
+        else:
+            msg  = f"Invalid value for `x_axis`."
+            raise ValueError(msg)
+        
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
         # ["var 1", ["variable 2", "var 3"]]
