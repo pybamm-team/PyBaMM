@@ -68,6 +68,7 @@ class BaseStep:
         start_time=None,
         description=None,
         direction: str | None = None,
+        skip_ok: bool = False,
     ):
         potential_directions = ["charge", "discharge", "rest", None]
         if direction not in potential_directions:
@@ -77,6 +78,7 @@ class BaseStep:
         self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
+        self.skip_ok = skip_ok
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
@@ -213,6 +215,7 @@ class BaseStep:
             start_time=self.start_time,
             description=self.description,
             direction=self.direction,
+            skip_ok=self.skip_ok,
         )
 
     def __str__(self):

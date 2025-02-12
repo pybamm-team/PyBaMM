@@ -145,6 +145,37 @@ class TestSimulationExperiment:
         assert len(sol3.cycles) == 2
         os.remove("test_experiment.sav")
 
+    def test_skip_ok(self):
+        model = pybamm.lithium_ion.SPMe()
+        cc_charge_skip_ok = pybamm.step.Current(-5, termination="4.2 V", skip_ok=True)
+        cc_charge_skip_not_ok = pybamm.step.Current(-5, termination="4.2 V")
+        steps = [
+            pybamm.step.Current(2, duration=100.0),
+            cc_charge_skip_ok,
+            pybamm.step.Voltage(4.2, termination="0.01 A"),
+        ]
+        param = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        # Make sure we know to skip it if we should and not if we shouldn't
+        assert sim.experiment.steps[1].skip_ok
+        assert not sim.experiment.steps[0].skip_ok
+
+        # Make sure we actually skipped it because it is infeasible
+        assert len(sol.cycles) == 2
+
+        # In this case, it is feasible, so we should not skip it
+        sol2 = sim.solve(initial_soc=0.5)
+        assert len(sol2.cycles) == 3
+
+        # make sure we raise an error if we shouldn't skip it and it is infeasible
+        steps[1] = cc_charge_skip_not_ok
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        with pytest.raises(pybamm.SolverError):
+            sim.solve()
+
     def test_run_experiment_multiple_times(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(

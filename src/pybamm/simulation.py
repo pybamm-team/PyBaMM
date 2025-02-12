@@ -779,7 +779,8 @@ class Simulation:
                             and "[experiment]" in error.message
                         ):
                             step_solution = pybamm.EmptySolution(
-                                "Event exceeded in initial conditions", t=start_time
+                                "Event exceeded in initial conditions",
+                                t=start_time,
                             )
                         else:
                             logs["error"] = error
@@ -877,19 +878,28 @@ class Simulation:
                 # At the final step of the inner loop we save the cycle
                 if len(steps) > 0:
                     # Check for EmptySolution
-                    if all(isinstance(step, pybamm.EmptySolution) for step in steps):
+                    if all(
+                        isinstance(step_solution, pybamm.EmptySolution)
+                        for step_solution in steps
+                    ):
                         if len(steps) == 1:
-                            raise pybamm.SolverError(
-                                f"Step '{step_str}' is infeasible "
-                                "due to exceeded bounds at initial conditions. "
-                                "If this step is part of a longer cycle, "
-                                "round brackets should be used to indicate this, "
-                                "e.g.:\n pybamm.Experiment([(\n"
-                                "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
-                                "\tCharge at 1 A until 4.1 V,\n"
-                                "\tHold at 4.1 V until 10 mA\n"
-                                "])"
-                            )
+                            if step.skip_ok:
+                                pybamm.logger.warning(
+                                    f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
+                                )
+                                continue
+                            else:
+                                raise pybamm.SolverError(
+                                    f"Step '{step_str}' is infeasible "
+                                    "due to exceeded bounds at initial conditions. "
+                                    "If this step is part of a longer cycle, "
+                                    "round brackets should be used to indicate this, "
+                                    "e.g.:\n pybamm.Experiment([(\n"
+                                    "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
+                                    "\tCharge at 1 A until 4.1 V,\n"
+                                    "\tHold at 4.1 V until 10 mA\n"
+                                    "])"
+                                )
                         else:
                             this_cycle = self.experiment.cycles[cycle_num - 1]
                             raise pybamm.SolverError(
@@ -924,6 +934,8 @@ class Simulation:
                     else:
                         capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
+                else:
+                    capacity_stop = logs["stopping conditions"].get("capacity")
 
                 logs["elapsed time"] = timer.time()
 
