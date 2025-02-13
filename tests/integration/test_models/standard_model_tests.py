@@ -3,7 +3,6 @@
 #
 import pybamm
 import tests
-import tempfile
 
 import numpy as np
 
@@ -148,14 +147,14 @@ class StandardModelTest:
             atol=1e-6,
         )
 
-    def test_serialisation(self, solver=None, t_eval=None):
-        temp = tempfile.NamedTemporaryFile(prefix="test_model")
-        file_name = temp.name
+    def test_serialisation(self, tmp_path, solver=None, t_eval=None):
+        file_name = tmp_path / "test_model"
+
         self.model.save_model(
             file_name, variables=self.model.variables, mesh=self.disc.mesh
         )
 
-        new_model = pybamm.load_model(file_name + ".json")
+        new_model = pybamm.load_model(str(file_name) + ".json")
 
         # create new solver for re-created model
         if solver is not None:
@@ -186,7 +185,6 @@ class StandardModelTest:
                 rtol=1e-6,
                 atol=1e-6,
             )
-        temp.close()
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False

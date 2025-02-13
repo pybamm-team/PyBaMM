@@ -1,9 +1,6 @@
 import contextlib
 import io
-import os
 import warnings
-from tempfile import NamedTemporaryFile
-
 import pytest
 from pybtex.database import Entry
 
@@ -11,15 +8,15 @@ import pybamm
 
 
 @contextlib.contextmanager
-def temporary_filename():
-    """Create a temporary-file and return yield its filename"""
+def temporary_filename(tmp_path):
+    """Create a temporary file inside tmp_path and yield its filename."""
 
-    f = NamedTemporaryFile(delete=False)
+    temp_file = tmp_path / "temp_file.tmp"
+    temp_file.touch()
     try:
-        f.close()
-        yield f.name
+        yield str(temp_file)
     finally:
-        os.remove(f.name)
+        temp_file.unlink(missing_ok=True)
 
 
 class TestCitations:
@@ -43,20 +40,18 @@ class TestCitations:
         # Test unknown citations at registration
         assert "not a citation" in citations._unknown_citations
 
-    def test_print_citations(self):
+    def test_print_citations(self, tmp_path):
         pybamm.citations._reset()
 
         # Text Style
-        with temporary_filename() as filename:
-            pybamm.print_citations(filename, "text")
-            with open(filename) as f:
-                assert len(f.readlines()) > 0
+        text_file = tmp_path / "citations.txt"
+        pybamm.print_citations(text_file, "text")
+        assert text_file.read_text().strip() != ""
 
         # Bibtext Style
-        with temporary_filename() as filename:
-            pybamm.print_citations(filename, "bibtex")
-            with open(filename) as f:
-                assert len(f.readlines()) > 0
+        bibtex_file = tmp_path / "citations.bib"
+        pybamm.print_citations(bibtex_file, "bibtex")
+        assert bibtex_file.read_text().strip() != ""
 
         # Write to stdout
         f = io.StringIO()

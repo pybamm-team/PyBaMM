@@ -3,9 +3,7 @@ Tests for the batch_study.py
 """
 
 import pytest
-import os
 import pybamm
-from tempfile import TemporaryDirectory
 
 
 class TestBatchStudy:
@@ -92,28 +90,27 @@ class TestBatchStudy:
             ]
             assert output_experiment in experiments_list
 
-    def test_create_gif(self):
-        with TemporaryDirectory() as dir_name:
-            bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
-            with pytest.raises(
-                ValueError, match="The simulations have not been solved yet."
-            ):
-                pybamm.BatchStudy(
-                    models={
-                        "SPM": pybamm.lithium_ion.SPM(),
-                        "SPM uniform": pybamm.lithium_ion.SPM(
-                            {"particle": "uniform profile"}
-                        ),
-                    }
-                ).create_gif()
-            bs.solve([0, 10])
+    def test_create_gif(self, tmp_path):
+        bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
+        with pytest.raises(
+            ValueError, match="The simulations have not been solved yet."
+        ):
+            pybamm.BatchStudy(
+                models={
+                    "SPM": pybamm.lithium_ion.SPM(),
+                    "SPM uniform": pybamm.lithium_ion.SPM(
+                        {"particle": "uniform profile"}
+                    ),
+                }
+            ).create_gif()
+        bs.solve([0, 10])
 
-            # Create a temporary file name
-            test_file = os.path.join(dir_name, "batch_study_test.gif")
+        # Create a temporary file name
+        test_file = tmp_path / "batch_study_test.gif"
 
-            # create a GIF before calling the plot method
-            bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
+        # create a GIF before calling the plot method
+        bs.create_gif(number_of_images=3, duration=1, output_filename=test_file.name)
 
-            # create a GIF after calling the plot method
-            bs.plot(show_plot=False)
-            bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
+        # create a GIF after calling the plot method
+        bs.plot(show_plot=False)
+        bs.create_gif(number_of_images=3, duration=1, output_filename=test_file.name)
