@@ -139,11 +139,11 @@ class TestBPX:
                 sols[0]["Voltage [V]"].data, sols[1]["Voltage [V]"].data, atol=1e-7
             )
 
-    def test_no_already_exists_in_BPX(self, tmp_file):
-        json.dump(copy.deepcopy(self.base), tmp_file)
-        tmp_file.flush()
+    def test_no_already_exists_in_BPX(self, tmp_path):
+        temp_file = tmp_path / "tmp.json"
+        temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
-        params = pybamm.ParameterValues.create_from_bpx(tmp_file.name)
+        params = pybamm.ParameterValues.create_from_bpx(str(temp_file))
         assert "check_already_exists" not in params.keys()
 
     def test_constant_functions(self, tmp_path):
