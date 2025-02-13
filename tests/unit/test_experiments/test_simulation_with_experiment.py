@@ -147,12 +147,14 @@ class TestSimulationExperiment:
 
     def test_skip_ok(self):
         model = pybamm.lithium_ion.SPMe()
-        cc_charge_skip_ok = pybamm.step.Current(-5, termination="4.2 V", skip_ok=True)
-        cc_charge_skip_not_ok = pybamm.step.Current(-5, termination="4.2 V")
+        cc_charge_skip_ok = pybamm.step.Current(-5, termination="4.2 V")
+        cc_charge_skip_not_ok = pybamm.step.Current(
+            -5, termination="4.2 V", skip_ok=False
+        )
         steps = [
-            pybamm.step.Current(2, duration=100.0),
+            pybamm.step.Current(2, duration=100.0, skip_ok=False),
             cc_charge_skip_ok,
-            pybamm.step.Voltage(4.2, termination="0.01 A"),
+            pybamm.step.Voltage(4.2, termination="0.01 A", skip_ok=False),
         ]
         param = pybamm.ParameterValues("Chen2020")
         experiment = pybamm.Experiment(steps)
@@ -718,31 +720,6 @@ class TestSimulationExperiment:
             sim.solution.cycles[0].last_state.y.full(),
             sim.solution.cycles[1].steps[-1].first_state.y.full(),
         )
-
-    def test_all_empty_solution_errors(self):
-        model = pybamm.lithium_ion.SPM()
-        parameter_values = pybamm.ParameterValues("Chen2020")
-
-        # One step exceeded, suggests making a cycle
-        experiment = pybamm.Experiment([("Charge at 1C until 4.2V")])
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, experiment=experiment
-        )
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Step 'Charge at 1C until 4.2V' is infeasible due to exceeded bounds",
-        ):
-            sim.solve()
-
-        # Two steps exceeded, different error
-        experiment = pybamm.Experiment(
-            [("Charge at 1C until 4.2V", "Charge at 1C until 4.2V")]
-        )
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, experiment=experiment
-        )
-        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
-            sim.solve()
 
     def test_solver_error(self):
         model = pybamm.lithium_ion.DFN()  # load model

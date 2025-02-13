@@ -57,7 +57,7 @@ class BaseStep:
         The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
     skip_ok : bool, optional
         If True, the step will be skipped if it is infeasible at the initial conditions.
-        Default is False.
+        Default is True.
     """
 
     def __init__(
@@ -71,7 +71,7 @@ class BaseStep:
         start_time=None,
         description=None,
         direction: str | None = None,
-        skip_ok: bool = False,
+        skip_ok: bool = True,
     ):
         potential_directions = ["charge", "discharge", "rest", None]
         if direction not in potential_directions:
