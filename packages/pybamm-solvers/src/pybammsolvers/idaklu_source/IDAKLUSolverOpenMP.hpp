@@ -8,7 +8,6 @@ using std::vector;
 
 #include "Options.hpp"
 #include "Solution.hpp"
-#include "sundials_legacy_wrapper.hpp"
 
 /**
  * @brief Abstract solver class based on OpenMP vectors

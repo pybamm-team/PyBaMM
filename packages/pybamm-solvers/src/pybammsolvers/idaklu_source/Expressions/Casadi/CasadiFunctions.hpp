@@ -5,8 +5,6 @@
 #include "../Expressions.hpp"
 #include <casadi/casadi.hpp>
 #include <casadi/core/function.hpp>
-#include <casadi/core/sparsity.hpp>
-#include <memory>
 
 /**
  * @brief Class for handling individual casadi functions

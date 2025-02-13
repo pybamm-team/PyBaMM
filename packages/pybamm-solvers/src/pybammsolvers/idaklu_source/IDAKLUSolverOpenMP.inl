@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Expressions/Expressions.hpp"
 #include "sundials_functions.hpp"
 #include <vector>

@@ -3,7 +3,6 @@
 
 #include "IDAKLUSolverOpenMP_solvers.hpp"
 #include "IDAKLUSolverGroup.hpp"
-#include <idas/idas.h>
 #include <memory>
 
 /**

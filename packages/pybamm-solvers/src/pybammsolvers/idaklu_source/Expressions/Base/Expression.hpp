@@ -3,8 +3,6 @@
 
 #include "ExpressionTypes.hpp"
 #include "../../common.hpp"
-#include "../../Options.hpp"
-#include <memory>
 #include <vector>
 
 class Expression {

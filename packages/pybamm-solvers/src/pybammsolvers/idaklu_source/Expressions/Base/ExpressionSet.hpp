@@ -1,11 +1,9 @@
 #ifndef PYBAMM_IDAKLU_EXPRESSION_SET_HPP
 #define PYBAMM_IDAKLU_EXPRESSION_SET_HPP
 
-#include "ExpressionTypes.hpp"
 #include "Expression.hpp"
 #include "../../common.hpp"
 #include "../../Options.hpp"
-#include <memory>
 
 template <class T>
 class ExpressionSet

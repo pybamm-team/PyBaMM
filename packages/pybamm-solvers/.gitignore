@@ -6,6 +6,7 @@ __pycache__
 .venv
 .env
 .nox
+.DS_Store
 
 setup.log
 install_KLU_Sundials

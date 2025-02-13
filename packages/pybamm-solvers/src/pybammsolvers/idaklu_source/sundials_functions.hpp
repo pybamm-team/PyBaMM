@@ -4,9 +4,13 @@
 #include "common.hpp"
 
 template<typename T>
-void axpy(int n, T alpha, const T* x, T* y) {
-  if (!x || !y) return;
-  for (int i=0; i<n; ++i) *y++ += alpha**x++;
+void axpy(int const n, T alpha, const T* x, T* y) {
+  if (!x || !y) {
+      return;
+  }
+  for (int i=0; i<n; ++i) {
+      *y++ += alpha**x++;
+  }
 }
 
 int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,

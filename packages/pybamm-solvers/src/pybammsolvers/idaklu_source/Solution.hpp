@@ -36,4 +36,4 @@ public:
   np_array y_term;
 };
 
-#endif // PYBAMM_IDAKLU_COMMON_HPP
+#endif // PYBAMM_IDAKLU_SOLUTION_HPP

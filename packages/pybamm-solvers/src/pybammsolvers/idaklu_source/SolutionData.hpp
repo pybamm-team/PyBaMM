@@ -20,14 +20,14 @@ class SolutionData
      * @brief constructor using fields
      */
     SolutionData(
-      int flag,
-      int number_of_timesteps,
-      int length_of_return_vector,
-      int arg_sens0,
-      int arg_sens1,
-      int arg_sens2,
-      int length_of_final_sv_slice,
-      bool save_hermite,
+      const int flag,
+      const int number_of_timesteps,
+      const int length_of_return_vector,
+      const int arg_sens0,
+      const int arg_sens1,
+      const int arg_sens2,
+      const int length_of_final_sv_slice,
+      const bool save_hermite,
       realtype *t_return,
       realtype *y_return,
       realtype *yp_return,

@@ -9,8 +9,7 @@ template<class T>
 int residual_eval(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
 {
   DEBUG("residual_eval");
-  ExpressionSet<T> *p_python_functions =
-    static_cast<ExpressionSet<T> *>(user_data);
+  auto *p_python_functions = static_cast<ExpressionSet<T> *>(user_data);
 
   DEBUG_VECTORn(yy, 100);
   DEBUG_VECTORn(yp, 100);
@@ -75,8 +74,7 @@ int residual_eval_approx(sunindextype Nlocal, realtype tt, N_Vector yy,
   DEBUG("residual_eval_approx");
 
   // Just use true residual for now
-  int result = residual_eval<T>(tt, yy, yp, gval, user_data);
-  return result;
+  return residual_eval<T>(tt, yy, yp, gval, user_data);
 }
 
 // Purpose This function computes the product Jv of the DAE system Jacobian J
@@ -105,8 +103,7 @@ int jtimes_eval(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
                   N_Vector tmp1, N_Vector tmp2)
 {
   DEBUG("jtimes_eval");
-  T *p_python_functions =
-      static_cast<T *>(user_data);
+  auto *p_python_functions = static_cast<T *>(user_data);
 
   // Jv has ∂F/∂y v
   p_python_functions->jac_action->m_arg[0] = &tt;
@@ -156,8 +153,7 @@ int jacobian_eval(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 {
   DEBUG("jacobian_eval");
 
-  T *p_python_functions =
-      static_cast<T *>(user_data);
+  auto *p_python_functions = static_cast<T *>(user_data);
 
   // create pointer to jac data, column pointers, and row values
   realtype *jac_data;
@@ -266,8 +262,7 @@ int events_eval(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
                   void *user_data)
 {
   DEBUG("events_eval");
-  T *p_python_functions =
-      static_cast<T*>(user_data);
+  auto *p_python_functions = static_cast<T*>(user_data);
 
   // args are t, y, put result in events_ptr
   p_python_functions->events->m_arg[0] = &t;
@@ -308,8 +303,7 @@ int sensitivities_eval(int Ns, realtype t, N_Vector yy, N_Vector yp,
 {
 
   DEBUG("sensitivities_eval");
-  T *p_python_functions =
-      static_cast<T*>(user_data);
+  auto *p_python_functions = static_cast<T*>(user_data);
 
   const int np = p_python_functions->number_of_parameters;
 

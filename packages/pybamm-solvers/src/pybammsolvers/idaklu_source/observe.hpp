@@ -2,7 +2,6 @@
 #define PYBAMM_CREATE_OBSERVE_HPP
 
 #include <memory>
-#include <unordered_map>
 #include <string>
 #include "common.hpp"
 #include <casadi/core/function.hpp>

@@ -45,13 +45,15 @@ std::vector<Solution> IDAKLUSolverGroup::solve(
     throw std::invalid_argument(
       "t_eval must have at least 2 entries"
     );
-  } else if (save_interp_steps) {
+  }
+  if (save_interp_steps) {
     if (t_interp.front() < t_eval.front()) {
       throw std::invalid_argument(
         "t_interp values must be greater than the smallest t_eval value: "
         + std::to_string(t_eval.front())
       );
-    } else if (t_interp.back() > t_eval.back()) {
+    }
+    if (t_interp.back() > t_eval.back()) {
       throw std::invalid_argument(
         "t_interp values must be less than the greatest t_eval value: "
         + std::to_string(t_eval.back())
