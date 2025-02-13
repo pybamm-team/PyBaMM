@@ -22,6 +22,7 @@
 
 ## Bug fixes
 
+- Fixed a bug that caused the variable `"Loss of lithium due to {domain} lithium plating"`to have the domain `"current collector"` (should not have any domain at all) if the `"x-average side reactions"` option was set to `"true"`. ([#4844](https://github.com/pybamm-team/PyBaMM/pull/4844))
 - Fixed a bug which caused the ec-reaction limited SEI model to give
   incorrect results ([#4774](https://github.com/pybamm-team/PyBaMM/pull/4774))
 
