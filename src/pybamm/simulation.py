@@ -2,7 +2,6 @@ from __future__ import annotations
 import pickle
 import pybamm
 import numpy as np
-import hashlib
 import warnings
 from functools import lru_cache
 from datetime import timedelta
@@ -133,9 +132,6 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
 
-        # Initialise instances of Simulation class with the same random seed
-        self._set_random_seed()
-
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
             import warnings
@@ -158,18 +154,6 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
-
-    # If the solver being used is CasadiSolver or its variants, set a fixed
-    # random seed during class initialization to the SHA-256 hash of the class
-    # name for purposes of reproducibility.
-    def _set_random_seed(self):
-        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
-            self._solver, pybamm.CasadiAlgebraicSolver
-        ):
-            np.random.seed(
-                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
-                % (2**32)
-            )
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
