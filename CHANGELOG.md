@@ -2,7 +2,17 @@
 
 ## Features
 
+- Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))
+- Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
+
+## Breaking changes
+
+- Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
+
+## Bug fixes
+
+- Fixed interpolation bug in `pybamm.QuickPlot` with spatial variables. ([#4841](https://github.com/pybamm-team/PyBaMM/pull/4841))
 
 # [v25.1.1](https://github.com/pybamm-team/PyBaMM/tree/v25.1.1) - 2025-01-20
 
