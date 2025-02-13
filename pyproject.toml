@@ -231,8 +231,10 @@ filterwarnings = [
     # ignore internal nbmake warnings
     'ignore:unclosed \<socket.socket:ResourceWarning',
     'ignore:unclosed event loop \<:ResourceWarning',
-    # ignore warnings generated while running tests
-    #"ignore::DeprecationWarning",
+    # convert internal warnings as errors
+    "error::DeprecationWarning:pybamm.*",
+    #ignore external DeprecationWarning
+    "ignore::DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
 ]
