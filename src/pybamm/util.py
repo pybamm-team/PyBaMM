@@ -115,16 +115,13 @@ class FuzzyDict(dict):
             key_lower = key.lower()
             if search_key in key_lower:
                 key_words = key_lower.split()
-                significant_match = False
 
                 for word in key_words:
                     similarity = difflib.SequenceMatcher(None, search_key, word).ratio()
 
                     if similarity >= min_similarity:
-                        significant_match = True
+                        exact_matches.append(key)
 
-                if significant_match:
-                    exact_matches.append(key)
             else:
                 partial_matches = difflib.get_close_matches(
                     search_key, known_keys, n=5, cutoff=0.5

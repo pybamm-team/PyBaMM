@@ -14,6 +14,10 @@
 
 - Fixed interpolation bug in `pybamm.QuickPlot` with spatial variables. ([#4841](https://github.com/pybamm-team/PyBaMM/pull/4841))
 
+## Optimizations
+
+- Improved search to handle cases with shorter input strings and provide more relevant results. ([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
+
 # [v25.1.1](https://github.com/pybamm-team/PyBaMM/tree/v25.1.1) - 2025-01-20
 
 ## Features
@@ -38,10 +42,6 @@
 - Added `Symbol.post_order()` method to return an iterable that steps through the tree in post-order fashion. ([#4684](https://github.com/pybamm-team/PyBaMM/pull/4684))
 - Porosity change now works for composite electrode ([#4417](https://github.com/pybamm-team/PyBaMM/pull/4417))
 - Added two more submodels (options) for the SEI: Lars von Kolzenberg (2020) model and Tunneling Limit model ([#4394](https://github.com/pybamm-team/PyBaMM/pull/4394))
-
-## Optimizations
-
-- Improved search to handle cases with shorter input strings and provide more relevant results. ([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
 
 ## Breaking changes
 
