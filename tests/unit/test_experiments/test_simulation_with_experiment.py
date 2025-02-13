@@ -187,6 +187,21 @@ class TestSimulationExperiment:
         with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
             sim.solve()
 
+    def test_all_empty_solution_errors(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # One step exceeded, suggests making a cycle
+        steps = [
+            (pybamm.step.Current(-5, termination="4.2 V", skip_ok=False),) * 5,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=parameter_values
+        )
+        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
+            sim.solve()
+
     def test_run_experiment_multiple_times(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(
