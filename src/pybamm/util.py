@@ -41,13 +41,6 @@ class FuzzyDict(dict):
     get_best_matches(key)
         Returns a list of the best-matching keys for a given input key.
 
-    __getitem__(key)
-        Retrieves the value associated with a key, handling renamed terms and
-        suggesting closest matches if the key is not found.
-
-    _find_matches(search_key, known_keys)
-        Finds exact and partial matches for a given search term in the dictionary keys.
-
     search(keys, print_values=False)
         Searches the dictionary for keys containing all specified terms. Prints
         the results and, optionally, the corresponding values.
