@@ -7,18 +7,6 @@ from pybtex.database import Entry
 import pybamm
 
 
-@contextlib.contextmanager
-def temporary_filename(tmp_path):
-    """Create a temporary file inside tmp_path and yield its filename."""
-
-    temp_file = tmp_path / "temp_file.tmp"
-    temp_file.touch()
-    try:
-        yield str(temp_file)
-    finally:
-        temp_file.unlink(missing_ok=True)
-
-
 class TestCitations:
     def test_citations(self):
         citations = pybamm.citations

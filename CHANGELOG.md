@@ -6,10 +6,6 @@
 - Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
 
-## Optimizations
-
-- Refactored unit tests to use `pytest`'s `tmp_path` fixture instead of tempfile. ([#4842](https://github.com/pybamm-team/PyBaMM/pull/4842))
-
 ## Breaking changes
 
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))

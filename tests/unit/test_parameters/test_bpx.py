@@ -438,9 +438,6 @@ class TestBPX:
         test_file = tmp_path / "test.json"
         test_file.write_text(json.dumps(bpx_obj))
 
-        # Ensure the file is actually written
-        assert test_file.exists(), f"File {test_file} was not created."
-
         param = pybamm.ParameterValues.create_from_bpx(str(test_file))
 
         assert param[

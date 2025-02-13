@@ -186,6 +186,7 @@ class StandardModelTest:
                 rtol=1e-6,
                 atol=1e-6,
             )
+        temp.close()
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
