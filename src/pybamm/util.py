@@ -21,12 +21,13 @@ def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent.parent)
 
+
 class FuzzyDict(dict):
     """
     A dictionary with fuzzy matching capabilities for key retrieval and search.
 
     This class extends the built-in `dict` to provide intelligent key lookup,
-    including approximate string matching and handling of renamed terms. It is 
+    including approximate string matching and handling of renamed terms. It is
     useful when working with parameter dictionaries where keys might have slight
     variations, renamings, or formatting differences.
 
@@ -35,22 +36,22 @@ class FuzzyDict(dict):
     - Custom error handling for specific key renamings with informative messages.
     - Search functionality to find keys containing specific terms.
     - Custom warnings for deprecated key names.
-    
+
     Methods:
     get_best_matches(key)
         Returns a list of the best-matching keys for a given input key.
-    
+
     __getitem__(key)
-        Retrieves the value associated with a key, handling renamed terms and 
+        Retrieves the value associated with a key, handling renamed terms and
         suggesting closest matches if the key is not found.
-    
+
     _find_matches(search_key, known_keys)
         Finds exact and partial matches for a given search term in the dictionary keys.
-    
+
     search(keys, print_values=False)
         Searches the dictionary for keys containing all specified terms. Prints
         the results and, optionally, the corresponding values.
-    
+
     copy()
         Returns a copy of the FuzzyDict instance.
 
@@ -213,20 +214,19 @@ class FuzzyDict(dict):
                 else:
                     print(f"No matches found for '{original_key}'")
 
-    
     def copy(self):
         """
         Create and return a copy of the FuzzyDict instance.
 
-        This method returns a new FuzzyDict object containing the same key-value pairs 
-        as the original dictionary. It ensures that the copied dictionary retains 
+        This method returns a new FuzzyDict object containing the same key-value pairs
+        as the original dictionary. It ensures that the copied dictionary retains
         the fuzzy matching behavior.
 
         Returns:
         FuzzyDict
             A new FuzzyDict instance with the same data as the original.
         """
-        
+
         return FuzzyDict(super().copy())
 
 
