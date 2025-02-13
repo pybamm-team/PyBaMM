@@ -91,6 +91,10 @@ class QuickPlot:
         - "tight": make axes tight to plot at each time
         - dictionary: fine-grain control for each variable, can be either "fixed" or \
         "tight" or a specific tuple (lower, upper).
+    x_axis : str, optional
+        The variable to use for the x-axis. Options are:
+        - "Time" (default): Use time as the x-axis.
+        - "Discharge capacity [A.h]": Use discharge capacity as the x-axis.
 
     """
 
