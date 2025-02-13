@@ -21,8 +21,42 @@ def root_dir():
     """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent.parent)
 
-
 class FuzzyDict(dict):
+    """
+    A dictionary with fuzzy matching capabilities for key retrieval and search.
+
+    This class extends the built-in `dict` to provide intelligent key lookup,
+    including approximate string matching and handling of renamed terms. It is 
+    useful when working with parameter dictionaries where keys might have slight
+    variations, renamings, or formatting differences.
+
+    Features:
+    - Fuzzy matching using `difflib.get_close_matches` to suggest the closest keys.
+    - Custom error handling for specific key renamings with informative messages.
+    - Search functionality to find keys containing specific terms.
+    - Custom warnings for deprecated key names.
+    
+    Methods
+    -------
+    get_best_matches(key)
+        Returns a list of the best-matching keys for a given input key.
+    
+    __getitem__(key)
+        Retrieves the value associated with a key, handling renamed terms and 
+        suggesting closest matches if the key is not found.
+    
+    _find_matches(search_key, known_keys)
+        Finds exact and partial matches for a given search term in the dictionary keys.
+    
+    search(keys, print_values=False)
+        Searches the dictionary for keys containing all specified terms. Prints
+        the results and, optionally, the corresponding values.
+    
+    copy()
+        Returns a copy of the FuzzyDict instance.
+
+    """
+
     def get_best_matches(self, key):
         """Get best matches from keys"""
         return difflib.get_close_matches(key, list(self.keys()), n=3, cutoff=0.5)
