@@ -399,7 +399,7 @@ class Simulation:
         t_eval=None,
         solver=None,
         save_at_cycles=None,
-        calc_esoh=True,
+        calc_esoh=None,
         starting_solution=None,
         initial_soc=None,
         callbacks=None,
@@ -442,7 +442,8 @@ class Simulation:
         calc_esoh : bool, optional
             Whether to include eSOH variables in the summary variables. If `False`
             then only summary variables that do not require the eSOH calculation
-            are calculated. Default is True.
+            are calculated.
+            If given, overwrites the default provided by the model.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
             is used. Must be None if not using an experiment.
@@ -469,6 +470,20 @@ class Simulation:
         # Setup
         if solver is None:
             solver = self._solver
+
+        if calc_esoh is None:
+            calc_esoh = self._model.calc_esoh
+        else:
+            # stop 'True' override if model isn't suitable to calculate eSOH
+            if calc_esoh and not self._model.calc_esoh:
+                calc_esoh = False
+                warnings.warn(
+                    UserWarning(
+                        "Model is not suitable for calculating eSOH, "
+                        "setting `calc_esoh` to False",
+                    ),
+                    stacklevel=2,
+                )
 
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
         logs = {}
@@ -1027,12 +1042,7 @@ class Simulation:
         return self._solution
 
     def _get_esoh_solver(self, calc_esoh):
-        if (
-            calc_esoh is False
-            or not isinstance(self._model, pybamm.lithium_ion.BaseModel)
-            or self._model.options["particle phases"] not in ["1", ("1", "1")]
-            or self._model.options["working electrode"] != "both"
-        ):
+        if calc_esoh is False:
             return None
 
         return pybamm.lithium_ion.ElectrodeSOHSolver(
