@@ -225,19 +225,13 @@ class QuickPlot:
             ]
             self.x_values = discharge_capacities
 
-            self.x_axis_min = min(dc[0] for dc in discharge_capacities)
-            self.x_axis_max = max(dc[-1] for dc in discharge_capacities)
             self.x_scaling_factor = 1
-            self.x_unit = "A.h"
+            self.x_label = "Discharge capacity [A.h]"
 
         elif x_axis == "Time":
             self.x_values = ts_seconds
-
-            self.x_axis_min = self.min_t
-            self.x_axis_max = self.max_t
             self.x_scaling_factor = self.time_scaling_factor
 
-            self.x_unit = self.time_unit
         else:
             msg = "Invalid value for `x_axis`."
             raise ValueError(msg)
@@ -441,8 +435,8 @@ class QuickPlot:
         self.axis_limits = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 0:
-                x_min = self.x_axis_min
-                x_max = self.x_axis_max
+                x_min = self.min_t
+                x_max = self.max_t
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_spatial_variable[key][0]
                 x_max = self.first_spatial_variable[key][-1]
@@ -551,7 +545,7 @@ class QuickPlot:
                 if self.x_axis == "Time":
                     ax.set_xlabel(f"Time [{self.time_unit}]")
                 if self.x_axis == "Discharge capacity [A.h]":
-                    ax.set_xlabel("Discharge capacity [A.h]")
+                    ax.set_xlabel(f"{self.x_label}")
 
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
@@ -714,14 +708,11 @@ class QuickPlot:
         if pybamm.is_notebook():  # pragma: no cover
             import ipywidgets as widgets
 
-            step = step or (self.x_axis_max - self.x_axis_min) / 100
+            step = step or self.max_t / 100
             widgets.interact(
                 lambda t: self.plot(t, dynamic=False),
                 t=widgets.FloatSlider(
-                    min=self.x_axis_min,
-                    max=self.x_axis_max,
-                    step=step,
-                    value=self.x_axis_min,
+                    min=self.min_t, max=self.max_t, step=step, value=self.min_t
                 ),
                 continuous_update=False,
             )
@@ -730,7 +721,7 @@ class QuickPlot:
             Slider = import_optional_dependency("matplotlib.widgets", "Slider")
 
             # Set initial x-axis values and slider
-            self.plot(self.x_axis_min, dynamic=True)
+            self.plot(self.min_t, dynamic=True)
 
             # Set x-axis label correctly
             if self.x_axis == "Time":
@@ -740,7 +731,7 @@ class QuickPlot:
             else:
                 ax_label = self.x_axis  # Use the string directly if unknown
 
-            ax_min, ax_max, val_init = self.x_axis_min, self.x_axis_max, self.x_axis_min
+            ax_min, ax_max, val_init = self.min_t, self.max_t, self.min_t
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
