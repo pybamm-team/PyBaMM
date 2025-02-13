@@ -1,0 +1,59 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pybamm_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies (MacOs)
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_AUTO_UPDATE: 1
+          HOMEBREW_NO_COLOR: 1
+          NONINTERACTIVE: 1
+        run: |
+          brew analytics off
+          brew install libomp
+          brew reinstall gcc
+
+      - name: Build and test
+        run: |
+          cd ..
+          git clone https://github.com/pybamm-team/PyBaMM.git
+          # Install PyBaMM
+          cd PyBaMM
+          pip install -e ".[all,dev,jax]"
+          
+          # Replace PyBaMM solvers
+          cd ../pybammsolvers
+          pip uninstall pybammsolvers --yes
+          python install_KLU_Sundials.py
+          pip install .
+          
+          # Run pybamm tests
+          cd ../PyBaMM
+          pytest tests/unit
+          pytest tests/integration

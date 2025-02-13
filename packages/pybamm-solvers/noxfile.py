@@ -84,7 +84,8 @@ def set_environment_variables(env_dict, session):
 
 @nox.session(name="idaklu-requires")
 def run_pybamm_requires(session):
-    """Download, compile, and install the build-time requirements for Linux and macOS. Supports --install-dir for custom installation paths and --force to force installation."""
+    """Download, compile, and install the build-time requirements for Linux and macOS.
+    Supports --install-dir for custom installation paths and --force to force installation."""
     set_environment_variables(PYBAMM_ENV, session=session)
     if sys.platform != "win32":
         session.run("python", "install_KLU_Sundials.py", *session.posargs)
@@ -117,7 +118,6 @@ def run_pybamm_requires(session):
 
 @nox.session(name="unit")
 def run_unit(session):
-    """Run the unit tests."""
     set_environment_variables(PYBAMM_ENV, session=session)
     session.install("setuptools", silent=False)
     session.install("casadi", silent=False)
