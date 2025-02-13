@@ -216,7 +216,21 @@ class FuzzyDict(dict):
                 else:
                     print(f"No matches found for '{original_key}'")
 
+    
     def copy(self):
+        """
+        Create and return a copy of the FuzzyDict instance.
+
+        This method returns a new FuzzyDict object containing the same key-value pairs 
+        as the original dictionary. It ensures that the copied dictionary retains 
+        the fuzzy matching behavior.
+
+        Returns
+        -------
+        FuzzyDict
+            A new FuzzyDict instance with the same data as the original.
+        """
+        
         return FuzzyDict(super().copy())
 
 
