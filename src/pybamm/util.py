@@ -26,7 +26,8 @@ class FuzzyDict(dict):
     """
     A dictionary with fuzzy matching capabilities for key retrieval and search.
 
-    Methods:
+    Methods
+    -------
     get_best_matches(key)
         Returns a list of the best-matching keys for a given input key.
 
@@ -37,8 +38,8 @@ class FuzzyDict(dict):
     copy()
         Returns a copy of the FuzzyDict instance.
 
-    Example usage:
-
+    Example usage
+    -------
     ```python
         >>> params = FuzzyDict({
         >>> "electrode diffusivity": 1.2,
@@ -129,6 +130,7 @@ class FuzzyDict(dict):
         Helper method to find exact and partial matches for a given search key.
 
         Parameters
+        -------
         search_key : str
             The term to search for in the keys.
         known_keys : list of str
@@ -147,6 +149,7 @@ class FuzzyDict(dict):
         the best matches are printed.
 
         Parameters
+        -------
         keys : str or list of str
             Search term(s)
         print_values : bool, optional
@@ -221,7 +224,8 @@ class FuzzyDict(dict):
         as the original dictionary. It ensures that the copied dictionary retains
         the fuzzy matching behavior.
 
-        Returns:
+        Returns
+        -------
         FuzzyDict
             A new FuzzyDict instance with the same data as the original.
         """
