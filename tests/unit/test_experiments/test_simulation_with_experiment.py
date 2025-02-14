@@ -145,6 +145,63 @@ class TestSimulationExperiment:
         assert len(sol3.cycles) == 2
         os.remove("test_experiment.sav")
 
+    def test_skip_ok(self):
+        model = pybamm.lithium_ion.SPMe()
+        cc_charge_skip_ok = pybamm.step.Current(-5, termination="4.2 V")
+        cc_charge_skip_not_ok = pybamm.step.Current(
+            -5, termination="4.2 V", skip_ok=False
+        )
+        steps = [
+            pybamm.step.Current(2, duration=100.0, skip_ok=False),
+            cc_charge_skip_ok,
+            pybamm.step.Voltage(4.2, termination="0.01 A", skip_ok=False),
+        ]
+        param = pybamm.ParameterValues("Chen2020")
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        # Make sure we know to skip it if we should and not if we shouldn't
+        assert sim.experiment.steps[1].skip_ok
+        assert not sim.experiment.steps[0].skip_ok
+
+        # Make sure we actually skipped it because it is infeasible
+        assert len(sol.cycles) == 2
+
+        # In this case, it is feasible, so we should not skip it
+        sol2 = sim.solve(initial_soc=0.5)
+        assert len(sol2.cycles) == 3
+
+        # make sure we raise an error if we shouldn't skip it and it is infeasible
+        steps[1] = cc_charge_skip_not_ok
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        with pytest.raises(pybamm.SolverError):
+            sim.solve()
+
+        # make sure we raise an error if all steps are infeasible
+        steps = [
+            (pybamm.step.Current(-5, termination="4.2 V", skip_ok=True),) * 5,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        with pytest.raises(pybamm.SolverError, match="skip_ok is True for all steps"):
+            sim.solve()
+
+    def test_all_empty_solution_errors(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = pybamm.ParameterValues("Chen2020")
+
+        # One step exceeded, suggests making a cycle
+        steps = [
+            (pybamm.step.Current(-5, termination="4.2 V", skip_ok=False),) * 5,
+        ]
+        experiment = pybamm.Experiment(steps)
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=parameter_values
+        )
+        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
+            sim.solve()
+
     def test_run_experiment_multiple_times(self):
         s = pybamm.step.string
         experiment = pybamm.Experiment(
@@ -678,31 +735,6 @@ class TestSimulationExperiment:
             sim.solution.cycles[0].last_state.y.full(),
             sim.solution.cycles[1].steps[-1].first_state.y.full(),
         )
-
-    def test_all_empty_solution_errors(self):
-        model = pybamm.lithium_ion.SPM()
-        parameter_values = pybamm.ParameterValues("Chen2020")
-
-        # One step exceeded, suggests making a cycle
-        experiment = pybamm.Experiment([("Charge at 1C until 4.2V")])
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, experiment=experiment
-        )
-        with pytest.raises(
-            pybamm.SolverError,
-            match="Step 'Charge at 1C until 4.2V' is infeasible due to exceeded bounds",
-        ):
-            sim.solve()
-
-        # Two steps exceeded, different error
-        experiment = pybamm.Experiment(
-            [("Charge at 1C until 4.2V", "Charge at 1C until 4.2V")]
-        )
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, experiment=experiment
-        )
-        with pytest.raises(pybamm.SolverError, match="All steps in the cycle"):
-            sim.solve()
 
     def test_solver_error(self):
         model = pybamm.lithium_ion.DFN()  # load model
