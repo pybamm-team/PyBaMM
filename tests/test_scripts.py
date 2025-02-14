@@ -12,6 +12,7 @@ class TestExamples:
     A class to test the example scripts.
     """
 
+    @staticmethod
     def list_of_files():
         file_list = (ROOT_DIR / "examples" / "scripts").rglob("*.py")
         return [pytest.param(file, id=file.name) for file in file_list]
@@ -19,4 +20,4 @@ class TestExamples:
     @pytest.mark.parametrize("files", list_of_files())
     @pytest.mark.scripts
     def test_example_scripts(self, files):
-        runpy.run_path(files)
+        runpy.run_path(str(files))
