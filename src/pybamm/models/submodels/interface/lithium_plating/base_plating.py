@@ -82,14 +82,16 @@ class BasePlating(BaseInterface):
         c_plated_Li_xav = pybamm.x_average(c_plated_Li)
         c_plated_Li_av = pybamm.yz_average(c_plated_Li_xav)
         L_plated_Li = c_plated_Li * c_to_L  # plated Li thickness
-        L_plated_Li_av = pybamm.x_average(L_plated_Li)
+        L_plated_Li_xav = pybamm.x_average(L_plated_Li)
+        L_plated_Li_av = pybamm.yz_average(L_plated_Li_xav)
         Q_plated_Li = c_plated_Li_av * L_k * self.param.L_y * self.param.L_z
 
         c_dead_Li_xav = pybamm.x_average(c_dead_Li)
         c_dead_Li_av = pybamm.yz_average(c_dead_Li_xav)
         # dead Li "thickness", required by porosity submodel
         L_dead_Li = c_dead_Li * c_to_L
-        L_dead_Li_av = pybamm.x_average(L_dead_Li)
+        L_dead_Li_xav = pybamm.x_average(L_dead_Li)
+        L_dead_Li_av = pybamm.yz_average(L_dead_Li_xav)
         Q_dead_Li = c_dead_Li_av * L_k * self.param.L_y * self.param.L_z
 
         variables = {
@@ -97,14 +99,23 @@ class BasePlating(BaseInterface):
             "[mol.m-3]": c_plated_Li,
             f"X-averaged {domain} {phase_name}lithium plating concentration "
             "[mol.m-3]": c_plated_Li_xav,
+            f"Volume-averaged {domain} {phase_name}lithium plating concentration "
+            "[mol.m-3]": c_plated_Li_av,
             f"{Domain} {phase_name}dead lithium concentration [mol.m-3]": c_dead_Li,
             f"X-averaged {domain} {phase_name}dead lithium concentration "
             "[mol.m-3]": c_dead_Li_xav,
+            f"Volume-averaged {domain} {phase_name}dead lithium concentration "
+            "[mol.m-3]": c_dead_Li_av,
             f"{Domain} {phase_name}lithium plating thickness [m]": L_plated_Li,
             f"X-averaged {domain} {phase_name}lithium plating thickness "
+            "[m]": L_plated_Li_xav,
+            f"Volume-averaged {domain} {phase_name}lithium plating thickness "
             "[m]": L_plated_Li_av,
             f"{Domain} {phase_name}dead lithium thickness [m]": L_dead_Li,
-            f"X-averaged {domain} {phase_name}dead lithium thickness [m]": L_dead_Li_av,
+            f"X-averaged {domain} {phase_name}dead lithium thickness "
+            "[m]": L_dead_Li_xav,
+            f"Volume-averaged {domain} {phase_name}dead lithium thickness "
+            "[m]": L_dead_Li_av,
             f"Loss of lithium to {domain} {phase_name}lithium plating [mol]": (
                 Q_plated_Li + Q_dead_Li
             ),
