@@ -26,17 +26,6 @@ class FuzzyDict(dict):
     """
     A dictionary with fuzzy matching capabilities for key retrieval and search.
 
-    This class extends the built-in `dict` to provide intelligent key lookup,
-    including approximate string matching and handling of renamed terms. It is
-    useful when working with parameter dictionaries where keys might have slight
-    variations, renamings, or formatting differences.
-
-    Features:
-    - Fuzzy matching using `difflib.get_close_matches` to suggest the closest keys.
-    - Custom error handling for specific key renamings with informative messages.
-    - Search functionality to find keys containing specific terms.
-    - Custom warnings for deprecated key names.
-
     Methods:
     get_best_matches(key)
         Returns a list of the best-matching keys for a given input key.
@@ -48,6 +37,23 @@ class FuzzyDict(dict):
     copy()
         Returns a copy of the FuzzyDict instance.
 
+    Example usage:
+
+    ```python
+        >>> params = FuzzyDict({
+        >>> "electrode diffusivity": 1.2,
+        >>> "particle diffusivity": 0.8,
+        >>> "Negative electrode SOC": 0.5,
+        >>> "Open-circuit voltage at 100% SOC [V]": 4.2,
+        >>> })
+
+        >>> print(params["electrode diffusivity"])  # 1.2 (direct access)
+        >>> print(params["particle diffusivity"])   # 0.8 (handles renaming)
+
+        >>> params.search("open circuit voltage")
+
+        >>> params_copy = params.copy()  # Creates a new FuzzyDict instance
+    ```
     """
 
     def get_best_matches(self, key):
