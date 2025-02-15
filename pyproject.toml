@@ -232,7 +232,7 @@ filterwarnings = [
     'ignore:unclosed event loop \<:ResourceWarning',
     # convert internal warnings as errors
     "error::DeprecationWarning:pybamm.*",
-    #ignore external DeprecationWarning
+    # ignore external DeprecationWarning
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
