@@ -35,10 +35,6 @@ def update_version():
         file.seek(0)
         file.writelines(output_list)
 
-    version_file_path = os.path.join(pybamm.root_dir(), "src", "pybamm", "_version.py")
-    with open(version_file_path, "w") as f:
-        f.write(f'__version__ = "{release_version}"\n')
-
 
 if __name__ == "__main__":
     update_version()
