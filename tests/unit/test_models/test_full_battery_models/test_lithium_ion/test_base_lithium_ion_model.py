@@ -42,3 +42,11 @@ class TestBaseLithiumIonModel:
             NotImplementedError, match="Reference electrode can only be"
         ):
             model.insert_reference_electrode()
+
+    def test_setting_calc_esoh(self):
+        model = pybamm.lithium_ion.BaseModel()
+        model.calc_esoh = False
+        assert model.calc_esoh is False
+
+        with pytest.raises(TypeError, match="`calc_esoh` arg needs to be a bool"):
+            model.calc_esoh = "Yes"
