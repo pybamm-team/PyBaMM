@@ -41,7 +41,7 @@ class SummaryVariables:
         self.user_inputs = user_inputs or {}
         self.esoh_solver = esoh_solver
         self._variables = {}  # Store computed variables
-        self.cycle_number = None
+        self.cycle_number = np.array([])
 
         model = solution.all_models[0]
         self._possible_variables = model.summary_variables  # minus esoh variables
@@ -122,6 +122,8 @@ class SummaryVariables:
         if key in self._variables:
             # return it if it exists
             return self._variables[key]
+        elif key == "Cycle number":
+            return self.cycle_number
         elif key not in self.all_variables:
             # check it's listed as a summary variable
             raise KeyError(f"Variable '{key}' is not a summary variable.")

@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+- Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
+
 # [v25.1.1](https://github.com/pybamm-team/PyBaMM/tree/v25.1.1) - 2025-01-20
 
 ## Features
@@ -8,7 +12,7 @@
 
 ## Bug fixes
 
-- Fixed a bug which caused the wc-reaction limited SEI model to give
+- Fixed a bug which caused the ec-reaction limited SEI model to give
   incorrect results ([#4774](https://github.com/pybamm-team/PyBaMM/pull/4774))
 
 # [v25.1.0](https://github.com/pybamm-team/PyBaMM/tree/v25.1.0) - 2025-01-14
