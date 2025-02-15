@@ -196,7 +196,7 @@ class BaseStep:
         self.next_start_time = None
         self.end_time = None
 
-    def copy(self, input_parameters: dict[str, any] | None = None):
+    def copy(self):
         """
         Return a copy of the step.
 
@@ -205,12 +205,6 @@ class BaseStep:
         :class:`pybamm.Step`
             A copy of the step.
         """
-
-        new_input_parameters = (
-            input_parameters
-            if input_parameters is not None
-            else getattr(self, "input_parameters", {})
-        )
         return self.__class__(
             self.input_value,
             duration=self.input_duration,
@@ -221,7 +215,6 @@ class BaseStep:
             start_time=self.start_time,
             description=self.description,
             direction=self.direction,
-            input_parameters=new_input_parameters,
         )
 
     def __str__(self):
@@ -239,7 +232,7 @@ class BaseStep:
         and temperature, which are the variables involved in processing the model. Also
         used for hashing.
         """
-        return f"Step({self.hash_args})"
+        return f"{self.__class__.__name__}:value={self.input_value},duration={self.input_duration},termination={self.termination}"
 
     def to_dict(self):
         """
@@ -400,14 +393,23 @@ class BaseStep:
             if hasattr(self, "input_parameters"):
                 merged_inputs.update(self.input_parameters)
             merged_inputs.update(inpt)
-            if (
-                isinstance(self.value, pybamm.InputParameter)
-                and self.value.name not in merged_inputs
-            ):
-                merged_inputs[self.value.name] = self.input_parameters.get(
-                    self.value.name
-                )
-            init_curr = self.value.evaluate(t=0, inputs=merged_inputs).flatten()[0]
+            if isinstance(self.value, pybamm.InputParameter):
+                param_value = merged_inputs.get(self.value.name)
+                if param_value is None:
+                    init_curr = 0
+                else:
+                    result = self.value.evaluate(t=0, inputs=merged_inputs)
+                    try:
+                        init_curr = result.flatten()[0]
+                    except AttributeError:
+                        # If result is a scalar (e.g. an int), use it directly.
+                        init_curr = result
+            else:
+                result = self.value.evaluate(t=0, inputs=merged_inputs)
+                try:
+                    init_curr = result.flatten()[0]
+                except AttributeError:
+                    init_curr = result
         else:
             init_curr = self.value
         sign = np.sign(init_curr)

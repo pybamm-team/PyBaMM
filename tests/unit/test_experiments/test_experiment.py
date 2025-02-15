@@ -5,6 +5,7 @@
 from datetime import datetime
 import pybamm
 import pytest
+import numpy as np
 
 
 class TestExperiment:
@@ -215,36 +216,21 @@ class TestExperiment:
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well
 
-    def test_experiment_input_parameter(self):
-        current_step = pybamm.step.current(
-            1, input_parameters=pybamm.InputParameter("I_app"), termination="2.5V"
-        )
+    def test_simulation_solve_updates_input_parameters(self):
+        model = pybamm.lithium_ion.SPM()  # or any valid model
+        step = pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
+        experiment = pybamm.Experiment([step])
 
-        experiment = pybamm.Experiment(
-            operating_conditions=[current_step],
-            input_parameters={"I_app": 1},
-            period="1 minute",
-            temperature=25.00,
-            termination="2.5 V",
-        )
+        sim = pybamm.Simulation(model, experiment=experiment)
 
-        processed_steps = experiment.process_steps(
-            [current_step], experiment.period, 298.15, experiment.input_parameters
-        )
+        for s in experiment.steps:
+            assert s.input_parameters == {}
 
-        for step in processed_steps.values():
-            assert hasattr(step, "input_parameters")
-            assert "I_app" in step.input_parameters
-            assert step.input_parameters["I_app"] == 1
+        sim.solve(inputs={"I_app": 1})
+        solution = sim.solution
 
-    def test_experiment_copy_preserves_input_parameters(self):
-        current_step = pybamm.step.current(
-            1, input_parameters=pybamm.InputParameter("I_app"), termination="2.5 V"
-        )
-        experiment = pybamm.Experiment(
-            input_parameters={"I_app": 1},
-            termination="2.5 V",
-            operating_conditions=[current_step],
-        )
-        experiment_copy = experiment.copy()
-        assert experiment_copy.input_parameters == experiment.input_parameters
+        # Evaluate the current at the final time
+        current = solution["Current [A]"].entries
+
+        # Check that the current matches the expected value (1 in this example)
+        assert np.allclose(current, 1, atol=1e-3)

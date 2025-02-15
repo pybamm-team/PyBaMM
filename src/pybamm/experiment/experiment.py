@@ -42,17 +42,13 @@ class Experiment:
         self,
         operating_conditions: list[str | tuple[str] | BaseStep],
         period: str | None = None,
-        input_parameters: dict[str, any] | None = None,
         temperature: float | None = None,
         termination: list[str] | None = None,
     ):
-        self.input_parameters = input_parameters if input_parameters is not None else {}
-
         # Save arguments for copying
         self.args = (
             operating_conditions,
             period,
-            input_parameters,
             temperature,
             termination,
         )
@@ -74,7 +70,7 @@ class Experiment:
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
         processed_steps = self.process_steps(
-            steps_unprocessed, self.period, self.temperature, self.input_parameters
+            steps_unprocessed, self.period, self.temperature
         )
 
         self.steps = [processed_steps[repr(step)] for step in steps_unprocessed]
@@ -97,7 +93,7 @@ class Experiment:
         self.termination = self.read_termination(termination)
 
     @staticmethod
-    def process_steps(unprocessed_steps, period, temp, input_parameters=None):
+    def process_steps(unprocessed_steps, period, temp):
         processed_steps = {}
         for step in unprocessed_steps:
             if repr(step) in processed_steps:
@@ -107,7 +103,7 @@ class Experiment:
             elif isinstance(step, pybamm.step.BaseStep):
                 # Copy the step to avoid modifying the original with the period and
                 # temperature and any other changes
-                processed_step = step.copy(input_parameters=input_parameters)
+                processed_step = step.copy()
             else:
                 raise TypeError("Operating conditions must be a Step object or string.")
 
