@@ -80,7 +80,6 @@ class BaseStep:
                 f"Invalid direction: {direction}. Must be one of {potential_directions}"
             )
         self.input_duration = duration
-        self.input_duration = duration
         self.input_value = value
         self.input_parameters = input_parameters if input_parameters is not None else {}
         self.skip_ok = skip_ok
@@ -405,17 +404,12 @@ class BaseStep:
                     init_curr = 0
                 else:
                     result = self.value.evaluate(t=0, inputs=merged_inputs)
-                    try:
-                        init_curr = result.flatten()[0]
-                    except AttributeError:
-                        # If result is a scalar (e.g. an int), use it directly.
-                        init_curr = result
+                    init_curr = result.flatten()[0]
+
             else:
                 result = self.value.evaluate(t=0, inputs=merged_inputs)
-                try:
-                    init_curr = result.flatten()[0]
-                except AttributeError:
-                    init_curr = result
+                init_curr = result.flatten()[0]
+
         else:
             init_curr = self.value
         sign = np.sign(init_curr)
