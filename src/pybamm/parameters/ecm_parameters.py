@@ -33,7 +33,6 @@ class EcmParameters:
         # external circuits submodels
         self.Q = self.cell_capacity
         self.current_density_with_time = self.current_with_time
-        self.n_electrodes_parallel = pybamm.Scalar(1)
         self.A_cc = pybamm.Scalar(1)
         self.n_cells = pybamm.Scalar(1)
 
