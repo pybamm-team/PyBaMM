@@ -98,7 +98,6 @@ Installable with ``pip install "pybamm[plot]"``
 =========================================================== ================== ================== ==================================================================
 Dependency                                                  Minimum Version    pip extra          Notes
 =========================================================== ================== ================== ==================================================================
-`imageio <https://imageio.readthedocs.io/en/stable/>`__     2.3.0              plot               For generating simulation GIFs.
 `matplotlib <https://matplotlib.org/stable/>`__             3.6.0              plot               To plot various battery models, and analyzing battery performance.
 =========================================================== ================== ================== ==================================================================
 

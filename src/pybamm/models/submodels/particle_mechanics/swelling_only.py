@@ -48,4 +48,6 @@ class SwellingOnly(BaseMechanics):
     def get_coupled_variables(self, variables):
         variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
+        if self.size_distribution:
+            variables.update(self._get_mechanical_size_distribution_results(variables))
         return variables

@@ -1,5 +1,5 @@
 #
-# Class for varying active material volume fraction, driven by stress
+# Class for varying active material volume fraction
 #
 import pybamm
 
