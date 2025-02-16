@@ -399,17 +399,9 @@ class BaseStep:
                 merged_inputs.update(self.input_parameters)
             merged_inputs.update(inpt)
             if isinstance(self.value, pybamm.InputParameter):
-                param_value = merged_inputs.get(self.value.name)
-                if param_value is None:
-                    init_curr = 0
-                else:
-                    result = self.value.evaluate(t=0, inputs=merged_inputs)
-                    init_curr = result.flatten()[0]
-
+                init_curr = 0
             else:
-                result = self.value.evaluate(t=0, inputs=merged_inputs)
-                init_curr = result.flatten()[0]
-
+                init_curr = self.value.evaluate(t=0, inputs=merged_inputs).flatten()[0]
         else:
             init_curr = self.value
         sign = np.sign(init_curr)
