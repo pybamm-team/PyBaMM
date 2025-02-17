@@ -176,9 +176,10 @@ class Voltage(BaseStepImplicit):
     """
 
     def get_parameter_values(self, variables):
-        params = {"Voltage function [V]": self.value}
-        if self.temperature is not None:
-            params["Ambient temperature [K]"] = self.temperature
+        params = {
+            "Voltage function [V]": self.value,
+            "Ambient temperature [K]": self.temperature,
+        }
         return params
 
     def get_submodel(self, model):
