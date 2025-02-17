@@ -55,6 +55,9 @@ class BaseStep:
         A description of the step.
     direction : str, optional
         The direction of the step, e.g. "Charge" or "Discharge" or "Rest".
+    skip_ok : bool, optional
+        If True, the step will be skipped if it is infeasible at the initial conditions.
+        Default is True.
     """
 
     def __init__(
@@ -68,6 +71,7 @@ class BaseStep:
         start_time=None,
         description=None,
         direction: str | None = None,
+        skip_ok: bool = True,
     ):
         potential_directions = ["charge", "discharge", "rest", None]
         if direction not in potential_directions:
@@ -77,6 +81,7 @@ class BaseStep:
         self.input_duration = duration
         self.input_duration = duration
         self.input_value = value
+        self.skip_ok = skip_ok
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
@@ -213,6 +218,7 @@ class BaseStep:
             start_time=self.start_time,
             description=self.description,
             direction=self.direction,
+            skip_ok=self.skip_ok,
         )
 
     def __str__(self):
