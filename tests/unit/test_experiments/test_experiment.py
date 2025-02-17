@@ -5,6 +5,7 @@
 from datetime import datetime
 import pybamm
 import pytest
+import numpy as np
 
 
 class TestExperiment:
@@ -214,3 +215,37 @@ class TestExperiment:
 
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well
+
+
+def test_temperature_time_series_simulation():
+    time_data = np.array([0, 600, 1200, 1800])
+    voltage_data = np.array([4.2, 4.0, 3.8, 3.6])
+    temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
+
+    voltage_profile = np.column_stack((time_data, voltage_data))
+    temperature_profile = np.column_stack((time_data, temperature_data))
+
+    experiment = pybamm.Experiment(
+        [pybamm.step.voltage(voltage_profile, temperature=temperature_profile)]
+    )
+
+    model = pybamm.lithium_ion.DFN()
+
+    param_values = pybamm.ParameterValues("Marquis2019")
+    param_values.update({"Ambient temperature [K]": 298.15})
+
+    sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param_values)
+    sim.build()
+
+    ambient_temp = sim.parameter_values["Ambient temperature [K]"]
+    assert hasattr(ambient_temp, "evaluate"), (
+        "Ambient temperature parameter is not time-dependent as expected."
+    )
+
+    t_eval = 600
+    interpolated_temp = ambient_temp.evaluate(t=t_eval)
+    np.testing.assert_allclose(interpolated_temp, 310.15, atol=1e-3)
+
+    t_eval2 = 1200
+    interpolated_temp2 = ambient_temp.evaluate(t=t_eval2)
+    np.testing.assert_allclose(interpolated_temp2, 305.15, atol=1e-3)

@@ -79,7 +79,6 @@ class BaseStep:
                 f"Invalid direction: {direction}. Must be one of {potential_directions}"
             )
         self.input_duration = duration
-        self.input_duration = duration
         self.input_value = value
         self.skip_ok = skip_ok
         # Check if drive cycle
@@ -158,7 +157,6 @@ class BaseStep:
         ):
             direction = self.value_based_charge_or_discharge()
         self.direction = direction
-
         self.repr_args, self.hash_args = self.record_tags(
             value,
             duration,
@@ -184,8 +182,12 @@ class BaseStep:
             term = _read_termination(term)
             self.termination.append(term)
 
-        self.temperature = _convert_temperature_to_kelvin(temperature)
-
+        self.temperature = _convert_temperature_to_kelvin(
+            temperature
+        )  # change name of the function
+        self.has_time_series_temperature = isinstance(
+            self.temperature, pybamm.Interpolant
+        )
         if tags is None:
             tags = []
         elif isinstance(tags, str):
@@ -424,9 +426,13 @@ class BaseStep:
             hash_args += f", termination={termination}"
         if period:
             repr_args += f", period={period}"
-        if temperature:
-            repr_args += f", temperature={temperature}"
-            hash_args += f", temperature={temperature}"
+        if temperature is not None:
+            if isinstance(temperature, np.ndarray):
+                repr_args += ", temperature=<time-series>"
+                hash_args += ", temperature=<time-series>"
+            else:
+                repr_args += f", temperature={temperature}"
+                hash_args += f", temperature={temperature}"
         if tags:
             repr_args += f", tags={tags}"
         if start_time:
@@ -535,7 +541,28 @@ def _convert_time_to_seconds(time_and_units):
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
-    """Convert a temperature in Celsius or Kelvin to a temperature in Kelvin"""
+    """
+    If the input is a 2D numpy array (time series), return an Interpolant.
+    Otherwise Convert a temperature in Celsius or Kelvin to a temperature in Kelvin
+    """
+
+    # Check if the temperature input is a time-series array
+    if isinstance(temperature_and_units, np.ndarray):
+        if temperature_and_units.ndim == 2 and temperature_and_units.shape[1] == 2:
+            # Assume first column is time (s) and second column is temperature (K)
+            times = temperature_and_units[:, 0]
+            temps = temperature_and_units[:, 1]
+            # Create an interpolant function parameter that depends on time
+            return pybamm.Interpolant(times, temps, pybamm.t, interpolator="linear")
+        else:
+            raise ValueError(
+                "Temperature time-series must be a 2D array with two columns (time, temperature)."
+            )
+
+    # If it's already an Interpolant, do nothing further.
+    if isinstance(temperature_and_units, pybamm.Interpolant):
+        return temperature_and_units
+
     # If the temperature is a number, assume it is in Kelvin
     if isinstance(temperature_and_units, (int, float)) or temperature_and_units is None:
         return temperature_and_units
