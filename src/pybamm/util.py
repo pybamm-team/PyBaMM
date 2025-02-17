@@ -38,23 +38,21 @@ class FuzzyDict(dict):
     copy()
         Returns a copy of the FuzzyDict instance.
 
-    Example usage
-    -------
-    ```python
-        >>> params = FuzzyDict({
-        >>> "electrode diffusivity": 1.2,
-        >>> "particle diffusivity": 0.8,
-        >>> "Negative electrode SOC": 0.5,
-        >>> "Open-circuit voltage at 100% SOC [V]": 4.2,
-        >>> })
-
-        >>> print(params["electrode diffusivity"])  # 1.2 (direct access)
-        >>> print(params["particle diffusivity"])   # 0.8 (handles renaming)
-
-        >>> params.search("open circuit voltage")
-
-        >>> params_copy = params.copy()  # Creates a new FuzzyDict instance
-    ```
+    Examples
+    --------
+      >>> params = FuzzyDict({
+      >>> "electrode diffusivity": 1.2,
+      >>> "particle diffusivity": 0.8,
+      >>> "Negative electrode SOC": 0.5,
+      >>> "Open-circuit voltage at 100% SOC [V]": 4.2,
+      >>> })
+      >>> print(params["electrode diffusivity"])
+      1.2
+      >>> print(params["particle diffusivity"])
+      0.8
+      >>> params.search("open circuit voltage")
+      >>> params_copy = params.copy()  # Creates a new FuzzyDict instance
+    
     """
 
     def get_best_matches(self, key):
