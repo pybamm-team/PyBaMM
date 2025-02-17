@@ -50,7 +50,6 @@ class Composite(BaseElectrolyteConductivity):
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
-        # RT_F_av = self.param.R * T_av / self.param.F
         RT_F_av_s = self.param.R * T_av_s / self.param.F
         RT_F_av_p = self.param.R * T_av_p / self.param.F
 
@@ -63,20 +62,21 @@ class Composite(BaseElectrolyteConductivity):
 
         # electrolyte current
         if self.options.electrode_types["negative"] == "planar":
-            # i_e_n = None
+            i_e_n = None
             i_e_n_edge = None
         else:
             x_n = pybamm.standard_spatial_vars.x_n
             x_n_edge = pybamm.standard_spatial_vars.x_n_edge
             T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
             RT_F_av_n = self.param.R * T_av_n / self.param.F
-            # i_e_n = i_boundary_cc * x_n / L_n
+            i_e_n = i_boundary_cc * x_n / L_n
             i_e_n_edge = i_boundary_cc * x_n_edge / L_n
-        # i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
+        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
-        # i_e_p = i_boundary_cc * (L_x - x_p) / L_p
+        i_e_p = i_boundary_cc * (L_x - x_p) / L_p
         i_e_p_edge = i_boundary_cc * (L_x - x_p_edge) / L_p
-        i_e = pybamm.concatenation(i_e_n_edge, i_e_s_edge, i_e_p_edge)
+        # i_e = pybamm.concatenation(i_e_n_edge, i_e_s_edge, i_e_p_edge)
+        i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
         phi_e_dict = {}
 
         # electrolyte potential
@@ -85,37 +85,11 @@ class Composite(BaseElectrolyteConductivity):
             eta_c_n = pybamm.Scalar(0)
             delta_phi_e_n = pybamm.Scalar(0)
         else:
-            # need to have current evaluated on edge as integral will make it
-            # evaluate on node
-
-            # eps_c_e_n = variables["Negative electrode porosity times concentration [mol.m-3]"]
-            T_av_bc = pybamm.PrimaryBroadcast(
-                T_av, ["negative electrode", "separator", "positive electrode"]
-            )
-            RT_F_av_bc = self.param.R * T_av_bc / self.param.F
-            c_e = variables["Electrolyte concentration concatenation [mol.m-3]"]
-            # eps_c_e_n = variables[
-            #     "Negative electrode porosity times concentration [mol.m-3]"
-            # ]
-            c_e_n = c_e.children[0]
             eta_c_n = -RT_F_av_n * pybamm.IndefiniteIntegral(
                 self.param.chi(c_e_n, T_av_n)
                 * self._derivative_macinnes_function(c_e_n)
                 * pybamm.grad(c_e_n),
                 x_n,
-            )
-
-            # I_n = pybamm.concatenation(
-            #     pybamm.PrimaryBroadcast(pybamm.Scalar(1), "negative electrode"),
-            #     pybamm.PrimaryBroadcast(pybamm.Scalar(0), "separator"),
-            #     pybamm.PrimaryBroadcast(pybamm.Scalar(0), "positive electrode"),
-            # )
-
-            eta_c_e = -RT_F_av_bc * pybamm.IndefiniteIntegral(
-                self.param.chi(c_e, T_av_bc)
-                * self._derivative_macinnes_function(c_e)
-                * pybamm.grad(c_e),
-                pybamm.standard_spatial_vars.x,
             )
 
             delta_phi_e_n = pybamm.IndefiniteIntegral(
@@ -174,8 +148,6 @@ class Composite(BaseElectrolyteConductivity):
         eta_c_av = (
             -pybamm.x_average(eta_c_p)
             + pybamm.x_average(eta_c_n)
-            - pybamm.Integral(eta_c_p, x_p)
-            + pybamm.Integral(eta_c_n, x_n)
             - pybamm.boundary_value(eta_c_s, "right")
             - pybamm.boundary_value(eta_c_n, "right")
         )
@@ -188,10 +160,7 @@ class Composite(BaseElectrolyteConductivity):
             - pybamm.boundary_value(delta_phi_e_n, "right")
         )
 
-        phi_e = phi_e_const - eta_c_e
-
         variables.update(self._get_standard_potential_variables(phi_e_dict))
-        variables.update({"Electrolyte potential [V]": phi_e})
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
@@ -209,10 +178,13 @@ class Composite(BaseElectrolyteConductivity):
         if self.options.electrode_types["negative"] == "planar":
             domains = ["Separator", "Positive"]
         else:
-            domains = ["Negative", "Separator", "Positive"]
+            domains = [
+                "Negative",
+                "Separator",
+                "Positive",
+            ]
 
         var_names = [
-            # " electrode porosity times concentration [mol.m-3]",
             " electrolyte concentration [mol.m-3]",
             # " electrolyte potential [V]",
         ]
@@ -220,12 +192,6 @@ class Composite(BaseElectrolyteConductivity):
         for name in var_names:
             for domain in domains:
                 full_var_name = domain + name
-
-                # Fix inconcsistency in naming, where porosity times concentration is
-                # called "electrode porosity times concentration"
-                full_var_name = full_var_name.replace(
-                    "Separator electrode", "Separator"
-                )
                 var = variables[full_var_name]
                 self.boundary_conditions.update(
                     {
