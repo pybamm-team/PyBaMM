@@ -3,24 +3,12 @@ import numpy as np
 import logging
 import warnings
 import numbers
-
+import pybammsolvers.idaklu as idaklu
 from typing import Union
 
 from functools import lru_cache
 
-import importlib.util
-import importlib
-
 logger = logging.getLogger("pybamm.solvers.idaklu_jax")
-
-idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
-if idaklu_spec is not None:
-    try:
-        idaklu = importlib.util.module_from_spec(idaklu_spec)
-        if idaklu_spec.loader:
-            idaklu_spec.loader.exec_module(idaklu)
-    except ImportError:  # pragma: no cover
-        idaklu_spec = None
 
 if pybamm.has_jax():
     import jax
@@ -60,10 +48,6 @@ class IDAKLUJax:
         if not pybamm.has_jax():
             raise ModuleNotFoundError(
                 "Jax or jaxlib is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/gnu-linux-mac.html#optional-jaxsolver"
-            )  # pragma: no cover
-        if not pybamm.has_idaklu():
-            raise ModuleNotFoundError(
-                "IDAKLU is not installed, please see https://docs.pybamm.org/en/latest/source/user_guide/installation/index.html"
             )  # pragma: no cover
         self.jaxpr = (
             None  # JAX expression representing the IDAKLU-wrapped solver object

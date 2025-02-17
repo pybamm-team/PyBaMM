@@ -131,10 +131,14 @@ class BaseParticle(pybamm.BaseSubModel):
             / c_scale,
             f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s)
             / c_scale,
-            f"Minimum {domain} {phase_name}particle "
-            "surface concentration": pybamm.min(c_s_surf) / c_scale,
-            f"Maximum {domain} {phase_name}particle "
-            "surface concentration": pybamm.max(c_s_surf) / c_scale,
+            f"Minimum {domain} {phase_name}particle surface concentration": pybamm.min(
+                c_s_surf
+            )
+            / c_scale,
+            f"Maximum {domain} {phase_name}particle surface concentration": pybamm.max(
+                c_s_surf
+            )
+            / c_scale,
             # Stoichiometry (equivalent to dimensionless concentration)
             f"{Domain} {phase_name}particle stoichiometry": c_s / c_scale,
             f"X-averaged {domain} {phase_name}particle stoichiometry": c_s_xav
@@ -149,10 +153,14 @@ class BaseParticle(pybamm.BaseSubModel):
             / c_scale,
             f"Maximum {domain} {phase_name}particle stoichiometry": pybamm.max(c_s)
             / c_scale,
-            f"Minimum {domain} {phase_name}particle "
-            "surface stoichiometry": pybamm.min(c_s_surf) / c_scale,
-            f"Maximum {domain} {phase_name}particle "
-            "surface stoichiometry": pybamm.max(c_s_surf) / c_scale,
+            f"Minimum {domain} {phase_name}particle surface stoichiometry": pybamm.min(
+                c_s_surf
+            )
+            / c_scale,
+            f"Maximum {domain} {phase_name}particle surface stoichiometry": pybamm.max(
+                c_s_surf
+            )
+            / c_scale,
             # Electrode extent of lithiation
             f"{Domain} electrode extent of lithiation": c_s_rav / c_scale,
             f"X-averaged {domain} electrode extent of lithiation": c_s_av / c_scale,
@@ -166,7 +174,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables = {f"{Domain} {phase_name}particle flux [mol.m-2.s-1]": N_s}
 
-        if isinstance(N_s, pybamm.Broadcast):
+        if isinstance(N_s, pybamm.SecondaryBroadcast):
             N_s_xav = pybamm.x_average(N_s)
             variables.update(
                 {
@@ -403,28 +411,28 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if [f"{domain} electrode"] in N_s.domains.values():
             # N_s depends on x
-
             N_s_distribution = N_s
-            # x-av the *tertiary* domain
-            # NOTE: not yet implemented. Fill with zeros instead
-            N_s_xav_distribution = pybamm.FullBroadcast(
-                0,
-                [f"{domain} {phase_name}particle"],
-                {
-                    "secondary": f"{domain} {phase_name}particle size",
-                    "tertiary": "current collector",
-                },
-            )
+            if isinstance(N_s, pybamm.TertiaryBroadcast):
+                N_s_xav_distribution = N_s.orphans[0]
+            else:
+                # can't average variables that evaluate on edges
+                N_s_xav_distribution = None
         else:
             N_s_xav_distribution = N_s
             N_s_distribution = pybamm.TertiaryBroadcast(N_s, [f"{domain} electrode"])
 
         variables = {
-            f"X-averaged {domain} {phase_name}particle flux "
-            "distribution [mol.m-2.s-1]": N_s_xav_distribution,
             f"{Domain} {phase_name}particle flux "
             "distribution [mol.m-2.s-1]": N_s_distribution,
         }
+
+        if N_s_xav_distribution is not None:
+            variables.update(
+                {
+                    f"X-averaged {domain} {phase_name}particle flux "
+                    "distribution [mol.m-2.s-1]": N_s_xav_distribution,
+                }
+            )
 
         return variables
 

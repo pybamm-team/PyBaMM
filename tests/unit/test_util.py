@@ -96,11 +96,6 @@ class TestUtil:
     def test_is_jax_compatible(self):
         assert pybamm.is_jax_compatible()
 
-    def test_git_commit_info(self):
-        git_commit_info = pybamm.get_git_commit_info()
-        assert isinstance(git_commit_info, str)
-        assert git_commit_info[:2] == "v2"
-
     def test_import_optional_dependency(self):
         optional_distribution_deps = get_optional_distribution_deps("pybamm")
         present_optional_import_deps = get_present_optional_import_deps(
@@ -223,7 +218,7 @@ class TestSearch:
         # Test param search (default returns key, value)
         with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
             param.search("test")
-            out = "Results for 'test': ['test']\n" "test -> 10\n"
+            out = "Results for 'test': ['test']\ntest -> 10\n"
             assert fake_out.getvalue() == out
 
         # Test no matches and no best matches
@@ -269,3 +264,22 @@ class TestSearch:
             match="'keys' must be a string or a list of strings, got <class 'int'>",
         ):
             model.variables.search(123)
+
+        # Test smaller strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["El", "co"], print_values=True)
+            out = "No matches found for 'El'\nNo matches found for 'co'\n"
+            assert fake_out.getvalue() == out
+
+        # Case where min_similarity is high (0.9)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.9)
+            assert fake_out.getvalue() == "No matches found for 'electro'\n"
+
+        # Case where min_similarity is low (0.3)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.3)
+            assert (
+                fake_out.getvalue()
+                == "Results for 'electro': ['Electrolyte concentration', 'Electrode potential']\n"
+            )

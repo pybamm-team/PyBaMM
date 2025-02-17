@@ -24,6 +24,10 @@ class BaseMechanics(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain, options, phase="primary"):
+        if options["particle size"] == "distribution":
+            self.size_distribution = True
+        else:
+            self.size_distribution = False
         super().__init__(param, domain, options=options, phase=phase)
 
     def _get_standard_variables(self, l_cr):
@@ -33,6 +37,71 @@ class BaseMechanics(pybamm.BaseSubModel):
             f"{Domain} {self.phase_param.phase_name}particle crack length [m]": l_cr,
             f"X-averaged {domain} {self.phase_param.phase_name}particle crack length [m]": l_cr_av,
         }
+        return variables
+
+    def _get_standard_size_distribution_variables(self, l_cr_dist):
+        domain, Domain = self.domain_Domain
+        l_cr_av_dist = pybamm.x_average(l_cr_dist)
+        variables = {
+            f"{Domain} {self.phase_param.phase_name}particle crack length distribution [m]": l_cr_dist,
+            f"X-averaged {domain} {self.phase_param.phase_name}particle crack length distribution [m]": l_cr_av_dist,
+        }
+        return variables
+
+    def _get_mechanical_size_distribution_results(self, variables):
+        domain, Domain = self.domain_Domain
+        phase_name = self.phase_param.phase_name
+        phase_param = self.phase_param
+        c_s_rav = variables[
+            f"R-averaged {domain} {phase_name}particle concentration distribution [mol.m-3]"
+        ]
+        c_s_surf = variables[
+            f"{Domain} {phase_name}particle surface concentration distribution [mol.m-3]"
+        ]
+        T = pybamm.PrimaryBroadcast(
+            variables[f"{Domain} electrode temperature [K]"],
+            [f"{domain} {phase_name}particle size"],
+        )
+        T = pybamm.PrimaryBroadcast(
+            T,
+            [f"{domain} {phase_name}particle"],
+        )
+
+        # use a tangential approximation for omega
+        c_0 = phase_param.c_0
+        R0 = phase_param.R
+        sto = variables[f"{Domain} {phase_name}particle concentration distribution"]
+        Omega = pybamm.r_average(phase_param.Omega(sto, T))
+
+        E0 = pybamm.r_average(phase_param.E(sto, T))
+        nu = phase_param.nu
+        # Ai2019 eq [10]
+        disp_surf = Omega * R0 / 3 * (c_s_rav - c_0)
+        # c0 reference concentration for no deformation
+        # stress evaluated at the surface of the particles
+        # Ai2019 eq [7] with r=R
+        stress_r_surf = pybamm.Scalar(0)
+        # Ai2019 eq [8] with r=R
+        # c_s_rav is already multiplied by 3/R^3 inside r_average
+        stress_t_surf = Omega * E0 * (c_s_rav - c_s_surf) / 3.0 / (1.0 - nu)
+
+        # Averages
+        stress_r_surf_av = pybamm.x_average(stress_r_surf)
+        stress_t_surf_av = pybamm.x_average(stress_t_surf)
+        disp_surf_av = pybamm.x_average(disp_surf)
+
+        variables.update(
+            {
+                f"{Domain} {phase_name}particle surface radial stress distribution [Pa]": stress_r_surf,
+                f"{Domain} {phase_name}particle surface tangential stress distribution [Pa]": stress_t_surf,
+                f"{Domain} {phase_name}particle surface displacement distribution [m]": disp_surf,
+                f"X-averaged {domain} {phase_name}particle surface "
+                "radial stress distribution [Pa]": stress_r_surf_av,
+                f"X-averaged {domain} {phase_name}particle surface "
+                "tangential stress distribution [Pa]": stress_t_surf_av,
+                f"X-averaged {domain} {phase_name}particle surface displacement distribution [m]": disp_surf_av,
+            }
+        )
         return variables
 
     def _get_mechanical_results(self, variables):
@@ -58,10 +127,11 @@ class BaseMechanics(pybamm.BaseSubModel):
         ]
 
         # use a tangential approximation for omega
+        c_0 = phase_param.c_0
+        R0 = phase_param.R
         sto = variables[f"{Domain} {phase_name}particle concentration"]
         Omega = pybamm.r_average(phase_param.Omega(sto, T))
-        R0 = phase_param.R
-        c_0 = phase_param.c_0
+
         E0 = pybamm.r_average(phase_param.E(sto, T))
         nu = phase_param.nu
         L0 = domain_param.L
@@ -79,7 +149,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         stress_r_surf = pybamm.Scalar(0)
         # Ai2019 eq [8] with r=R
         # c_s_rav is already multiplied by 3/R^3 inside r_average
-        stress_t_surf = Omega * E0 / 3.0 / (1.0 - nu) * (c_s_rav - c_s_surf)
+        stress_t_surf = Omega * E0 * (c_s_rav - c_s_surf) / 3.0 / (1.0 - nu)
 
         # Averages
         stress_r_surf_av = pybamm.x_average(stress_r_surf)

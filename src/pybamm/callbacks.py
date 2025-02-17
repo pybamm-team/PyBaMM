@@ -195,7 +195,7 @@ class LoggingCallback(Callback):
                 )
 
     def on_cycle_end(self, logs):
-        cap_stop = logs["stopping conditions"]["capacity"]
+        cap_stop = logs["stopping conditions"].get("capacity")
         if cap_stop is not None:
             cap_now = logs["summary variables"]["Capacity [A.h]"]
             cap_start = logs["start capacity"]

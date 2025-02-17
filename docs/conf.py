@@ -321,6 +321,9 @@ nbsphinx_requirejs_path = ""
 # made to a notebook, if any.
 # On local builds, the version is not set, so we use "latest".
 
+notebooks_version = version
+append_to_url = f"blob/v{notebooks_version}"
+
 if (os.environ.get("READTHEDOCS_VERSION") == "latest") or (
     os.environ.get("READTHEDOCS_VERSION") is None
 ):
