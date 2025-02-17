@@ -17,7 +17,7 @@ if pybamm.config.check_opt_out():
 else:  # pragma: no cover
     _posthog = Posthog(
         # this is the public, write only API key, so it's ok to include it here
-        project_api_key="phc_bLZKBW03XjgiRhbWnPsnKPr0iw0z03fA6ZZYjxgW7ej",
+        project_api_key="phc_acTt7KxmvBsAxaE0NyRd5WfJyNxGvBq1U9HnlQSztmb",
         host="https://us.i.posthog.com",
     )
     _posthog.log.setLevel("CRITICAL")

@@ -1,18 +1,12 @@
 [build-system]
 requires = [
-    "setuptools>=70.1.1",
-    # On Windows, use the CasADi vcpkg registry and CMake bundled from MSVC
-    "casadi>=3.6.7; platform_system!='Windows'",
-    # Note: the version of CasADi as a build-time dependency should be matched
-    # across platforms, so updates to its minimum version here should be accompanied
-    # by a version bump in https://github.com/pybamm-team/casadi-vcpkg-registry.
-    "cmake; platform_system!='Windows'",
+    "hatchling>=1.13.0",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 
 [project]
 name = "pybamm"
-version = "24.11.2"
+version = "25.1.1"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -34,6 +28,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "pybammsolvers",
     "numpy>=1.23.5,<2.0.0",
     "scipy>=1.11.4",
     "casadi>=3.6.7",
@@ -79,7 +74,6 @@ examples = [
     "jupyter",
 ]
 plot = [
-    "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
     # outside of plot() methods.
@@ -125,11 +119,6 @@ jax = [
     "jax==0.4.27",
     "jaxlib==0.4.27",
 ]
-# For MLIR expression evaluation (IDAKLU Solver)
-iree = [
-    # must be pip installed with --find-links=https://iree.dev/pip-release-links.html
-    "iree-compiler==20240507.886",  # see IREE compatibility notes in noxfile.py
-]
 # Contains all optional dependencies, except for jax, iree, and dev dependencies
 all = [
     "scikit-fem>=8.1.0",
@@ -156,25 +145,12 @@ ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
-[tool.setuptools]
-include-package-data = true
-
-# List of files to include as package data. These are mainly the parameter CSV files in
-# the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
-# README.md files, and specific .txt files inside the pybamm/ directory are also included.
-# These are specified to be included in the SDist through MANIFEST.in.
-[tool.setuptools.package-data]
-pybamm = [
-    "*.txt",
-    "*.md",
-    "*.csv",
-    "*.py",
-    "src/pybamm/CITATIONS.bib",
-    "src/pybamm/plotting/mplstyle",
+[tool.hatch]
+build.targets.sdist.include = [
+  "src/pybamm",
+  "CITATION.cff",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
@@ -237,7 +213,6 @@ required_plugins = [
     "pytest-mock",
     "pytest-subtests",
 ]
-norecursedirs = 'pybind11*'
 addopts = [
     "-nauto",
     "-vra",

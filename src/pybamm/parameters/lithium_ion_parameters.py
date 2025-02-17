@@ -454,9 +454,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.epsilon_s * pybamm.r_average(self.c_init)
         )
         # if self.options['open-circuit potential'] == 'Plett':
-        self.hysteresis_decay = pybamm.Parameter(
-            f"{pref}{Domain} particle hysteresis decay rate"
-        )
         self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"
         )
@@ -513,6 +510,21 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.b_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant m")
 
+    def hysteresis_decay(self, lithiation=None):
+        """
+        Rate at which the open-circuit potential approaches the lithiation
+        or delithiation branch when it exhibits hysteresis.
+        """
+        Domain = self.domain.capitalize()
+        if lithiation is None:
+            lithiation = ""
+        else:
+            lithiation = lithiation + " "
+
+        return pybamm.Parameter(
+            f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate"
+        )
+
     def k_cr(self, T):
         """
         Cracking rate for the electrode;
@@ -543,8 +555,7 @@ class ParticleLithiumIonParameters(BaseParameters):
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{Domain} particle {lithiation}"
-            "diffusivity [m2.s-1]",
+            f"{self.phase_prefactor}{Domain} particle {lithiation}diffusivity [m2.s-1]",
             inputs,
         )
 

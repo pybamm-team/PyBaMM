@@ -1,7 +1,3 @@
-#
-# Tests for the Processed Variable class
-#
-
 import casadi
 import pybamm
 import tests
@@ -11,10 +7,7 @@ import pytest
 from scipy.interpolate import CubicHermiteSpline
 
 
-if pybamm.has_idaklu():
-    _hermite_args = [True, False]
-else:
-    _hermite_args = [False]
+_hermite_args = [True, False]
 
 
 def to_casadi(var_pybamm, y, inputs=None):
@@ -96,10 +89,9 @@ class TestProcessedVariable:
         )
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
 
         return y_sol, first_sol, second_sol, t_sol, yp_sol
 
@@ -153,10 +145,9 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(data_t1, data_t2)
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -196,8 +187,8 @@ class TestProcessedVariable:
         data = pybamm.DiscreteTimeData(data_t, data_v, "test_data")
 
         # check data interp
-        np.testing.assert_array_almost_equal(
-            data.evaluate(t=t_sol).flatten(), data_v_interp
+        np.testing.assert_allclose(
+            data.evaluate(t=t_sol).flatten(), data_v_interp, rtol=1e-7, atol=1e-6
         )
 
         var = (y - data) ** order
@@ -210,11 +201,11 @@ class TestProcessedVariable:
             [var_casadi],
             self._sol_default(t_sol, y_sol, yp_sol, model),
         )
-        np.testing.assert_array_almost_equal(
-            processed_var.entries, expected_entries.flatten(), decimal=10
+        np.testing.assert_allclose(
+            processed_var.entries, expected_entries.flatten(), rtol=1e-11, atol=1e-10
         )
-        np.testing.assert_array_almost_equal(
-            processed_var(t=data_t), expected.flatten(), decimal=10
+        np.testing.assert_allclose(
+            processed_var(t=data_t), expected.flatten(), rtol=1e-11, atol=1e-10
         )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -279,15 +270,20 @@ class TestProcessedVariable:
             self._sol_default(t_sol, y_sol, yp_sol),
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol)
-        np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
+        np.testing.assert_allclose(
+            processed_var(t_sol, x_sol), y_sol, rtol=1e-7, atol=1e-6
+        )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.process_variable(
             [eqn_sol],
             [eqn_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
         )
-        np.testing.assert_array_almost_equal(
-            processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
+        np.testing.assert_allclose(
+            processed_eqn(t_sol, x_sol),
+            t_sol * y_sol + x_sol[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
 
         # Test extrapolation
@@ -326,10 +322,9 @@ class TestProcessedVariable:
         )
 
         # check that C++ and Python give the same result
-        if pybamm.has_idaklu():
-            np.testing.assert_array_equal(
-                processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
-            )
+        np.testing.assert_array_equal(
+            processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_1D_unknown_domain(self, hermite_interp):
@@ -600,8 +595,8 @@ class TestProcessedVariable:
         # vector
         np.testing.assert_array_equal(processed_var(t_sol), y_sol[0])
         # scalar
-        np.testing.assert_array_almost_equal(processed_var(0.5), 2.5)
-        np.testing.assert_array_almost_equal(processed_var(0.7), 3.5)
+        np.testing.assert_allclose(processed_var(0.5), 2.5, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(processed_var(0.7), 3.5, rtol=1e-7, atol=1e-6)
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.process_variable(
@@ -613,7 +608,7 @@ class TestProcessedVariable:
 
         assert processed_eqn(0.5).shape == ()
 
-        np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
+        np.testing.assert_allclose(processed_eqn(0.5), 0.5 * 2.5, rtol=1e-6, atol=1e-6)
         np.testing.assert_array_equal(processed_eqn(2, fill_value=100), 100)
         # Suppress warning for this test
         pybamm.set_logging_level("ERROR")
@@ -661,16 +656,22 @@ class TestProcessedVariable:
         )
 
         # 2 vectors
-        np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
+        np.testing.assert_allclose(
+            processed_var(t_sol, x_sol), y_sol, rtol=1e-7, atol=1e-6
+        )
         # 1 vector, 1 scalar
-        np.testing.assert_array_almost_equal(processed_var(0.5, x_sol), 2.5 * x_sol)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
+            processed_var(0.5, x_sol), 2.5 * x_sol, rtol=1e-7, atol=1e-6
+        )
+        np.testing.assert_allclose(
             processed_var(t_sol, x_sol[-1]),
             x_sol[-1] * np.linspace(0, 5),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # 2 scalars
-        np.testing.assert_array_almost_equal(
-            processed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1]
+        np.testing.assert_allclose(
+            processed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1], rtol=1e-7, atol=1e-6
         )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.process_variable(
@@ -679,8 +680,11 @@ class TestProcessedVariable:
             self._sol_default(t_sol, y_sol, yp_sol),
         )
         # 2 vectors
-        np.testing.assert_array_almost_equal(
-            processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
+        np.testing.assert_allclose(
+            processed_eqn(t_sol, x_sol),
+            t_sol * y_sol + x_sol[:, np.newaxis],
+            rtol=1e-7,
+            atol=1e-6,
         )
         # 1 vector, 1 scalar
         assert processed_eqn(0.5, x_sol[10:30]).shape == (20,)
@@ -697,7 +701,9 @@ class TestProcessedVariable:
             [x_casadi],
             self._sol_default(t_sol, y_sol, yp_sol),
         )
-        np.testing.assert_array_almost_equal(processed_x(t=0, x=x_sol), x_sol)
+        np.testing.assert_allclose(
+            processed_x(t=0, x=x_sol), x_sol, rtol=1e-7, atol=1e-6
+        )
 
         # In particles
         r_n = pybamm.Matrix(
@@ -712,7 +718,9 @@ class TestProcessedVariable:
         )
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
         r_test = np.linspace(0, 0.5)
-        np.testing.assert_array_almost_equal(processed_r_n(0, r=r_test), r_test)
+        np.testing.assert_allclose(
+            processed_r_n(0, r=r_test), r_test, rtol=1e-7, atol=1e-6
+        )
 
         # On size domain
         R_n = pybamm.Matrix(
@@ -730,7 +738,9 @@ class TestProcessedVariable:
         )
         np.testing.assert_array_equal(R_n.entries[:, 0], processed_R_n.entries[:, 0])
         R_test = np.linspace(0, 1)
-        np.testing.assert_array_almost_equal(processed_R_n(0, R=R_test), R_test)
+        np.testing.assert_allclose(
+            processed_R_n(0, R=R_test), R_test, rtol=1e-7, atol=1e-6
+        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_var_1D_fixed_t_interpolation(self, hermite_interp):
@@ -754,11 +764,11 @@ class TestProcessedVariable:
         )
 
         # vector
-        np.testing.assert_array_almost_equal(
-            processed_var(x=x_sol), 2 * x_sol[:, np.newaxis]
+        np.testing.assert_allclose(
+            processed_var(x=x_sol), 2 * x_sol[:, np.newaxis], rtol=1e-7, atol=1e-6
         )
         # scalar
-        np.testing.assert_array_almost_equal(processed_var(x=0.5), 1)
+        np.testing.assert_allclose(processed_var(x=0.5), 1, rtol=1e-7, atol=1e-6)
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_var_wrong_spatial_variable_names(self, hermite_interp):
@@ -843,9 +853,11 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             processed_var(t_sol, x_sol, r_sol),
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # 2 vectors, 1 scalar
         np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (10, 40))
@@ -958,9 +970,11 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             processed_var(t_sol, x_sol, r_sol),
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # 2 vectors, 1 scalar
         np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (10, 40))
@@ -1022,9 +1036,11 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(
             processed_var(t_sol, y=y_sol, z=z_sol).shape, (15, 15, 50)
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             processed_var(t_sol, y=y_sol, z=z_sol),
             np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # 2 vectors, 1 scalar
         np.testing.assert_array_equal(
@@ -1131,9 +1147,11 @@ class TestProcessedVariable:
         np.testing.assert_array_equal(
             processed_var(t=t_sol, x=x_sol, z=z_sol).shape, (20, 10, 50)
         )
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             processed_var(t_sol, x=x_sol, z=z_sol),
             np.reshape(y_sol, [len(z_sol), len(x_sol), len(t_sol)]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         # 2 vectors, 1 scalar
         np.testing.assert_array_equal(
@@ -1212,9 +1230,6 @@ class TestProcessedVariable:
             processed_var._process_spatial_variable_names(["var1", "var2"])
 
     def test_hermite_interpolator(self):
-        if not pybamm.has_idaklu():
-            pytest.skip("Cannot test Hermite interpolation without IDAKLU")
-
         # initialise dummy solution to access method
         def solution_setup(t_sol, sign):
             y_sol = np.array([sign * np.sin(t_sol)])
