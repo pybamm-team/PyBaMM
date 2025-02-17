@@ -61,12 +61,12 @@ class SubMesh1D(SubMesh):
         # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
         # "None" and nothing is removed from lims
         tabs = lims.pop("tabs", None)
-
+        lims_without_coord_sys = {l: v for l, v in lims.items() if l != "coord_sys"}
         # check that only one variable passed in
-        if len(lims) != 1:
+        if len(lims_without_coord_sys) != 1:
             raise pybamm.GeometryError("lims should only contain a single variable")
 
-        ((spatial_var, spatial_lims),) = lims.items()
+        ((spatial_var, spatial_lims),) = lims_without_coord_sys.items()
 
         if isinstance(spatial_var, str):
             spatial_var = getattr(pybamm.standard_spatial_vars, spatial_var)
@@ -121,17 +121,17 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
+    coord_sys : str
+        The coordinate system of the submesh
     """
 
-    def __init__(self, lims, npts):
+    def __init__(self, lims, npts, coord_sys):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.name]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 
-        coord_sys = spatial_var.coord_sys
-
-        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
+        super().__init__(edges, coord_sys, tabs=tabs)
 
     @classmethod
     def _from_json(cls, snippet: dict):

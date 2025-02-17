@@ -62,8 +62,8 @@ class Mesh(dict):
                             "Geometry should no longer be given keys 'primary' or "
                             "'secondary'. See pybamm.battery_geometry() for example"
                         )
-                    # skip over tabs key
-                    if var != "tabs":
+                    # skip over tabs and coord_sys keys
+                    if var not in ["tabs", "coord_sys"]:
                         if isinstance(var, str):
                             var = getattr(pybamm.standard_spatial_vars, var)
                         # Raise error if the number of points for a particular
@@ -79,6 +79,13 @@ class Mesh(dict):
                         # Otherwise add to the dictionary of submesh points
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
         self.submesh_pts = submesh_pts
+
+        coord_sys = {}
+        for domain in geometry:
+            if "coord_sys" in geometry[domain].keys():
+                coord_sys[domain] = geometry[domain].pop("coord_sys")
+            else:
+                coord_sys[domain] = "cartesian"
 
         # evaluate any expressions in geometry
         for domain in geometry:
@@ -114,7 +121,9 @@ class Mesh(dict):
         # Create submeshes
         self.base_domains = []
         for domain in geometry:
-            self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
+            self[domain] = submesh_types[domain](
+                geometry[domain], submesh_pts[domain], coord_sys[domain]
+            )
             self.base_domains.append(domain)
 
         # add ghost meshes
@@ -297,8 +306,8 @@ class MeshGenerator:
         self.submesh_type = submesh_type
         self.submesh_params = submesh_params or {}
 
-    def __call__(self, lims, npts):
-        return self.submesh_type(lims, npts, **self.submesh_params)
+    def __call__(self, lims, npts, coord_sys):
+        return self.submesh_type(lims, npts, coord_sys, **self.submesh_params)
 
     def __repr__(self):
         return f"Generator for {self.submesh_type.__name__}"
