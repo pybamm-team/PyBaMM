@@ -52,7 +52,7 @@ class FuzzyDict(dict):
       0.8
       >>> params.search("open circuit voltage")
       >>> params_copy = params.copy()  # Creates a new FuzzyDict instance
-    
+
     """
 
     def get_best_matches(self, key):
