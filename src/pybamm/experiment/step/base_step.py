@@ -540,6 +540,20 @@ def _convert_time_to_seconds(time_and_units):
     return time_in_seconds
 
 
+def process_temperature_input(temperature_and_units):
+    if isinstance(temperature_and_units, np.ndarray):
+        if temperature_and_units.ndim == 2 and temperature_and_units.shape[1] == 2:
+            # Assume first column is time (s) and second column is temperature (K)
+            times = temperature_and_units[:, 0]
+            temps = temperature_and_units[:, 1]
+            return pybamm.Interpolant(times, temps, pybamm.t, interpolator="linear")
+        else:
+            raise ValueError(
+                "Temperature time-series must be a 2D array with two columns (time, temperature)."
+            )
+    return temperature_and_units  # Return as-is if not a NumPy array
+
+
 def _convert_temperature_to_kelvin(temperature_and_units):
     """
     If the input is a 2D numpy array (time series), return an Interpolant.
@@ -548,16 +562,7 @@ def _convert_temperature_to_kelvin(temperature_and_units):
 
     # Check if the temperature input is a time-series array
     if isinstance(temperature_and_units, np.ndarray):
-        if temperature_and_units.ndim == 2 and temperature_and_units.shape[1] == 2:
-            # Assume first column is time (s) and second column is temperature (K)
-            times = temperature_and_units[:, 0]
-            temps = temperature_and_units[:, 1]
-            # Create an interpolant function parameter that depends on time
-            return pybamm.Interpolant(times, temps, pybamm.t, interpolator="linear")
-        else:
-            raise ValueError(
-                "Temperature time-series must be a 2D array with two columns (time, temperature)."
-            )
+        return process_temperature_input(temperature_and_units)
 
     # If it's already an Interpolant, do nothing further.
     if isinstance(temperature_and_units, pybamm.Interpolant):
