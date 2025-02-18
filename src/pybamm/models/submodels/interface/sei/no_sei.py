@@ -42,7 +42,7 @@ class NoSEI(BaseModel):
             zero = pybamm.FullBroadcast(
                 pybamm.Scalar(0), f"{domain} electrode", "current collector"
             )
-        variables = self._get_standard_thickness_variables(zero)
+        variables = self._get_standard_concentration_variables(zero)
 
         if self.size_distribution:
             variables.update(self._get_standard_reaction_distribution_variables(zero))
@@ -52,10 +52,4 @@ class NoSEI(BaseModel):
         else:
             variables.update(self._get_standard_reaction_variables(zero))
         variables.update(self._get_standard_interfacial_current_variables(zero))
-        return variables
-
-    def get_coupled_variables(self, variables):
-        variables.update(self._get_standard_concentration_variables(variables))
-        # Update whole cell variables, which also updates the "sum of" variables
-        variables.update(super().get_coupled_variables(variables))
         return variables

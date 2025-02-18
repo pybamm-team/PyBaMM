@@ -284,12 +284,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_sei_submodel(self):
         for domain in ["negative", "positive"]:
-            if self.options.electrode_types[domain] == "planar":
-                reaction_loc = "interface"
-            elif self.options["x-average side reactions"] == "true":
-                reaction_loc = "x-average"
-            else:
-                reaction_loc = "full electrode"
             phases = self.options.phases[domain]
             for phase in phases:
                 sei_option = getattr(getattr(self.options, domain), phase)["SEI"]
@@ -303,12 +297,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                     submodel = pybamm.sei.SEIGrowth(
                         self.param,
                         domain,
-                        reaction_loc,
                         self.options,
                         phase,
                         cracks=False,
                     )
                 self.submodels[f"{domain} {phase} sei"] = submodel
+                self.submodels[
+                    f"{domain} {phase} sei thickness"
+                ] = pybamm.sei.SEIThickness(
+                    self.param, domain, self.options, phase, cracks=False
+                )
             if len(phases) > 1:
                 self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
                     self.param, domain, self.options
@@ -332,19 +330,23 @@ class BaseModel(pybamm.BaseBatteryModel):
                             self.param, domain, self.options, phase, cracks=True
                         )
                     else:
-                        if self.options["x-average side reactions"] == "true":
-                            reaction_loc = "x-average"
-                        else:
-                            reaction_loc = "full electrode"
                         submodel = pybamm.sei.SEIGrowth(
                             self.param,
                             domain,
-                            reaction_loc,
                             self.options,
                             phase,
                             cracks=True,
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
+                    self.submodels[
+                        f"{domain} {phase} sei on cracks thickness"
+                    ] = pybamm.sei.SEIThickness(
+                        self.param,
+                        domain,
+                        self.options,
+                        phase,
+                        cracks=True,
+                    )
                 if len(phases) > 1:
                     self.submodels[f"{domain} total sei on cracks"] = (
                         pybamm.sei.TotalSEI(
