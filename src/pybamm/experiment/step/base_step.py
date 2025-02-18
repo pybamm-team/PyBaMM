@@ -70,8 +70,8 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
+        operator=None,
         direction: str | None = None,
-        input_parameters: dict[str, any] | None = None,
         skip_ok: bool = True,
     ):
         potential_directions = ["charge", "discharge", "rest", None]
@@ -81,11 +81,16 @@ class BaseStep:
             )
         self.input_duration = duration
         self.input_value = value
-        self.input_parameters = input_parameters if input_parameters is not None else {}
+        self.operator = operator
         self.skip_ok = skip_ok
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
+
+        if isinstance(value, pybamm.InputParameter) and operator is None:
+            raise ValueError(
+                "When using an InputParameter, you must provide an operator."
+            )
         if is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
@@ -212,6 +217,7 @@ class BaseStep:
         return self.__class__(
             self.input_value,
             duration=self.input_duration,
+            operator=self.operator,
             termination=self.termination,
             period=self.period,
             temperature=self.temperature,
@@ -237,7 +243,7 @@ class BaseStep:
         and temperature, which are the variables involved in processing the model. Also
         used for hashing.
         """
-        return f"{self.__class__.__name__}:value={self.input_value},duration={self.input_duration},termination={self.termination}"
+        return f"Step({self.hash_args})"
 
     def to_dict(self):
         """
@@ -390,18 +396,13 @@ class BaseStep:
     def value_based_charge_or_discharge(self):
         """
         Determine whether the step is a charge or discharge step based on the value of the
-        step
+        step. If an operator is provided, the step direction is not used, so we return None.
         """
+        if hasattr(self, "operator") and self.operator is not None:
+            return None
         if isinstance(self.value, pybamm.Symbol):
             inpt = {"start time": 0}
-            merged_inputs = {}
-            if hasattr(self, "input_parameters"):
-                merged_inputs.update(self.input_parameters)
-            merged_inputs.update(inpt)
-            if isinstance(self.value, pybamm.InputParameter):
-                init_curr = 0
-            else:
-                init_curr = self.value.evaluate(t=0, inputs=merged_inputs).flatten()[0]
+            init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
         else:
             init_curr = self.value
         sign = np.sign(init_curr)

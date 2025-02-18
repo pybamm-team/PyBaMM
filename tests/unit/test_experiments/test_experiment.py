@@ -217,20 +217,31 @@ class TestExperiment:
         # operating_conditions_steps (or equivalent) as well
 
     def test_simulation_solve_updates_input_parameters(self):
-        model = pybamm.lithium_ion.SPM()  # or any valid model
-        step = pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
+        model = pybamm.lithium_ion.SPM()
+
+        def voltage_operator(variables):
+            return variables["Voltage [V]"] - 3.3
+
+        step = pybamm.step.current(
+            pybamm.InputParameter("I_app"),
+            termination="2.5 V",
+            operator=voltage_operator,
+        )
         experiment = pybamm.Experiment([step])
 
         sim = pybamm.Simulation(model, experiment=experiment)
 
-        for s in experiment.steps:
-            assert s.input_parameters == {}
-
         sim.solve(inputs={"I_app": 1})
         solution = sim.solution
 
-        # Evaluate the current at the final time
         current = solution["Current [A]"].entries
 
-        # Check that the current matches the expected value (1 in this example)
         assert np.allclose(current, 1, atol=1e-3)
+
+    def test_current_step_raises_error_without_operator_with_input_parameters(self):
+        pybamm.lithium_ion.SPM()
+        with pytest.raises(
+            ValueError,
+            match="When using an InputParameter, you must provide an operator.",
+        ):
+            pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
