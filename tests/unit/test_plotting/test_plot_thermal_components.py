@@ -17,10 +17,10 @@ class TestPlotThermalComponents:
         for input_data in [sim, sol]:
             _, ax = pybamm.plot_thermal_components(input_data, show_plot=False)
             t, cumul_heat = ax[1].get_lines()[-1].get_data()
-            np.testing.assert_array_almost_equal(t, sol["Time [h]"].data)
+            np.testing.assert_allclose(t, sol["Time [h]"].data, rtol=1e-7, atol=1e-6)
             t, cumul_heat = ax[1].get_lines()[-1].get_data()
             T_sol = sol["X-averaged cell temperature [K]"].data
-            np.testing.assert_array_almost_equal(t, sol["Time [h]"].data)
+            np.testing.assert_allclose(t, sol["Time [h]"].data, rtol=1e-7, atol=1e-6)
             rho_c_p_eff = sol[
                 "Volume-averaged effective heat capacity [J.K-1.m-3]"
             ].data

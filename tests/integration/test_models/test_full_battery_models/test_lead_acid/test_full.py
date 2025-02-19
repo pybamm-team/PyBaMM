@@ -27,10 +27,9 @@ class TestLeadAcidFull:
         model = pybamm.lead_acid.Full(options)
         return tests.OptimisationsTest(model)
 
-    def test_optimisations(self, optimisations_test):
-        original = optimisations_test.evaluate_model()
-        to_python = optimisations_test.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python)
+        original = optimtest.evaluate_model()
+        to_python = optimtest.evaluate_model(to_python=True)
+        np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-6)
 
     def test_set_up(self, optimisations_test):
         optimisations_test.set_up_model(to_python=True)

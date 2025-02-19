@@ -1,5 +1,5 @@
 #
-# Class for varying active material volume fraction, driven by stress
+# Class for varying active material volume fraction
 #
 import pybamm
 
@@ -161,14 +161,14 @@ class LossActiveMaterial(BaseModel):
             f"in {domain} electrode [mol]"
         ]
         # Multiply by mol.m-3 * m3 to get mol
-        c_s_av = variables[
-            f"Average {domain} {phase_name}particle concentration [mol.m-3]"
+        c_s_rav = variables[
+            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]"
         ]
         V = self.domain_param.L * self.param.A_cc
 
         self.rhs = {
             # minus sign because eps_solid is decreasing and LLI measures positive
-            lli_due_to_lam: -c_s_av * V * pybamm.x_average(deps_solid_dt),
+            lli_due_to_lam: -V * pybamm.x_average(c_s_rav * deps_solid_dt),
             eps_solid: deps_solid_dt,
         }
 

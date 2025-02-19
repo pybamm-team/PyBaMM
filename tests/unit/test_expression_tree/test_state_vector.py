@@ -26,15 +26,19 @@ class TestStateVector:
     def test_evaluate_list(self):
         sv = pybamm.StateVector(slice(0, 11), slice(20, 31))
         y = np.linspace(0, 3, 31)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sv.evaluate(y=y),
             np.concatenate([np.linspace(0, 1, 11), np.linspace(2, 3, 11)])[
                 :, np.newaxis
             ],
+            rtol=1e-7,
+            atol=1e-6,
         )
         sv = pybamm.StateVector(slice(0, 11), slice(11, 20), slice(20, 31))
         y = np.linspace(0, 3, 31)
-        np.testing.assert_array_almost_equal(sv.evaluate(y=y), y[:, np.newaxis])
+        np.testing.assert_allclose(
+            sv.evaluate(y=y), y[:, np.newaxis], rtol=1e-7, atol=1e-6
+        )
 
     def test_name(self):
         sv = pybamm.StateVector(slice(0, 10))

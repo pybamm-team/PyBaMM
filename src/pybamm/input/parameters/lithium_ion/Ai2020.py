@@ -45,7 +45,7 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -219,7 +219,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
     References
     ----------
-    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [1] John Newman, Dualfoil
 
     Parameters
     ----------
@@ -247,7 +247,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
 
     References
     ----------
-    .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] John Newman, Dualfoil
 
     Parameters
     ----------

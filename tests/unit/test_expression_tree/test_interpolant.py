@@ -50,15 +50,21 @@ class TestInterpolant:
         # linear
         for interpolator in ["linear", "cubic", "pchip"]:
             interp = pybamm.Interpolant(x, 2 * x, y, interpolator=interpolator)
-            np.testing.assert_array_almost_equal(
-                interp.evaluate(y=np.array([0.397, 1.5]))[:, 0], np.array([0.794, 3])
+            np.testing.assert_allclose(
+                interp.evaluate(y=np.array([0.397, 1.5]))[:, 0],
+                np.array([0.794, 3]),
+                rtol=1e-7,
+                atol=1e-6,
             )
         # square
         y = pybamm.StateVector(slice(0, 1))
         for interpolator in ["linear", "cubic", "pchip"]:
             interp = pybamm.Interpolant(x, x**2, y, interpolator=interpolator)
-            np.testing.assert_array_almost_equal(
-                interp.evaluate(y=np.array([0.397]))[:, 0], np.array([0.397**2])
+            np.testing.assert_allclose(
+                interp.evaluate(y=np.array([0.397]))[:, 0],
+                np.array([0.397**2]),
+                rtol=1e-7,
+                atol=1e-6,
             )
 
         # with extrapolation set to False
@@ -82,8 +88,11 @@ class TestInterpolant:
         # linear
         for interpolator in ["linear", "cubic", "pchip"]:
             interp = pybamm.Interpolant(x, y, var, interpolator=interpolator)
-            np.testing.assert_array_almost_equal(
-                interp.evaluate(y=np.array([0.397])), 0.794 * np.ones((10, 1))
+            np.testing.assert_allclose(
+                interp.evaluate(y=np.array([0.397])),
+                0.794 * np.ones((10, 1)),
+                rtol=1e-7,
+                atol=1e-6,
             )
 
     def test_interpolation_2_x_2d_y(self):
@@ -94,13 +103,13 @@ class TestInterpolant:
         var2 = pybamm.StateVector(slice(1, 2))
         # linear
         interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
-        np.testing.assert_array_almost_equal(
-            interp.evaluate(y=np.array([0, 0])), 0, decimal=3
+        np.testing.assert_allclose(
+            interp.evaluate(y=np.array([0, 0])), 0, rtol=1e-4, atol=1e-3
         )
         # cubic
         interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="cubic")
-        np.testing.assert_array_almost_equal(
-            interp.evaluate(y=np.array([0, 0])), 0, decimal=3
+        np.testing.assert_allclose(
+            interp.evaluate(y=np.array([0, 0])), 0, rtol=1e-4, atol=1e-3
         )
 
     def test_interpolation_2_x(self):
@@ -311,18 +320,22 @@ class TestInterpolant:
             interp_diff = pybamm.Interpolant(
                 x, 2 * x, y, interpolator=interpolator
             ).diff(y)
-            np.testing.assert_array_almost_equal(
-                interp_diff.evaluate(y=np.array([0.397, 1.5]))[:, 0], np.array([2, 2])
+            np.testing.assert_allclose(
+                interp_diff.evaluate(y=np.array([0.397, 1.5]))[:, 0],
+                np.array([2, 2]),
+                rtol=1e-7,
+                atol=1e-6,
             )
         # square (derivative should be 2*x)
         for interpolator in ["cubic", "pchip"]:
             interp_diff = pybamm.Interpolant(
                 x, x**2, y, interpolator=interpolator
             ).diff(y)
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 interp_diff.evaluate(y=np.array([0.397, 0.806]))[:, 0],
                 np.array([0.794, 1.612]),
-                decimal=3,
+                rtol=1e-4,
+                atol=1e-3,
             )
 
         # test 2D interpolation diff fails
