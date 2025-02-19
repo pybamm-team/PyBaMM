@@ -730,8 +730,6 @@ class QuickPlot:
                 ax_label = f"Time [{self.time_unit}]"
             elif self.x_axis == "Discharge capacity [A.h]":
                 ax_label = "Discharge capacity [A.h]"
-            else:
-                ax_label = self.x_axis  # Use the string directly if unknown
 
             ax_min, ax_max, val_init = self.min_t, self.max_t, self.min_t
 

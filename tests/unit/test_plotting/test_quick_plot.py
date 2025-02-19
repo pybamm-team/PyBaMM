@@ -318,6 +318,10 @@ class TestQuickPlot:
             f"Expected 'Discharge capacity [A.h]', got '{x_label}'"
         )
 
+        # check dynamic plot loads
+        quick_plot.dynamic_plot(show_plot=False)
+        quick_plot.slider_update(0.01)
+
     def test_plot_with_different_models(self):
         model = pybamm.BaseModel()
         a = pybamm.Variable("a")
