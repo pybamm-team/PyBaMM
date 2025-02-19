@@ -81,7 +81,6 @@ class BaseStep:
         self.input_duration = duration
         self.input_value = value
         self.skip_ok = skip_ok
-        self.operator = None
 
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
@@ -176,7 +175,6 @@ class BaseStep:
             term_obj = None
             if isinstance(term, str):
                 operator, typ, val = _parse_termination(term, self.value)
-                self.operator = operator
                 term_obj = _read_termination((operator, typ, val))
             else:
                 term_obj = _read_termination(term)
