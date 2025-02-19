@@ -4,9 +4,16 @@ import pytest
 import numpy as np
 
 
+@pytest.fixture
+def optimtest():
+    options = {"thermal": "isothermal"}
+    model = pybamm.lead_acid.Full(options)
+    return tests.OptimisationsTest(model)
+
+
 class TestLeadAcidFull:
     @pytest.mark.parametrize(
-        "options,t_eval",
+        "options, t_eval",
         [
             ({"thermal": "isothermal"}, np.linspace(0, 3600 * 17)),
             (
@@ -21,19 +28,14 @@ class TestLeadAcidFull:
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=t_eval)
 
-    @pytest.fixture
-    def optimisations_test(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.Full(options)
-        return tests.OptimisationsTest(model)
-
+    def test_optimisations(self, optimtest):
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-6)
 
-    def test_set_up(self, optimisations_test):
-        optimisations_test.set_up_model(to_python=True)
-        optimisations_test.set_up_model(to_python=False)
+    def test_set_up(self, optimtest):
+        optimtest.set_up_model(to_python=True)
+        optimtest.set_up_model(to_python=False)
 
     @pytest.mark.parametrize(
         "options",
