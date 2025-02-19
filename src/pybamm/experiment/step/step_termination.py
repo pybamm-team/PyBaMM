@@ -199,9 +199,14 @@ class CustomTermination(BaseTermination):
         return pybamm.Event(self.name, self.event_function(variables))
 
 
-def _read_termination(termination):
+def _read_termination(termination, operator=None):
     if isinstance(termination, tuple):
-        typ, value = termination
+        if len(termination) == 3:
+            op, typ, value = termination
+        elif len(termination) == 2:
+            typ, value = termination
+            op = None
+
     else:
         return termination
 
@@ -210,4 +215,4 @@ def _read_termination(termination):
         "voltage": VoltageTermination,
         "C-rate": CRateTermination,
     }[typ]
-    return termination_class(value)
+    return termination_class(value, operator=op)

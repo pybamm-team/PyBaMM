@@ -219,13 +219,9 @@ class TestExperiment:
     def test_simulation_solve_updates_input_parameters(self):
         model = pybamm.lithium_ion.SPM()
 
-        def voltage_operator(variables):
-            return variables["Voltage [V]"] - 3.3
-
         step = pybamm.step.current(
             pybamm.InputParameter("I_app"),
-            termination="2.5 V",
-            operator=voltage_operator,
+            termination="< 2.5 V",
         )
         experiment = pybamm.Experiment([step])
 
@@ -242,6 +238,6 @@ class TestExperiment:
         pybamm.lithium_ion.SPM()
         with pytest.raises(
             ValueError,
-            match="When using an InputParameter, you must provide an operator.",
+            match="Termination must include an operator when using InputParameter.",
         ):
             pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")

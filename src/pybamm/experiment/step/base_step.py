@@ -70,7 +70,6 @@ class BaseStep:
         tags=None,
         start_time=None,
         description=None,
-        operator=None,
         direction: str | None = None,
         skip_ok: bool = True,
     ):
@@ -81,16 +80,12 @@ class BaseStep:
             )
         self.input_duration = duration
         self.input_value = value
-        self.operator = operator
         self.skip_ok = skip_ok
+        self.operator = None
+
         # Check if drive cycle
         is_drive_cycle = isinstance(value, np.ndarray)
         is_python_function = callable(value)
-
-        if isinstance(value, pybamm.InputParameter) and operator is None:
-            raise ValueError(
-                "When using an InputParameter, you must provide an operator."
-            )
         if is_drive_cycle:
             if value.ndim != 2 or value.shape[1] != 2:
                 raise ValueError(
@@ -158,13 +153,6 @@ class BaseStep:
             self.value = value
             self.period = _convert_time_to_seconds(period)
 
-        if (
-            hasattr(self, "calculate_charge_or_discharge")
-            and self.calculate_charge_or_discharge
-        ):
-            direction = self.value_based_charge_or_discharge()
-        self.direction = direction
-
         self.repr_args, self.hash_args = self.record_tags(
             value,
             duration,
@@ -185,10 +173,21 @@ class BaseStep:
             termination = [termination]
         self.termination = []
         for term in termination:
+            term_obj = None
             if isinstance(term, str):
-                term = _convert_electric(term)
-            term = _read_termination(term)
-            self.termination.append(term)
+                operator, typ, val = _parse_termination(term, self.value)
+                self.operator = operator
+                term_obj = _read_termination((operator, typ, val))
+            else:
+                term_obj = _read_termination(term)
+            self.termination.append(term_obj)
+
+        if (
+            hasattr(self, "calculate_charge_or_discharge")
+            and self.calculate_charge_or_discharge
+        ):
+            direction = self.value_based_charge_or_discharge()
+        self.direction = direction
 
         self.temperature = _convert_temperature_to_kelvin(temperature)
 
@@ -217,7 +216,6 @@ class BaseStep:
         return self.__class__(
             self.input_value,
             duration=self.input_duration,
-            operator=self.operator,
             termination=self.termination,
             period=self.period,
             temperature=self.temperature,
@@ -398,7 +396,7 @@ class BaseStep:
         Determine whether the step is a charge or discharge step based on the value of the
         step. If an operator is provided, the step direction is not used, so we return None.
         """
-        if hasattr(self, "operator") and self.operator is not None:
+        if isinstance(self.value, pybamm.InputParameter):
             return None
         if isinstance(self.value, pybamm.Symbol):
             inpt = {"start time": 0}
@@ -591,3 +589,21 @@ def _convert_electric(value_string):
             f"units must be 'A', 'V', 'W', 'Ohm', or 'C'. For example: {_examples}"
         ) from error
     return typ, value
+
+
+def _parse_termination(term_str, value):
+    """Parse a termination string into its components"""
+    term_str = term_str.strip()
+    operator = None
+    remaining = term_str
+    # Check if the string starts with '<' or '>'
+    if term_str and term_str[0] in ("<", ">"):
+        operator = term_str[0]
+        remaining = term_str[1:].strip()
+    remaining = remaining.replace(" ", "")
+    typ, val = _convert_electric(remaining)
+    if isinstance(value, pybamm.InputParameter) and operator is None:
+        raise ValueError(
+            "Termination must include an operator when using InputParameter."
+        )
+    return operator, typ, val
