@@ -13,7 +13,7 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm import ParameterValues
-from .util import deprecate_arguments
+from pybamm.util import deprecate_arguments
 
 
 class BaseSolver:

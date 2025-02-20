@@ -4,7 +4,7 @@ import numbers
 from pprint import pformat
 from warnings import warn
 from collections import defaultdict
-from .util import deprecate_arguments
+from pybamm.util import deprecate_arguments
 
 
 class ParameterValues:
