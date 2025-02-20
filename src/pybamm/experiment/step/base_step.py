@@ -396,7 +396,15 @@ class BaseStep:
         """
         if isinstance(self.value, pybamm.InputParameter):
             return None
-        if isinstance(self.value, pybamm.Symbol):
+        elif callable(self.value):
+            is_dynamic = _check_callable(self.value)
+            if is_dynamic:
+                return None
+            else:
+                raise ValueError(
+                    "Cannot determine charge or discharge direction for a function"
+                )
+        elif isinstance(self.value, pybamm.Symbol):
             inpt = {"start time": 0}
             init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
         else:
@@ -600,8 +608,19 @@ def _parse_termination(term_str, value):
         remaining = term_str[1:].strip()
     remaining = remaining.replace(" ", "")
     typ, val = _convert_electric(remaining)
-    if isinstance(value, pybamm.InputParameter) and operator is None:
+    if (
+        isinstance(value, pybamm.InputParameter) or _check_callable(value)
+    ) and operator is None:
         raise ValueError(
             "Termination must include an operator when using InputParameter."
         )
     return operator, typ, val
+
+
+def _check_callable(func):
+    result = func(0)
+    init_val = result
+    if isinstance(init_val, pybamm.Symbol) or not np.isfinite(init_val):
+        return True
+    else:
+        return False

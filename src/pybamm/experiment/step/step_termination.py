@@ -201,12 +201,7 @@ class CustomTermination(BaseTermination):
 
 def _read_termination(termination, operator=None):
     if isinstance(termination, tuple):
-        if len(termination) == 3:
-            op, typ, value = termination
-        elif len(termination) == 2:
-            typ, value = termination
-            op = None
-
+        op, typ, value = termination
     else:
         return termination
 

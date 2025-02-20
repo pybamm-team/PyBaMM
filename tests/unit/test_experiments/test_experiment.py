@@ -241,3 +241,32 @@ class TestExperiment:
             match="Termination must include an operator when using InputParameter.",
         ):
             pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
+
+    def test_value_function_with_input_parameter(self):
+        def f(t):
+            return pybamm.Symbol("I_app") * (t + 1)
+
+        step = pybamm.step.current(
+            pybamm.InputParameter("I_app"), termination="< 2.5 V"
+        )
+        step.value = f
+
+        direction = step.value_based_charge_or_discharge()
+
+        assert direction is None, (
+            "Expected direction to be None when step.value is a function of an input parameter."
+        )
+
+    def test_value_function_without_input_parameter(self):
+        def f(t):
+            return t + 1
+
+        step = pybamm.step.current(
+            pybamm.InputParameter("I_app"), termination="< 2.5 V"
+        )
+        step.value = f
+        with pytest.raises(
+            ValueError,
+            match="Cannot determine charge or discharge direction for a function",
+        ):
+            step.value_based_charge_or_discharge()
