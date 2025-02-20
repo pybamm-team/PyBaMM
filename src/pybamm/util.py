@@ -417,10 +417,10 @@ def deprecate_arguments(
     deprecated_in: str,
     removed_in: str,
     current_version: str,
-    msg: str = "",
+    msg: dict[str, str],
 ):
     """
-    Custom decorator to deprecate specific function arguments with an optional custom message.
+    Custom decorator to deprecate specific function arguments with optional custom messages.
 
     Args:
         deprecated_args (dict): Dictionary of deprecated argument names with details.
@@ -428,7 +428,8 @@ def deprecate_arguments(
         deprecated_in (str): Version when the argument was deprecated.
         removed_in (str): Version when the argument will be removed.
         current_version (str): Current version of the package/module.
-        msg (str, optional): Additional custom message for the warning. Defaults to "".
+        msg (dict, optional): Custom messages for specific deprecated arguments.
+            Example: {"old_arg": "Additional information about the deprecation."}
     """
 
     def decorator(func):
@@ -441,8 +442,10 @@ def deprecate_arguments(
                         f"and will be removed in version {removed_in}. (Current version: {current_version}) "
                         f"{message}"
                     )
-                    if msg:
-                        warning_message += f" {msg}"
+                    # Append a custom message if provided in the msg dictionary
+                    if msg and arg in msg:
+                        warning_message += f" {msg[arg]}"
+
                     warnings.warn(
                         warning_message,
                         category=DeprecationWarning,

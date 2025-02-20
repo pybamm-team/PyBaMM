@@ -422,11 +422,18 @@ class ParameterValues:
         deprecated_args={
             "electrode diffusivity": "Use 'particle diffusivity' instead.",
             "1 + dlnf/dlnc": "Use 'Thermodynamic factor' instead.",
+            "propotional term": " Use proportional term [s-1]', and its value should now be divided"
+            "by 3600 to get the same results as before",
         },
         deprecated_in="24.1.0",
         removed_in="25.3.0",
         current_version="25.1.0",
-        msg="Update your parameter names to avoid future compatibility issues.",
+        msg={
+            "electrode diffusivity": "Use 'particle diffusivity' instead.",
+            "1 + dlnf/dlnc": "Use 'Thermodynamic factor' instead.",
+            "propotional term": " Use proportional term [s-1]', and its value should now be divided"
+            "by 3600 to get the same results as before",
+        },
     )
     def check_parameter_values(values):
         for param in list(values.keys()):
