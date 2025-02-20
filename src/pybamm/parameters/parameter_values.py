@@ -4,6 +4,7 @@ import numbers
 from pprint import pformat
 from warnings import warn
 from collections import defaultdict
+from .util import deprecate_arguments
 
 
 class ParameterValues:
@@ -417,6 +418,16 @@ class ParameterValues:
         return parameter_values
 
     @staticmethod
+    @deprecate_arguments(
+        deprecated_args={
+            "electrode diffusivity": "Use 'particle diffusivity' instead.",
+            "1 + dlnf/dlnc": "Use 'Thermodynamic factor' instead.",
+        },
+        deprecated_in="24.1.0",
+        removed_in="25.3.0",
+        current_version="25.1.0",
+        msg="Update your parameter names to avoid future compatibility issues.",
+    )
     def check_parameter_values(values):
         for param in list(values.keys()):
             if "propotional term" in param:

@@ -13,6 +13,7 @@ import numpy as np
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
 from pybamm import ParameterValues
+from .util import deprecate_arguments
 
 
 class BaseSolver:
@@ -1162,6 +1163,13 @@ class BaseSolver:
 
         return t_interp
 
+    @deprecate_arguments(
+        deprecated_args={"npts": "Use 't_eval' instead."},
+        deprecated_in="25.1.0",
+        removed_in="25.3.0",
+        current_version="25.1.0",
+        msg="Please refer to the updated documentation.",
+    )
     def step(
         self,
         old_solution,
