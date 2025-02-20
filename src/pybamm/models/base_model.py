@@ -80,6 +80,9 @@ class BaseModel:
         self.is_discretised = False
         self.y_slices = None
 
+        # Non-lithium ion models shouldn't calculate eSOH parameters
+        self._calc_esoh = False
+
     @classmethod
     def deserialise(cls, properties: dict):
         """
@@ -425,6 +428,11 @@ class BaseModel:
         if self._input_parameters is None:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
+
+    @property
+    def calc_esoh(self):
+        """Whether to include eSOH variables in the summary variables."""
+        return self._calc_esoh
 
     def get_parameter_info(self, by_submodel=False):
         """

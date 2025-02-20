@@ -20,14 +20,18 @@ class TestExperiments:
             model, experiment=experiment, solver=pybamm.CasadiSolver()
         )
         sim.solve()
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim._solution["Time [h]"].entries,
             np.array([0, 0.5, 1, 1 + 1e-9, 1.5, 2, 2 + 1e-9, 2.5, 3]),
+            rtol=1e-7,
+            atol=1e-6,
         )
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim._solution["Current [A]"].entries,
             [cap / 2] * 3 + [0] * 3 + [-cap / 2] * 3,
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_rest_discharge_rest(self):
@@ -45,8 +49,10 @@ class TestExperiments:
             solver=pybamm.CasadiSolver(),
         )
         sol = sim.solve()
-        np.testing.assert_array_almost_equal(sol["Current [A]"].data[:5], 0)
-        np.testing.assert_array_almost_equal(sol["Current [A]"].data[-29:], 0)
+        np.testing.assert_allclose(sol["Current [A]"].data[:5], 0, rtol=1e-7, atol=1e-6)
+        np.testing.assert_allclose(
+            sol["Current [A]"].data[-29:], 0, rtol=1e-7, atol=1e-6
+        )
 
     def test_gitt(self):
         experiment = pybamm.Experiment(
@@ -58,9 +64,11 @@ class TestExperiments:
         )
         sim.solve()
         cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             sim._solution["Current [A]"].entries,
             [cap / 20] * 11 + [0] * 11 + ([cap / 20] * 11 + [0] * 11) * 9,
+            rtol=1e-7,
+            atol=1e-6,
         )
 
     def test_infeasible(self):

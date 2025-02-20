@@ -264,3 +264,22 @@ class TestSearch:
             match="'keys' must be a string or a list of strings, got <class 'int'>",
         ):
             model.variables.search(123)
+
+        # Test smaller strings
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search(["El", "co"], print_values=True)
+            out = "No matches found for 'El'\nNo matches found for 'co'\n"
+            assert fake_out.getvalue() == out
+
+        # Case where min_similarity is high (0.9)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.9)
+            assert fake_out.getvalue() == "No matches found for 'electro'\n"
+
+        # Case where min_similarity is low (0.3)
+        with mocker.patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("electro", min_similarity=0.3)
+            assert (
+                fake_out.getvalue()
+                == "Results for 'electro': ['Electrolyte concentration', 'Electrode potential']\n"
+            )
