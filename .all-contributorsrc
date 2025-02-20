@@ -1028,6 +1028,26 @@
         "doc",
         "infra"
       ]
+    },
+    {
+      "login": "vidipsingh",
+      "name": "Vidip Singh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/112854574?v=4",
+      "profile": "https://github.com/vidipsingh",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "chtamar",
+      "name": "chtamar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/196436685?v=4",
+      "profile": "https://github.com/chtamar",
+      "contributions": [
+        "code",
+        "doc",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,

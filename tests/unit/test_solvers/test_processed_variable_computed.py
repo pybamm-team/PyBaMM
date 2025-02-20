@@ -174,7 +174,9 @@ class TestProcessedVariableComputed:
         y_sol = y_sol.reshape((y_sol.shape[1], y_sol.shape[0])).transpose()
         np.testing.assert_array_equal(processed_var.entries, y_sol)
         np.testing.assert_array_equal(processed_var.entries, processed_var.data)
-        np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
+        np.testing.assert_allclose(
+            processed_var(t_sol, x_sol), y_sol, rtol=1e-7, atol=1e-6
+        )
 
         # Check unroll function
         np.testing.assert_array_equal(processed_var.unroll(), y_sol)

@@ -163,7 +163,7 @@ class TestExperimentSteps:
                 "value": 3,
                 "type": "Voltage",
                 "duration": 3600 * 24,
-                "termination": [pybamm.step.CrateTermination(0.02)],
+                "termination": [pybamm.step.CRateTermination(0.02)],
             },
             {
                 "type": "CRate",
