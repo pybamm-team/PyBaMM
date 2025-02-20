@@ -394,17 +394,9 @@ class BaseStep:
         Determine whether the step is a charge or discharge step based on the value of the
         step. If an operator is provided, the step direction is not used, so we return None.
         """
-        if isinstance(self.value, pybamm.InputParameter):
-            return None
-        elif callable(self.value):
-            is_dynamic = _check_callable(self.value)
-            if is_dynamic:
+        if isinstance(self.value, pybamm.Symbol):
+            if _check_input_params(self.value):
                 return None
-            else:
-                raise ValueError(
-                    "Cannot determine charge or discharge direction for a function"
-                )
-        elif isinstance(self.value, pybamm.Symbol):
             inpt = {"start time": 0}
             init_curr = self.value.evaluate(t=0, inputs=inpt).flatten()[0]
         else:
@@ -609,7 +601,7 @@ def _parse_termination(term_str, value):
     remaining = remaining.replace(" ", "")
     typ, val = _convert_electric(remaining)
     if (
-        isinstance(value, pybamm.InputParameter) or _check_callable(value)
+        isinstance(value, pybamm.Symbol) and _check_input_params(value)
     ) and operator is None:
         raise ValueError(
             "Termination must include an operator when using InputParameter."
@@ -617,13 +609,10 @@ def _parse_termination(term_str, value):
     return operator, typ, val
 
 
-def _check_callable(func):
+def _check_input_params(value):
     """Check if self.value is a function of input parameters"""
-    if not callable(func):
-        return False
-    result = func(0)
-    init_val = result
-    if isinstance(init_val, pybamm.Symbol) or not np.isfinite(init_val):
-        return True
-    else:
-        return False
+    leaves = value.post_order(filter=lambda node: len(node.children) == 0)
+    contains_input_parameter = any(
+        isinstance(leaf, pybamm.InputParameter) for leaf in leaves
+    )
+    return contains_input_parameter

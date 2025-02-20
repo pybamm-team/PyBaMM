@@ -243,30 +243,12 @@ class TestExperiment:
             pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
 
     def test_value_function_with_input_parameter(self):
-        def f(t):
-            return pybamm.Symbol("I_app") * (t + 1)
-
-        step = pybamm.step.current(
-            pybamm.InputParameter("I_app"), termination="< 2.5 V"
-        )
-        step.value = f
+        I_coeff = pybamm.InputParameter("I_coeff")
+        t = pybamm.t
+        expr = I_coeff * t
+        step = pybamm.step.current(expr, termination="< 2.5V")
 
         direction = step.value_based_charge_or_discharge()
-
         assert direction is None, (
-            "Expected direction to be None when step.value is a function of an input parameter."
+            "Expected direction to be None when the expression depends on an InputParameter."
         )
-
-    def test_value_function_without_input_parameter(self):
-        def f(t):
-            return t + 1
-
-        step = pybamm.step.current(
-            pybamm.InputParameter("I_app"), termination="< 2.5 V"
-        )
-        step.value = f
-        with pytest.raises(
-            ValueError,
-            match="Cannot determine charge or discharge direction for a function",
-        ):
-            step.value_based_charge_or_discharge()
