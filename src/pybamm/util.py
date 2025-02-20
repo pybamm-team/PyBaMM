@@ -7,6 +7,7 @@ import pathlib
 import pickle
 import timeit
 import difflib
+import warnings
 from warnings import warn
 import functools
 
@@ -411,7 +412,12 @@ def import_optional_dependency(module_name, attribute=None):
         raise ModuleNotFoundError(err_msg) from error
 
 
-def deprecate_arguments(deprecated_args, deprecated_in, removed_in, current_version):
+def deprecate_arguments(
+    deprecated_args: dict[str, str],
+    deprecated_in: str,
+    removed_in: str,
+    current_version: str,
+):
     """
     Custom decorator to deprecate specific function arguments.
 
