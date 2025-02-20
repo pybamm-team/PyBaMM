@@ -619,6 +619,8 @@ def _parse_termination(term_str, value):
 
 def _check_callable(func):
     """Check if self.value is a function of input parameters"""
+    if not callable(func):
+        return False
     result = func(0)
     init_val = result
     if isinstance(init_val, pybamm.Symbol) or not np.isfinite(init_val):
