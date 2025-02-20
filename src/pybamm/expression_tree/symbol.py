@@ -3,7 +3,6 @@
 #
 from __future__ import annotations
 import numbers
-import warnings
 
 import numpy as np
 import sympy
@@ -1012,13 +1011,6 @@ class Symbol:
         new_children: list[Symbol] | None = None,
         perform_simplifications: bool = True,
     ):
-        """ """
-        warnings.warn(
-            "The 'new_copy' function for expression tree symbols is deprecated, use "
-            "'create_copy' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
         return self.create_copy(new_children, perform_simplifications)
 
     @cached_property

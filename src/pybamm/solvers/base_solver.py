@@ -1242,14 +1242,6 @@ class BaseSolver:
         if dt <= 0:
             raise pybamm.SolverError("Step time must be >0")
 
-        # Raise deprecation warning for npts and convert it to t_eval
-        if npts is not None:
-            warnings.warn(
-                "The 'npts' parameter is deprecated, use 't_eval' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            t_eval = np.linspace(0, dt, npts)
         elif t_eval is None:
             t_eval = np.array([0, dt])
         elif t_eval[0] != 0 or t_eval[-1] != dt:
