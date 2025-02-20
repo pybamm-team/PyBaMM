@@ -410,6 +410,7 @@ def import_optional_dependency(module_name, attribute=None):
         # Raise an ModuleNotFoundError if the module or attribute is not available
         raise ModuleNotFoundError(err_msg) from error
 
+
 def deprecate_arguments(deprecated_args, deprecated_in, removed_in, current_version):
     """
     Custom decorator to deprecate specific function arguments.

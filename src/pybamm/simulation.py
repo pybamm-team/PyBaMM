@@ -155,7 +155,6 @@ class Simulation:
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
 
-
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         self._set_up_and_parameterise_experiment(solve_kwargs=solve_kwargs)
 
