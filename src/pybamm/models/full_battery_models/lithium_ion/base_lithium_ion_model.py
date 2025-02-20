@@ -273,6 +273,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                 elif ocp_option == "Wycisk":
                     pybamm.citations.register("Wycisk2022")
                     ocp_model = ocp_submodels.WyciskOpenCircuitPotential
+                elif ocp_option == "Axen":
+                    pybamm.citations.register("Axen2022")
+                    ocp_model = ocp_submodels.AxenOpenCircuitPotential
                 elif ocp_option == "MSMR":
                     ocp_model = ocp_submodels.MSMROpenCircuitPotential
                 self.submodels[f"{domain} {phase} open-circuit potential"] = ocp_model(

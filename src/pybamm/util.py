@@ -92,7 +92,9 @@ class FuzzyDict(dict):
                 f"'{key}' not found. Best matches are {best_matches}"
             ) from error
 
-    def _find_matches(self, search_key: str, known_keys: list[str]):
+    def _find_matches(
+        self, search_key: str, known_keys: list[str], min_similarity: float = 0.4
+    ):
         """
         Helper method to find exact and partial matches for a given search key.
 
@@ -102,13 +104,37 @@ class FuzzyDict(dict):
             The term to search for in the keys.
         known_keys : list of str
             The list of known dictionary keys to search within.
-
+        min_similarity : float, optional
+            The minimum similarity threshold for a match.
+            Default is 0.4
         """
-        exact = [key for key in known_keys if search_key in key.lower()]
-        partial = difflib.get_close_matches(search_key, known_keys, n=5, cutoff=0.5)
-        return exact, partial
+        search_key = search_key.lower()
+        exact_matches = []
+        partial_matches = []
 
-    def search(self, keys: str | list[str], print_values: bool = False):
+        for key in known_keys:
+            key_lower = key.lower()
+            if search_key in key_lower:
+                key_words = key_lower.split()
+
+                for word in key_words:
+                    similarity = difflib.SequenceMatcher(None, search_key, word).ratio()
+
+                    if similarity >= min_similarity:
+                        exact_matches.append(key)
+
+            else:
+                partial_matches = difflib.get_close_matches(
+                    search_key, known_keys, n=5, cutoff=0.5
+                )
+        return exact_matches, partial_matches
+
+    def search(
+        self,
+        keys: str | list[str],
+        print_values: bool = False,
+        min_similarity: float = 0.4,
+    ):
         """
         Search dictionary for keys containing all terms in 'keys'.
         If print_values is True, both the keys and values will be printed.
@@ -122,6 +148,9 @@ class FuzzyDict(dict):
         print_values : bool, optional
             If True, print both keys and values. Otherwise, print only keys.
             Default is False.
+        min_similarity : float, optional
+            The minimum similarity threshold for a match.
+            Default is 0.4
         """
 
         if not isinstance(keys, (str, list)) or not all(
@@ -146,14 +175,23 @@ class FuzzyDict(dict):
             search_keys = [k.strip().lower() for k in keys if k.strip()]
 
         known_keys = list(self.keys())
-        known_keys.sort()
-
         # Check for exact matches where all search keys appear together in a key
-        exact_matches = [
-            key
-            for key in known_keys
-            if all(term in key.lower() for term in search_keys)
-        ]
+        exact_matches = []
+        for key in known_keys:
+            key_lower = key.lower()
+            if all(term in key_lower for term in search_keys):
+                key_words = key_lower.split()
+
+                # Ensure all search terms match at least one word in the key
+                if all(
+                    any(
+                        difflib.SequenceMatcher(None, term, word).ratio()
+                        >= min_similarity
+                        for word in key_words
+                    )
+                    for term in search_keys
+                ):
+                    exact_matches.append(key)
 
         if exact_matches:
             print(
@@ -167,7 +205,7 @@ class FuzzyDict(dict):
         # If no exact matches, iterate over search keys individually
         for original_key, search_key in zip(original_keys, search_keys):
             exact_key_matches, partial_matches = self._find_matches(
-                search_key, known_keys
+                search_key, known_keys, min_similarity
             )
 
             if exact_key_matches:
