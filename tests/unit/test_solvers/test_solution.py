@@ -2,7 +2,6 @@
 # Tests for the Solution class
 #
 import pytest
-import os
 import io
 import logging
 import json
@@ -371,7 +370,7 @@ class TestSolution:
         solution.plot(["c", "2c"], show_plot=False)
 
     def test_save(self, tmp_path):
-        test_stub = os.path.join(tmp_path, "test")
+        test_stub = tmp_path / "test"
 
         model = pybamm.BaseModel()
         # create both 1D and 2D variables

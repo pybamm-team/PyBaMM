@@ -2,7 +2,6 @@
 # Test for the standard lead acid parameters
 #
 import pytest
-import os
 
 import pybamm
 from tests import get_discretisation_for_testing
@@ -17,8 +16,9 @@ class TestStandardParametersLeadAcid:
     def test_print_parameters(self, tmp_path):
         parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
-        output_file = os.path.join(tmp_path, "lead_acid_parameters.txt")
-        parameter_values.print_parameters(parameters, output_file)
+
+        output_file = tmp_path / "lead_acid_parameters.txt"
+        parameter_values.print_parameters(parameters, str(output_file))
 
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
