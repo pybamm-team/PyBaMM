@@ -543,8 +543,8 @@ def get_parameter_values():
         "SEI electron conductivity [S.m-1]": 8.95e-14,
         "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial SEI thickness [m]": 5e-09,
-        "Initial SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
+        "Initial SEI concentration [mol.m-3]": 38.34,
+        "Initial SEI on cracks concentration [mol.m-3]": 0.002,  # from O'Kane 2022
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,

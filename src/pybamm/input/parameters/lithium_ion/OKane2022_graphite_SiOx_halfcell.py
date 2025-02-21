@@ -405,7 +405,7 @@ def get_parameter_values():
         "Dead lithium decay constant [s-1]": 1e-06,
         "Dead lithium decay rate [s-1]": SEI_limited_dead_lithium_OKane2022,
         # sei
-        "Ratio of lithium moles to SEI moles": 1.0,
+        "Ratio of lithium moles to SEI moles": 1.0,  # not physical but true to paper
         "SEI partial molar volume [m3.mol-1]": 9.585e-05,
         "SEI reaction exchange current density [A.m-2]": 1.5e-07,
         "SEI resistivity [Ohm.m]": 200000.0,
@@ -415,8 +415,8 @@ def get_parameter_values():
         "SEI electron conductivity [S.m-1]": 8.95e-14,
         "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
-        "Initial SEI thickness [m]": 5e-9,
-        "Initial SEI on cracks thickness [m]": 5e-13,  # avoid division by zero
+        "Initial SEI concentration [mol.m-3]": 20.03,
+        "Initial SEI on cracks concentration [mol.m-3]": 0.002003,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
