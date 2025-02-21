@@ -74,7 +74,7 @@ class BaseModel(BaseInterface):
         phase_param = self.phase_param
         reaction_name = self.reaction_name
 
-        if self.reaction.loc == "interface":
+        if self.reaction_loc == "interface":
             # c_sei is an interfacial quantity [mol.m-2]
             c_sei_av = pybamm.yz_average(c_sei)
             variables = {
