@@ -118,9 +118,7 @@ class Plating(BasePlating):
                 f"X-averaged {domain} electrode {phase_name}lithium plating volumetric "
                 "interfacial current density [A.m-3]"
             ]
-            L_sei = variables[
-                f"X-averaged {domain} {phase_name}SEI thickness [m]"
-            ]
+            L_sei = variables[f"X-averaged {domain} {phase_name}SEI thickness [m]"]
         else:
             c_plated_Li = variables[
                 f"{Domain} {phase_name}lithium plating concentration [mol.m-3]"
