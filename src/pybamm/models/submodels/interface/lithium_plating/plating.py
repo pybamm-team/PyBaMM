@@ -119,7 +119,7 @@ class Plating(BasePlating):
                 "interfacial current density [A.m-3]"
             ]
             L_sei = variables[
-                f"X-averaged {domain} total {phase_name}SEI thickness [m]"
+                f"X-averaged {domain} {phase_name}SEI thickness [m]"
             ]
         else:
             c_plated_Li = variables[
@@ -132,7 +132,7 @@ class Plating(BasePlating):
                 f"{Domain} electrode {phase_name}lithium plating volumetric "
                 "interfacial current density [A.m-3]"
             ]
-            L_sei = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
+            L_sei = variables[f"{Domain} {phase_name}SEI thickness [m]"]
 
         lithium_plating_option = getattr(getattr(self.options, domain), self.phase)[
             "lithium plating"

@@ -112,7 +112,7 @@ class SEIGrowth(BaseModel):
                 "interfacial current density [A.m-2]"
             ]
 
-        L_sei = variables[f"{Domain} total {self.reaction_name}thickness [m]"]
+        L_sei = variables[f"{Domain} {self.reaction_name}thickness [m]"]
 
         R_sei = phase_param.R_sei
         eta_SEI = delta_phi - phase_param.U_sei - j * L_sei * R_sei
