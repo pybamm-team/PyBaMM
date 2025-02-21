@@ -1,9 +1,10 @@
+#%%
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
-import inspect
-from RK_Polynomial_OCP import RK_Open_Circuit_Potential
+from pybamm.models.submodels.interface.open_circuit_potential.RK_Polynomial_OCP import RK_Open_Circuit_Potential
 
+#%%
 def rk_polynomial(sto,T):
     func=0
     T=T
@@ -18,32 +19,27 @@ def rk_polynomial(sto,T):
     function=k_b*T*(np.log(sto/(1-sto)))+func+A[-1]
     return function
 
-
+#%%
 def run_temp ():
     model=pybamm.lithium_ion.DFN(build=False)
+    print(model.submodels["positive primary open-circuit potential"])
     model.submodels["positive primary open-circuit potential"] = RK_Open_Circuit_Potential(model.param, "positive",
     "lithium-ion main", model.options, "primary")
     model.build_model()
     parameter_values = pybamm.ParameterValues("Chen2020")
     parameter_values.update({"Positive electrode RK_OCP [V]": rk_polynomial}, check_already_exists=False)
     parameter_values["Current function [A]"] = 4
-    #print(parameter_values)
+    print(model.submodels["positive primary open-circuit potential"])
 
     sim = pybamm.Simulation(model, parameter_values=parameter_values)
-
     solutions=sim.solve([0,3600])
-
-    print(parameter_values["Positive electrode OCP [V]"])
-    
-    print(inspect.getsource(parameter_values["Positive electrode OCP [V]"]))
-
     t = solutions["Time [s]"]
     V = solutions["Voltage [V]"]
     return t.entries, V.entries
 
 
-
+#%%
 t,V=run_temp()
-
+#%%
 plt.plot(t,V)
 plt.show()

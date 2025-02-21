@@ -38,7 +38,7 @@ class RK_Open_Circuit_Potential(BaseOpenCircuitPotential):
                     T = T.orphans[0]
 
             inputs = {
-                f"{Domain} particle stoichiometry": sto,
+                f"{Domain} particle stoichiometry": sto_surf,
                 f"{Domain} electrode temperature [k]": T,
             }
         
@@ -53,5 +53,5 @@ class RK_Open_Circuit_Potential(BaseOpenCircuitPotential):
             T_bulk = pybamm.xyzs_average(T)
             ocp_bulk = self.phase_param.U(sto_bulk, T_bulk)
 
-        variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
+        variables.update(self._get_standard_ocp_variables(OCP_surf, ocp_bulk, dUdT))
         return variables
