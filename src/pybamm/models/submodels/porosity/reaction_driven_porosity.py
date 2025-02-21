@@ -29,10 +29,6 @@ class ReactionDriven(BaseModel):
             if domain != "separator":  # separator porosity does not change
                 dom = domain.split()[0]
                 Domain = dom.capitalize()
-                if Domain == "Negative":
-                    L_sei_0 = self.param.n.prim.L_sei_0
-                elif Domain == "Positive":
-                    L_sei_0 = self.param.p.prim.L_sei_0
                 SEI_option = getattr(self.options, dom)["SEI"]
                 phases_option = getattr(self.options, dom)["particle phases"]
                 phases = self.options.phases[dom]
@@ -45,11 +41,23 @@ class ReactionDriven(BaseModel):
                         # `domain` has more than one phase
                         phase_name = phase + " "
                         pref = phase.capitalize() + ": "
-                    L_sei_k = variables[f"{Domain} total {phase_name}SEI thickness [m]"]
+                    a_k = variables[
+                        f"{Domain} electrode {phase_name}"
+                        "surface area to volume ratio [m-1]"
+                    ]
                     if SEI_option == "none":
                         L_sei_0 = pybamm.Scalar(0)
                     else:
-                        L_sei_0 = pybamm.Parameter(f"{pref}Initial SEI thickness [m]")
+                        c_sei_0 = pybamm.Parameter(
+                            f"{pref}Initial SEI concentration [mol.m-3]"
+                        )
+                        V_bar_sei = pybamm.Parameter(
+                            f"{pref}SEI partial molar volume [m3.mol-1]"
+                        )
+                        # Use of a_k to calculate L_sei_0 introduces errors if there is
+                        # a lot of LAM and c_sei_0 is large, but Li is still conserved
+                        L_sei_0 = c_sei_0 * V_bar_sei / a_k
+                    L_sei_k = variables[f"{Domain} {phase_name}SEI thickness [m]"]
                     L_pl_k = variables[
                         f"{Domain} {phase_name}lithium plating thickness [m]"
                     ]
@@ -57,7 +65,7 @@ class ReactionDriven(BaseModel):
                         f"{Domain} {phase_name}dead lithium thickness [m]"
                     ]
                     L_sei_cr_k = variables[
-                        f"{Domain} total {phase_name}SEI on cracks thickness [m]"
+                        f"{Domain} {phase_name}SEI on cracks thickness [m]"
                     ]
                     roughness_k = variables[
                         f"{Domain} {phase_name}electrode roughness ratio"
@@ -69,11 +77,6 @@ class ReactionDriven(BaseModel):
                         + L_dead_k
                         + L_sei_cr_k * (roughness_k - 1)
                     )
-
-                    a_k = variables[
-                        f"{Domain} electrode {phase_name}"
-                        "surface area to volume ratio [m-1]"
-                    ]
 
                     # This assumes a thin film so curvature effects are neglected.
                     # They could be included (e.g. for a sphere it is
