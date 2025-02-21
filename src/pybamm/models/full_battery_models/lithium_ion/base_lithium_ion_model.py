@@ -302,10 +302,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                         cracks=False,
                     )
                 self.submodels[f"{domain} {phase} sei"] = submodel
-                self.submodels[
-                    f"{domain} {phase} sei thickness"
-                ] = pybamm.sei.SEIThickness(
-                    self.param, domain, self.options, phase, cracks=False
+                self.submodels[f"{domain} {phase} sei thickness"] = (
+                    pybamm.sei.SEIThickness(
+                        self.param, domain, self.options, phase, cracks=False
+                    )
                 )
             if len(phases) > 1:
                 self.submodels[f"{domain} total sei"] = pybamm.sei.TotalSEI(
@@ -338,14 +338,14 @@ class BaseModel(pybamm.BaseBatteryModel):
                             cracks=True,
                         )
                     self.submodels[f"{domain} {phase} sei on cracks"] = submodel
-                    self.submodels[
-                        f"{domain} {phase} sei on cracks thickness"
-                    ] = pybamm.sei.SEIThickness(
-                        self.param,
-                        domain,
-                        self.options,
-                        phase,
-                        cracks=True,
+                    self.submodels[f"{domain} {phase} sei on cracks thickness"] = (
+                        pybamm.sei.SEIThickness(
+                            self.param,
+                            domain,
+                            self.options,
+                            phase,
+                            cracks=True,
+                        )
                     )
                 if len(phases) > 1:
                     self.submodels[f"{domain} total sei on cracks"] = (

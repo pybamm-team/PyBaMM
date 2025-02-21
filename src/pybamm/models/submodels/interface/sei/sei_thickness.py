@@ -77,8 +77,8 @@ class SEIThickness(BaseModel):
 
             variables.update(
                 {
-                    f"X-averaged {self.domain} electrode resistance "
-                    "[Ohm.m2]": L_sei_xav * R_sei,
+                    f"X-averaged {self.domain} electrode resistance [Ohm.m2]": L_sei_xav
+                    * R_sei,
                 }
             )
         # Thickness variables are handled slightly differently for SEI on cracks
