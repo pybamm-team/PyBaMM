@@ -99,10 +99,7 @@ class SEIThickness(BaseModel):
         variables.update(
             {
                 f"{Domain} {reaction_name}thickness [m]": L_sei,
-                f"{Domain} {reaction_name}[m]": L_sei,
-                f"{Domain} total {reaction_name}thickness [m]": L_sei,
                 f"X-averaged {domain} {reaction_name}thickness [m]": L_sei_xav,
-                f"X-averaged {domain} total {reaction_name}thickness [m]": L_sei_xav,
                 f"Volume-averaged {domain} {reaction_name}thickness [m]": L_sei_av,
             }
         )
