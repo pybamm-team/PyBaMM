@@ -6,6 +6,7 @@
 - Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))
 - Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
+- Added InputParameter support in PyBamm experiments ([#4826](https://github.com/pybamm-team/PyBaMM/pull/4826))
 
 ## Breaking changes
 
@@ -14,6 +15,7 @@
 
 ## Bug fixes
 
+- Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))
 - Fixed interpolation bug in `pybamm.QuickPlot` with spatial variables. ([#4841](https://github.com/pybamm-team/PyBaMM/pull/4841))
 
 ## Optimizations
@@ -28,7 +30,6 @@
 
 ## Bug fixes
 
-- Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))
 - Fixed a bug which caused the ec-reaction limited SEI model to give
   incorrect results ([#4774](https://github.com/pybamm-team/PyBaMM/pull/4774))
 
