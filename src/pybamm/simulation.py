@@ -2,7 +2,6 @@ from __future__ import annotations
 import pickle
 import pybamm
 import numpy as np
-import hashlib
 import warnings
 from functools import lru_cache
 from datetime import timedelta
@@ -133,9 +132,6 @@ class Simulation:
         self._solution = None
         self.quick_plot = None
 
-        # Initialise instances of Simulation class with the same random seed
-        self._set_random_seed()
-
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
             import warnings
@@ -158,18 +154,6 @@ class Simulation:
         """
         self.__dict__ = state
         self.get_esoh_solver = lru_cache()(self._get_esoh_solver)
-
-    # If the solver being used is CasadiSolver or its variants, set a fixed
-    # random seed during class initialization to the SHA-256 hash of the class
-    # name for purposes of reproducibility.
-    def _set_random_seed(self):
-        if isinstance(self._solver, pybamm.CasadiSolver) or isinstance(
-            self._solver, pybamm.CasadiAlgebraicSolver
-        ):
-            np.random.seed(
-                int(hashlib.sha256(self.__class__.__name__.encode()).hexdigest(), 16)
-                % (2**32)
-            )
 
     def set_up_and_parameterise_experiment(self, solve_kwargs=None):
         msg = "pybamm.simulation.set_up_and_parameterise_experiment is deprecated and not meant to be accessed by users."
@@ -779,7 +763,8 @@ class Simulation:
                             and "[experiment]" in error.message
                         ):
                             step_solution = pybamm.EmptySolution(
-                                "Event exceeded in initial conditions", t=start_time
+                                "Event exceeded in initial conditions",
+                                t=start_time,
                             )
                         else:
                             logs["error"] = error
@@ -877,25 +862,47 @@ class Simulation:
                 # At the final step of the inner loop we save the cycle
                 if len(steps) > 0:
                     # Check for EmptySolution
-                    if all(isinstance(step, pybamm.EmptySolution) for step in steps):
+                    if all(
+                        isinstance(step_solution, pybamm.EmptySolution)
+                        for step_solution in steps
+                    ):
                         if len(steps) == 1:
-                            raise pybamm.SolverError(
-                                f"Step '{step_str}' is infeasible "
-                                "due to exceeded bounds at initial conditions. "
-                                "If this step is part of a longer cycle, "
-                                "round brackets should be used to indicate this, "
-                                "e.g.:\n pybamm.Experiment([(\n"
-                                "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
-                                "\tCharge at 1 A until 4.1 V,\n"
-                                "\tHold at 4.1 V until 10 mA\n"
-                                "])"
-                            )
+                            if step.skip_ok:
+                                pybamm.logger.warning(
+                                    f"Step '{step_str}' is infeasible at initial conditions, but skip_ok is True. Skipping step."
+                                )
+                                continue
+                            else:
+                                raise pybamm.SolverError(
+                                    f"Step '{step_str}' is infeasible "
+                                    "due to exceeded bounds at initial conditions. "
+                                    "If this step is part of a longer cycle, "
+                                    "round brackets should be used to indicate this, "
+                                    "e.g.:\n pybamm.Experiment([(\n"
+                                    "\tDischarge at C/5 for 10 hours or until 3.3 V,\n"
+                                    "\tCharge at 1 A until 4.1 V,\n"
+                                    "\tHold at 4.1 V until 10 mA\n"
+                                    "])\n"
+                                    "Otherwise, set skip_ok=True when instantiating the step to skip this step."
+                                )
                         else:
                             this_cycle = self.experiment.cycles[cycle_num - 1]
-                            raise pybamm.SolverError(
-                                f"All steps in the cycle {this_cycle} are infeasible "
-                                "due to exceeded bounds at initial conditions."
+                            all_steps_skipped = all(
+                                this_step.skip_ok
+                                for this_step in this_cycle
+                                if isinstance(this_step, pybamm.step.BaseStep)
                             )
+                            if all_steps_skipped:
+                                raise pybamm.SolverError(
+                                    f"All steps in the cycle {this_cycle} are infeasible "
+                                    "due to exceeded bounds at initial conditions, though "
+                                    "skip_ok is True for all steps. Please recheck the experiment."
+                                )
+                            else:
+                                raise pybamm.SolverError(
+                                    f"All steps in the cycle {this_cycle} are infeasible "
+                                    "due to exceeded bounds at initial conditions."
+                                )
                     cycle_sol = pybamm.make_cycle_solution(
                         steps,
                         esoh_solver=esoh_solver,
@@ -924,6 +931,8 @@ class Simulation:
                     else:
                         capacity_stop = None
                     logs["stopping conditions"]["capacity"] = capacity_stop
+                else:
+                    capacity_stop = logs["stopping conditions"].get("capacity")
 
                 logs["elapsed time"] = timer.time()
 
