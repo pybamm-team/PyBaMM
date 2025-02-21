@@ -72,7 +72,6 @@ class BaseModel(BaseInterface):
         """
         domain, Domain = self.domain_Domain
         phase_param = self.phase_param
-        phase_name = phase_param.phase_name
         reaction_name = self.reaction_name
 
         if self.reaction.loc == "interface":

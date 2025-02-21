@@ -10,6 +10,8 @@
 
 ## Breaking changes
 
+- Changed fundamental variable for all SEI models from thickness to concentration ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
+- Replaced parameter `"Initial SEI thickness [m]"` with `"Initial SEI concentration [mol.m-3]"` ([#4869](https://github.com/pybamm-team/PyBaMM/pull/4869))
 - Added `skip_ok` option to `step` to allow for steps to be skipped if they are infeasible at initial conditions. ([#4839](https://github.com/pybamm-team/PyBaMM/pull/4839))
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
 
