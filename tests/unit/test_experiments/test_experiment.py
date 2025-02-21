@@ -252,3 +252,32 @@ class TestExperiment:
         assert direction is None, (
             "Expected direction to be None when the expression depends on an InputParameter."
         )
+
+    def test_symbolic_current_step(self):
+        model = pybamm.lithium_ion.SPM()
+        expr = 2.5 + 0 * pybamm.t
+
+        step = pybamm.step.current(expr, duration=3600)
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve([0, 3600])
+
+        solution = sim.solution
+        voltage = solution["Current [A]"].entries
+
+        np.testing.assert_allclose(voltage[-1], 2.5, atol=0.1)
+
+    def test_voltage_without_directions(self):
+        model = pybamm.lithium_ion.SPM()
+
+        step = pybamm.step.voltage(2.5, termination="2.5 V")
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        sim.solve()
+        solution = sim.solution
+
+        voltage = solution["Terminal voltage [V]"].entries
+        assert np.allclose(voltage, 2.5, atol=1e-3)
