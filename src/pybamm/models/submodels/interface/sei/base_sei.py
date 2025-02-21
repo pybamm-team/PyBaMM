@@ -112,7 +112,7 @@ class BaseModel(BaseInterface):
             else:
                 c_sei_0 = phase_param.c_sei_0  # mol.m-3
                 c_sei_crack_0 = phase_param.c_sei_crack_0
-        
+
         if self.reaction == "SEI":
             delta_c_sei = c_sei_av - c_sei_0
         elif self.reaction == "SEI on cracks":
