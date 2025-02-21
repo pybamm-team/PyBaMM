@@ -14,6 +14,7 @@
 
 ## Bug fixes
 
+- Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))
 - Fixed interpolation bug in `pybamm.QuickPlot` with spatial variables. ([#4841](https://github.com/pybamm-team/PyBaMM/pull/4841))
 
 ## Optimizations
@@ -28,7 +29,6 @@
 
 ## Bug fixes
 
-- Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))
 - Fixed a bug which caused the ec-reaction limited SEI model to give
   incorrect results ([#4774](https://github.com/pybamm-team/PyBaMM/pull/4774))
 
