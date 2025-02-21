@@ -375,7 +375,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
 
     gamma_0 = pybamm.Parameter("Dead lithium decay constant [s-1]")
-    L_sei_0 = pybamm.Scalar(5E-9)
+    L_sei_0 = pybamm.Scalar(5e-9)
 
     gamma = gamma_0 * L_sei_0 / L_sei
 
