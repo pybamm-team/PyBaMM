@@ -33,10 +33,14 @@ class TestLeadAcidFullSurfaceForm:
 
 
 class TestLeadAcidFullSideReactions:
+    def test_model_well_posedness(self):
+        options = {"hydrolysis": "true"}
+        model = pybamm.lead_acid.Full(options)
+        model.check_well_posedness()
+
     @pytest.mark.parametrize(
         "options, expected_solver",
         [
-            ({"hydrolysis": "true"}, None),
             (
                 {"hydrolysis": "true", "surface form": "differential"},
                 pybamm.CasadiSolver,
@@ -44,7 +48,6 @@ class TestLeadAcidFullSideReactions:
             ({"hydrolysis": "true", "surface form": "algebraic"}, pybamm.CasadiSolver),
         ],
         ids=[
-            "well_posed",
             "surface_form_differential",
             "surface_form_algebraic",
         ],
