@@ -5,6 +5,7 @@
 from datetime import datetime
 import pybamm
 import pytest
+import numpy as np
 
 
 class TestExperiment:
@@ -214,3 +215,69 @@ class TestExperiment:
 
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well
+
+    def test_simulation_solve_updates_input_parameters(self):
+        model = pybamm.lithium_ion.SPM()
+
+        step = pybamm.step.current(
+            pybamm.InputParameter("I_app"),
+            termination="< 2.5 V",
+        )
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        sim.solve(inputs={"I_app": 1})
+        solution = sim.solution
+
+        current = solution["Current [A]"].entries
+
+        assert np.allclose(current, 1, atol=1e-3)
+
+    def test_current_step_raises_error_without_operator_with_input_parameters(self):
+        pybamm.lithium_ion.SPM()
+        with pytest.raises(
+            ValueError,
+            match="Termination must include an operator when using InputParameter.",
+        ):
+            pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
+
+    def test_value_function_with_input_parameter(self):
+        I_coeff = pybamm.InputParameter("I_coeff")
+        t = pybamm.t
+        expr = I_coeff * t
+        step = pybamm.step.current(expr, termination="< 2.5V")
+
+        direction = step.value_based_charge_or_discharge()
+        assert direction is None, (
+            "Expected direction to be None when the expression depends on an InputParameter."
+        )
+
+    def test_symbolic_current_step(self):
+        model = pybamm.lithium_ion.SPM()
+        expr = 2.5 + 0 * pybamm.t
+
+        step = pybamm.step.current(expr, duration=3600)
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve([0, 3600])
+
+        solution = sim.solution
+        voltage = solution["Current [A]"].entries
+
+        np.testing.assert_allclose(voltage[-1], 2.5, atol=0.1)
+
+    def test_voltage_without_directions(self):
+        model = pybamm.lithium_ion.SPM()
+
+        step = pybamm.step.voltage(2.5, termination="2.5 V")
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        sim.solve()
+        solution = sim.solution
+
+        voltage = solution["Terminal voltage [V]"].entries
+        assert np.allclose(voltage, 2.5, atol=1e-3)
