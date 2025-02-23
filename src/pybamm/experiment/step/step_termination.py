@@ -1,4 +1,5 @@
 import pybamm
+from warnings import warn
 
 
 class BaseTermination:
@@ -43,7 +44,7 @@ class BaseTermination:
             return False
 
 
-class CrateTermination(BaseTermination):
+class CRateTermination(BaseTermination):
     """
     Termination based on C-rate, created when a string termination of the C-rate type
     (e.g. "C/10") is provided
@@ -58,6 +59,20 @@ class CrateTermination(BaseTermination):
             abs(variables["C-rate"]) - self.value,
         )
         return event
+
+
+class CrateTermination(CRateTermination):
+    """
+    Termination based on C-rate, created when a string termination of the C-rate type
+    (e.g. "C/10") is provided
+    """
+
+    def __init__(self, value, operator=None):
+        super().__init__(value, operator)
+        warning = DeprecationWarning(
+            "CrateTermination is deprecated and will be removed in a future release. Use CRateTermination instead."
+        )
+        warn(warning, stacklevel=2)
 
 
 class CurrentTermination(BaseTermination):
@@ -184,15 +199,15 @@ class CustomTermination(BaseTermination):
         return pybamm.Event(self.name, self.event_function(variables))
 
 
-def _read_termination(termination):
+def _read_termination(termination, operator=None):
     if isinstance(termination, tuple):
-        typ, value = termination
+        op, typ, value = termination
     else:
         return termination
 
     termination_class = {
         "current": CurrentTermination,
         "voltage": VoltageTermination,
-        "C-rate": CrateTermination,
+        "C-rate": CRateTermination,
     }[typ]
-    return termination_class(value)
+    return termination_class(value, operator=op)
