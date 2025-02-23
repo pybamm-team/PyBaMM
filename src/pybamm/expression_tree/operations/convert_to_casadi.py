@@ -146,12 +146,42 @@ class CasadiConverter:
                 elif symbol.interpolator == "cubic":
                     solver = "bspline"
                 elif symbol.interpolator == "pchip":
-                    raise NotImplementedError(
-                        "The interpolator 'pchip' is not supported by CasAdi. "
-                        "Use 'linear' or 'cubic' instead. "
-                        "Alternatively, set 'model.convert_to_format = 'python'' "
-                        "and use a non-CasADi solver. "
-                    )
+                    x_np = np.array(symbol.x[0])
+                    y_np = np.array(symbol.y)
+                    pchip_interp = interpolate.PchipInterpolator(x_np, y_np, axis=0)
+                    d_np = pchip_interp.derivative()(x_np)
+                    x_sym = converted_children[0]
+                    result = casadi.MX.zeros(x_sym.shape)
+
+                    # Loop over each interval [x_np[i], x_np[i+1]]
+                    for i in range(len(x_np) - 1):
+                        x0 = x_np[i]
+                        x1 = x_np[i + 1]
+                        h_val = x1 - x0
+                        h_val_mx = casadi.MX(h_val)
+                        y0 = casadi.MX(y_np[i])
+                        y1 = casadi.MX(y_np[i + 1])
+                        d0 = casadi.MX(d_np[i])
+                        d1 = casadi.MX(d_np[i + 1])
+
+                        t = (x_sym - x0) / h_val_mx
+
+                        # Define the Hermite basis functions.
+                        h00 = 2 * t**3 - 3 * t**2 + 1
+                        h10 = t**3 - 2 * t**2 + t
+                        h01 = -2 * t**3 + 3 * t**2
+                        h11 = t**3 - t**2
+
+                        piece_val = (
+                            h00 * y0
+                            + h10 * h_val_mx * d0
+                            + h01 * y1
+                            + h11 * h_val_mx * d1
+                        )
+
+                        cond = casadi.logic_and(x_sym >= x0, x_sym <= x1)
+                        result = casadi.if_else(cond, piece_val, result)
+                    return result
                 else:  # pragma: no cover
                     raise NotImplementedError(
                         f"Unknown interpolator: {symbol.interpolator}"
