@@ -148,13 +148,11 @@ class CasadiConverter:
                 elif symbol.interpolator == "pchip":
                     x_np = np.array(symbol.x[0])
                     y_np = np.array(symbol.y)
-                    pchip_interp = interpolate.PchipInterpolator(x_np, y_np, axis=0)
+                    pchip_interp = interpolate.PchipInterpolator(x_np, y_np)
                     d_np = pchip_interp.derivative()(x_np)
-                    x_sym = converted_children[0]
-                    result = casadi.MX.zeros(x_sym.shape)
+                    x = converted_children[0]
 
-                    # Loop over each interval [x_np[i], x_np[i+1]]
-                    for i in range(len(x_np) - 1):
+                    def hermite_poly(i):
                         x0 = x_np[i]
                         x1 = x_np[i + 1]
                         h_val = x1 - x0
@@ -163,24 +161,32 @@ class CasadiConverter:
                         y1 = casadi.MX(y_np[i + 1])
                         d0 = casadi.MX(d_np[i])
                         d1 = casadi.MX(d_np[i + 1])
-
-                        t = (x_sym - x0) / h_val_mx
-
-                        # Define the Hermite basis functions.
-                        h00 = 2 * t**3 - 3 * t**2 + 1
-                        h10 = t**3 - 2 * t**2 + t
-                        h01 = -2 * t**3 + 3 * t**2
-                        h11 = t**3 - t**2
-
-                        piece_val = (
+                        xn = (x - x0) / h_val_mx
+                        h00 = 2 * xn**3 - 3 * xn**2 + 1
+                        h10 = xn**3 - 2 * xn**2 + xn
+                        h01 = -2 * xn**3 + 3 * xn**2
+                        h11 = xn**3 - xn**2
+                        return (
                             h00 * y0
                             + h10 * h_val_mx * d0
                             + h01 * y1
                             + h11 * h_val_mx * d1
                         )
 
-                        cond = casadi.logic_and(x_sym >= x0, x_sym <= x1)
-                        result = casadi.if_else(cond, piece_val, result)
+                    # Build piecewise polynomial for points inside the domain.
+                    inside = casadi.MX.zeros(x.shape)
+                    for i in range(len(x_np) - 1):
+                        cond = casadi.logic_and(x >= x_np[i], x <= x_np[i + 1])
+                        inside = casadi.if_else(cond, hermite_poly(i), inside)
+
+                    # Extrapolation:
+                    left = hermite_poly(0)  # For x < x_np[0]
+                    right = hermite_poly(len(x_np) - 2)  # For x > x_np[-1]
+
+                    # if greater than the maximum, use right; otherwise, use the piecewise value.
+                    result = casadi.if_else(
+                        x < x_np[0], left, casadi.if_else(x > x_np[-1], right, inside)
+                    )
                     return result
                 else:  # pragma: no cover
                     raise NotImplementedError(
