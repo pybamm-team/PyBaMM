@@ -8,7 +8,6 @@ import pybamm
 import pytest
 from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 from scipy import special
-from scipy.interpolate import PchipInterpolator
 
 
 class TestCasadiConverter:
@@ -164,10 +163,7 @@ class TestCasadiConverter:
             interp = pybamm.Interpolant(x, 2 * x, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
-            if interpolator == "pchip":
-                expected = PchipInterpolator(x, 2 * x)(y_test).reshape(2, 1)
-            else:
-                expected = interp.evaluate(y=y_test)
+            expected = interp.evaluate(y=y_test)
             np.testing.assert_allclose(expected, f(y_test), rtol=1e-7, atol=1e-6)
 
         # square

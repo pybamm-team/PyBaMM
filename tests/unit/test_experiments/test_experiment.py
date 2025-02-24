@@ -6,7 +6,6 @@ from datetime import datetime
 import pybamm
 import pytest
 import numpy as np
-from scipy.interpolate import PchipInterpolator
 import casadi
 
 
@@ -291,13 +290,11 @@ class TestExperiment:
         y = pybamm.StateVector(slice(0, 1))
         interp = pybamm.Interpolant(x, y_values, y, interpolator="pchip")
 
-        casadi_y = casadi.MX.sym("y", 1)
+        test_points = np.linspace(0, 1, 21)
+        casadi_y = casadi.MX.sym("y", len(test_points), 1)
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
 
-        test_points = np.linspace(0, 1, 21)
-
-        expected = PchipInterpolator(x, y_values)(test_points).reshape((-1, 1))
-        casadi_results = f(test_points)
-
+        casadi_results = f(test_points.reshape((-1, 1)))
+        expected = interp.evaluate(y=test_points)
         np.testing.assert_allclose(casadi_results, expected, rtol=1e-7, atol=1e-6)
