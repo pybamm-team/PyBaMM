@@ -165,12 +165,10 @@ class TestCasadiConverter:
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             if interpolator == "pchip":
-                expected = PchipInterpolator(x, 2 * x)(y_test)
+                expected = PchipInterpolator(x, 2 * x)(y_test).reshape(2, 1)
             else:
                 expected = interp.evaluate(y=y_test)
-            np.testing.assert_allclose(
-                expected.flatten(), np.array(f(y_test)).flatten(), rtol=1e-7, atol=1e-6
-            )
+            np.testing.assert_allclose(expected, f(y_test), rtol=1e-7, atol=1e-6)
 
         # square
         y = pybamm.StateVector(slice(0, 1))

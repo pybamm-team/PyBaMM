@@ -285,30 +285,19 @@ class TestExperiment:
         assert np.allclose(voltage, 2.5, atol=1e-3)
 
     def test_pchip_interpolation_experiment(self):
-        # Create a 1D grid and a known monotonic function.
         x = np.linspace(0, 1, 11)
-        # Let f(x) = x**3, which is smooth and monotonic.
         y_values = x**3
 
-        # Create a PyBaMM state vector for a 1D problem.
         y = pybamm.StateVector(slice(0, 1))
-
-        # Create a PCHIP interpolant using PyBaMM.
         interp = pybamm.Interpolant(x, y_values, y, interpolator="pchip")
 
-        # Convert the PyBaMM interpolant to a CasADi function.
         casadi_y = casadi.MX.sym("y", 1)
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
 
-        # Choose some test points for evaluation.
         test_points = np.linspace(0, 1, 21)
 
-        # Compute the expected results using SciPy's PchipInterpolator.
-        expected = PchipInterpolator(x, y_values)(test_points)
+        expected = PchipInterpolator(x, y_values)(test_points).reshape((-1, 1))
         casadi_results = f(test_points)
 
-        # Compare the results.
-        np.testing.assert_allclose(
-            np.array(casadi_results).flatten(), expected.flatten(), rtol=1e-7, atol=1e-6
-        )
+        np.testing.assert_allclose(casadi_results, expected, rtol=1e-7, atol=1e-6)
