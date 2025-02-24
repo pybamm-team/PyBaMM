@@ -6,6 +6,8 @@ from datetime import datetime
 import pybamm
 import pytest
 import numpy as np
+import casadi
+from scipy.interpolate import PchipInterpolator
 
 
 class TestExperiment:
@@ -281,3 +283,75 @@ class TestExperiment:
 
         voltage = solution["Terminal voltage [V]"].entries
         assert np.allclose(voltage, 2.5, atol=1e-3)
+
+    def test_pchip_interpolation_experiment(self):
+        x = np.linspace(0, 1, 11)
+        y_values = x**3
+
+        y = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, y, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        casadi_y = casadi.MX.sym("y", len(test_points), 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        casadi_results = f(test_points.reshape((-1, 1)))
+        expected = interp.evaluate(y=test_points)
+        np.testing.assert_allclose(casadi_results, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_interpolation_uniform_grid(self):
+        x = np.linspace(0, 1, 11)
+        y_values = np.sin(x)
+
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_interpolation_nonuniform_grid(self):
+        x = np.array([0, 0.05, 0.2, 0.4, 0.65, 1.0])
+        y_values = np.exp(-x)
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_non_increasing_x(self):
+        x = np.array([0, 0.5, 0.5, 1.0])
+        y_values = np.linspace(0, 1, 4)
+        state = pybamm.StateVector(slice(0, 1))
+        with pytest.raises(ValueError, match="strictly increasing sequence"):
+            _ = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+    def test_pchip_extrapolation(self):
+        x = np.linspace(0, 1, 11)
+        y_values = np.log1p(x)  # a smooth function on [0,1]
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.array([-0.1, 1.1])
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
