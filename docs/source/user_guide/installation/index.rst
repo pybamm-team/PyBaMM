@@ -163,6 +163,7 @@ Dependency                                                                      
 `pytest-mock <https://pytest-mock.readthedocs.io/en/latest/index.html>`__        \-                 dev                Provides a mocker fixture.
 `nbmake <https://github.com/treebeardtech/nbmake/>`__                            \-                 dev                A ``pytest`` plugin for executing Jupyter notebooks.
 `importlib-metadata <https://pypi.org/project/importlib-metadata/>`__            \-                 dev                Used to read metadata from Python packages.
+`hypothesis <https://hypothesis.readthedocs.io/en/latest/>`__                    \-                 dev                Used to perform property based testing.
 ================================================================================ ================== ================== =============================================================
 
 .. _install.cite_dependencies:
