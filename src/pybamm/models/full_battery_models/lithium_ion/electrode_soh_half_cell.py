@@ -31,7 +31,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         Q_w = pybamm.InputParameter("Q_w")
         T_ref = param.T_ref
         U_w = param.p.prim.U
-        Q = Q_w * (x_100 - x_0)
+        Q = Q_w * (x_0 - x_100)
 
         V_max = param.ocp_soc_100
         V_min = param.ocp_soc_0
@@ -49,7 +49,6 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
             "Uw(x_100)": U_w(x_100, T_ref),
             "Uw(x_0)": U_w(x_0, T_ref),
             "Q_w": Q_w,
-            "Q_w * (x_100 - x_0)": Q_w * (x_100 - x_0),
         }
 
     @property
