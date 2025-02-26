@@ -560,6 +560,30 @@ class BaseModel:
 
         return max_name_length, max_type_length
 
+    def _check_standard_form_dae(self):
+        """
+        Check if the model is a DAE in standard form with a mass matrix that is all
+        zeros except for along the diagonal, which is either ones or zeros.
+
+        For example, the following is standard form:
+        M*y' = f(y, y', t)
+
+        M = [I 0
+             0 0]
+
+        The following explicit ODE is also a standard form DAE:
+        M = I
+
+        The following is not standard form:
+        M = [2I 0
+             0 0]
+        """
+        if self.mass_matrix is None or self.mass_matrix_inv is None:
+            return False
+        # Check that the mass matrix inverse is an identity matrix
+        mass_matrix_inv = self.mass_matrix_inv.entries.toarray()
+        return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
+
     def _format_table_row(
         self, param_name, param_type, max_name_length, max_type_length
     ):
@@ -1163,30 +1187,6 @@ class BaseModel:
             raise pybamm.ModelError(
                 f"Multiple equations specified for variables {rhs_keys.intersection(alg_keys)}"
             )
-
-    def _check_standard_form_dae(self):
-        """
-        Check if the model is a DAE in standard form with a mass matrix that is all
-        zeros except for along the diagonal, which is either ones or zeros.
-
-        For example, the following is standard form:
-        M*y' = f(y, y', t)
-
-        M = [I 0
-             0 0]
-
-        The following explicit ODE is also a standard form DAE:
-        M = I
-
-        The following is not standard form:
-        M = [2I 0
-             0 0]
-        """
-        if self.mass_matrix is None or self.mass_matrix_inv is None:
-            return False
-        # Check that the mass matrix inverse is an identity matrix
-        mass_matrix_inv = self.mass_matrix_inv.entries.toarray()
-        return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
 
     def info(self, symbol_name):
         """
