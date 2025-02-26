@@ -111,6 +111,9 @@ dev = [
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
+    # For property based testing
+    "hypothesis",
+
 ]
 # For the Jax solver.
 # Note: These must be kept in sync with the versions defined in pybamm/util.py, and

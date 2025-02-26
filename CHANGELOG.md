@@ -6,6 +6,8 @@
 - Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))
 - Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
 - Added support for particle size distributions combined with particle mechanics. ([#4807](https://github.com/pybamm-team/PyBaMM/pull/4807))
+- Added InputParameter support in PyBamm experiments ([#4826](https://github.com/pybamm-team/PyBaMM/pull/4826))
+- Added support for the `"pchip"` interpolator using the CasADI backend. ([#4871](https://github.com/pybamm-team/PyBaMM/pull/4871))
 
 ## Breaking changes
 
@@ -14,6 +16,8 @@
 
 ## Bug fixes
 
+- Moved concentration inside x-averaged when calculating LLI due to LAM variables ([#4858](https://github.com/pybamm-team/PyBaMM/pull/4858))
+- Fixed a bug that caused the variable `"Loss of lithium due to {domain} lithium plating"`to have the domain `"current collector"` (should not have any domain at all) if the `"x-average side reactions"` option was set to `"true"`. ([#4844](https://github.com/pybamm-team/PyBaMM/pull/4844))
 - Fixed interpolation bug in `pybamm.QuickPlot` with spatial variables. ([#4841](https://github.com/pybamm-team/PyBaMM/pull/4841))
 
 ## Optimizations
