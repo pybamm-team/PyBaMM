@@ -22,6 +22,7 @@
 
 ## Optimizations
 
+- Performance improvements to `IDAKLUSolver` initialization and processed variables. ([#4878](https://github.com/pybamm-team/PyBaMM/pull/4878))
 - Improved search to handle cases with shorter input strings and provide more relevant results. ([#4735](https://github.com/pybamm-team/PyBaMM/pull/4735))
 
 # [v25.1.1](https://github.com/pybamm-team/PyBaMM/tree/v25.1.1) - 2025-01-20
