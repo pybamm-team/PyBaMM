@@ -69,6 +69,7 @@ class BaseModel:
         self._parameters = None
         self._input_parameters = None
         self._parameter_info = None
+        self._is_standard_form_dae = None
         self._variables_casadi = {}
         self._geometry = pybamm.Geometry({})
 
@@ -428,6 +429,16 @@ class BaseModel:
         if self._input_parameters is None:
             self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
+
+    @property
+    def is_standard_form_dae(self):
+        """
+        Check if the model is a DAE in standard form with a mass matrix that is all
+        zeros except for along the diagonal, which is either ones or zeros.
+        """
+        if self._is_standard_form_dae is None:
+            self._is_standard_form_dae = self._check_standard_form_dae()
+        return self._is_standard_form_dae
 
     @property
     def calc_esoh(self):
@@ -1152,6 +1163,30 @@ class BaseModel:
             raise pybamm.ModelError(
                 f"Multiple equations specified for variables {rhs_keys.intersection(alg_keys)}"
             )
+
+    def _check_standard_form_dae(self):
+        """
+        Check if the model is a DAE in standard form with a mass matrix that is all
+        zeros except for along the diagonal, which is either ones or zeros.
+
+        For example, the following is standard form:
+        M*y' = f(y, y', t)
+
+        M = [I 0
+             0 0]
+
+        The following explicit ODE is also a standard form DAE:
+        M = I
+
+        The following is not standard form:
+        M = [2I 0
+             0 0]
+        """
+        if self.mass_matrix is None or self.mass_matrix_inv is None:
+            return False
+        # Check that the mass matrix inverse is an identity matrix
+        mass_matrix_inv = self.mass_matrix_inv.entries.toarray()
+        return np.allclose(mass_matrix_inv, np.eye(mass_matrix_inv.shape[0]))
 
     def info(self, symbol_name):
         """
