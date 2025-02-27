@@ -70,7 +70,7 @@ sim.plot(
         "X-averaged negative electrode SEI interfacial current density [A.m-2]",
         "X-averaged negative electrode lithium plating interfacial current density "
         "[A.m-2]",
-        "X-averaged negative total SEI concentration [mol.m-3]",
+        "X-averaged negative SEI concentration [mol.m-3]",
         "X-averaged negative dead lithium concentration [mol.m-3]",
         [
             "Total lithium lost [mol]",
