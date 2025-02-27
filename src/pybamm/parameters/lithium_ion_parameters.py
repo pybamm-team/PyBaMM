@@ -357,7 +357,9 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{pref}SEI lithium ion conductivity [S.m-1]"
         )
         self.c_sei_0 = pybamm.Parameter(f"{pref}Initial SEI concentration [mol.m-3]")
-        self.c_sei_planar_0 = pybamm.Parameter("Initial SEI concentration [mol.m-2]")
+        self.c_sei_planar_0 = pybamm.Parameter(
+            "Initial SEI concentration on Li metal [mol.m-2]"
+        )
         self.c_sei_crack_0 = pybamm.Parameter(
             f"{pref}Initial SEI on cracks concentration [mol.m-3]"
         )
