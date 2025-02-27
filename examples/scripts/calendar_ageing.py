@@ -45,9 +45,9 @@ pb.dynamic_plot(
         "Negative particle surface concentration",
         "X-averaged negative particle surface concentration",
         "Electrolyte concentration [mol.m-3]",
-        "Negative SEI thickness [m]",
-        "X-averaged negative SEI thickness [m]",
+        "Negative SEI concentration [mol.m-3]",
         "X-averaged negative SEI concentration [mol.m-3]",
+        "X-averaged negative SEI thickness [m]",
         "Sum of x-averaged negative electrode volumetric "
         "interfacial current densities [A.m-3]",
         "Loss of lithium inventory [%]",

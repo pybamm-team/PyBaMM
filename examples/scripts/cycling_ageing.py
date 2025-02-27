@@ -66,14 +66,16 @@ sim.plot(
         "Discharge capacity [A.h]",
         "Electrolyte potential [V]",
         "Electrolyte concentration [mol.m-3]",
-        "Negative SEI thickness [m]",
-        "Negative electrode porosity",
         "X-averaged negative electrode porosity",
         "X-averaged negative electrode SEI interfacial current density [A.m-2]",
-        "X-averaged negative SEI thickness [m]",
+        "X-averaged negative electrode lithium plating interfacial current density "
+        "[A.m-2]",
+        "X-averaged negative total SEI concentration [mol.m-3]",
+        "X-averaged negative dead lithium concentration [mol.m-3]",
         [
             "Total lithium lost [mol]",
             "Loss of lithium to negative SEI [mol]",
+            "Loss of lithium to negative lithium plating [mol]",
         ],
     ]
 )
