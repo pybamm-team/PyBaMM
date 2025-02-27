@@ -29,7 +29,7 @@ class Isothermal(BaseThermal):
         # Broadcast t to be the same size as y and z (to catch cases where the ambient
         # temperature is a function of time only)
         t_broadcast = pybamm.PrimaryBroadcast(pybamm.t, "current collector")
-        T_x_av = self.param.T_amb(y, z, t_broadcast)
+        T_x_av = self.param.T_amb(t_broadcast, y, z)
         T_vol_av = self._yz_average(T_x_av)
 
         T_dict = {

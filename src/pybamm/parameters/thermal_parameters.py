@@ -40,22 +40,20 @@ class ThermalParameters(BaseParameters):
         # Initial temperature
         self.T_init = pybamm.Parameter("Initial temperature [K]")
 
-    def T_amb(self, y, z, t):
+    def T_amb(self, t, y=None, z=None):
         """Ambient temperature [K]"""
-        return pybamm.FunctionParameter(
-            "Ambient temperature [K]",
-            {
-                "Distance across electrode width [m]": y,
-                "Distance across electrode height [m]": z,
-                "Time [s]": t,
-            },
-        )
+        inputs = {"Time [s]": t}
+        if y is not None:
+            inputs["Distance across electrode width [m]"] = y
+        if z is not None:
+            inputs["Distance across electrode height [m]"] = z
+        return pybamm.FunctionParameter("Ambient temperature [K]", inputs)
 
     def T_amb_av(self, t):
         """YZ-averaged ambient temperature [K]"""
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        return pybamm.yz_average(self.T_amb(y, z, t))
+        return pybamm.yz_average(self.T_amb(t, y, z))
 
     def h_edge(self, y, z):
         """Cell edge heat transfer coefficient [W.m-2.K-1]"""

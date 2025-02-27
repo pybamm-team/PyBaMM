@@ -355,3 +355,48 @@ class TestExperiment:
         result = np.array(f(test_points)).flatten()
 
         np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_ambient_temperature_time_only_lumped(self):
+        options = {"particle": "quadratic profile", "thermal": "lumped"}
+        model = pybamm.lithium_ion.SPMe(options)
+
+        # Function only takes time parameter
+        def ambient_temperature(t, y=None, z=None):
+            # Ignore y and z for lumped model
+            return 300 + t * 100 / 3600
+
+        param = pybamm.ParameterValues("Chen2020")
+        param.update(
+            {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
+        )
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        solution = sim.solve([0, 3600])
+        computed = solution["Ambient temperature [K]"](0)
+        expected = ambient_temperature(0)
+
+        assert np.isclose(computed, expected, rtol=1e-1), (
+            f"Ambient temperature mismatch at t={0}s: "
+            f"computed {computed}, expected {expected}"
+        )
+
+    def test_ambient_function_required_spatial_params(self):
+        options = {"particle": "quadratic profile", "thermal": "lumped"}
+        model = pybamm.lithium_ion.SPMe(options)
+
+        # This function requires spatial parameters
+        def ambient_temperature(t, y=None, z=None):
+            return 300 + t * 100 / 3600 + 2 * y * z
+
+        param = pybamm.ParameterValues("Chen2020")
+        param.update(
+            {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
+        )
+
+        # This should now raise a ValueError due to your implementation
+        with pytest.raises(
+            ValueError, match=r"Dimensions .* do not exist\. Expected .*"
+        ):
+            sim = pybamm.Simulation(model, parameter_values=param)
+            solution = sim.solve([0, 3600])
+            solution["Ambient temperature [K]"](5, 2, 4)
