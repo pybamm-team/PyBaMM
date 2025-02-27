@@ -765,7 +765,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ]
             )
         else:
-            inputs = np.array([[]])
+            inputs = np.array([[]] * len(inputs_list))
 
         # stack y0full and ydot0full so they are a 2D array of shape (number_of_inputs, number_of_states + number_of_parameters * number_of_states)
         # note that y0full and ydot0full are currently 1D arrays (i.e. independent of inputs), but in the future we will support
@@ -984,15 +984,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # calculate the time derivatives of the differential equations
         input_eval = inputs if casadi_format else inputs_dict
 
-        rhs_alg0 = model.rhs_algebraic_eval(time, y0, input_eval)
-        if isinstance(rhs_alg0, casadi.DM):
-            rhs_alg0 = rhs_alg0.full()
-        rhs_alg0 = rhs_alg0.flatten()
-
-        rhs0 = rhs_alg0[: model.len_rhs]
+        rhs0 = model.rhs_eval(time, y0, input_eval)
+        if isinstance(rhs0, casadi.DM):
+            rhs0 = rhs0.full()
+        rhs0 = rhs0.flatten()
 
         # for the differential terms, ydot = M^-1 * (rhs)
-        ydot0[: model.len_rhs] = model.mass_matrix_inv.entries @ rhs0
+        # M^-1 is the identity matrix, so we can just use rhs
+        ydot0[: model.len_rhs] = rhs0
 
         return ydot0
 

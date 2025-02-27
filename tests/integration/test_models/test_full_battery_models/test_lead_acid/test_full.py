@@ -1,68 +1,69 @@
-#
-# Tests for the lead-acid Full model
-#
 import pybamm
 import tests
-
+import pytest
 import numpy as np
 
 
+@pytest.fixture
+def optimtest():
+    options = {"thermal": "isothermal"}
+    model = pybamm.lead_acid.Full(options)
+    return tests.OptimisationsTest(model)
+
+
 class TestLeadAcidFull:
-    def test_basic_processing(self):
-        options = {"thermal": "isothermal"}
+    @pytest.mark.parametrize(
+        "options, t_eval",
+        [
+            ({"thermal": "isothermal"}, np.linspace(0, 3600 * 17)),
+            (
+                {"thermal": "isothermal", "convection": "uniform transverse"},
+                np.linspace(0, 3600 * 10),
+            ),
+        ],
+        ids=["basic_processing", "basic_processing_with_convection"],
+    )
+    def test_basic_processing(self, options, t_eval):
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 3600 * 17))
+        modeltest.test_all(t_eval=t_eval)
 
-    def test_basic_processing_with_convection(self):
-        options = {"thermal": "isothermal", "convection": "uniform transverse"}
-        model = pybamm.lead_acid.Full(options)
-        # var_pts = {"x_n": 10, "x_s": 10, "x_p": 10}
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 3600 * 10))
-
-    def test_optimisations(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
-
+    def test_optimisations(self, optimtest):
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-6)
 
-    def test_set_up(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
+    def test_set_up(self, optimtest):
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
 
-    def test_basic_processing_1plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 1}
-        model = pybamm.lead_acid.Full(options)
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {"current collector": "potential pair", "dimensionality": 1},
+            {
+                "current collector": "potential pair",
+                "dimensionality": 1,
+                "convection": "full transverse",
+            },
+        ],
+        ids=["basic_1plus1D", "1plus1D_with_convection"],
+    )
+    def test_basic_processing_1plus1D(self, options):
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "y": 5, "z": 5}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
-
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "convection": "full transverse",
-        }
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 
 
 class TestLeadAcidFullSurfaceForm:
-    def test_basic_processing_differential(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-    def test_basic_processing_algebraic(self):
-        options = {"surface form": "algebraic"}
+    @pytest.mark.parametrize(
+        "surface_form",
+        ["differential", "algebraic"],
+        ids=["differential", "algebraic"],
+    )
+    def test_basic_processing(self, surface_form):
+        options = {"surface form": surface_form}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -74,15 +75,18 @@ class TestLeadAcidFullSurfaceForm:
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
 
-    def test_thermal(self):
-        options = {"thermal": "lumped"}
+    @pytest.mark.parametrize(
+        "options, param_update",
+        [
+            ({"thermal": "lumped"}, {"Current function [A]": 1.7}),
+            ({"thermal": "x-full"}, None),
+        ],
+        ids=["lumped_with_current_function", "x_full"],
+    )
+    def test_thermal(self, options, param_update):
         model = pybamm.lead_acid.Full(options)
         param = model.default_parameter_values
-        param["Current function [A]"] = 1.7
+        if param_update:
+            param.update(param_update)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-        options = {"thermal": "x-full"}
-        model = pybamm.lead_acid.Full(options)
-        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
