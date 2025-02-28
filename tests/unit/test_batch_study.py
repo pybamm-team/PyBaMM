@@ -109,8 +109,8 @@ class TestBatchStudy:
         test_file = tmp_path / "batch_study_test.gif"
 
         # create a GIF before calling the plot method
-        bs.create_gif(number_of_images=3, duration=1, output_filename=str(test_file))
+        bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
         # create a GIF after calling the plot method
         bs.plot(show_plot=False)
-        bs.create_gif(number_of_images=3, duration=1, output_filename=str(test_file))
+        bs.create_gif(number_of_images=3, duration=1, output_filename=test_file)

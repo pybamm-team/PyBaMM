@@ -130,7 +130,7 @@ class TestBPX:
         for obj in bpx_objs:
             temp_file = tmp_path / "tmp.json"
             temp_file.write_text(json.dumps(obj))
-            pv = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+            pv = pybamm.ParameterValues.create_from_bpx(temp_file)
             sim = pybamm.Simulation(model, parameter_values=pv, experiment=experiment)
             sols.append(sim.solve())
 
@@ -143,7 +143,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(copy.deepcopy(self.base)))
 
-        params = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+        params = pybamm.ParameterValues.create_from_bpx(temp_file)
         assert "check_already_exists" not in params.keys()
 
     def test_constant_functions(self, tmp_path):
@@ -170,7 +170,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
 
-        param = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
 
         # Function to check that functional parameters output constants
         def check_constant_output(func):
@@ -217,7 +217,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
 
-        param = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
 
         # Check that the electrolyte conductivity is an Interpolant with the
         # correct child
@@ -247,7 +247,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
 
-        pv = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+        pv = pybamm.ParameterValues.create_from_bpx(temp_file)
 
         def arrhenius_assertion(pv, param_key, Ea_key):
             sto = 0.5
@@ -333,7 +333,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
 
-        pv = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+        pv = pybamm.ParameterValues.create_from_bpx(temp_file)
 
         # initial concentration must be set manually for blended models (for now)
         pv.update(
@@ -406,7 +406,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
         with pytest.raises(NotImplementedError, match="PyBaMM does not support"):
-            pybamm.ParameterValues.create_from_bpx(str(temp_file))
+            pybamm.ParameterValues.create_from_bpx(temp_file)
 
     def test_bpx_user_defined(self, tmp_path):
         bpx_obj = copy.deepcopy(self.base)
@@ -420,7 +420,7 @@ class TestBPX:
         temp_file = tmp_path / "tmp.json"
         temp_file.write_text(json.dumps(bpx_obj))
 
-        param = pybamm.ParameterValues.create_from_bpx(str(temp_file))
+        param = pybamm.ParameterValues.create_from_bpx(temp_file)
 
         assert param["User-defined scalar parameter"] == pytest.approx(1.0, rel=1e-12)
         var = pybamm.Variable("var")
@@ -438,7 +438,7 @@ class TestBPX:
         test_file = tmp_path / "test.json"
         test_file.write_text(json.dumps(bpx_obj))
 
-        param = pybamm.ParameterValues.create_from_bpx(str(test_file))
+        param = pybamm.ParameterValues.create_from_bpx(test_file)
 
         assert param[
             "Negative electrode diffusivity activation energy [J.mol-1]"

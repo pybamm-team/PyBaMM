@@ -18,7 +18,7 @@ class TestStandardParametersLeadAcid:
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
 
         output_file = tmp_path / "lead_acid_parameters.txt"
-        parameter_values.print_parameters(parameters, str(output_file))
+        parameter_values.print_parameters(parameters, output_file)
 
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
