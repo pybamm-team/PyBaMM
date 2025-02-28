@@ -2,6 +2,7 @@
 
 ## Features
 
+- Revision of the hysteresis notebook to include the method implemented in the module `axen_ocp`. ([#4880](https://github.com/pybamm-team/PyBaMM/pull/4880))
 - Added `axen_ocp` module within submodel `interface.open_circuit_potential` to handle an OCP with hysteresis. ([#4816](https://github.com/pybamm-team/PyBaMM/pull/4816))
 - Creates a 'calc_esoh' property in battery models ([#4825](https://github.com/pybamm-team/PyBaMM/pull/4825))
 - Added 'get_summary_variables' to return dictionary of computed summary variables ([#4824](https://github.com/pybamm-team/PyBaMM/pull/4824))
