@@ -360,9 +360,7 @@ class TestExperiment:
         options = {"particle": "quadratic profile", "thermal": "lumped"}
         model = pybamm.lithium_ion.SPMe(options)
 
-        # Function only takes time parameter
         def ambient_temperature(t, y=None, z=None):
-            # Ignore y and z for lumped model
             return 300 + t * 100 / 3600
 
         param = pybamm.ParameterValues("Chen2020")
@@ -384,7 +382,6 @@ class TestExperiment:
         options = {"particle": "quadratic profile", "thermal": "lumped"}
         model = pybamm.lithium_ion.SPMe(options)
 
-        # This function requires spatial parameters
         def ambient_temperature(t, y=None, z=None):
             return 300 + t * 100 / 3600 + 2 * y * z
 
@@ -393,7 +390,6 @@ class TestExperiment:
             {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
         )
 
-        # This should now raise a ValueError due to your implementation
         with pytest.raises(
             ValueError, match=r"Dimensions .* do not exist\. Expected .*"
         ):

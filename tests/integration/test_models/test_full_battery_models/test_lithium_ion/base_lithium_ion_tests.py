@@ -376,7 +376,7 @@ class BaseIntegrationTestLithiumIon:
         times = np.arange(0, 4000, 10)
         tmax = max(times)
 
-        def temp_drive_cycle(y, z, t):
+        def temp_drive_cycle(t, y=None, z=None):
             return pybamm.Interpolant(
                 times,
                 298.15 + 20 * (times / tmax),
