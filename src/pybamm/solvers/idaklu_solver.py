@@ -633,6 +633,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             "ids": ids,  # array
             "sensitivity_names": sensitivity_names,
             "number_of_sensitivity_parameters": number_of_sensitivity_parameters,
+            "standard_form_dae": model.is_standard_form_dae,  # bool
             "output_variables": self.output_variables,
             "var_fcns": self.computed_var_fcns,
             "var_idaklu_fcns": self.var_idaklu_fcns,
@@ -990,8 +991,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         rhs0 = rhs0.flatten()
 
         # for the differential terms, ydot = M^-1 * (rhs)
-        # M^-1 is the identity matrix, so we can just use rhs
-        ydot0[: model.len_rhs] = rhs0
+        if model.is_standard_form_dae:
+            # M^-1 is the identity matrix, so we can just use rhs
+            ydot0[: model.len_rhs] = rhs0
+        else:
+            # M^-1 is not the identity matrix, so we need to use the mass matrix
+            ydot0[: model.len_rhs] = model.mass_matrix_inv.entries @ rhs0
 
         return ydot0
 

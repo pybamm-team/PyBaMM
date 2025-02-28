@@ -470,6 +470,8 @@ class TestDiscretise:
             np.eye(submesh.nodes.shape[0]), model.mass_matrix.entries.toarray()
         )
 
+        assert model.is_standard_form_dae
+
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, submesh.npts))
 
@@ -526,6 +528,8 @@ class TestDiscretise:
         np.testing.assert_array_equal(
             np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
         )
+
+        assert model.is_standard_form_dae
 
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -640,6 +644,7 @@ class TestDiscretise:
         np.testing.assert_array_equal(
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
+        assert model.is_standard_form_dae
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -722,6 +727,8 @@ class TestDiscretise:
         # mass matrix is identity upper left, zeros elsewhere
         mass = np.zeros((np.size(submesh.nodes), np.size(submesh.nodes)))
         np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+        assert not model.is_standard_form_dae
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))
