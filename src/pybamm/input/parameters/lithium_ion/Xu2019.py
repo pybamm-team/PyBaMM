@@ -225,7 +225,7 @@ def get_parameter_values():
         "SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
         "Lithium interstitial reference concentration [mol.m-3]": 15.0,
         "Initial SEI concentration [mol.m-3]": 38.34,
-        "Initial SEI concentration on Li metal [mol.m-2]": 1.043e-04,  # Liu and Lu 2017
+        "Initial SEI concentration on Li metal [mol.m-2]": 5.216e-05,
         "EC initial concentration in electrolyte [mol.m-3]": 4541.0,
         "EC diffusivity [m2.s-1]": 2e-18,
         "SEI kinetic rate constant [m.s-1]": 1e-12,
@@ -288,5 +288,5 @@ def get_parameter_values():
         "Initial concentration in positive electrode [mol.m-3]": 4631.0,
         "Initial temperature [K]": 298.15,
         # citations
-        "citations": ["Xu2019", "Liu2017", "Valoen2005"],
+        "citations": ["Xu2019", "Valoen2005"],
     }
