@@ -1187,7 +1187,7 @@ class TestProcessedVariable:
         r_sol = disc.mesh["negative particle"].nodes
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis]
+        y_sol = np.ones(len(x_sol) * len(R_sol) * len(r_sol))[:, np.newaxis] * t_sol
         yp_sol = self._get_yps(y_sol, hermite_interp)
 
         var_casadi = to_casadi(var_sol, y_sol)
@@ -1243,6 +1243,11 @@ class TestProcessedVariable:
             processed_var(t=0.2, x=0.2, R=0.2, r=0.2).shape, ()
         )
 
+        # check that C++ and Python give the same result
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
+        )
+
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_var_3D_scikit_interpolation(self, hermite_interp):
         var = pybamm.Variable(
@@ -1258,7 +1263,7 @@ class TestProcessedVariable:
         z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
         t_sol = np.array([0, 1, 2])
-        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
+        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * t_sol
         up_sol = self._get_yps(u_sol, hermite_interp)
         var_casadi = to_casadi(var_sol, u_sol)
 
@@ -1307,6 +1312,11 @@ class TestProcessedVariable:
         # 4 scalars
         np.testing.assert_array_equal(
             processed_var(t=0.2, x=0.2, y=0.2, z=0.2).shape, ()
+        )
+
+        # check that C++ and Python give the same result
+        np.testing.assert_array_equal(
+            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
         )
 
     def test_process_spatial_variable_names(self):

@@ -470,7 +470,7 @@ class TestProcessedVariableComputed:
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
         )
 
-    def test_processed_variable_3D(self):
+    def test_processed_variable_3D_r_R_x(self):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
@@ -506,3 +506,35 @@ class TestProcessedVariableComputed:
 
         # Check unroll function (3D)
         np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(4, 5, 3, 2))
+
+    def test_processed_variable_3D_x_y_z(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        disc = tests.get_2p1d_discretisation_for_testing(xpts=5, ypts=6, zpts=7)
+        disc.set_variable_slices([var])
+        x_sol = disc.mesh["negative electrode"].nodes
+        y_sol = disc.mesh["current collector"].edges["y"]
+        z_sol = disc.mesh["current collector"].edges["z"]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1, 2)
+        u_sol = np.ones(len(x_sol) * len(y_sol) * len(z_sol))[:, np.newaxis] * t_sol
+
+        var_casadi = to_casadi(var_sol, u_sol)
+        processed_var = pybamm.ProcessedVariableComputed(
+            [var_sol],
+            [var_casadi],
+            [u_sol],
+            pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
+        )
+
+        # Check shape (prim, sec, ter, time)
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(u_sol, [len(x_sol), len(y_sol), len(z_sol), len(t_sol)]),
+        )
+
+        # Check unroll function (3D)
+        np.testing.assert_array_equal(processed_var.unroll(), u_sol.reshape(5, 6, 7, 2))

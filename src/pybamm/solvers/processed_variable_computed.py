@@ -74,7 +74,7 @@ class ProcessedVariableComputed:
         self.base_eval_size = self.base_variables[0].size
         self.unroll_params = {}
 
-        # handle 2D (in space) finite element variables differently
+        # handle 2D or 3D (in space) finite element variables differently
         if (
             self.mesh
             and "current collector" in self.domain
@@ -82,6 +82,12 @@ class ProcessedVariableComputed:
         ):
             self.initialise_2D_scikit_fem()
             return
+        if hasattr(base_variables[0], "secondary_mesh"):
+            if "current collector" in base_variables[0].domains[
+                "secondary"
+            ] and isinstance(base_variables[0].secondary_mesh, pybamm.ScikitSubMesh2D):
+                self.initialise_3D_scikit_fem()
+                return
 
         # check variable shape
         if len(self.base_eval_shape) == 0 or self.base_eval_shape[0] == 1:
@@ -458,7 +464,7 @@ class ProcessedVariableComputed:
 
     def initialise_3D(self):
         """
-        Initialise a 3D object that depends on x, y, and z, or x, r, and R.
+        Initialise a 3D object that depends on x, r, and R.
         """
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
@@ -579,15 +585,6 @@ class ProcessedVariableComputed:
             self.r_sol = first_dim_pts
             self.R_sol = second_dim_pts
             self.x_sol = third_dim_pts
-        elif self.domain[0].endswith("electrode") and self.domains["secondary"] == [
-            "current collector"
-        ]:
-            self.first_dimension = "x"
-            self.second_dimension = "y"
-            self.third_dimension = "z"
-            self.x_sol = first_dim_pts
-            self.y_sol = second_dim_pts
-            self.z_sol = third_dim_pts
         else:  # pragma: no cover
             raise pybamm.DomainError(
                 f"Cannot process 3D object with domains '{self.domains}'."
@@ -614,6 +611,46 @@ class ProcessedVariableComputed:
                 self.third_dimension: third_dim_pts_for_interp,
                 "t": self.t_pts,
             },
+        )
+
+    def initialise_3D_scikit_fem(self):
+        x_nodes = self.mesh.nodes
+        x_edges = self.mesh.edges
+        y_sol = self.base_variables[0].secondary_mesh.edges["y"]
+        z_sol = self.base_variables[0].secondary_mesh.edges["z"]
+        if self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_nodes):
+            x_sol = x_nodes
+        elif self.base_eval_size // (len(y_sol) * len(z_sol)) == len(x_edges):
+            x_sol = x_edges
+
+        len_x = len(x_sol)
+        len_y = len(y_sol)
+        len_z = len(z_sol)
+        entries = self.unroll_3D(
+            realdata=None,
+            n_dim1=len_z,
+            n_dim2=len_y,
+            n_dim3=len_x,
+            axis_swaps=[(0, 3), (0, 2), (0, 1)],
+        )
+
+        # assign attributes for reference
+        self.entries = entries
+        self.dimensions = 3
+        self.x_sol = x_sol
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "x"
+        self.second_dimension = "y"
+        self.third_dimension = "z"
+        self.first_dim_pts = x_sol
+        self.second_dim_pts = y_sol
+        self.third_dim_pts = z_sol
+
+        # set up interpolation
+        self._xr_data_array = xr.DataArray(
+            entries,
+            coords={"x": x_sol, "y": y_sol, "z": z_sol, "t": self.t_pts},
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None):
