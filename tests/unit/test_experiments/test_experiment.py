@@ -365,7 +365,7 @@ class TestExperiment:
         times = np.arange(0, 1810, 10)
         tmax = times[-1]
 
-        def ambient_temperature(t, y=None, z=None):
+        def ambient_temperature(t):
             return pybamm.Interpolant(times, 298.15 + 20 * (times / tmax), pybamm.t)
 
         param = model.default_parameter_values

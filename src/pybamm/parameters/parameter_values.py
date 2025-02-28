@@ -4,6 +4,7 @@ import numbers
 from pprint import pformat
 from warnings import warn
 from collections import defaultdict
+import inspect
 
 
 class ParameterValues:
@@ -730,7 +731,13 @@ class ParameterValues:
                 function = pybamm.Scalar(function_name, name=symbol.name)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
-                function = function_name(*new_children)
+                sig = inspect.signature(function_name)
+                # If function accepts fewer parameters than provided, only pass what it can accept
+                if len(sig.parameters) < len(new_children):
+                    # Only pass the number of parameters the function can accept
+                    function = function_name(*new_children[: len(sig.parameters)])
+                else:
+                    function = function_name(*new_children)
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)
             ) or (

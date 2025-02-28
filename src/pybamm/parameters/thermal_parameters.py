@@ -3,6 +3,7 @@
 #
 import pybamm
 from .base_parameters import BaseParameters
+import warnings
 
 
 class ThermalParameters(BaseParameters):
@@ -42,6 +43,11 @@ class ThermalParameters(BaseParameters):
 
     def T_amb(self, t, y=None, z=None):
         """Ambient temperature [K]"""
+        warnings.warn(
+            UserWarning,
+            "order of arguments for T_amb has changed. Please use T_amb(t, y, z)",
+            stacklevel=2,
+        )
         inputs = {"Time [s]": t}
         if y is not None:
             inputs["Distance across electrode width [m]"] = y
