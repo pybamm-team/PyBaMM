@@ -356,27 +356,43 @@ class TestExperiment:
 
         np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
 
-    def test_ambient_temperature_time_only_lumped(self):
-        options = {"particle": "quadratic profile", "thermal": "lumped"}
-        model = pybamm.lithium_ion.SPMe(options)
+    def test_ambient_temperature_interpolant_in_lumped_model(self):
+        options = {"thermal": "lumped"}
+        model = pybamm.lithium_ion.DFN(options)
+
+        geometry = model.default_geometry
+
+        times = np.arange(0, 1810, 10)
+        tmax = times[-1]
 
         def ambient_temperature(t, y=None, z=None):
-            return 300 + t * 100 / 3600
+            return pybamm.Interpolant(times, 298.15 + 20 * (times / tmax), pybamm.t)
 
-        param = pybamm.ParameterValues("Chen2020")
+        param = model.default_parameter_values
         param.update(
             {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
         )
 
-        sim = pybamm.Simulation(model, parameter_values=param)
-        solution = sim.solve([0, 3600])
-        computed = solution["Ambient temperature [K]"](0)
-        expected = ambient_temperature(0)
+        param.process_model(model)
+        param.process_geometry(geometry)
 
-        assert np.isclose(computed, expected, rtol=1e-1), (
-            f"Ambient temperature mismatch at t={0}s: "
-            f"computed {computed}, expected {expected}"
-        )
+        var_pts = {"x_n": 30, "x_s": 30, "x_p": 30, "r_n": 10, "r_p": 10}
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 1800, 100)
+        solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
+        solution = solver.solve(model, t_eval)
+
+        amb_temp = solution["Ambient temperature [K]"]
+
+        t_sol = solution.t
+        computed = amb_temp(t_sol)
+
+        expected = 298.15 + 20 * (t_sol / tmax)
+
+        np.testing.assert_allclose(computed, expected, rtol=1e-2)
 
     def test_ambient_function_required_spatial_params(self):
         options = {"particle": "quadratic profile", "thermal": "lumped"}

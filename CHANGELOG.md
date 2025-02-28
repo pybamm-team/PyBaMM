@@ -13,6 +13,7 @@
 
 - Added `skip_ok` option to `step` to allow for steps to be skipped if they are infeasible at initial conditions. ([#4839](https://github.com/pybamm-team/PyBaMM/pull/4839))
 - Deprecated `CrateTermination` and renamed it to `CRateTermination`. ([#4834](https://github.com/pybamm-team/PyBaMM/pull/4834))
+- Made y, z optional arguments for FunctionParameters that depend on space ([#4883](https://github.com/pybamm-team/PyBaMM/pull/4883))
 
 ## Bug fixes
 
