@@ -44,8 +44,8 @@ class ThermalParameters(BaseParameters):
     def T_amb(self, t, y=None, z=None):
         """Ambient temperature [K]"""
         warnings.warn(
-            UserWarning,
             "order of arguments for T_amb has changed. Please use T_amb(t, y, z)",
+            UserWarning,
             stacklevel=2,
         )
         inputs = {"Time [s]": t}
