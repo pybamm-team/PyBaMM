@@ -279,7 +279,7 @@ class ProcessedVariable:
             processed_entries = entries
 
         if not is_sorted:
-            idxs_unsort = np.zeros_like(idxs_sort)
+            idxs_unsort = np.empty_like(idxs_sort)
             idxs_unsort[idxs_sort] = np.arange(len(t_observe))
 
             processed_entries = processed_entries[..., idxs_unsort]
