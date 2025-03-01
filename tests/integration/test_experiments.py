@@ -89,7 +89,7 @@ class TestExperiments:
     def test_drive_cycle(self):
         drive_cycle = np.array([np.arange(100), 5 * np.ones(100)]).T
         c_step = pybamm.step.current(
-            value=drive_cycle, duration=100, termination=["4.00 V"]
+            value=drive_cycle, duration=100, termination=["< 4.00 V"]
         )
         experiment = pybamm.Experiment(
             [

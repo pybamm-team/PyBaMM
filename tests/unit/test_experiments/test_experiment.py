@@ -7,6 +7,8 @@ import pybamm
 import pytest
 import numpy as np
 from pybamm.experiment.step.base_step import process_temperature_input
+import casadi
+from scipy.interpolate import PchipInterpolator
 
 
 class TestExperiment:
@@ -217,94 +219,236 @@ class TestExperiment:
         # TODO: once #3176 is completed, the test should pass for
         # operating_conditions_steps (or equivalent) as well
 
+    def test_temperature_time_series_simulation_build(self):
+        time_data = np.array([0, 600, 1200, 1800])
+        voltage_data = np.array([4.2, 4.0, 3.8, 3.6])
+        temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
 
-def test_temperature_time_series_simulation_build():
-    time_data = np.array([0, 600, 1200, 1800])
-    voltage_data = np.array([4.2, 4.0, 3.8, 3.6])
-    temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
+        voltage_profile = np.column_stack((time_data, voltage_data))
+        temperature_profile = np.column_stack((time_data, temperature_data))
 
-    voltage_profile = np.column_stack((time_data, voltage_data))
-    temperature_profile = np.column_stack((time_data, temperature_data))
+        experiment = pybamm.Experiment(
+            [pybamm.step.voltage(voltage_profile, temperature=temperature_profile)]
+        )
 
-    experiment = pybamm.Experiment(
-        [pybamm.step.voltage(voltage_profile, temperature=temperature_profile)]
-    )
+        model = pybamm.lithium_ion.DFN()
 
-    model = pybamm.lithium_ion.DFN()
+        param_values = pybamm.ParameterValues("Marquis2019")
+        param_values.update({"Ambient temperature [K]": 298.15})
 
-    param_values = pybamm.ParameterValues("Marquis2019")
-    param_values.update({"Ambient temperature [K]": 298.15})
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=param_values
+        )
+        sim.build()
 
-    sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param_values)
-    sim.build()
+        ambient_temp = sim.parameter_values["Ambient temperature [K]"]
+        assert hasattr(ambient_temp, "evaluate"), (
+            "Ambient temperature parameter is not time-dependent as expected."
+        )
 
-    ambient_temp = sim.parameter_values["Ambient temperature [K]"]
-    assert hasattr(ambient_temp, "evaluate"), (
-        "Ambient temperature parameter is not time-dependent as expected."
-    )
+        t_eval = 600
+        interpolated_temp = ambient_temp.evaluate(t=t_eval)
+        np.testing.assert_allclose(interpolated_temp, 310.15, atol=1e-3)
 
-    t_eval = 600
-    interpolated_temp = ambient_temp.evaluate(t=t_eval)
-    np.testing.assert_allclose(interpolated_temp, 310.15, atol=1e-3)
+        t_eval2 = 1200
+        interpolated_temp2 = ambient_temp.evaluate(t=t_eval2)
+        np.testing.assert_allclose(interpolated_temp2, 305.15, atol=1e-3)
 
-    t_eval2 = 1200
-    interpolated_temp2 = ambient_temp.evaluate(t=t_eval2)
-    np.testing.assert_allclose(interpolated_temp2, 305.15, atol=1e-3)
+    def test_process_temperature_valid(self):
+        time_data = np.array([0, 600, 1200, 1800])
+        temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
+        temperature_profile = np.column_stack((time_data, temperature_data))
 
+        result = process_temperature_input(temperature_profile)
 
-def test_process_temperature_valid():
-    time_data = np.array([0, 600, 1200, 1800])
-    temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
-    temperature_profile = np.column_stack((time_data, temperature_data))
+        assert isinstance(result, pybamm.Interpolant), "Expected an Interpolant object"
+        np.testing.assert_allclose(result.evaluate(600), 310.15, atol=1e-3)
+        np.testing.assert_allclose(result.evaluate(1200), 305.15, atol=1e-3)
 
-    result = process_temperature_input(temperature_profile)
+    def test_process_temperature_invalid(self):
+        invalid_data = np.array([298.15, 310.15, 305.15, 300.00])
+        with pytest.raises(
+            ValueError, match="Temperature time-series must be a 2D array"
+        ):
+            process_temperature_input(invalid_data)
 
-    assert isinstance(result, pybamm.Interpolant), "Expected an Interpolant object"
-    np.testing.assert_allclose(result.evaluate(600), 310.15, atol=1e-3)
-    np.testing.assert_allclose(result.evaluate(1200), 305.15, atol=1e-3)
+        invalid_data_2 = np.array([[0, 298.15, 310.15], [600, 305.15, 300.00]])
+        with pytest.raises(
+            ValueError, match="Temperature time-series must be a 2D array"
+        ):
+            process_temperature_input(invalid_data_2)
 
+    def test_temperature_time_series_simulation_solve(self):
+        time_data = np.array([0, 600, 1200, 1800])
+        voltage_data = np.array([4.2, 4.0, 3.8, 3.6])
+        temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
 
-def test_process_temperature_invalid():
-    invalid_data = np.array([298.15, 310.15, 305.15, 300.00])
-    with pytest.raises(ValueError, match="Temperature time-series must be a 2D array"):
-        process_temperature_input(invalid_data)
+        voltage_profile = np.column_stack((time_data, voltage_data))
+        temperature_profile = np.column_stack((time_data, temperature_data))
 
-    invalid_data_2 = np.array([[0, 298.15, 310.15], [600, 305.15, 300.00]])
-    with pytest.raises(ValueError, match="Temperature time-series must be a 2D array"):
-        process_temperature_input(invalid_data_2)
+        # Update experiment step to handle temperature profile as expected
+        experiment = pybamm.Experiment(
+            [
+                pybamm.step.voltage(
+                    voltage_profile, temperature=temperature_profile, duration=1800
+                )
+            ]
+        )
 
+        model = pybamm.lithium_ion.DFN()
 
-def test_temperature_time_series_simulation_solve():
-    time_data = np.array([0, 600, 1200, 1800])
-    voltage_data = np.array([4.2, 4.0, 3.8, 3.6])
-    temperature_data = np.array([298.15, 310.15, 305.15, 300.00])
+        param_values = pybamm.ParameterValues("Marquis2019")
 
-    voltage_profile = np.column_stack((time_data, voltage_data))
-    temperature_profile = np.column_stack((time_data, temperature_data))
+        sim = pybamm.Simulation(
+            model, experiment=experiment, parameter_values=param_values
+        )
 
-    # Update experiment step to handle temperature profile as expected
-    experiment = pybamm.Experiment(
-        [
-            pybamm.step.voltage(
-                voltage_profile, temperature=temperature_profile, duration=1800
-            )
-        ]
-    )
+        solution = sim.solve()
 
-    model = pybamm.lithium_ion.DFN()
+        ambient_temp = sim.parameter_values["Ambient temperature [K]"]
+        assert hasattr(ambient_temp, "evaluate"), (
+            "Ambient temperature parameter is not time-dependent as expected."
+        )
 
-    param_values = pybamm.ParameterValues("Marquis2019")
+        assert solution is not None, "Solution object is None."
+        assert hasattr(solution, "t"), "Solution does not contain time vector."
 
-    sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param_values)
+        np.testing.assert_allclose(solution.t[0], time_data[0], atol=1e-3)
 
-    solution = sim.solve()
+    def test_simulation_solve_updates_input_parameters(self):
+        model = pybamm.lithium_ion.SPM()
 
-    ambient_temp = sim.parameter_values["Ambient temperature [K]"]
-    assert hasattr(ambient_temp, "evaluate"), (
-        "Ambient temperature parameter is not time-dependent as expected."
-    )
+        step = pybamm.step.current(
+            pybamm.InputParameter("I_app"),
+            termination="< 2.5 V",
+        )
+        experiment = pybamm.Experiment([step])
 
-    assert solution is not None, "Solution object is None."
-    assert hasattr(solution, "t"), "Solution does not contain time vector."
+        sim = pybamm.Simulation(model, experiment=experiment)
 
-    np.testing.assert_allclose(solution.t[0], time_data[0], atol=1e-3)
+        sim.solve(inputs={"I_app": 1})
+        solution = sim.solution
+
+        current = solution["Current [A]"].entries
+
+        assert np.allclose(current, 1, atol=1e-3)
+
+    def test_current_step_raises_error_without_operator_with_input_parameters(self):
+        pybamm.lithium_ion.SPM()
+        with pytest.raises(
+            ValueError,
+            match="Termination must include an operator when using InputParameter.",
+        ):
+            pybamm.step.current(pybamm.InputParameter("I_app"), termination="2.5 V")
+
+    def test_value_function_with_input_parameter(self):
+        I_coeff = pybamm.InputParameter("I_coeff")
+        t = pybamm.t
+        expr = I_coeff * t
+        step = pybamm.step.current(expr, termination="< 2.5V")
+
+        direction = step.value_based_charge_or_discharge()
+        assert direction is None, (
+            "Expected direction to be None when the expression depends on an InputParameter."
+        )
+
+    def test_symbolic_current_step(self):
+        model = pybamm.lithium_ion.SPM()
+        expr = 2.5 + 0 * pybamm.t
+
+        step = pybamm.step.current(expr, duration=3600)
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve([0, 3600])
+
+        solution = sim.solution
+        voltage = solution["Current [A]"].entries
+
+        np.testing.assert_allclose(voltage[-1], 2.5, atol=0.1)
+
+    def test_voltage_without_directions(self):
+        model = pybamm.lithium_ion.SPM()
+
+        step = pybamm.step.voltage(2.5, termination="2.5 V")
+        experiment = pybamm.Experiment([step])
+
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        sim.solve()
+        solution = sim.solution
+
+        voltage = solution["Terminal voltage [V]"].entries
+        assert np.allclose(voltage, 2.5, atol=1e-3)
+
+    def test_pchip_interpolation_experiment(self):
+        x = np.linspace(0, 1, 11)
+        y_values = x**3
+
+        y = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, y, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        casadi_y = casadi.MX.sym("y", len(test_points), 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+
+        casadi_results = f(test_points.reshape((-1, 1)))
+        expected = interp.evaluate(y=test_points)
+        np.testing.assert_allclose(casadi_results, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_interpolation_uniform_grid(self):
+        x = np.linspace(0, 1, 11)
+        y_values = np.sin(x)
+
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_interpolation_nonuniform_grid(self):
+        x = np.array([0, 0.05, 0.2, 0.4, 0.65, 1.0])
+        y_values = np.exp(-x)
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.linspace(0, 1, 21)
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
+
+    def test_pchip_non_increasing_x(self):
+        x = np.array([0, 0.5, 0.5, 1.0])
+        y_values = np.linspace(0, 1, 4)
+        state = pybamm.StateVector(slice(0, 1))
+        with pytest.raises(ValueError, match="strictly increasing sequence"):
+            _ = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+    def test_pchip_extrapolation(self):
+        x = np.linspace(0, 1, 11)
+        y_values = np.log1p(x)  # a smooth function on [0,1]
+        state = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, y_values, state, interpolator="pchip")
+
+        test_points = np.array([-0.1, 1.1])
+        expected = PchipInterpolator(x, y_values)(test_points)
+
+        casadi_y = casadi.MX.sym("y", 1)
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        result = np.array(f(test_points)).flatten()
+
+        np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-6)
