@@ -558,7 +558,6 @@ def process_temperature_input(temperature_and_units):
             raise ValueError(
                 "Temperature time-series must be a 2D array with two columns (time, temperature)."
             )
-    return temperature_and_units  # Return as-is if not a NumPy array
 
 
 def _convert_temperature_to_kelvin(temperature_and_units):
