@@ -1,12 +1,12 @@
 [build-system]
 requires = [
-    "setuptools",
+    "hatchling>=1.13.0",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 
 [project]
 name = "pybamm"
-version = "25.1.0"
+version = "25.1.1"
 license = { file = "LICENSE.txt" }
 description = "Python Battery Mathematical Modelling"
 authors = [{name = "The PyBaMM Team", email = "pybamm@pybamm.org"}]
@@ -74,7 +74,6 @@ examples = [
     "jupyter",
 ]
 plot = [
-    "imageio>=2.3.0",
     # Note: matplotlib is loaded for debug plots, but to ensure PyBaMM runs
     # on systems without an attached display, it should never be imported
     # outside of plot() methods.
@@ -112,6 +111,9 @@ dev = [
     "nbmake",
     # To access the metadata for python packages
     "importlib-metadata; python_version < '3.10'",
+    # For property based testing
+    "hypothesis",
+
 ]
 # For the Jax solver.
 # Note: These must be kept in sync with the versions defined in pybamm/util.py, and
@@ -146,25 +148,12 @@ ECM_Example = "pybamm.input.parameters.ecm.example_set:get_parameter_values"
 MSMR_Example = "pybamm.input.parameters.lithium_ion.MSMR_example_set:get_parameter_values"
 Chayambuka2022 = "pybamm.input.parameters.sodium_ion.Chayambuka2022:get_parameter_values"
 
-[tool.setuptools]
-include-package-data = true
-
-# List of files to include as package data. These are mainly the parameter CSV files in
-# the input/parameters/ subdirectories. Other files such as the CITATIONS file, relevant
-# README.md files, and specific .txt files inside the pybamm/ directory are also included.
-# These are specified to be included in the SDist through MANIFEST.in.
-[tool.setuptools.package-data]
-pybamm = [
-    "*.txt",
-    "*.md",
-    "*.csv",
-    "*.py",
-    "src/pybamm/CITATIONS.bib",
-    "src/pybamm/plotting/mplstyle",
+[tool.hatch]
+build.targets.sdist.include = [
+  "src/pybamm",
+  "CITATION.cff",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
@@ -227,7 +216,6 @@ required_plugins = [
     "pytest-mock",
     "pytest-subtests",
 ]
-norecursedirs = 'pybind11*'
 addopts = [
     "-nauto",
     "-vra",

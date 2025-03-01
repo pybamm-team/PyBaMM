@@ -139,8 +139,8 @@ class TestSerialiseModels:
         new_solution = new_solver.solve(new_model, t)
 
         for x, _ in enumerate(solution.all_ys):
-            np.testing.assert_array_almost_equal(
-                solution.all_ys[x], new_solution.all_ys[x]
+            np.testing.assert_allclose(
+                solution.all_ys[x], new_solution.all_ys[x], rtol=1e-7, atol=1e-6
             )
         os.remove("heat_equation.json")
 

@@ -306,8 +306,8 @@ class TestSolution:
         )
         # check summay variables not in the solve can be evaluated at the final timestep
         # via 'last_state
-        np.testing.assert_array_almost_equal(
-            sol1.last_state["4u"].entries, np.array([4.0])
+        np.testing.assert_allclose(
+            sol1.last_state["4u"].entries, np.array([4.0]), rtol=1e-7, atol=1e-6
         )
 
     def test_cycles(self):
@@ -439,8 +439,12 @@ class TestSolution:
 
             # read csv
             df = pd.read_csv(f"{test_stub}.csv")
-            np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
-            np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+            np.testing.assert_allclose(
+                df["c"], solution.data["c"], rtol=1e-7, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                df["2c"], solution.data["2c"], rtol=1e-7, atol=1e-6
+            )
 
             # to json
             solution.save_data(f"{test_stub}.json", to_format="json")
@@ -453,8 +457,12 @@ class TestSolution:
 
             # check if string has the right values
             json_data = json.loads(json_str)
-            np.testing.assert_array_almost_equal(json_data["c"], solution.data["c"])
-            np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
+            np.testing.assert_allclose(
+                json_data["c"], solution.data["c"], rtol=1e-7, atol=1e-6
+            )
+            np.testing.assert_allclose(
+                json_data["d"], solution.data["d"], rtol=1e-7, atol=1e-6
+            )
 
             # raise error if format is unknown
             with pytest.raises(
@@ -551,6 +559,6 @@ class TestSolution:
             sol = solver.solve(model, t_eval=t_eval, inputs={"a": a})
             y_sol = np.exp(-a * data_times)
             expected = np.sum((y_sol - data_values) ** 2)
-            np.testing.assert_array_almost_equal(
-                sol["data_comparison"](), expected, decimal=2
+            np.testing.assert_allclose(
+                sol["data_comparison"](), expected, rtol=1e-3, atol=1e-2
             )

@@ -8,3 +8,4 @@ Open-circuit potential models
   single_ocp
   msmr_ocp
   wycisk_ocp
+  axen_ocp
