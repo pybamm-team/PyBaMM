@@ -286,7 +286,6 @@ class TestExperiment:
         voltage_profile = np.column_stack((time_data, voltage_data))
         temperature_profile = np.column_stack((time_data, temperature_data))
 
-        # Update experiment step to handle temperature profile as expected
         experiment = pybamm.Experiment(
             [
                 pybamm.step.voltage(

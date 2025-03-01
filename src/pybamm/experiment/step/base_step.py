@@ -187,9 +187,7 @@ class BaseStep:
             direction = self.value_based_charge_or_discharge()
         self.direction = direction
 
-        self.temperature = _convert_temperature_to_kelvin(
-            temperature
-        )  # change name of the function
+        self.temperature = _convert_temperature_to_kelvin(temperature)
         self.has_time_series_temperature = isinstance(
             self.temperature, pybamm.Interpolant
         )
