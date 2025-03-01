@@ -1,6 +1,6 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Feature
+## Features
 
 - Added functionality to set `Discharge capacity` as the x-axis in `QuickPlot`.([#4775](https://github.com/pybamm-team/PyBaMM/pull/4775))
 - Revision of the hysteresis notebook to include the method implemented in the module `axen_ocp`. ([#4880](https://github.com/pybamm-team/PyBaMM/pull/4880))
