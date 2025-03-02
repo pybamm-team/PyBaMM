@@ -66,7 +66,9 @@ def create_object_of_size(size: int, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domains: dict[str, list[str] | str], typ="vector"):
+def evaluate_for_shape_using_domain(
+    domains: dict[str, list[str] | str] | list[str], typ="vector"
+):
     """
     Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
@@ -964,7 +966,9 @@ class Symbol:
         """
         return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
 
-    def _children_for_copying(self, children: list[Symbol] | None = None) -> Symbol:
+    def _children_for_copying(
+        self, children: list[Symbol] | None = None
+    ) -> list[Symbol]:
         """
         Gets existing children for a symbol being copied if they aren't provided.
         """

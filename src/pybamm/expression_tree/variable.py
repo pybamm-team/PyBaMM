@@ -61,12 +61,12 @@ class VariableBase(pybamm.Symbol):
         domains: DomainsType = None,
         bounds: tuple[pybamm.Symbol] | None = None,
         print_name: str | None = None,
-        scale: float | pybamm.Symbol | None = 1,
-        reference: float | pybamm.Symbol | None = 0,
+        scale: float | int | pybamm.Symbol | None = 1,
+        reference: float | int | pybamm.Symbol | None = 0,
     ):
-        if isinstance(scale, numbers.Number):
+        if isinstance(scale, (float, int)):
             scale = pybamm.Scalar(scale)
-        if isinstance(reference, numbers.Number):
+        if isinstance(reference, (float, int)):
             reference = pybamm.Scalar(reference)
         self._scale = scale
         self._reference = reference
@@ -88,7 +88,7 @@ class VariableBase(pybamm.Symbol):
         return self._bounds
 
     @bounds.setter
-    def bounds(self, values: tuple[Numeric, Numeric]):
+    def bounds(self, values: tuple[Numeric, Numeric] | None):
         if values is None:
             values = (-np.inf, np.inf)
         else:

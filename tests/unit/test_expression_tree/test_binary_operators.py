@@ -16,7 +16,7 @@ EMPTY_DOMAINS = {
     "secondary": [],
     "tertiary": [],
     "quaternary": [],
-}
+}  # type: dict[str, list[str]]
 
 
 class TestBinaryOperators:

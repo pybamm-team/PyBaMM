@@ -20,7 +20,7 @@ class Serialise:
     class _SymbolEncoder(json.JSONEncoder):
         """Converts PyBaMM symbols into a JSON-serialisable format"""
 
-        def default(self, node: dict):
+        def default(self, node: dict | pybamm.Symbol):
             node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
             if isinstance(node, pybamm.Symbol):
                 node_dict.update(node.to_json())  # this doesn't include children
@@ -46,7 +46,7 @@ class Serialise:
     class _MeshEncoder(json.JSONEncoder):
         """Converts PyBaMM meshes into a JSON-serialisable format"""
 
-        def default(self, node: pybamm.Mesh):
+        def default(self, node: pybamm.Mesh | pybamm.SubMesh):
             node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
             if isinstance(node, pybamm.Mesh):
                 node_dict.update(node.to_json())
@@ -63,9 +63,6 @@ class Serialise:
             if isinstance(node, pybamm.SubMesh):
                 node_dict.update(node.to_json())
                 return node_dict
-
-            node_dict["json"] = json.JSONEncoder.default(self, node)  # pragma: no cover
-            return node_dict  # pragma: no cover
 
     class _Empty:
         """A dummy class to aid deserialisation"""

@@ -8,7 +8,7 @@ from scipy.sparse import csr_matrix, issparse
 import sympy
 import pybamm
 from pybamm.util import import_optional_dependency
-from pybamm.type_definitions import DomainsType
+from pybamm.type_definitions import DomainsType, Numeric
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -31,7 +31,7 @@ class UnaryOperator(pybamm.Symbol):
     def __init__(
         self,
         name: str,
-        child: pybamm.Symbol,
+        child: pybamm.Symbol | Numeric,
         domains: DomainsType = None,
     ):
         if isinstance(child, (float, int, np.number)):

@@ -48,7 +48,7 @@ for i, model in enumerate(models):
     disc.process_model(model)
 
 # solve model
-solutions = [None] * len(models)
+solutions = [None] * len(models)  # type: Any
 t_eval = np.linspace(0, 3600, 100)
 for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)

@@ -255,6 +255,7 @@ disable_error_code = ["call-overload", "operator"]
 strict = false
 warn_unreachable = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+exclude = 'build/'
 
 [[tool.mypy.overrides]]
 module = [

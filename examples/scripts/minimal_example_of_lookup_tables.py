@@ -34,12 +34,12 @@ df["T"] = df["T"] + 273.15
 D_s_n_data = process_2D("Negative particle diffusivity [m2.s-1]", df)
 
 
-def D_s_n(sto, T):
+def D_s_n_func(sto, T):
     name, (x, y) = D_s_n_data
     return pybamm.Interpolant(x, y, [T, sto], name)
 
 
-parameter_values["Negative particle diffusivity [m2.s-1]"] = D_s_n
+parameter_values["Negative particle diffusivity [m2.s-1]"] = D_s_n_func
 
 k_n = parameter_values["Negative electrode exchange-current density [A.m-2]"]
 

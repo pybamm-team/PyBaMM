@@ -2,7 +2,6 @@
 # Binary operator classes
 #
 from __future__ import annotations
-import numbers
 
 import numpy as np
 import sympy
@@ -33,8 +32,8 @@ def _preprocess_binary(
             raise ValueError("right must be a 1D array")
         right = pybamm.Vector(right)
 
-    # Check both left and right are pybamm Symbols
-    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+    # Check right is pybamm Symbol
+    if not isinstance(right, pybamm.Symbol):
         raise NotImplementedError(
             f"BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"
         )
@@ -127,7 +126,7 @@ class BinaryOperator(pybamm.Symbol):
         children = self._children_for_copying(new_children)
 
         if not perform_simplifications:
-            out = self.__class__(children[0], children[1])
+            out = self.__class__(*children)
         else:
             # creates a new instance using the overloaded binary operator to perform
             # additional simplifications, rather than just calling the constructor
@@ -1538,7 +1537,7 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
-    if isinstance(left, numbers.Number):
+    if isinstance(left, (int, float)):
         left = pybamm.PrimaryBroadcast(left, "current collector")
 
     # force type cast for mypy

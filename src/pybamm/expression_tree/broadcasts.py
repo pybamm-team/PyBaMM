@@ -463,7 +463,7 @@ class FullBroadcast(Broadcast):
         self,
         child_input: Numeric | pybamm.Symbol,
         broadcast_domain: DomainType = None,
-        auxiliary_domains: AuxiliaryDomainType = None,
+        auxiliary_domains: AuxiliaryDomainType | str = None,
         broadcast_domains: DomainsType = None,
         name: str | None = None,
     ):

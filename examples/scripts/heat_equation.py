@@ -106,7 +106,7 @@ def T_exact(x, t):
 # Plot ------------------------------------------------------------------------
 x_nodes = mesh["rod"].nodes  # numerical gridpoints
 xx = np.linspace(0, 2, 101)  # fine mesh to plot exact solution
-plot_times = np.linspace(0, 1, 5)
+plot_times = np.linspace(0, 1, 5)  # type: np.ndarray
 
 plt.figure(figsize=(15, 8))
 cmap = plt.get_cmap("inferno")

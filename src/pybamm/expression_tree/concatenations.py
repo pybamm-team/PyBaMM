@@ -473,7 +473,7 @@ class ConcatenationVariable(Concatenation):
         if name is None:
             # Name is the intersection of the children names (should usually make sense
             # if the children have been named consistently)
-            name = intersect(children[0].name, children[1].name)
+            name = intersect(children[0].name, children[1].name) or ""
             for child in children[2:]:
                 name = intersect(name, child.name)
             if len(name) == 0:
