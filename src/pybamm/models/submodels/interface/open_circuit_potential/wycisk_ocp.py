@@ -41,12 +41,14 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         return variables
 
     def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
+        _, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         i_surf = variables[
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
         ]
+        sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+
         # check if composite or not
         if phase_name != "":
             Q_cell = variables[f"{Domain} electrode {phase_name}phase capacity [A.h]"]
@@ -57,17 +59,13 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
             f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
         ]
         dQdU = dQdU.orphans[0]
-        K = self.phase_param.hysteresis_decay()
+        K = self.phase_param.hysteresis_decay(sto_surf, T)
         K_x = self.phase_param.hysteresis_switch
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
-        dhdt = (
-            K * (i_surf / (Q_cell * (dQdU**K_x))) * (1 - pybamm.sign(i_surf) * h)
-        )  #! current is backwards for a halfcell
-        self.rhs[h] = dhdt
+        i_surf_sign = pybamm.sign(i_surf)
+        signed_h = 1 - i_surf_sign * h
+        rate_coefficient = K * (i_surf / (Q_cell * (dQdU**K_x)))
+        dhdt = rate_coefficient * signed_h
 
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        self.initial_conditions[h] = self.phase_param.h_init
+        self.rhs[h] = dhdt

@@ -510,7 +510,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.b_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant b")
         self.m_cr = pybamm.Parameter(f"{pref}{Domain} electrode Paris' law constant m")
 
-    def hysteresis_decay(self, lithiation=None):
+    def hysteresis_decay(self, sto, T, lithiation=None):
         """
         Rate at which the open-circuit potential approaches the lithiation
         or delithiation branch when it exhibits hysteresis.
@@ -521,8 +521,14 @@ class ParticleLithiumIonParameters(BaseParameters):
         else:
             lithiation = lithiation + " "
 
-        return pybamm.Parameter(
-            f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate"
+        inputs = {
+            f"{self.phase_prefactor}{Domain} particle stoichiometry": sto,
+            f"{Domain} electrode temperature [K]": T,
+        }
+
+        return pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{Domain} particle {lithiation}hysteresis decay rate",
+            inputs,
         )
 
     def k_cr(self, T):

@@ -64,15 +64,22 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
             # Get delithiation and lithiation OCPs
             sto_surf, T = self._get_stoichiometry_and_temperature(variables)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
+            U_lith_x_av = pybamm.x_average(U_lith)
             U_delith = self.phase_param.U(sto_surf, T, "delithiation")
             U_delith_x_av = pybamm.x_average(U_delith)
 
+            U_eq = (U_lith + U_delith) / 2
+            U_eq_x_av = (U_lith_x_av + U_delith_x_av) / 2
+
             H = U_lith - U_delith
             H_x_av = pybamm.x_average(H)
+
             variables.update(
                 {
                     f"{Domain} electrode {phase_name}OCP hysteresis [V]": H,
                     f"X-averaged {domain} electrode {phase_name}OCP hysteresis [V]": H_x_av,
+                    f"{Domain} electrode {phase_name} equilibrium OCP [V]": U_eq,
+                    f"X-averaged {domain} electrode {phase_name} equilibrium OCP [V]": U_eq_x_av,
                 }
             )
 
@@ -90,29 +97,28 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
                     f"X-averaged {domain} electrode {phase_name}hysteresis state"
                 ]
 
-            # check if PSD
-            if domain_options["particle size"] == "distribution":
-                # check if MPM Model
-                if "current collector" in sto_surf.domains["secondary"]:
-                    ocp_surf = U_delith_x_av + H_x_av * (1 - h_x_av) / 2
-                # must be DFN with PSD model
-                elif (
-                    f"{domain} electrode" in sto_surf.domains["secondary"]
-                    or f"{domain} {phase_name}particle size"
-                    in sto_surf.domains["primary"]
-                ):
-                    ocp_surf = U_delith + H * (1 - h) / 2
-            # must not be a PSD
+            # check MPM
+            if (
+                domain_options["particle size"] == "distribution"
+                and "current collector" in sto_surf.domains["secondary"]
+            ):
+                ocp_surf = (1 + h_x_av) / 2 * U_delith + (1 - h_x_av) / 2 * U_lith
             else:
-                ocp_surf = U_delith + H * (1 - h) / 2
+                ocp_surf = (1 + h) / 2 * U_delith + (1 - h) / 2 * U_lith
 
             # Size average
             U_delith_s_av = pybamm.size_average(U_delith_x_av)
-            H_s_av = pybamm.size_average(H_x_av)
+            U_lith_s_av = pybamm.size_average(U_lith_x_av)
             h_s_av = pybamm.size_average(h_x_av)
 
-            ocp_bulk = U_delith_s_av + H_s_av * (1 - h_s_av) / 2
+            ocp_bulk = (1 + h_s_av) / 2 * U_delith_s_av + (1 - h_s_av) / 2 * U_lith_s_av
             dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables
+
+    def set_initial_conditions(self, variables):
+        _, Domain = self.domain_Domain
+        phase_name = self.phase_name
+        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
+        self.initial_conditions[h] = self.phase_param.h_init

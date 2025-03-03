@@ -46,3 +46,6 @@ class CurrentSigmoidOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         variables.update(self._get_coupled_variables(variables))
 
         return variables
+
+    def set_initial_conditions(self, variables):
+        pass

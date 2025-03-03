@@ -37,9 +37,10 @@ class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         ]
         c_max = self.phase_param.c_max
         epsl = self.phase_param.epsilon_s
+        sto_surf, T = self._get_stoichiometry_and_temperature(variables)
 
-        K_lith = self.phase_param.hysteresis_decay("lithiation")
-        K_delith = self.phase_param.hysteresis_decay("delithiation")
+        K_lith = self.phase_param.hysteresis_decay(sto_surf, T, "lithiation")
+        K_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
         h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         S_lith = i_vol * K_lith / (self.param.F * c_max * epsl)
@@ -54,9 +55,3 @@ class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         dhdt = rate_coefficient * signed_h
 
         self.rhs[h] = dhdt
-
-    def set_initial_conditions(self, variables):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-        self.initial_conditions[h] = self.phase_param.h_init
