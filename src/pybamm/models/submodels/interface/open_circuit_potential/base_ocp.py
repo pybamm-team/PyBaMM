@@ -142,3 +142,34 @@ class BaseOpenCircuitPotential(BaseInterface):
             )
 
         return variables
+
+    def _get_stoichiometry_and_temperature(self, variables):
+        domain, Domain = self.domain_Domain
+        domain_options = getattr(self.options, domain)
+        phase_name = self.phase_name
+
+        T = variables[f"{Domain} electrode temperature [K]"]
+
+        # For "particle-size distribution" models, take distribution version
+        # of sto_surf that depends on particle size.
+        if domain_options["particle size"] == "distribution":
+            sto_surf = variables[
+                f"{Domain} {phase_name}particle surface stoichiometry distribution"
+            ]
+            # If variable was broadcast, take only the orphan
+            if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
+                T, pybamm.Broadcast
+            ):
+                sto_surf = sto_surf.orphans[0]
+                T = T.orphans[0]
+            T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
+        else:
+            sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
+            # If variable was broadcast, take only the orphan
+            if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
+                T, pybamm.Broadcast
+            ):
+                sto_surf = sto_surf.orphans[0]
+                T = T.orphans[0]
+
+        return sto_surf, T

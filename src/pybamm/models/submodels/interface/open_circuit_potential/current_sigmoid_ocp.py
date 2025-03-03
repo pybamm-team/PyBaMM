@@ -8,6 +8,10 @@ from . import BaseOpenCircuitPotential
 class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_coupled_variables(self, variables):
         domain, Domain = self.domain_Domain
+        domain_options = getattr(self.options, domain)
+        phase_name = self.phase_name
+
+        # Set hysteresis state
         current = variables["Total current density [A.m-2]"]
         k = 100
 
@@ -16,49 +20,83 @@ class CurrentSigmoidOpenCircuitPotential(BaseOpenCircuitPotential):
         elif Domain == "Negative":
             lithiation_current = -current
 
-        m_lith = pybamm.sigmoid(0, lithiation_current, k)  # lithiation_current > 0
-        m_delith = 1 - m_lith  # lithiation_current < 0
-
-        phase_name = self.phase_name
+        h_x_av = 1 - 2 * pybamm.sigmoid(0, lithiation_current, k)
+        h = pybamm.FullBroadcast(
+            h_x_av,
+            [f"{domain} electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        variables.update(
+            {
+                f"{Domain} electrode {phase_name}hysteresis state": h,
+                f"X-averaged {domain} electrode {phase_name}hysteresis state": h_x_av,
+            }
+        )
+        if domain_options["particle size"] == "distribution":
+            h_dist = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
+            h_dist_x_av = pybamm.x_average(h_dist)
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}hysteresis state distribution": h_dist,
+                    f"X-averaged {domain} electrode {phase_name}hysteresis state distribution": h_dist_x_av,
+                }
+            )
 
         if self.reaction == "lithium-ion main":
-            T = variables[f"{Domain} electrode temperature [K]"]
-            # For "particle-size distribution" models, take distribution version
-            # of sto_surf that depends on particle size.
-            domain_options = getattr(self.options, domain)
-            if domain_options["particle size"] == "distribution":
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry distribution"
-                ]
-                # If variable was broadcast, take only the orphan
-                if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
-                    T, pybamm.Broadcast
-                ):
-                    sto_surf = sto_surf.orphans[0]
-                    T = T.orphans[0]
-                T = pybamm.PrimaryBroadcast(T, [f"{domain} {phase_name}particle size"])
-            else:
-                sto_surf = variables[
-                    f"{Domain} {phase_name}particle surface stoichiometry"
-                ]
-                # If variable was broadcast, take only the orphan
-                if isinstance(sto_surf, pybamm.Broadcast) and isinstance(
-                    T, pybamm.Broadcast
-                ):
-                    sto_surf = sto_surf.orphans[0]
-                    T = T.orphans[0]
-
+            # Get delithiation and lithiation OCPs
+            sto_surf, T = self._get_stoichiometry_and_temperature(variables)
             U_lith = self.phase_param.U(sto_surf, T, "lithiation")
             U_delith = self.phase_param.U(sto_surf, T, "delithiation")
-            ocp_surf = m_lith * U_lith + m_delith * U_delith
-            dUdT = self.phase_param.dUdT(sto_surf)
+            U_delith_x_av = pybamm.x_average(U_delith)
 
-            # Bulk OCP is from the average SOC and temperature
-            sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-            T_bulk = pybamm.xyz_average(pybamm.size_average(T))
-            U_bulk_lith = self.phase_param.U(sto_bulk, T_bulk, "lithiation")
-            U_bulk_delith = self.phase_param.U(sto_bulk, T_bulk, "delithiation")
-            ocp_bulk = m_lith * U_bulk_lith + m_delith * U_bulk_delith
+            H = U_lith - U_delith
+            H_x_av = pybamm.x_average(H)
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}OCP hysteresis [V]": H,
+                    f"X-averaged {domain} electrode {phase_name}OCP hysteresis [V]": H_x_av,
+                }
+            )
+
+            # Get correct hysteresis state variable
+            if domain_options["particle size"] == "distribution":
+                h = variables[
+                    f"{Domain} electrode {phase_name}hysteresis state distribution"
+                ]
+                h_x_av = variables[
+                    f"X-averaged {domain} electrode {phase_name}hysteresis state distribution"
+                ]
+            else:
+                h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
+                h_x_av = variables[
+                    f"X-averaged {domain} electrode {phase_name}hysteresis state"
+                ]
+
+            # check if psd
+            if domain_options["particle size"] == "distribution":
+                # should always be true
+                if f"{domain} particle size" in sto_surf.domains["primary"]:
+                    # check if MPM Model
+                    if "current collector" in sto_surf.domains["secondary"]:
+                        ocp_surf = U_delith_x_av + H_x_av * (1 - h_x_av) / 2
+                    # must be DFN with PSD model
+                    elif (
+                        f"{domain} electrode" in sto_surf.domains["secondary"]
+                        or f"{domain} {phase_name}particle size"
+                        in sto_surf.domains["primary"]
+                    ):
+                        ocp_surf = U_delith + H * (1 - h) / 2
+            # must not be a psd
+            else:
+                ocp_surf = U_delith + H * (1 - h) / 2
+
+            # Size average
+            U_delith_s_av = pybamm.size_average(U_delith_x_av)
+            H_s_av = pybamm.size_average(H_x_av)
+            h_s_av = pybamm.size_average(h_x_av)
+
+            ocp_bulk = U_delith_s_av + H_s_av * (1 - h_s_av) / 2
+            dUdT = self.phase_param.dUdT(sto_surf)
 
         variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables
