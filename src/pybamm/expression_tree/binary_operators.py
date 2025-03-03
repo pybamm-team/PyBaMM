@@ -113,7 +113,7 @@ class BinaryOperator(pybamm.Symbol):
         return f"{left_str} {self.name} {right_str}"
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return self.__class__(self.name, left, right)
+        return self.__class__(self.name, left, right)  # pragma: no cover
 
     def create_copy(
         self,
@@ -384,7 +384,7 @@ class MatrixMultiplication(BinaryOperator):
         super().__init__("@", left, right)
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return MatrixMultiplication(left, right)
+        return MatrixMultiplication(left, right)  # pragma: no cover
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -487,7 +487,7 @@ class Inner(BinaryOperator):
         super().__init__("inner product", left, right)
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return Inner(left, right)
+        return Inner(left, right)  # pragma: no cover
 
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -628,7 +628,7 @@ class _Heaviside(BinaryOperator):
         super().__init__(name, left, right)
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return Equality(left, right)
+        return _Heaviside(left, right)  # pragma: no cover
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -708,7 +708,7 @@ class Modulo(BinaryOperator):
         super().__init__("%", left, right)
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return Equality(left, right)
+        return Modulo(left, right)
 
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -753,7 +753,7 @@ class Minimum(BinaryOperator):
         super().__init__("minimum", left, right)
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return Equality(left, right)
+        return Minimum(left, right)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -800,7 +800,7 @@ class Maximum(BinaryOperator):
         super().__init__("maximum", left, right)
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return Equality(left, right)
+        return Maximum(left, right)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""

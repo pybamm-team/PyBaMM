@@ -78,7 +78,7 @@ class Broadcast(pybamm.SpatialOperator):
         )
 
     def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
-        pass
+        pass  # pragma: no cover
 
 
 class PrimaryBroadcast(Broadcast):
