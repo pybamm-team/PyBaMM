@@ -5,6 +5,7 @@ Automatically update version numbers in various files for releases
 import os
 import re
 from datetime import date
+import subprocess
 import pybamm
 
 
@@ -12,7 +13,10 @@ def update_version():
     """
     Updates version numbers and release information across project files
     """
-    release_version = os.getenv("VERSION")[1:]
+    result = subprocess.run(
+        ["hatch", "version"], capture_output=True, text=True, check=True
+    )
+    release_version = result.stdout.strip()
     release_date = date.today()
 
     # CITATION.cff
