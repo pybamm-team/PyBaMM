@@ -2,10 +2,10 @@
 # from Wycisk 2022
 #
 import pybamm
-from . import BaseOpenCircuitPotential
+from . import BaseHysteresisOpenCircuitPotential
 
 
-class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
+class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
     Class for open-circuit potential with hysteresis based on the approach outlined by Wycisk :footcite:t:'Wycisk2022'.
     This approach employs a differential capacity hysteresis state variable. The decay and switching of the hysteresis state
@@ -13,67 +13,18 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
     """
 
     def get_fundamental_variables(self):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-        h = pybamm.Variable(
-            f"{Domain} electrode {phase_name}hysteresis state",
-            domains={
-                "primary": f"{domain} electrode",
-                "secondary": "current collector",
-            },
-        )
-        return {
-            f"{Domain} electrode {phase_name}hysteresis state": h,
-        }
+        return self._get_hysteresis_state_variables()
 
     def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-        domain_options = getattr(self.options, domain)
+        _, Domain = self.domain_Domain
         phase_name = self.phase_name
-        phase = self.phase
+
+        variables = self._get_coupled_variables(variables)
 
         if self.reaction == "lithium-ion main":
-            sto_surf, T = self._get_stoichiometry_and_temperature(variables)
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-
-            if domain_options["particle size"] == "distribution":
-                h = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
-
-            variables[
-                f"{Domain} electrode {phase_name}hysteresis state distribution"
-            ] = h
-
-            # Bulk OCP is from the average SOC and temperature
-            sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
-            c_scale = self.phase_param.c_max
-            variables[f"Total lithium in {phase} phase in {domain} electrode [mol]"] = (
-                sto_bulk * c_scale
-            )  # c_s_vol * L * A
-
-            ocp_surf_eq = self.phase_param.U(sto_surf, T)
-            variables[f"{Domain} electrode {phase_name}equilibrium OCP [V]"] = (
-                ocp_surf_eq
-            )
-
-            T_bulk = pybamm.xyz_average(pybamm.size_average(T))
-            ocp_bulk_eq = self.phase_param.U(sto_bulk, T_bulk)
-            variables[f"{Domain} electrode {phase_name}bulk equilibrium OCP [V]"] = (
-                ocp_bulk_eq
-            )
-
-            inputs = {f"{Domain} {phase_name}particle stoichiometry": sto_surf}
-            lith_ref = pybamm.FunctionParameter(
-                f"{self.phase_param.phase_prefactor}{Domain} electrode lithiation OCP [V]",
-                inputs,
-            )
-            delith_ref = pybamm.FunctionParameter(
-                f"{self.phase_param.phase_prefactor}{Domain} electrode delithiation OCP [V]",
-                inputs,
-            )
-            H = abs(delith_ref - lith_ref) / 2
-            variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
-
             # determine dQ/dU
+            sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+            T_bulk = pybamm.xyz_average(pybamm.size_average(T))
             if phase_name == "":
                 Q_mag = variables[f"{Domain} electrode capacity [A.h]"]
             else:
@@ -87,38 +38,6 @@ class WyciskOpenCircuitPotential(BaseOpenCircuitPotential):
                 f"{Domain} electrode {phase_name}differential capacity [A.s.V-1]"
             ] = dQdU
 
-            H_x_av = pybamm.x_average(H)
-            h_x_av = pybamm.x_average(h)
-            variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"] = (
-                h_x_av
-            )
-
-            # check if psd
-            if domain_options["particle size"] == "distribution":
-                # should always be true
-                if f"{domain} particle size" in sto_surf.domains["primary"]:
-                    # check if MPM Model
-                    if "current collector" in sto_surf.domains["secondary"]:
-                        ocp_surf = ocp_surf_eq + H_x_av * h_x_av
-                    # must be DFN with PSD model
-                    elif (
-                        f"{domain} electrode" in sto_surf.domains["secondary"]
-                        or f"{domain} {phase_name}particle size"
-                        in sto_surf.domains["primary"]
-                    ):
-                        ocp_surf = ocp_surf_eq + H * h
-            # must not be a psd
-            else:
-                ocp_surf = ocp_surf_eq + H * h
-
-            H_s_av = pybamm.size_average(H_x_av)
-            h_s_av = pybamm.size_average(h_x_av)
-
-            ocp_bulk = ocp_bulk_eq + H_s_av * h_s_av
-
-            dUdT = self.phase_param.dUdT(sto_surf)
-
-        variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
         return variables
 
     def set_rhs(self, variables):

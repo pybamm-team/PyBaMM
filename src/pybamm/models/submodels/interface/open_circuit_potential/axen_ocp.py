@@ -2,10 +2,10 @@
 # from Axen 2022
 #
 import pybamm
-from . import BaseOpenCircuitPotential
+from . import BaseHysteresisOpenCircuitPotential
 
 
-class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
+class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
     """
     Class for open-circuit potential (OCP) with hysteresis based on the approach outlined by Axen et al. https://doi.org/10.1016/j.est.2022.103985.
     This approach tracks the evolution of the hysteresis using an ODE system scaled by the volumetric interfacial current density and
@@ -23,81 +23,13 @@ class AxenOpenCircuitPotential(BaseOpenCircuitPotential):
     """
 
     def get_fundamental_variables(self):
-        domain, Domain = self.domain_Domain
-        phase_name = self.phase_name
-        h = pybamm.Variable(
-            f"{Domain} electrode {phase_name}hysteresis state",
-            domains={
-                "primary": f"{domain} electrode",
-                "secondary": "current collector",
-            },
-        )
-        return {
-            f"{Domain} electrode {phase_name}hysteresis state": h,
-        }
+        return self._get_hysteresis_state_variables()
 
     def get_coupled_variables(self, variables):
-        domain, Domain = self.domain_Domain
-        domain_options = getattr(self.options, domain)
-        phase_name = self.phase_name
-
-        if self.reaction == "lithium-ion main":
-            sto_surf, T = self._get_stoichiometry_and_temperature(variables)
-            h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
-
-            # For "particle-size distribution" models, take distribution version
-            # of c_s_surf that depends on particle size.
-            if domain_options["particle size"] == "distribution":
-                h = pybamm.PrimaryBroadcast(h, [f"{domain} {phase_name}particle size"])
-
-            variables[
-                f"{Domain} electrode {phase_name}hysteresis state distribution"
-            ] = h
-
-            # Bulk OCP is from the average SOC and temperature
-            lith_ref = self.phase_param.U(sto_surf, T, "lithiation")
-            delith_ref = self.phase_param.U(sto_surf, T, "delithiation")
-            H = lith_ref - delith_ref
-            variables[f"{Domain} electrode {phase_name}OCP hysteresis [V]"] = H
-
-            delith_ref_x_av = pybamm.x_average(delith_ref)
-            H_x_av = pybamm.x_average(H)
-            h_x_av = pybamm.x_average(h)
-            variables[f"X-averaged {domain} electrode {phase_name}hysteresis state"] = (
-                h_x_av
-            )
-
-            # check if psd
-            if domain_options["particle size"] == "distribution":
-                # should always be true
-                if f"{domain} particle size" in sto_surf.domains["primary"]:
-                    # check if MPM Model
-                    if "current collector" in sto_surf.domains["secondary"]:
-                        ocp_surf = delith_ref_x_av + H_x_av * (1 - h_x_av) / 2
-                    # must be DFN with PSD model
-                    elif (
-                        f"{domain} electrode" in sto_surf.domains["secondary"]
-                        or f"{domain} {phase_name}particle size"
-                        in sto_surf.domains["primary"]
-                    ):
-                        ocp_surf = delith_ref + H * (1 - h) / 2
-            # must not be a psd
-            else:
-                ocp_surf = delith_ref + H * (1 - h) / 2
-
-            delith_ref_s_av = pybamm.size_average(delith_ref_x_av)
-            H_s_av = pybamm.size_average(H_x_av)
-            h_s_av = pybamm.size_average(h_x_av)
-
-            ocp_bulk = delith_ref_s_av + H_s_av * (1 - h_s_av) / 2
-
-            dUdT = self.phase_param.dUdT(sto_surf)
-
-        variables.update(self._get_standard_ocp_variables(ocp_surf, ocp_bulk, dUdT))
-        return variables
+        return self._get_coupled_variables(variables)
 
     def set_rhs(self, variables):
-        domain, Domain = self.domain_Domain
+        _, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         i_vol = variables[

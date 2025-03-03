@@ -28,23 +28,6 @@ class BaseOpenCircuitPotential(BaseInterface):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def _get_standard_ocp_variables(self, ocp_surf, ocp_bulk, dUdT):
-        """
-        A private function to obtain the open-circuit potential and
-        related standard variables.
-
-        Parameters
-        ----------
-        ocp : :class:`pybamm.Symbol`
-            The open-circuit potential
-        dUdT : :class:`pybamm.Symbol`
-            The entropic change in ocp
-
-        Returns
-        -------
-        variables : dict
-            The variables dictionary including the open-circuit potentials
-            and related standard variables.
-        """
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
@@ -105,10 +88,6 @@ class BaseOpenCircuitPotential(BaseInterface):
         return variables
 
     def _get_standard_size_distribution_ocp_variables(self, ocp, dUdT):
-        """
-        A private function to obtain the open-circuit potential and
-        related standard variables when there is a distribution of particle sizes.
-        """
         domain, Domain = self.domain_Domain
         reaction_name = self.reaction_name
 
