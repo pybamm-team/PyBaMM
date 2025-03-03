@@ -626,9 +626,10 @@ class _Heaviside(BinaryOperator):
     ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__(name, left, right)
+        self.name = name
 
     def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
-        return _Heaviside(left, right)  # pragma: no cover
+        return _Heaviside(self.name, left, right)  # pragma: no cover
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
