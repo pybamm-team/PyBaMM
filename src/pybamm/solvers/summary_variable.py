@@ -42,13 +42,13 @@ class SummaryVariables:
         self.esoh_solver = esoh_solver
 
         # Store computed variables
-        self._variables = {}  # type: dict[str, float | list[float]]
+        self._variables: dict[str, float | list[float]] = {}
         self.cycle_number = np.array([])
         self.cycles: list[SummaryVariables] | None = None
-
+        self._all_variables: list[str] | None = None
         model = solution.all_models[0]
         self._possible_variables = model.summary_variables  # minus esoh variables
-        self._esoh_variables = None  # Store eSOH variable names
+        self._esoh_variables: list[str] | None = None  # Store eSOH variable names
 
         # Flag if eSOH calculations are needed
         self.calc_esoh = (
@@ -84,20 +84,18 @@ class SummaryVariables:
         Return names of all possible summary variables, including eSOH variables
          if appropriate.
         """
-        try:
+        if self._all_variables is not None:
             return self._all_variables
-        except AttributeError:
-            base_vars = self._possible_variables.copy()
-            base_vars.extend(
-                f"Change in {var[0].lower() + var[1:]}"
-                for var in self._possible_variables
-            )
+        base_vars = self._possible_variables.copy()
+        base_vars.extend(
+            f"Change in {var[0].lower() + var[1:]}" for var in self._possible_variables
+        )
 
-            if self.calc_esoh:
-                base_vars.extend(self.esoh_variables)
+        if self.calc_esoh:
+            base_vars.extend(self.esoh_variables)
 
-            self._all_variables = base_vars
-            return self._all_variables
+        self._all_variables = cast(list[str], base_vars)
+        return self._all_variables
 
     @property
     def esoh_variables(self) -> list[str] | None:

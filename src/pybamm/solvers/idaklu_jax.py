@@ -258,7 +258,7 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: np.ndarray = None,
+        t: Union[np.ndarray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -291,7 +291,7 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: np.ndarray = None,
+        t: Union[np.ndarray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -464,13 +464,11 @@ class IDAKLUJax:
         logger.debug(f"  py:invar: {type(invar)}, {invar}")
         logger.debug(f"  py:primals: {type(primals)}, {primals}")
 
-        t = primals[0]
+        t = np.asarray(primals[0])
         inputs = primals[1:]
 
         if isinstance(invar, float):
             invar = round(invar)
-        if isinstance(t, float):
-            t = np.array(t)
 
         if t.ndim == 0 or (t.ndim == 1 and t.shape[0] == 1):
             # scalar time input

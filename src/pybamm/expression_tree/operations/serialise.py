@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any
 
 import pybamm
 from datetime import datetime
@@ -21,7 +22,10 @@ class Serialise:
         """Converts PyBaMM symbols into a JSON-serialisable format"""
 
         def default(self, node: dict | pybamm.Symbol):
-            node_dict = {"py/object": str(type(node))[8:-2], "py/id": id(node)}
+            node_dict: dict[str, Any] = {
+                "py/object": str(type(node))[8:-2],
+                "py/id": id(node),
+            }
             if isinstance(node, pybamm.Symbol):
                 node_dict.update(node.to_json())  # this doesn't include children
                 node_dict["children"] = []
@@ -61,7 +65,7 @@ class Serialise:
                 return node_dict
 
             if isinstance(node, pybamm.SubMesh):
-                node_dict.update(node.to_json())
+                node_dict.update(node.to_json())  # type: ignore[attr-defined]
                 return node_dict
 
     class _Empty:

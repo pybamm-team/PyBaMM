@@ -1,3 +1,4 @@
+from typing import cast
 from posthog import Posthog
 import pybamm
 import sys
@@ -12,15 +13,15 @@ class MockTelemetry:
         pass
 
 
-if not pybamm.config.check_opt_out():
+if pybamm.config.check_opt_out():
+    _posthog = MockTelemetry()
+else:  # pragma: no cover
     _posthog = Posthog(
         # this is the public, write only API key, so it's ok to include it here
         project_api_key="phc_acTt7KxmvBsAxaE0NyRd5WfJyNxGvBq1U9HnlQSztmb",
         host="https://us.i.posthog.com",
     )
-    _posthog.log.setLevel("CRITICAL")
-else:  # pragma: no cover
-    _posthog = MockTelemetry()
+    cast(Posthog, _posthog).log.setLevel("CRITICAL")
 
 
 def disable():

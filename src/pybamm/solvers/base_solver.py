@@ -1122,7 +1122,7 @@ class BaseSolver:
         """
 
         ninputs = len(model.calculate_sensitivities)
-        initial_conditions = tuple([] for _ in range(ninputs))  # type: tuple
+        initial_conditions: tuple = tuple([] for _ in range(ninputs))
         solution = solution.last_state
         for var in model.initial_conditions:
             final_state = solution[var.name]

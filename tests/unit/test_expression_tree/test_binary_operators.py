@@ -11,12 +11,12 @@ from scipy.sparse import coo_matrix
 import pybamm
 import sympy
 
-EMPTY_DOMAINS = {
+EMPTY_DOMAINS: dict[str, list[str]] = {
     "primary": [],
     "secondary": [],
     "tertiary": [],
     "quaternary": [],
-}  # type: dict[str, list[str]]
+}
 
 
 class TestBinaryOperators:

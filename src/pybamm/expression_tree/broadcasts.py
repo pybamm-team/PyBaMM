@@ -78,8 +78,7 @@ class Broadcast(pybamm.SpatialOperator):
         )
 
     def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
-        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
-        return self.__class__(child, self.broadcast_domain)
+        pass
 
 
 class PrimaryBroadcast(Broadcast):
@@ -190,6 +189,10 @@ class PrimaryBroadcast(Broadcast):
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
         return self.orphans[0]
+
+    def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.broadcast_domain)
 
 
 class PrimaryBroadcastToEdges(PrimaryBroadcast):
@@ -321,6 +324,10 @@ class SecondaryBroadcast(Broadcast):
         """Reduce the broadcast by one dimension."""
         return self.orphans[0]
 
+    def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.broadcast_domain)
+
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
     """A secondary broadcast onto the edges of a domain."""
@@ -437,6 +444,10 @@ class TertiaryBroadcast(Broadcast):
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
         raise NotImplementedError
+
+    def _unary_new_copy(self, child: pybamm.Symbol, perform_simplifications=True):
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
+        return self.__class__(child, self.broadcast_domain)
 
 
 class TertiaryBroadcastToEdges(TertiaryBroadcast):

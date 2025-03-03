@@ -152,9 +152,9 @@ class FuzzyDict(dict):
             Default is 0.4
         """
 
-        if not isinstance(keys, (str, list)) or not all(
+        if not isinstance(keys, (str, list)) or not all(  # type: ignore[redundant-expr]
             isinstance(k, str) for k in keys
-        ):  # type: ignore[redundant-expr]
+        ):
             msg = f"'keys' must be a string or a list of strings, got {type(keys)}"
             raise TypeError(msg)
 
