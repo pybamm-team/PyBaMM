@@ -81,15 +81,11 @@ class TestUtil:
             )
 
     def test_get_parameters_filepath(self, tmp_path):
-        file_in_pybamm_root = pybamm.root_dir() / tmp_path / "temp_file.txt"
-        assert pybamm.get_parameters_filepath(file_in_pybamm_root.name) == str(
-            file_in_pybamm_root
-        )
+        temppath = tmp_path / "temp_file.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(temppath)
 
-        package_dir = os.path.join(pybamm.root_dir(), "src", "pybamm")
-        temp_file_in_package = package_dir / tmp_path / "temp_file.txt"
-        path = os.path.join(package_dir, temp_file_in_package.name)
-        assert pybamm.get_parameters_filepath(temp_file_in_package) == str(path)
+        temppath = "random.txt"
+        assert pybamm.get_parameters_filepath(temppath) == str(os.path.join(pybamm.root_dir(),"src", "pybamm", temppath))
 
     @pytest.mark.skipif(not pybamm.has_jax(), reason="JAX is not installed")
     def test_is_jax_compatible(self):
