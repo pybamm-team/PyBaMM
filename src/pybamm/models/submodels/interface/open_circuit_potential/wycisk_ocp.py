@@ -47,7 +47,9 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         i_surf = variables[
             f"{Domain} electrode {phase_name}interfacial current density [A.m-2]"
         ]
-        sto_surf, T = self._get_stoichiometry_and_temperature(variables)
+        sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
+        T = variables[f"{Domain} electrode temperature [K]"]
+        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         # check if composite or not
         if phase_name != "":
@@ -61,7 +63,6 @@ class WyciskOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         dQdU = dQdU.orphans[0]
         K = self.phase_param.hysteresis_decay(sto_surf, T)
         K_x = self.phase_param.hysteresis_switch
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         i_surf_sign = pybamm.sign(i_surf)
         signed_h = 1 - i_surf_sign * h

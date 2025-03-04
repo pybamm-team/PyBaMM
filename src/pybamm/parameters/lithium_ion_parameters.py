@@ -457,8 +457,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.hysteresis_switch = pybamm.Parameter(
             f"{pref}{Domain} particle hysteresis switching factor"
         )
-        self.h_init = pybamm.Parameter(
-            f"{pref}Initial hysteresis state in {domain} electrode"
+        self.h_init = pybamm.FunctionParameter(
+            f"{pref}Initial hysteresis state in {domain} electrode",
+            {"Through-cell distance (x) [m]": x},
         )
 
         if self.options["open-circuit potential"] != "MSMR":

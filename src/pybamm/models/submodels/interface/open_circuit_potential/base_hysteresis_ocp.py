@@ -1,5 +1,5 @@
 #
-# Base class for open-circuit potential
+# Base class for open-circuit potential with hysteresis
 #
 import pybamm
 from . import BaseOpenCircuitPotential
@@ -78,8 +78,8 @@ class BaseHysteresisOpenCircuitPotential(BaseOpenCircuitPotential):
                 {
                     f"{Domain} electrode {phase_name}OCP hysteresis [V]": H,
                     f"X-averaged {domain} electrode {phase_name}OCP hysteresis [V]": H_x_av,
-                    f"{Domain} electrode {phase_name} equilibrium OCP [V]": U_eq,
-                    f"X-averaged {domain} electrode {phase_name} equilibrium OCP [V]": U_eq_x_av,
+                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": U_eq,
+                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": U_eq_x_av,
                 }
             )
 

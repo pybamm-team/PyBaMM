@@ -35,13 +35,14 @@ class AxenOpenCircuitPotential(BaseHysteresisOpenCircuitPotential):
         i_vol = variables[
             f"{Domain} electrode {phase_name}volumetric interfacial current density [A.m-3]"
         ]
+        sto_surf = variables[f"{Domain} {phase_name}particle surface stoichiometry"]
+        T = variables[f"{Domain} electrode temperature [K]"]
+        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
+
         c_max = self.phase_param.c_max
         epsl = self.phase_param.epsilon_s
-        sto_surf, T = self._get_stoichiometry_and_temperature(variables)
-
         K_lith = self.phase_param.hysteresis_decay(sto_surf, T, "lithiation")
         K_delith = self.phase_param.hysteresis_decay(sto_surf, T, "delithiation")
-        h = variables[f"{Domain} electrode {phase_name}hysteresis state"]
 
         S_lith = i_vol * K_lith / (self.param.F * c_max * epsl)
         S_delith = i_vol * K_delith / (self.param.F * c_max * epsl)

@@ -7,7 +7,7 @@ from . import BaseOpenCircuitPotential
 
 class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
     def get_coupled_variables(self, variables):
-        _, Domain = self.domain_Domain
+        domain, Domain = self.domain_Domain
         phase_name = self.phase_name
 
         if self.reaction == "lithium-ion main":
@@ -19,6 +19,16 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             sto_bulk = variables[f"{Domain} electrode {phase_name}stoichiometry"]
             T_bulk = pybamm.xyzs_average(T)
             ocp_bulk = self.phase_param.U(sto_bulk, T_bulk)
+
+            variables.update(
+                {
+                    f"{Domain} electrode {phase_name}equilibrium open-circuit potential [V]": ocp_surf,
+                    f"X-averaged {domain} electrode {phase_name}equilibrium open-circuit potential [V]": pybamm.x_average(
+                        ocp_surf
+                    ),
+                }
+            )
+
         elif self.reaction == "lithium metal plating":
             T = variables[f"{Domain} electrode temperature [K]"]
             ocp_surf = 0 * T
