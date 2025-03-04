@@ -2,7 +2,6 @@
 # Binary operator classes
 #
 from __future__ import annotations
-import numbers
 
 import numpy as np
 import sympy
@@ -33,8 +32,8 @@ def _preprocess_binary(
             raise ValueError("right must be a 1D array")
         right = pybamm.Vector(right)
 
-    # Check both left and right are pybamm Symbols
-    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+    # Check right is pybamm Symbol
+    if not isinstance(right, pybamm.Symbol):
         raise NotImplementedError(
             f"BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"
         )
@@ -113,6 +112,9 @@ class BinaryOperator(pybamm.Symbol):
             right_str = f"{self.right!s}"
         return f"{left_str} {self.name} {right_str}"
 
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return self.__class__(self.name, left, right)  # pragma: no cover
+
     def create_copy(
         self,
         new_children: list[pybamm.Symbol] | None = None,
@@ -127,7 +129,7 @@ class BinaryOperator(pybamm.Symbol):
         children = self._children_for_copying(new_children)
 
         if not perform_simplifications:
-            out = self.__class__(children[0], children[1])
+            out = self._new_instance(children[0], children[1])
         else:
             # creates a new instance using the overloaded binary operator to perform
             # additional simplifications, rather than just calling the constructor
@@ -224,6 +226,9 @@ class Power(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("**", left, right)
 
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Power(left, right)
+
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
@@ -273,6 +278,9 @@ class Addition(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("+", left, right)
 
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Addition(left, right)
+
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) + self.right.diff(variable)
@@ -299,6 +307,9 @@ class Subtraction(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("-", left, right)
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Subtraction(left, right)
 
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -328,6 +339,9 @@ class Multiplication(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("*", left, right)
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Multiplication(left, right)
 
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -368,6 +382,9 @@ class MatrixMultiplication(BinaryOperator):
     ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("@", left, right)
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return MatrixMultiplication(left, right)  # pragma: no cover
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -418,6 +435,9 @@ class Division(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("/", left, right)
 
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Division(left, right)
+
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply quotient rule
@@ -465,6 +485,9 @@ class Inner(BinaryOperator):
     ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("inner product", left, right)
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Inner(left, right)  # pragma: no cover
 
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
@@ -543,6 +566,9 @@ class Equality(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("==", left, right)
 
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Equality(left, right)
+
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         # Equality should always be multiplied by something else so hopefully don't
@@ -600,6 +626,10 @@ class _Heaviside(BinaryOperator):
     ):
         """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__(name, left, right)
+        self.name = name
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return _Heaviside(self.name, left, right)  # pragma: no cover
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -678,6 +708,9 @@ class Modulo(BinaryOperator):
     ):
         super().__init__("%", left, right)
 
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Modulo(left, right)
+
     def _diff(self, variable: pybamm.Symbol):
         """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
@@ -719,6 +752,9 @@ class Minimum(BinaryOperator):
         right: ChildSymbol,
     ):
         super().__init__("minimum", left, right)
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Minimum(left, right)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -763,6 +799,9 @@ class Maximum(BinaryOperator):
         right: ChildSymbol,
     ):
         super().__init__("maximum", left, right)
+
+    def _new_instance(self, left: pybamm.Symbol, right: pybamm.Symbol) -> pybamm.Symbol:
+        return Maximum(left, right)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -1538,7 +1577,7 @@ def source(
         corresponding to a source term in the bulk.
     """
     # Broadcast if left is number
-    if isinstance(left, numbers.Number):
+    if isinstance(left, (int, float)):
         left = pybamm.PrimaryBroadcast(left, "current collector")
 
     # force type cast for mypy

@@ -258,7 +258,7 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: np.ndarray = None,
+        t: Union[np.ndarray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -291,8 +291,8 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: np.ndarray = None,
-        inputs: Union[dict, None] = None,
+        t: Union[np.ndarray, None] = None,
+        inputs: Union[np.ndarray, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
         """Helper function to compute the gradient of a jaxified expression

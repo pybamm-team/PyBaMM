@@ -79,6 +79,7 @@ class TestCopy:
                 a * b,
                 a / b,
                 a**b,
+                b % a,
                 pybamm.minimum(a, b),
                 pybamm.maximum(a, b),
                 pybamm.Equality(a, b),
@@ -89,12 +90,15 @@ class TestCopy:
                 b * a,
                 b / a,
                 b**a,
+                b % a,
                 pybamm.minimum(b, a),
                 pybamm.maximum(b, a),
                 pybamm.Equality(b, a),
             ],
         ):
-            new_symbol = symbol_ab.create_copy(new_children=[b, a])
+            new_symbol = symbol_ab.create_copy(
+                new_children=[b, a], perform_simplifications=False
+            )
             assert new_symbol == symbol_ba
             assert new_symbol.print_name == symbol_ba.print_name
 

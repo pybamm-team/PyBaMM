@@ -514,7 +514,7 @@ def substrings(s: str):
             yield s[i : j + 1]
 
 
-def intersect(s1: str, s2: str):
+def intersect(s1: str, s2: str) -> str:
     # find all the common strings between two strings
     all_intersects = set(substrings(s1)) & set(substrings(s2))
     # intersect is the longest such intercept
@@ -525,7 +525,7 @@ def intersect(s1: str, s2: str):
     return intersect.lstrip().rstrip()
 
 
-def simplified_concatenation(*children, name: Optional[str] = None):
+def simplified_concatenation(*children, name=None):
     """Perform simplifications on a concatenation."""
     # remove children that are None
     children = list(filter(lambda x: x is not None, children))

@@ -160,7 +160,7 @@ class Solution:
     def has_sensitivities(self) -> bool:
         if isinstance(self._all_sensitivities, bool):
             return self._all_sensitivities
-        elif isinstance(self._all_sensitivities, dict):
+        else:
             return len(self._all_sensitivities) > 0
 
     def extract_explicit_sensitivities(self):
