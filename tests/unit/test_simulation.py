@@ -576,11 +576,11 @@ class TestSimulation:
         test_file = tmp_path / "test_sim.gif"
 
         # create a GIF without calling the plot method
-        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file.name)
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
         # call the plot method before creating the GIF
         sim.plot(show_plot=False)
-        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file.name)
+        sim.create_gif(number_of_images=3, duration=1, output_filename=test_file)
 
     @pytest.mark.skipif(
         no_internet_connection(),

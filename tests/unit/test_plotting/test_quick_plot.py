@@ -310,11 +310,9 @@ class TestQuickPlot:
         # test creating a GIF
         test_stub = tmp_path / "spm_sim_test"
         test_file = test_stub.with_suffix(".gif")
-        quick_plot.create_gif(
-            number_of_images=3, duration=3, output_filename=test_file.name
-        )
+        quick_plot.create_gif(number_of_images=3, duration=3, output_filename=test_file)
         assert not os.path.exists(f"{test_stub}*.png")
-        assert os.path.exists(test_file.name)
+        assert os.path.exists(test_file)
         pybamm.close_plots()
 
     def test_loqs_spme(self):

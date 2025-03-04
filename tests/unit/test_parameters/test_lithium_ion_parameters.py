@@ -11,7 +11,7 @@ class TestLithiumIonParameterValues:
         parameters = pybamm.LithiumIonParameters()
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
         output_file = tmp_path / "lithium_ion_parameters.txt"
-        parameter_values.print_parameters(parameters, output_file.name)
+        parameter_values.print_parameters(parameters, output_file)
 
     def test_lithium_ion(self):
         """This test checks that all the parameters are being calculated
