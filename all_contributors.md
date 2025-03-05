@@ -138,7 +138,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/chtamar"><img src="https://avatars.githubusercontent.com/u/196436685?v=4?s=100" width="100px;" alt="chtamar"/><br /><sub><b>chtamar</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=chtamar" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=chtamar" title="Documentation">📖</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=chtamar" title="Tests">⚠️</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Prtm2110"><img src="https://avatars.githubusercontent.com/u/139000226?v=4?s=100" width="100px;" alt="Pratham Hole"/><br /><sub><b>Pratham Hole</b></sub></a><br /><a href="#maintenance-Prtm2110" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Prtm2110"><img src="https://avatars.githubusercontent.com/u/139000226?v=4?s=100" width="100px;" alt="Pratham Hole"/><br /><sub><b>Pratham Hole</b></sub></a><br /><a href="#maintenance-Prtm2110" title="Tests">⚠️</a></td>
     </tr>
   </tbody>
 </table>
