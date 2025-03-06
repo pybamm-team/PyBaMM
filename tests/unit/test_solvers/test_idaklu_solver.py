@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 
 import pybamm
+from scipy.sparse import eye
 from tests import get_discretisation_for_testing
 
 
@@ -1265,3 +1266,35 @@ class TestIDAKLUSolver:
 
         with pytest.warns(pybamm.SolverWarning, match="extrapolation occurred for"):
             solver.solve(model, t_eval=[0, 1])
+
+    def test_model_solver_with_non_identity_mass(self):
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", domain="negative electrode")
+        var2 = pybamm.Variable("var2", domain="negative electrode")
+        model.rhs = {var1: var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # FV discretisation has identity mass. Manually set the mass matrix to
+        # be a diag of 10s here for testing. Note that the algebraic part is all
+        # zeros
+        mass_matrix = 10 * model.mass_matrix.entries
+        model.mass_matrix = pybamm.Matrix(mass_matrix)
+
+        # Note that mass_matrix_inv is just the inverse of the ode block of the
+        # mass matrix
+        mass_matrix_inv = 0.1 * eye(mass_matrix.shape[0] // 2)
+        model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
+
+        assert not model.is_standard_form_dae
+
+        # Solve
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        t_interp = np.linspace(0, 1, 100)
+        t_eval = [t_interp[0], t_interp[-1]]
+        solution = solver.solve(model, t_eval, t_interp=t_interp)
+        np.testing.assert_array_equal(solution.t, t_interp)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))

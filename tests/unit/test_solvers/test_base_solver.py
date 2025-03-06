@@ -38,6 +38,20 @@ class TestBaseSolver:
         ):
             pybamm.BaseSolver(root_method=pybamm.ScipySolver())
 
+    def test_additional_inputs_provided(self):
+        # if additional inputs are provided that are not in the model, this should run as normal
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), solver=pybamm.IDAKLUSolver())
+        sol1 = sim.solve([0, 3600])["Voltage [V]"].entries
+        sol2 = sim.solve([0, 3600], inputs={"Current function [A]": 1})[
+            "Voltage [V]"
+        ].entries
+        sol3 = sim.solve(
+            [0, 3600], inputs=[{"Current function [A]": 1}, {"Current function [A]": 2}]
+        )[0]["Voltage [V]"].entries
+        # check that the solutions are the same
+        np.testing.assert_array_almost_equal(sol1, sol2)
+        np.testing.assert_array_almost_equal(sol2, sol3)
+
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()

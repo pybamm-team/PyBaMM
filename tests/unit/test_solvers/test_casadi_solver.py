@@ -476,6 +476,8 @@ class TestCasadiSolver:
         mass_matrix_inv = 0.1 * eye(int(mass_matrix.shape[0] / 2))
         model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
 
+        assert not model.is_standard_form_dae
+
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
