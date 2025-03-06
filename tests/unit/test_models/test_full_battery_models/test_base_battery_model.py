@@ -432,6 +432,62 @@ class TestBaseBatteryModel:
         with pytest.raises(pybamm.ModelError, match="Missing variable"):
             model.build_model()
 
+    def test_different_input_types(self):
+        # Test invalid string input
+        with pytest.raises(
+            NotImplementedError,
+            match="SEI porosity change submodels do not yet support particle-size distributions.",
+        ):
+            BatteryModelOptions(
+                {
+                    "particle size": "distribution",
+                    "SEI porosity change": "true",
+                }
+            )
+
+        # Test valid string input
+        opts = BatteryModelOptions(
+            {
+                "particle": "Fickian diffusion",
+                "loss of active material": "stress-driven",
+            }
+        )
+        assert opts.negative["particle"] == "Fickian diffusion"
+        assert opts.positive["particle"] == "Fickian diffusion"
+        assert opts["loss of active material"] == "stress-driven"
+
+        # Test invalid tuple input
+        with pytest.raises(
+            NotImplementedError,
+            match="SEI porosity change submodels do not yet support particle-size distributions.",
+        ):
+            BatteryModelOptions(
+                {
+                    "particle size": ("single", "distribution"),
+                    "SEI porosity change": "true",
+                }
+            )
+
+        # Test valid tuple input
+        opts = BatteryModelOptions(
+            {
+                "particle": ("Fickian diffusion", "quadratic profile"),
+            }
+        )
+        assert opts.negative["particle"] == "Fickian diffusion"
+        assert opts.positive["particle"] == "quadratic profile"
+
+        with pytest.raises(pybamm.OptionError, match="loss of active material"):
+            BatteryModelOptions(
+                {
+                    "loss of active material": (
+                        "bad LAM model",
+                        "bad LAM model",
+                        "bad LAM model",
+                    )
+                }
+            )
+
     def test_default_solver(self):
         model = pybamm.BaseBatteryModel()
         assert isinstance(model.default_solver, pybamm.CasadiSolver)
