@@ -992,7 +992,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 or "none" not in options["SEI film resistance"]
             ):
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
-            if "none" not in options["lithium plating"]:
+            if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
             if "MSMR" in options["open-circuit potential"]:
                 raise pybamm.OptionError(
@@ -1106,10 +1106,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             return pybamm.kinetics.AsymmetricButlerVolmer
         elif "linear" in options["intercalation kinetics"]:
             return pybamm.kinetics.Linear
-        elif "Marcus" in options["intercalation kinetics"]:
-            return pybamm.kinetics.Marcus
         elif "Marcus-Hush-Chidsey" in options["intercalation kinetics"]:
             return pybamm.kinetics.MarcusHushChidsey
+        elif "Marcus" in options["intercalation kinetics"]:
+            return pybamm.kinetics.Marcus
         elif "MSMR" in options["intercalation kinetics"]:
             return pybamm.kinetics.MSMRButlerVolmer
 
