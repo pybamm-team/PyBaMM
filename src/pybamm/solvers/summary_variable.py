@@ -188,3 +188,9 @@ class SummaryVariables:
             ) from error
 
         return esoh_sol
+
+    def get_summary_variables(self):
+        """
+        Computes and returns all the summary values + cycle number, as a dictionary
+        """
+        return {k: self[k] for k in [*self.all_variables, "Cycle number"]}

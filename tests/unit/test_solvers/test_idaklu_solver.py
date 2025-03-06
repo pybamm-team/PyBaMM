@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 
 import pybamm
+from scipy.sparse import eye
 from tests import get_discretisation_for_testing
 
 
@@ -42,19 +43,21 @@ class TestIDAKLUSolver:
 
             # test that final time is time of event
             # y = 0.1 t + y0 so y=0.2 when t=2
-            np.testing.assert_array_almost_equal(solution.t[-1], 2.0)
+            np.testing.assert_allclose(solution.t[-1], 2.0, rtol=1e-7, atol=1e-6)
 
             # test that final value is the event value
-            np.testing.assert_array_almost_equal(solution.y[0, -1], 0.2)
+            np.testing.assert_allclose(solution.y[0, -1], 0.2, rtol=1e-7, atol=1e-6)
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                solution.y[1, :], np.ones(solution.t.shape)
+            np.testing.assert_allclose(
+                solution.y[1, :], np.ones(solution.t.shape), rtol=1e-7, atol=1e-6
             )
 
             # test that y[0] = to true solution
             true_solution = 0.1 * solution.t
-            np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
+            np.testing.assert_allclose(
+                solution.y[0, :], true_solution, rtol=1e-7, atol=1e-6
+            )
 
     def test_multiple_inputs(self):
         model = pybamm.BaseModel()
@@ -130,10 +133,11 @@ class TestIDAKLUSolver:
             np.testing.assert_array_equal(
                 solution.t, t_interp, err_msg=f"Failed for form {form}"
             )
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 solution.y[0],
                 np.exp(0.1 * solution.t),
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
                 err_msg=f"Failed for form {form}",
             )
 
@@ -152,10 +156,11 @@ class TestIDAKLUSolver:
             )
             solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
             np.testing.assert_array_equal(solution.t, t_interp)
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 solution.y[0],
                 np.exp(0.1 * solution.t),
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
                 err_msg=f"Failed for form {form}",
             )
 
@@ -170,10 +175,11 @@ class TestIDAKLUSolver:
             )
             solution = solver.solve(model_disc, t_eval, t_interp=t_interp)
             assert len(solution.t) < len(t_interp)
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 solution.y[0],
                 np.exp(0.1 * solution.t),
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
                 err_msg=f"Failed for form {form}",
             )
 
@@ -204,16 +210,18 @@ class TestIDAKLUSolver:
             np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
             np.testing.assert_equal(solution.t_event[0], solution.t[-1])
             np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 solution.y[0],
                 np.exp(0.1 * solution.t),
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
                 err_msg=f"Failed for form {form}",
             )
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 solution.y[-1],
                 2 * np.exp(0.1 * solution.t),
-                decimal=5,
+                rtol=1e-6,
+                atol=1e-5,
                 err_msg=f"Failed for form {form}",
             )
 
@@ -259,20 +267,32 @@ class TestIDAKLUSolver:
             )
 
             # test that y[3] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[3], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[3],
+                np.ones(sol.t.shape),
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(
-                sol.y[0], true_solution, err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[0],
+                true_solution,
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            np.testing.assert_array_almost_equal(
-                sol.y[1:3], true_solution, err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[1:3],
+                true_solution,
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
     def test_sensitivities_initial_condition(self):
@@ -315,10 +335,11 @@ class TestIDAKLUSolver:
                     calculate_sensitivities=True,
                 )
 
-                np.testing.assert_array_almost_equal(
+                np.testing.assert_allclose(
                     sol["2v"].sensitivities["a"].full().flatten(),
                     np.exp(-sol.t) * 2,
-                    decimal=4,
+                    rtol=1e-5,
+                    atol=1e-4,
                     err_msg=f"Failed for form {form}",
                 )
 
@@ -364,14 +385,22 @@ class TestIDAKLUSolver:
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[1, :],
+                np.ones(sol.t.shape),
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(
-                sol.y[0, :], true_solution, err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[0, :],
+                true_solution,
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # should be no sensitivities calculated
@@ -388,14 +417,22 @@ class TestIDAKLUSolver:
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[1, :],
+                np.ones(sol.t.shape),
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(
-                sol.y[0, :], true_solution, err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[0, :],
+                true_solution,
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # evaluate the sensitivities using idas
@@ -415,16 +452,21 @@ class TestIDAKLUSolver:
             decimal = (
                 2 if form == "iree" else 6
             )  # iree currently operates with single precision
-            np.testing.assert_array_almost_equal(
-                dyda_ida, dyda_fd, decimal=decimal, err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                dyda_ida,
+                dyda_fd,
+                err_msg=f"Failed for form {form}",
+                rtol=10 ** (-decimal - 1),
+                atol=10 ** (-decimal),
             )
 
             # get the sensitivities for the variable
             d2uda = sol["2u"].sensitivities["a"]
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 2 * dyda_ida[0:200:2],
                 d2uda,
-                decimal=decimal,
+                rtol=10 ** (-decimal - 1),
+                atol=10 ** (-decimal),
                 err_msg=f"Failed for form {form}",
             )
 
@@ -461,13 +503,21 @@ class TestIDAKLUSolver:
             solver._set_consistent_initialization(model, t0, inputs_dict={})
 
             # u(t0) = 0, v(t0) = 1
-            np.testing.assert_array_almost_equal(
-                model.y0full, [0, 1], err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                model.y0full,
+                [0, 1],
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
             # u'(t0) = 0.1 * v(t0) = 0.1
             # Since v is algebraic, the initial derivative is set to 0
-            np.testing.assert_array_almost_equal(
-                model.ydot0full, [0.1, 0], err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                model.ydot0full,
+                [0.1, 0],
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
     def test_sensitivities_with_events(self):
@@ -516,14 +566,22 @@ class TestIDAKLUSolver:
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape), err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[1, :],
+                np.ones(sol.t.shape),
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
-            np.testing.assert_array_almost_equal(
-                sol.y[0, :], true_solution, err_msg=f"Failed for form {form}"
+            np.testing.assert_allclose(
+                sol.y[0, :],
+                true_solution,
+                err_msg=f"Failed for form {form}",
+                rtol=1e-7,
+                atol=1e-6,
             )
 
             # evaluate the sensitivities using idas
@@ -551,10 +609,11 @@ class TestIDAKLUSolver:
             decimal = (
                 2 if form == "iree" else 6
             )  # iree currently operates with single precision
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 dyda_ida[: (2 * max_index), :],
                 dyda_fd,
-                decimal=decimal,
+                rtol=10 ** (-decimal - 1),
+                atol=10 ** (-decimal),
                 err_msg=f"Failed for form {form}",
             )
 
@@ -574,10 +633,11 @@ class TestIDAKLUSolver:
             dydb_fd = (sol_plus.y[:, :max_index] - sol_neg.y[:, :max_index]) / h
             dydb_fd = dydb_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(
+            np.testing.assert_allclose(
                 dydb_ida[: (2 * max_index), :],
                 dydb_fd,
-                decimal=decimal,
+                rtol=10 ** (-decimal - 1),
+                atol=10 ** (-decimal),
                 err_msg=f"Failed for form {form}",
             )
 
@@ -685,7 +745,7 @@ class TestIDAKLUSolver:
         solver_banded = pybamm.IDAKLUSolver(options=options)
         soln_banded = solver_banded.solve(model, t_eval, t_interp=t_interp)
 
-        np.testing.assert_array_almost_equal(soln.y, soln_banded.y, 5)
+        np.testing.assert_allclose(soln.y, soln_banded.y, rtol=1e-6, atol=1e-5)
 
     def test_setup_options(self):
         model = pybamm.BaseModel()
@@ -764,7 +824,9 @@ class TestIDAKLUSolver:
 
                     if works:
                         soln = solver.solve(model, t_eval, t_interp=t_interp)
-                        np.testing.assert_array_almost_equal(soln.y, soln_base.y, 4)
+                        np.testing.assert_allclose(
+                            soln.y, soln_base.y, rtol=1e-5, atol=1e-4
+                        )
                     else:
                         with pytest.raises(ValueError):
                             soln = solver.solve(model, t_eval, t_interp=t_interp)
@@ -815,7 +877,7 @@ class TestIDAKLUSolver:
             solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6, options=options)
             soln = solver.solve(model, t_eval, t_interp=t_interp)
 
-            np.testing.assert_array_almost_equal(soln.y, soln_base.y, 4)
+            np.testing.assert_allclose(soln.y, soln_base.y, rtol=1e-5, atol=1e-4)
 
         options_fail = {
             "max_order_bdf": -1,
@@ -929,8 +991,8 @@ class TestIDAKLUSolver:
 
         # Compare output to sol_all
         for varname in [*output_variables, *model_vars]:
-            np.testing.assert_array_almost_equal(
-                sol[varname](t_eval), sol_all[varname](t_eval), 3
+            np.testing.assert_allclose(
+                sol[varname](t_eval), sol_all[varname](t_eval), rtol=1e-4, atol=1e-3
             )
 
         # Check that the missing variables are not available in the solution
@@ -1030,10 +1092,11 @@ class TestIDAKLUSolver:
             # Compare output to sol_all
             tol = 1e-5 if form != "iree" else 1e-2  # iree has reduced precision
             for varname in output_variables:
-                np.testing.assert_array_almost_equal(
+                np.testing.assert_allclose(
                     sol[varname](t_interp),
                     sol_all[varname](t_interp),
-                    tol,
+                    rtol=tol,
+                    atol=tol,
                     err_msg=f"Failed for {varname} with form {form}",
                 )
 
@@ -1103,7 +1166,7 @@ class TestIDAKLUSolver:
         )
         sol = sim.solve()
 
-        np.testing.assert_array_almost_equal(sol.t, np.arange(0, 10.1, 0.1), decimal=4)
+        np.testing.assert_allclose(sol.t, np.arange(0, 10.1, 0.1), rtol=1e-5, atol=1e-5)
 
     def test_interpolate_time_step_start_offset(self):
         model = pybamm.lithium_ion.SPM()
@@ -1203,3 +1266,35 @@ class TestIDAKLUSolver:
 
         with pytest.warns(pybamm.SolverWarning, match="extrapolation occurred for"):
             solver.solve(model, t_eval=[0, 1])
+
+    def test_model_solver_with_non_identity_mass(self):
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", domain="negative electrode")
+        var2 = pybamm.Variable("var2", domain="negative electrode")
+        model.rhs = {var1: var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # FV discretisation has identity mass. Manually set the mass matrix to
+        # be a diag of 10s here for testing. Note that the algebraic part is all
+        # zeros
+        mass_matrix = 10 * model.mass_matrix.entries
+        model.mass_matrix = pybamm.Matrix(mass_matrix)
+
+        # Note that mass_matrix_inv is just the inverse of the ode block of the
+        # mass matrix
+        mass_matrix_inv = 0.1 * eye(mass_matrix.shape[0] // 2)
+        model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
+
+        assert not model.is_standard_form_dae
+
+        # Solve
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        t_interp = np.linspace(0, 1, 100)
+        t_eval = [t_interp[0], t_interp[-1]]
+        solution = solver.solve(model, t_eval, t_interp=t_interp)
+        np.testing.assert_array_equal(solution.t, t_interp)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))

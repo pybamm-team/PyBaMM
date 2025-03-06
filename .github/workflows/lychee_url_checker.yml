@@ -17,7 +17,7 @@ jobs:
 
       # cache Lychee results to avoid hitting rate limits
       - name: Restore lychee cache
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
         with:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
@@ -28,7 +28,7 @@ jobs:
 
       # use stable version for now to avoid breaking changes
       - name: Lychee URL checker
-        uses: lycheeverse/lychee-action@f796c8b7d468feb9b8c0a46da3fac0af6874d374 # v2.2.0
+        uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
         with:
           # arguments with file types to check
           args: >-

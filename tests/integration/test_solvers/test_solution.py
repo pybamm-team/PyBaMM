@@ -42,8 +42,9 @@ class TestSolution:
             old_t = t
 
         # Check both give the same answer
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_allclose(
             solution["Voltage [V]"](solution.t[:-1]),
             step_solution["Voltage [V]"](solution.t[:-1]),
-            decimal=4,
+            rtol=1e-5,
+            atol=1e-4,
         )

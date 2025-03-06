@@ -23,11 +23,11 @@ class TestMPM:
 
         original = optimtest.evaluate_model()
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, to_python)
+        np.testing.assert_allclose(original, to_python, rtol=1e-7, atol=1e-6)
 
         if pybamm.has_jax():
             to_jax = optimtest.evaluate_model(to_jax=True)
-            np.testing.assert_array_almost_equal(original, to_jax)
+            np.testing.assert_allclose(original, to_jax, rtol=1e-7, atol=1e-6)
 
     def test_set_up(self):
         model = pybamm.lithium_ion.MPM()
@@ -90,6 +90,30 @@ class TestMPM:
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
+    def test_axen_ocp(self):
+        options = {"open-circuit potential": ("Axen", "single")}
+        model = pybamm.lithium_ion.MPM(options)
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        parameter_values = pybamm.get_size_distribution_parameters(parameter_values)
+        parameter_values.update(
+            {
+                "Negative electrode lithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
+                - 0.1,
+                "Negative electrode delithiation OCP [V]": lambda sto: parameter_values[
+                    "Negative electrode OCP [V]"
+                ](sto)
+                + 0.1,
+                "Negative particle lithiation hysteresis decay rate": 10,
+                "Negative particle delithiation hysteresis decay rate": 10,
+                "Initial hysteresis state in negative electrode": 0.0,
+            },
+            check_already_exists=False,
+        )
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all(skip_output_tests=True)
+
     def test_voltage_control(self):
         options = {"operating mode": "voltage"}
         model = pybamm.lithium_ion.MPM(options)
@@ -122,8 +146,8 @@ class TestMPM:
             pos_Li.append(pos)
 
         # compare
-        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
-        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
+        np.testing.assert_allclose(neg_Li[0], neg_Li[1], rtol=1e-13, atol=1e-13)
+        np.testing.assert_allclose(pos_Li[0], pos_Li[1], rtol=1e-13, atol=1e-13)
 
     def test_basic_processing_nonlinear_diffusion(self):
         model = pybamm.lithium_ion.MPM()
