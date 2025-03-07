@@ -37,3 +37,8 @@ repos:
         - id: rst-backticks
         - id: rst-directive-colons
         - id: rst-inline-touching-normal
+
+  - repo: https://github.com/scientific-python/cookie
+    rev: 2025.01.22
+    hooks:
+        - id: sp-repo-review
