@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, Union
 import numpy.typing as npt
+import numpy as np
 import pybamm
 
 
 @dataclass
 class ProcessedVariableTimeIntegral:
     method: Literal["discrete", "continuous"]
-    initial_condition: npt.NDArray
-    discrete_times: Optional[npt.NDArray]
+    initial_condition: npt.NDArray[np.float64]
+    discrete_times: Optional[npt.NDArray[np.float64]]
 
     @staticmethod
     def from_pybamm_var(

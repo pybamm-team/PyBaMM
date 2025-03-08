@@ -11,6 +11,7 @@ import numpy.typing as npt
 import sympy
 from scipy.sparse import issparse, vstack
 from collections.abc import Sequence
+from typing import Any
 
 import pybamm
 
@@ -113,7 +114,7 @@ class Concatenation(pybamm.Symbol):
 
         return domains
 
-    def _concatenation_evaluate(self, children_eval: list[npt.NDArray]):
+    def _concatenation_evaluate(self, children_eval: list[npt.NDArray[Any]]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         if len(children_eval) == 0:
             return np.array([])
@@ -123,8 +124,8 @@ class Concatenation(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
@@ -368,7 +369,7 @@ class DomainConcatenation(Concatenation):
                 start = end
         return slices
 
-    def _concatenation_evaluate(self, children_eval: list[npt.NDArray]):
+    def _concatenation_evaluate(self, children_eval: list[npt.NDArray[Any]]):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
         # preallocate vector
         vector = np.empty((self._size, 1))

@@ -123,8 +123,8 @@ class Function(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: npt.NDArray | None = None,
-        y_dot: npt.NDArray | None = None,
+        y: npt.NDArray[np.float64] | None = None,
+        y_dot: npt.NDArray[np.float64] | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
