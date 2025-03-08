@@ -3,7 +3,7 @@
 #
 from __future__ import annotations
 import numpy as np
-
+import numpy.typing as npt
 import pybamm
 from pybamm.type_definitions import DomainType, AuxiliaryDomainType, DomainsType
 
@@ -15,7 +15,7 @@ class Vector(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.ndarray | list[float] | np.matrix,
+        entries: npt.NDArray | list[float] | np.matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,

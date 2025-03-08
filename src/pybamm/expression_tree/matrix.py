@@ -3,6 +3,7 @@
 #
 from __future__ import annotations
 import numpy as np
+import numpy.typing as npt
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
@@ -16,7 +17,7 @@ class Matrix(pybamm.Array):
 
     def __init__(
         self,
-        entries: np.ndarray | list[float] | csr_matrix,
+        entries: npt.NDArray | list[float] | csr_matrix,
         name: str | None = None,
         domain: DomainType = None,
         auxiliary_domains: AuxiliaryDomainType = None,

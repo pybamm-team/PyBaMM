@@ -5,6 +5,7 @@ from __future__ import annotations
 import numbers
 
 import numpy as np
+import numpy.typing as npt
 import sympy
 from scipy.sparse import csr_matrix, issparse
 import functools
@@ -152,8 +153,8 @@ class BinaryOperator(pybamm.Symbol):
     def evaluate(
         self,
         t: float | None = None,
-        y: np.ndarray | None = None,
-        y_dot: np.ndarray | None = None,
+        y: npt.NDArray | None = None,
+        y_dot: npt.NDArray | None = None,
         inputs: dict | str | None = None,
     ):
         """See :meth:`pybamm.Symbol.evaluate()`."""
