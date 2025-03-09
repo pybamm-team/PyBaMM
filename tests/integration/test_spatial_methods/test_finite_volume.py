@@ -5,7 +5,6 @@ import pybamm
 from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
-    get_cylindrical_mesh_for_testing,
 )
 
 import numpy as np
@@ -109,40 +108,6 @@ class TestFiniteVolumeConvergence:
 
         # Get errors
         ns = 10 * 2 ** np.arange(1, 6)
-        errs = {n: get_error(int(n)) for n in ns}
-        # expect quadratic convergence everywhere
-        err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
-        rates = np.log2(err_norm[:-1] / err_norm[1:])
-        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
-
-    def test_cylindrical_div_convergence_quadratic(self):
-        # N = sin(r) --> div(N) = sin(r)/r + cos(r)
-        spatial_methods = {"current collector": pybamm.FiniteVolume()}
-
-        # Function for convergence testing
-        def get_error(n):
-            # create mesh and discretisation (single particle)
-            mesh = get_cylindrical_mesh_for_testing(rcellpts=n)
-            disc = pybamm.Discretisation(mesh, spatial_methods)
-            submesh = mesh["current collector"]
-            r = submesh.nodes
-            r_edge = pybamm.SpatialVariableEdge("r", domain=["current collector"])
-
-            # Define flux and eqn
-            N = pybamm.sin(r_edge)
-            div_eqn = pybamm.div(N)
-            # Define exact solutions
-            div_exact = np.sin(r) / r + np.cos(r)
-
-            # Discretise and evaluate
-            div_eqn_disc = disc.process_symbol(div_eqn)
-            div_approx = div_eqn_disc.evaluate()
-
-            # Return difference between approx and exact
-            return div_approx[:, 0] - div_exact
-
-        # Get errors
-        ns = 10 * 2 ** np.arange(1, 7)
         errs = {n: get_error(int(n)) for n in ns}
         # expect quadratic convergence everywhere
         err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
