@@ -33,8 +33,8 @@ def _preprocess_binary(
             raise ValueError("right must be a 1D array")
         right = pybamm.Vector(right)
 
-    # Check right is pybamm Symbol
-    if not isinstance(right, pybamm.Symbol):
+    # Check both left and right are pybamm Symbols
+    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):  # type: ignore[redundant-expr]
         raise NotImplementedError(
             f"BinaryOperator not implemented for symbols of type {type(left)} and {type(right)}"
         )
