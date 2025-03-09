@@ -1,5 +1,6 @@
 import pybamm
 import numpy as np
+import numpy.typing as npt
 import logging
 import warnings
 import numbers
@@ -258,7 +259,7 @@ class IDAKLUJax:
 
     def jax_value(
         self,
-        t: Union[np.ndarray, None] = None,
+        t: Union[npt.NDArray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -291,7 +292,7 @@ class IDAKLUJax:
 
     def jax_grad(
         self,
-        t: Union[np.ndarray, None] = None,
+        t: Union[npt.NDArray, None] = None,
         inputs: Union[dict, None] = None,
         output_variables: Union[list[str], None] = None,
     ):
@@ -395,9 +396,9 @@ class IDAKLUJax:
 
     def _jax_solve(
         self,
-        t: Union[float, np.ndarray],
+        t: Union[float, npt.NDArray],
         *inputs,
-    ) -> np.ndarray:
+    ) -> npt.NDArray:
         """Solver implementation used by f-bind"""
         logger.info("jax_solve")
         logger.debug(f"  t: {type(t)}, {t}")
@@ -409,7 +410,7 @@ class IDAKLUJax:
 
     def _jax_jvp_impl(
         self,
-        *args: Union[np.ndarray],
+        *args: Union[npt.NDArray],
     ):
         """JVP implementation used by f_jvp bind"""
         primals = args[: len(args) // 2]
@@ -454,9 +455,9 @@ class IDAKLUJax:
 
     def _jax_vjp_impl(
         self,
-        y_bar: np.ndarray,
+        y_bar: npt.NDArray,
         invar: Union[str, int],  # index or name of input variable
-        *primals: np.ndarray,
+        *primals: npt.NDArray,
     ):
         """VJP implementation used by f_vjp bind"""
         logger.info("py:f_vjp_p_impl")
