@@ -154,6 +154,17 @@ build.targets.sdist.include = [
   "CITATION.cff",
 ]
 
+[tool.repo-review]
+ignore = [
+    "MY",    # ignore all MyPy setting checks (MY101, MY103, MY104, MY105, MY106)
+    "PP004", # ignore the check that prevents an upper cap on Python requires
+    "PP308", # ignore the explicit pytest summary flag (-ra) check
+    "PC140", # ignore missing type checker in pre-commit
+    "PC160", # ignore missing spell checker in pre-commit
+    "PC180", # ignore missing markdown formatter in pre-commit
+    "RF102", # ignore the missing isort selection in Ruff configuration
+]
+
 [tool.ruff]
 extend-include = ["*.ipynb"]
 extend-exclude = ["__init__.py"]
