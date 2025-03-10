@@ -41,7 +41,7 @@ class RK_Open_Circuit_Potential(BaseOpenCircuitPotential):
                 f"{Domain} particle stoichiometry": sto_surf,
                 f"{Domain} electrode temperature [k]": T,
             }
-        
+
             OCP_surf = pybamm.FunctionParameter(
                 f"{Domain} electrode RK_OCP [V]", inputs
             )

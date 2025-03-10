@@ -74,7 +74,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
-    """  
+    """
     LG M50 NMC open-circuit potential as a function of stoichiometry, fit taken
     from [1].
 
@@ -94,8 +94,8 @@ def nmc_LGM50_ocp_Chen2020(sto):
     -------
     :class:`pybamm.Symbol`
         Open-circuit potential
-    """  
-    
+    """
+
     u_eq = (
         -0.8090 * sto
         + 4.4875
@@ -105,7 +105,6 @@ def nmc_LGM50_ocp_Chen2020(sto):
     )
 
     return u_eq
-
 
 
 def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, c_s_max, T):
