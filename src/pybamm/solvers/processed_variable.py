@@ -859,6 +859,11 @@ class ProcessedVariable2DSciKitFEM(ProcessedVariable2D):
 
         return entries, coords_for_interp
 
+    def _observe_postfix(self, entries, t):
+        shape = entries.shape
+        entries = entries.transpose(1, 0, 2).reshape(shape)
+        return entries
+
 
 def process_variable(base_variables, *args, **kwargs):
     mesh = base_variables[0].mesh
