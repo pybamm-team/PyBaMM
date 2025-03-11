@@ -253,9 +253,9 @@ class TestSolution:
 
         sol2 = sol1.copy()
 
-        assert (
+        assert all(
             sol1._variables[k] == sol2._variables[k] for k in sol1._variables.keys()
-        ) is not None
+        )
         assert sol2.variables_returned is True
 
     def test_last_state(self):
