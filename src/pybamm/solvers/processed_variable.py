@@ -97,7 +97,7 @@ class ProcessedVariable:
         t must be a sorted array of time points.
         """
 
-        entries = self._observe_hermite_cpp(t)
+        entries = self._observe_hermite(t)
         processed_entries = self._observe_postfix(entries, t)
 
         tf = self.t_pts[-1]
@@ -113,9 +113,9 @@ class ProcessedVariable:
         Evaluate the base variable at the given time points and y values.
         """
         t = self.t_pts
-        return self._observe_postfix(self._observe_raw_cpp(), t)
+        return self._observe_postfix(self._observe_raw(), t)
 
-    def _setup_cpp_inputs(self, t, full_range):
+    def _setup_inputs(self, t, full_range):
         pybamm.logger.debug("Setting up C++ interpolation inputs")
 
         ts = self.all_ts
@@ -160,25 +160,22 @@ class ProcessedVariable:
 
         return ts, ys, yps, funcs, inputs, is_f_contiguous
 
-    def _observe_hermite_cpp(self, t):
-        pybamm.logger.debug("Observing and Hermite interpolating the variable in C++")
+    def _observe_hermite(self, t):
+        pybamm.logger.debug("Observing and Hermite interpolating the variable")
 
-        ts, ys, yps, funcs, inputs, _ = self._setup_cpp_inputs(t, full_range=False)
+        ts, ys, yps, funcs, inputs, _ = self._setup_inputs(t, full_range=False)
         shapes = self._shape(t)
         return idaklu.observe_hermite_interp(t, ts, ys, yps, inputs, funcs, shapes)
 
-    def _observe_raw_cpp(self):
-        pybamm.logger.debug("Observing the variable raw data in C++")
+    def _observe_raw(self):
+        pybamm.logger.debug("Observing the variable raw data")
         t = self.t_pts
-        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_cpp_inputs(
+        ts, ys, _, funcs, inputs, is_f_contiguous = self._setup_inputs(
             t, full_range=True
         )
         shapes = self._shape(self.t_pts)
 
         return idaklu.observe(ts, ys, inputs, funcs, is_f_contiguous, shapes)
-
-    def _observe_raw_python(self):
-        raise NotImplementedError  # pragma: no cover
 
     def _observe_postfix(self, entries, t):
         return entries
@@ -495,23 +492,6 @@ class ProcessedVariable0D(ProcessedVariable):
             time_integral=time_integral,
         )
 
-    def _observe_raw_python(self):
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        # initialise empty array of the correct size
-        entries = np.empty(self._shape(self.t_pts))
-        idx = 0
-        # Evaluate the base_variable index-by-index
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[idx] = float(base_var_casadi(t, y, inputs))
-
-                idx += 1
-        return entries
-
     def _observe_postfix(self, entries, t):
         if self.time_integral is None:
             return entries
@@ -573,22 +553,6 @@ class ProcessedVariable1D(ProcessedVariable):
             solution,
             time_integral=time_integral,
         )
-
-    def _observe_raw_python(self):
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        entries = np.empty(self._shape(self.t_pts))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
-                idx += 1
-        return entries
 
     def _interp_setup(self, entries, t):
         # Get node and edge values
@@ -681,30 +645,6 @@ class ProcessedVariable2D(ProcessedVariable):
         second_dim_pts = second_dim_nodes
         self.first_dim_size = len(first_dim_pts)
         self.second_dim_size = len(second_dim_pts)
-
-    def _observe_raw_python(self):
-        """
-        Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
-        """
-        pybamm.logger.debug("Observing the variable raw data in Python")
-        first_dim_size, second_dim_size, t_size = self._shape(self.t_pts)
-        entries = np.empty((first_dim_size, second_dim_size, t_size))
-
-        # Evaluate the base_variable index-by-index
-        idx = 0
-        for ts, ys, inputs, base_var_casadi in zip(
-            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
-        ):
-            for inner_idx, t in enumerate(ts):
-                t = ts[inner_idx]
-                y = ys[:, inner_idx]
-                entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                idx += 1
-        return entries
 
     def _interp_setup(self, entries, t):
         """
