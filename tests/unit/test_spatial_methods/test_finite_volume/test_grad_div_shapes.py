@@ -7,6 +7,7 @@ from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_cylindrical_mesh_for_testing,
     get_mesh_for_testing_symbolic,
     get_spherical_mesh_for_testing_symbolic,
     get_cylindrical_mesh_for_testing_symbolic,
@@ -71,6 +72,67 @@ class TestFiniteVolumeGradDiv:
             np.zeros_like(submesh.nodes[:, np.newaxis]),
             rtol=1e-7,
             atol=1e-6,
+        )
+
+    def test_cylindrical_grad_div_shapes_Dirichlet_bcs(self):
+        """
+        Test grad and div with Dirichlet boundary conditions in cylindrical polar
+        coordinates
+        """
+        # Create discretisation
+        mesh = get_cylindrical_mesh_for_testing()
+        spatial_methods = {"current collector": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh["current collector"]
+        npts = submesh.npts
+        npts_edges = submesh.npts + 1
+
+        # Test gradient of a constant is zero
+        # grad(1) = 0
+        constant_y = np.ones((npts, 1))
+        var = pybamm.Variable(
+            "var",
+            domain=["current collector"],
+        )
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y), np.zeros((npts_edges, 1))
+        )
+
+        # Test operations on linear and quadratic in r
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(submesh.edges[0]), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        # grad(r) == 1
+        y_linear = submesh.nodes
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_allclose(
+            grad_eqn_disc.evaluate(None, y_linear),
+            np.ones((npts_edges, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+        # div(grad r^2) = 4
+        y_squared = submesh.nodes**2
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        div_eval = div_eqn_disc.evaluate(None, y_squared)
+        np.testing.assert_allclose(
+            div_eval[1:-1], 4 * np.ones((npts - 2, 1)), rtol=1e-7, atol=1e-6
         )
 
     def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -322,6 +384,74 @@ class TestFiniteVolumeGradDiv:
         np.testing.assert_allclose(
             div_eqn_disc.evaluate(None, linear_y),
             np.zeros_like(submesh.nodes[:, np.newaxis]),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+    def test_cylindrical_grad_div_shapes_Neumann_bcs(self):
+        """
+        Test grad and div with Neumann boundary conditions in cylindrical polar
+        coordinates
+        """
+        # Create discretisation
+        mesh = get_cylindrical_mesh_for_testing()
+        spatial_methods = {"current collector": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh["current collector"]
+        npts = submesh.npts
+        npts_edges = submesh.npts + 1
+
+        # Test gradient
+        var = pybamm.Variable("var", domain="current collector")
+        grad_eqn = pybamm.grad(var)
+        # grad(1) = 0
+        constant_y = np.ones((npts, 1))
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y), np.zeros((npts_edges, 1))
+        )
+        # grad(r) = 1
+        y_linear = submesh.nodes
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_allclose(
+            grad_eqn_disc.evaluate(None, y_linear),
+            np.ones((npts_edges, 1)),
+            rtol=1e-7,
+            atol=1e-6,
+        )
+
+        # Test divergence
+        # div(grad(r^2)) = 4 , N_left = 2*r_inner, N_right = 2
+        y_squared = submesh.nodes**2
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var: {
+                "left": (pybamm.Scalar(2 * submesh.edges[0]), "Neumann"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_allclose(
+            div_eqn_disc.evaluate(None, y_squared),
+            4 * np.ones((npts, 1)),
             rtol=1e-7,
             atol=1e-6,
         )
