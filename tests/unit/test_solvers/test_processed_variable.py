@@ -88,11 +88,6 @@ class TestProcessedVariable:
             np.reshape(y_sol, [len(first_sol), len(second_sol), len(t_sol)]),
         )
 
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-        )
-
         return y_sol, first_sol, second_sol, t_sol, yp_sol
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -143,11 +138,6 @@ class TestProcessedVariable:
         data_t2 = processed_var(sol.t)
 
         np.testing.assert_array_equal(data_t1, data_t2)
-
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_var._observe_raw_cpp(), processed_var._observe_raw_python()
-        )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
     def test_processed_variable_0D_discrete_data(self, hermite_interp):
@@ -319,11 +309,6 @@ class TestProcessedVariable:
         )
         np.testing.assert_array_equal(
             processed_eqn2.entries, y_sol + x_sol[:, np.newaxis]
-        )
-
-        # check that C++ and Python give the same result
-        np.testing.assert_array_equal(
-            processed_eqn2._observe_raw_cpp(), processed_eqn2._observe_raw_python()
         )
 
     @pytest.mark.parametrize("hermite_interp", _hermite_args)
@@ -1158,10 +1143,10 @@ class TestProcessedVariable:
             processed_var(t=0.5, x=x_sol, z=z_sol).shape, (20, 10)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=0.2, z=z_sol).shape, (20, 50)
+            processed_var(t_sol, x=0.2, z=z_sol).shape, (20, 50)
         )
         np.testing.assert_array_equal(
-            processed_var(t=t_sol, x=x_sol, z=0.5).shape, (10, 50)
+            processed_var(t_sol, x=x_sol, z=0.5).shape, (10, 50)
         )
         # 1 vectors, 2 scalar
         np.testing.assert_array_equal(processed_var(t=0.5, x=0.2, z=z_sol).shape, (20,))

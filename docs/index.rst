@@ -107,7 +107,7 @@ explore the effect of different battery designs and modeling assumptions under a
 
       +++
 
-      .. button-link:: ../CONTRIBUTING.md
+      .. button-ref:: source/user_guide/contributing
          :expand:
          :color: secondary
          :click-parent:
