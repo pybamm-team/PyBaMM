@@ -32,8 +32,7 @@ if pybamm.has_jax():
     }
 
     model = make_model()
-    t_interp = np.linspace(0, 1, 100)
-    t_eval = [t_interp[0], t_interp[-1]]
+    t_eval = np.linspace(0, 1, 100)
 
     idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
@@ -43,7 +42,7 @@ if pybamm.has_jax():
         t_eval,
         inputs=inputs,
         calculate_sensitivities=True,
-        t_interp=t_interp,
+        t_interp=t_eval,
     )
 
     # Get jax expressions for IDAKLU solver
@@ -69,7 +68,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables[:1],
             calculate_sensitivities=True,
-            t_interp=t_interp,
+            t_interp=t_eval,
         )
         f1 = jax_single.get_jaxpr()
         jax_single2 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
@@ -77,7 +76,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables[:1],
             calculate_sensitivities=True,
-            t_interp=t_interp,
+            t_interp=t_eval,
         )
         f2 = jax_single2.get_jaxpr()
         # Multiple output variables
@@ -86,7 +85,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=True,
-            t_interp=t_interp,
+            t_interp=t_eval,
         )
         f3 = jax_multi.get_jaxpr()
         jax_multi2 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
@@ -94,7 +93,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=True,
-            t_interp=t_interp,
+            t_interp=t_eval,
         )
         f4 = jax_multi.get_jaxpr()
 
@@ -204,6 +203,8 @@ class TestIDAKLUJax:
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
     def test_f_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
+        print(k)
+        print(t_eval)
         out = wrapper(f)(t_eval[k], inputs)
         np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
