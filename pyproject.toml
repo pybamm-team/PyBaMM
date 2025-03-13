@@ -233,6 +233,9 @@ filterwarnings = [
     'ignore:unclosed event loop \<:ResourceWarning',
     # convert internal warnings as errors
     "error::DeprecationWarning:pybamm.*",
+    # ignore setuptools and pybtex deprecation warnings
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    "ignore:open_text is deprecated:DeprecationWarning",
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
 ]
