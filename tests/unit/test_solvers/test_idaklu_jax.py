@@ -32,7 +32,9 @@ if pybamm.has_jax():
     }
 
     model = make_model()
-    t_eval = np.linspace(0, 1, 100)
+    t_interp = np.linspace(0, 1, 100)
+    t_eval = [t_interp[0], t_interp[-1]]
+
     idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
     # Create surrogate data (using base IDAKLU solver)
@@ -41,7 +43,7 @@ if pybamm.has_jax():
         t_eval,
         inputs=inputs,
         calculate_sensitivities=True,
-        t_interp=t_eval,
+        t_interp=t_interp,
     )
 
     # Get jax expressions for IDAKLU solver
@@ -67,7 +69,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables[:1],
             calculate_sensitivities=True,
-            t_interp=t_eval,
+            t_interp=t_interp,
         )
         f1 = jax_single.get_jaxpr()
         jax_single2 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
@@ -75,7 +77,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables[:1],
             calculate_sensitivities=True,
-            t_interp=t_eval,
+            t_interp=t_interp,
         )
         f2 = jax_single2.get_jaxpr()
         # Multiple output variables
@@ -84,7 +86,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=True,
-            t_interp=t_eval,
+            t_interp=t_interp,
         )
         f3 = jax_multi.get_jaxpr()
         jax_multi2 = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6).jaxify(
@@ -92,7 +94,7 @@ def make_test_cases():
             t_eval,
             output_variables=output_variables,
             calculate_sensitivities=True,
-            t_interp=t_eval,
+            t_interp=t_interp,
         )
         f4 = jax_multi.get_jaxpr()
 

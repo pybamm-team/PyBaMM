@@ -403,7 +403,7 @@ class BaseModel:
         if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
-            return pybamm.CasadiSolver(mode="safe")
+            return pybamm.IDAKLUSolver()
 
     @property
     def default_quick_plot_variables(self):
