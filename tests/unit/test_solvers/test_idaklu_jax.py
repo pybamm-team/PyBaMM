@@ -33,7 +33,6 @@ if pybamm.has_jax():
 
     model = make_model()
     t_eval = np.linspace(0, 1, 100)
-
     idaklu_solver = pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-6)
 
     # Create surrogate data (using base IDAKLU solver)
@@ -203,8 +202,6 @@ class TestIDAKLUJax:
         "output_variables,idaklu_jax_solver,f,wrapper", make_test_cases()
     )
     def test_f_scalar(self, output_variables, idaklu_jax_solver, f, wrapper):
-        print(k)
-        print(t_eval)
         out = wrapper(f)(t_eval[k], inputs)
         np.testing.assert_allclose(
             out, np.array([sim[outvar](t_eval[k]) for outvar in output_variables]).T
