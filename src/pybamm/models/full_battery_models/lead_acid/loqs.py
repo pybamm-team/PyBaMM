@@ -68,10 +68,7 @@ class LOQS(BaseModel):
 
     @property
     def default_solver(self):
-        if len(self.rhs) == 0 and len(self.algebraic) != 0:
-            return pybamm.CasadiAlgebraicSolver()
-        else:
-            return pybamm.CasadiSolver()
+        return pybamm.CasadiSolver()
 
     def set_current_collector_submodel(self):
         if self.options["current collector"] in [
